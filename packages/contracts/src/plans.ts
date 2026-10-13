@@ -264,6 +264,8 @@ export const TestRevisionInput = Type.Union([
   Obj({
     plan: ExecutablePlan,
     parentId: Type.Optional(id("rev")),
+    /** Why the revision exists; kept on the revision and shown in its history (UX-024). */
+    justification: Type.Optional(Description),
     origin: Enum(["manual", "generated", "healed", "imported"]),
   }),
   Obj({

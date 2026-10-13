@@ -1,5 +1,6 @@
 import { type Static, type TSchema, Type } from "@sinclair/typebox";
 import * as Entities from "./entities.js";
+import { authoringContracts } from "./m4/authoring.js";
 import { identityContracts } from "./m4/identity.js";
 import { integrationContracts } from "./m4/integrations.js";
 import * as Metrics from "./metrics.js";
@@ -138,6 +139,8 @@ const supplemental = {
     proposalIds: Type.Array(P.id("pro")),
     expectedVersion: P.Version,
     reason: Type.Optional(P.Description),
+    /** Selected proposals the preview flagged as exact duplicates and the caller accepts anyway (UX-017). */
+    acknowledgedDuplicates: Type.Optional(Type.Array(P.id("pro"), { uniqueItems: true })),
   }),
   ProposalDecisionReceipt: P.Obj({
     accepted: Type.Array(P.id("tst")),
@@ -619,6 +622,7 @@ export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({
   ...supplemental,
   ...httpInputs,
   ...integrationContracts,
+  ...authoringContracts,
   ...identityContracts,
   ...Object.fromEntries(
     Object.entries(mcpTools).map(([name, tool]) => [`Mcp_${name}`, tool.input]),

@@ -1,0 +1,486 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "batchId",
+    "batchVersion",
+    "batchState",
+    "stale",
+    "staleReason",
+    "policy",
+    "items",
+    "blocked"
+  ],
+  "properties": {
+    "batchId": {
+      "pattern": "^pbt_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "batchVersion": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "batchState": {
+      "anyOf": [
+        {
+          "const": "proposed",
+          "type": "string"
+        },
+        {
+          "const": "accepted",
+          "type": "string"
+        },
+        {
+          "const": "rejected",
+          "type": "string"
+        },
+        {
+          "const": "stale",
+          "type": "string"
+        }
+      ]
+    },
+    "stale": {
+      "type": "boolean"
+    },
+    "staleReason": {
+      "anyOf": [
+        {
+          "maxLength": 8000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "policy": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "channel",
+        "canAccept",
+        "reason",
+        "text"
+      ],
+      "properties": {
+        "channel": {
+          "const": "interactive",
+          "type": "string"
+        },
+        "canAccept": {
+          "type": "boolean"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "text": {
+          "maxLength": 8000,
+          "type": "string"
+        }
+      }
+    },
+    "items": {
+      "maxItems": 200,
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "proposalId",
+          "state",
+          "selectable",
+          "validation",
+          "revision",
+          "authorship",
+          "similar",
+          "needsDecision"
+        ],
+        "properties": {
+          "proposalId": {
+            "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "const": "proposed",
+                "type": "string"
+              },
+              {
+                "const": "accepted",
+                "type": "string"
+              },
+              {
+                "const": "rejected",
+                "type": "string"
+              }
+            ]
+          },
+          "selectable": {
+            "type": "boolean"
+          },
+          "validation": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "structural",
+              "semantic",
+              "issues"
+            ],
+            "properties": {
+              "structural": {
+                "anyOf": [
+                  {
+                    "const": "valid",
+                    "type": "string"
+                  },
+                  {
+                    "const": "invalid",
+                    "type": "string"
+                  }
+                ]
+              },
+              "semantic": {
+                "anyOf": [
+                  {
+                    "const": "valid",
+                    "type": "string"
+                  },
+                  {
+                    "const": "invalid",
+                    "type": "string"
+                  }
+                ]
+              },
+              "issues": {
+                "maxItems": 200,
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "severity",
+                    "code",
+                    "field",
+                    "stepId",
+                    "message"
+                  ],
+                  "properties": {
+                    "severity": {
+                      "anyOf": [
+                        {
+                          "const": "error",
+                          "type": "string"
+                        },
+                        {
+                          "const": "warning",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "code": {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    "field": {
+                      "maxLength": 400,
+                      "type": "string"
+                    },
+                    "stepId": {
+                      "anyOf": [
+                        {
+                          "minLength": 1,
+                          "maxLength": 200,
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "message": {
+                      "maxLength": 8000,
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "action",
+                  "testId",
+                  "testName",
+                  "ordinal",
+                  "parentRevisionId",
+                  "origin",
+                  "runner",
+                  "type",
+                  "contentHash",
+                  "stepCount",
+                  "assertionCount",
+                  "estimate"
+                ],
+                "properties": {
+                  "action": {
+                    "anyOf": [
+                      {
+                        "const": "create_test",
+                        "type": "string"
+                      },
+                      {
+                        "const": "create_revision",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "testId": {
+                    "anyOf": [
+                      {
+                        "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "testName": {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  "ordinal": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "parentRevisionId": {
+                    "anyOf": [
+                      {
+                        "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "origin": {
+                    "const": "generated",
+                    "type": "string"
+                  },
+                  "runner": {
+                    "anyOf": [
+                      {
+                        "const": "playwright",
+                        "type": "string"
+                      },
+                      {
+                        "const": "http",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "type": {
+                    "anyOf": [
+                      {
+                        "const": "frontend",
+                        "type": "string"
+                      },
+                      {
+                        "const": "backend",
+                        "type": "string"
+                      },
+                      {
+                        "const": "integration",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "contentHash": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "stepCount": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "assertionCount": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "estimate": {
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "unit",
+                      "min",
+                      "max",
+                      "reason"
+                    ],
+                    "properties": {
+                      "unit": {
+                        "const": "seconds",
+                        "type": "string"
+                      },
+                      "min": {
+                        "minimum": 0,
+                        "type": "number"
+                      },
+                      "max": {
+                        "minimum": 0,
+                        "type": "number"
+                      },
+                      "reason": {
+                        "maxLength": 8000,
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "authorship": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "generatedBy",
+              "humanEdits",
+              "refinedFrom"
+            ],
+            "properties": {
+              "generatedBy": {
+                "anyOf": [
+                  {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "humanEdits": {
+                "maxItems": 100,
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "principalId",
+                    "at",
+                    "fromVersion"
+                  ],
+                  "properties": {
+                    "principalId": {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    "at": {
+                      "format": "date-time",
+                      "pattern": "Z$",
+                      "type": "string"
+                    },
+                    "fromVersion": {
+                      "minimum": 1,
+                      "type": "integer"
+                    }
+                  }
+                }
+              },
+              "refinedFrom": {
+                "anyOf": [
+                  {
+                    "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          },
+          "similar": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "kind",
+                "id",
+                "name",
+                "score",
+                "exactDuplicate"
+              ],
+              "properties": {
+                "kind": {
+                  "anyOf": [
+                    {
+                      "const": "test",
+                      "type": "string"
+                    },
+                    {
+                      "const": "proposal",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "id": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "name": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "score": {
+                  "minimum": 0,
+                  "maximum": 1,
+                  "type": "number"
+                },
+                "exactDuplicate": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "needsDecision": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "blocked": {
+      "type": "boolean"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:ProposalPreview",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}
