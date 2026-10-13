@@ -96,10 +96,6 @@ export interface TelemetryDeps {
   alerts(): AlertsService;
 }
 
-interface DurationRow {
-  seconds: number;
-}
-
 /** Reasons a Run ended because of the system under test; never charged to platform or API budgets. */
 export const targetReasonCodes = [
   "assertion_timeout",
@@ -235,12 +231,12 @@ export class TelemetryService {
       ),
     );
     const waits = this.ctx.database
-      .all<DurationRow>(
-        "SELECT (julianday(a.started_at)-julianday(r.created_at))*86400.0 AS seconds FROM attempts a JOIN runs r ON r.workspace_id=a.workspace_id AND r.id=a.run_id WHERE a.workspace_id=? AND a.number=1 AND a.started_at IS NOT NULL AND r.created_at>=?",
+      .all<{ admitted: string; started: string }>(
+        "SELECT r.created_at AS admitted, a.started_at AS started FROM attempts a JOIN runs r ON r.workspace_id=a.workspace_id AND r.id=a.run_id WHERE a.workspace_id=? AND a.number=1 AND a.started_at IS NOT NULL AND r.created_at>=?",
         this.ctx.workspaceId,
         since,
       )
-      .map((row) => Math.max(0, Number(row.seconds)));
+      .map((row) => Math.max(0, (Date.parse(row.started) - Date.parse(row.admitted)) / 1000));
     indicators.push(
       latency(
         "queue_wait_p95",
