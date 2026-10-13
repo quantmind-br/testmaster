@@ -33,6 +33,11 @@ const postgresParityExclusions: ReadonlyArray<{ file: string; reason: string }> 
     reason:
       "SIGKILLs a child process that opens the SQLite file by path; database.pg.test.ts covers the PostgreSQL crash cases.",
   },
+  {
+    file: "packages/application/src/integrations/github/github-restore.test.ts",
+    reason:
+      "Backs up and restores the SQLite metadata file; PostgreSQL backups go through pg_dump (operations slice) and the tombstone-over-active-row rule itself runs on PostgreSQL in github-delivery.test.ts.",
+  },
 ];
 
 const common = {

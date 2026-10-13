@@ -1,17 +1,13 @@
-import { createHash, createPublicKey, createVerify } from "node:crypto";
+import { createPublicKey, createVerify } from "node:crypto";
 import { createServer as createHttpServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { Application } from "../../application.js";
 import type { PermissionGrant } from "../../index.js";
 import { appJwt } from "./api.js";
 import { type GithubWorld, startGithubWorld } from "./testing/world.js";
 
 const worlds: GithubWorld[] = [];
-const extras: Application[] = [];
 afterEach(async () => {
-  for (const app of extras.splice(0)) await app.close();
   for (const world of worlds.splice(0)) await world.stop();
 });
 async function world(options?: Parameters<typeof startGithubWorld>[0]): Promise<GithubWorld> {
@@ -402,70 +398,6 @@ describe("SEC-047 agent branches and pull requests need the integration switch, 
 });
 
 describe("OPS-037 revocation survives a restore from an older backup", () => {
-  it("OPS-037 OPS-025 a revoked installation stays revoked after restoring a backup taken while it was active", async () => {
-    const w = await world();
-    await w.install();
-    await w.openPr(7, SHA_A);
-    expect(w.pull(SHA_A).state).toBe("awaiting_preview");
-    const backup = join(w.app.config.cwd, "backup");
-    await w.app.backups.create(backup);
-    await w.send(
-      "installation",
-      w.fake.installationPayload("deleted", w.fake.installations.get(w.installationId) as never),
-    );
-    const revoked = w.app.database.get(
-      "SELECT state FROM github_installations WHERE installation_id=?",
-      String(w.installationId),
-    );
-    expect(revoked?.state).toBe("revoked");
-    const restoredDir = join(w.app.config.cwd, "restored");
-    await w.app.backups.restore(backup, restoredDir);
-    const restored = await Application.open({
-      cwd: w.app.config.cwd,
-      home: w.app.config.home,
-      env: { TESTMASTER_DATA_DIR: restoredDir, TESTMASTER_EXECUTOR: "process" },
-      github: {
-        apiBaseUrl: w.fake.url,
-        now: () => w.clock.t,
-        sleep: () => Promise.resolve(),
-        random: () => 0.5,
-      },
-    });
-    extras.push(restored);
-    // The backup still says "active", but the tombstone re-applied from the live state wins.
-    const tombstone = restored.database.get(
-      "SELECT value FROM operational_state WHERE key=?",
-      `integration:revoked:github:${w.installationId}`,
-    );
-    expect(tombstone).toBeDefined();
-    const tokens = w.fake.requestsMatching("POST", /access_tokens$/u).length;
-    const receipt = await restored.controllerScope().integrations.receiveWebhook(
-      "github",
-      w.fake.signedRequest(
-        "pull_request",
-        w.fake.pullRequestPayload({
-          installationId: w.installationId,
-          repository: w.repository,
-          number: 7,
-          headSha: SHA_B,
-          action: "synchronize",
-        }),
-      ),
-    );
-    expect(receipt).toMatchObject({ outcome: "ignored", ignoredReason: "revoked_installation" });
-    await restored.controllerScope().github.reconcile();
-    expect(w.fake.requestsMatching("POST", /access_tokens$/u)).toHaveLength(tokens);
-    expect(
-      restored.database.get("SELECT COUNT(*) AS n FROM github_checks WHERE head_sha=?", SHA_B)?.n,
-    ).toBe(0);
-    expect(
-      restored.database.get(
-        "SELECT state FROM github_installations WHERE installation_id=?",
-        String(w.installationId),
-      )?.state,
-    ).toBe("revoked");
-  });
-
   it("OPS-037 the tombstone alone revokes an installation row that a restore brought back as active and closes its pull requests", async () => {
     const w = await world();
     await w.install();
@@ -485,41 +417,5 @@ describe("OPS-037 revocation survives a restore from an older backup", () => {
       )?.state,
     ).toBe("revoked");
     expect(w.pull(SHA_A).state).toBe("closed");
-  });
-
-  it("OPS-037 a restored installation that was never revoked keeps working (the tombstone is not a blanket block)", async () => {
-    const w = await world();
-    await w.install();
-    const backup = join(w.app.config.cwd, "backup");
-    await w.app.backups.create(backup);
-    const restoredDir = join(w.app.config.cwd, "restored");
-    await w.app.backups.restore(backup, restoredDir);
-    const restored = await Application.open({
-      cwd: w.app.config.cwd,
-      home: w.app.config.home,
-      env: { TESTMASTER_DATA_DIR: restoredDir, TESTMASTER_EXECUTOR: "process" },
-      github: {
-        apiBaseUrl: w.fake.url,
-        now: () => w.clock.t,
-        sleep: () => Promise.resolve(),
-        random: () => 0.5,
-      },
-    });
-    extras.push(restored);
-    const receipt = await restored.controllerScope().integrations.receiveWebhook(
-      "github",
-      w.fake.signedRequest(
-        "pull_request",
-        w.fake.pullRequestPayload({
-          installationId: w.installationId,
-          repository: w.repository,
-          number: 9,
-          headSha: SHA_B,
-          action: "opened",
-        }),
-      ),
-    );
-    expect(receipt.outcome).toBe("accepted");
-    expect(createHash("sha256").update(JSON.stringify(receipt)).digest("hex")).toHaveLength(64);
   });
 });
