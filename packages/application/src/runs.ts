@@ -114,11 +114,17 @@ export class RunsService {
   }
   /**
    * Newest-first Runs the caller may read, produced lazily in pages of 100 so a consumer that stops
-   * after one page reads one page. `testId`, `status` and `since` filter in SQL; `projectId` is
+   * after one page reads one page. `testId`, `batchId`, `status` and `since` filter in SQL; `projectId` is
    * resolved through the Run's test. Authorization and test lookups are memoised per test.
    */
   *stream(
-    filter: { testId?: string; status?: string; since?: string; projectId?: string },
+    filter: {
+      testId?: string;
+      batchId?: string;
+      status?: string;
+      since?: string;
+      projectId?: string;
+    },
     position: { cutoff: string; after: { createdAt: string; id: string } | null },
   ): Generator<Run & EntityDocument> {
     this.ctx.authorize("R");
@@ -139,6 +145,7 @@ export class RunsService {
     };
     const where: Record<string, string> = {};
     if (filter.testId !== undefined) where.testId = filter.testId;
+    if (filter.batchId !== undefined) where.batchId = filter.batchId;
     if (filter.status !== undefined) where.status = filter.status;
     let cursor = position.after ? { ...position.after, cutoff: position.cutoff } : undefined;
     do {
