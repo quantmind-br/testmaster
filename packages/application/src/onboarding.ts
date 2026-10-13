@@ -22,6 +22,7 @@ import {
   DockerExecutor,
   PolicyDenied,
 } from "@testmaster/sandbox";
+import { authoringTransaction } from "./authoring.js";
 import type { ResolvedConfig } from "./config.js";
 import { requireEntity, type ServiceContext } from "./context.js";
 
@@ -174,7 +175,7 @@ export class OnboardingService {
     validate("OnboardingStateInput", input);
     scanStrings(input.choices, "/choices");
     const choices = this.checkChoices(projectId, input);
-    return this.ctx.database.withTx(() => {
+    return authoringTransaction(this.ctx, () => {
       const previous = this.get(projectId);
       if (previous.version !== expectedVersion)
         throw new ContractError("REVISION_CONFLICT", "Onboarding state changed", {

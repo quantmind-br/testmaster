@@ -46,10 +46,10 @@ export const onboardingRoutes: RouteModule = {
       context.service.requirements.approve(id(context), context.ifMatch()),
     "GET /projects/{id}/feature-map": (context) => context.service.featureMap.get(id(context)),
   },
+  // Only synchronous handlers can be wrapped: `executeIdempotent` stores the receipt of a handler
+  // that has returned, so the asynchronous checks and normalizations are not listed.
   synchronous: [
     "PUT /projects/{id}/onboarding",
-    "POST /projects/{id}/onboarding/checks",
-    "POST /projects/{id}/requirements/normalizations",
     "POST /projects/{id}/requirements/decisions",
     "POST /requirements/{id}/approve",
   ],
