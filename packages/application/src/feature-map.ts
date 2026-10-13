@@ -1,10 +1,10 @@
 import type { FeatureCoverageMap, PlanStep, Requirement, TestCase } from "@testmaster/contracts";
 import type { EntityDocument } from "@testmaster/persistence";
-import { allEntities, requireEntity, type ServiceContext } from "./context.js";
 import type { DiscoveryService } from "./ai/discovery.js";
 import type { RequirementsService } from "./ai/requirements.js";
 import { flattenSteps, pathMatches, requestPath } from "./ai/source-insights.js";
 import type { SourcesService } from "./ai/sources.js";
+import { allEntities, requireEntity, type ServiceContext } from "./context.js";
 
 const MAX_ROWS = 500;
 const MAX_EVIDENCE = 20;

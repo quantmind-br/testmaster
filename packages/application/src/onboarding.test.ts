@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 import { Application } from "./application.js";
 import { entity } from "./context.js";
-import { OnboardingService, type OnboardingProbes } from "./onboarding.js";
+import { type OnboardingProbes, OnboardingService } from "./onboarding.js";
 
 const apps: Application[] = [];
 const roots: string[] = [];

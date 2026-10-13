@@ -59,10 +59,11 @@ function scanStrings(value: unknown, path: string): void {
         "Onboarding state must not contain credentials; reference a stored secret instead",
         { path },
       );
-  } else if (Array.isArray(value))
-    value.forEach((item, index) => scanStrings(item, `${path}/${index}`));
-  else if (value && typeof value === "object")
+  } else if (Array.isArray(value)) {
+    for (const [index, item] of value.entries()) scanStrings(item, `${path}/${index}`);
+  } else if (value && typeof value === "object") {
     for (const [key, child] of Object.entries(value)) scanStrings(child, `${path}/${key}`);
+  }
 }
 
 /** A target the network policy accepted, with the address the probe must connect to. */
