@@ -3306,11 +3306,74 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/scheduling/scheduler.test.ts::OPS-016 OPS-017 a cron schedule fires once per occurrence and keeps the planned instant on the firing",
+        "apps/server/src/lists-schedules.test.ts::OPS-016 OPS-017 the firing history route pages what the scheduler decided and links the batch each firing admitted",
+        "validation/journeys/schedule-helpers.test.ts::OPS-016 OPS-018 REQ-035 J13 schedule part: a New York schedule skips the spring-forward gap, forbids overlap and admits a new batch with one Run per revision",
+        "validation/journeys/lists-schedules.portal.test.ts::OPS-017 OPS-019 the firing history shows a real scheduled firing with its outcome and batch",
+        "packages/application/src/scheduling/scheduler.test.ts::OPS-017 overlap forbid records an overlap firing and starts nothing while the previous batch runs",
+        "packages/application/src/scheduling/scheduler.test.ts::OPS-016 the unique key (schedule, revision, instant) refuses a second firing for the same occurrence",
+        "packages/application/src/scheduling/scheduler.test.ts::OPS-016 a DST gap skips the nonexistent local time by default and after_gap fires once when the gap ends",
+        "packages/application/src/scheduling/scheduler.test.ts::OPS-017 skip records one aggregated misfire for a missed window and dispatches nothing"
+      ],
+      "oracle": [
+        "Each schedule occurrence creates a new BatchRun with one Run per revision and cell, and the firing records the planned instant, the real decision time, the overlap, DST and misfire outcome, and the admitted batch.",
+        "A skipped, overlapped or misfired occurrence creates no batch, and the same occurrence never creates two."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s6/009-s6-pnpm-test-final2/output.log",
+        "validation/results/m4-acceptance/s6/007-s6-test-postgres-merged/output.log",
+        "validation/results/m4-acceptance/s6/010-s6-test-postgres-parity-final/output.log"
+      ],
+      "code": [
+        "packages/application/src/scheduling",
+        "packages/persistence/migrations/sqlite/0014_lists_schedules.sql",
+        "packages/persistence/migrations/postgres/0014_lists_schedules.sql",
+        "apps/server/src/routes/schedules.ts",
+        "apps/cli/src/schedules.ts",
+        "packages/contracts/src/m4/schedules.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/scheduling/scheduler.test.ts::OPS-016 OPS-017 a cron schedule fires once per occurrence and keeps the planned instant on the firing",
+          "apps/server/src/lists-schedules.test.ts::OPS-016 OPS-017 the firing history route pages what the scheduler decided and links the batch each firing admitted",
+          "validation/journeys/schedule-helpers.test.ts::OPS-016 OPS-018 REQ-035 J13 schedule part: a New York schedule skips the spring-forward gap, forbids overlap and admits a new batch with one Run per revision",
+          "validation/journeys/lists-schedules.portal.test.ts::OPS-017 OPS-019 the firing history shows a real scheduled firing with its outcome and batch"
+        ],
+        "negative": [
+          "packages/application/src/scheduling/scheduler.test.ts::OPS-017 overlap forbid records an overlap firing and starts nothing while the previous batch runs",
+          "packages/application/src/scheduling/scheduler.test.ts::OPS-016 the unique key (schedule, revision, instant) refuses a second firing for the same occurrence",
+          "packages/application/src/scheduling/scheduler.test.ts::OPS-016 a DST gap skips the nonexistent local time by default and after_gap fires once when the gap ends",
+          "packages/application/src/scheduling/scheduler.test.ts::OPS-017 skip records one aggregated misfire for a missed window and dispatches nothing"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/schedule-helpers.test.ts",
+            "assertion": "expect(evidence.first.runIds).toHaveLength(2);"
+          },
+          {
+            "path": "validation/journeys/schedule-helpers.test.ts",
+            "assertion": "expect(new Set(evidence.first.revisionIds).size).toBe(2);"
+          },
+          {
+            "path": "validation/journeys/schedule-helpers.test.ts",
+            "assertion": "expect(evidence.second.batchId).not.toBe(evidence.first.batchId);"
+          },
+          {
+            "path": "validation/journeys/schedule-helpers.test.ts",
+            "assertion": "expect(evidence.overlap).toMatchObject({ state: \"overlap\", batchId: null });"
+          },
+          {
+            "path": "apps/server/src/lists-schedules.test.ts",
+            "assertion": "expect(body.items[0]?.batchId).toMatch(/^bat_/);"
+          },
+          {
+            "path": "packages/application/src/scheduling/scheduler.test.ts",
+            "assertion": "expect(gap).toMatchObject({ state: \"skipped\", scheduledAt: \"2026-03-08T07:00:00.000Z\" });"
+          }
+        ]
+      }
     },
     {
       "id": "INT-030",
@@ -5672,11 +5735,75 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M4",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/j09-cross-project-list.portal.test.ts::J09 UX-007 UX-041 UX-042 UX-043 REQ-034 a cross-project list with homonymous staging freezes expansion and mapping, declares a revoked project and never lets A's grant reach B",
+        "packages/application/src/suites.test.ts::REQ-034 a grant on one project does not authorize another project in a list",
+        "validation/journeys/lists-schedules.portal.test.ts::UX-043 J09 revoking project B before the next dispatch is declared, never silently omitted, and the confirmed subset leaves a failed gate"
+      ],
+      "oracle": [
+        "In the real portal on the server profile, a list over two projects with homonymous staging environments freezes the expansion, runs grouped two and two by environment revision with distinct targets and secret references, and a revoked project is declared with a 403 until its exclusion is confirmed.",
+        "The confirmed subset leaves accepted 2 of requested 3, the not-dispatched entry named, a failed gate, and a grant on A never authorizes B."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s6/009-s6-pnpm-test-final2/output.log",
+        "validation/results/m4-acceptance/s6/007-s6-test-postgres-merged/output.log",
+        "validation/results/m4-acceptance/s6/010-s6-test-postgres-parity-final/output.log",
+        "validation/results/m4-acceptance/s6/007-s6-test-postgres-merged/created/validation/results/j09-cross-project-list.json"
+      ],
+      "code": [
+        "packages/application/src/suites.ts",
+        "apps/server/src/routes/suites.ts",
+        "apps/cli/src/lists.ts",
+        "apps/mcp/src/server.ts",
+        "packages/contracts/src/m4/lists.ts",
+        "apps/web/src/routes/lists.tsx",
+        "apps/web/src/routes/schedules.tsx",
+        "apps/web/src/routes/automation-shared.tsx",
+        "validation/journeys/j09-cross-project-list.portal.test.ts",
+        "validation/journeys/automation-world.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/j09-cross-project-list.portal.test.ts::J09 UX-007 UX-041 UX-042 UX-043 REQ-034 a cross-project list with homonymous staging freezes expansion and mapping, declares a revoked project and never lets A's grant reach B"
+        ],
+        "negative": [
+          "validation/journeys/j09-cross-project-list.portal.test.ts::J09 UX-007 UX-041 UX-042 UX-043 REQ-034 a cross-project list with homonymous staging freezes expansion and mapping, declares a revoked project and never lets A's grant reach B",
+          "packages/application/src/suites.test.ts::REQ-034 a grant on one project does not authorize another project in a list",
+          "validation/journeys/lists-schedules.portal.test.ts::UX-043 J09 revoking project B before the next dispatch is declared, never silently omitted, and the confirmed subset leaves a failed gate"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/j09-cross-project-list.portal.test.ts",
+            "assertion": "expect(first?.environmentRevisionId).not.toBe(second?.environmentRevisionId);"
+          },
+          {
+            "path": "validation/journeys/j09-cross-project-list.portal.test.ts",
+            "assertion": "expect([...byEnvironment.values()].map((group) => group.length)).toEqual([2, 2]);"
+          },
+          {
+            "path": "validation/journeys/j09-cross-project-list.portal.test.ts",
+            "assertion": "expect(refsB?.secretRefs).toEqual([world.b.secretId]);"
+          },
+          {
+            "path": "validation/journeys/j09-cross-project-list.portal.test.ts",
+            "assertion": "expect(blocked.status).toBe(403);"
+          },
+          {
+            "path": "validation/journeys/j09-cross-project-list.portal.test.ts",
+            "assertion": "expect(blocked.text).not.toContain(\"batchId\");"
+          },
+          {
+            "path": "validation/journeys/j09-cross-project-list.portal.test.ts",
+            "assertion": "expect(partial.aggregate.gate).toBe(\"failed\");"
+          },
+          {
+            "path": "validation/journeys/j09-cross-project-list.portal.test.ts",
+            "assertion": "expect(deniedList.status).toBe(403);"
+          }
+        ]
+      },
+      "note": "Chromium only; no human screen-reader session; runs target unreachable loopback origins so only admission and freezing are observed."
     },
     {
       "id": "J10",
@@ -8464,11 +8591,106 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M4",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/lists-schedules.portal.test.ts::REQ-034 UX-041 UX-042 a cross-project list names an explicit staging per project, shows what it expands to and runs one frozen batch",
+        "validation/journeys/lists-schedules.portal.test.ts::UX-043 J09 revoking project B before the next dispatch is declared, never silently omitted, and the confirmed subset leaves a failed gate",
+        "validation/journeys/lists-schedules.portal.test.ts::REQ-035 UX-049 OPS-016 a schedule previews its next ten occurrences, refuses an unknown time zone and saves a revision",
+        "validation/journeys/lists-schedules.portal.test.ts::OPS-017 OPS-019 the firing history shows a real scheduled firing with its outcome and batch",
+        "apps/cli/src/lists-schedules.test.ts::REQ-034 UX-042 suite run admits one batch per idempotency key and refuses a partial list until its exclusions are confirmed",
+        "apps/cli/src/lists-schedules.test.ts::REQ-035 OPS-016 schedule commands preview, create, edit, pause, resume, list history and archive",
+        "apps/mcp/src/lists.test.ts::REQ-034 testmaster_run_tests with a suiteId admits one frozen batch for the list and replays an idempotency key",
+        "apps/server/src/lists-schedules.test.ts::REQ-034 UX-041 running a list over HTTP admits one frozen batch per idempotency key and replays it after the list changed",
+        "packages/application/src/scheduling/scheduler.pg.test.ts::OPS-016 OPS-017 three scheduler processes with a killed leader and flapping leases never fire an occurrence twice on PostgreSQL",
+        "validation/journeys/j09-cross-project-list.portal.test.ts::J09 UX-007 UX-041 UX-042 UX-043 REQ-034 a cross-project list with homonymous staging freezes expansion and mapping, declares a revoked project and never lets A's grant reach B",
+        "validation/journeys/lists-schedules.portal.test.ts::UX-005 UX-042 a viewer reads lists but every action explains why it is unavailable",
+        "validation/journeys/lists-schedules.portal.test.ts::UX-005 a viewer reads schedules but cannot change them",
+        "apps/mcp/src/lists.test.ts::REQ-034 UX-042 testmaster_run_tests refuses lists without execution scope, mixed selections, unsupported modes and a missing environment",
+        "apps/server/src/lists-schedules.test.ts::UX-042 a token restricted to one project gets a forbidden answer naming the exclusion and a confirmed subset declares what was dropped",
+        "packages/application/src/scheduling/scheduler.test.ts::OPS-017 overlap forbid records an overlap firing and starts nothing while the previous batch runs",
+        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-019 losing access to the scheduled project blocks the firing with owner_revoked instead of running a reduced list",
+        "apps/cli/src/lists-schedules.test.ts::REQ-035 OPS-016 schedule commands refuse an unknown timezone, a bad cron and a stale version without storing anything",
+        "validation/journeys/lists-schedules.portal.test.ts::UX-051 UX-052 every list and schedule page is axe clean on desktop and reflows at 320 px",
+        "validation/journeys/lists-schedules.portal.test.ts::UX-051 a list can be run with the keyboard alone and the focus ring is visible"
+      ],
+      "oracle": [
+        "Cross-project lists and schedules work end to end through the portal, HTTP, CLI and MCP: a list freezes its expansion and mapping, declares anything dropped and keeps the gate failed, and a schedule fires once per occurrence under DST, misfire, overlap, dependency and ownership rules with a visible firing history.",
+        "The pages are accessible (axe-clean on desktop and 320 px, keyboard-only), viewers see disabled actions with reasons, and the portal calls only catalog /v1 routes."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s6/009-s6-pnpm-test-final2/output.log",
+        "validation/results/m4-acceptance/s6/007-s6-test-postgres-merged/output.log",
+        "validation/results/m4-acceptance/s6/010-s6-test-postgres-parity-final/output.log"
+      ],
+      "code": [
+        "packages/application/src/suites.ts",
+        "apps/server/src/routes/suites.ts",
+        "apps/cli/src/lists.ts",
+        "apps/mcp/src/server.ts",
+        "packages/contracts/src/m4/lists.ts",
+        "packages/application/src/scheduling",
+        "packages/persistence/migrations/sqlite/0014_lists_schedules.sql",
+        "packages/persistence/migrations/postgres/0014_lists_schedules.sql",
+        "apps/server/src/routes/schedules.ts",
+        "apps/cli/src/schedules.ts",
+        "packages/contracts/src/m4/schedules.ts",
+        "apps/web/src/routes/lists.tsx",
+        "apps/web/src/routes/schedules.tsx",
+        "apps/web/src/routes/automation-shared.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/lists-schedules.portal.test.ts::REQ-034 UX-041 UX-042 a cross-project list names an explicit staging per project, shows what it expands to and runs one frozen batch",
+          "validation/journeys/lists-schedules.portal.test.ts::UX-043 J09 revoking project B before the next dispatch is declared, never silently omitted, and the confirmed subset leaves a failed gate",
+          "validation/journeys/lists-schedules.portal.test.ts::REQ-035 UX-049 OPS-016 a schedule previews its next ten occurrences, refuses an unknown time zone and saves a revision",
+          "validation/journeys/lists-schedules.portal.test.ts::OPS-017 OPS-019 the firing history shows a real scheduled firing with its outcome and batch",
+          "apps/cli/src/lists-schedules.test.ts::REQ-034 UX-042 suite run admits one batch per idempotency key and refuses a partial list until its exclusions are confirmed",
+          "apps/cli/src/lists-schedules.test.ts::REQ-035 OPS-016 schedule commands preview, create, edit, pause, resume, list history and archive",
+          "apps/mcp/src/lists.test.ts::REQ-034 testmaster_run_tests with a suiteId admits one frozen batch for the list and replays an idempotency key",
+          "apps/server/src/lists-schedules.test.ts::REQ-034 UX-041 running a list over HTTP admits one frozen batch per idempotency key and replays it after the list changed",
+          "packages/application/src/scheduling/scheduler.pg.test.ts::OPS-016 OPS-017 three scheduler processes with a killed leader and flapping leases never fire an occurrence twice on PostgreSQL",
+          "validation/journeys/j09-cross-project-list.portal.test.ts::J09 UX-007 UX-041 UX-042 UX-043 REQ-034 a cross-project list with homonymous staging freezes expansion and mapping, declares a revoked project and never lets A's grant reach B"
+        ],
+        "negative": [
+          "validation/journeys/lists-schedules.portal.test.ts::UX-005 UX-042 a viewer reads lists but every action explains why it is unavailable",
+          "validation/journeys/lists-schedules.portal.test.ts::UX-005 a viewer reads schedules but cannot change them",
+          "apps/mcp/src/lists.test.ts::REQ-034 UX-042 testmaster_run_tests refuses lists without execution scope, mixed selections, unsupported modes and a missing environment",
+          "apps/server/src/lists-schedules.test.ts::UX-042 a token restricted to one project gets a forbidden answer naming the exclusion and a confirmed subset declares what was dropped",
+          "packages/application/src/scheduling/scheduler.test.ts::OPS-017 overlap forbid records an overlap firing and starts nothing while the previous batch runs",
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-019 losing access to the scheduled project blocks the firing with owner_revoked instead of running a reduced list",
+          "apps/cli/src/lists-schedules.test.ts::REQ-035 OPS-016 schedule commands refuse an unknown timezone, a bad cron and a stale version without storing anything"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/lists-schedules.portal.test.ts",
+            "assertion": "expect(await receipt.innerText()).toContain(\"4 of 4 entries were dispatched\");"
+          },
+          {
+            "path": "validation/journeys/lists-schedules.portal.test.ts",
+            "assertion": "expect(frozen.selectionSnapshot.suite.members).toHaveLength(4);"
+          },
+          {
+            "path": "validation/journeys/lists-schedules.portal.test.ts",
+            "assertion": "expect(await run.getAttribute(\"aria-disabled\")).toBe(\"true\");"
+          },
+          {
+            "path": "validation/journeys/lists-schedules.portal.test.ts",
+            "assertion": "expect(dispatched).toContain(\"bat_\");"
+          },
+          {
+            "path": "validation/journeys/lists-schedules.portal.test.ts",
+            "assertion": "expect((await keys.focused()).focusRing).toBe(true);"
+          },
+          {
+            "path": "packages/application/src/scheduling/scheduler.pg.test.ts",
+            "assertion": "expect(batches).toHaveLength(dispatched.length);"
+          },
+          {
+            "path": "validation/journeys/j09-cross-project-list.portal.test.ts",
+            "assertion": "expect(partial.aggregate.gate).toBe(\"failed\");"
+          }
+        ]
+      }
     },
     {
       "id": "M4-07",
@@ -9389,7 +9611,7 @@
         "packages/contracts/src/registries.ts",
         "packages/reporting/src/index.ts"
       ],
-      "note": "Verified core observable distinctions, not product-wide future metrics. Pass basis: orchestrator-reported green unit/docker/live gates and cited existing journey results; no tests rerun for this mapping.",
+      "note": "Verified core observable distinctions, not product-wide future metrics. Pass basis: orchestrator-reported green unit/docker/live gates and cited existing journey results; no tests rerun for this mapping. M4 S6: the CLI unavailable-capability probe moved from schedules (now implemented) to tunnels (M5).",
       "coverage": {
         "positive": [
           "apps/cli/src/cli.test.ts::scaffolds a reusable plan and validates it offline without a database"
@@ -9425,7 +9647,7 @@
           },
           {
             "path": "apps/cli/src/cli.test.ts",
-            "assertion": "expect(result.document.error).toMatchObject({\n      code: \"CAPABILITY_UNAVAILABLE\",\n      details: { capability: \"schedules\", milestone: \"M4\" },\n    });"
+            "assertion": "expect(result.document.error).toMatchObject({\n      code: \"CAPABILITY_UNAVAILABLE\",\n      details: { capability: \"tunnels\", milestone: \"M5\" },\n    });"
           }
         ]
       }
@@ -10556,11 +10778,96 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M4",
       "ownerRole": "Operations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/scheduling/calendar.test.ts::OPS-016 skips the nonexistent hour by default and reports the gap",
+        "packages/application/src/scheduling/calendar.test.ts::OPS-016 fires once when the gap ends if the schedule asks for it",
+        "packages/application/src/scheduling/calendar.test.ts::OPS-016 a repeated hour fires once by default, at the first occurrence",
+        "packages/application/src/scheduling/calendar.test.ts::OPS-016 a repeated hour can fire on the last occurrence or on both",
+        "packages/application/src/scheduling/calendar.test.ts::OPS-016 handles a second zone and a half-hour DST shift",
+        "packages/application/src/scheduling/calendar.test.ts::OPS-016 occurrences are strictly increasing with no duplicate instants across both transitions",
+        "packages/application/src/scheduling/scheduler.test.ts::OPS-016 OPS-017 a cron schedule fires once per occurrence and keeps the planned instant on the firing",
+        "packages/application/src/scheduling/scheduler.test.ts::OPS-016 a DST gap skips the nonexistent local time by default and after_gap fires once when the gap ends",
+        "packages/application/src/scheduling/scheduler.test.ts::OPS-016 a DST fold fires once by default and twice with both, in London as well as New York",
+        "packages/application/src/scheduling/scheduler.pg.test.ts::OPS-016 OPS-017 three scheduler processes with a killed leader and flapping leases never fire an occurrence twice on PostgreSQL",
+        "packages/application/src/scheduling/calendar.test.ts::OPS-016 refuses a schedule that restricts both day-of-month and day-of-week",
+        "packages/application/src/scheduling/calendar.test.ts::OPS-016 refuses malformed cron without guessing",
+        "packages/application/src/scheduling/calendar.test.ts::OPS-016 refuses a cron that never fires within five years",
+        "packages/application/src/scheduling/calendar.test.ts::OPS-016 refuses an unknown timezone instead of falling back to UTC",
+        "packages/application/src/scheduling/scheduler.test.ts::OPS-016 the unique key (schedule, revision, instant) refuses a second firing for the same occurrence",
+        "packages/application/src/scheduling/scheduler.test.ts::OPS-016 an unknown timezone and a changed timezone are handled as data: refused, or a new revision",
+        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-016 a crash after the batch was admitted but before the firing was recorded re-drives the firing onto the same batch"
+      ],
+      "oracle": [
+        "Cron and interval occurrences are computed in the schedule's IANA zone with the recorded tzdata version: a nonexistent local time is skipped (or fires once after the gap), a repeated hour fires once or on both, and independent compilations agree.",
+        "The unique key (schedule, revision, instant) makes a replayed tick, a second leader or a crash after admission unable to fire an occurrence twice, on SQLite and on PostgreSQL with several processes."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s6/009-s6-pnpm-test-final2/output.log",
+        "validation/results/m4-acceptance/s6/007-s6-test-postgres-merged/output.log",
+        "validation/results/m4-acceptance/s6/010-s6-test-postgres-parity-final/output.log"
+      ],
+      "code": [
+        "packages/application/src/scheduling",
+        "packages/persistence/migrations/sqlite/0014_lists_schedules.sql",
+        "packages/persistence/migrations/postgres/0014_lists_schedules.sql",
+        "apps/server/src/routes/schedules.ts",
+        "apps/cli/src/schedules.ts",
+        "packages/contracts/src/m4/schedules.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/scheduling/calendar.test.ts::OPS-016 skips the nonexistent hour by default and reports the gap",
+          "packages/application/src/scheduling/calendar.test.ts::OPS-016 fires once when the gap ends if the schedule asks for it",
+          "packages/application/src/scheduling/calendar.test.ts::OPS-016 a repeated hour fires once by default, at the first occurrence",
+          "packages/application/src/scheduling/calendar.test.ts::OPS-016 a repeated hour can fire on the last occurrence or on both",
+          "packages/application/src/scheduling/calendar.test.ts::OPS-016 handles a second zone and a half-hour DST shift",
+          "packages/application/src/scheduling/calendar.test.ts::OPS-016 occurrences are strictly increasing with no duplicate instants across both transitions",
+          "packages/application/src/scheduling/scheduler.test.ts::OPS-016 OPS-017 a cron schedule fires once per occurrence and keeps the planned instant on the firing",
+          "packages/application/src/scheduling/scheduler.test.ts::OPS-016 a DST gap skips the nonexistent local time by default and after_gap fires once when the gap ends",
+          "packages/application/src/scheduling/scheduler.test.ts::OPS-016 a DST fold fires once by default and twice with both, in London as well as New York",
+          "packages/application/src/scheduling/scheduler.pg.test.ts::OPS-016 OPS-017 three scheduler processes with a killed leader and flapping leases never fire an occurrence twice on PostgreSQL"
+        ],
+        "negative": [
+          "packages/application/src/scheduling/calendar.test.ts::OPS-016 refuses a schedule that restricts both day-of-month and day-of-week",
+          "packages/application/src/scheduling/calendar.test.ts::OPS-016 refuses malformed cron without guessing",
+          "packages/application/src/scheduling/calendar.test.ts::OPS-016 refuses a cron that never fires within five years",
+          "packages/application/src/scheduling/calendar.test.ts::OPS-016 refuses an unknown timezone instead of falling back to UTC",
+          "packages/application/src/scheduling/scheduler.test.ts::OPS-016 the unique key (schedule, revision, instant) refuses a second firing for the same occurrence",
+          "packages/application/src/scheduling/scheduler.test.ts::OPS-016 an unknown timezone and a changed timezone are handled as data: refused, or a new revision",
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-016 a crash after the batch was admitted but before the firing was recorded re-drives the firing onto the same batch"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/scheduling/calendar.test.ts",
+            "assertion": "expect(reason(() => parseCron(\"0 9 1 * mon\"))).toBe(\"cron_day_semantics_ambiguous\");"
+          },
+          {
+            "path": "packages/application/src/scheduling/scheduler.test.ts",
+            "assertion": "expect(dispatched(w, skip.id)).toHaveLength(0);"
+          },
+          {
+            "path": "packages/application/src/scheduling/scheduler.test.ts",
+            "assertion": "expect(gap).toMatchObject({ state: \"skipped\", scheduledAt: \"2026-03-08T07:00:00.000Z\" });"
+          },
+          {
+            "path": "packages/application/src/scheduling/scheduler.test.ts",
+            "assertion": "expect(store.insertFiring({ ...existing, id: `sfr_${crypto.randomUUID()}` })).toBe(false);"
+          },
+          {
+            "path": "packages/application/src/scheduling/scheduler-policies.test.ts",
+            "assertion": "expect(dispatched(w, schedule.id)[0]?.batchId).toBe(admitted?.id);"
+          },
+          {
+            "path": "packages/application/src/scheduling/scheduler.pg.test.ts",
+            "assertion": "expect(new Set(firings.map((row) => row.fire_instant)).size).toBe(firings.length);"
+          },
+          {
+            "path": "packages/application/src/scheduling/scheduler.pg.test.ts",
+            "assertion": "expect(batches).toHaveLength(dispatched.length);"
+          }
+        ]
+      }
     },
     {
       "id": "OPS-017",
@@ -10568,11 +10875,83 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M4",
       "ownerRole": "Operations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/scheduling/scheduler.test.ts::OPS-017 fire_once runs one representative of the missed window and still records the rest as missed",
+        "packages/application/src/scheduling/scheduler.test.ts::OPS-017 catch_up replays at most three occurrences inside its window and a week-long outage creates a bounded number of rows",
+        "packages/application/src/scheduling/scheduler.test.ts::OPS-017 skip records one aggregated misfire for a missed window and dispatches nothing",
+        "packages/application/src/scheduling/scheduler.test.ts::OPS-017 a clock that moves back never fires again and a clock that jumps forward does not avalanche",
+        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 the daily firing budget skips further occurrences and a run of failed gates pauses the schedule",
+        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 an expired schedule pauses with a reason and stops firing",
+        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 a changed secret pauses a schedule whose policy says pause and a use_current schedule keeps running",
+        "validation/journeys/lists-schedules.portal.test.ts::OPS-017 OPS-019 the firing history shows a real scheduled firing with its outcome and batch",
+        "apps/server/src/lists-schedules.test.ts::OPS-016 OPS-017 the firing history route pages what the scheduler decided and links the batch each firing admitted",
+        "packages/application/src/scheduling/scheduler.pg.test.ts::OPS-016 OPS-017 three scheduler processes with a killed leader and flapping leases never fire an occurrence twice on PostgreSQL",
+        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-018 a firing waits when no worker is live and is recorded as a misfire after its grace period"
+      ],
+      "oracle": [
+        "A missed window is recorded as one aggregated misfire (skip), one representative (fire_once) or at most three catch-up firings inside the window; a week-long outage creates a bounded number of rows, a clock moving back never refires and a clock jumping forward does not avalanche.",
+        "The daily budget, schedule expiry, failed-gate streaks and a changed secret pause or skip with a recorded reason, and the firing history shows what was decided and which batch it admitted."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s6/009-s6-pnpm-test-final2/output.log",
+        "validation/results/m4-acceptance/s6/007-s6-test-postgres-merged/output.log",
+        "validation/results/m4-acceptance/s6/010-s6-test-postgres-parity-final/output.log"
+      ],
+      "code": [
+        "packages/application/src/scheduling",
+        "packages/persistence/migrations/sqlite/0014_lists_schedules.sql",
+        "packages/persistence/migrations/postgres/0014_lists_schedules.sql",
+        "apps/server/src/routes/schedules.ts",
+        "apps/cli/src/schedules.ts",
+        "packages/contracts/src/m4/schedules.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/scheduling/scheduler.test.ts::OPS-017 fire_once runs one representative of the missed window and still records the rest as missed",
+          "packages/application/src/scheduling/scheduler.test.ts::OPS-017 catch_up replays at most three occurrences inside its window and a week-long outage creates a bounded number of rows",
+          "packages/application/src/scheduling/scheduler.test.ts::OPS-017 skip records one aggregated misfire for a missed window and dispatches nothing",
+          "packages/application/src/scheduling/scheduler.test.ts::OPS-017 a clock that moves back never fires again and a clock that jumps forward does not avalanche",
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 the daily firing budget skips further occurrences and a run of failed gates pauses the schedule",
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 an expired schedule pauses with a reason and stops firing",
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 a changed secret pauses a schedule whose policy says pause and a use_current schedule keeps running",
+          "validation/journeys/lists-schedules.portal.test.ts::OPS-017 OPS-019 the firing history shows a real scheduled firing with its outcome and batch",
+          "apps/server/src/lists-schedules.test.ts::OPS-016 OPS-017 the firing history route pages what the scheduler decided and links the batch each firing admitted",
+          "packages/application/src/scheduling/scheduler.pg.test.ts::OPS-016 OPS-017 three scheduler processes with a killed leader and flapping leases never fire an occurrence twice on PostgreSQL"
+        ],
+        "negative": [
+          "packages/application/src/scheduling/scheduler.test.ts::OPS-017 a clock that moves back never fires again and a clock that jumps forward does not avalanche",
+          "packages/application/src/scheduling/scheduler.test.ts::OPS-017 skip records one aggregated misfire for a missed window and dispatches nothing",
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-018 a firing waits when no worker is live and is recorded as a misfire after its grace period",
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 the daily firing budget skips further occurrences and a run of failed gates pauses the schedule"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/scheduling/scheduler.test.ts",
+            "assertion": "missedCount: 6,"
+          },
+          {
+            "path": "packages/application/src/scheduling/scheduler.test.ts",
+            "assertion": "expect(jumped.length - count).toBeLessThanOrEqual(2);"
+          },
+          {
+            "path": "packages/application/src/scheduling/scheduler-policies.test.ts",
+            "assertion": "expect(dispatched(w, budget.id)).toHaveLength(1);"
+          },
+          {
+            "path": "apps/server/src/lists-schedules.test.ts",
+            "assertion": "expect(body.items[0]?.batchId).toMatch(/^bat_/);"
+          },
+          {
+            "path": "validation/journeys/lists-schedules.portal.test.ts",
+            "assertion": "expect(dispatched).toContain(\"bat_\");"
+          },
+          {
+            "path": "packages/application/src/scheduling/scheduler.pg.test.ts",
+            "assertion": "expect(new Set(firings.map((row) => row.fire_instant)).size).toBe(firings.length);"
+          }
+        ]
+      }
     },
     {
       "id": "OPS-018",
@@ -10580,11 +10959,70 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M4",
       "ownerRole": "Operations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/scheduling/scheduler.test.ts::OPS-017 overlap forbid records an overlap firing and starts nothing while the previous batch runs",
+        "packages/application/src/scheduling/scheduler.test.ts::OPS-017 overlap replace cancels the running batch durably and starts the new one after it stopped",
+        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-018 a dependent schedule waits for its upstream gate and only runs when the condition holds",
+        "validation/journeys/lists-schedules.portal.test.ts::OPS-018 OPS-019 pausing asks for confirmation, records the pause and stops the preview; resuming restores it",
+        "validation/journeys/schedule-helpers.test.ts::OPS-016 OPS-018 REQ-035 J13 schedule part: a New York schedule skips the spring-forward gap, forbids overlap and admits a new batch with one Run per revision",
+        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-018 dependency cycles, including self dependencies, are refused with a named reason",
+        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-018 a dependency that never runs times out as blocked and an upstream that did not dispatch skips the dependent",
+        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-018 a firing waits when no worker is live and is recorded as a misfire after its grace period"
+      ],
+      "oracle": [
+        "Overlap forbid records an overlap firing and starts nothing while the previous batch runs, allow keeps starting batches, and replace cancels the running batch durably before starting the new one.",
+        "A dependent schedule waits for its upstream gate and runs only when the condition holds; cycles, including self dependencies, a missing upstream run and an upstream that did not dispatch are refused or skipped with a named reason."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s6/009-s6-pnpm-test-final2/output.log",
+        "validation/results/m4-acceptance/s6/007-s6-test-postgres-merged/output.log",
+        "validation/results/m4-acceptance/s6/010-s6-test-postgres-parity-final/output.log"
+      ],
+      "code": [
+        "packages/application/src/scheduling",
+        "packages/persistence/migrations/sqlite/0014_lists_schedules.sql",
+        "packages/persistence/migrations/postgres/0014_lists_schedules.sql",
+        "apps/server/src/routes/schedules.ts",
+        "apps/cli/src/schedules.ts",
+        "packages/contracts/src/m4/schedules.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/scheduling/scheduler.test.ts::OPS-017 overlap forbid records an overlap firing and starts nothing while the previous batch runs",
+          "packages/application/src/scheduling/scheduler.test.ts::OPS-017 overlap replace cancels the running batch durably and starts the new one after it stopped",
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-018 a dependent schedule waits for its upstream gate and only runs when the condition holds",
+          "validation/journeys/lists-schedules.portal.test.ts::OPS-018 OPS-019 pausing asks for confirmation, records the pause and stops the preview; resuming restores it",
+          "validation/journeys/schedule-helpers.test.ts::OPS-016 OPS-018 REQ-035 J13 schedule part: a New York schedule skips the spring-forward gap, forbids overlap and admits a new batch with one Run per revision"
+        ],
+        "negative": [
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-018 dependency cycles, including self dependencies, are refused with a named reason",
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-018 a dependency that never runs times out as blocked and an upstream that did not dispatch skips the dependent",
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-018 a firing waits when no worker is live and is recorded as a misfire after its grace period"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/scheduling/scheduler.test.ts",
+            "assertion": "expect(overlapped).toMatchObject({ reasonCode: \"schedule_overlap\", batchId: null });"
+          },
+          {
+            "path": "packages/application/src/scheduling/scheduler.test.ts",
+            "assertion": "expect(dispatched(w, allow.id)).toHaveLength(2);"
+          },
+          {
+            "path": "packages/application/src/scheduling/scheduler-policies.test.ts",
+            "assertion": ").toBe(\"dependency_cycle\");"
+          },
+          {
+            "path": "validation/journeys/schedule-helpers.test.ts",
+            "assertion": "expect(evidence.overlap).toMatchObject({ state: \"overlap\", batchId: null });"
+          },
+          {
+            "path": "validation/journeys/schedule-helpers.test.ts",
+            "assertion": "expect(evidence.first.runIds).toHaveLength(2);"
+          }
+        ]
+      }
     },
     {
       "id": "OPS-019",
@@ -10592,11 +11030,80 @@
       "sourceFile": "specs/08-operations.md",
       "milestone": "M4",
       "ownerRole": "Operations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-019 two schedulers with a flapping lease never start the same occurrence twice",
+        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-019 a stale leader that loses the lease between planning and admission starts nothing and the new leader finishes the firing once",
+        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-019 a schedule whose owner was removed or lost its token pauses with owner_revoked and never runs as an administrator",
+        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-019 resuming needs a valid owner and does not replay the backlog accumulated while paused",
+        "packages/application/src/scheduling/scheduler.pg.test.ts::OPS-016 OPS-017 three scheduler processes with a killed leader and flapping leases never fire an occurrence twice on PostgreSQL",
+        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-019 losing access to the scheduled project blocks the firing with owner_revoked instead of running a reduced list",
+        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-019 revoking a service credential before the firing blocks the execution instead of running without it"
+      ],
+      "oracle": [
+        "A database lease with a fencing token elects one scheduler; two schedulers with flapping leadership, a stale leader and a killed leader across PostgreSQL processes never start the same occurrence twice, and the fence is re-checked inside the admission transaction.",
+        "A schedule whose owner was removed, lost a token, lost project access or whose service credential was revoked pauses or blocks with owner_revoked and never runs as an administrator or with a reduced list. SCIM as a revocation source is M6."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s6/009-s6-pnpm-test-final2/output.log",
+        "validation/results/m4-acceptance/s6/007-s6-test-postgres-merged/output.log",
+        "validation/results/m4-acceptance/s6/010-s6-test-postgres-parity-final/output.log"
+      ],
+      "code": [
+        "packages/application/src/scheduling",
+        "packages/persistence/migrations/sqlite/0014_lists_schedules.sql",
+        "packages/persistence/migrations/postgres/0014_lists_schedules.sql",
+        "apps/server/src/routes/schedules.ts",
+        "apps/cli/src/schedules.ts",
+        "packages/contracts/src/m4/schedules.ts"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-019 two schedulers with a flapping lease never start the same occurrence twice",
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-019 a stale leader that loses the lease between planning and admission starts nothing and the new leader finishes the firing once",
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-019 a schedule whose owner was removed or lost its token pauses with owner_revoked and never runs as an administrator",
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-019 resuming needs a valid owner and does not replay the backlog accumulated while paused",
+          "packages/application/src/scheduling/scheduler.pg.test.ts::OPS-016 OPS-017 three scheduler processes with a killed leader and flapping leases never fire an occurrence twice on PostgreSQL"
+        ],
+        "negative": [
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-019 losing access to the scheduled project blocks the firing with owner_revoked instead of running a reduced list",
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-019 revoking a service credential before the firing blocks the execution instead of running without it",
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-019 a stale leader that loses the lease between planning and admission starts nothing and the new leader finishes the firing once"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/scheduling/scheduler-policies.test.ts",
+            "assertion": "expect(fire).toMatchObject({ state: \"blocked\", reasonCode: \"owner_revoked\", batchId: null });"
+          },
+          {
+            "path": "packages/application/src/scheduling/scheduler-policies.test.ts",
+            "assertion": "expect(view).toMatchObject({ state: \"paused\", pauseReason: \"owner_revoked\", nextFireAt: null });"
+          },
+          {
+            "path": "packages/application/src/scheduling/scheduler-policies.test.ts",
+            "assertion": "expect(blocked.leader).toBe(false);"
+          },
+          {
+            "path": "packages/application/src/scheduling/scheduler-policies.test.ts",
+            "assertion": "expect(second).toMatchObject({ leader: true, fence: 2 });"
+          },
+          {
+            "path": "packages/application/src/scheduling/scheduler.pg.test.ts",
+            "assertion": "expect(batches).toHaveLength(dispatched.length);"
+          }
+        ]
+      },
+      "note": "Revocation is detected from the authority the scheduler can observe (membership, token, project access, credential); SCIM-driven revocation is deferred to M6.",
+      "deferred": [
+        {
+          "milestone": "M6",
+          "scope": "SCIM as a source of owner revocation for schedules",
+          "specQuote": {
+            "path": "specs/08-operations.md",
+            "text": "SCIM é apenas uma das origens de revogação e chega em M6"
+          }
+        }
+      ]
     },
     {
       "id": "OPS-020",
@@ -11030,7 +11537,8 @@
         "packages/persistence/src/persistence.test.ts::OPS-025 replays post-backup consent and approval revocations and invalidates server tokens",
         "packages/persistence/src/persistence.test.ts::OPS-025 keeps a consent revoked in the backup even when the live ledger regranted it",
         "packages/persistence/src/persistence.test.ts::OPS-025 declares an unreadable post-backup ledger and keeps the restore suspended",
-        "packages/persistence/src/persistence.test.ts::backs up WAL consistently and restores in suspended isolation preserving IDs"
+        "packages/persistence/src/persistence.test.ts::backs up WAL consistently and restores in suspended isolation preserving IDs",
+        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-025 the scheduler does nothing while the restored copy is isolated and resumes when it is released"
       ],
       "oracle": [
         "Revoked secrets, images, consents and approvals cannot resurrect after restore; jobs and outbox are non-dispatchable and server tokens are invalidated; terminal identities are retained; the restore process opens no outbound connection and dispatches no outbox message; when the post-backup ledger cannot be read the restore declares postBackupLedger unavailable, stays suspended and review --apply refuses without --ledger-loss-accepted."
@@ -11043,14 +11551,17 @@
         "validation/journeys/network-recorder.ts",
         "validation/journeys/m1-recovery.docker.test.ts",
         "packages/persistence/src/persistence.test.ts",
-        "packages/application/src/release.test.ts"
+        "packages/application/src/release.test.ts",
+        "validation/results/m4-acceptance/s6/009-s6-pnpm-test-final2/output.log"
       ],
       "code": [
         "packages/application/src/backups.ts",
         "packages/persistence/src/database.ts",
-        "apps/cli/src/backups.ts"
+        "apps/cli/src/backups.ts",
+        "packages/application/src/scheduling/scheduler.ts",
+        "packages/application/src/operations-state.ts"
       ],
-      "note": "Verified for the local single-user profile. Restore replays secret, image, retention, deletion, consent and approval revocations from the live ledger (it only tightens state, never reinstates). When the live ledger is unreadable or the live database has no workspace row, restore declares postBackupLedger=unavailable and exclusionsGuaranteed=false, writes restore_review=post_backup_ledger_unavailable, and review --apply requires --ledger-loss-accepted in addition to --revocations-confirmed. Review still opens admission only after the audited operator decision. A remote, lost-host ledger remains unavailable (M4). Grants are consents in the local schema; no separate grants table exists.",
+      "note": "Verified for the local single-user profile. Restore replays secret, image, retention, deletion, consent and approval revocations from the live ledger (it only tightens state, never reinstates). When the live ledger is unreadable or the live database has no workspace row, restore declares postBackupLedger=unavailable and exclusionsGuaranteed=false, writes restore_review=post_backup_ledger_unavailable, and review --apply requires --ledger-loss-accepted in addition to --revocations-confirmed. Review still opens admission only after the audited operator decision. A remote, lost-host ledger remains unavailable (M4). Grants are consents in the local schema; no separate grants table exists. M4 S6: the scheduler controller does nothing while operational_state restore:isolated is set and resumes when it is released.",
       "coverage": {
         "positive": [
           "validation/journeys/crash-recovery.docker.test.ts::J17 backup during active Docker execution is coherent, incomplete objects are explicit and restore merges later revocation",
@@ -11058,14 +11569,16 @@
           "validation/journeys/m1-recovery.docker.test.ts::J17 backup restores to an isolated suspended destination with retained identities and no replayed effects",
           "packages/application/src/release.test.ts::carries image revocations into a restored data directory and keeps the restore suspended",
           "packages/application/src/release.test.ts::carries consent revocations made after the backup into the restored directory",
-          "packages/persistence/src/persistence.test.ts::OPS-025 replays post-backup consent and approval revocations and invalidates server tokens"
+          "packages/persistence/src/persistence.test.ts::OPS-025 replays post-backup consent and approval revocations and invalidates server tokens",
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-025 the scheduler does nothing while the restored copy is isolated and resumes when it is released"
         ],
         "negative": [
           "validation/journeys/recovery-controls.docker.test.ts::OPS-025 restore requires explicit admin review and new Attempt decision without automatic effects",
           "validation/journeys/recovery-controls.docker.test.ts::OPS-025 isolated restore opens no outbound connection and dispatches no outbox message",
           "packages/application/src/release.test.ts::declares an unverifiable post-backup ledger and keeps the restore suspended",
           "packages/persistence/src/persistence.test.ts::OPS-025 keeps a consent revoked in the backup even when the live ledger regranted it",
-          "packages/persistence/src/persistence.test.ts::OPS-025 declares an unreadable post-backup ledger and keeps the restore suspended"
+          "packages/persistence/src/persistence.test.ts::OPS-025 declares an unreadable post-backup ledger and keeps the restore suspended",
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-025 the scheduler does nothing while the restored copy is isolated and resumes when it is released"
         ],
         "criticalAssertions": [
           {
@@ -11095,6 +11608,10 @@
           {
             "path": "packages/persistence/src/persistence.test.ts",
             "assertion": "expect(target.get(\"SELECT COUNT(*) AS n FROM server_tokens\")?.n).toBe(0);"
+          },
+          {
+            "path": "packages/application/src/scheduling/scheduler-policies.test.ts",
+            "assertion": "expect(held).toMatchObject({ isolated: true, leader: false, claimed: 0, dispatched: 0 });"
           }
         ]
       },
@@ -14077,11 +14594,90 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M4",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/suites.test.ts::REQ-034 UX-041 running a list freezes expansion, revisions and mapping on the BatchRun and later edits never alter it",
+        "packages/application/src/suites.test.ts::REQ-034 UX-042 a confirmed subset dispatches the allowed part and the BatchRun declares what was left out with a failed gate",
+        "apps/server/src/lists-schedules.test.ts::REQ-034 UX-041 running a list over HTTP admits one frozen batch per idempotency key and replays it after the list changed",
+        "apps/cli/src/lists-schedules.test.ts::REQ-034 UX-042 suite run admits one batch per idempotency key and refuses a partial list until its exclusions are confirmed",
+        "apps/mcp/src/lists.test.ts::REQ-034 UX-042 testmaster_run_tests refuses a partial list until the dropped project is confirmed and then declares it",
+        "validation/journeys/lists-schedules.portal.test.ts::REQ-034 UX-041 UX-042 a cross-project list names an explicit staging per project, shows what it expands to and runs one frozen batch",
+        "validation/journeys/j09-cross-project-list.portal.test.ts::J09 UX-007 UX-041 UX-042 UX-043 REQ-034 a cross-project list with homonymous staging freezes expansion and mapping, declares a revoked project and never lets A's grant reach B",
+        "packages/application/src/suites.test.ts::REQ-034 a grant on one project does not authorize another project in a list",
+        "packages/application/src/suites.test.ts::REQ-034 UX-042 a viewer with access to one project cannot run the other and the list never silently shrinks",
+        "packages/application/src/suites.test.ts::REQ-034 UX-042 confirming an exclusion that does not apply or a stale expansion hash is refused",
+        "packages/application/src/suites.test.ts::REQ-034 an archived environment excludes its project and an archived list cannot run",
+        "apps/server/src/lists-schedules.test.ts::UX-042 a token restricted to one project gets a forbidden answer naming the exclusion and a confirmed subset declares what was dropped",
+        "apps/mcp/src/lists.test.ts::REQ-034 UX-042 testmaster_run_tests refuses lists without execution scope, mixed selections, unsupported modes and a missing environment"
+      ],
+      "oracle": [
+        "A list spanning two projects resolves, before dispatch, into members and one environment, target and secret mapping per project, and a run freezes that expansion on the BatchRun through the portal, HTTP, CLI and MCP.",
+        "A caller without a grant on one project never reaches it through the list: the project is a declared exclusion, a stale or inapplicable confirmation is refused, and a grant on A never authorizes B."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s6/009-s6-pnpm-test-final2/output.log",
+        "validation/results/m4-acceptance/s6/007-s6-test-postgres-merged/output.log",
+        "validation/results/m4-acceptance/s6/010-s6-test-postgres-parity-final/output.log"
+      ],
+      "code": [
+        "packages/application/src/suites.ts",
+        "apps/server/src/routes/suites.ts",
+        "apps/cli/src/lists.ts",
+        "apps/mcp/src/server.ts",
+        "packages/contracts/src/m4/lists.ts",
+        "apps/web/src/routes/lists.tsx",
+        "apps/web/src/routes/schedules.tsx",
+        "apps/web/src/routes/automation-shared.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/suites.test.ts::REQ-034 UX-041 running a list freezes expansion, revisions and mapping on the BatchRun and later edits never alter it",
+          "packages/application/src/suites.test.ts::REQ-034 UX-042 a confirmed subset dispatches the allowed part and the BatchRun declares what was left out with a failed gate",
+          "apps/server/src/lists-schedules.test.ts::REQ-034 UX-041 running a list over HTTP admits one frozen batch per idempotency key and replays it after the list changed",
+          "apps/cli/src/lists-schedules.test.ts::REQ-034 UX-042 suite run admits one batch per idempotency key and refuses a partial list until its exclusions are confirmed",
+          "apps/mcp/src/lists.test.ts::REQ-034 UX-042 testmaster_run_tests refuses a partial list until the dropped project is confirmed and then declares it",
+          "validation/journeys/lists-schedules.portal.test.ts::REQ-034 UX-041 UX-042 a cross-project list names an explicit staging per project, shows what it expands to and runs one frozen batch",
+          "validation/journeys/j09-cross-project-list.portal.test.ts::J09 UX-007 UX-041 UX-042 UX-043 REQ-034 a cross-project list with homonymous staging freezes expansion and mapping, declares a revoked project and never lets A's grant reach B"
+        ],
+        "negative": [
+          "packages/application/src/suites.test.ts::REQ-034 a grant on one project does not authorize another project in a list",
+          "packages/application/src/suites.test.ts::REQ-034 UX-042 a viewer with access to one project cannot run the other and the list never silently shrinks",
+          "packages/application/src/suites.test.ts::REQ-034 UX-042 confirming an exclusion that does not apply or a stale expansion hash is refused",
+          "packages/application/src/suites.test.ts::REQ-034 an archived environment excludes its project and an archived list cannot run",
+          "apps/server/src/lists-schedules.test.ts::UX-042 a token restricted to one project gets a forbidden answer naming the exclusion and a confirmed subset declares what was dropped",
+          "apps/mcp/src/lists.test.ts::REQ-034 UX-042 testmaster_run_tests refuses lists without execution scope, mixed selections, unsupported modes and a missing environment"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/suites.test.ts",
+            "assertion": "expect(frozenSuite(after).hash).toBe(frozenHash);"
+          },
+          {
+            "path": "packages/application/src/suites.test.ts",
+            "assertion": ").toThrowError(expect.objectContaining({ code: \"FORBIDDEN\" }));"
+          },
+          {
+            "path": "apps/server/src/lists-schedules.test.ts",
+            "assertion": "expect(sneaky.statusCode).toBe(403);"
+          },
+          {
+            "path": "apps/mcp/src/lists.test.ts",
+            "assertion": "expect(f.app.database.all(\"SELECT id FROM batches\")).toEqual([]);"
+          },
+          {
+            "path": "apps/cli/src/lists-schedules.test.ts",
+            "assertion": "expect((confirmed.document.data as { notDispatched: unknown[] }).notDispatched).toHaveLength(1);"
+          },
+          {
+            "path": "validation/journeys/lists-schedules.portal.test.ts",
+            "assertion": "expect(frozen.selectionSnapshot.suite.members).toHaveLength(4);"
+          },
+          {
+            "path": "validation/journeys/j09-cross-project-list.portal.test.ts",
+            "assertion": "expect(first?.environmentRevisionId).not.toBe(second?.environmentRevisionId);"
+          }
+        ]
+      }
     },
     {
       "id": "REQ-035",
@@ -14089,11 +14685,85 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M4",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/scheduling/service.test.ts::REQ-035 OPS-016 a saved schedule shows the next ten occurrences with their local time and the tzdata version",
+        "packages/application/src/scheduling/service.test.ts::REQ-035 a definition change creates an immutable revision while the history stays readable",
+        "packages/application/src/scheduling/service.test.ts::REQ-035 a pinned selection is frozen at save time and latest_approved follows the list",
+        "apps/server/src/lists-schedules.test.ts::REQ-035 OPS-016 schedule routes create, preview, patch, pause, resume and list revisions and firings over /v1",
+        "apps/cli/src/lists-schedules.test.ts::REQ-035 OPS-016 schedule commands preview, create, edit, pause, resume, list history and archive",
+        "validation/journeys/lists-schedules.portal.test.ts::REQ-035 UX-049 OPS-016 a schedule previews its next ten occurrences, refuses an unknown time zone and saves a revision",
+        "packages/application/src/scheduling/service.test.ts::REQ-035 an unreadable project hides the schedule and an owner cannot schedule what they cannot run",
+        "packages/application/src/scheduling/service.test.ts::REQ-035 archiving removes a schedule from firing, history stays and it can no longer change",
+        "packages/application/src/scheduling/service.test.ts::REQ-035 OPS-016 a draft preview names the local times a DST gap removed and refuses invalid triggers",
+        "apps/cli/src/lists-schedules.test.ts::REQ-035 OPS-016 schedule commands refuse an unknown timezone, a bad cron and a stale version without storing anything"
+      ],
+      "oracle": [
+        "A schedule is a revisioned definition with an IANA timezone, trigger, target list or pinned revisions, overlap, budget and secret policy, previewed before saving and created, edited, paused, resumed, archived and read through the service, HTTP, CLI and portal.",
+        "An invalid timezone, a bad trigger, a stale version or a project the caller cannot read stores nothing and exposes nothing."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s6/009-s6-pnpm-test-final2/output.log",
+        "validation/results/m4-acceptance/s6/007-s6-test-postgres-merged/output.log",
+        "validation/results/m4-acceptance/s6/010-s6-test-postgres-parity-final/output.log"
+      ],
+      "code": [
+        "packages/application/src/scheduling",
+        "packages/persistence/migrations/sqlite/0014_lists_schedules.sql",
+        "packages/persistence/migrations/postgres/0014_lists_schedules.sql",
+        "apps/server/src/routes/schedules.ts",
+        "apps/cli/src/schedules.ts",
+        "packages/contracts/src/m4/schedules.ts",
+        "apps/web/src/routes/lists.tsx",
+        "apps/web/src/routes/schedules.tsx",
+        "apps/web/src/routes/automation-shared.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/scheduling/service.test.ts::REQ-035 OPS-016 a saved schedule shows the next ten occurrences with their local time and the tzdata version",
+          "packages/application/src/scheduling/service.test.ts::REQ-035 a definition change creates an immutable revision while the history stays readable",
+          "packages/application/src/scheduling/service.test.ts::REQ-035 a pinned selection is frozen at save time and latest_approved follows the list",
+          "apps/server/src/lists-schedules.test.ts::REQ-035 OPS-016 schedule routes create, preview, patch, pause, resume and list revisions and firings over /v1",
+          "apps/cli/src/lists-schedules.test.ts::REQ-035 OPS-016 schedule commands preview, create, edit, pause, resume, list history and archive",
+          "validation/journeys/lists-schedules.portal.test.ts::REQ-035 UX-049 OPS-016 a schedule previews its next ten occurrences, refuses an unknown time zone and saves a revision"
+        ],
+        "negative": [
+          "packages/application/src/scheduling/service.test.ts::REQ-035 an unreadable project hides the schedule and an owner cannot schedule what they cannot run",
+          "packages/application/src/scheduling/service.test.ts::REQ-035 archiving removes a schedule from firing, history stays and it can no longer change",
+          "packages/application/src/scheduling/service.test.ts::REQ-035 OPS-016 a draft preview names the local times a DST gap removed and refuses invalid triggers",
+          "apps/cli/src/lists-schedules.test.ts::REQ-035 OPS-016 schedule commands refuse an unknown timezone, a bad cron and a stale version without storing anything"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/scheduling/service.test.ts",
+            "assertion": "expect(schedule.preview).toHaveLength(10);"
+          },
+          {
+            "path": "packages/application/src/scheduling/service.test.ts",
+            "assertion": "expect(history.map((item) => item.revision)).toEqual([2, 1]);"
+          },
+          {
+            "path": "packages/application/src/scheduling/service.test.ts",
+            "assertion": "expect(restricted.schedules.list()).toEqual([]);"
+          },
+          {
+            "path": "apps/cli/src/lists-schedules.test.ts",
+            "assertion": "expect(f.app.schedules.list()).toEqual([]);"
+          },
+          {
+            "path": "apps/cli/src/lists-schedules.test.ts",
+            "assertion": "expect(stale.document.error?.code).toBe(\"REVISION_CONFLICT\");"
+          },
+          {
+            "path": "apps/server/src/lists-schedules.test.ts",
+            "assertion": "expect(conflict.statusCode).toBe(412);"
+          },
+          {
+            "path": "validation/journeys/lists-schedules.portal.test.ts",
+            "assertion": "expect(await preview.getByRole(\"row\").count()).toBe(11);"
+          }
+        ]
+      }
     },
     {
       "id": "REQ-036",
@@ -18717,11 +19387,70 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/suites.test.ts::REQ-034 UX-041 a dynamic list expands across projects with one pinned environment and one mapping row per project",
+        "packages/application/src/suites.test.ts::UX-041 a dynamic list filters by tag per project and a fixed list pins revisions",
+        "packages/application/src/suites.test.ts::REQ-034 UX-041 running a list freezes expansion, revisions and mapping on the BatchRun and later edits never alter it",
+        "apps/server/src/lists-schedules.test.ts::REQ-034 UX-041 list routes create, patch with If-Match, preview and archive over /v1 and refuse unauthenticated or unauthorized callers",
+        "apps/cli/src/lists-schedules.test.ts::REQ-034 UX-041 suite commands create, inspect, edit, expand and archive a cross-project list",
+        "validation/journeys/lists-schedules.portal.test.ts::REQ-034 UX-041 UX-042 a cross-project list names an explicit staging per project, shows what it expands to and runs one frozen batch",
+        "packages/application/src/suites.test.ts::UX-041 previewing a list leaves execution rows unchanged",
+        "packages/application/src/suites.test.ts::UX-041 retrying with the same idempotency key returns the original batch even after the list was edited",
+        "packages/application/src/suites.test.ts::REQ-034 an archived environment excludes its project and an archived list cannot run"
+      ],
+      "oracle": [
+        "A saved list is either a dynamic filter or a fixed set of pinned TestRevisions, previewing it writes no execution row, and the expansion is resolved and frozen before the BatchRun and its members are dispatched.",
+        "Editing the list afterwards, or retrying the same idempotency key, never alters or duplicates the admitted batch."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s6/009-s6-pnpm-test-final2/output.log",
+        "validation/results/m4-acceptance/s6/007-s6-test-postgres-merged/output.log",
+        "validation/results/m4-acceptance/s6/010-s6-test-postgres-parity-final/output.log"
+      ],
+      "code": [
+        "packages/application/src/suites.ts",
+        "apps/server/src/routes/suites.ts",
+        "apps/cli/src/lists.ts",
+        "apps/mcp/src/server.ts",
+        "packages/contracts/src/m4/lists.ts",
+        "apps/web/src/routes/lists.tsx",
+        "apps/web/src/routes/schedules.tsx",
+        "apps/web/src/routes/automation-shared.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/suites.test.ts::REQ-034 UX-041 a dynamic list expands across projects with one pinned environment and one mapping row per project",
+          "packages/application/src/suites.test.ts::UX-041 a dynamic list filters by tag per project and a fixed list pins revisions",
+          "packages/application/src/suites.test.ts::REQ-034 UX-041 running a list freezes expansion, revisions and mapping on the BatchRun and later edits never alter it",
+          "apps/server/src/lists-schedules.test.ts::REQ-034 UX-041 list routes create, patch with If-Match, preview and archive over /v1 and refuse unauthenticated or unauthorized callers",
+          "apps/cli/src/lists-schedules.test.ts::REQ-034 UX-041 suite commands create, inspect, edit, expand and archive a cross-project list",
+          "validation/journeys/lists-schedules.portal.test.ts::REQ-034 UX-041 UX-042 a cross-project list names an explicit staging per project, shows what it expands to and runs one frozen batch"
+        ],
+        "negative": [
+          "packages/application/src/suites.test.ts::UX-041 previewing a list leaves execution rows unchanged",
+          "packages/application/src/suites.test.ts::UX-041 retrying with the same idempotency key returns the original batch even after the list was edited",
+          "packages/application/src/suites.test.ts::REQ-034 an archived environment excludes its project and an archived list cannot run"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/suites.test.ts",
+            "assertion": "expect(frozenSuite(after).hash).toBe(frozenHash);"
+          },
+          {
+            "path": "packages/application/src/suites.test.ts",
+            "assertion": "expect(retry.batchId).toBe(first.batchId);"
+          },
+          {
+            "path": "packages/application/src/suites.test.ts",
+            "assertion": "expect(expansion.requiresConfirmation).toEqual([]);"
+          },
+          {
+            "path": "validation/journeys/lists-schedules.portal.test.ts",
+            "assertion": "expect(frozen.selectionSnapshot.suite.members).toHaveLength(4);"
+          }
+        ]
+      }
     },
     {
       "id": "UX-042",
@@ -18729,11 +19458,76 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/suites.test.ts::REQ-034 UX-042 a confirmed subset dispatches the allowed part and the BatchRun declares what was left out with a failed gate",
+        "packages/application/src/suites.test.ts::REQ-034 UX-041 a dynamic list expands across projects with one pinned environment and one mapping row per project",
+        "validation/journeys/lists-schedules.portal.test.ts::REQ-034 UX-041 UX-042 a cross-project list names an explicit staging per project, shows what it expands to and runs one frozen batch",
+        "apps/cli/src/lists-schedules.test.ts::REQ-034 UX-042 suite run admits one batch per idempotency key and refuses a partial list until its exclusions are confirmed",
+        "validation/journeys/j09-cross-project-list.portal.test.ts::J09 UX-007 UX-041 UX-042 UX-043 REQ-034 a cross-project list with homonymous staging freezes expansion and mapping, declares a revoked project and never lets A's grant reach B",
+        "packages/application/src/suites.test.ts::REQ-034 UX-042 a viewer with access to one project cannot run the other and the list never silently shrinks",
+        "packages/application/src/suites.test.ts::REQ-034 UX-042 confirming an exclusion that does not apply or a stale expansion hash is refused",
+        "apps/server/src/lists-schedules.test.ts::UX-042 a token restricted to one project gets a forbidden answer naming the exclusion and a confirmed subset declares what was dropped",
+        "apps/mcp/src/lists.test.ts::REQ-034 UX-042 testmaster_run_tests refuses lists without execution scope, mixed selections, unsupported modes and a missing environment",
+        "validation/journeys/lists-schedules.portal.test.ts::UX-005 UX-042 a viewer reads lists but every action explains why it is unavailable"
+      ],
+      "oracle": [
+        "A cross-project list requires access in every project and shows the explicit environment, target origin and secret reference mapping per project without secret values.",
+        "Without access to a project the run is refused and names the exclusion; only an explicit confirmation of the exact excluded entries dispatches the remainder."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s6/009-s6-pnpm-test-final2/output.log",
+        "validation/results/m4-acceptance/s6/007-s6-test-postgres-merged/output.log",
+        "validation/results/m4-acceptance/s6/010-s6-test-postgres-parity-final/output.log"
+      ],
+      "code": [
+        "packages/application/src/suites.ts",
+        "apps/server/src/routes/suites.ts",
+        "apps/cli/src/lists.ts",
+        "apps/mcp/src/server.ts",
+        "packages/contracts/src/m4/lists.ts",
+        "apps/web/src/routes/lists.tsx",
+        "apps/web/src/routes/schedules.tsx",
+        "apps/web/src/routes/automation-shared.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "packages/application/src/suites.test.ts::REQ-034 UX-042 a confirmed subset dispatches the allowed part and the BatchRun declares what was left out with a failed gate",
+          "packages/application/src/suites.test.ts::REQ-034 UX-041 a dynamic list expands across projects with one pinned environment and one mapping row per project",
+          "validation/journeys/lists-schedules.portal.test.ts::REQ-034 UX-041 UX-042 a cross-project list names an explicit staging per project, shows what it expands to and runs one frozen batch",
+          "apps/cli/src/lists-schedules.test.ts::REQ-034 UX-042 suite run admits one batch per idempotency key and refuses a partial list until its exclusions are confirmed",
+          "validation/journeys/j09-cross-project-list.portal.test.ts::J09 UX-007 UX-041 UX-042 UX-043 REQ-034 a cross-project list with homonymous staging freezes expansion and mapping, declares a revoked project and never lets A's grant reach B"
+        ],
+        "negative": [
+          "packages/application/src/suites.test.ts::REQ-034 UX-042 a viewer with access to one project cannot run the other and the list never silently shrinks",
+          "packages/application/src/suites.test.ts::REQ-034 UX-042 confirming an exclusion that does not apply or a stale expansion hash is refused",
+          "apps/server/src/lists-schedules.test.ts::UX-042 a token restricted to one project gets a forbidden answer naming the exclusion and a confirmed subset declares what was dropped",
+          "apps/mcp/src/lists.test.ts::REQ-034 UX-042 testmaster_run_tests refuses lists without execution scope, mixed selections, unsupported modes and a missing environment",
+          "validation/journeys/lists-schedules.portal.test.ts::UX-005 UX-042 a viewer reads lists but every action explains why it is unavailable"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/suites.test.ts",
+            "assertion": "expect(expansion.requiresConfirmation).toEqual([`project:${projectB.id}`]);"
+          },
+          {
+            "path": "apps/server/src/lists-schedules.test.ts",
+            "assertion": "expect(sneaky.statusCode).toBe(403);"
+          },
+          {
+            "path": "validation/journeys/lists-schedules.portal.test.ts",
+            "assertion": "expect(mappingText.match(/values are never shown/g)?.length).toBe(2);"
+          },
+          {
+            "path": "validation/journeys/lists-schedules.portal.test.ts",
+            "assertion": "expect(refused.status).toBe(403);"
+          },
+          {
+            "path": "validation/journeys/j09-cross-project-list.portal.test.ts",
+            "assertion": "expect(refsB?.secretRefs).toEqual([world.b.secretId]);"
+          }
+        ]
+      }
     },
     {
       "id": "UX-043",
@@ -18741,11 +19535,79 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/lists-schedules.portal.test.ts::UX-043 J09 revoking project B before the next dispatch is declared, never silently omitted, and the confirmed subset leaves a failed gate",
+        "packages/application/src/suites.test.ts::REQ-034 UX-042 a confirmed subset dispatches the allowed part and the BatchRun declares what was left out with a failed gate",
+        "apps/cli/src/lists-schedules.test.ts::REQ-034 UX-042 suite run admits one batch per idempotency key and refuses a partial list until its exclusions are confirmed",
+        "apps/mcp/src/lists.test.ts::REQ-034 UX-042 testmaster_run_tests refuses a partial list until the dropped project is confirmed and then declares it",
+        "validation/journeys/j09-cross-project-list.portal.test.ts::J09 UX-007 UX-041 UX-042 UX-043 REQ-034 a cross-project list with homonymous staging freezes expansion and mapping, declares a revoked project and never lets A's grant reach B",
+        "packages/application/src/suites.test.ts::REQ-034 a suite run reports the BatchReceipt of the batch gate and never passes on dropped members",
+        "packages/application/src/suites.test.ts::REQ-034 UX-042 a viewer with access to one project cannot run the other and the list never silently shrinks",
+        "apps/server/src/lists-schedules.test.ts::UX-042 a token restricted to one project gets a forbidden answer naming the exclusion and a confirmed subset declares what was dropped"
+      ],
+      "oracle": [
+        "Losing access to a project before dispatch needs an explicit decision in the UI, the receipt and the BatchRun declare what was not dispatched, and the gate is failed, never green for the full list."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s6/009-s6-pnpm-test-final2/output.log",
+        "validation/results/m4-acceptance/s6/007-s6-test-postgres-merged/output.log",
+        "validation/results/m4-acceptance/s6/010-s6-test-postgres-parity-final/output.log"
+      ],
+      "code": [
+        "packages/application/src/suites.ts",
+        "apps/server/src/routes/suites.ts",
+        "apps/cli/src/lists.ts",
+        "apps/mcp/src/server.ts",
+        "packages/contracts/src/m4/lists.ts",
+        "apps/web/src/routes/lists.tsx",
+        "apps/web/src/routes/schedules.tsx",
+        "apps/web/src/routes/automation-shared.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/lists-schedules.portal.test.ts::UX-043 J09 revoking project B before the next dispatch is declared, never silently omitted, and the confirmed subset leaves a failed gate",
+          "packages/application/src/suites.test.ts::REQ-034 UX-042 a confirmed subset dispatches the allowed part and the BatchRun declares what was left out with a failed gate",
+          "apps/cli/src/lists-schedules.test.ts::REQ-034 UX-042 suite run admits one batch per idempotency key and refuses a partial list until its exclusions are confirmed",
+          "apps/mcp/src/lists.test.ts::REQ-034 UX-042 testmaster_run_tests refuses a partial list until the dropped project is confirmed and then declares it",
+          "validation/journeys/j09-cross-project-list.portal.test.ts::J09 UX-007 UX-041 UX-042 UX-043 REQ-034 a cross-project list with homonymous staging freezes expansion and mapping, declares a revoked project and never lets A's grant reach B"
+        ],
+        "negative": [
+          "packages/application/src/suites.test.ts::REQ-034 a suite run reports the BatchReceipt of the batch gate and never passes on dropped members",
+          "packages/application/src/suites.test.ts::REQ-034 UX-042 a viewer with access to one project cannot run the other and the list never silently shrinks",
+          "apps/server/src/lists-schedules.test.ts::UX-042 a token restricted to one project gets a forbidden answer naming the exclusion and a confirmed subset declares what was dropped"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/suites.test.ts",
+            "assertion": "expect(receipt.gate).not.toBe(\"passed\");"
+          },
+          {
+            "path": "packages/application/src/suites.test.ts",
+            "assertion": "expect(fetched.aggregate.gate).not.toBe(\"passed\");"
+          },
+          {
+            "path": "packages/application/src/suites.test.ts",
+            "assertion": "expect([\"failed\", \"blocked\", \"inconclusive\", \"pending\"]).toContain(receipt.gate);"
+          },
+          {
+            "path": "validation/journeys/lists-schedules.portal.test.ts",
+            "assertion": "expect(await run.getAttribute(\"aria-disabled\")).toBe(\"true\");"
+          },
+          {
+            "path": "validation/journeys/lists-schedules.portal.test.ts",
+            "assertion": "expect(text).toContain(\"Not dispatched: 1, so the gate stays failed\");"
+          },
+          {
+            "path": "validation/journeys/lists-schedules.portal.test.ts",
+            "assertion": "expect(view.aggregate.gate).toBe(\"failed\");"
+          },
+          {
+            "path": "validation/journeys/j09-cross-project-list.portal.test.ts",
+            "assertion": "expect(partial.aggregate.gate).toBe(\"failed\");"
+          }
+        ]
+      }
     },
     {
       "id": "UX-044",
@@ -18945,11 +19807,71 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/lists-schedules.portal.test.ts::REQ-035 UX-049 OPS-016 a schedule previews its next ten occurrences, refuses an unknown time zone and saves a revision",
+        "packages/application/src/scheduling/service.test.ts::REQ-035 OPS-016 a saved schedule shows the next ten occurrences with their local time and the tzdata version",
+        "apps/server/src/lists-schedules.test.ts::REQ-035 OPS-016 schedule routes create, preview, patch, pause, resume and list revisions and firings over /v1",
+        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 a changed secret pauses a schedule whose policy says pause and a use_current schedule keeps running",
+        "packages/application/src/scheduling/service.test.ts::REQ-035 OPS-016 a draft preview names the local times a DST gap removed and refuses invalid triggers",
+        "apps/cli/src/lists-schedules.test.ts::REQ-035 OPS-016 schedule commands refuse an unknown timezone, a bad cron and a stale version without storing anything",
+        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 the daily firing budget skips further occurrences and a run of failed gates pauses the schedule"
+      ],
+      "oracle": [
+        "The schedule form defines IANA timezone, cron or interval, target list or revisions, overlap, misfire, budget and secret policy, and shows the next ten occurrences, the tzdata version and the local times a DST gap removed before saving.",
+        "A changed secret pauses a pause-policy schedule, the daily budget skips further occurrences, and invalid input is refused with nothing stored."
+      ],
+      "evidence": [
+        "validation/results/m4-acceptance/s6/009-s6-pnpm-test-final2/output.log",
+        "validation/results/m4-acceptance/s6/007-s6-test-postgres-merged/output.log",
+        "validation/results/m4-acceptance/s6/010-s6-test-postgres-parity-final/output.log"
+      ],
+      "code": [
+        "packages/application/src/scheduling",
+        "packages/persistence/migrations/sqlite/0014_lists_schedules.sql",
+        "packages/persistence/migrations/postgres/0014_lists_schedules.sql",
+        "apps/server/src/routes/schedules.ts",
+        "apps/cli/src/schedules.ts",
+        "packages/contracts/src/m4/schedules.ts",
+        "apps/web/src/routes/lists.tsx",
+        "apps/web/src/routes/schedules.tsx",
+        "apps/web/src/routes/automation-shared.tsx"
+      ],
+      "coverage": {
+        "positive": [
+          "validation/journeys/lists-schedules.portal.test.ts::REQ-035 UX-049 OPS-016 a schedule previews its next ten occurrences, refuses an unknown time zone and saves a revision",
+          "packages/application/src/scheduling/service.test.ts::REQ-035 OPS-016 a saved schedule shows the next ten occurrences with their local time and the tzdata version",
+          "apps/server/src/lists-schedules.test.ts::REQ-035 OPS-016 schedule routes create, preview, patch, pause, resume and list revisions and firings over /v1",
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 a changed secret pauses a schedule whose policy says pause and a use_current schedule keeps running"
+        ],
+        "negative": [
+          "packages/application/src/scheduling/service.test.ts::REQ-035 OPS-016 a draft preview names the local times a DST gap removed and refuses invalid triggers",
+          "apps/cli/src/lists-schedules.test.ts::REQ-035 OPS-016 schedule commands refuse an unknown timezone, a bad cron and a stale version without storing anything",
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 the daily firing budget skips further occurrences and a run of failed gates pauses the schedule"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/lists-schedules.portal.test.ts",
+            "assertion": "expect(await preview.getByRole(\"row\").count()).toBe(11);"
+          },
+          {
+            "path": "validation/journeys/lists-schedules.portal.test.ts",
+            "assertion": "expect(new URL(page.url()).pathname).toBe(\"/schedules/new\");"
+          },
+          {
+            "path": "packages/application/src/scheduling/service.test.ts",
+            "assertion": "expect(preview.skippedByDst).toHaveLength(1);"
+          },
+          {
+            "path": "packages/application/src/scheduling/scheduler-policies.test.ts",
+            "assertion": "expect(dispatched(w, budget.id)).toHaveLength(1);"
+          },
+          {
+            "path": "apps/cli/src/lists-schedules.test.ts",
+            "assertion": "expect(zone.exit).toBe(5);"
+          }
+        ]
+      }
     },
     {
       "id": "UX-050",
