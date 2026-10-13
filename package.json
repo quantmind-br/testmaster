@@ -8,13 +8,14 @@
     "node": ">=24 <25"
   },
   "scripts": {
-    "build": "tsc -b && chmod +x apps/cli/dist/main.js",
-    "clean": "tsc -b --clean",
+    "build": "tsc -b && pnpm --filter @testmaster/web build && chmod +x apps/cli/dist/main.js",
+    "clean": "tsc -b --clean && rm -rf apps/web/dist",
     "lint": "biome check .",
     "format": "biome format --write .",
     "test": "vitest run --project unit",
     "test:docker": "vitest run --project docker",
     "test:live": "vitest run --project live",
+    "test:portal": "vitest run --project portal",
     "check": "bash tools/ci/check.sh"
   },
   "devDependencies": {
