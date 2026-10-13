@@ -1,0 +1,209 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "W4-A-resource-cleanup",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-13T15:05:23.617Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "W4-A-resource-cleanup",
+        "--base-url",
+        "http://127.0.0.1:38505",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_56996bbf-b511-4938-a3b4-5e70ca48add0",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "secret",
+        "set",
+        "cleanup-auth",
+        "--from-env",
+        "CLEANUP_AUTH",
+        "--allowed-origin",
+        "http://127.0.0.1:38505",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_6226f39f-76f2-4d0c-b43f-8cefac891283",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-O6RQTu/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_bba5aa37-9c45-4cf2-98d4-0d27697162b3",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a135cb-bb66-7241-a030-84e0b3e24f68",
+        "--wait",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "requestId": "cli_f6116dae-dbb7-4bf6-8175-9a84b6c00e5e",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "resource",
+        "list",
+        "--run",
+        "run_01a135cb-cc60-7402-b4c5-348ee6b2576f",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_a6ed65f5-9c77-4fcc-8888-b036aa209c81",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "approval",
+        "create",
+        "--action",
+        "cleanup:res_01a135cb-d9a7-72f4-95a2-c0815117083a",
+        "--revision-hash",
+        "3bcb4ff9527e7cd15ebde419ebc5afc479a3a147c4ffe13771a03ec1bbdcda6f",
+        "--environment-revision",
+        "evr_01a135cb-a946-73c4-8319-19512b546217",
+        "--origin",
+        "http://127.0.0.1:38505",
+        "--policy-hash",
+        "a325f5c6403955d6134076d9629c8266f7bb7015b7897e20a4833a6a89db2c6d",
+        "--reason",
+        "Compensate orphaned resource res_01a135cb-d9a7-72f4-95a2-c0815117083a",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_04c3a188-dca3-431b-9d97-e8f5d47244ba",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "resource",
+        "cleanup",
+        "res_01a135cb-d9a7-72f4-95a2-c0815117083a",
+        "--approval",
+        "apr_01a135cb-e473-74cc-af26-cc5d2b2a95d6",
+        "--expected-version",
+        "4",
+        "--idempotency-key",
+        "949e3c16-511f-45da-be03-cf99904fea7d",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ee26990f-2c62-40dd-af9e-1fe74d2867b4",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "resource",
+        "cleanup",
+        "res_01a135cb-d9a7-72f4-95a2-c0815117083a",
+        "--approval",
+        "apr_01a135cb-e473-74cc-af26-cc5d2b2a95d6",
+        "--expected-version",
+        "4",
+        "--idempotency-key",
+        "949e3c16-511f-45da-be03-cf99904fea7d",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_77211429-ef9b-4dfe-9dc3-93908326a9c4",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/var/tmp/tm-m4/s2a/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a135cb-cc60-7402-b4c5-348ee6b2576f",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_2e894ddd-e506-4e41-a3f3-982f6605c7f2",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a135cb-cc60-7402-b4c5-348ee6b2576f"
+  ],
+  "oracleVerdicts": [
+    {
+      "resourceId": "res_01a135cb-d9a7-72f4-95a2-c0815117083a",
+      "operationId": "job_01a135cb-ea9e-76b0-abc2-ffea9ee0a98e",
+      "userPresentBefore": true,
+      "userPresentAfter": false,
+      "originalGate": "failed"
+    }
+  ],
+  "limitations": [
+    "Chromium and declarative HTTP only; no LLM or SaaS claim."
+  ]
+}
