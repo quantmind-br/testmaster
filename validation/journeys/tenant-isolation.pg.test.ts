@@ -355,38 +355,42 @@ describe("tenant isolation through the server profile", () => {
   });
 
   it("SEC-030 NFR-003 an event stream of tenant A's Run is not served to tenant B", async () => {
-    const stream = (token: string, runId: string) =>
-      new Promise<{ status: number; body: string }>((resolve, reject) => {
-        const url = new URL(`/v1/runs/${runId}/events`, stack.baseUrl);
-        const call = httpsRequest(
-          {
-            host: url.hostname,
-            port: url.port,
-            path: url.pathname,
-            method: "GET",
-            headers: { accept: "text/event-stream", authorization: `Bearer ${token}` },
-            ca: stack.ca.caPem,
-          },
-          (response) => {
-            let body = "";
-            const finish = () => {
-              call.destroy();
-              resolve({ status: response.statusCode ?? 0, body });
-            };
-            response.setEncoding("utf8");
-            response.on("data", (chunk: string) => {
-              body += chunk;
-              if (body.includes("\n\n")) finish();
-            });
-            response.on("end", finish);
-          },
-        );
-        call.on("error", (error) => {
-          if ((error as NodeJS.ErrnoException).code !== "ECONNRESET") reject(error);
-        });
-        call.setTimeout(10_000, () => call.destroy(new Error("stream timed out")));
-        call.end();
+    const stream = (token: string, runId: string) => {
+      const { promise, resolve, reject } = Promise.withResolvers<{
+        status: number;
+        body: string;
+      }>();
+      const url = new URL(`/v1/runs/${runId}/events`, stack.baseUrl);
+      const call = httpsRequest(
+        {
+          host: url.hostname,
+          port: url.port,
+          path: url.pathname,
+          method: "GET",
+          headers: { accept: "text/event-stream", authorization: `Bearer ${token}` },
+          ca: stack.ca.caPem,
+        },
+        (response) => {
+          let body = "";
+          const finish = () => {
+            call.destroy();
+            resolve({ status: response.statusCode ?? 0, body });
+          };
+          response.setEncoding("utf8");
+          response.on("data", (chunk: string) => {
+            body += chunk;
+            if (body.includes("\n\n")) finish();
+          });
+          response.on("end", finish);
+        },
+      );
+      call.on("error", (error) => {
+        if ((error as NodeJS.ErrnoException).code !== "ECONNRESET") reject(error);
       });
+      call.setTimeout(10_000, () => call.destroy(new Error("stream timed out")));
+      call.end();
+      return promise;
+    };
     const own = await stream(a.token, a.runIds[0] as string);
     expect(own.status).toBe(200);
     const foreign = await stream(b.token, a.runIds[0] as string);
@@ -472,30 +476,27 @@ describe("tenant isolation through the server profile", () => {
   });
 
   it("SEC-030 NFR-003 M4-01 the remote CLI with tenant B's token cannot read tenant A's Run", async () => {
-    const run = (token: string, args: string[]) =>
-      new Promise<{
+    const run = (token: string, args: string[]) => {
+      const { promise, resolve } = Promise.withResolvers<{
         code: number | null;
         document: { data?: { id?: string }; error?: { code: string } };
-      }>((resolve) => {
-        const child = spawn(
-          process.execPath,
-          [cli, "--json", "--endpoint", stack.baseUrl, ...args],
-          {
-            env: {
-              ...process.env,
-              TESTMASTER_API_KEY: token,
-              NODE_EXTRA_CA_CERTS: caFile,
-              XDG_CONFIG_HOME: join(caDirectory, "xdg"),
-            },
-            stdio: "pipe",
-          },
-        );
-        let stdout = "";
-        child.stdout.on("data", (chunk: Buffer) => {
-          stdout += chunk.toString();
-        });
-        child.once("close", (code) => resolve({ code, document: JSON.parse(stdout) }));
+      }>();
+      const child = spawn(process.execPath, [cli, "--json", "--endpoint", stack.baseUrl, ...args], {
+        env: {
+          ...process.env,
+          TESTMASTER_API_KEY: token,
+          NODE_EXTRA_CA_CERTS: caFile,
+          XDG_CONFIG_HOME: join(caDirectory, "xdg"),
+        },
+        stdio: "pipe",
       });
+      let stdout = "";
+      child.stdout.on("data", (chunk: Buffer) => {
+        stdout += chunk.toString();
+      });
+      child.once("close", (code) => resolve({ code, document: JSON.parse(stdout) }));
+      return promise;
+    };
     const own = await run(a.token, ["run", "get", a.runIds[0] as string]);
     expect(own.code).toBe(0);
     expect(own.document.data?.id).toBe(a.runIds[0]);
