@@ -32,7 +32,10 @@ import {
 } from "./types.js";
 
 type Stored<T> = T & EntityDocument;
-const MAX_STATE_BYTES = 100_000;
+/** The vault's own secret limit: a larger state could not be stored. */
+/** Longest lifetime of an exported storage state; the stored copy is capped to it as well. */
+const MAX_EXPORT_TTL_SECONDS = 900;
+const MAX_STATE_BYTES = 65_536;
 const ACTION_OPERATIONS = new Set([
   "navigate",
   "click",
@@ -533,6 +536,17 @@ export class AuthProfilesService {
     });
     this.cancelPending(profile.id);
   }
+  /** Network profile of an environment that uses the profile; it decides what egress the provider call may use. */
+  private attachedNetworkProfile(
+    profile: StoredAuthProfile,
+  ): AuthEnvironment["networkProfile"] | null {
+    for (const environment of allEntities(this.ctx, "Environment")) {
+      if (environment.projectId !== profile.projectId) continue;
+      const found = this.environment(environment.id).environment;
+      if (found.authProfileRefs.includes(profile.id)) return found.networkProfile;
+    }
+    return null;
+  }
   private cancelPending(profileId: string): void {
     const pending = this.ctx.database.all(
       "SELECT id FROM auth_checkpoints WHERE workspace_id=? AND auth_profile_id=? AND state='pending'",
@@ -745,6 +759,12 @@ export class AuthProfilesService {
     const profile = requireEntity(this.ctx, "AuthProfile", id) as StoredAuthProfile;
     this.ctx.authorize("R", profile.projectId);
     this.ctx.authorizeNamed("export", "SecretReference", profile.projectId);
+    const ttlSeconds = input.ttlSeconds ?? 300;
+    if (!Number.isInteger(ttlSeconds) || ttlSeconds < 60 || ttlSeconds > MAX_EXPORT_TTL_SECONDS)
+      throw new ContractError("INVALID_ARGUMENT", "Export lifetime is outside the allowed range", {
+        minSeconds: 60,
+        maxSeconds: MAX_EXPORT_TTL_SECONDS,
+      });
     return await auditedOperation(this.ctx, "auth.export_state", id, async () => {
       if (this.ctx.actor.credentialKind !== null)
         await this.deps.stepUp(input.password, "export-state");
@@ -761,7 +781,7 @@ export class AuthProfilesService {
           reasonCode: "manual_auth_required",
         });
       const storageState = await (await this.deps.secrets.release(secretId)).resolve();
-      const exportExpiresAt = new Date(this.clock() + (input.ttlSeconds ?? 300) * 1000);
+      const exportExpiresAt = new Date(this.clock() + ttlSeconds * 1000);
       if (Date.parse(meta.expiresAt) > exportExpiresAt.getTime())
         this.store.patch(id, {
           credentials: {
@@ -785,6 +805,8 @@ export class AuthProfilesService {
     const profile = requireEntity(this.ctx, "AuthProfile", id) as StoredAuthProfile;
     this.ctx.authorize("W", profile.projectId);
     await auditedOperation(this.ctx, "auth.revoke_session", id, async () => {
+      const networkProfile = this.attachedNetworkProfile(profile);
+      if (networkProfile) await this.engine.revokeAtProvider(profile, { networkProfile });
       await this.resetSession(profile, "session_revoked", true);
     });
     return this.view(profile);

@@ -106,7 +106,7 @@ export class AuthEngine {
     }
     return [];
   }
-  network(profile: StoredAuthProfile, env: AuthEnvironment): AuthNetwork {
+  network(profile: StoredAuthProfile, env: Pick<AuthEnvironment, "networkProfile">): AuthNetwork {
     return new AuthNetwork({
       allowedOrigins: [...new Set([...profile.originBindings, ...this.idpOrigins(profile)])],
       networkProfile: env.networkProfile,
@@ -602,7 +602,11 @@ export class AuthEngine {
     try {
       await this.singleFlight(profile, options, fresh, async (lease) => {
         const policy = profile.refreshPolicy;
-        this.admitAttempt(profile, options.explicit === true, policy);
+        this.admitAttempt(
+          profile,
+          options.explicit === true || options.afterCheckpoint === true,
+          policy,
+        );
         const network = this.network(profile, env);
         const destination = login.loginUrl;
         network.assertAllowed(destination);
@@ -673,6 +677,24 @@ export class AuthEngine {
     } catch (error) {
       if (error instanceof EgressDenied)
         throw new AuthBlocked("egress_denied", "Login endpoint is not allowed", "origin_denied");
+      const kind = error instanceof AuthBlocked ? error.details.kind : undefined;
+      if (
+        error instanceof AuthBlocked &&
+        error.authFailure === "challenge_required" &&
+        typeof kind === "string" &&
+        !options.afterCheckpoint
+      ) {
+        // The target answered with a CAPTCHA or similar: record an authorized pendency instead of
+        // only failing, and never try to solve it.
+        await this.needHuman(
+          profile,
+          env,
+          options,
+          kind as AuthCheckpointKind,
+          "challenge_required",
+        );
+        return await this.ensure(profile, env, { ...options, afterCheckpoint: true });
+      }
       throw error;
     }
     return result();
@@ -699,7 +721,11 @@ export class AuthEngine {
     }
     const login = config.browser;
     if (!login) throw new ContractError("INVALID_ARGUMENT", "Form profile has no browser login");
-    this.admitAttempt(profile, options.explicit === true, profile.refreshPolicy);
+    this.admitAttempt(
+      profile,
+      options.explicit === true || options.afterCheckpoint === true,
+      profile.refreshPolicy,
+    );
     const secretIds = new Set<string>();
     const collect = (value: unknown): void => {
       if (!value || typeof value !== "object") return;
@@ -830,7 +856,11 @@ export class AuthEngine {
     };
     try {
       await this.singleFlight(profile, options, fresh, async (lease) => {
-        this.admitAttempt(profile, options.explicit === true, profile.refreshPolicy);
+        this.admitAttempt(
+          profile,
+          options.explicit === true || options.afterCheckpoint === true,
+          profile.refreshPolicy,
+        );
         const network = this.network(profile, env);
         const refreshToken = await this.readManaged(profile, "refreshToken");
         if (refreshToken) {
@@ -1068,6 +1098,42 @@ export class AuthEngine {
       this.clock() + tokens.expiresInSeconds * 1000,
       rearm,
     );
+  }
+
+  /**
+   * Best-effort RFC 7009 revocation of the refresh token at the identity provider. The local
+   * credentials are erased by the caller whether or not the provider answers.
+   */
+  async revokeAtProvider(
+    profile: StoredAuthProfile,
+    env: Pick<AuthEnvironment, "networkProfile">,
+  ): Promise<boolean> {
+    if (profile.kind !== "oauth" && profile.kind !== "oidc") return false;
+    const config = parseConfig<AuthOAuthConfig>("AuthOAuthConfig", profile);
+    if (config.adapter === "cognito") return false;
+    const refreshToken = await this.readManaged(profile, "refreshToken");
+    if (!refreshToken) return false;
+    try {
+      const network = this.network(profile, env);
+      const endpoints = await resolveEndpoints(network, config);
+      if (!endpoints.revocation) return false;
+      const form: Record<string, string> = {
+        token: refreshToken,
+        token_type_hint: "refresh_token",
+        client_id: config.clientId,
+      };
+      if (profile.secrets.clientSecret)
+        form.client_secret = await this.readFor(profile.secrets.clientSecret, endpoints.revocation);
+      const response = await network.send({
+        method: "POST",
+        url: endpoints.revocation,
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams(form).toString(),
+      });
+      return response.status < 300;
+    } catch {
+      return false;
+    }
   }
 
   // --- Authorization-code enrollment ---------------------------------------------------------

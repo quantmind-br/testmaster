@@ -36,7 +36,17 @@ const probePlan = validate<ExecutablePlan>("ExecutablePlan", {
       description: "Open the target after the login phase",
       kind: "action",
       operation: "navigate",
+      required: true,
       input: { path: "/" },
+    },
+    {
+      id: "probe-loaded",
+      description: "Require the page to render",
+      kind: "assertion",
+      operation: "assert",
+      required: true,
+      input: { locator: { by: "css", value: "body" } },
+      expectation: { predicate: "visible" },
     },
   ],
 });
