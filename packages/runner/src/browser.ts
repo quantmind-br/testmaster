@@ -1371,7 +1371,7 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       if (login.captureState) {
         const captured = JSON.stringify(await context.storageState());
         for (const value of storageStateSecrets(captured)) runtime.secrets.add(value);
-        if (Buffer.byteLength(captured) > 100_000)
+        if (Buffer.byteLength(captured) > 65_536)
           throw new RuntimeError(
             "storage_unavailable",
             "Captured storage state exceeds the size limit",
