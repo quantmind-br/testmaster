@@ -232,7 +232,7 @@ it.skipIf(postgresParity)(
     // Re-create the previous release's state: the application rows are real, migrations 10 and later are undone.
     const old = await PersistenceDatabase.open(join(dataDir, "testmaster.db"), { migrate: false });
     old.exec(
-      "DROP TABLE inbound_webhook_deliveries; DROP TABLE integrations; DROP TABLE sessions; DROP TABLE password_credentials; DELETE FROM schema_migrations WHERE version>=10",
+      "DROP TABLE notification_attempts; DROP TABLE notification_deliveries; DROP INDEX outbox_created_idx; DROP TABLE inbound_webhook_deliveries; DROP TABLE integrations; DROP TABLE sessions; DROP TABLE password_credentials; DELETE FROM schema_migrations WHERE version>=10",
     );
     old.run(
       "INSERT INTO workers(workspace_id,id,created_at,state,last_heartbeat_at) VALUES(?, 'wrk_previous',?, 'ready',?)",

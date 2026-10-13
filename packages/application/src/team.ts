@@ -110,6 +110,13 @@ export function provisionWorkspace(
     };
   });
 }
+/** Workspaces created through the team service have a controller principal; the single local workspace does not. */
+export function hasSystemPrincipal(database: PersistenceDatabase, workspaceId: string): boolean {
+  return (
+    database.get("SELECT 1 FROM operational_state WHERE key=?", systemPrincipalKey(workspaceId)) !==
+    undefined
+  );
+}
 /** The credential-less principal controller loops use inside one workspace. */
 export function systemPrincipalId(database: PersistenceDatabase, workspaceId: string): string {
   const row = database.get(

@@ -17,6 +17,7 @@ import { auditSecurity } from "../audit.js";
 import type { ServiceContext } from "../context.js";
 import {
   adapterCompatible,
+  type DeliveryContext,
   type DeliveryOutcome,
   type DeliveryOutcomeState,
   deliveryOutcomeStates,
@@ -24,6 +25,7 @@ import {
   type InboundRequest,
   type IntegrationContext,
   type IntegrationProvider,
+  type IntegrationSecrets,
   type IntegrationState,
   type StoredIntegration,
 } from "./provider.js";
@@ -35,6 +37,9 @@ export interface IntegrationsOptions {
   now?: () => Date;
   /** A delivery recorded as `received` for longer than this is treated as abandoned and may be processed again. */
   receivedStaleMs?: number;
+  /** Resolves secrets for delivery; the Application supplies a workspace-system resolver. */
+  secrets?: IntegrationSecrets;
+  publicOrigin?: string;
 }
 type Row = Record<string, unknown>;
 interface InboundRow {
@@ -182,10 +187,20 @@ function normalizeOutcome(raw: DeliveryOutcome | undefined): NormalizedOutcome {
   return { state, detail };
 }
 
+const unavailableSecrets: IntegrationSecrets = {
+  async resolveBound() {
+    throw new ContractError("CAPABILITY_UNAVAILABLE", "Secret resolution is not configured", {
+      capability: "integration-secrets",
+    });
+  },
+};
+
 export class IntegrationsService {
   private readonly providers: IntegrationProviderRegistry;
   private readonly now: () => Date;
   private readonly receivedStaleMs: number;
+  private secrets: IntegrationSecrets;
+  private publicOrigin: string;
   constructor(
     private readonly ctx: ServiceContext,
     options: IntegrationsOptions = {},
@@ -193,6 +208,14 @@ export class IntegrationsService {
     this.providers = options.providers ?? integrationProviders;
     this.now = options.now ?? (() => new Date());
     this.receivedStaleMs = options.receivedStaleMs ?? defaultReceivedStaleMs;
+    this.secrets = options.secrets ?? unavailableSecrets;
+    this.publicOrigin = options.publicOrigin ?? "http://127.0.0.1:7331";
+  }
+
+  /** Supplies the platform secret resolver and the portal origin used for test and notification deliveries. */
+  useDelivery(delivery: { secrets: IntegrationSecrets; publicOrigin: string }): void {
+    this.secrets = delivery.secrets;
+    this.publicOrigin = delivery.publicOrigin;
   }
 
   create(input: IntegrationInput): IntegrationMetadata {
@@ -201,6 +224,7 @@ export class IntegrationsService {
     const provider = this.providers.resolve(input.provider);
     const settings = this.parseSettings(provider, input.settings);
     this.requireConsent(provider, settings, input.consent.scopes);
+    this.requireListedSecrets(provider, settings, input.secretRefs);
     return inTx(this.ctx, () => {
       this.checkEvents(provider, input.events);
       this.checkReferences(input.projectIds, input.secretRefs);
@@ -292,6 +316,7 @@ export class IntegrationsService {
       if (!revoking) {
         // Consent is re-checked on every change that could widen access, including resuming a pause.
         this.requireConsent(provider, settings, consent.scopes);
+        this.requireListedSecrets(provider, settings, secretRefs);
         if (patch.events) this.checkEvents(provider, events);
         this.checkReferences(
           patch.projectIds ? projectIds : [],
@@ -361,6 +386,8 @@ export class IntegrationsService {
     const context = {
       ...this.integrationContext(correlationId, true),
       workspaceId: this.ctx.workspaceId,
+      secrets: this.secrets,
+      publicOrigin: this.publicOrigin,
       test: { test: true, deliveryId, label: TEST_LABEL },
     } as const;
     let outcome: NormalizedOutcome;
@@ -405,6 +432,38 @@ export class IntegrationsService {
       state: outcome.state,
       detail: outcome.detail,
       correlationId,
+    };
+  }
+
+  /** Internal: active integrations of this workspace for the given providers (no end-user call). */
+  activeFor(providerIds: readonly string[]): StoredIntegration[] {
+    if (!providerIds.length) return [];
+    return this.ctx.database
+      .all(
+        `SELECT * FROM integrations WHERE workspace_id=? AND state='active' AND provider IN (${providerIds.map(() => "?").join(",")}) ORDER BY created_at,id`,
+        this.ctx.workspaceId,
+        ...providerIds,
+      )
+      .map(decode);
+  }
+
+  /** Internal: one integration of this workspace in any state. */
+  stored(id: string): StoredIntegration {
+    return this.load(id);
+  }
+
+  /** Internal: the adapter registered for a provider, after the compatibility check. */
+  adapter(providerId: string): IntegrationProvider {
+    return this.providers.resolve(providerId);
+  }
+
+  /** Internal: the context an adapter receives for one outbound notification attempt. */
+  deliveryContext(correlationId: string): DeliveryContext {
+    return {
+      ...this.integrationContext(correlationId, true),
+      workspaceId: this.ctx.workspaceId,
+      secrets: this.secrets,
+      publicOrigin: this.publicOrigin,
     };
   }
 
@@ -766,6 +825,25 @@ export class IntegrationsService {
         "PRECONDITION_FAILED",
         "Integration consent does not cover every required scope",
         { provider: provider.id, missingScopes: missing, nextActions: ["grant-consent"] },
+      );
+  }
+
+  /** Every secret the settings point at must be a listed, existing binding of the integration. */
+  private requireListedSecrets(
+    provider: IntegrationProvider,
+    settings: unknown,
+    secretRefs: readonly string[],
+  ): void {
+    const referenced = provider.referencedSecrets?.(settings as never) ?? [];
+    const unlisted = referenced.filter((ref) => !secretRefs.includes(ref));
+    if (unlisted.length)
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        "Settings reference secrets that are not listed",
+        {
+          provider: provider.id,
+          unlistedSecretRefs: unlisted,
+        },
       );
   }
 

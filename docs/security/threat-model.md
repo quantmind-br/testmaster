@@ -58,9 +58,9 @@ The acceptance checker derives the real executors, transports and capabilities f
 | B-14 | `capability:ci` |
 | B-15 | `capability:contracts`, `capability:state-reducer`, `capability:traceability` |
 | B-16 | `capability:tunnels`, `capability:distributed` |
-| B-17 | `capability:suites`, `capability:schedules`, `capability:auth-dynamic`, `capability:workers-registration`, `capability:deliveries`, `capability:secrets-rotation`, `capability:audit-api`, `capability:matrix-advanced`, `capability:visualMatches`, `capability:accessibilityViolations`, `capability:memory`, `capability:visual-baselines`, `capability:sso`, `capability:scim`, `capability:portability`, `capability:break-glass` |
+| B-17 | `capability:suites`, `capability:schedules`, `capability:auth-dynamic`, `capability:secrets-rotation`, `capability:audit-api`, `capability:matrix-advanced`, `capability:visualMatches`, `capability:accessibilityViolations`, `capability:memory`, `capability:visual-baselines`, `capability:sso`, `capability:scim`, `capability:portability`, `capability:break-glass` |
 | B-18 | `capability:server`, `capability:postgres`, `capability:multi-user`, `capability:identity` |
-| B-19 | `capability:integrations` |
+| B-19 | `capability:integrations`, `capability:deliveries`, `capability:workers-registration` |
 
 ## STRIDE threat register
 

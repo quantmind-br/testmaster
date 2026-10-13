@@ -76,8 +76,14 @@ import { entity, type RunActor, type Scope, type ServiceContext } from "./contex
 import { ControllerRegistry } from "./controllers.js";
 import { DeliveryService } from "./delivery.js";
 import { FlakeService } from "./flake.js";
-import { IntegrationsService } from "./integrations/index.js";
 import { IdentityService } from "./identity.js";
+import { type IntegrationSecrets, IntegrationsService } from "./integrations/index.js";
+import {
+  defaultPublicOrigin,
+  NotificationsService,
+  notificationControllers,
+  registerNotificationProviders,
+} from "./notifications/index.js";
 import { correlationId } from "./observability.js";
 import { QuarantineService } from "./quarantine.js";
 import { revokedImageIds, revokeImage } from "./release.js";
@@ -91,6 +97,7 @@ import { SelectionService } from "./selection.js";
 import type { ServerConfig } from "./server-config.js";
 import { filesystemRoot } from "./server-config.js";
 import {
+  hasSystemPrincipal,
   MembersService,
   OperatorService,
   systemPrincipalId,
@@ -99,6 +106,7 @@ import {
 } from "./team.js";
 import type { TokenData, TokenKind } from "./tokens.js";
 import { WorkerService } from "./worker.js";
+import { WorkerPoolService } from "./worker-pool.js";
 
 const columnScope: Readonly<Record<RbacColumn, Scope>> = {
   read: "R",
@@ -142,6 +150,9 @@ export interface ApplicationOptions extends ResolveConfigOptions {
 interface SharedRuntime {
   controllers: ControllerRegistry;
   controllerScope?: Application;
+  /** Workspace system scopes handed to controller loops, built once per workspace. */
+  systemScopes?: Map<string, Application>;
+  ephemeralSecrets: Map<string, string>;
 }
 export class Application {
   readonly context: ServiceContext;
@@ -162,6 +173,8 @@ export class Application {
   readonly ci: CiService;
   readonly delivery: DeliveryService;
   readonly integrations: IntegrationsService;
+  readonly notifications: NotificationsService;
+  readonly workerPool: WorkerPoolService;
   readonly agentSkills: AgentSkillsService;
   readonly model: ModelService;
   readonly analysis: AnalysisService;
@@ -204,7 +217,10 @@ export class Application {
     readonly dockerCommand?: DockerCommand,
     /** Workspace this instance is bound to; `null` spans all (controllers) or the lone SQLite one. */
     private readonly bound: string | null = null,
-    private readonly shared: SharedRuntime = { controllers: new ControllerRegistry() },
+    private readonly shared: SharedRuntime = {
+      controllers: new ControllerRegistry(),
+      ephemeralSecrets: new Map(),
+    },
     readonly serverConfig?: ServerConfig,
   ) {
     const database = root.forWorkspace(bound ?? "*");
@@ -268,7 +284,7 @@ export class Application {
     this.tests = new TestsService(this.context);
     this.revisions = new RevisionsService(this.context);
     this.approvals = new ApprovalsService(this.context, config);
-    this.secrets = new SecretsService(this.context, config);
+    this.secrets = new SecretsService(this.context, config, shared.ephemeralSecrets);
     this.runs = new RunsService(this.context, {
       config,
       admittedImages: () => this.verifiedImages,
@@ -365,6 +381,39 @@ export class Application {
     this.members = new MembersService(this.context);
     this.tokens = new TokensService(this.context, () => this);
     this.operator = new OperatorService(root.forWorkspace("*"));
+    const publicOrigin = serverConfig?.server.publicOrigin ?? defaultPublicOrigin;
+    this.integrations.useDelivery({ secrets: this.platformSecrets(), publicOrigin });
+    this.workerPool = new WorkerPoolService(this.context);
+    this.notifications = new NotificationsService(this.context, this.integrations, this.batches, {
+      publicOrigin,
+    });
+  }
+
+  /** Releases a secret of this workspace for delivery as the workspace system principal, with its bound origins. */
+  private platformSecrets(): IntegrationSecrets {
+    return {
+      resolveBound: async (ref) => {
+        const system = this.systemScope(this.context.workspaceId);
+        const metadata = system.secrets.get(ref);
+        const value = await (await system.secrets.release(ref)).resolve();
+        return { value, allowedOrigins: metadata.allowedOrigins };
+      },
+    };
+  }
+
+  /** The workspace system principal for background loops; cached, unlike `forWorkspaceSystem`. */
+  systemScope(workspaceId: string): Application {
+    this.shared.systemScopes ??= new Map();
+    let scope = this.shared.systemScopes.get(workspaceId);
+    if (!scope) {
+      // The single local workspace has no controller principal: its owner scope runs the loops.
+      scope =
+        this.root.engine === "sqlite" && !hasSystemPrincipal(this.root, workspaceId)
+          ? this.controllerScope()
+          : this.forWorkspaceSystem(workspaceId, correlationId());
+      this.shared.systemScopes.set(workspaceId, scope);
+    }
+    return scope;
   }
   readonly backups: BackupsService;
   readonly retention: RetentionService;
@@ -387,7 +436,7 @@ export class Application {
         database.close();
         throw error;
       }
-    return new Application(
+    const application = new Application(
       config,
       database,
       options.identity,
@@ -398,6 +447,9 @@ export class Application {
       undefined,
       options.server,
     );
+    registerNotificationProviders();
+    for (const controller of notificationControllers) application.controllers.register(controller);
+    return application;
   }
   close(): void {
     this.root.close();

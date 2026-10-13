@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import {
   ContractError,
   type IntegrationProviderIdValue,
+  type NotificationPayload,
   SCHEMA_VERSION,
 } from "@testmaster/contracts";
 
@@ -53,14 +54,53 @@ export interface IntegrationContext {
    */
   findIntegrations(provider: IntegrationProviderIdValue): StoredIntegration[];
 }
+/**
+ * Secrets of the integration's own workspace, resolved by the platform for delivery (never for an
+ * end user). A secret whose allowed origins do not cover the destination must be refused by the adapter.
+ */
+export interface IntegrationSecrets {
+  resolveBound(ref: string): Promise<{ value: string; allowedOrigins: readonly string[] }>;
+}
 /** Marks a delivery as a configuration test; the payload an adapter builds must carry the same label. */
 export interface TestDeliveryContext extends IntegrationContext {
+  readonly secrets: IntegrationSecrets;
+  /** Origin the portal is served from; message links are built on it. */
+  readonly publicOrigin: string;
   readonly workspaceId: string;
   readonly test: {
     readonly test: true;
     readonly deliveryId: string;
     readonly label: "test notification";
   };
+}
+
+/** Context of one outbound notification attempt. */
+export interface DeliveryContext extends IntegrationContext {
+  readonly workspaceId: string;
+  readonly secrets: IntegrationSecrets;
+  readonly publicOrigin: string;
+}
+/** One frozen notification: the same bytes and delivery ID on every retry. */
+export interface OutboundNotification {
+  /** Stable across retries; receivers dedupe on it. */
+  readonly deliveryId: string;
+  readonly eventId: string;
+  /** 1-based number of this attempt. */
+  readonly attempt: number;
+  readonly payload: NotificationPayload;
+  /** Canonical JSON of `payload`; signatures cover exactly these bytes. */
+  readonly body: Buffer;
+}
+/**
+ * Result of one attempt. `failed` is retried with backoff; `rejected` is permanent (policy,
+ * validation, authorization) and dead-letters at once. `uncertain` marks a request that may have
+ * reached the destination without an observed answer.
+ */
+export interface DeliveryAttemptOutcome extends DeliveryOutcome {
+  readonly reasonCode?: string | null;
+  readonly httpStatus?: number | null;
+  readonly retryAfterMs?: number | null;
+  readonly uncertain?: boolean;
 }
 
 export interface InboundRequest {
@@ -106,6 +146,14 @@ export interface IntegrationProvider<Settings = unknown> {
     context: TestDeliveryContext,
     integration: StoredIntegration<Settings>,
   ): Promise<DeliveryOutcome>;
+  /** Secret references the settings point at; each must also be listed in the integration's `secretRefs`. */
+  referencedSecrets?(settings: Settings): readonly string[];
+  /** Deliver one outbound notification. Absent for providers that only receive. */
+  deliver?(
+    context: DeliveryContext,
+    integration: StoredIntegration<Settings>,
+    notification: OutboundNotification,
+  ): Promise<DeliveryAttemptOutcome>;
   /** Verify the provider signature, validate the schema and classify the delivery. */
   receive?(context: IntegrationContext, request: InboundRequest): Promise<InboundOutcome>;
 }

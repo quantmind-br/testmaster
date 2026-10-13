@@ -488,10 +488,11 @@ export async function health(config: ResolvedConfig): Promise<SecretBackendHealt
 }
 
 export class SecretsService {
-  private readonly ephemeral = new Map<string, string>();
   constructor(
     private readonly ctx: ServiceContext,
     private readonly config: ResolvedConfig,
+    /** Process memory shared by every scope of one runtime, so controller loops can release request-scoped ephemeral secrets. */
+    private readonly ephemeral: Map<string, string> = new Map(),
   ) {}
   list(): SecretMetadata[] {
     this.ctx.authorize("R");
