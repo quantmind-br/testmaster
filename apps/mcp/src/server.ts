@@ -35,6 +35,7 @@ import {
 } from "@testmaster/contracts";
 import { semanticHash } from "@testmaster/domain";
 import { formatDiagnosisSummary } from "@testmaster/reporting";
+import { toolDescriptions } from "./tool-descriptions.js";
 
 export interface McpOptions {
   application: Application;
@@ -84,7 +85,7 @@ export class TestMasterMcp {
     this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
       tools: mcpToolCatalog.map((tool) => ({
         name: tool.name,
-        description: `${tool.name} (${tool.milestone})`,
+        description: toolDescriptions[tool.name as keyof typeof toolDescriptions],
         inputSchema: jsonSchema(tool.inputSchema) as { type: "object" },
         outputSchema: jsonSchema(tool.outputSchema) as { type: "object" },
         annotations: {

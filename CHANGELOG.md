@@ -9,6 +9,8 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 
 ## Unreleased
 
+- MCP tools now carry action-oriented descriptions (what the tool does, when to use it, which tool comes next); `testmaster_get_run` states it returns a summary only and points to evidence and analysis before naming a cause.
+
 ### M4 server, portal, teams and automation (server profile)
 
 - Server profile: `testmaster server start --mode server --config <file>` runs the API, the portal and the controller loops on PostgreSQL 17 (TLS, `verify-full`) with filesystem evidence storage on one host ([ADR-015](docs/adr/015-postgres-runtime.md), [ADR-016](docs/adr/016-server-profile.md)); `storage.kind: "s3"` is refused with `CAPABILITY_UNAVAILABLE` (M5). Compose reference deployment in `deploy/compose/`, workers as host systemd user units, rootless Docker validated ([`docs/operations/rootless-docker.md`](docs/operations/rootless-docker.md)).

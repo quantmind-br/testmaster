@@ -36,6 +36,18 @@ it("SDK handshake advertises contract schemas, records protocol and dispatches M
     try {
       const tools = (await client.listTools()).tools;
       expect(tools.map((tool) => tool.name)).toEqual(mcpToolCatalog.map((tool) => tool.name));
+      const catalogNames = new Set(mcpToolCatalog.map((tool) => tool.name));
+      for (const tool of tools) {
+        const description = tool.description ?? "";
+        expect(description.length, tool.name).toBeGreaterThan(0);
+        expect(description.length, tool.name).toBeLessThanOrEqual(300);
+        expect(description, tool.name).not.toMatch(/^testmaster_\w+ \(M\d\)$/);
+        for (const cited of description.match(/testmaster_[a-z_]+/g) ?? [])
+          expect(catalogNames.has(cited), `${tool.name} cites ${cited}`).toBe(true);
+      }
+      const getRun = tools.find((tool) => tool.name === "testmaster_get_run")?.description ?? "";
+      expect(getRun).toContain("testmaster_get_evidence");
+      expect(getRun).toContain("testmaster_analyze_run");
       for (const tool of tools) {
         expect(tool.inputSchema.type).toBe("object");
         expect(tool.outputSchema?.type).toBe("object");
