@@ -9,6 +9,8 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 
 ## Unreleased
 
+- MCP tools now carry action-oriented descriptions (what the tool does, when to use it, which tool comes next); `testmaster_get_run` states it returns a summary only and points to evidence and analysis before naming a cause.
+
 ### Plan generation against OpenAPI sources
 
 - `jsonSchema` assertions now run: the worker resolves each assertion's `sourceRevisionId` + `pointer` (a JSON pointer such as `/paths/~1items/get/responses/200/content/application~1json/schema`) to the dereferenced schema stored with the source revision and hands it to the runner. Before, every such step ended `blocked` with "Named source schema is absent from snapshot".
