@@ -9,6 +9,12 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 
 ## Unreleased
 
+### Plan generation against OpenAPI sources
+
+- `jsonSchema` assertions now run: the worker resolves each assertion's `sourceRevisionId` + `pointer` (a JSON pointer such as `/paths/~1items/get/responses/200/content/application~1json/schema`) to the dereferenced schema stored with the source revision and hands it to the runner. Before, every such step ended `blocked` with "Named source schema is absent from snapshot".
+- `plan generate` prefixes request paths with the first OpenAPI `servers` path (for example `/v1`) when the cited sources agree on it, because an environment base URL is an origin. Requests that already carry the prefix are left alone.
+- `plan generate` offers the workspace's non-revoked secret names and ids (never values) so generated requests can send `{ "secretRef": … }` credentials. Proposals that cite a secret that was not offered, a `jsonSchema` pointer that does not reach a schema in the cited revision, or an HTTP plan whose only assertions are 200 status checks are refused with `INVALID_ARGUMENT` before anything is persisted.
+
 ### M4 server, portal, teams and automation (server profile)
 
 - Server profile: `testmaster server start --mode server --config <file>` runs the API, the portal and the controller loops on PostgreSQL 17 (TLS, `verify-full`) with filesystem evidence storage on one host ([ADR-015](docs/adr/015-postgres-runtime.md), [ADR-016](docs/adr/016-server-profile.md)); `storage.kind: "s3"` is refused with `CAPABILITY_UNAVAILABLE` (M5). Compose reference deployment in `deploy/compose/`, workers as host systemd user units, rootless Docker validated ([`docs/operations/rootless-docker.md`](docs/operations/rootless-docker.md)).

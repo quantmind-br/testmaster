@@ -30,8 +30,17 @@ import { estimateDuration, flattenSteps, planSimilarity } from "../plan-analysis
 import { stepIdAt } from "../plan-validation.js";
 import type { ModelService } from "./model.js";
 import type { RequirementsService } from "./requirements.js";
+import { applyServerBasePath, unresolvedSchemaPointers } from "./source-documents.js";
 
 type StoredProposal = Proposal & EntityDocument;
+function secretRefsOf(value: unknown, found: string[] = []): string[] {
+  if (Array.isArray(value)) for (const item of value) secretRefsOf(item, found);
+  else if (value && typeof value === "object")
+    for (const [key, item] of Object.entries(value))
+      if (key === "secretRef" && typeof item === "string") found.push(item);
+      else secretRefsOf(item, found);
+  return found;
+}
 type StoredBatch = ProposalBatch & EntityDocument;
 export type PlanGenerationType = "frontend" | "backend" | "integration" | "auto";
 const planRunners = { backend: "http", frontend: "playwright", integration: "http" } as const;
@@ -101,6 +110,17 @@ export class ProposalsService {
     readonly model: ModelService,
     readonly requirements: RequirementsService,
   ) {}
+  /** Secret names and ids the model may reference; none when the caller cannot read secrets. */
+  private offeredSecrets(): { secretRef: string; name: string }[] {
+    try {
+      this.ctx.authorize("R");
+    } catch {
+      return [];
+    }
+    return allEntities(this.ctx, "SecretReference")
+      .filter((secret) => !secret.revokedAt && !secret.managedBy)
+      .map((secret) => ({ secretRef: String(secret.id), name: String(secret.locator) }));
+  }
   async generate(input: {
     projectId: string;
     sourceSnapshotId?: string;
@@ -163,6 +183,7 @@ export class ProposalsService {
       type === "auto"
         ? 'Choose each plan\'s type from the requirement: "backend" with runner "http" when it is observable through HTTP API status, headers or JSON; "frontend" with runner "playwright" when it is observable only in the browser UI.'
         : `Every plan must have type "${type}" and runner "${planRunners[type]}".${type === "integration" ? ' Build an HTTP workflow with at least two request steps: capture a value from an earlier response and use its "stepId.captureName" variableRef in a later request pathSegments, query, headers or body. Include a required deterministic business assertion referencing that later request through responseStepId. A single request, unused capture, or assertion only over the initial response is not an integration workflow.' : ""}`;
+    const secrets = this.offeredSecrets();
     const output = await this.model.complete<unknown>({
       projectId: input.projectId,
       purpose: "plan",
@@ -178,8 +199,10 @@ export class ProposalsService {
         })),
         type,
         sourceSnapshotId: snapshot.fingerprint,
+        // Names and ids only: values never leave the vault.
+        ...(secrets.length ? { secrets } : {}),
       },
-      instructions: `Return exactly one independent executable proposal per supplied requirement, not an intent. ${typeInstruction} Copy requirement IDs exactly and cite only the evidenceId values supplied with that requirement. Use deterministic business assertions deriving expected values only from approved requirements. Include an assertion that would fail if the required feature were broken; body/html visibility and broad all-status checks are trivial and rejected. HTTP paths are relative pathSegments of literal values; frontend locators use testId/role/label. Do not invent absolute destinations or secret values.`,
+      instructions: `Return exactly one independent executable proposal per supplied requirement, not an intent. ${typeInstruction} Copy requirement IDs exactly and cite only the evidenceId values supplied with that requirement. Use deterministic business assertions deriving expected values only from approved requirements. Include an assertion that would fail if the required feature were broken; body/html visibility and broad all-status checks are trivial and rejected, and an HTTP 200 status check alone is trivial too: add a body, schema or header assertion. HTTP paths are relative pathSegments of literal values, written as the source document's paths (a declared server path prefix such as /v1 is added to the request automatically). A jsonSchema assertion's pointer must be a non-empty JSON pointer into the cited source document that reaches the response schema, for example /paths/~1items/get/responses/200/content/application~1json/schema; an empty pointer is rejected. When a secrets entry fits the target API, send its credential as a header whose value is {"secretRef": <entry id>} (for example authorization) on every request unless the source explicitly declares the operation public (security: []): specifications often omit security, and a request without a needed credential only proves the 401. Use only secretRef ids from the supplied secrets and never invent secret values. Frontend locators use testId/role/label. Do not invent absolute destinations or secret values.`,
       sourceRevisionIds: [...new Set(catalog.refs.map((ref) => ref.sourceRevisionId))],
       dataClasses: ["requirements"],
       ...input.budget,
@@ -192,6 +215,44 @@ export class ProposalsService {
       requirements.map((item) => item.id),
       catalog,
     );
+    const offeredSecrets = new Set(secrets.map((secret) => secret.secretRef));
+    generated.proposals = generated.proposals.map((proposal) => {
+      const plan = applyServerBasePath(
+        this.ctx,
+        proposal.plan,
+        proposal.evidenceRefs.map((ref) => ref.sourceRevisionId),
+      );
+      const unknownSecret = secretRefsOf(plan).find((ref) => !offeredSecrets.has(ref));
+      if (unknownSecret)
+        throw new ContractError(
+          "INVALID_ARGUMENT",
+          "Generated proposal references a secret that was not offered",
+          { secretRef: unknownSecret },
+        );
+      const unresolved = unresolvedSchemaPointers(this.ctx, plan);
+      if (unresolved.length)
+        throw new ContractError(
+          "INVALID_ARGUMENT",
+          "Generated jsonSchema assertion does not reach a schema in the cited source revision",
+          { pointers: unresolved },
+        );
+      // Any HTTP 200 passes for an unrelated page (e.g. an HTML portal behind a mistyped path),
+      // so a success status only counts together with an assertion over the body or headers.
+      if (
+        plan.runner === "http" &&
+        !plan.steps.some(
+          (step) =>
+            step.kind === "assertion" &&
+            step.required !== false &&
+            !(step.expectation.predicate === "statusIn" && step.expectation.values.includes(200)),
+        )
+      )
+        throw new ContractError(
+          "INVALID_ARGUMENT",
+          "A generated HTTP proposal needs a body, schema or header assertion beyond a 200 status check",
+        );
+      return { ...proposal, plan };
+    });
     if (
       generated.proposals.some(
         ({ plan }) =>

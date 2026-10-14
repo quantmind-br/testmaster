@@ -9,6 +9,7 @@ import { completion, testProvider } from "../../../model-gateway/src/test-suppor
 import { Application } from "../application.js";
 import { scaffoldPlan } from "../authoring.js";
 import { allEntities, entity } from "../context.js";
+import { sourceSchemasFor } from "./source-documents.js";
 
 const roots: string[] = [];
 const apps: Application[] = [];
@@ -895,4 +896,181 @@ it("selected exploration retry refuses unknown full foreign drifted and unauthor
   ).toThrow("Raw artifact access denied");
   expect(f.counts().requests).toBe(0);
   expect(allEntities(f.app.context, "DiscoveryJob")).toHaveLength(1);
+});
+async function openApiGenerationFixture() {
+  const f = await fixture();
+  await writeFile(
+    join(f.root, "openapi.json"),
+    JSON.stringify({
+      openapi: "3.0.3",
+      info: { title: "Items", version: "1" },
+      servers: [{ url: "https://api.example.test/v1" }],
+      paths: {
+        "/items": {
+          get: {
+            responses: {
+              "200": {
+                description: "ok",
+                content: { "application/json": { schema: { $ref: "#/components/schemas/Items" } } },
+              },
+            },
+          },
+        },
+      },
+      components: {
+        schemas: {
+          Items: {
+            type: "object",
+            required: ["items"],
+            additionalProperties: false,
+            properties: { items: { type: "array", items: { type: "string" } } },
+          },
+        },
+      },
+    }),
+  );
+  const source = await f.app.sources.add({
+    projectId: f.projectId,
+    role: "api-spec",
+    path: join(f.root, "openapi.json"),
+    format: "openapi",
+  });
+  f.app.model.grantConsent(f.projectId, "fake", ["documents", "requirements"], true);
+  f.setOutput({
+    requirements: [
+      {
+        key: "items",
+        text: "Listing items returns an items array",
+        acceptanceCriteria: ["GET /items returns an object with an items array"],
+        evidenceIds: ["E1"],
+        originKind: "explicit",
+        confidence: null,
+        reason: "OpenAPI",
+      },
+    ],
+    conflicts: [],
+    openQuestions: [],
+  });
+  const [requirement] = (
+    await f.app.requirements.normalize({
+      projectId: f.projectId,
+      sourceRevisionIds: [source.revision.id],
+    })
+  ).requirements;
+  if (!requirement) throw new Error("Missing normalized requirement");
+  f.app.requirements.approve(requirement.id, requirement.version ?? 1);
+  const secret = await f.app.secrets.set("API_BEARER", "Bearer canary-credential-value", {
+    allowedOrigins: ["https://api.example.test"],
+  });
+  const pointer = "/paths/~1items/get/responses/200/content/application~1json/schema";
+  const proposal = (
+    over: { path?: string[]; pointer?: string; secretRef?: string; statusOnly?: boolean } = {},
+  ) => {
+    const plan = scaffoldPlan("backend");
+    plan.requirementRefs = [requirement.id];
+    const headers = { authorization: { secretRef: over.secretRef ?? secret.id } };
+    plan.steps = [
+      {
+        id: "call",
+        kind: "action",
+        operation: "request",
+        description: "List items",
+        input: {
+          method: "GET",
+          pathSegments: (over.path ?? ["items"]).map((literal) => ({ literal })),
+          headers,
+        },
+      },
+      {
+        id: "status",
+        kind: "assertion",
+        operation: "assert",
+        description: "Status is 200",
+        input: { responseStepId: "call" },
+        expectation: { predicate: "statusIn", values: [200] },
+      },
+      ...(over.statusOnly
+        ? []
+        : [
+            {
+              id: "schema",
+              kind: "assertion" as const,
+              operation: "assert" as const,
+              description: "Body matches the declared response schema",
+              input: { responseStepId: "call" },
+              expectation: {
+                predicate: "jsonSchema" as const,
+                sourceRevisionId: source.revision.id,
+                pointer: over.pointer ?? pointer,
+              },
+            },
+          ]),
+    ];
+    return {
+      proposals: [{ plan, requirementRefs: [requirement.id], evidenceIds: ["E1"], warnings: [] }],
+    };
+  };
+  return { f, source, secret, pointer, proposal };
+}
+it("generation offers secret names to the model, prefixes the OpenAPI server path and resolves schemas for the runner", async () => {
+  const { f, source, secret, pointer, proposal } = await openApiGenerationFixture();
+  f.setOutput(proposal());
+  const batch = await f.app.proposals.generate({ projectId: f.projectId });
+  const [generated] = f.app.proposals.detail(batch.id).proposals;
+  if (generated?.plan.kind !== "executable") throw new Error("Missing generated plan");
+  const request = generated.plan.steps[0];
+  if (request?.operation !== "request") throw new Error("Missing request step");
+  expect(request.input.pathSegments).toEqual([{ literal: "v1" }, { literal: "items" }]);
+  expect(request.input.headers).toEqual({ authorization: { secretRef: secret.id } });
+  const prompt = ((f.payloads.at(-1)?.messages ?? []) as { content: string }[])
+    .map((message) => message.content)
+    .join("\n");
+  expect(prompt).toContain(`"secretRef":"${secret.id}"`);
+  expect(prompt).toContain('"name":"API_BEARER"');
+  expect(prompt).not.toContain("canary-credential-value");
+  const schemas = sourceSchemasFor(f.app.context, generated.plan);
+  expect(schemas).toEqual({
+    [`${source.revision.id}${pointer}`]: expect.objectContaining({
+      type: "object",
+      required: ["items"],
+      properties: { items: { type: "array", items: { type: "string" } } },
+    }),
+  });
+  // Negative control: a path that already carries the prefix is not prefixed twice.
+  f.setOutput(proposal({ path: ["v1", "items"] }));
+  const again = await f.app.proposals.generate({ projectId: f.projectId });
+  const [second] = f.app.proposals.detail(again.id).proposals;
+  const secondRequest = second?.plan.kind === "executable" ? second.plan.steps[0] : undefined;
+  expect(secondRequest?.operation === "request" && secondRequest.input.pathSegments).toEqual([
+    { literal: "v1" },
+    { literal: "items" },
+  ]);
+});
+it("generation refuses proposals that cannot run: unreachable schema pointer, unknown secret, 200-only status", async () => {
+  const { f, proposal } = await openApiGenerationFixture();
+  const before = f.app.proposals.list(f.projectId).length;
+  const refuses = async (output: unknown, message: string) => {
+    f.setOutput(output);
+    await expect(f.app.proposals.generate({ projectId: f.projectId })).rejects.toMatchObject({
+      code: "INVALID_ARGUMENT",
+      message,
+    });
+  };
+  await refuses(
+    proposal({ pointer: "" }),
+    "Generated jsonSchema assertion does not reach a schema in the cited source revision",
+  );
+  await refuses(
+    proposal({ pointer: "/paths/~1items/get/responses/404/content/application~1json/schema" }),
+    "Generated jsonSchema assertion does not reach a schema in the cited source revision",
+  );
+  await refuses(
+    proposal({ secretRef: "sec_01900000-0000-7000-8000-000000000001" }),
+    "Generated proposal references a secret that was not offered",
+  );
+  await refuses(
+    proposal({ statusOnly: true }),
+    "A generated HTTP proposal needs a body, schema or header assertion beyond a 200 status check",
+  );
+  expect(f.app.proposals.list(f.projectId)).toHaveLength(before);
 });

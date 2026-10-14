@@ -50,6 +50,7 @@ import {
 } from "@testmaster/sandbox";
 import { AgentModeService } from "./ai/agent-mode.js";
 import { CodeImportService } from "./ai/code-import.js";
+import { sourceSchemasFor } from "./ai/source-documents.js";
 import { auditSecurity } from "./audit.js";
 import { type AuthProfilesService, authBlockReasons } from "./auth/index.js";
 import { runMatrixCell } from "./comparisons.js";
@@ -721,6 +722,7 @@ export class WorkerService {
             ...(prepared?.runnerAuth ? { auth: prepared.runnerAuth } : {}),
             variables,
             artifacts: fixtureInputs.artifacts,
+            schemas: sourceSchemasFor(this.ctx, plan),
             bodyBytes: limits.bodyBytes ?? defaults.bodyBytes,
             locale: env.locale,
             timezone: env.timezone,
