@@ -17,6 +17,7 @@ export function validateCapacity(capacity: WorkerCapacity): WorkerCapacity {
     capacity.pools.browser,
     capacity.pools.http,
     capacity.pools.python,
+    capacity.pools.terminal,
   ])
     if (!Number.isFinite(value) || value < 0)
       throw new ContractError(
@@ -24,9 +25,13 @@ export function validateCapacity(capacity: WorkerCapacity): WorkerCapacity {
         "Worker capacity must contain finite nonnegative budgets",
       );
   if (
-    ![capacity.pools.browser, capacity.pools.http, capacity.pools.python, capacity.pids].every(
-      Number.isInteger,
-    )
+    ![
+      capacity.pools.browser,
+      capacity.pools.http,
+      capacity.pools.python,
+      capacity.pools.terminal,
+      capacity.pids,
+    ].every(Number.isInteger)
   )
     throw new ContractError(
       "INVALID_ARGUMENT",

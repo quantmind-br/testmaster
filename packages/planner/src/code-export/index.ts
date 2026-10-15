@@ -201,6 +201,12 @@ const playwrightLock = {
 export function exportCode(input: ExecutablePlan, options: CodeExportOptions): CodeExport {
   if (options.format !== "playwright" && options.format !== "pytest")
     throw new ContractError("INVALID_ARGUMENT", "Unknown code export format");
+  if (input.runner === "terminal")
+    throw new ContractError(
+      "CAPABILITY_UNAVAILABLE",
+      "Code export is not available for terminal tests; replay them with the terminal runner",
+      { operation: "export", runner: "terminal", format: options.format },
+    );
   if (options.async && (options.format !== "pytest" || input.runner !== "playwright"))
     throw new ContractError("INVALID_ARGUMENT", "Async export requires pytest Playwright");
   const plan = validate<ExecutablePlan>("ExecutablePlan", input);

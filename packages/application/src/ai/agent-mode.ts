@@ -18,6 +18,12 @@ export class AgentModeService {
     const revision = requireEntity(this.ctx, "TestRevision", revisionId);
     const owner = requireEntity(this.ctx, "TestCase", String(revision.testId));
     this.ctx.authorize("X", String(owner.projectId));
+    if (revision.runnerKind === "terminal")
+      throw new ContractError(
+        "CAPABILITY_UNAVAILABLE",
+        "Agent mode is not available for terminal tests",
+        { capability: "agent-mode", runner: "terminal", reason: "terminal_runner" },
+      );
     const proposalId = (revision.extensions as Record<string, unknown> | undefined)?.[
       "testmaster:proposalId"
     ];

@@ -39,6 +39,9 @@ const allowedRunner: Record<string, true> = {
   // Reporter API host for imported @playwright/test projects (plan D8).
   "@playwright/test": true,
   undici: true,
+  // Terminal runner (ADR-025): the PTY and the headless emulator behind the screen assertions.
+  "@lydell/node-pty": true,
+  "@xterm/headless": true,
 };
 const testFrameworks: Record<string, true> = { vitest: true, "fast-check": true };
 const builtins = new Set(builtinModules.flatMap((name) => [name, `node:${name}`]));

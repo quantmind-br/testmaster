@@ -18,6 +18,12 @@ export class UnsafeRuntime implements AttemptRuntimeExecutor {
         "Unsafe-local Python execution is unavailable",
         { capability: "unsafe-local-python", milestone: "M2" },
       );
+    if (input.kind === "terminal")
+      throw new ContractError(
+        "CAPABILITY_UNAVAILABLE",
+        "Unsafe-local terminal execution is unavailable",
+        { capability: "unsafe-local-terminal", milestone: "M5" },
+      );
     return executeUnsafeProcess(
       {
         unsafeLocal: true,

@@ -1,5 +1,5 @@
 import { once } from "node:events";
-import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { connect } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -12,6 +12,7 @@ import { AttemptExecutor } from "./executor.js";
 
 async function scenario(
   mode: "valid" | "regressive" | "missing" | "second" | "quota" | "capture" | "capture-missing",
+  kind: "http" | "terminal" = "http",
 ) {
   const root = await mkdtemp(join(tmpdir(), "protocol-test-"));
   const runtime = join(root, "runtime");
@@ -28,8 +29,11 @@ async function scenario(
   const imageId = `sha256:${"1".repeat(64)}`;
   let secondClosed = false;
   let removed = false;
+  let created: string[] = [];
+  let inputFiles: string[] = [];
   const command: DockerCommand = async (args) => {
     if (args[0] === "rm") removed = true;
+    if (args[0] === "create") created = [...args];
     if (args[0] === "inspect")
       return {
         code: 0,
@@ -63,6 +67,7 @@ async function scenario(
         droppedBytes: 0,
       };
     if (args[0] === "start") {
+      inputFiles = (await readdir(inputDir)).sort();
       const input = JSON.parse(await readFile(join(inputDir, "snapshot.json"), "utf8"));
       const socket = connect(join(runtime, "testmaster", ids.attemptId, "protocol.sock"));
       await once(socket, "connect");
@@ -112,7 +117,7 @@ async function scenario(
       runtime,
     ).execute({
       ...ids,
-      kind: "http",
+      kind,
       imageId,
       inputDir,
       networkPolicy: {
@@ -137,7 +142,7 @@ async function scenario(
           }
         : {}),
     });
-    return { result, secondClosed, removed };
+    return { result, secondClosed, removed, created, inputFiles };
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -166,4 +171,12 @@ it("refuses sensitive captures when encrypted storage is unavailable", async () 
   expect(result.outcome).toBe("blocked");
   expect(result.reasonCode).toBe("missing_secret");
   expect(JSON.stringify(result.events)).not.toContain("protocol-capture-canary");
+});
+it("runs a terminal attempt from snapshot.json in the terminal envelope without a Python input", async () => {
+  const { result, created, inputFiles } = await scenario("valid", "terminal");
+  expect(result.outcome).toBe("passed");
+  expect(inputFiles).toEqual(["snapshot.json"]);
+  expect(created[created.indexOf("--memory") + 1]).toBe(String(1024 ** 3));
+  expect(created[created.indexOf("--pids-limit") + 1]).toBe("256");
+  expect(created).not.toContain("--input");
 });

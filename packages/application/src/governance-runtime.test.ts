@@ -58,6 +58,7 @@ it("opens only migrated storage and degrades browser readiness without declaring
         http: { status: "ready" },
         playwright: { status: "unavailable" },
         python: { status: "ready" },
+        terminal: { status: "ready" },
       },
     },
   });
@@ -102,7 +103,7 @@ it("an old local worker advertises real digests but never claims a queued action
       memoryBytes: 17179869184,
       pids: 1024,
       diskBytes: 10737418240,
-      pools: { browser: 2, http: 4, python: 1 },
+      pools: { browser: 2, http: 4, python: 1, terminal: 1 },
     },
   });
   await finished.promise;
@@ -231,4 +232,60 @@ it("refuses future executable schemas and an absent image before claim", async (
   ).toBe(false);
   expect(supportsQueuedRun({ ...handshake, imageDigests: [] }, run, revision, lock)).toBe(false);
   expect(app.database.all("SELECT id FROM attempts WHERE run_id=?", run.id)).toEqual([]);
+});
+it("claims terminal runs only for a worker that advertises the terminal runner and its operations", async () => {
+  const { app, init } = await fixture();
+  const test = app.tests.create({ projectId: init.projectId, plan: scaffoldPlan("backend") });
+  vi.spyOn(app, "preflight").mockResolvedValue();
+  const receipt = await app.runs.admit(
+    { testId: test.id, environmentId: init.environmentId },
+    { wait: true },
+  );
+  const run = app.runs.get(receipt.runId);
+  const lock = await imageLock();
+  const plan = scaffoldPlan("backend");
+  plan.type = "cli";
+  plan.runner = "terminal";
+  plan.steps = [
+    {
+      id: "cli",
+      kind: "action",
+      operation: "run",
+      description: "Run the program",
+      input: { program: { path: "/bin/true" } },
+    },
+    {
+      id: "exit",
+      kind: "assertion",
+      operation: "assert",
+      description: "The program exits cleanly",
+      required: true,
+      input: { processStepId: "cli" },
+      expectation: { predicate: "exitCodeIn", values: [0] },
+    },
+  ];
+  const revision = {
+    ...app.revisions.get(String(test.activeRevisionId)),
+    runnerKind: "terminal",
+    plan,
+  };
+  const handshake = localHandshake(lock);
+  expect(handshake.runners).toContain("terminal");
+  expect(supportsQueuedRun(handshake, run, revision, lock)).toBe(true);
+  expect(
+    supportsQueuedRun(
+      { ...handshake, runners: handshake.runners.filter((runner) => runner !== "terminal") },
+      run,
+      revision,
+      lock,
+    ),
+  ).toBe(false);
+  expect(
+    supportsQueuedRun(
+      { ...handshake, actions: handshake.actions.filter((action) => action !== "run") },
+      run,
+      revision,
+      lock,
+    ),
+  ).toBe(false);
 });

@@ -1,0 +1,64 @@
+{
+  "schema": "ExecutablePlan",
+  "value": {
+    "schemaVersion": "1.0.0",
+    "kind": "executable",
+    "name": "Print the version and browse the library",
+    "type": "cli",
+    "runner": "terminal",
+    "requirementRefs": [],
+    "steps": [
+      {
+        "id": "version",
+        "kind": "action",
+        "operation": "run",
+        "description": "Print the version",
+        "input": {
+          "program": { "path": "/usr/bin/env" },
+          "args": [{ "literal": "--version" }]
+        }
+      },
+      {
+        "id": "version-exit",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "The command succeeds",
+        "input": { "processStepId": "version" },
+        "expectation": { "predicate": "exitCodeIn", "values": [0] }
+      },
+      {
+        "id": "open-tui",
+        "kind": "action",
+        "operation": "launch",
+        "description": "Open the interactive program",
+        "input": {
+          "program": { "path": "/usr/bin/env" },
+          "cols": 100,
+          "rows": 30
+        }
+      },
+      {
+        "id": "press-quit",
+        "kind": "action",
+        "operation": "sendKeys",
+        "description": "Quit",
+        "input": { "keys": ["Ctrl+Q"] }
+      },
+      {
+        "id": "quit-exit",
+        "kind": "action",
+        "operation": "waitForExit",
+        "description": "Wait for the program to exit",
+        "input": { "deadlineMs": 5000 }
+      },
+      {
+        "id": "no-leftovers",
+        "kind": "assertion",
+        "operation": "assert",
+        "description": "No process outlives the session",
+        "input": { "processStepId": "open-tui" },
+        "expectation": { "predicate": "noLingeringProcesses" }
+      }
+    ]
+  }
+}

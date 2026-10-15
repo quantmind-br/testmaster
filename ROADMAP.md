@@ -1,6 +1,6 @@
 # TestMaster — Roadmap de implementação
 
-Estado: **planejamento; nenhum marco de software concluído por esta entrega documental**. As caixas abaixo permanecem abertas até evidência real. Ordem por dependências e gates, não cronograma prometido. Contrato superior: [SPEC](SPEC.md); escopo completo: [56 requisitos funcionais](specs/01-requirements.md); aceitação: [VAL e jornadas J01–J18](specs/10-validation.md). Relatório do concorrente: [REPORT](REPORT.md); proveniência: [SOURCES](SOURCES.md).
+Estado: **planejamento; nenhum marco de software concluído por esta entrega documental**. As caixas abaixo permanecem abertas até evidência real. Ordem por dependências e gates, não cronograma prometido. Contrato superior: [SPEC](SPEC.md); escopo completo: [57 requisitos funcionais](specs/01-requirements.md); aceitação: [VAL e jornadas J01–J18](specs/10-validation.md). Relatório do concorrente: [REPORT](REPORT.md); proveniência: [SOURCES](SOURCES.md).
 
 ## 1. Resultado final e regras de execução
 
@@ -37,7 +37,7 @@ M3a é trilha interna de M3, não marco extra. Design de UI/integrações pode o
 |---|---|---|---|
 | M0 | Contratos testáveis e corpus com oracle independente | Nenhuma | Contratos convergentes; threat model e negative controls |
 | M1 | Browser/API locais reais sem modelo/conta | M0 | J01/J04/J06/J17 local; invariantes e sandbox |
-| M2 | Fontes → propostas revisadas → execução; agente via MCP | M1 | J02/J03/J14; geração grounded, consent e budgets |
+| M2 | Fontes → propostas revisadas → execução; agente via MCP | M1 | J02/J03/J14; geração grounded, allowlist de providers e budgets |
 | M3 | Falha → diagnóstico/proposta → nova verificação; CI strict | M1+M2 para IA | J05–J08/J11; sem false repair/false green |
 | M4 | Equipe opera portal/API/GitHub/schedules self-hosted | M3 | J09/J10/J12/J13/J16/J17 servidor |
 | M5 | Remoto/túnel, matriz e qualidade avançada autorizada | M4 | J08/J13/J18; isolamento/egress e carga controlada |
@@ -77,7 +77,7 @@ M3a é trilha interna de M3, não marco extra. Design de UI/integrações pode o
 
 - [ ] **M2-01 — Fontes e parsers** (`Core`, `AI`). PRD Markdown/texto/JSON/PDF; OpenAPI 3.0/3.1/Swagger2/Postman; uploads/chunks/hashes e refs autorizados. **Dep.:** M1-02/03. **Prova:** PDF sem texto, archive malicioso e `$ref` externo têm diagnósticos seguros; erro não vira fonte vazia ready.
 - [ ] **M2-02 — Code summary/diff** (`AI`). AST inicial JS/TS/React/Next/Express e Python/FastAPI, ignores, base/head/dirtyHash e impact closure. **Dep.:** M2-01. **Prova:** sem executar scripts do repo; arquivo excluído não vai ao modelo; mudança de auth inclui smoke crítica e declara cobertura parcial.
-- [ ] **M2-03 — Gateway de modelos e budgets** (`AI`, `Security`, `Operations`). BYOK/OpenAI-compatible/local, capabilities, consent, structured-output, timeout/cancel, reservas/usage, retry bounded e cache scoped. **Dep.:** M0-03/M1-02. **Prova:** provider inválido/não autorizado não recebe dados; concorrência não gasta duas vezes saldo; replay segue sem modelo.
+- [ ] **M2-03 — Gateway de modelos e budgets** (`AI`, `Security`, `Operations`). BYOK/OpenAI-compatible/local, capabilities, allowlist de providers, structured-output, timeout/cancel, reservas/usage, retry bounded e cache scoped. **Dep.:** M0-03/M1-02. **Prova:** provider inválido/não autorizado não recebe dados; concorrência não gasta duas vezes saldo; replay segue sem modelo.
 - [ ] **M2-04 — Normalização e exploração** (`AI`, `Execution`). Requisitos explicit/inferred/observed, conflitos, feature map e exploração browser com fingerprint e partial/unreachable. **Dep.:** M2-01/02/03/M1-04. **Prova:** app contradiz PRD e sistema não reescreve intenção; retomar só feature elegível; prompt injection não amplia ferramentas.
 - [ ] **M2-05 — Propostas e aceite** (`Core`, `AI`). Batches, dedupe, revisão/candidata/validação, subset e optimistic concurrency, aprovação com permissões. **Dep.:** M2-04. **Prova:** A/B aceitos uma vez; C retido; concurrent edit é conflito, não overwrite; generation ≠ verification passed.
 - [ ] **M2-06 — Geração/export de código** (`Execution`, `AI`). Playwright TS e Python sync/async/pytest/requests com harness e dependencies fixas; integration workflow multi-step. **Dep.:** M2-03/05/M1-05. **Prova:** código exportado roda fora TestMaster; import malicioso fica contido; compilação não é prova de oracle.
@@ -163,8 +163,9 @@ final integrated-suite pass or M3 graduation follows from these development cont
 - [ ] **M5-06 — Segurança e carga autorizadas** (`Security`, `Execution`). Checks auth/tenant/input e adapter DAST; performance/concurrency com ramp/rate/duration/cancel. **Dep.:** M5-01/05. **Prova:** target não autorizado negado, limite efetivo e stop condition; dados/hardware e overhead plataforma separados.
 - [ ] **M5-07 — Issues e memória de projeto** (`Integrations`, `AI`). Jira/Linear import/link/create aprovado; memória factual aprovada com source/TTL/invalidation/forget. **Dep.:** M4-08/M2-01/03. **Prova:** ticket/DOM malicioso não executa ferramenta; source removida invalida derivados; fechar issue não altera failed.
 - [ ] **M5-08 — Avaliação de capacidade e isolamento** (`Quality`, `Operations`). Matriz supported, hardware manifests, soak/chaos/storage/backpressure e runbooks. **Dep.:** M5-01–07. **Prova:** publicar throughput/percentis com n e limites reais; multi-tenant hostil não recebe promessa de isolamento forte por container sozinho.
+- [ ] **M5-09 — Runner de terminal (CLI, PTY e TUI)** (`Execution`, `Security`, `Core`). Implementado no código; evidência de aceite a anexar pelo owner. Plano `type: cli`/`runner: terminal` em dois modos: pipes (CLI) e PTY lido por emulador headless (`@xterm/headless` 6.0.0 com `@lydell/node-pty` 1.2.0-beta.15 pré-compilado, [ADR-025](docs/adr/025-terminal-runner.md)); programa de fixture (bind read-only) ou da imagem, sem shell implícito; asserções de exit code, stdout/stderr, tela, arquivo e clipboard OSC 52; evidências `terminal.*`; migração 0022; capability `terminal`; `test scaffold --type cli`. Geração por modelo, healing, agent mode, export de código e unsafe-local são recusados com `CAPABILITY_UNAVAILABLE`. **Dep.:** M1-03/M1-05. **Prova:** TUI Go real exercitada por pipes e PTY; defeitos introduzidos em cópia descartável reprovam apenas o teste correspondente com `failed/assertion_*`; programa ausente fica `blocked`, processo pendurado `assertion_timeout` sem processo vivo depois, cancelamento mata a árvore; runs HTTP, Playwright e pytest seguem verdes com a imagem nova.
 
-**Gate M5:** J08 matriz/J13 issues/J18 e SEC de túnel/egress/plugins. Não disparar scan/carga externa para provar documentação sem autorização específica do alvo.
+**Gate M5:** J08 matriz/J13 issues/J18 e SEC de túnel/egress/plugins/terminal (SEC-049–053). Não disparar scan/carga externa para provar documentação sem autorização específica do alvo.
 
 ## 9. M6 — Federação, portabilidade, extensões e GA
 
@@ -173,7 +174,7 @@ final integrated-suite pass or M3 graduation follows from these development cont
 - [ ] **M6-03 — SDK/plugins e conformance** (`Core`, `Maintainer`). Runner/model/storage/notifier adapters versionados, manifests/checksum/trust, API docs e examples. **Dep.:** M5. **Prova:** plugin respeita cancel/limits/egress/redaction/tenant; upgrade incompatível recusado antes de efeito; nenhum hot-load de URL dada por modelo.
 - [ ] **M6-04 — Matriz de distribuição/airgap** (`Operations`). Linux referência, macOS/Windows via Docker Desktop/WSL2 validados, imagens/deps offline, install/uninstall/upgrade/rollback. **Dep.:** M4-02/M6-03. **Prova:** ambiente sem registry/API/analytics executa replay; suporte por OS divulgado somente após smoke real.
 - [ ] **M6-05 — Release OSS e documentação operacional** (`Maintainer`, `Security`). Licença final, SBOM/notices/proveniência/assinatura, contribuição/governança/security policy, exemplos, guias de migração/backup/incident response. **Dep.:** M6-01–04. **Prova:** terceiro instala/restaura/exporta a partir do pacote publicado sem conhecimento interno.
-- [ ] **M6-06 — Auditoria final de paridade e GA** (`Quality`, `Maintainer`). Todas REQ-001–056 e NFR/INV/SEC/OPS/UX/INT/VAL/CONTRACT com evidência; benchmarks/limitações/waivers não críticos publicados. **Dep.:** todos os gates. **Prova:** suite fresh e jornadas completas; zero high/critical no scope, sem false passed/secret leak/tenant leak/assertion weakening; performance não medida permanece sem claim.
+- [ ] **M6-06 — Auditoria final de paridade e GA** (`Quality`, `Maintainer`). Todas REQ-001–057 e NFR/INV/SEC/OPS/UX/INT/VAL/CONTRACT com evidência; benchmarks/limitações/waivers não críticos publicados. **Dep.:** todos os gates. **Prova:** suite fresh e jornadas completas; zero high/critical no scope, sem false passed/secret leak/tenant leak/assertion weakening; performance não medida permanece sem claim.
 
 **GA não equivale a ausência de bugs.** Representa escopo e versões testados, limitações explícitas, manutenção e distribuição verificáveis. Capability não exercitada não herda selo GA de outro provider/browser/OS.
 
@@ -230,7 +231,7 @@ IDs funcionais da [spec 01](specs/01-requirements.md). Tarefas secundárias refo
 | REQ-045 | M5 | M5-03 | J08/J18, matrix |
 | REQ-046 | M5 | M5-03 | J18, visual mutant |
 | REQ-047 | M5 | M5-04 | J18, a11y violation |
-| REQ-048 | M5 | M5-06 | J18, consent/tenant |
+| REQ-048 | M5 | M5-06 | J18, approval/tenant |
 | REQ-049 | M5 | M5-06 | J18, load stop |
 | REQ-050 | M5 | M5-05 | VAL-042, shrink/replay |
 | REQ-051 | M6 | M6-02 | J15, roundtrip |
@@ -239,6 +240,7 @@ IDs funcionais da [spec 01](specs/01-requirements.md). Tarefas secundárias refo
 | REQ-054 | M4 | M4-04 | chat → proposal → review |
 | REQ-055 | M3 | M3-04 | closure/fixture validity |
 | REQ-056 | M6 | M6-04 | offline install/replay |
+| REQ-057 | M5 | M5-09 | pipes/PTY, TUI com defeito, leak/hang |
 
 NFR são transversais: NFR-001/005/007 → M0-02/M1-02/06/08/M4-02; NFR-002/003/011 → M0-03/05/M1-03/08/M6-05; NFR-004/009 → M0-01/02/M6-03; NFR-006/010 → M4-02/M5-08; NFR-008 → M4-04/05; NFR-012 → todos reducers/gates, com owner `Quality`. Requisitos especializados seguem os mesmos marcos declarados nas specs; registry M0-06 expande cada ID, não somente essa agregação.
 

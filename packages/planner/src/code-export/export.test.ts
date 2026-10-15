@@ -269,4 +269,23 @@ describe("standalone deterministic code export", () => {
       for (const action of actions) expect(code).toContain(action.id);
     }
   });
+  it("refuses terminal plans explicitly in every format instead of taking the Playwright path", async () => {
+    const plan = await fixture("cli");
+    expect(plan.runner).toBe("terminal");
+    for (const options of [
+      { format: "playwright" },
+      { format: "pytest" },
+      { format: "pytest", async: true },
+    ] as const)
+      expect(() => exportCode(plan, options), JSON.stringify(options)).toThrow(
+        expect.objectContaining({
+          code: "CAPABILITY_UNAVAILABLE",
+          message:
+            "Code export is not available for terminal tests; replay them with the terminal runner",
+        }),
+      );
+    // Positive control: the refusal is specific to the terminal runner.
+    const backend = await fixture("backend");
+    expect(() => exportCode(backend, { format: "pytest" })).not.toThrow();
+  });
 });

@@ -44,12 +44,26 @@ export const Locator = Type.Recursive((Self) => {
 const valuePredicate = <P extends string>(predicate: P) =>
   Obj({ predicate: Type.Literal(predicate), value: Value });
 export const Expectation = Type.Union([
-  ...(["visible", "hidden", "enabled"] as const).map((predicate) =>
-    Obj({ predicate: Type.Literal(predicate) }),
-  ),
-  ...(["textEquals", "textContains", "valueEquals", "urlEquals", "jsonEquals"] as const).map(
-    valuePredicate,
-  ),
+  ...(
+    ["visible", "hidden", "enabled", "noLingeringProcesses", "fileExists", "fileAbsent"] as const
+  ).map((predicate) => Obj({ predicate: Type.Literal(predicate) })),
+  Obj({
+    predicate: Type.Literal("exitCodeIn"),
+    values: Type.Array(Type.Integer({ minimum: 0, maximum: 255 }), {
+      minItems: 1,
+      uniqueItems: true,
+    }),
+  }),
+  ...(
+    [
+      "textEquals",
+      "textContains",
+      "textNotContains",
+      "valueEquals",
+      "urlEquals",
+      "jsonEquals",
+    ] as const
+  ).map(valuePredicate),
   Obj({ predicate: Type.Literal("countEquals"), value: Nonnegative }),
   Obj({
     predicate: Type.Literal("statusIn"),
@@ -115,6 +129,65 @@ export const RequestInput = Obj({
     }),
   ),
 });
+/** Named keys of the terminal runner; `Ctrl+<A-Z>` and `Alt+<A-Za-z0-9>` are matched by pattern. */
+export const terminalNamedKeys = [
+  "Enter",
+  "Tab",
+  "Shift+Tab",
+  "Backspace",
+  "Delete",
+  "Escape",
+  "Space",
+  "Up",
+  "Down",
+  "Left",
+  "Right",
+  "Home",
+  "End",
+  "PageUp",
+  "PageDown",
+  "Insert",
+  "F1",
+  "F2",
+  "F3",
+  "F4",
+  "F5",
+  "F6",
+  "F7",
+  "F8",
+  "F9",
+  "F10",
+  "F11",
+  "F12",
+] as const;
+export const terminalSignals = ["SIGINT", "SIGTERM", "SIGHUP", "SIGQUIT", "SIGKILL"] as const;
+/** Program run without an implicit shell: an imported fixture or an absolute path in the image. */
+export const TerminalProgram = Type.Union([
+  Obj({ artifactRef: id("art") }),
+  Obj({ path: Type.String({ pattern: "^(?!.*(?:^|/)\\.\\.(?:/|$))/[^\\\\]+$", maxLength: 1024 }) }),
+]);
+export const TerminalEnvName = Type.String({ pattern: "^[A-Za-z_][A-Za-z0-9_]{0,127}$" });
+export const TerminalEnv = Type.Record(TerminalEnvName, Value, { maxProperties: 64 });
+export const TerminalKey = Type.String({
+  pattern: `^(?:${terminalNamedKeys.map((key) => key.replace("+", "\\+")).join("|")}|Ctrl\\+[A-Z]|Alt\\+[A-Za-z0-9])$`,
+});
+export const TerminalColumns = Type.Integer({ minimum: 20, maximum: 500 });
+export const TerminalRows = Type.Integer({ minimum: 5, maximum: 200 });
+export const TerminalRoot = Enum(["workdir", "home"]);
+export const ProcessCapture = Obj({
+  name: Name,
+  from: Enum(["stdout", "stderr"]),
+  jsonPointer: Type.Optional(JsonPointer),
+  valueType: Enum(["string", "number", "boolean", "object", "array", "null"]),
+  sensitive: Type.Boolean(),
+});
+const terminalProcess = {
+  program: TerminalProgram,
+  args: Type.Optional(Type.Array(Value, { maxItems: 256 })),
+  env: Type.Optional(TerminalEnv),
+  cwd: Type.Optional(RelativePath),
+};
+const terminalFilePath = Obj({ root: TerminalRoot, path: RelativePath });
 const common = {
   id: Type.String({ pattern: "^[a-z][a-z0-9_-]{0,63}$" }),
   description: Description,
@@ -125,86 +198,145 @@ const common = {
 const action = <O extends string, I extends TSchema>(operation: O, input: I) =>
   Obj({ ...common, kind: Type.Literal("action"), operation: Type.Literal(operation), input });
 const locatorInput = Obj({ locator: Locator });
-export const Step = Type.Recursive((Self) =>
-  Type.Union([
-    action(
-      "navigate",
-      Obj({
-        path: Type.String({ minLength: 1 }),
-        readiness: Type.Optional(Enum(["load", "domcontentloaded", "networkidle"])),
-      }),
-    ),
-    ...(["click", "hover", "check", "uncheck"] as const).map((op) =>
+const buildStep = (withTerminal: boolean) =>
+  Type.Recursive((Self) =>
+    Type.Union([
       action(
-        op,
+        "navigate",
         Obj({
-          locator: Locator,
-          button: Type.Optional(Enum(["left", "middle", "right"])),
-          modifiers: Type.Optional(Type.Array(Enum(["Alt", "Control", "Meta", "Shift"]))),
+          path: Type.String({ minLength: 1 }),
+          readiness: Type.Optional(Enum(["load", "domcontentloaded", "networkidle"])),
         }),
       ),
-    ),
-    action("fill", Obj({ locator: Locator, value: Value })),
-    action("press", Obj({ locator: Locator, key: Name })),
-    action(
-      "select",
-      Obj({
-        locator: Locator,
-        values: Type.Array(
-          Type.Union([Obj({ value: Value }), Obj({ label: Value }), Obj({ index: Nonnegative })]),
-          { minItems: 1 },
+      ...(["click", "hover", "check", "uncheck"] as const).map((op) =>
+        action(
+          op,
+          Obj({
+            locator: Locator,
+            button: Type.Optional(Enum(["left", "middle", "right"])),
+            modifiers: Type.Optional(Type.Array(Enum(["Alt", "Control", "Meta", "Shift"]))),
+          }),
         ),
-      }),
-    ),
-    action("drag", Obj({ source: Locator, destination: Locator })),
-    action(
-      "upload",
-      Obj({ locator: Locator, artifactRefs: Type.Array(id("art"), { minItems: 1 }) }),
-    ),
-    action(
-      "download",
-      Obj({
-        trigger: Obj({ operation: Type.Literal("click"), input: locatorInput }),
-        outputName: Name,
-      }),
-    ),
-    action("switchPage", Obj({ pageAlias: Name })),
-    action(
-      "frame",
-      Obj({ locator: Locator, childSteps: Type.Array(Self, { minItems: 1, maxItems: 200 }) }),
-    ),
-    action(
-      "waitFor",
-      Type.Union([
+      ),
+      action("fill", Obj({ locator: Locator, value: Value })),
+      action("press", Obj({ locator: Locator, key: Name })),
+      action(
+        "select",
         Obj({
           locator: Locator,
-          state: Enum(["attached", "detached", "visible", "hidden"]),
-          deadlineMs: Positive,
+          values: Type.Array(
+            Type.Union([Obj({ value: Value }), Obj({ label: Value }), Obj({ index: Nonnegative })]),
+            { minItems: 1 },
+          ),
         }),
+      ),
+      action("drag", Obj({ source: Locator, destination: Locator })),
+      action(
+        "upload",
+        Obj({ locator: Locator, artifactRefs: Type.Array(id("art"), { minItems: 1 }) }),
+      ),
+      action(
+        "download",
         Obj({
-          response: Obj({
-            url: Name,
-            status: Type.Optional(Type.Integer({ minimum: 100, maximum: 599 })),
-          }),
-          deadlineMs: Positive,
+          trigger: Obj({ operation: Type.Literal("click"), input: locatorInput }),
+          outputName: Name,
         }),
-      ]),
-    ),
-    action("request", RequestInput),
-    Obj({
-      ...common,
-      kind: Type.Literal("assertion"),
-      operation: Type.Literal("assert"),
-      input: Type.Union([
-        Obj({ locator: Locator }),
-        Obj({ pageAlias: Type.Optional(Name), url: Type.Optional(Type.String()) }),
-        Obj({ responseStepId: Name, jsonPointer: Type.Optional(JsonPointer) }),
-        Obj({ outputName: Name }),
-      ]),
-      expectation: Expectation,
-    }),
-  ]),
-);
+      ),
+      action("switchPage", Obj({ pageAlias: Name })),
+      action(
+        "frame",
+        Obj({ locator: Locator, childSteps: Type.Array(Self, { minItems: 1, maxItems: 200 }) }),
+      ),
+      action(
+        "waitFor",
+        Type.Union([
+          Obj({
+            locator: Locator,
+            state: Enum(["attached", "detached", "visible", "hidden"]),
+            deadlineMs: Positive,
+          }),
+          Obj({
+            response: Obj({
+              url: Name,
+              status: Type.Optional(Type.Integer({ minimum: 100, maximum: 599 })),
+            }),
+            deadlineMs: Positive,
+          }),
+        ]),
+      ),
+      action("request", RequestInput),
+      ...(withTerminal
+        ? [
+            action(
+              "run",
+              Obj({
+                ...terminalProcess,
+                stdin: Type.Optional(Value),
+                capture: Type.Optional(Type.Array(ProcessCapture, { maxItems: 32 })),
+              }),
+            ),
+            action(
+              "launch",
+              Obj({ ...terminalProcess, cols: TerminalColumns, rows: TerminalRows }),
+            ),
+            action("sendText", Obj({ text: Value })),
+            action(
+              "sendKeys",
+              Obj({ keys: Type.Array(TerminalKey, { minItems: 1, maxItems: 100 }) }),
+            ),
+            action("resize", Obj({ cols: TerminalColumns, rows: TerminalRows })),
+            action("signal", Obj({ signal: Enum(terminalSignals) })),
+            action(
+              "waitForText",
+              Obj({
+                text: Value,
+                state: Type.Optional(Enum(["present", "absent"])),
+                row: Type.Optional(Type.Integer({ minimum: 0, maximum: 199 })),
+                deadlineMs: Positive,
+              }),
+            ),
+            action("waitForExit", Obj({ deadlineMs: Positive })),
+            action(
+              "writeFile",
+              Type.Union([
+                Obj({ root: TerminalRoot, path: RelativePath, content: Value }),
+                Obj({ root: TerminalRoot, path: RelativePath, artifactRef: id("art") }),
+              ]),
+            ),
+          ]
+        : []),
+      Obj({
+        ...common,
+        kind: Type.Literal("assertion"),
+        operation: Type.Literal("assert"),
+        input: Type.Union([
+          Obj({ locator: Locator }),
+          Obj({ pageAlias: Type.Optional(Name), url: Type.Optional(Type.String()) }),
+          Obj({ responseStepId: Name, jsonPointer: Type.Optional(JsonPointer) }),
+          Obj({ outputName: Name }),
+          ...(withTerminal
+            ? [
+                Obj({
+                  processStepId: Name,
+                  stream: Type.Optional(Enum(["stdout", "stderr", "output"])),
+                  jsonPointer: Type.Optional(JsonPointer),
+                }),
+                Obj({
+                  screen: Obj({ row: Type.Optional(Type.Integer({ minimum: 0, maximum: 199 })) }),
+                }),
+                Obj({ file: terminalFilePath, jsonPointer: Type.Optional(JsonPointer) }),
+                Obj({ clipboard: Type.Literal("osc52") }),
+              ]
+            : []),
+        ]),
+        expectation: Expectation,
+      }),
+    ]),
+  );
+/** Every step the runners execute. */
+export const Step = buildStep(true);
+/** The steps a model may propose: terminal tests are authored by people, so their schema stays out of prompts. */
+export const ModelStep = buildStep(false);
 export const DependencyBinding = Obj({
   producerTestId: id("tst"),
   producerRevisionId: Type.Optional(id("rev")),
@@ -229,10 +361,24 @@ export const ExecutablePlan = Obj({
   schemaVersion: Type.Literal("1.0.0"),
   kind: Type.Literal("executable"),
   name: Name,
+  type: Enum(["frontend", "backend", "integration", "cli"]),
+  runner: Enum(["playwright", "http", "terminal"]),
+  requirementRefs: Type.Array(id("req")),
+  steps: Type.Array(Step, { minItems: 1, maxItems: 200 }),
+  dependsOn: Type.Optional(Type.Array(DependencyBinding, { maxItems: 100 })),
+  cleanup: Type.Optional(Type.Array(Cleanup)),
+  tags: Type.Optional(Type.Array(Name)),
+  priority: Type.Optional(Priority),
+});
+/** An ExecutablePlan as a model may propose it: no terminal tests, so their schema is not in prompts. */
+export const ModelExecutablePlan = Obj({
+  schemaVersion: Type.Literal("1.0.0"),
+  kind: Type.Literal("executable"),
+  name: Name,
   type: Enum(["frontend", "backend", "integration"]),
   runner: Enum(["playwright", "http"]),
   requirementRefs: Type.Array(id("req")),
-  steps: Type.Array(Step, { minItems: 1, maxItems: 200 }),
+  steps: Type.Array(ModelStep, { minItems: 1, maxItems: 200 }),
   dependsOn: Type.Optional(Type.Array(DependencyBinding, { maxItems: 100 })),
   cleanup: Type.Optional(Type.Array(Cleanup)),
   tags: Type.Optional(Type.Array(Name)),

@@ -27,7 +27,7 @@ const capacity = (memoryGiB: number, browserSlots: number) => ({
   memoryBytes: memoryGiB * 1024 ** 3,
   pids: 1024,
   diskBytes: 8 * 1024 ** 3,
-  pools: { browser: browserSlots, http: 1, python: 1 },
+  pools: { browser: browserSlots, http: 1, python: 1, terminal: 1 },
 });
 
 it("OPS-032 resource headroom queues a second browser while an HTTP pool progresses; repeated cancel kills all container children", async () => {

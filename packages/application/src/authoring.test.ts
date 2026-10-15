@@ -210,8 +210,8 @@ describe("authoring services", () => {
 });
 
 describe("local plan tools", () => {
-  it("validates both complete declarative examples and describes dry-run without a verdict", () => {
-    for (const type of ["frontend", "backend"] as const) {
+  it("validates every complete declarative example and describes dry-run without a verdict", () => {
+    for (const type of ["frontend", "backend", "cli"] as const) {
       const plan = scaffoldPlan(type);
       const result = dryRunPlan(JSON.stringify(plan));
       expect(result.dryRun).toBe(true);

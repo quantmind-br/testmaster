@@ -232,10 +232,148 @@ it("persists private immutable inputs, freezes hashes and stages verified contai
   expect(staged.inputFixtureHashes).toEqual(admission.inputFixtureHashes);
   expect(staged.artifacts[imported.id]).toEqual({
     path: `/run/testmaster/input/fixture-${imported.id}`,
+    name: `fixture-${imported.id}`,
     mimeType: "application/octet-stream",
     sizeBytes: bytes.length,
   });
   expect(await readFile(join(inputDir, `fixture-${imported.id}`))).toEqual(bytes);
+});
+function terminalPlan(program: string, data: string): ExecutablePlan {
+  const plan = scaffoldPlan("backend");
+  plan.type = "cli";
+  plan.runner = "terminal";
+  plan.steps = [
+    {
+      id: "seed",
+      kind: "action",
+      operation: "writeFile",
+      description: "Provide the input file",
+      input: { root: "workdir", path: "input.txt", artifactRef: data },
+    },
+    {
+      id: "cli",
+      kind: "action",
+      operation: "run",
+      description: "Run the program",
+      input: { program: { artifactRef: program }, args: [{ literal: "--version" }] },
+    },
+    {
+      id: "exit",
+      kind: "assertion",
+      operation: "assert",
+      description: "The program exits cleanly",
+      required: true,
+      input: { processStepId: "cli" },
+      expectation: { predicate: "exitCodeIn", values: [0] },
+    },
+  ] as PlanStep[];
+  return plan;
+}
+it("stages only terminal program fixtures as executable and names every fixture file", async () => {
+  const { app, init, inputDir } = await fixture();
+  const [program, data, other] = await Promise.all(
+    ["program", "data", "other"].map((name) =>
+      app.artifacts.importFixtureInput({
+        projectId: init.projectId,
+        name,
+        bytes: Buffer.from(name),
+        mimeType: "application/octet-stream",
+      }),
+    ),
+  );
+  const plan = terminalPlan(program!.id, data!.id);
+  const hashes = fixtureInputHashes(app.context, init.projectId, plan);
+  expect(Object.keys(hashes).sort()).toEqual([program!.id, data!.id].sort());
+  const staged = await stageFixtureInputs(
+    app.context,
+    app.config,
+    init.projectId,
+    plan,
+    inputDir,
+    hashes,
+  );
+  const mode = async (id: string) => (await stat(join(inputDir, `fixture-${id}`))).mode & 0o777;
+  expect(await mode(program!.id)).toBe(0o555);
+  expect(await mode(data!.id)).toBe(0o644);
+  expect(staged.artifacts[program!.id]?.name).toBe(`fixture-${program!.id}`);
+  expect(staged.artifacts[data!.id]?.name).toBe(`fixture-${data!.id}`);
+  // A fixture referenced by a non-terminal plan keeps the plain mode even when it is a binary.
+  const upload = await stageFixtureInputs(
+    app.context,
+    app.config,
+    init.projectId,
+    uploadPlan(other!.id),
+    join(inputDir, ".."),
+    { [other!.id]: other!.contentHash },
+  );
+  expect((await stat(join(inputDir, "..", `fixture-${other!.id}`))).mode & 0o777).toBe(0o644);
+  expect(upload.artifacts[other!.id]?.name).toBe(`fixture-${other!.id}`);
+});
+it("refuses a fixture above the execution limit and names the limit", async () => {
+  const { app, init, inputDir } = await fixture();
+  const imported = await app.artifacts.importFixtureInput({
+    projectId: init.projectId,
+    name: "binary",
+    bytes: Buffer.alloc(64),
+    mimeType: "application/octet-stream",
+  });
+  const plan = uploadPlan(imported.id);
+  const hashes = fixtureInputHashes(app.context, init.projectId, plan);
+  await expect(
+    stageFixtureInputs(app.context, app.config, init.projectId, plan, inputDir, hashes, {
+      artifactBytes: 32,
+    }),
+  ).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+    message: expect.stringContaining("limit is 32 bytes"),
+    details: { reason: "size_limit", maximumBytes: 32, sizeBytes: 64 },
+  });
+});
+it("admits and dispatches a terminal plan on the terminal kind and runner image", async () => {
+  const { app, init } = await fixture();
+  const [program, data] = await Promise.all(
+    ["program", "data"].map((name) =>
+      app.artifacts.importFixtureInput({
+        projectId: init.projectId,
+        name,
+        bytes: Buffer.from(name),
+        mimeType: "application/octet-stream",
+      }),
+    ),
+  );
+  const test = app.tests.create({
+    projectId: init.projectId,
+    plan: terminalPlan(program!.id, data!.id),
+  });
+  const lock = await readImageLock(
+    new URL("../../../containers/images.lock.json", import.meta.url).pathname,
+  );
+  vi.spyOn(app, "preflight").mockResolvedValue();
+  vi.spyOn(app, "images").mockResolvedValue(lock);
+  vi.spyOn(app.runs.host, "admittedImages").mockReturnValue(lock);
+  const modes: Record<string, number> = {};
+  const execute = vi
+    .spyOn(AttemptExecutor.prototype, "execute")
+    .mockImplementation(async (input) => {
+      expect(input.kind).toBe("terminal");
+      expect(input.imageId).toBe(lock["testmaster-runner"].imageId);
+      for (const id of [program!.id, data!.id])
+        modes[id] = (await stat(join(input.inputDir, `fixture-${id}`))).mode & 0o777;
+      expect(input.runnerInput?.artifacts?.[program!.id]?.name).toBe(`fixture-${program!.id}`);
+      return {
+        outcome: "blocked",
+        reasonCode: "security_precondition_failed",
+        logDropped: 0,
+        events: [],
+      };
+    });
+  const receipt = await app.runs.admit(
+    { testId: test.id, environmentId: init.environmentId, limits: { maxAttempts: 1 } },
+    { wait: true },
+  );
+  await app.worker.run({ ephemeral: true, runIds: [receipt.runId] });
+  expect(execute).toHaveBeenCalledOnce();
+  expect(modes).toEqual({ [program!.id]: 0o555, [data!.id]: 0o644 });
 });
 it("dispatch input staging refuses missing, foreign, revoked and corrupt fixtures", async () => {
   const { app, init, inputDir } = await fixture();
@@ -354,6 +492,7 @@ it("worker dispatch carries frozen capabilities and fixture hashes into the seal
       expect(input.runnerInput?.artifacts).toEqual({
         [imported.id]: {
           path: `/run/testmaster/input/fixture-${imported.id}`,
+          name: `fixture-${imported.id}`,
           mimeType: "application/octet-stream",
           sizeBytes: bytes.length,
         },

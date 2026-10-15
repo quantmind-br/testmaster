@@ -36,14 +36,14 @@ export function testCommands(program: Command, runtime: Runtime): void {
     group.command("scaffold").requiredOption("--type <type>"),
     (_rt, _args, options) => {
       const type = required(options, "type");
-      if (type !== "frontend" && type !== "backend")
-        throw new ContractError("INVALID_ARGUMENT", "Type must be frontend or backend");
+      if (type !== "frontend" && type !== "backend" && type !== "cli")
+        throw new ContractError("INVALID_ARGUMENT", "Type must be frontend, backend or cli");
       return { data: scaffoldPlan(type) };
     },
     (_rt, _args, options) => {
       const type = required(options, "type");
-      if (type !== "frontend" && type !== "backend")
-        throw new ContractError("INVALID_ARGUMENT", "Type must be frontend or backend");
+      if (type !== "frontend" && type !== "backend" && type !== "cli")
+        throw new ContractError("INVALID_ARGUMENT", "Type must be frontend, backend or cli");
       scaffoldPlan(type);
       return { data: null };
     },

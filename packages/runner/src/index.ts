@@ -13,3 +13,4 @@ export { ProtocolClient } from "./protocol.js";
 export { default as TestMasterReporter } from "./reporter.js";
 export type { RunnerInput, RunnerResult } from "./runtime.js";
 export { Runtime, RuntimeError } from "./runtime.js";
+export { runTerminal } from "./terminal.js";

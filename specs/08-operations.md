@@ -1,6 +1,6 @@
 # 08 — Operação, confiabilidade, capacidade e recuperação
 
-> Especificação operacional de desenvolvimento; os procedimentos, SLOs e capacidades são propostos, não resultados medidos. Núcleo/CLI/MCP em TypeScript/Node 24 LTS, Playwright determinístico, HTTP declarativo e adaptador Python 3.12/Schemathesis; Docker rootless em Linux como referência. `schemaVersion: "1.0.0"`, API `/v1`, IDs prefixados com UUID. Não há produto executado, serviço SaaS homologado ou benchmark realizado por este documento.
+> Especificação operacional de desenvolvimento; os procedimentos, SLOs e capacidades são propostos, não resultados medidos. Núcleo/CLI/MCP em TypeScript/Node 24 LTS, Playwright determinístico, HTTP declarativo, runner de terminal (CLI, PTY e TUI) e adaptador Python 3.12/Schemathesis; Docker rootless em Linux como referência. `schemaVersion: "1.0.0"`, API `/v1`, IDs prefixados com UUID. Não há produto executado, serviço SaaS homologado ou benchmark realizado por este documento.
 
 ## 1. Perfis suportados e responsabilidade
 
@@ -34,6 +34,7 @@ Os valores abaixo são defaults de produto a implementar e calibrar, não tuning
 | Browser concurrency local | 2 | Sujeita a memória/CPU/PIDs | Fila; nunca spawn sem slot |
 | HTTP concurrency local | 4 | Requests concorrentes por Attempt: 4 | Backpressure |
 | Python concurrency local | 1 | Mesmo orçamento do host | Fila |
+| Terminal concurrency local | 2 | Reaproveita o valor de browser; envelope próprio abaixo; sujeita a memória/CPU/PIDs | Fila |
 | BatchRun seleção de testes/células | 500 | Teto default de admission; distinto de create/import batch ≤100 casos/10 MiB por request | Recusar seleção grande com diagnóstico |
 | Run deadline | 1.800 s | Teto padrão do serviço 7.200 s | Interromper novas ações; preservar evidence |
 | Attempt deadline | 300 s | Teto padrão 900 s e deadline restante do Run | `attempt_timeout`; não marcar passed |
@@ -48,6 +49,7 @@ Os valores abaixo são defaults de produto a implementar e calibrar, não tuning
 | Worker browser resource envelope | 2 vCPU, 2 GiB RAM, 256 PIDs | Reservar também controlador/OS; nunca ilimitado | OOM/limit registrável |
 | Worker HTTP envelope | 1 vCPU, 512 MiB RAM, 128 PIDs | Mesmo isolamento de rede | Resource limit outcome |
 | Worker Python envelope | 1 vCPU, 1 GiB RAM, 128 PIDs | Inclui geração Schemathesis limitada | Resource limit outcome |
+| Worker terminal envelope | 1 vCPU, 1 GiB RAM, 256 PIDs | Mesmo isolamento de rede; disco 1 GiB | Resource limit outcome |
 | Attempt temp disk | 1 GiB | Quota real, não só contador | Interromper escrita com diagnóstico |
 | Request/response body | 10 MiB | Não coletar body por padrão | Rejeitar/encerrar sem alocar body inteiro |
 | Artifact object | 64 MiB | Raw trace/vídeo opt-in até 256 MiB por policy | Truncation/missing reason; sem sucesso inventado |
@@ -209,7 +211,7 @@ Por request, ledger registra provider/model/endpoint permitido, operation, revis
 
 **OPS-029 — Reserva antes do request (M2–M3).** Reservar budget de forma atômica por Run/projeto/tenant antes do envio, estimando input e máximo de output. Somar retries como requests pagos possíveis. Ao concluir reconciliar usage conhecido; após resposta perdida manter reserva prudente/unknown até regra de reconciliação, não liberar como “não cobrou”. Bloquear requests novos ao esgotar quota, preservando resultado determinístico. **Aceitação:** dois workers não gastam a mesma última unidade, retry conta para reserva, provider sem usage não produz zero falso, custo só muda por ledger event rastreável.
 
-**OPS-030 — Quotas de tokens, moeda e compute (M2–M5).** Budget financeiro e tokens são limites independentes e opcionais; currency explícita sem conversão silenciosa. Provider/model sem tabela de preço exige consentimento de custo desconhecido ou é recusado; teto de tokens é opt-in do operador. Budget exhausted interrompe geração/análise/healing, não testes determinísticos já admitidos sem AI; proposal incompleta não é autoaceita. Compute tem slots, deadlines, bytes e requests limitados mesmo com modelo local gratuito. **Aceitação:** preço desconhecido não dribla orçamento configurado, Run failed permanece failed após analysis budget stop, relatório separa AI status/custo e verdict; trocar modelo não herda preço/model ID errado.
+**OPS-030 — Quotas de tokens, moeda e compute (M2–M5).** Budget financeiro e tokens são limites independentes e opcionais; currency explícita sem conversão silenciosa. Provider/model sem tabela de preço não exige flag nem consentimento: com budget financeiro configurado a chamada é recusada antes do envio (`QUOTA_EXCEEDED`, `reasonCode: budget_exhausted`, restante `unknown`), porque o teto não poderia ser aplicado; sem budget financeiro a chamada é permitida e o custo fica `unknown` no ledger, nunca zero. O teto de tokens, quando definido, continua valendo para modelos sem preço. Budget exhausted interrompe geração/análise/healing, não testes determinísticos já admitidos sem AI; proposal incompleta não é autoaceita. Compute tem slots, deadlines, bytes e requests limitados mesmo com modelo local gratuito. **Aceitação:** preço desconhecido não dribla orçamento configurado, Run failed permanece failed após analysis budget stop, relatório separa AI status/custo e verdict; trocar modelo não herda preço/model ID errado.
 
 **OPS-031 — Export e divergência de billing (M3–M5).** Oferecer export redigido de consumo por período/projeto/run/model, com totals known e unknown separados. Reconciliação com billing do fornecedor é opcional e nunca leitura automática de conta externa. Alterar tabela de preço não reescreve valores históricos sem evento de ajuste. **Aceitação:** soma do ledger corresponde aos totals, requests abortados/retries aparecem, cache tokens não são contados duas vezes; relatório deixa claro estimated versus billed.
 

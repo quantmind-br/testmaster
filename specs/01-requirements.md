@@ -75,6 +75,7 @@ Cada ID tem aceite operacional; referências E-* são evidências no catálogo. 
 | REQ-054 | Chat de refinamento | alterações viram proposal/revision, diferença e aceite; sem edição oculta em teste ativo | P1 | M4 | E30,E32 |
 | REQ-055 | Reexecução seletiva | por teste/chain/lista/diff; closure explícita e preview dos recursos/efeitos | P1 | M3 | E05,E34 |
 | REQ-056 | Portabilidade/airgap | distribuição com dependências pré-carregadas, egress fechado, export sem registry/conta externa | P1 | M6 | design OSS |
+| REQ-057 | Runner de terminal (CLI, PTY e TUI) | plano `type: cli`/`runner: terminal` executa um programa sem shell implícito no sandbox endurecido: modo pipes (exit code, stdout e stderr separados) e modo PTY com emulador headless (tela, teclas, resize, OSC 52 como clipboard simulado); programa vindo de fixture ou da imagem; árvore de processos encerrada e vazamento contado; geração por modelo, healing, agent mode, export de código e unsafe-local recusados | P2 | M5 | design OSS |
 
 ## 3. Requisitos não funcionais
 
@@ -102,9 +103,10 @@ Cada ID tem aceite operacional; referências E-* são evidências no catálogo. 
 - Alvo com auth/cookie de outra origem: autorização de origem obrigatória; override não encaminha credenciais automaticamente.
 - Artefato expirado: metadata permanece e resposta identifica `ARTIFACT_EXPIRED`; não retorna 404 ambíguo como “teste nunca existiu”.
 - Nenhum teste selecionado, todos deferred ou cancelados: gate não verde por padrão.
-- LLM indisponível: replay funciona; geração falha com razão precisa; nenhum fallback para outro provedor sem consentimento.
+- LLM indisponível: replay funciona; geração falha com razão precisa; nenhum fallback para outro provedor fora da allowlist do operador nem para outro modelo sem escolha explícita.
 - Mudança visual aprovada não muda requisito de negócio. Quebra em idioma/viewport só atualiza baseline daquela matriz.
+- Programa de terminal que ignora SIGHUP/SIGTERM, deixa um processo neto vivo, não desenha a tela esperada ou termina antes da interação: a árvore é encerrada com SIGKILL e o vazamento é contado (reprova `noLingeringProcesses` quando o plano a exige); a espera estoura com a última tela observada (`assertion_timeout`) em vez de passar ou pendurar o Attempt. Programa que não pode ser iniciado (ausente, sem permissão de execução, formato inválido) fica `blocked`, não `failed`.
 
 ## 5. Critério de paridade completa
 
-Todas REQ-001–REQ-056 devem ter evidência de aceite e marco concluído, ou decisão explícita do mantenedor de mudar escopo e documentação pública correspondente. Capacidades comerciais não reproduzidas literalmente (créditos proprietários, claims quantitativos e backend secreto) têm equivalentes OSS funcionais descritos, não omissões escondidas. Ver [validação](10-validation.md).
+Todas REQ-001–REQ-057 devem ter evidência de aceite e marco concluído, ou decisão explícita do mantenedor de mudar escopo e documentação pública correspondente. Capacidades comerciais não reproduzidas literalmente (créditos proprietários, claims quantitativos e backend secreto) têm equivalentes OSS funcionais descritos, não omissões escondidas. Ver [validação](10-validation.md).

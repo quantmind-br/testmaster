@@ -14,13 +14,14 @@ export class ContainerCleanupError extends Error {
   }
 }
 
-export type ExecutorKind = "browser" | "http" | "python";
+export type ExecutorKind = "browser" | "http" | "python" | "terminal";
 export const executorResources: Readonly<
   Record<ExecutorKind, { cpu: number; memoryBytes: number; pids: number; diskBytes: number }>
 > = {
   browser: { cpu: 2, memoryBytes: 2 * 1024 ** 3, pids: 256, diskBytes: 1024 ** 3 },
   http: { cpu: 1, memoryBytes: 512 * 1024 ** 2, pids: 128, diskBytes: 1024 ** 3 },
   python: { cpu: 1, memoryBytes: 1024 ** 3, pids: 128, diskBytes: 1024 ** 3 },
+  terminal: { cpu: 1, memoryBytes: 1024 ** 3, pids: 256, diskBytes: 1024 ** 3 },
 };
 const envelopes = Object.fromEntries(
   Object.entries(executorResources).map(([kind, resource]) => [

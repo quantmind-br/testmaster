@@ -79,11 +79,26 @@ try {
     });
     await writeFile(join(runner, "runner/package.json"), '{"type":"module","private":true}\n');
     await access(join(runner, "runner/dist/harness.js"));
-    for (const dependency of ["playwright-core", "undici", "@playwright/test", "playwright"]) {
+    // The PTY prebuild (glibc >= 2.28) is only reachable through the pnpm store of its parent.
+    const ptyPlatform = "@lydell/node-pty-linux-x64";
+    for (const dependency of [
+      "playwright-core",
+      "undici",
+      "@playwright/test",
+      "playwright",
+      "@xterm/headless",
+      "@lydell/node-pty",
+      ptyPlatform,
+    ]) {
       await cp(
         dependency === "playwright"
           ? join(root, "node_modules/.pnpm/playwright@1.63.0/node_modules/playwright")
-          : join(root, "packages/runner/node_modules", dependency),
+          : dependency === ptyPlatform
+            ? join(
+                root,
+                `node_modules/.pnpm/@lydell+node-pty-linux-x64@1.2.0-beta.15/node_modules/${ptyPlatform}`,
+              )
+            : join(root, "packages/runner/node_modules", dependency),
         join(runner, "runner/node_modules", dependency),
         { recursive: true, dereference: true },
       );

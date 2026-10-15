@@ -249,6 +249,19 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
           captures.add(`${step.id}.${capture.name}`);
         }
       if (step.operation === "request" && step.input.resource) captures.add(`${step.id}.handle`);
+      if (step.operation === "run")
+        for (const capture of step.input.capture ?? []) {
+          if (captures.has(capture.name) || captures.has(`${step.id}.${capture.name}`))
+            reject(`${current}/input/capture`, "unique", "Duplicate capture");
+          if (capture.jsonPointer === undefined && capture.valueType !== "string")
+            reject(
+              `${current}/input/capture`,
+              "valueType",
+              "A capture without jsonPointer is the whole stream and must be a string",
+            );
+          captures.add(capture.name);
+          captures.add(`${step.id}.${capture.name}`);
+        }
     });
   };
   visit(plan.steps, "/steps");
@@ -256,23 +269,55 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
   if (!assertion)
     reject("/steps", "requiredAssertion", "At least one required assertion is required");
   const seenResponses = new Set<string>();
+  const processes = new Map<string, "run" | "launch">();
+  let launched = false;
+  if (plan.runner === "terminal" && (plan.cleanup ?? []).length)
+    reject("/cleanup", "runner", "Cleanup requests are not available in the terminal runner");
   for (const { step, path } of flat) {
-    if (plan.runner === "http" && !["request", "assert"].includes(step.operation))
+    if (
+      plan.runner === "http" &&
+      !["request", "assert"].includes(step.operation) &&
+      !terminalOnlyOperations.has(step.operation)
+    )
       reject(`${path}/operation`, "runner", "Operation requires playwright");
+    if (terminalOnlyOperations.has(step.operation) && plan.runner !== "terminal")
+      reject(`${path}/operation`, "runner", "Operation requires the terminal runner");
+    if (
+      plan.runner === "terminal" &&
+      step.operation !== "assert" &&
+      !terminalOnlyOperations.has(step.operation)
+    )
+      reject(`${path}/operation`, "runner", "Operation is not available in the terminal runner");
     if (
       (plan.type === "frontend" && plan.runner !== "playwright") ||
-      (plan.type === "backend" && plan.runner !== "http")
+      (plan.type === "backend" && plan.runner !== "http") ||
+      (plan.type === "cli") !== (plan.runner === "terminal")
     )
       reject("/runner", "runner", "Runner does not match test type");
     if (step.operation === "request") {
       seenResponses.add(step.id);
       validateHeaders(step.input.headers ?? {}, `${path}/input/headers`, reject);
     }
+    if (plan.runner === "terminal") {
+      if (sessionOperations.has(step.operation) && !launched)
+        reject(`${path}/operation`, "session", "Operation requires a preceding launch");
+      validateTerminalStep(step, path, { processes, launched }, reject);
+      if (step.operation === "run") processes.set(step.id, "run");
+      if (step.operation === "launch") {
+        processes.set(step.id, "launch");
+        launched = true;
+      }
+    }
+    if (step.kind === "assertion" && plan.runner === "terminal") continue;
     if (step.kind === "assertion") {
       const predicate = step.expectation.predicate;
       if (["visualMatches", "accessibilityViolations"].includes(predicate))
         requireCapability(predicate);
       const input = step.input as Record<string, unknown>;
+      if (terminalPredicates.has(predicate))
+        reject(`${path}/expectation`, "predicateInput", "Predicate requires the terminal runner");
+      if (["processStepId", "screen", "file", "clipboard"].some((key) => key in input))
+        reject(`${path}/input`, "predicateInput", "Input requires the terminal runner");
       const locatorPredicates = [
         "visible",
         "hidden",
@@ -366,5 +411,144 @@ function validateHeaders(
       "literal" in object
     )
       reject(`${path}/${name}`, "secretRef", "Authentication headers require a reference");
+  }
+}
+const terminalOnlyOperations: ReadonlySet<string> = new Set([
+  "run",
+  "launch",
+  "sendText",
+  "sendKeys",
+  "resize",
+  "signal",
+  "waitForText",
+  "waitForExit",
+  "writeFile",
+]);
+const sessionOperations: ReadonlySet<string> = new Set([
+  "sendText",
+  "sendKeys",
+  "resize",
+  "signal",
+  "waitForText",
+  "waitForExit",
+]);
+const terminalPredicates: ReadonlySet<string> = new Set([
+  "textNotContains",
+  "exitCodeIn",
+  "noLingeringProcesses",
+  "fileExists",
+  "fileAbsent",
+]);
+const reservedEnvironment: ReadonlySet<string> = new Set(["HOME", "TMPDIR", "PWD"]);
+const proxyEnvironment: ReadonlySet<string> = new Set([
+  "HTTP_PROXY",
+  "HTTPS_PROXY",
+  "NO_PROXY",
+  "ALL_PROXY",
+]);
+type Reject = (path: string, rule: string, message: string) => void;
+interface TerminalState {
+  processes: ReadonlyMap<string, "run" | "launch">;
+  launched: boolean;
+}
+/** Rejects a literal that cannot be rendered as the named scalar type. */
+function checkLiteral(
+  value: unknown,
+  path: string,
+  allowed: readonly string[],
+  reject: Reject,
+): void {
+  if (!value || typeof value !== "object" || !("literal" in value)) return;
+  const literal = (value as { literal: unknown }).literal;
+  if (!allowed.includes(typeof literal))
+    reject(`${path}/literal`, "valueType", `Literal must be ${allowed.join(", ")}`);
+}
+function validateTerminalStep(
+  step: PlanStep,
+  path: string,
+  state: TerminalState,
+  reject: Reject,
+): void {
+  const scalars = ["string", "number", "boolean"];
+  if (step.operation === "run" || step.operation === "launch") {
+    (step.input.args ?? []).forEach((value, index) => {
+      checkLiteral(value, `${path}/input/args/${index}`, scalars, reject);
+    });
+    for (const [name, value] of Object.entries(step.input.env ?? {})) {
+      if (
+        reservedEnvironment.has(name) ||
+        proxyEnvironment.has(name.toUpperCase()) ||
+        name.startsWith("TESTMASTER_")
+      )
+        reject(`${path}/input/env/${name}`, "environment", "Environment name is reserved");
+      checkLiteral(value, `${path}/input/env/${name}`, scalars, reject);
+    }
+  }
+  if (step.operation === "run")
+    checkLiteral(step.input.stdin, `${path}/input/stdin`, ["string"], reject);
+  if (step.operation === "sendText" || step.operation === "waitForText")
+    checkLiteral(step.input.text, `${path}/input/text`, ["string"], reject);
+  if (step.operation === "writeFile" && "content" in step.input)
+    checkLiteral(step.input.content, `${path}/input/content`, ["string"], reject);
+  if (step.kind !== "assertion") return;
+  const predicate = step.expectation.predicate;
+  const input = step.input as Record<string, unknown>;
+  const fail = (message: string): void => reject(`${path}/input`, "predicateInput", message);
+  const shape =
+    "processStepId" in input
+      ? "process"
+      : "screen" in input
+        ? "screen"
+        : "file" in input
+          ? "file"
+          : "clipboard" in input
+            ? "clipboard"
+            : "other";
+  if (shape === "other") {
+    fail("Terminal assertions require processStepId, screen, file or clipboard input");
+    return;
+  }
+  if ((shape === "screen" || shape === "clipboard") && !state.launched)
+    reject(`${path}/input`, "session", "Input requires a preceding launch");
+  const stream = input.stream;
+  if (shape === "process") {
+    const kind = state.processes.get(String(input.processStepId));
+    if (!kind)
+      reject(
+        `${path}/input/processStepId`,
+        "processReference",
+        "Process must be a preceding run or launch",
+      );
+    if (kind === "run" && stream === "output")
+      reject(`${path}/input/stream`, "processReference", "Stream output requires a launch");
+    if (kind === "launch" && (stream === "stdout" || stream === "stderr"))
+      reject(`${path}/input/stream`, "processReference", "Streams stdout and stderr require a run");
+  }
+  const jsonPointer = input.jsonPointer !== undefined;
+  switch (predicate) {
+    case "exitCodeIn":
+    case "noLingeringProcesses":
+      if (shape !== "process" || stream !== undefined || jsonPointer)
+        fail("Predicate requires processStepId without stream or jsonPointer");
+      break;
+    case "textEquals":
+    case "textContains":
+    case "textNotContains":
+      if (jsonPointer) fail("jsonPointer is only valid with jsonEquals");
+      if (shape === "process" && stream === undefined) fail("Text predicate requires a stream");
+      break;
+    case "jsonEquals":
+      if (shape === "screen" || shape === "clipboard")
+        fail("jsonEquals requires a process stream or a file");
+      if (shape === "process" && stream !== "stdout" && stream !== "stderr")
+        fail("jsonEquals requires stream stdout or stderr");
+      break;
+    case "fileExists":
+    case "fileAbsent":
+      if (shape !== "file" || jsonPointer)
+        fail("Predicate requires a file input without jsonPointer");
+      break;
+    default:
+      fail("Predicate is not available in the terminal runner");
   }
 }

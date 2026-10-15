@@ -11,7 +11,8 @@ it("kills non-equivalent revision redaction and assertion mutations in isolated 
   const mutations = [
     {
       invariant: "revision immutability",
-      path: "packages/persistence/migrations/sqlite/0001_initial.sql",
+      // 0022 rebuilds test_revisions, so its trigger is the effective definition.
+      path: "packages/persistence/migrations/sqlite/0022_terminal_runner.sql",
       before:
         "CREATE TRIGGER test_revisions_no_update BEFORE UPDATE ON test_revisions BEGIN SELECT RAISE(ABORT,'immutable'); END;",
       after: "-- Mutant: published revision rewrite allowed",

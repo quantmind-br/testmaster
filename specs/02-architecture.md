@@ -39,6 +39,7 @@ flowchart TD
 | `runner-playwright` | ações/assertions, traces, eventos de step | publicar passed ignorando runner supervisor |
 | `runner-http` | requests determinísticos, schema, captures | usar eval na interpolação |
 | `runner-python` | pytest/Playwright Python/Schemathesis adapter | instalar dependências arbitrárias durante run |
+| `runner-terminal` | programa CLI por pipes ou sessão PTY, tela lida de emulador headless, exit code, arquivos, evidência de terminal | executar por shell implícito, executar binário escrito durante o Attempt, repassar OSC 52 ao host |
 | `evidence` | hashes, snapshots, bundle, redaction | mesclar últimos artefatos de runs diferentes |
 | `analysis` | rules/LLM hypothesis, failure kind, healing proposal | sobrescrever resultado terminal |
 | `reporting` | JSON/HTML/Markdown/JUnit/Allure export | recalcular verdict de fonte divergente |

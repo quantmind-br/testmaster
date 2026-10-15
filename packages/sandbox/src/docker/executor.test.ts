@@ -7,6 +7,8 @@ import {
   type DockerCommand,
   DockerExecutor,
   dockerCreateArgs,
+  type InspectFacts,
+  resourceLimitsEnforced,
 } from "./executor.js";
 
 const attempt: DockerAttempt = {
@@ -27,6 +29,27 @@ it("refuses mutable images, root users and mount syntax injection before spawnin
     { attemptId: "../escape" },
   ])
     expect(() => dockerCreateArgs({ ...attempt, ...override })).toThrow();
+});
+it("gives the terminal kind its own 1 CPU, 1 GiB, 256 PID envelope and refuses limits above it", () => {
+  const args = dockerCreateArgs({ ...attempt, kind: "terminal" });
+  const flag = (name: string) => args[args.indexOf(name) + 1];
+  expect([flag("--cpus"), flag("--memory"), flag("--memory-swap"), flag("--pids-limit")]).toEqual([
+    "1",
+    String(1024 ** 3),
+    String(1024 ** 3),
+    "256",
+  ]);
+  const facts = { memory: 1024 ** 3, memorySwap: 1024 ** 3, pidsLimit: 256, nanoCpus: 1e9 };
+  expect(resourceLimitsEnforced(facts as InspectFacts, "terminal")).toBe(true);
+  for (const above of [
+    { memory: 1024 ** 3 + 1 },
+    { memorySwap: 1024 ** 3 + 1 },
+    { pidsLimit: 257 },
+    { nanoCpus: 2e9 },
+  ])
+    expect(resourceLimitsEnforced({ ...facts, ...above } as InspectFacts, "terminal")).toBe(false);
+  // The browser envelope would admit a container the terminal envelope must refuse.
+  expect(resourceLimitsEnforced({ ...facts, nanoCpus: 2e9 } as InspectFacts, "browser")).toBe(true);
 });
 it("reports unavailable daemon without selecting a process fallback", async () => {
   const calls: readonly string[][] = [];

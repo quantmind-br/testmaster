@@ -41,6 +41,18 @@ export function fixtureRefIds(plan: ExecutablePlan | null): string[] {
   }
   return [...refs];
 }
+/** Fixtures a terminal plan executes directly from the read-only input bind; they alone get an execute bit. */
+export function terminalProgramRefIds(plan: ExecutablePlan | null): Set<string> {
+  const refs = new Set<string>();
+  if (plan?.runner === "terminal")
+    for (const step of plan.steps)
+      if (
+        (step.operation === "run" || step.operation === "launch") &&
+        "artifactRef" in step.input.program
+      )
+        refs.add(step.input.program.artifactRef);
+  return refs;
+}
 export function planRunnerPolicy(plan: ExecutablePlan | null) {
   const policy = {
     allowUploads: false,
@@ -107,11 +119,12 @@ export function fixtureRevoked(ctx: ServiceContext, id: string): boolean {
     ),
   );
 }
-function refuse(id: string, reason: string): never {
+function refuse(id: string, reason: string, details: Record<string, unknown> = {}): never {
   throw new ContractError("PRECONDITION_FAILED", "Fixture input is not authorized for execution", {
     reasonCode: "security_precondition_failed",
     artifactRef: id,
     reason,
+    ...details,
   });
 }
 export function fixtureInputHashes(
@@ -154,9 +167,11 @@ export async function importFixtureInput(
     limits?.artifactBytes ?? defaults.artifactBytes,
   );
   if (input.bytes.byteLength > maximum)
-    throw new ContractError("INVALID_ARGUMENT", "Fixture input exceeds execution size limit", {
-      maximumBytes: maximum,
-    });
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      `Fixture input is ${input.bytes.byteLength} bytes; the execution limit is ${maximum} bytes (the smaller of execution.bodyBytes and execution.artifactBytes)`,
+      { maximumBytes: maximum, sizeBytes: input.bytes.byteLength },
+    );
   // The caller can mutate its Uint8Array while storage awaits; seal our own bytes.
   const bytes = Buffer.from(input.bytes);
   const contentHash = sha256(bytes);
@@ -229,8 +244,12 @@ export async function stageFixtureInputs(
 ) {
   const hashes = fixtureInputHashes(ctx, projectId, plan);
   if (canonicalJson(hashes) !== canonicalJson(expected)) refuse("plan", "admission_hash_mismatch");
-  const artifacts: Record<string, { path: string; mimeType: string; sizeBytes: number }> = {};
+  const artifacts: Record<
+    string,
+    { path: string; name: string; mimeType: string; sizeBytes: number }
+  > = {};
   if (!Object.keys(hashes).length) return { artifacts, inputFixtureHashes: hashes };
+  const programs = terminalProgramRefIds(plan);
   const source = new ConfinedRoot(config.dataDir);
   const destination = new ConfinedRoot(inputDir);
   let total = 0;
@@ -244,11 +263,23 @@ export async function stageFixtureInputs(
         limits.artifactBytes ?? defaults.artifactBytes,
       );
       total += row.size_bytes;
-      if (
-        row.size_bytes > maximum ||
-        total > (limits.attemptArtifactBytes ?? defaults.attemptArtifactBytes)
-      )
-        refuse(id, "size_limit");
+      if (row.size_bytes > maximum)
+        throw new ContractError(
+          "PRECONDITION_FAILED",
+          `Fixture input is ${row.size_bytes} bytes; the execution limit is ${maximum} bytes (the smaller of execution.bodyBytes and execution.artifactBytes)`,
+          {
+            reasonCode: "security_precondition_failed",
+            artifactRef: id,
+            reason: "size_limit",
+            maximumBytes: maximum,
+            sizeBytes: row.size_bytes,
+          },
+        );
+      if (total > (limits.attemptArtifactBytes ?? defaults.attemptArtifactBytes))
+        refuse(id, "size_limit", {
+          maximumBytes: limits.attemptArtifactBytes ?? defaults.attemptArtifactBytes,
+          totalBytes: total,
+        });
       let bytes: Buffer;
       try {
         const file = await source.openFile(expectedPath);
@@ -269,12 +300,13 @@ export async function stageFixtureInputs(
       const file = await destination.openFile(name, true);
       try {
         await file.writeFile(bytes);
-        await file.chmod(0o644);
+        await file.chmod(programs.has(id) ? 0o555 : 0o644);
       } finally {
         await file.close();
       }
       artifacts[id] = {
         path: `/run/testmaster/input/${name}`,
+        name,
         mimeType: row.mime_type,
         sizeBytes: row.size_bytes,
       };

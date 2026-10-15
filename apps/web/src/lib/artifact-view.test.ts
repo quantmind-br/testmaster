@@ -55,6 +55,24 @@ describe("artifact viewer selection", () => {
     ).not.toContain("image");
   });
 
+  it("UX-031 terminal evidence is shown inline as text or JSON and its asciicast recording is only downloadable", () => {
+    for (const [kind, mimeType] of [
+      ["terminal.process", "application/json"],
+      ["terminal.stdout", "text/plain"],
+      ["terminal.stderr", "text/plain"],
+      ["terminal.screen", "text/plain"],
+    ] as const)
+      expect(selectArtifactViewer(entry({ kind, mimeType })).viewers, kind).toEqual([
+        "text",
+        "download",
+      ]);
+    // Negative control: the recording is a replay format, never previewed as text or an image.
+    expect(
+      selectArtifactViewer(entry({ kind: "terminal.cast", mimeType: "application/x-asciicast" }))
+        .viewers,
+    ).toEqual(["download"]);
+  });
+
   it("UX-031 an artifact that is missing, expired or partial is named, never replaced by a viewer", () => {
     const missing = selectArtifactViewer(
       entry({

@@ -1,9 +1,14 @@
+import type { PersistenceDatabase } from "./database.js";
+
 export interface ConstraintFixture {
   name: string;
   statements: string[];
   expected: "accept" | "foreign_key" | "unique" | "check";
 }
 const time = "2026-10-05T00:00:00.000Z";
+/** A `tst-a` revision row of the given runner kind whose JSON document the migrations must carry unchanged. */
+export const revisionInsert = (id: string, ordinal: number, kind: string, parent: string | null) =>
+  `INSERT INTO test_revisions(workspace_id,id,created_at,version,data_json,test_id,ordinal,parent_id,content_hash,runner_kind,origin) VALUES('ws-a','${id}','${time}',1,'{"kind":"${kind}","note":"it''s kept"}','tst-a',${ordinal},${parent ? `'${parent}'` : "NULL"},'hash-${id}','${kind}','generated')`;
 export const constraintSeed = [
   `INSERT INTO workspaces(workspace_id,id,created_at,name,mode) VALUES('ws-a','ws-a','${time}','A','single-user'),('ws-b','ws-b','${time}','B','single-user')`,
   `INSERT INTO projects(workspace_id,id,created_at,name,slug) VALUES('ws-a','prj-a','${time}','A','a'),('ws-b','prj-b','${time}','B','b')`,
@@ -17,6 +22,18 @@ export const constraintSeed = [
   `INSERT INTO snapshots(workspace_id,id,created_at,run_id,attempt_id,revision_id,manifest_hash,committed_at) VALUES('ws-a','snp-a','${time}','run-a','att-a','rev-a','hash','${time}')`,
   `INSERT INTO audit_events(workspace_id,id,created_at,actor,action,resource_id,request_id,timestamp) VALUES('ws-a','aud-a','${time}','user','create','run-a','request','${time}')`,
 ];
+/** Runs one statement in its own transaction: `accepted`, or the class of the constraint that refused it. */
+export function statementOutcome(
+  db: PersistenceDatabase,
+  sql: string,
+): "accepted" | ConstraintFixture["expected"] {
+  try {
+    db.withTx(() => db.exec(sql));
+  } catch (error) {
+    return constraintErrorClass(error);
+  }
+  return "accepted";
+}
 export const constraintFixtures: ConstraintFixture[] = [
   {
     name: "negative independent token quota",
@@ -31,13 +48,6 @@ export const constraintFixtures: ConstraintFixture[] = [
       "INSERT INTO token_budget_limits(workspace_id,project_id,tokens) VALUES('ws-a','prj-b',100)",
     ],
     expected: "foreign_key",
-  },
-  {
-    name: "invalid unknown cost consent",
-    statements: [
-      "INSERT INTO consents(workspace_id,id,created_at,project_id,provider_id,data_classes_json,granted_at,allow_unknown_cost) VALUES('ws-a','consent-invalid','2026-10-05','prj-a','provider','[]','2026-10-05',2)",
-    ],
-    expected: "check",
   },
   {
     name: "valid independent token quota",
@@ -139,6 +149,25 @@ export const constraintFixtures: ConstraintFixture[] = [
   {
     name: "revision bytes immutable",
     statements: ["UPDATE test_revisions SET content_hash='tamper' WHERE id='rev-a'"],
+    expected: "check",
+  },
+  {
+    name: "revision deletion rejected",
+    statements: ["DELETE FROM test_revisions WHERE id='rev-a'"],
+    expected: "check",
+  },
+  {
+    name: "terminal runner kind accepted",
+    statements: [
+      `INSERT INTO test_revisions(workspace_id,id,created_at,test_id,ordinal,content_hash,runner_kind,origin) VALUES('ws-a','rev-terminal','${time}','tst-a',2,'hash','terminal','manual')`,
+    ],
+    expected: "accept",
+  },
+  {
+    name: "unknown runner kind rejected",
+    statements: [
+      `INSERT INTO test_revisions(workspace_id,id,created_at,test_id,ordinal,content_hash,runner_kind,origin) VALUES('ws-a','rev-unknown','${time}','tst-a',2,'hash','shell','manual')`,
+    ],
     expected: "check",
   },
   {

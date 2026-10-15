@@ -14,7 +14,7 @@ export function localHandshake(lock: ImageLock): WorkerHandshake {
   return {
     schemaVersions: ["1.0.0"],
     runnerVersion: "0.1.0",
-    runners: ["playwright", "http", "python"],
+    runners: ["playwright", "http", "python", "terminal"],
     actions: variants.map((variant) => variant.properties.operation.const),
     imageDigests: Object.values(lock).map((entry) => entry.imageId),
   };
