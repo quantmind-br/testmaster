@@ -262,9 +262,10 @@ a file that imports `http`/`https`/`http2` (or the `node:` forms) and calls `cre
 never under `app/` or `pages/`, in `.tsx`/`.jsx`, or in a test file (`*.test.*`, `*.spec.*`, or
 under `__tests__/`, `test/`, `tests/`: a stub server there is a fixture, not an application route).
 The method is the `method === "GET"` / `req.method === "GET"` comparison in the same `&&` chain,
-else `UNKNOWN`. Bumping `CODE_DETECTOR_VERSION` (now 1.4.0) stops old discovery jobs from resuming.
-A file is skipped as `binary` only when a NUL byte occurs in its first 8000 bytes (Git's
-heuristic); a later NUL, such as a join separator in a source string, does not exclude the file.
+else `UNKNOWN`. Bumping `CODE_DETECTOR_VERSION` (now 1.5.0) stops old discovery jobs from resuming.
+A file is skipped as `binary` only when its bytes are not valid UTF-8 or more than a tenth of them
+are NUL (UTF-16 text, zero-filled data); a literal NUL inside a source string, even near the start
+of the file, does not exclude it.
 
 The project data directory (`<repo>/.testmaster/` by default, or `TESTMASTER_DATA_DIR`) is never
 listed or opened by repository provenance or by the working-tree diff, whether or not Git ignores

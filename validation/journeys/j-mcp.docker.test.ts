@@ -89,6 +89,7 @@ it("MCP-001–004 built CLI initialize/list/run/evidence, reattach, and HTTP tok
         let count = 0;
         let pages = 0;
         let resource: string | undefined;
+        let linkedMimeType: string | undefined;
         do {
           const evidence = await client.callTool({
             name: "testmaster_get_evidence",
@@ -101,6 +102,9 @@ it("MCP-001–004 built CLI initialize/list/run/evidence, reattach, and HTTP tok
           count += entries.length;
           pages++;
           resource ??= (data.resources as string[])[0];
+          linkedMimeType ??= (evidence.content as { uri?: string; mimeType?: string }[]).find(
+            (entry) => entry.uri === resource,
+          )?.mimeType;
           expect(
             (evidence.content as { type: string }[]).some(
               (entry) => entry.type === "resource_link",
@@ -115,6 +119,8 @@ it("MCP-001–004 built CLI initialize/list/run/evidence, reattach, and HTTP tok
         const content = object(page.contents[0]);
         // Textual artifacts are `text` contents, binary ones `blob`; both carry the paging in _meta.
         const mimeType = text(content.mimeType).split(";")[0]?.trim().toLowerCase() ?? "";
+        // The link announced the artifact's own media type, not a blanket JSON type.
+        expect(linkedMimeType).toBe(content.mimeType);
         if (/^text\/|\/(json|xml|x-ndjson)$|\+(json|xml)$/.test(mimeType)) {
           expect(content).not.toHaveProperty("blob");
           expect(text(content.text).length).toBeGreaterThan(0);

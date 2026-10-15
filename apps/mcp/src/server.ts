@@ -277,12 +277,24 @@ export class TestMasterMcp {
           validate(tool.outputSchema, data);
           const links =
             tool.name === "testmaster_get_evidence"
-              ? (data.resources as string[]).map((uri) => ({
-                  type: "resource_link" as const,
-                  uri,
-                  name: uri,
-                  mimeType: "application/json",
-                }))
+              ? (() => {
+                  // Each link names its artifact and its own media type, so an agent knows which
+                  // pages read as text and which as base64 before it reads them.
+                  const entries = (
+                    data.manifest as { entries: { relativePath: string; mimeType: string }[] }
+                  ).entries;
+                  return (data.resources as string[]).map((uri) => {
+                    const entry = entries.find((item) =>
+                      uri.includes(`/artifacts/${encodeURIComponent(item.relativePath)}?`),
+                    );
+                    return {
+                      type: "resource_link" as const,
+                      uri,
+                      name: entry?.relativePath ?? uri,
+                      mimeType: entry?.mimeType ?? "application/octet-stream",
+                    };
+                  });
+                })()
               : [];
           const summary =
             tool.name === "testmaster_get_analysis"

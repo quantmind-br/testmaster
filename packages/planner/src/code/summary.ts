@@ -8,11 +8,27 @@ import { canonicalJson, sha256 } from "@testmaster/domain";
 import ignore from "ignore";
 import type { CodeRef, CodeSummary, CodeSummaryOptions, CodeSymbol } from "./types.js";
 
-export const CODE_DETECTOR_VERSION = "1.4.0";
+export const CODE_DETECTOR_VERSION = "1.5.0";
 const DEFAULT_MAX_SYMBOLS_PER_FILE = 200;
 const DEFAULT_MAX_SYMBOLS = 20_000;
-/** Leading bytes inspected for a NUL byte; the same window Git uses to call a file binary. */
-const BINARY_SNIFF_BYTES = 8000;
+const utf8 = new TextDecoder("utf-8", { fatal: true });
+/**
+ * Source text of a file, or `null` when its bytes are binary. Text is valid UTF-8 in which NUL
+ * bytes are at most a tenth of the bytes: a source file may carry a few literal NULs inside strings
+ * (a join separator, a control-character fixture), even near its start or in a one-line file,
+ * while UTF-16 text is about half NULs, zero-filled data is all NULs, and images, archives or MPEG
+ * transport streams named `.ts` are not valid UTF-8.
+ */
+function sourceText(bytes: Uint8Array): string | null {
+  let nul = 0;
+  for (let at = bytes.indexOf(0); at !== -1; at = bytes.indexOf(0, at + 1))
+    if (++nul * 10 > bytes.length) return null;
+  try {
+    return utf8.decode(bytes);
+  } catch {
+    return null;
+  }
+}
 /** Relative import specifiers stored per summary; see `retainRelativeImports`. */
 export const MAX_RETAINED_IMPORTS = 20_000;
 /** Per-run limits applied when `CodeSummaryOptions` does not set them. */
@@ -709,13 +725,11 @@ export async function summarizeCode(
           continue;
         }
         total += bytes.length;
-        // Git's heuristic: a file is binary only when a NUL byte occurs in its first 8000 bytes.
-        // A NUL later on (for example a join separator in a source file) is still valid text.
-        if (bytes.subarray(0, BINARY_SNIFF_BYTES).includes(0)) {
+        const text = sourceText(bytes);
+        if (text === null) {
           summary.skippedFiles.push({ path, reason: "binary" });
           continue;
         }
-        const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
         const hash = sha256(bytes);
         const target = nextRouteTarget(path);
         summary.scannedFiles.push(path);

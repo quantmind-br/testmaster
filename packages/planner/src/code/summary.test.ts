@@ -159,14 +159,41 @@ describe("confined AST code summary", () => {
       const padding = "// padding\n".repeat(800);
       expect(Buffer.byteLength(padding)).toBeGreaterThan(8000);
       await writeFile(join(root, "late.ts"), `${padding}export const SEP = "a\0b";\n`);
-      // The NUL at the very start is binary; the same bytes with the NUL late are code.
-      await writeFile(join(root, "early.ts"), `\0export const early = 1;\n${padding}`);
       const summary = await summarizeCode(root);
       expect(summary.scannedFiles).toContain("late.ts");
       expect(summary.skippedFiles).not.toContainEqual({ path: "late.ts", reason: "binary" });
       expect(summary.symbols.map((symbol) => symbol.name)).toContain("SEP");
-      expect(summary.skippedFiles).toContainEqual({ path: "early.ts", reason: "binary" });
-      expect(summary.scannedFiles).not.toContain("early.ts");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+  it("analyzes a source file with a literal NUL near its start and skips non-text bytes as binary", async () => {
+    const root = await repo();
+    try {
+      // OmniRoute's serviceKindIndex.ts: a NUL separator inside a template literal at byte 857.
+      await writeFile(
+        join(root, "index.ts"),
+        'export function key(id: string, declared: string[]) {\n  return `${id}\0${declared.join(",")}`;\n}\n',
+      );
+      // A one-line file whose separator is a NUL (about 4% of its bytes).
+      await writeFile(join(root, "sep.ts"), 'export const SEP = "\0";\n');
+      // UTF-16 source is half NULs; an MPEG transport stream named .ts is not UTF-8 (no NUL here).
+      await writeFile(join(root, "wide.ts"), Buffer.from("export const wide = 1;\n", "utf16le"));
+      await writeFile(
+        join(root, "video.ts"),
+        Buffer.from([0x47, 0x40, 0x11, 0x10, 0xff, 0xfe, 0x80]),
+      );
+      const summary = await summarizeCode(root);
+      expect([...summary.scannedFiles].sort()).toEqual(["index.ts", "sep.ts"]);
+      expect(summary.symbols.map((symbol) => symbol.name)).toEqual(
+        expect.arrayContaining(["key", "SEP"]),
+      );
+      expect(summary.skippedFiles).toEqual(
+        expect.arrayContaining([
+          { path: "wide.ts", reason: "binary" },
+          { path: "video.ts", reason: "binary" },
+        ]),
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
     }
