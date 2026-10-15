@@ -279,7 +279,6 @@ export async function createNotificationHarness(
       return app.integrations.create({
         provider: "webhook",
         ...base(opts),
-        consent: { scopes: ["notify:webhook"] },
         secretRefs: [signing],
         settings: { url: receiver.url, signingSecretRef: signing, ...withRules(opts) },
       });
@@ -289,7 +288,6 @@ export async function createNotificationHarness(
       return app.integrations.create({
         provider: "slack",
         ...base(opts),
-        consent: { scopes: ["notify:slack"] },
         secretRefs: [hook],
         settings: { secretRef: hook, ...withRules(opts) },
       });
@@ -308,7 +306,6 @@ export async function createNotificationHarness(
       return app.integrations.create({
         provider: "email",
         ...base(opts),
-        consent: { scopes: ["notify:email"] },
         secretRefs: [credentials],
         settings: {
           smtpSecretRef: credentials,

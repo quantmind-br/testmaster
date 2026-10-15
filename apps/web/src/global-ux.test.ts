@@ -8,7 +8,7 @@ import { DemoBanner } from "./components/demo-banner";
 import { ImpactPanel } from "./components/impact-panel";
 import { RunStateSummary } from "./components/run-state";
 import { demoQuotaPolicyId, isDemoWorkspace } from "./lib/demo";
-import { budgetImpact, consentImpact, environmentImpact } from "./lib/impact";
+import { budgetImpact, environmentImpact } from "./lib/impact";
 import { describeRunState } from "./lib/run-state";
 import { createScopedSelection, planBulkAction, selectionForScope } from "./lib/selection";
 import { applyFilters, searchRows, stableOrder, tableEmptiness } from "./lib/table-model";
@@ -252,21 +252,7 @@ describe("impact of settings changes", () => {
     expect(impacts[2]?.level).toBe("none");
   });
 
-  it("UX-047 warns that unknown-cost calls escape the budget and that revoking does not recall data", () => {
-    const base = {
-      providerId: "p",
-      remote: true,
-      baseUrl: "https://llm.test",
-      dataClasses: ["dom"],
-      revoke: false,
-    };
-    const strict = consentImpact({ ...base, allowUnknownCost: false });
-    const lax = consentImpact({ ...base, allowUnknownCost: true });
-    expect(strict[1]?.level).toBe("info");
-    expect(lax[1]?.level).toBe("warning");
-    expect(strict[2]?.text).toContain("dom");
-    const revoke = consentImpact({ ...base, allowUnknownCost: false, revoke: true });
-    expect(revoke[2]?.text).toContain("not recalled");
+  it("UX-047 states how a lifetime token budget change affects cost", () => {
     expect(budgetImpact(1000, 5000)[1]?.text).toContain("was 1,000");
   });
 

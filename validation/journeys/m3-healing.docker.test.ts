@@ -106,7 +106,6 @@ it("M3-02 deterministic controlled-provider Chromium healing preserves original 
       );
       const init = await session.init(url);
       app = await Application.open({ cwd: session.cwd, home: session.home, env: session.env });
-      app.model.grantConsent(text(init.projectId), "fake", ["execution_evidence"], true);
       const plan = executable("Save persists", "playwright", [
         action("open", "navigate", { path: "/" }),
         {

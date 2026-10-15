@@ -3,6 +3,7 @@
 - Status: accepted
 - Date: 2026-10-05
 - Scope: approved M0–M2 implementation plan; later profiles remain capability-gated.
+- Amended by: [ADR-024](024-consent-removal.md) (the project/provider/data-class consent requirement below is removed; the provider allowlist and budget reservation stay).
 
 ## Context
 
@@ -10,7 +11,7 @@ The selected QuantForge deepseek-v4.1-flash model supports json_object but rejec
 
 ## Decision
 
-Use declared/negotiated capabilities and response_format type json_object with the shared strict Ajv 2020-12 TypeBox catalog. Validate locally and allow at most two repair calls, each recorded as ModelCall. Invalid-after-repair never creates an active test. Missing required capability returns CAPABILITY_UNAVAILABLE; never silently switch models. Require project/provider/data-class consent and allowlist before any byte is sent; reserve budget before each call.
+Use declared/negotiated capabilities and response_format type json_object with the shared strict Ajv 2020-12 TypeBox catalog. Validate locally and allow at most two repair calls, each recorded as ModelCall. Invalid-after-repair never creates an active test. Missing required capability returns CAPABILITY_UNAVAILABLE; never silently switch models. Require project/provider/data-class consent and allowlist before any byte is sent *(historical wording; consent removed by ADR-024, the allowlist remains the gate)*; reserve budget before each call.
 
 Prompt rendering factors byte-identical repeated JSON Schema nodes into local `$defs`/`$ref`
 instead of sending the expanded recursive executable-plan catalog. It preserves schema semantics

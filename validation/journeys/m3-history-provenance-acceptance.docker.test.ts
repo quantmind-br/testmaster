@@ -108,7 +108,6 @@ it("reports persisted generated-to-manual model provenance and refuses unsupport
         path: join(session.cwd, "prd.md"),
         format: "markdown",
       });
-      app.model.grantConsent(projectId, "fake", ["documents", "requirements"], true);
       providerOutput = {
         requirements: [
           {

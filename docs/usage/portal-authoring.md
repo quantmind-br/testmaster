@@ -8,7 +8,7 @@ route catalog. Text from sources, models, plans, DOM and reports is always rende
 
 - **Proposals** (`/projects/:projectId/proposals`) shows the approved requirements, the project's token
   budget (or "No limit set"), the number of model calls so far and the batches of the project.
-- **Generate proposals** needs approved requirements and model consent. Cancelling closes the request; the
+- **Generate proposals** needs approved requirements and a model provider the operator policy allows. Cancelling closes the request; the
   server cancels the model call when the connection drops, and nothing is stored. Sources and requirements
   prepared earlier stay as they were. **Resume generation** repeats the request with the same idempotency
   key, so a generation that finished before the cancel arrived is returned instead of billed twice.
@@ -39,7 +39,7 @@ origin), validation, the revision acceptance would create, an estimate of the du
 Accepting makes a test active, so it is an interactive act by an enabled human principal: a person with a
 browser session, or the host's local token. API tokens (`tm_api_`), worker and operator credentials, service
 accounts and controller scopes are refused with `POLICY_DENIED` and `details.reason`
-`interactive_acceptance_required` or `human_acceptance_required`. A consent given in an interactive session
+`interactive_acceptance_required` or `human_acceptance_required`. An acceptance given in an interactive session
 is not inherited by CI or other automation. The preview states this in `policy`; a role without write
 permission is reported with `write_permission_required` and the page disables the action with the reason.
 
@@ -73,7 +73,7 @@ only as healing. Promoting a revision records `revision.promoted` in the audit t
 ## Refinement chat (REQ-054)
 
 `POST /v1/proposals/{id}/refinements` and `POST /v1/tests/{id}/refinements` send a message to the model through
-the normal `ModelService` (consent, budget and the usage ledger apply). The answer is a **new proposal**
+the normal `ModelService` (provider allowlist, budget and the usage ledger apply). The answer is a **new proposal**
 with its own batch (`origin: refinement`), reviewed and accepted like any other; it never edits a revision.
 The refinement may add assertions, but it may not remove or weaken a required one (`assertion_weakened`) and
 a reply that changes nothing is refused (`no_change`). Turns are stored append-only; text in the chat is data

@@ -7,7 +7,6 @@ import {
   INBOUND_WEBHOOK_MAX_BYTES,
   type IntegrationInput,
   type IntegrationMetadata,
-  routeCatalog,
   validate,
 } from "@testmaster/contracts";
 import { sha256 } from "@testmaster/domain";
@@ -68,7 +67,6 @@ function testProvider(
       const { installation, admin } = input as Settings;
       return { installation, ...(admin ? { admin } : {}) };
     },
-    requiredScopes: (settings) => ["notify:post", ...(settings.admin ? ["notify:admin"] : [])],
     async sendTest(context, integration) {
       probe.tests.push({ context, integrationId: integration.id });
       return probe.testOutcome();
@@ -225,7 +223,6 @@ async function fixture(
       name: `hook-${randomUUID().slice(0, 8)}`,
       projectIds: [init.projectId],
       events: ["run.completed"],
-      consent: { scopes: ["notify:post"] },
       secretRefs: [secretId],
       settings: { installation: "inst-1" },
       ...overrides,
@@ -809,73 +806,56 @@ describe("INT-002 inbound idempotency is scoped, hashed and durable", () => {
   });
 });
 
-describe("INT-004 integrations need scope consent and test deliveries are labelled", () => {
-  it("INT-004 creating an integration without consent for every required scope is refused and stores nothing", async () => {
+describe("INT-004 integrations need ordinary authorization and test deliveries are labelled", () => {
+  it("INT-004 an integration records who created it and carries no consent document", async () => {
     const f = await fixture();
-    const missing = await Promise.resolve()
-      .then(() => f.service.create(f.input({ settings: { installation: "inst-1", admin: true } })))
-      .catch((caught: unknown) => caught);
-    expect((missing as ContractError).code).toBe("PRECONDITION_FAILED");
-    expect((missing as ContractError).details).toMatchObject({
-      missingScopes: ["notify:admin"],
-      nextActions: ["grant-consent"],
-    });
-    expect(await codeOf(() => f.service.create(f.input({ consent: { scopes: [] } })))).toBe(
-      "PRECONDITION_FAILED",
+    const created = f.service.create(
+      f.input({ settings: { installation: "inst-1", admin: true } }),
     );
-    expect(f.rows("SELECT id FROM integrations")).toHaveLength(0);
-    const granted = f.service.create(
-      f.input({
-        settings: { installation: "inst-1", admin: true },
-        consent: { scopes: ["notify:post", "notify:admin", "extra"] },
-      }),
-    );
-    expect(granted.consent).toMatchObject({
-      scopes: ["notify:post", "notify:admin", "extra"],
-      grantedBy: f.app.context.principalId,
-      grantedAt: "2026-10-13T10:00:00.000Z",
-    });
-    expect(granted.state).toBe("active");
+    expect(created.createdBy).toBe(f.app.context.principalId);
+    expect(created).not.toHaveProperty("consent");
+    expect(created.state).toBe("active");
+    expect(f.rows("SELECT data_json FROM integrations")[0]?.data_json).not.toContain("consent");
+    validate("IntegrationMetadata", created);
+    // A consent document is no longer part of the contract and is refused rather than ignored.
+    const withConsent = { ...f.input({ name: "other" }), consent: { scopes: ["notify:post"] } };
+    expect(await codeOf(() => f.service.create(withConsent as never))).toBe("INVALID_ARGUMENT");
+    expect(
+      await codeOf(() =>
+        f.service.update(created.id, { consent: { scopes: [] } } as never, created.version),
+      ),
+    ).toBe("INVALID_ARGUMENT");
+    expect(f.rows("SELECT id FROM integrations")).toHaveLength(1);
   });
 
-  it("INT-004 widening settings or resuming re-checks consent against what the adapter now requires", async () => {
+  it("INT-004 updating or resuming keeps the creating principal and needs no scope grant", async () => {
     const f = await fixture();
     const created = f.service.create(f.input());
-    expect(
-      await codeOf(() =>
-        f.service.update(
-          created.id,
-          { settings: { installation: "inst-1", admin: true } },
-          created.version,
-        ),
-      ),
-    ).toBe("PRECONDITION_FAILED");
-    expect(f.service.get(created.id).version).toBe(created.version);
-    const widened = f.service.update(
-      created.id,
-      {
-        settings: { installation: "inst-1", admin: true },
-        consent: { scopes: ["notify:post", "notify:admin"] },
-      },
-      created.version,
+    const paused = f.service.pause(created.id, created.version);
+    const otherService = new IntegrationsService(
+      { ...f.app.context, principalId: "prn_another_admin" },
+      { providers: f.registry },
     );
-    expect(widened.version).toBe(created.version + 1);
+    const resumed = otherService.update(created.id, { state: "active" }, paused.version);
+    expect(resumed.state).toBe("active");
+    expect(resumed.createdBy).toBe(f.app.context.principalId);
+    const widened = otherService.update(
+      created.id,
+      { settings: { installation: "inst-1", admin: true } },
+      resumed.version,
+    );
+    expect(widened.version).toBe(resumed.version + 1);
     expect((widened.settings as Settings).admin).toBe(true);
-    expect(widened.consent.grantedAt).toBe("2026-10-13T10:00:00.000Z");
-    // Consent that no longer covers the settings cannot be kept by narrowing it silently.
-    expect(
-      await codeOf(() =>
-        f.service.update(created.id, { consent: { scopes: ["notify:post"] } }, widened.version),
-      ),
-    ).toBe("PRECONDITION_FAILED");
+    expect(widened.createdBy).toBe(f.app.context.principalId);
   });
 
-  it("INT-004 revoking ends access with no fallback: no consent, no secrets, no test, no update, no reactivation", async () => {
+  it("INT-004 revoking ends access with no fallback: no secrets, no test, no update, no reactivation", async () => {
     const f = await fixture();
     const created = f.service.create(f.input());
     const revoked = f.service.revoke(created.id, created.version);
     expect(revoked).toMatchObject({ state: "revoked", secretRefs: [] });
-    expect(revoked.consent.scopes).toEqual([]);
+    expect(revoked).not.toHaveProperty("consent");
+    expect(revoked.createdBy).toBe(created.createdBy);
     expect(await codeOf(() => f.service.test(created.id))).toBe("PRECONDITION_FAILED");
     expect(f.probe.tests).toHaveLength(0);
     expect(
@@ -1014,30 +994,5 @@ describe("INT-004 integrations need scope consent and test deliveries are labell
     ).toThrow();
     const typed: IntegrationMetadata = renamed;
     expect(typed.provider).toBe("webhook");
-  });
-});
-
-describe("INT-001 surface catalog", () => {
-  it("INT-001 integration routes are declared under /v1 with distinct request and response contracts", () => {
-    // The GitHub provider's own routes (`/integrations/github/...`, `/integrations/{id}/github/...`) are proven by github.routes.test.ts.
-    const rows = routeCatalog.filter(
-      (route) => route.path.startsWith("/integrations") && !route.path.includes("github"),
-    );
-    expect(rows.map((route) => `${route.method} ${route.path} ${route.scope}`).sort()).toEqual([
-      "GET /integrations integrations:A",
-      "PATCH /integrations/{id} integrations:A",
-      "POST /integrations integrations:A",
-      "POST /integrations/{id}/test integrations:A",
-      "POST /integrations/{provider}/webhooks signature",
-    ]);
-    const patch = rows.find((route) => route.method === "PATCH");
-    expect(patch).toMatchObject({
-      requestSchema: "IntegrationPatchInput",
-      responseSchema: "IntegrationMetadata",
-    });
-    expect(rows.find((route) => route.path.endsWith("/webhooks"))).toMatchObject({
-      requestSchema: "InboundWebhookBody",
-      responseSchema: "InboundWebhookReceipt",
-    });
   });
 });

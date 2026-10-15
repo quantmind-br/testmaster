@@ -11,7 +11,7 @@ function study(): UserTaskStudy {
   return {
     schemaVersion: "1.0.0",
     id: "synthetic-validator-study",
-    participants: orders.map((_order, index) => ({ id: `participant-${index}`, consent: true })),
+    participants: orders.map((_order, index) => ({ id: `participant-${index}` })),
     sessions: orders.map((order, index) => ({
       participantId: `participant-${index}`,
       taskId: "review-control",
@@ -68,14 +68,14 @@ it("rejects mismatched arm order, invented duration and manual work exceeding de
   manual.sessions[0]!.observations[0]!.manualWorkMs = 1001;
   expect(() => aggregateUserTasks(manual)).toThrow("Invalid decision time or manual work");
 });
-it("rejects missing consent, repeated tasks and participants without sessions", () => {
-  const consent = study();
-  Object.assign(consent.participants[0]!, { consent: false });
-  expect(() => aggregateUserTasks(consent)).toThrow("missing consent");
+it("rejects repeated participants, repeated tasks and participants without sessions", () => {
+  const repeated = study();
+  repeated.participants.push({ id: "participant-0" });
+  expect(() => aggregateUserTasks(repeated)).toThrow("Invalid participant");
   const duplicate = study();
   duplicate.sessions.push(duplicate.sessions[0]!);
   expect(() => aggregateUserTasks(duplicate)).toThrow("Duplicate participant/task");
   const incomplete = study();
-  incomplete.participants.push({ id: "absent", consent: true });
+  incomplete.participants.push({ id: "absent" });
   expect(() => aggregateUserTasks(incomplete)).toThrow("completed session");
 });

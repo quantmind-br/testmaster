@@ -279,67 +279,38 @@ describe("project settings", () => {
     allRequests.push(...diagnostics.requests);
   });
 
-  it("UX-047 UX-007 sets data-sharing consent by named category with impact first, and revokes it", async () => {
+  it("UX-047 UX-007 lists the model providers read-only with the policy verdict, has no data-sharing controls and does not serve the removed model-consent routes", async () => {
     const { page, diagnostics } = await portal(stack.owner);
     await page.goto(`/projects/${projectId}/settings`);
+    await page.getByRole("form", { name: "Token budget" }).waitFor();
     const local = page.getByRole("article", { name: "Provider fake-local" });
     await local.waitFor();
-    // Nothing is shared by default.
-    expect(await local.innerText()).toContain("Not shared");
-    // Negative control: no category chosen, so the button is inert and says why.
-    await local.getByRole("button", { name: "Allow data sharing" }).click({ force: true });
-    expect(await local.innerText()).toContain("Choose at least one category");
-    expect(await page.getByRole("dialog").count()).toBe(0);
-    // A provider the server profile does not allow cannot be granted.
+    expect(await local.innerText()).toContain("Allowed by policy");
+    // A provider the server profile does not allow says so and is marked remote.
     const remote = page.getByRole("article", { name: "Provider fake-remote" });
-    expect(await remote.innerText()).toContain("not allowed by the server's profile policy");
+    expect(await remote.innerText()).toContain("Blocked by policy");
+    expect(await remote.innerText()).toContain("does not allow this provider");
     expect(await remote.innerText()).toContain("remote");
-
-    await local.getByLabel("dom").check();
-    await local.getByLabel("requirements").check();
-    const impact = await local.getByTestId("impact-panel").innerText();
-    expect(impact).toContain("dom, requirements");
-    expect(impact).toContain("refused, so the budget stays enforceable");
-    await local.getByLabel("Allow calls to models with no known price").check();
-    expect(await local.getByTestId("impact-panel").innerText()).toContain("cannot cap their spend");
-    await local.getByLabel("Allow calls to models with no known price").uncheck();
-
-    await local.getByRole("button", { name: "Allow data sharing" }).click();
-    const dialog = page.getByRole("dialog");
-    expect(await dialog.innerText()).toContain("Settings project");
-    await dialog.getByRole("button", { name: "Allow sharing" }).click();
-    await page.getByRole("dialog").waitFor({ state: "detached" });
-    await page
-      .getByRole("article", { name: "Provider fake-local" })
-      .getByText("Sharing enabled")
-      .waitFor();
-    const granted = await apiGet<{
-      providers: {
-        id: string;
-        consent: { dataClasses: string[]; revokedAt: string | null } | null;
-      }[];
-    }>(`/projects/${projectId}/model-consents`);
-    const consent = granted.providers.find((provider) => provider.id === "fake-local")?.consent;
-    expect(consent?.dataClasses.sort()).toEqual(["dom", "requirements"]);
-    expect(consent?.revokedAt).toBeNull();
-    expect(granted.providers.find((provider) => provider.id === "fake-remote")?.consent).toBeNull();
-
-    const card = page.getByRole("article", { name: "Provider fake-local" });
-    await card.getByRole("button", { name: "Revoke data sharing" }).click();
-    expect(await page.getByRole("dialog").innerText()).toContain("not recalled");
-    await page.getByRole("dialog").getByRole("button", { name: "Revoke sharing" }).click();
-    await page.getByRole("dialog").waitFor({ state: "detached" });
-    await page
-      .getByRole("article", { name: "Provider fake-local" })
-      .getByText("Revoked")
-      .first()
-      .waitFor();
-    const revoked = await apiGet<{
-      providers: { id: string; consent: { revokedAt: string | null } | null }[];
-    }>(`/projects/${projectId}/model-consents`);
+    const body = await page.locator("main").innerText();
+    expect(body).not.toMatch(/data sharing|Allow sharing|Revoke sharing|no known price|consent/iu);
+    expect(await page.getByRole("button", { name: /data sharing/iu }).count()).toBe(0);
+    const owner = stack.ownerClient();
+    const read = await owner.request("GET", `/v1/projects/${projectId}/model-providers`);
+    expect(read.status).toBe(200);
     expect(
-      revoked.providers.find((provider) => provider.id === "fake-local")?.consent?.revokedAt,
-    ).not.toBeNull();
+      read
+        .json<{ data: { providers: { id: string; allowedByProfile: boolean }[] } }>()
+        .data.providers.map((provider) => [provider.id, provider.allowedByProfile]),
+    ).toEqual([
+      ["fake-local", true],
+      ["fake-remote", false],
+    ]);
+    const gone = await owner.request("GET", `/v1/projects/${projectId}/model-consents`);
+    expect([404, 405]).toContain(gone.status);
+    const write = await owner.mutate("PUT", `/v1/projects/${projectId}/model-consents/fake-local`, {
+      dataClasses: ["dom"],
+    });
+    expect([404, 405]).toContain(write.status);
     allRequests.push(...diagnostics.requests);
   });
 
@@ -833,8 +804,7 @@ describe("keyboard, reflow and the route catalog", () => {
     for (const route of [
       "PATCH /environments/{id}",
       "GET /environments/{id}/revisions",
-      "GET /projects/{id}/model-consents",
-      "PUT /projects/{id}/model-consents/{provider}",
+      "GET /projects/{id}/model-providers",
       "POST /projects/{id}/budget",
       "POST /secrets/{id}/rotate",
       "GET /secrets/{id}/history",

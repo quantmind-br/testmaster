@@ -32,7 +32,6 @@ const provider: IntegrationProvider<{ installation: string }> = {
       throw new ContractError("INVALID_ARGUMENT", "installation is required");
     return { installation: String(input.installation) };
   },
-  requiredScopes: () => [],
   async sendTest(context) {
     visibleToTest.push(context.findIntegrations("webhook").length);
     return { state: "delivered" };
@@ -144,7 +143,6 @@ async function twoTenants() {
       name: `${login}-hook`,
       projectIds: [project.id],
       events: [],
-      consent: { scopes: [] },
       secretRefs: [],
       settings: { installation },
     };

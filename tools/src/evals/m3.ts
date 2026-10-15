@@ -243,7 +243,6 @@ export function healingRefusal(error: unknown, forbidden: readonly string[]) {
         "no_regeneration",
         "semantic_failure",
         "provider_unavailable",
-        "consent_required",
         "evidence_unavailable",
         "model_abstained",
       ].includes(reason),
@@ -1374,12 +1373,6 @@ async function setup(
         version: (project.version ?? 1) + 1,
         extensions: { ...project.extensions, "testmaster:healingPolicy": "apply" },
       },
-    );
-    app.model.grantConsent(
-      project.id,
-      r.provider.id,
-      ["execution_evidence", "dom", "plans", "requirements", "documents", "code_summary"],
-      true,
     );
   }
   return {

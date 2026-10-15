@@ -377,13 +377,6 @@ export async function replayM3(
           };
           if (options.model) {
             const project = app.tests.get(app.runs.get(runId).testId).projectId;
-            const provider = app.model.config.modelProviders[0]!;
-            app.model.grantConsent(
-              project,
-              provider.id,
-              ["execution_evidence", "dom", "plans", "requirements", "documents", "code_summary"],
-              true,
-            );
             const existingCharge =
               app.database.get<{ used: number }>(
                 "SELECT COALESCE(SUM(CASE WHEN state='reserved' THEN reserved_tokens ELSE COALESCE(charged_tokens,reserved_tokens) END),0) AS used FROM budget_reservations WHERE workspace_id=? AND project_id=? AND state<>'released'",

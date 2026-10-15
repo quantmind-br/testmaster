@@ -175,12 +175,6 @@ async function open(caseId: string, targetUrl: string, baseUrl: string) {
   await writeFile(configPath, JSON.stringify(config));
   const app = await Application.open({ cwd, home, env });
   const project = app.projects.list()[0]!;
-  app.model.grantConsent(
-    project.id,
-    provider.id,
-    ["execution_evidence", "dom", "plans", "requirements", "documents", "code_summary"],
-    true,
-  );
   return { app, projectId: project.id, environmentId: app.environments.list(project.id)[0]!.id };
 }
 async function replay(app: Application, testId: string, environmentId: string) {

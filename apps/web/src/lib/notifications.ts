@@ -46,14 +46,6 @@ export const providerLabels: Readonly<Record<NotificationProvider, string>> = {
   webhook: "Webhook",
   email: "Email",
 };
-/** Scope the provider needs before it may send (`requiredScopes` of each adapter). */
-export const requiredConsent: Readonly<
-  Record<NotificationProvider, { scope: string; text: string }>
-> = {
-  slack: { scope: "notify:slack", text: "Send TestMaster notifications to the Slack channel." },
-  webhook: { scope: "notify:webhook", text: "Send signed TestMaster notifications to the URL." },
-  email: { scope: "notify:email", text: "Send TestMaster notifications through the SMTP server." },
-};
 /** Shown wherever an attempt or a delivery may have reached its destination (INT-026). */
 export const uncertainText = "Outcome uncertain — the destination may have received it";
 
@@ -90,7 +82,6 @@ export interface IntegrationDocument {
   readonly state: IntegrationState;
   readonly projectIds: readonly string[];
   readonly events: readonly string[];
-  readonly consent: { readonly scopes: readonly string[] };
   readonly secretRefs: readonly string[];
   readonly settings: IntegrationSettings;
   readonly adapterStatus: string;
@@ -208,7 +199,6 @@ export interface IntegrationForm {
   environmentIds: readonly string[];
   suiteIds: readonly string[];
   redaction: RedactionLevel;
-  consented: boolean;
   /** Slack webhook-URL secret, webhook signing secret or SMTP credentials secret. */
   secretRef: string;
   url: string;
@@ -228,7 +218,6 @@ export function emptyForm(provider: NotificationProvider = "webhook"): Integrati
     environmentIds: [],
     suiteIds: [],
     redaction: "summary",
-    consented: false,
     secretRef: "",
     url: "",
     security: "tls",
@@ -239,7 +228,7 @@ export function emptyForm(provider: NotificationProvider = "webhook"): Integrati
   };
 }
 
-/** Edit starts from what is stored; consent counts as given when it already covers the provider's scope. */
+/** Edit starts from what is stored. */
 export function formFromIntegration(integration: IntegrationDocument): IntegrationForm {
   const provider = isNotificationProvider(integration.provider) ? integration.provider : "webhook";
   const settings = integration.settings;
@@ -251,7 +240,6 @@ export function formFromIntegration(integration: IntegrationDocument): Integrati
     environmentIds: settings.rules?.environmentIds ?? [],
     suiteIds: settings.rules?.suiteIds ?? [],
     redaction: settings.redaction?.level === "minimal" ? "minimal" : "summary",
-    consented: integration.consent.scopes.includes(requiredConsent[provider].scope),
     secretRef: settings.secretRef ?? settings.smtpSecretRef ?? settings.signingSecretRef ?? "",
     url: settings.url ?? "",
     security: settings.security ?? "tls",
@@ -270,8 +258,7 @@ export type FormField =
   | "from"
   | "recipients"
   | "domains"
-  | "subjectPrefix"
-  | "consent";
+  | "subjectPrefix";
 
 export interface FormIssue {
   readonly field: FormField;
@@ -339,11 +326,6 @@ export function validateForm(form: IntegrationForm): FormIssue[] {
         message: "Use a single-line subject prefix of at most 120 characters.",
       });
   }
-  if (!form.consented)
-    issues.push({
-      field: "consent",
-      message: `Grant ${requiredConsent[form.provider].scope} to allow this integration to send.`,
-    });
   return issues;
 }
 
@@ -398,7 +380,6 @@ export interface IntegrationBody {
   readonly name: string;
   readonly projectIds: readonly string[];
   readonly events: readonly string[];
-  readonly consent: { readonly scopes: readonly string[] };
   readonly secretRefs: readonly string[];
   readonly settings: IntegrationSettings;
 }
@@ -410,7 +391,6 @@ export function buildBody(form: IntegrationForm, current?: IntegrationDocument):
     name: form.name.trim(),
     projectIds: form.projectIds,
     events: form.events,
-    consent: { scopes: [requiredConsent[form.provider].scope] },
     secretRefs: referencedSecrets(settings),
     settings,
   };

@@ -9,19 +9,11 @@ export type IntegrationProviderIdValue = (typeof integrationProviderIds)[number]
 export const integrationStates = ["active", "paused", "revoked"] as const;
 
 const IntegrationId = Type.String({ pattern: `^int_${P.uuidPattern}$` });
-const Scopes = Type.Array(P.Name, { maxItems: 64 });
 const ProjectIds = Type.Array(P.id("prj"), { maxItems: 100 });
 const EventTypes = Type.Array(P.Name, { maxItems: 64 });
 const SecretRefs = Type.Array(P.id("sec"), { maxItems: 16 });
 const IntegrationState = P.Enum(integrationStates);
 
-/** Consent is granted by the caller; the server records who and when. */
-const IntegrationConsentInput = P.Obj({ scopes: Scopes });
-const IntegrationConsent = P.Obj({
-  scopes: Scopes,
-  grantedBy: P.Name,
-  grantedAt: P.Timestamp,
-});
 /** Adapter identity and declared capabilities as exposed on every integration (INT-001). */
 const IntegrationAdapter = P.Obj({
   id: P.Enum(integrationProviderIds),
@@ -37,7 +29,6 @@ export const integrationContracts = {
     name: P.Name,
     projectIds: ProjectIds,
     events: EventTypes,
-    consent: IntegrationConsentInput,
     secretRefs: SecretRefs,
     settings: P.Json,
   }),
@@ -47,7 +38,6 @@ export const integrationContracts = {
       name: P.Name,
       projectIds: ProjectIds,
       events: EventTypes,
-      consent: IntegrationConsentInput,
       secretRefs: SecretRefs,
       settings: P.Json,
       state: IntegrationState,
@@ -61,7 +51,8 @@ export const integrationContracts = {
     state: IntegrationState,
     projectIds: ProjectIds,
     events: EventTypes,
-    consent: IntegrationConsent,
+    /** Principal that created the integration; the server records it. */
+    createdBy: P.Name,
     secretRefs: SecretRefs,
     settings: P.Json,
     /** Null when no adapter is registered for the provider; `adapterStatus` says why it cannot run. */

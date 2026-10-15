@@ -15,11 +15,6 @@ export interface DeliveryOutcome {
   readonly detail?: string | null;
 }
 
-export interface IntegrationConsent {
-  readonly scopes: readonly string[];
-  readonly grantedBy: string;
-  readonly grantedAt: string;
-}
 export type IntegrationState = "active" | "paused" | "revoked";
 export interface StoredIntegration<Settings = unknown> {
   readonly id: string;
@@ -29,7 +24,8 @@ export interface StoredIntegration<Settings = unknown> {
   readonly state: IntegrationState;
   readonly projectIds: readonly string[];
   readonly events: readonly string[];
-  readonly consent: IntegrationConsent;
+  /** Principal that created the integration; GitHub acts as it, so it stays accountable for what the integration does. */
+  readonly createdBy: string;
   readonly secretRefs: readonly string[];
   readonly settings: Settings;
   readonly lastTest: {
@@ -140,7 +136,6 @@ export interface IntegrationProvider<Settings = unknown> {
   readonly supportedEvents?: readonly string[];
   /** Throws `INVALID_ARGUMENT` on bad settings and returns the normalized value that is stored. */
   parseSettings(input: unknown): Settings;
-  requiredScopes(settings: Settings): readonly string[];
   /** Deliver a clearly labelled test message; `context.test` must be carried into the message. */
   sendTest(
     context: TestDeliveryContext,

@@ -304,9 +304,6 @@ it("J03 real model A/B/C subset review survives retry and concurrent duplicate w
         expect(
           Number(object(object(usage.lifetimeBudget).reservations).settled),
         ).toBeGreaterThanOrEqual(2);
-        await session.command(["consent", "revoke", "--provider", "quantforge"]);
-        const revoked = await session.command(["consent", "status", "--provider", "quantforge"]);
-        expect(object(revoked.consent).revokedAt).toBeTruthy();
       } finally {
         try {
           session.oracles.push({

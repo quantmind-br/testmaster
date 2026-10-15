@@ -6,6 +6,7 @@ import { uuidV7IdGenerator } from "@testmaster/domain";
 import { type AttemptIds, FileEvidenceStore } from "@testmaster/evidence";
 import { afterEach, expect, it, vi } from "vitest";
 import { testProvider } from "../../model-gateway/src/test-support.js";
+import { attemptAdditionalOrigins } from "./authoring.js";
 import { entity } from "./context.js";
 import {
   Application,
@@ -569,7 +570,7 @@ it("UX-048 completes an empty project purge at once and lists operations by proj
 
 // ---------------------------------------------------------------------------------- UX-047
 
-const consentFixture = (extraEnv: Record<string, string> = {}) =>
+const providersFixture = (extraEnv: Record<string, string> = {}) =>
   fixture({
     profile: {
       modelProviders: [
@@ -596,61 +597,29 @@ const consentFixture = (extraEnv: Record<string, string> = {}) =>
     env: { FAKE_KEY: "API-KEY-CANARY-fake", REMOTE_KEY: "API-KEY-CANARY-remote", ...extraEnv },
   });
 
-it("UX-047 shows the supported data classes and providers, grants and revokes consent, and never exposes endpoint credentials", async () => {
-  const f = await consentFixture();
-  const before = f.app.model.settings(f.init.projectId);
-  expect(before.dataClasses.map((entry) => entry.id)).toEqual([
-    "documents",
-    "code_summary",
-    "dom",
-    "requirements",
-    "plans",
-    "execution_evidence",
-  ]);
-  expect(before.dataClasses[0]).toEqual({
-    id: "documents",
-    description: "Uploaded product documents and requirement text",
+it("UX-047 shows the configured model providers and profile admission, and never exposes endpoint credentials", async () => {
+  const f = await providersFixture();
+  const settings = f.app.model.settings(f.init.projectId);
+  expect(settings).toEqual({
+    projectId: f.init.projectId,
+    providers: [
+      {
+        id: "fake",
+        baseUrl: "http://127.0.0.1:4010",
+        remote: false,
+        models: ["model"],
+        allowedByProfile: true,
+      },
+      {
+        id: "remote",
+        baseUrl: "https://models.example.com",
+        remote: true,
+        models: ["big"],
+        allowedByProfile: false,
+      },
+    ],
   });
-  expect(before.providers).toEqual([
-    {
-      id: "fake",
-      baseUrl: "http://127.0.0.1:4010",
-      remote: false,
-      models: ["model"],
-      allowedByProfile: true,
-      consent: null,
-    },
-    {
-      id: "remote",
-      baseUrl: "https://models.example.com",
-      remote: true,
-      models: ["big"],
-      allowedByProfile: false,
-      consent: null,
-    },
-  ]);
-  f.app.model.grantConsent(f.init.projectId, "fake", ["documents", "plans", "documents"], true);
-  const granted = f.app.model.settings(f.init.projectId).providers[0]?.consent;
-  expect(granted).toMatchObject({
-    dataClasses: ["documents", "plans"],
-    allowUnknownCost: true,
-    grantedBy: f.app.context.principalId,
-    revokedAt: null,
-  });
-  f.app.model.revokeConsent(f.init.projectId, "fake");
-  const revoked = f.app.model.settings(f.init.projectId).providers[0]?.consent;
-  expect(revoked).toMatchObject({
-    dataClasses: ["documents", "plans"],
-    grantedAt: granted?.grantedAt,
-  });
-  expect(revoked?.revokedAt).toEqual(expect.any(String));
-  // Granting again clears the revocation (positive control for the revokedAt assertion).
-  f.app.model.grantConsent(f.init.projectId, "fake", ["dom"]);
-  expect(f.app.model.settings(f.init.projectId).providers[0]?.consent).toMatchObject({
-    dataClasses: ["dom"],
-    revokedAt: null,
-  });
-  const serialized = JSON.stringify(f.app.model.settings(f.init.projectId));
+  const serialized = JSON.stringify(settings);
   for (const secret of [
     "QUERY-CANARY",
     "private-path",
@@ -662,108 +631,15 @@ it("UX-047 shows the supported data classes and providers, grants and revokes co
     expect(serialized).not.toContain(secret);
 });
 
-it("UX-047 refuses unsupported data classes, providers the profile does not allow and unknown providers", async () => {
-  const f = await consentFixture();
-  const grant = (provider: string, classes: string[]) => () =>
-    f.app.model.grantConsent(f.init.projectId, provider, classes);
-  expect(grant("fake", ["telemetry"])).toThrowError(
-    expect.objectContaining({ code: "INVALID_ARGUMENT" }),
-  );
-  expect(grant("fake", [])).toThrowError(expect.objectContaining({ code: "INVALID_ARGUMENT" }));
-  expect(grant("remote", ["documents"])).toThrowError(
-    expect.objectContaining({ code: "POLICY_DENIED" }),
-  );
-  expect(grant("unknown", ["documents"])).toThrowError(
-    expect.objectContaining({ code: "POLICY_DENIED" }),
-  );
-  expect(f.app.model.settings(f.init.projectId).providers.map((entry) => entry.consent)).toEqual([
-    null,
-    null,
-  ]);
-  // Positive control: the allowed provider with a supported class is granted.
-  expect(grant("fake", ["documents"])).not.toThrow();
-});
-
-it("UX-047 refuses to revoke a provider that is not configured and writes no audit row for it", async () => {
-  const f = await consentFixture();
-  const revoked = () =>
-    Number(
-      f.app.database.get(
-        "SELECT COUNT(*) AS n FROM audit_events WHERE workspace_id=? AND action='consent.revoked'",
-        f.init.workspaceId,
-      )?.n,
-    );
-  expect(revoked()).toBe(0);
-  expect(() => f.app.model.revokeConsent(f.init.projectId, "ghost")).toThrowError(
-    expect.objectContaining({ code: "NOT_FOUND" }),
-  );
-  expect(revoked()).toBe(0);
-  // Positive control: a configured provider is revoked and audited exactly once.
-  f.app.model.grantConsent(f.init.projectId, "fake", ["documents"]);
-  f.app.model.revokeConsent(f.init.projectId, "fake");
-  expect(revoked()).toBe(1);
-  // A consent that still exists is revocable even when its provider is no longer configured.
-  f.app.database.run(
-    "UPDATE consents SET provider_id='retired' WHERE workspace_id=? AND provider_id='fake'",
-    f.init.workspaceId,
-  );
-  f.app.model.revokeConsent(f.init.projectId, "retired");
-  expect(revoked()).toBe(2);
-});
-
-it("UX-047 keeps the grantor on the consent record and never reports an unknown grantor", async () => {
-  const f = await consentFixture();
-  const admin = await f.member("org_admin");
-  admin.scoped.model.grantConsent(f.init.projectId, "fake", ["documents"]);
-  const stored = f.app.database.get(
-    "SELECT data_json FROM consents WHERE workspace_id=? AND provider_id='fake'",
-    f.init.workspaceId,
-  );
-  expect(JSON.parse(String(stored?.data_json))).toEqual({ grantedBy: admin.identity.principalId });
-  const grantor = () => f.app.model.settings(f.init.projectId).providers[0]?.consent?.grantedBy;
-  expect(grantor()).toBe(admin.identity.principalId);
-  // A later grant by someone else replaces the grantor together with the classes.
-  f.app.model.grantConsent(f.init.projectId, "fake", ["plans"]);
-  expect(grantor()).toBe(f.app.context.principalId);
-  // A consent written before the actor was kept on the row falls back to its own grant event.
-  f.app.database.run(
-    "UPDATE consents SET data_json='{}' WHERE workspace_id=? AND provider_id='fake'",
-    f.init.workspaceId,
-  );
-  expect(grantor()).toBe(f.app.context.principalId);
-  // When no actor can be established the view fails closed instead of inventing one.
-  f.app.database.run(
-    "UPDATE consents SET granted_at='2000-01-01T00:00:00.000Z' WHERE workspace_id=? AND provider_id='fake'",
-    f.init.workspaceId,
-  );
-  expect(() => f.app.model.settings(f.init.projectId)).toThrowError(
-    expect.objectContaining({
-      code: "PRECONDITION_FAILED",
-      details: { reason: "consent_actor_missing" },
-    }),
-  );
-});
-
-it("UX-047 lets every role read the consent settings but only the admin column change them", async () => {
-  const f = await consentFixture();
-  const roles = denied("admin");
-  expect(roles).toEqual(expect.arrayContaining(["maintainer", "reviewer", "runner", "viewer"]));
-  for (const role of roles) {
+it("UX-047 lets every role read the model providers and refuses an unknown project", async () => {
+  const f = await providersFixture();
+  for (const role of [...denied("admin"), "org_admin" as const]) {
     const user = await f.member(role);
     expect(user.scoped.model.settings(f.init.projectId).providers).toHaveLength(2);
-    expect(() =>
-      user.scoped.model.grantConsent(f.init.projectId, "fake", ["documents"]),
-    ).toThrowError(expect.objectContaining({ code: "FORBIDDEN" }));
-    expect(() => user.scoped.model.revokeConsent(f.init.projectId, "fake")).toThrowError(
-      expect.objectContaining({ code: "FORBIDDEN" }),
-    );
   }
-  expect(f.app.model.settings(f.init.projectId).providers[0]?.consent).toBeNull();
-  const admin = await f.member("org_admin");
-  admin.scoped.model.grantConsent(f.init.projectId, "fake", ["documents"]);
-  expect(admin.scoped.model.settings(f.init.projectId).providers[0]?.consent).toMatchObject({
-    grantedBy: admin.identity.principalId,
-  });
+  expect(() => f.app.model.settings(uuidV7IdGenerator.next("prj"))).toThrowError(
+    expect.objectContaining({ code: "NOT_FOUND" }),
+  );
 });
 
 // ---------------------------------------------------------------------------------- D5
@@ -789,6 +665,7 @@ it("M4-05 lists environment revisions newest first and never returns variables",
   ]);
   expect(Object.keys(revisions[0] ?? {}).sort()).toEqual(
     [
+      "additionalOrigins",
       "authProfileRefs",
       "createdAt",
       "id",
@@ -827,8 +704,157 @@ it("M4-05 lists environment revisions newest first and never returns variables",
   const listed = f.app.environments.revisions(environment.name);
   expect(listed).toHaveLength(4);
   expect(listed.at(-1)?.id).toBe(canary.id);
+  // A revision stored before the field existed reads as an empty list.
+  expect(listed.at(-1)?.additionalOrigins).toEqual([]);
   expect(JSON.stringify(listed)).not.toContain("VARIABLE-CANARY");
   expect(JSON.stringify(listed)).not.toContain("variables");
+});
+
+// ------------------------------------------------------------------ additional origins
+
+const publicEnvironment = {
+  baseUrl: "https://app.example.test",
+  networkProfile: "public" as const,
+};
+
+it("stores exact additional origins per revision without touching target origins, and update replaces or clears them", async () => {
+  const f = await fixture();
+  const environments = f.app.environments;
+  const extras = ["https://flagcdn.com", "https://cdn.example.test:8443"];
+  const created = environments.create({
+    projectId: f.init.projectId,
+    name: "with-extras",
+    ...publicEnvironment,
+    additionalOrigins: extras,
+  });
+  expect(environments.revisions(created.id)[0]).toMatchObject({
+    targetOrigins: ["https://app.example.test"],
+    additionalOrigins: extras,
+  });
+  // Control: an environment created without the field has none.
+  const plain = environments.create({
+    projectId: f.init.projectId,
+    name: "plain",
+    ...publicEnvironment,
+  });
+  expect(environments.revisions(plain.id)[0]?.additionalOrigins).toEqual([]);
+  // An unrelated update carries the list into the new revision.
+  const relocated = environments.update(created.id, { locale: "pt-BR" }, Number(created.version));
+  expect(environments.revisions(created.id)[0]?.additionalOrigins).toEqual(extras);
+  const replaced = environments.update(
+    created.id,
+    { additionalOrigins: ["https://fonts.example.test"] },
+    Number(relocated.version),
+  );
+  const cleared = environments.update(
+    created.id,
+    { additionalOrigins: [] },
+    Number(replaced.version),
+  );
+  expect(environments.revisions(created.id).map((entry) => entry.additionalOrigins)).toEqual([
+    [],
+    ["https://fonts.example.test"],
+    extras,
+    extras,
+  ]);
+  // The additional origins never become target origins on any revision.
+  expect(
+    environments.revisions(created.id).every((entry) => entry.targetOrigins.length === 1),
+  ).toBe(true);
+  expect(cleared.activeRevisionId).toBe(environments.revisions(created.id)[0]?.id);
+});
+
+it.each([
+  ["a path", ["https://cdn.example.test/img"], "INVALID_ARGUMENT"],
+  ["a query", ["https://cdn.example.test/?x=1"], "INVALID_ARGUMENT"],
+  ["credentials", ["https://user:pass@cdn.example.test"], "INVALID_ARGUMENT"],
+  ["a fragment", ["https://cdn.example.test/#x"], "INVALID_ARGUMENT"],
+  ["a wildcard", ["https://*.example.test"], "INVALID_ARGUMENT"],
+  ["a non-HTTP scheme", ["ftp://cdn.example.test"], "INVALID_ARGUMENT"],
+  ["a bare host", ["cdn.example.test"], "INVALID_ARGUMENT"],
+  ["the target origin", ["https://app.example.test"], "INVALID_ARGUMENT"],
+  ["a duplicate", ["https://cdn.example.test", "https://cdn.example.test:443"], "INVALID_ARGUMENT"],
+  [
+    "too many origins",
+    Array.from({ length: 33 }, (_, i) => `https://c${i}.example.test`),
+    "INVALID_ARGUMENT",
+  ],
+  ["loopback under the public profile", ["http://127.0.0.1:9000"], "POLICY_DENIED"],
+  ["localhost under the public profile", ["http://localhost:9000"], "POLICY_DENIED"],
+  ["a private address under the public profile", ["http://10.0.0.5"], "POLICY_DENIED"],
+  ["the cloud metadata address", ["http://169.254.169.254"], "POLICY_DENIED"],
+])("refuses additional origins with %s", async (_label, additionalOrigins, code) => {
+  const f = await fixture();
+  const before = f.app.database.all("SELECT id FROM environment_revisions").length;
+  expect(() =>
+    f.app.environments.create({
+      projectId: f.init.projectId,
+      name: "refused",
+      ...publicEnvironment,
+      additionalOrigins,
+    }),
+  ).toThrowError(expect.objectContaining({ code }));
+  expect(f.app.database.all("SELECT id FROM environment_revisions")).toHaveLength(before);
+});
+
+it("applies the network profile to literal additional origins like the base URL and rechecks them on update", async () => {
+  const f = await fixture();
+  const environments = f.app.environments;
+  const input = { projectId: f.init.projectId };
+  // Positive controls: each profile accepts the literal addresses it permits.
+  environments.create({
+    ...input,
+    name: "public-literal",
+    ...publicEnvironment,
+    additionalOrigins: ["https://8.8.8.8"],
+  });
+  environments.create({
+    ...input,
+    name: "private-literal",
+    baseUrl: "http://10.0.0.7:3000",
+    networkProfile: "private",
+    additionalOrigins: ["http://10.0.0.5:9000"],
+  });
+  const loopback = environments.create({
+    ...input,
+    name: "loopback-literal",
+    baseUrl: "http://127.0.0.1:3100",
+    networkProfile: "local-loopback",
+    additionalOrigins: ["http://127.0.0.1:9000", "https://flagcdn.com"],
+  });
+  const revisions = environments.revisions(loopback.id).length;
+  // Switching to a profile that no longer permits a stored origin is refused, and nothing is stored.
+  expect(() =>
+    environments.update(loopback.id, { networkProfile: "public" }, Number(loopback.version)),
+  ).toThrowError(expect.objectContaining({ code: "POLICY_DENIED" }));
+  // Moving the base URL onto a stored additional origin is refused as a duplicate.
+  expect(() =>
+    environments.update(
+      loopback.id,
+      { baseUrl: "http://127.0.0.1:9000" },
+      Number(loopback.version),
+    ),
+  ).toThrowError(expect.objectContaining({ code: "INVALID_ARGUMENT" }));
+  expect(environments.revisions(loopback.id)).toHaveLength(revisions);
+  // Clearing together with the profile change is accepted.
+  environments.update(
+    loopback.id,
+    { networkProfile: "public", additionalOrigins: ["https://flagcdn.com"] },
+    Number(loopback.version),
+  );
+  expect(environments.revisions(loopback.id)[0]).toMatchObject({
+    networkProfile: "public",
+    additionalOrigins: ["https://flagcdn.com"],
+  });
+});
+
+it("merges additional origins into an attempt policy only outside offline profiles and never duplicates a target", () => {
+  const revision = { additionalOrigins: ["https://flagcdn.com", "http://127.0.0.1:3000"] };
+  expect(attemptAdditionalOrigins(revision, ["http://127.0.0.1:3000"], false)).toEqual([
+    "https://flagcdn.com",
+  ]);
+  expect(attemptAdditionalOrigins(revision, ["http://127.0.0.1:3000"], true)).toEqual([]);
+  expect(attemptAdditionalOrigins({}, ["http://127.0.0.1:3000"], false)).toEqual([]);
 });
 
 // ---------------------------------------------------------------------------------- UX-056

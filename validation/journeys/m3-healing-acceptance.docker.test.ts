@@ -160,7 +160,6 @@ async function fixture(
         version: Number(project.version) + 1,
       },
     );
-    app.model.grantConsent(projectId, "fake", ["execution_evidence"], true);
     const current = app;
     await body({
       app: current,
@@ -689,7 +688,6 @@ it("OPS-014 deterministic analysis timeout preserves terminal execution and sour
       );
       app = await Application.open({ cwd: session.cwd, home: session.home, env: session.env });
       const projectId = text(init.projectId);
-      app.model.grantConsent(projectId, "fake", ["execution_evidence", "code_summary"], true);
       const test = await session.createTest(
         executable("Analysis price", "http", [
           action("request", "request", { method: "GET", pathSegments: [] }),

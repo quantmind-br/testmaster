@@ -104,11 +104,9 @@ it("UX-048 answers another workspace's project and operations with not found and
   ).toEqual([operation.id]);
 });
 
-it("UX-047 answers another workspace's project with not found for consent settings and changes", async () => {
+it("UX-047 answers another workspace's project with not found for model provider settings", async () => {
   const { acme, globex, project } = await twoWorkspaces();
   expect(() => globex.model.settings(project.id)).toThrowError(notFound);
-  expect(() => globex.model.grantConsent(project.id, "fake", ["documents"])).toThrowError(notFound);
-  expect(() => globex.model.revokeConsent(project.id, "fake")).toThrowError(notFound);
   // Positive control: the owner reads the settings.
   expect(acme.model.settings(project.id).projectId).toBe(project.id);
 });

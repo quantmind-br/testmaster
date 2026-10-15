@@ -349,9 +349,6 @@ describe("keyboard and accessibility", () => {
       .waitFor({ state: "attached" });
     await keyboard.press("ArrowDown");
     await keyboard.tabTo((element) => element.name.startsWith("Redaction level"), 6);
-    await keyboard.press("Tab");
-    await keyboard.press("Space");
-    expect(await page.getByRole("checkbox", { name: /notify:webhook/u }).isChecked()).toBe(true);
     await keyboard.tabTo((element) => element.name === "Create integration", 3);
     await keyboard.press("Enter");
     await integrationRow(page, "Keyboard created hook").waitFor();
@@ -611,7 +608,7 @@ describe("deliveries", () => {
 });
 
 describe("integrations", () => {
-  it("INT-004 a test delivery is labelled as a test, writes no delivery row, and an integration needs consent, can pause and resume, and ends access when revoked", async () => {
+  it("INT-004 a test delivery is labelled as a test, writes no delivery row, and an integration can pause and resume, and ends access when revoked", async () => {
     const fixture = await seedNotifications(stack, { integrationName: "Test delivery hook" });
     const handle = await portal();
     const { page } = handle;
@@ -656,24 +653,17 @@ describe("integrations", () => {
     await target.locator('[data-status="active"]').waitFor();
     expect(await test.getAttribute("aria-disabled")).toBe("false");
 
-    // Consent is required: without it nothing is sent to the server.
+    // The form carries no consent step: a complete form creates the integration directly.
     await page.getByRole("button", { name: "New integration" }).click();
-    await page.getByRole("textbox", { name: /^Name/u }).fill("No consent hook");
+    await page.getByRole("textbox", { name: /^Name/u }).fill("Direct hook");
     await page.getByLabel("Run failed", { exact: true }).check();
     await page.getByLabel("Webhook URL").fill("https://hooks.s8.invalid/none");
     await page.getByLabel("Signing secret").selectOption({ index: 1 });
+    expect(await page.getByText(/consent/iu).count()).toBe(0);
     const created = () => requestsTo(handle, /^POST \/v1\/integrations$/u).length;
     const before = created();
     await page.getByRole("button", { name: "Create integration" }).click();
-    const summary = page.getByTestId("error-summary");
-    await summary.waitFor();
-    expect(await summary.innerText()).toContain("Grant notify:webhook");
-    expect(created()).toBe(before);
-    expect(await integrationRow(page, "No consent hook").count()).toBe(0);
-    // With consent the same form creates the integration.
-    await page.getByRole("checkbox", { name: /notify:webhook/u }).check();
-    await page.getByRole("button", { name: "Create integration" }).click();
-    await integrationRow(page, "No consent hook").waitFor();
+    await integrationRow(page, "Direct hook").waitFor();
     expect(created()).toBe(before + 1);
 
     // Revoke asks first; revoking is final and ends access with no fallback.
@@ -701,13 +691,13 @@ describe("integrations", () => {
           items: {
             id: string;
             state: string;
-            consent: { scopes: string[] };
             secretRefs: string[];
           }[];
         };
       }>()
       .data.items.find((item) => item.id === fixture.integrationId);
-    expect(revoked).toMatchObject({ state: "revoked", consent: { scopes: [] }, secretRefs: [] });
+    expect(revoked).toMatchObject({ state: "revoked", secretRefs: [] });
+    expect(revoked).not.toHaveProperty("consent");
     expect(handle.diagnostics.pageErrors).toEqual([]);
   });
 

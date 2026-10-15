@@ -262,7 +262,7 @@ Pessoa usando teclado/leitor de tela conclui onboarding, review, RunDetail, arti
 
 Interromper processo durante persistência/coleta e reiniciar; SQLite/filesystem e perfil PostgreSQL/S3 recuperam sem resultado terminal inventado. Expirar artifact e mudar source/env mostram partial/expired/stale sem alterar histórico. Restore de backup preserva IDs/audit e não executa schedules duas vezes. **Rastreio:** UX-030/032/034/048, INT-040/044, VAL-026/032/045; M1/M4/M6.
 
-### J18 — Qualidade avançada com consentimento
+### J18 — Qualidade avançada com política e aprovação
 
 Admin habilita visual, a11y, API property/security/load em destino controlado, com scope/rate/budget e cancelamento. Regressão visual aprovada e violação a11y real são detectadas; API mutation auth/schema/concurrency é observada. Negativo: alvo externo sem autorização ou benchmark contra produção é recusado. **Rastreio:** UX-036/047, INT-017/028, VAL-040–044; M5.
 
@@ -324,7 +324,7 @@ Acessibilidade alvo: WCAG 2.2 AA nas telas próprias; scan automatizado zero vio
 | ID | Requisito | Aceitação |
 |---|---|---|
 | VAL-042 | Contrato/property API cobre negativos, stateful workflows, seed/example replay, auth boundaries e shrinking. | Schemathesis detecta mutant schema/status/tenant; example minimizado reproduz sem LLM. |
-| VAL-043 | Probes de segurança têm scope/allowlist/consent, isolamento, redaction e oracle independente. | Sem autorização explícita, scan destrutivo/externo é recusado; não se promete pentest completo por geração LLM. |
+| VAL-043 | Probes de segurança têm scope/allowlist/approval, isolamento, redaction e oracle independente. | Sem autorização explícita, scan destrutivo/externo é recusado; não se promete pentest completo por geração LLM. |
 | VAL-044 | Load tests distinguem plataforma de destino, têm ramp/concurrency/rate/duration/budget e stop conditions. | Saturação não derruba host fora do limite definido; results incluem hardware, dataset e errors, sem throughput fictício. |
 
 API security mínimo em corpus autorizado: autorização por objeto/tenant, escopos, replay/idempotência, mass assignment, input validation, segredo em logs/headers, redirects/SSRF e comportamento de rate limit. Não emitir tráfego contra terceiros por descobrimento de link. Ataques com risco de dados exigem fixture descartável/backup e teardown. Extensão security/load não deve ser habilitada implicitamente pela palavra “complete” de um PRD.
@@ -434,7 +434,7 @@ Não se inicia uma fase insegura porque o marco anterior ficou “quase concluí
 |---|---|---|
 | **M0 — contracts/security** | Schemas/version/IDs e estados; TestRevision/Attempt/Artifact invariants; threat model, permissions, security preconditions, corpus/oracles/protocols. Nenhum runner inseguro automático. | VAL-001–005/014–019/023/046; UX-001–004/005/010; INT-001–004/014/018. |
 | **M1 — local deterministic slice** | CLI/core sem LLM; Docker rootless Linux; Playwright real + HTTP real + adapter contract; SQLite/filesystem; Run por revisão/célula, BatchRun receipt/contagens; failed/pass controls, artifacts/hash/redaction e reattach/cancel. | VAL-002/006–009/020–032/047–049 no escopo local de cada requisito; J01/J04/J06/J17 local; UX-002/020/026–034; INT-005/008/010–013 exports locais. Scheduler calendário/DST/UI/App não são entregues por esse gate. |
-| **M2 — discovery/AI/MCP** | Sources/PRD/diff/proposals, subset accept, MCP e managed skills; model contract/eval separado, consent e injection defenses. | VAL-003/014–018/025/031/038/039; J02/J03/J14; UX-011–019/044; INT-034–039. |
+| **M2 — discovery/AI/MCP** | Sources/PRD/diff/proposals, subset accept, MCP e managed skills; model contract/eval separado, allowlist de providers, orçamento e injection defenses. | VAL-003/014–018/025/031/038/039; J02/J03/J14; UX-011–019/044; INT-034–039. |
 | **M3 — evidence/healing/CI** | Original failure preservado inclusive retry/cancel; nova revisão/Run de verificação; strict replay, flaky cohorts/comparison; JUnit/Action, gate/cleanup e SHA/check básico. | VAL-010–013/019–022/024/027/032/033/047–050 no escopo CI; J05–J08 coorte local/J11/J12 básico; UX-029/035–040; INT-005–013/016/021–023. App, túnel e matriz avançada não são requisitos M3. |
 | **M4 — self-hosted web/team/schedules/GitHub/auth dinâmica** | UI/autorização/accessibility; PostgreSQL/S3 profiles; settings/secrets/history/stale; cross-project lists, schedule/notification/recovery; GitHub App/previews multi-provider e auth refresh/MFA/checkpoint; enrollment/heartbeat de workers sem distribuição completa. | VAL-026/027/033–037/041/043/045/052 no escopo M4; J09/J10/J12 App/J13 schedule/J16/J17 server; UX-005–008/041–056; INT-014–023/025–029; SEC-023–024/027/030–031/047. |
 | **M5 — remote/distributed/matrix/advanced/memory** | Workers remotos com leases/fencing/partições, tunnels, issue import/link; matriz cross-browser visual/a11y e modos API property/security/load; memória de projeto com revisão/proveniência e escopo autorizado. | VAL-020/024/026/033/040–044/046/050–052; J08 matriz/J12 variante túnel/J13 tracker/J18; INT-024/030–033; SEC-019/030/041–044. Memória não reescreve requisito/assertion/policy e não mistura tenants; variantes negativas integram VAL-016/043/046. |

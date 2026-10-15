@@ -3,7 +3,7 @@ import { semanticHash } from "@testmaster/domain";
 import { expect, it } from "vitest";
 import { startAdversarial } from "../../fixtures/adversarial/src/index.js";
 import { controlledShop, journey, object, text } from "./harness.js";
-import { configureModel, metadata, provider } from "./m2-support.js";
+import { configureModel, metadata } from "./m2-support.js";
 
 it("explores within budget and resolves an accepted draft into a replay-verified candidate", async () => {
   await journey(
@@ -24,7 +24,6 @@ it("explores within budget and resolves an accepted draft into a replay-verified
             baseUrl: shop.url,
             networkProfile: "local-loopback",
           });
-          app.model.grantConsent(projectId, provider, ["dom", "plans"], true);
           const explored = await app.explore.start({
             projectId,
             environmentId: environment.id,
@@ -159,13 +158,15 @@ it("explores within budget and resolves an accepted draft into a replay-verified
           await app.worker.run({ ephemeral: true, runIds: [verification.runId] });
           expect(app.runs.get(verification.runId).outcome).toBe("passed");
           app.revisions.promote(candidateId, app.tests.get(test.id).version ?? 1);
-          app.model.revokeConsent(projectId, provider);
+          // A replay is deterministic and never calls a model: the usage ledger does not change.
+          const callsBefore = app.usage.get({ projectId }).calls.length;
           const replay = await app.runs.admit(
             { testId: test.id, environmentId: environment.id, mode: "replay" },
             { wait: true },
           );
           await app.worker.run({ ephemeral: true, runIds: [replay.runId] });
           expect(app.runs.get(replay.runId).outcome).toBe("passed");
+          expect(app.usage.get({ projectId }).calls).toHaveLength(callsBefore);
         } finally {
           app.close();
           await shop.close();

@@ -102,7 +102,6 @@ describe("INT-027 outbound webhooks are signed over the original bytes", () => {
       name: "rotating",
       projectIds: [h.projectId],
       events: ["run.failed"],
-      consent: { scopes: ["notify:webhook"] },
       secretRefs: [current, previous],
       settings: {
         url: receiver.url,

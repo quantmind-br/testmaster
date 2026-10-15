@@ -172,54 +172,6 @@ it.skipIf(postgresParity)(
 
 // Not run on PostgreSQL: Backup, restore and upgrade of the SQLite data directory; PostgreSQL uses pg_dump (M4-02).
 it.skipIf(postgresParity)(
-  "carries consent revocations made after the backup into the restored directory",
-  async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "tm-consent-restore-"));
-    roots.push(cwd);
-    const app = await Application.open({ cwd, home: join(cwd, "home") });
-    try {
-      const { projectId, workspaceId } = await app.init();
-      const consentId = "consent-restore-probe";
-      app.database.run(
-        "INSERT INTO consents(workspace_id,id,created_at,project_id,provider_id,data_classes_json,granted_at) VALUES(?,?,?,?,?,?,?)",
-        workspaceId,
-        consentId,
-        new Date().toISOString(),
-        projectId,
-        "fake",
-        '["documents"]',
-        new Date().toISOString(),
-      );
-      const backup = join(cwd, "backup");
-      await app.backups.create(backup);
-      app.database.run(
-        "UPDATE consents SET revoked_at=? WHERE id=?",
-        new Date().toISOString(),
-        consentId,
-      );
-      const restored = join(cwd, "restored");
-      expect(await app.backups.restore(backup, restored)).toMatchObject({
-        postBackupLedger: "replayed",
-        exclusionsGuaranteed: true,
-      });
-      const database = await PersistenceDatabase.open(join(restored, "testmaster.db"), {
-        migrate: false,
-      });
-      try {
-        expect(
-          database.get("SELECT revoked_at FROM consents WHERE id=?", consentId)?.revoked_at,
-        ).not.toBeNull();
-      } finally {
-        database.close();
-      }
-    } finally {
-      app.close();
-    }
-  },
-);
-
-// Not run on PostgreSQL: Backup, restore and upgrade of the SQLite data directory; PostgreSQL uses pg_dump (M4-02).
-it.skipIf(postgresParity)(
   "resumes with the new release on the upgraded data directory with the same identities",
   async () => {
     const cwd = await mkdtemp(join(tmpdir(), "tm-resume-"));
@@ -236,6 +188,10 @@ it.skipIf(postgresParity)(
     );
     old.exec(
       "DROP TABLE github_checks; DROP TABLE github_deployments; DROP TABLE github_pulls; DROP TABLE github_repositories; DROP TABLE github_installations; DROP TABLE admin_operations; DROP TABLE alerts; DROP TABLE incident_events; DROP TABLE incidents; DROP TABLE audit_purge_summaries",
+    );
+    // Migration 19 removed the consent ledger; the previous release still had it, so migration 19 has a table to drop again.
+    old.exec(
+      "CREATE TABLE consents (workspace_id TEXT NOT NULL, id TEXT NOT NULL, created_at TEXT NOT NULL, version INTEGER NOT NULL DEFAULT 1 CHECK(version>=1), data_json TEXT NOT NULL DEFAULT '{}', project_id TEXT NOT NULL, provider_id TEXT NOT NULL, data_classes_json TEXT NOT NULL, granted_at TEXT NOT NULL, revoked_at TEXT, allow_unknown_cost INTEGER NOT NULL DEFAULT 0 CHECK(allow_unknown_cost IN (0,1)), PRIMARY KEY(workspace_id,id), FOREIGN KEY(workspace_id) REFERENCES workspaces(id) DEFERRABLE INITIALLY DEFERRED, FOREIGN KEY(workspace_id,project_id) REFERENCES projects(workspace_id,id) DEFERRABLE INITIALLY DEFERRED, UNIQUE(workspace_id,project_id,provider_id)) STRICT",
     );
     old.run(
       "INSERT INTO workers(workspace_id,id,created_at,state,last_heartbeat_at) VALUES(?, 'wrk_previous',?, 'ready',?)",

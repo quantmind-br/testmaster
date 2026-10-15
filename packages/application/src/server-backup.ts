@@ -802,9 +802,6 @@ export function readLiveLedger(
     tombstones: database.all<SqlRow>(
       "SELECT key,value FROM operational_state WHERE key LIKE 'retention:%' OR key LIKE 'image:revoked:%' OR key LIKE 'integration:revoked:%'",
     ),
-    consentRevocations: database.all<SqlRow>(
-      "SELECT workspace_id,id,revoked_at FROM consents WHERE revoked_at IS NOT NULL",
-    ),
     approvalRevocations: database.all<SqlRow>(
       "SELECT workspace_id,id,revoked_at FROM approvals WHERE revoked_at IS NOT NULL",
     ),

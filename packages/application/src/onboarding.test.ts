@@ -94,6 +94,64 @@ it("UX-009 resumes the saved step, choices and history for the same principal an
   expect(revisited.history.at(-1)?.event).toBe("revisited");
 });
 
+it("UX-009 resumes and saves wizard state migrated from the consent era, keeping version and history", async () => {
+  const { service, projectId, app } = await fixture();
+  const key = `onboarding:${app.context.workspaceId}:${projectId}:${app.context.principalId}`;
+  // The row exactly as migration 0021 leaves it: choices.consents removed, history untouched
+  // (migration 0021 itself is proven over the real migration chain in packages/persistence).
+  const migrated = {
+    projectId,
+    principalId: app.context.principalId,
+    version: 3,
+    saved: true,
+    currentStep: "target",
+    completedSteps: ["mode", "project"],
+    choices: { mode: "local", target: target("http://127.0.0.1:4010") },
+    history: [
+      {
+        at: "2026-10-01T10:00:00.000Z",
+        step: "mode",
+        event: "completed",
+        changed: ["mode", "consents"],
+      },
+    ],
+    updatedAt: "2026-10-01T10:00:00.000Z",
+  };
+  app.database.run(
+    "INSERT INTO operational_state(key,value) VALUES(?,?)",
+    key,
+    JSON.stringify(migrated),
+  );
+  const resumed = service.get(projectId);
+  expect(resumed).toMatchObject({
+    version: 3,
+    currentStep: "target",
+    completedSteps: ["mode", "project"],
+    choices: migrated.choices,
+    updatedAt: migrated.updatedAt,
+    history: migrated.history,
+  });
+  const saved = service.save(
+    projectId,
+    { currentStep: "target", completedSteps: ["mode", "project"], choices: resumed.choices },
+    3,
+  );
+  expect(saved).toMatchObject({ version: 4, choices: migrated.choices });
+  expect(saved.history).toEqual(migrated.history);
+  // Negative control: the removed consents choices are rejected by the strict input schema.
+  expect(() =>
+    service.save(
+      projectId,
+      {
+        currentStep: "target",
+        completedSteps: ["mode", "project"],
+        choices: { ...resumed.choices, consents: { scan: "granted" } },
+      } as never,
+      4,
+    ),
+  ).toThrow();
+});
+
 it("UX-009 never stores credentials and reduces the target to an origin", async () => {
   const { service, projectId, app, secret } = await fixture();
   const save = (choices: Record<string, unknown>, version = 1) =>

@@ -172,10 +172,6 @@ function checkOriginBinding(
     : rejected("secret_origin_mismatch", "The secret is not bound to this destination");
 }
 
-const slackScopes = ["notify:slack"] as const;
-const emailScopes = ["notify:email"] as const;
-const webhookScopes = ["notify:webhook"] as const;
-
 export interface SlackProviderOptions extends EgressOptions {
   /** Hosts a Slack incoming-webhook URL may point at; tests add a local receiver. */
   allowedHosts?: readonly string[];
@@ -228,7 +224,6 @@ export function createSlackProvider(
       validate("SlackSettings", input);
       return input as SlackSettings;
     },
-    requiredScopes: () => slackScopes,
     referencedSecrets: (settings) => [settings.secretRef],
     async sendTest(context, integration): Promise<DeliveryOutcome> {
       const payload = payloadFor(context, null, context.test, integration.settings);
@@ -313,7 +308,6 @@ export function createWebhookProvider(
         throw new ContractError("INVALID_ARGUMENT", "The rotation window is at most 24 hours");
       return settings;
     },
-    requiredScopes: () => webhookScopes,
     referencedSecrets: (settings) => [
       settings.signingSecretRef,
       ...(settings.previousSigningSecretRef ? [settings.previousSigningSecretRef] : []),
@@ -508,7 +502,6 @@ export function createEmailProvider(
       validate("EmailSettings", input);
       return input as EmailSettings;
     },
-    requiredScopes: () => emailScopes,
     referencedSecrets: (settings) => [settings.smtpSecretRef],
     async sendTest(context, integration) {
       const payload = payloadFor(context, null, context.test, integration.settings);

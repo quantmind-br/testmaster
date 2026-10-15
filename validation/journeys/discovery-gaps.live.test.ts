@@ -4,7 +4,7 @@ import { Application, entity } from "@testmaster/application";
 import { expect, it } from "vitest";
 import { startAdversarial } from "../../fixtures/adversarial/src/index.js";
 import { controlledShop, items, journey, object, text } from "./harness.js";
-import { configureModel, metadata, provider, source } from "./m2-support.js";
+import { configureModel, metadata, source } from "./m2-support.js";
 
 it("expected feature matrix distinguishes full partial and login-unreachable; selective retry charges only selected feature and video is opt-in", async () => {
   await journey(
@@ -24,7 +24,6 @@ it("expected feature matrix distinguishes full partial and login-unreachable; se
           baseUrl: shop.url,
           networkProfile: "local-loopback",
         });
-        app.model.grantConsent(projectId, provider, ["dom"], true);
         const add = (path: string, completion?: string) => {
           const feature = entity(app.context, "fea", {
             projectId,
@@ -191,7 +190,6 @@ it("live model receives each malicious channel without acquiring process network
       });
       const target = await startAdversarial();
       try {
-        app.model.grantConsent(projectId, provider, ["dom", "documents"], true);
         const environment = app.environments.create({
           projectId,
           name: "malicious-page",

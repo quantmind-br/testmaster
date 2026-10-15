@@ -208,7 +208,6 @@ describe("onboarding wizard", () => {
     await stepHeading(page, "Target application");
     await page.getByLabel("Base URL").fill(target.url);
     await page.getByLabel("Application type").fill("Node.js HTTP API");
-    await page.getByLabel(/Scan the repository/).check();
     await page.getByRole("button", { name: "Save progress" }).click();
     await page.getByTestId("resume-note").waitFor();
     await first.close();

@@ -121,7 +121,6 @@ async function source(): Promise<Source> {
     name: "ops-hook",
     projectIds: [world.projectId],
     events: ["run.failed"],
-    consent: { scopes: ["notify:webhook"] },
     secretRefs: [signing],
     settings: { url: receiver.url, signingSecretRef: signing },
   });

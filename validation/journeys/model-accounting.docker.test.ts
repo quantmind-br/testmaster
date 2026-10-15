@@ -99,14 +99,6 @@ it("VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run 
           session.env.ACCOUNTING_KEY = "local-accounting-key";
           session.env.TESTMASTER_OFFLINE = "false";
           const identity = await session.init(target.url);
-          await session.command([
-            "consent",
-            "grant",
-            "--provider",
-            "accounting",
-            "--data-class",
-            "documents",
-          ]);
           const prd = await source(
             session,
             "PRD.md",
@@ -122,18 +114,7 @@ it("VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run 
             "--source-revision",
             text(object(prd.revision).id),
           ];
-          const denied = await session.command(normalize, 9);
-          expect(object(denied.error).code).toBe("POLICY_DENIED");
           expect(completions).toBe(0);
-          await session.command([
-            "consent",
-            "grant",
-            "--provider",
-            "accounting",
-            "--allow-unknown-cost",
-            "--data-class",
-            "documents",
-          ]);
           await session.command(["budget", "set", "--tokens", "100000"]);
           const test = await session.createTest(healthPlan());
           await session.worker();

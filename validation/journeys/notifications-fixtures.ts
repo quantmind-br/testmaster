@@ -71,7 +71,6 @@ export async function createWebhookIntegration(
       name,
       projectIds: options.projectIds ?? [],
       events: options.events ?? ["run.failed", "delivery.dead_letter"],
-      consent: { scopes: ["notify:webhook"] },
       secretRefs: [secret.id],
       settings: {
         url: `${destinationOrigin}/testmaster`,

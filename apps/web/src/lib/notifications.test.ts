@@ -45,7 +45,6 @@ function filled(provider: IntegrationForm["provider"]): IntegrationForm {
     ...emptyForm(provider),
     name: "Ops channel",
     events: ["run.failed", "delivery.dead_letter"],
-    consented: true,
     secretRef: secret,
     url: "https://hooks.example.test/testmaster",
     from: "testmaster@example.test",
@@ -88,7 +87,7 @@ describe("integration forms", () => {
       }[provider];
       validate(settingsSchema, body.settings);
       expect(body.secretRefs, provider).toEqual([secret]);
-      expect(body.consent.scopes, provider).toEqual([`notify:${provider}`]);
+      expect(body, provider).not.toHaveProperty("consent");
     }
   });
 
@@ -120,22 +119,11 @@ describe("integration forms", () => {
       subjectPrefix: "line\nbreak",
     });
     expect(issues.map((issue) => issue.field).sort()).toEqual(
-      [
-        "consent",
-        "domains",
-        "events",
-        "from",
-        "name",
-        "recipients",
-        "secretRef",
-        "subjectPrefix",
-      ].sort(),
+      ["domains", "events", "from", "name", "recipients", "secretRef", "subjectPrefix"].sort(),
     );
     const insecure = validateForm({ ...filled("webhook"), url: "http://hooks.example.test/x" });
     expect(insecure.map((issue) => issue.field)).toEqual(["url"]);
-    expect(validateForm({ ...filled("webhook"), consented: false }).map((i) => i.field)).toEqual([
-      "consent",
-    ]);
+    expect(validateForm(filled("webhook"))).toEqual([]);
   });
 
   it("INT-004 editing keeps what the portal does not edit (a webhook rotation window) and round-trips the form", () => {
@@ -150,7 +138,6 @@ describe("integration forms", () => {
       state: "active",
       projectIds: [`prj_${uuid(5)}`],
       events: ["run.failed"],
-      consent: { scopes: ["notify:webhook"] },
       secretRefs: [secret, rotation.previousSigningSecretRef],
       settings: {
         url: "https://hooks.example.test/testmaster",
@@ -166,7 +153,6 @@ describe("integration forms", () => {
     expect(form).toMatchObject({
       provider: "webhook",
       secretRef: secret,
-      consented: true,
       projectIds: [`prj_${uuid(5)}`],
     });
     const body = buildBody(form, stored);
@@ -175,7 +161,7 @@ describe("integration forms", () => {
     validate("WebhookSettings", body.settings);
     // Negative control: without the stored document the rotation is not invented.
     expect(buildBody(form).settings).not.toHaveProperty("previousSigningSecretRef");
-    expect(formFromIntegration({ ...stored, consent: { scopes: [] } }).consented).toBe(false);
+    expect(buildBody(form, stored)).not.toHaveProperty("consent");
     expect(describeRules(stored)).toBe("Environments: all · Suites: all · Redaction: summary");
   });
 

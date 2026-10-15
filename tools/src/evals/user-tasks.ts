@@ -5,7 +5,7 @@ export type TaskArm = "none" | "rules" | "model";
 export interface UserTaskStudy {
   schemaVersion: "1.0.0";
   id: string;
-  participants: { id: string; consent: true }[];
+  participants: { id: string }[];
   sessions: {
     participantId: string;
     taskId: string;
@@ -43,10 +43,9 @@ export function aggregateUserTasks(value: unknown) {
       !participant ||
       typeof participant.id !== "string" ||
       !participant.id.trim() ||
-      participants.has(participant.id) ||
-      participant.consent !== true
+      participants.has(participant.id)
     )
-      throw new Error("Invalid participant or missing consent");
+      throw new Error("Invalid participant");
     participants.add(participant.id);
   }
   const seen = new Set<string>();
@@ -161,7 +160,7 @@ export function aggregateUserTasks(value: unknown) {
       ]),
     ),
     limitations: [
-      "Participant identity, consent and decisions are declared; the validator cannot prove observation integrity. Aggregation alone does not homologate assisted healing.",
+      "Participant identity and decisions are declared; the validator cannot prove observation integrity. Aggregation alone does not homologate assisted healing.",
     ],
   };
 }

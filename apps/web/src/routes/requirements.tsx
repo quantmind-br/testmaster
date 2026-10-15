@@ -151,8 +151,8 @@ function NormalizeForm({
     <section aria-label="Normalize requirements">
       <h2>Normalize requirements</h2>
       <p className="hint">
-        The selected sources are sent to the configured model provider only if you have granted
-        consent for this project. The model never approves anything.
+        The selected sources are sent to the configured model provider when it is allowed by the
+        server's policy. The model never approves anything.
       </p>
       <StatusView
         status={sources.status}

@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { githubDefaultScopes, githubEventTypes } from "@testmaster/contracts";
+import { githubEventTypes } from "@testmaster/contracts";
 import { createTestDatabase } from "@testmaster/persistence/testing";
 import { afterEach, expect, it } from "vitest";
 import { authenticateSession } from "../../identity.js";
@@ -82,7 +82,6 @@ async function twoTenants() {
     name: "globex-app",
     projectIds: [project.id],
     events: [...githubEventTypes],
-    consent: { scopes: [...githubDefaultScopes] },
     secretRefs: [privateKeyRef, webhookSecretRef],
     settings: {
       appId: "9002",

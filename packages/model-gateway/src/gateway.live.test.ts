@@ -1,7 +1,7 @@
 import { validate } from "@testmaster/contracts";
 import { expect, it } from "vitest";
 import { ModelGateway } from "./gateway.js";
-import { grantedConsent, TestBudgetLedger, testRequest } from "./test-support.js";
+import { TestBudgetLedger, testRequest } from "./test-support.js";
 import type { ModelCallRecord } from "./types.js";
 
 it("QuantForge qwen3.8-flash returns locally validated JSON and measured usage", async () => {
@@ -21,11 +21,6 @@ it("QuantForge qwen3.8-flash returns locally validated JSON and measured usage",
     ],
     allowedProviders: ["quantforge"],
     allowedEndpoints: [endpoint],
-    consentStore: {
-      async find() {
-        return grantedConsent;
-      },
-    },
     budgetLedger: ledger,
     recorder: {
       async record(call) {

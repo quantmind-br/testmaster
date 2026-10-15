@@ -41,7 +41,7 @@ Personas não são papéis de autorização: a mesma pessoa pode acumular inten�
 | `ProductReviewer` | Comparar PRD e comportamento esperado, aprovar propostas de intenção. | Exposição de código/segredos desnecessária; aprovação de teste confundida com aprovação do produto. |
 | `ProjectAdministrator` | Configurar fontes, auth, ambientes, limites, secrets e integrações. | Escopo amplo, preview de fork não confiável, acesso cruzado de tenant. |
 | `ReleaseOperator` | Avaliar gate CI, histórico, schedule, distribuição e rollback operacional. | Check verde com cancelled/blocked; export incompleto; discrepância de revisões. |
-| `AgentConsumer` | Usar CLI/MCP e abrir deep link para revisar uma decisão humana. | Sessão de agente sem consentimento, proposta autoinserida, output não estruturado. |
+| `AgentConsumer` | Usar CLI/MCP e abrir deep link para revisar uma decisão humana. | Sessão de agente sem scope adequado, proposta autoinserida, output não estruturado. |
 
 Navegação principal: workspace/projeto → overview → sources/requirements → proposals → tests/lists → runs/comparison → environments/auth → integrations/settings. `RunDetail`, `BatchRunDetail`, `TestRevisionDetail`, `ProposalDetail` e `ArtifactDetail` são deep links estáveis com autorização em cada acesso. BatchRunDetail mostra seleção, membros, rejeitados/não despachados, contagens e gate agregado; RunDetail não mistura attempts de membros distintos. O projeto atual fica explícito no cabeçalho, e o ambiente selecionado não é uma variável global silenciosa.
 
@@ -62,7 +62,7 @@ Navegação principal: workspace/projeto → overview → sources/requirements �
 4. Detectar tipo de aplicação e sugerir destino, porta e comandos de preparação. Sugestões são editáveis e não executadas automaticamente.
 5. Verificar Docker rootless e runner suportado. Modo process local só é permitido por opt-in inseguro explícito, com aviso e política do administrador; nunca é fallback após falha de sandbox.
 6. Criar `Environment` separado de destino: a URL responde “onde”, auth responde “como”. Credenciais de teste dedicadas são referências a secrets, não texto dentro do plano.
-7. Validar alcance do destino sem executar testes destrutivos; solicitar consentimento separado para scan, load/security e túnel.
+7. Validar alcance do destino sem executar testes destrutivos; scan, load/security e túnel exigem política e aprovação separadas (SEC-038/039), nunca implícitas no onboarding.
 8. Importar/generar propostas ou criar manualmente um cenário determinístico; revisar e executar a revisão aceita.
 9. Abrir resultado real, incluindo falha, bloqueio ou evidência parcial. O onboarding é completo por configuração útil, não por exigir artificialmente um passed.
 
@@ -85,7 +85,7 @@ A tela mostra cards e tabela com origem, requisito-alvo, intenção, prioridade,
 | UX-016 | Aceitação parcial é atômica por unidade declarada, idempotente e preserva itens não selecionados. | Aceitar A/B de A/B/C e reenviar mesma operação não duplica testes; C permanece pendente. |
 | UX-017 | Alterações humanas e LLM têm autoria/proveniência distintas; deduplicação mostra similaridade sem destruir intenção. | Dois cenários parecidos podem permanecer; aceitar duplicata produz aviso e decisão explícita. |
 | UX-018 | Gerar/retomar tem cancelamento e orçamento visível; source novo não invalida silenciosamente a geração anterior. | Geração interrompida conserva fases completas; proposta antiga mostra source stale e exige revisão. |
-| UX-019 | Nenhuma proposta gerada vira teste ativo em CI por consentimento implícito. | Caminho automatizado documenta policy; consentimento permissivo de sessão interativa não é herdado pela CI. |
+| UX-019 | Nenhuma proposta gerada vira teste ativo em CI por aceitação implícita. | Caminho automatizado documenta policy; aceitação de sessão interativa não é herdada pela CI. |
 
 ## 4. Autoria, edição e versionamento
 
@@ -145,7 +145,7 @@ A matriz comparativa pode ordenar por novos defeitos, flakiness observada, dura�
 | UX-044 | Fonte possui revisão/hash, tipo, data de import, owner, exclusões e status de atualização. | Nova OpenAPI exibe endpoints alterados e testes potencialmente stale sem apagar fonte anterior. |
 | UX-045 | Auth suporta referências a secrets, contas dedicadas e credenciais estáticas desde M1; refresh/OTP/MFA/checkpoints autorizados chegam em M4. | Token expirado identifica falha de auth; interação/OTP não atendida não vira assertion de negócio, não mascara failure já comprovada e não é anunciada como capability entregue antes de M4. |
 | UX-046 | Secret write não devolve valor; rotação mantém histórico de referência/versionamento sem expor segredo. | Formulário mostra masked/unset, não preenche valor antigo; secret não aparece em export, URL, toast ou replay. |
-| UX-047 | Alterar ambiente/policy/LLM mostra impacto em reprodutibilidade, custos e proteção de dados. | Opt-in para enviar source a provedor remoto explicita categorias enviadas; execução passada não é recalculada. |
+| UX-047 | Alterar ambiente/policy/LLM mostra impacto em reprodutibilidade, custos e proteção de dados. | Escolher provider remoto mostra provider, endpoint, categorias de dados que o contexto mínimo pode conter e orçamento aplicável, sem gate adicional de opt-in; provider fora da allowlist aparece com o motivo e não é selecionável; execução passada não é recalculada. |
 | UX-048 | Exclusão/retention diferencia remover referência, arquivar teste e expirar artifact; objetos imutáveis têm tombstone auditável quando necessário. | Histórico não apresenta “nunca existiu” para evidência expirada; deleção não contorna retenção legal configurada. |
 | UX-049 | Schedule define timezone IANA, cron, destino, lista/revisões, overlap, budget e política de secrets. | DST, backlog, revogação e overlap são apresentados; schedule expirado não executa em novo destino por fallback. |
 | UX-050 | Audit trail exibe ator humano/agente/integration, operação, escopo, resultado e correlation ID sem secret. | Administrador consegue relacionar acceptance, dispatch, secret rotation e check remoto sem acessar segredo. |
@@ -205,7 +205,7 @@ TESTMASTER_API_KEY=<injected_by_ci_secret_store>
 | INT-001 | Adapters seguem `/v1`, schemaVersion e erros estruturados do core; possuem versão e capability declaration. | Adapter incompatível recusa com ação de atualização; não interpreta enum desconhecido como passed. |
 | INT-002 | Idempotência é scoped por provider/installation/project/event/action, com payload hash e registro de dedupe durável. | Mesmo evento repetido devolve referência original; mesma chave com payload divergente gera conflito. |
 | INT-003 | Retry de transporte tem limite, backoff, tratamento de rate limit e dead-letter visível, independente de verdict. | Slack fora do ar mantém failed e permite redelivery; timeout de check não cria Run duplicado. |
-| INT-004 | Configurar integração exige consentimento de escopo e teste de entrega claramente rotulado. | Mensagem “test notification” não aparece como resultado real; permissão revogada encerra acesso sem fallback. |
+| INT-004 | Configurar integração exige a permissão administrativa do escopo, registra o principal que a criou (`createdBy`) e oferece teste de entrega claramente rotulado. | Mensagem “test notification” não aparece como resultado real; integração revogada encerra acesso e remove bindings de secret sem fallback. |
 
 ## 9. CLI, GitHub Action e CI genérica
 
@@ -275,7 +275,7 @@ Enquanto queued/preparing, check é queued; running/collecting/analyzing são in
 | INT-021 | Publisher deriva check do snapshot terminal, SHA e gate policy versionados. | Artefato inválido ou selected empty não vira success por mapping simplista. |
 | INT-022 | Gate/summary mostra Run ID, revisão/lista, ambiente, SHA, exclusões, first attempt e freshness. | Quem revisa PR consegue abrir exatamente a evidência que originou o check. |
 | INT-023 | Rate limit/permissão revogada/host fora do ar são problemas de delivery com estado próprio e alerta. | Recuperar transporte republica mesmo check/run; não altera resultado nem reroda sem pedido. |
-| INT-024 | Túnel remoto opcional (M5) tem consentimento, escopo, autenticação, expiração e indicador live. | Túnel perdido antes de efeito bloqueia; após iniciar aplica outcome/cancelamento conforme specs/03 e preserva failed comprovado; sem fallback plaintext ou exposição silenciosa de localhost. |
+| INT-024 | Túnel remoto opcional (M5) exige ativação explícita, aprovação conforme SEC-039, escopo, autenticação, expiração e indicador live. | Túnel perdido antes de efeito bloqueia; após iniciar aplica outcome/cancelamento conforme specs/03 e preserva failed comprovado; sem fallback plaintext ou exposição silenciosa de localhost. |
 
 ## 11. Notificações, schedules e trackers
 
@@ -295,7 +295,7 @@ Slack pode usar app/token ou webhook configurado; email usa SMTP/provider explí
 
 ## 12. Agentes, MCP e instalação de skills
 
-Instalar orientações para agentes é uma operação no workspace explicitamente consentida, não um efeito colateral de ler um relatório. A skill documenta como consumir contrato JSON, preparar fontes, revisar propostas, obter evidências e reexecutar sem “corrigir” assertions para passar. MCP disponibiliza as mesmas operações autorizadas do core; permissões de escrita/execução não são herdadas de acesso de leitura. A integração nunca afirma que uma resposta textual do agente comprova execução.
+Instalar orientações para agentes é uma operação explícita no workspace (preview por padrão, aplicada só com confirmação e escopo de escrita), não um efeito colateral de ler um relatório. A skill documenta como consumir contrato JSON, preparar fontes, revisar propostas, obter evidências e reexecutar sem “corrigir” assertions para passar. MCP disponibiliza as mesmas operações autorizadas do core; permissões de escrita/execução não são herdadas de acesso de leitura. A integração nunca afirma que uma resposta textual do agente comprova execução.
 
 | ID | Requisito | Aceitação |
 |---|---|---|
@@ -303,7 +303,7 @@ Instalar orientações para agentes é uma operação no workspace explicitament
 | INT-035 | Primeira instalação/update tem preview, backup com permissões preservadas e escrita atômica; drift dentro da seção gera conflito. | Modificação humana no bloco não é sobrescrita; rollback restaura backup de operação sem tocar edição posterior silenciosamente. |
 | INT-036 | Installer valida raiz autorizada, path traversal, symlink e tipo de arquivo; global install é escolha separada. | Repo malicioso com symlink fora do workspace não escreve no home; duas instalações concorrentes não truncam arquivo. |
 | INT-037 | Uninstall remove apenas bytes/arquivos cuja propriedade e hash gerenciado sejam verificáveis, mantendo modificações não gerenciadas. | Skill alterada pelo usuário pede decisão e preserva conteúdo; uninstall não remove MCP de outro produto. |
-| INT-038 | Skill/MCP expõe capability/version, limites, approvals e tratamento de stale/partial evidence, sem incluir secrets em exemplos. | Agente não aceita partial bundle como verificação; ação write exige scope/consent apropriado. |
+| INT-038 | Skill/MCP expõe capability/version, limites, approvals e tratamento de stale/partial evidence, sem incluir secrets em exemplos. | Agente não aceita partial bundle como verificação; ação write exige o scope apropriado e ação destrutiva exige approval. |
 | INT-039 | Saídas de MCP/CLI para agentes são estruturadas e output grande vira referência paginável/bundle verificável. | Truncamento tem indicador/cursor, nunca remove failure da resposta e mantém “passed”. |
 
 Markers ilustrativos: `<!-- TESTMASTER:BEGIN version=1 -->` e `<!-- TESTMASTER:END -->`. O installer deve detectar duplicação/malformação dos markers e parar com diagnóstico recuperável. A versão do marker não substitui `schemaVersion`. Backup não é commitado automaticamente; caminhos e permissões devem evitar vazamento de credenciais já existentes no arquivo. Gerar plugin/skill para uma IDE não implica compatibilidade com todas as IDEs: cada adapter tem acceptance por versão e sistema suportado.
@@ -344,10 +344,10 @@ A migração não preserva semântica proprietária de auto-healing, `codeVersio
 |---|---|---|
 | M0 | Contratos de status/revisão, UX flows, matriz de permissões, namespace, threat model de integration/import. | Nenhum adapter sem binding/dedupe/security aprovado; schemas são a referência única. |
 | M1 | CLI determinística local, exports JSON/JUnit, deep links locais e fluxos de evidência concebidos. | Browser/API reais, sandbox e imutabilidade; não exigir web para usar core. |
-| M2 | Discovery/PRD/proposals, MCP e skills; revisão e aceitação parcial. | Fonte rastreável, injection isolation e consentimento; CLI/MCP completos antes de UI paralela. |
+| M2 | Discovery/PRD/proposals, MCP e skills; revisão e aceitação parcial. | Fonte rastreável, injection isolation, allowlist de providers e orçamento; CLI/MCP completos antes de UI paralela. |
 | M3 | Comparação/evidência/healing strict, Action/CI e checks básicos. | Commit binding, JUnit não-verde para bloqueios, original failure preservado. |
 | M4 | Web self-hosted/team, settings/sources/auth dinâmica, listas cross-project, schedules/notificações e GitHub App/previews multi-provider; enrollment/heartbeat de workers. | Autorização server-side, a11y, concurrency, histórico, secret store, auth checkpoints, fork safety e commit binding; registro de worker não implica distribuição completa. |
-| M5 | Tunnels, workers distribuídos, matriz/modos avançados, memória e Jira/Linear. | Fencing/partições, allowlists, budgets, consentimento e gates visual/security/load; sem execução destrutiva implícita. |
+| M5 | Tunnels, workers distribuídos, matriz/modos avançados, memória e Jira/Linear. | Fencing/partições, allowlists, budgets, aprovações e gates visual/security/load; sem execução destrutiva implícita. |
 | M6 | SSO OIDC/SAML/SCIM, plugins, portabilidade/import-export nativo/TestSprite revisado, migration/backup/install governance e GA de integrações suportadas. | Matriz real de compatibilidade, isolamento/versionamento de plugins, docs/release/rollback, acessibilidade e manutenção aprovadas. |
 
 Conclusão de uma feature exige: contrato persistido e erro recuperável; callsites CLI/MCP/web coerentes; autorização e audit; prova determinística quando aplicável; jornada real do usuário; documentation de limitações e policy; e gates de [10-validation.md](10-validation.md) satisfeitos. Ausência de uma prova de fornecedor não permite omitir capacidade anunciada: registrar como objetivo e avaliar independentemente. Esta especificação não contém medições, resultados de conta SaaS ou execução de produto.

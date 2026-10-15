@@ -105,4 +105,4 @@ Proveniência histórica: o pacote de continuidade trouxe leituras anteriores do
 
 ## 5. Como atualizar
 
-Revisitar E46 e E17; registrar novo commit/versão e data; comparar contracts/capabilities/preços sem presumir rollout uniforme. Para evidência runtime futura, usar app de referência controlada, conta de teste autorizada, consentimento de custo/upload e armazenar runId/build/env/model/evidência. Só então promover alegação a capacidade observada. Não reaproveitar métricas de marketing como objetivo atingido.
+Revisitar E46 e E17; registrar novo commit/versão e data; comparar contracts/capabilities/preços sem presumir rollout uniforme. Para evidência runtime futura, usar app de referência controlada, conta de teste autorizada, autorização expressa do responsável da conta para custo e upload e armazenar runId/build/env/model/evidência. Só então promover alegação a capacidade observada. Não reaproveitar métricas de marketing como objetivo atingido.

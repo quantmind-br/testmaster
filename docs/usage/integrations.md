@@ -18,13 +18,13 @@ The integrations core (milestone M4) is the shared layer under every outbound an
   `reasonCode: "adapter_contract_violation"`. Adapter exceptions that are not `ContractError`s surface as
   `INTERNAL` / `adapter_error` without the adapter's message.
 
-## Configuration and consent
+## Configuration
 
-- `POST /v1/integrations` and `PATCH /v1/integrations/{id}` require the caller's `consent.scopes` to
-  include every scope the adapter's `requiredScopes(settings)` returns for the stored settings. The same
-  check runs again on every settings change, on resume from a pause and before a test delivery.
+- `POST /v1/integrations` and `PATCH /v1/integrations/{id}` need the administrator scope. The created
+  integration records the principal that created it (`createdBy`), which stays accountable for what the
+  integration does; there are no per-integration consent scopes to supply or re-check.
 - `PATCH` moves `state` between `active` and `paused`, or to `revoked`. Revocation is terminal and ends
-  access: the consent scopes and secret bindings are cleared, tests and updates are refused, and inbound
+  access: the secret bindings are cleared, tests and updates are refused, and inbound
   deliveries for the integration are recorded as ignored. The database also refuses to reactivate a
   revoked integration.
 - Projects and secret references must belong to the caller's workspace; archived projects and revoked

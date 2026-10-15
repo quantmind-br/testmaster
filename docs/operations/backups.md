@@ -187,7 +187,7 @@ testmaster ops isolation release --reason "<why>"
 ```
 
 (Add `--mode server --config <path>` as for the restore, and `--workspace <id>` on a multi-workspace server: review and release apply to one workspace.) `--revocations-confirmed` asserts that
-you reconciled consents, approvals, tokens and secret revocations made after the backup.
+you reconciled approvals, tokens and secret revocations made after the backup.
 `--accept-incomplete-evidence` is required when the backup was incomplete or artifacts are
 `missing`/`partial`; `--ledger-loss-accepted` is required when `postBackupLedger` is `unavailable`,
 because exclusions and revocations after the snapshot cannot then be guaranteed. `ops isolation release`

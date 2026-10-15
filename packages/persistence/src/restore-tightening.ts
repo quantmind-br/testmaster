@@ -1,14 +1,13 @@
 import type { PersistenceDatabase, SqlRow } from "./database.js";
 
 /**
- * Post-backup facts a restore replays so it can only tighten access: revocations, consent and
- * approval withdrawals, retention tombstones and deletion decisions made after the snapshot.
+ * Post-backup facts a restore replays so it can only tighten access: revocations, approval
+ * withdrawals, retention tombstones and deletion decisions made after the snapshot.
  */
 export interface RestoreTighteningOptions {
   revocations?: SqlRow[];
   tombstones?: SqlRow[];
-  /** Consent and approval rows revoked in the live ledger after the backup was taken. */
-  consentRevocations?: SqlRow[];
+  /** Approval rows revoked in the live ledger after the backup was taken. */
   approvalRevocations?: SqlRow[];
   /** False when the caller could not read the post-backup ledger; the restore stays suspended and says so. */
   ledgerAvailable?: boolean;
@@ -54,15 +53,6 @@ export function applyRestoreTightening(
     );
   }
   const revokedNow = new Date().toISOString();
-  for (const current of options.consentRevocations ?? []) {
-    // Consents carry their state in columns; a restore only ever tightens them.
-    restored.run(
-      "UPDATE consents SET revoked_at=?,version=version+1 WHERE workspace_id=? AND id=? AND revoked_at IS NULL",
-      current.revoked_at ?? revokedNow,
-      current.workspace_id,
-      current.id,
-    );
-  }
   for (const current of options.approvalRevocations ?? []) {
     const row = restored.get(
       "SELECT data_json FROM approvals WHERE workspace_id=? AND id=? AND revoked_at IS NULL",

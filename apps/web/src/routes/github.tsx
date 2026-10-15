@@ -17,7 +17,6 @@ interface IntegrationSummary {
   readonly provider: string;
   readonly state: string;
   readonly projectIds: readonly string[];
-  readonly consent: { readonly scopes: readonly string[] };
   readonly adapterStatus: string;
   readonly lastTest: {
     readonly deliveryId: string;
@@ -187,20 +186,12 @@ function GithubIntegrations(): ReactNode {
   );
 }
 
-function ConsentPanel({ integration }: { integration: IntegrationSummary }): ReactNode {
+function TestDeliveryPanel({ integration }: { integration: IntegrationSummary }): ReactNode {
   const action = useAction();
   const [receipt, setReceipt] = useState<{ deliveryId: string; state: string } | null>(null);
   return (
-    <section aria-labelledby="gh-consent">
-      <h2 id="gh-consent">Consent and test delivery</h2>
-      <p>This integration was granted these scopes. Anything outside this list is refused.</p>
-      <ul aria-label="Consented scopes">
-        {integration.consent.scopes.map((scope) => (
-          <li key={scope}>
-            <code>{scope}</code>
-          </li>
-        ))}
-      </ul>
+    <section aria-labelledby="gh-test-delivery">
+      <h2 id="gh-test-delivery">Test delivery</h2>
       <button
         type="button"
         className="button secondary"
@@ -868,7 +859,7 @@ function GithubIntegrationPage(): ReactNode {
           <p>
             <Link to="/integrations/github">All GitHub integrations</Link>
           </p>
-          <ConsentPanel integration={integration} />
+          <TestDeliveryPanel integration={integration} />
           <InstallationsPanel integration={integration} />
           <PullsPanel integration={integration} />
           <ChecksPanel integration={integration} />

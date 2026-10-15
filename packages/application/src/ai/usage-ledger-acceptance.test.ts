@@ -5,11 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { ModelGateway, type ModelPrice, type ModelRequest } from "@testmaster/model-gateway";
-import {
-  SqliteBudgetLedger,
-  SqliteConsentStore,
-  SqliteModelCallRecorder,
-} from "@testmaster/persistence";
+import { SqliteBudgetLedger, SqliteModelCallRecorder } from "@testmaster/persistence";
 import { postgresParity } from "@testmaster/persistence/testing";
 import { expect, it } from "vitest";
 import { Application } from "../application.js";
@@ -65,13 +61,6 @@ it("exports real aborted, repaired and cached calls without double billing and p
   const prompt = "synthetic-private-prompt-must-not-export";
   try {
     const init = await app.init();
-    const consent = new SqliteConsentStore(app.database);
-    consent.grant(
-      { workspaceId: app.context.workspaceId, projectId: init.projectId, providerId: "ledger" },
-      ["documents"],
-      app.context.principalId,
-      true,
-    );
     const create = (price: ModelPrice) =>
       new ModelGateway({
         providers: [
@@ -88,7 +77,6 @@ it("exports real aborted, repaired and cached calls without double billing and p
         ],
         allowedProviders: ["ledger"],
         allowedEndpoints: [endpoint],
-        consentStore: consent,
         budgetLedger: new SqliteBudgetLedger(app.database),
         recorder: new SqliteModelCallRecorder(app.database),
         env: () => key,
@@ -121,7 +109,6 @@ it("exports real aborted, repaired and cached calls without double billing and p
         dataClasses: ["documents"],
         maxInputBytes: 32768,
         maxInputTokens: 32768,
-        allowUnknownCost: true,
       },
     };
     expect((await gateway.complete(input)).output).toEqual({

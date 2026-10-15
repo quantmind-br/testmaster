@@ -77,8 +77,8 @@ owner and update status; `…/sources/:sourceId` shows the revision history.
 - **History.** Every normalization records what was added, removed or reworded (text before and after),
   and every decision and approval, with time and actor. Nothing is approved automatically; the model
   never approves.
-- **Normalize** sends the selected sources to the configured model provider only when the project has
-  granted consent; without consent the page shows the refusal and no model call is made.
+- **Normalize** sends the selected sources to the configured model provider only when the operator policy
+  allows it; otherwise the page shows the refusal and no model call is made.
 
 ## Feature map
 

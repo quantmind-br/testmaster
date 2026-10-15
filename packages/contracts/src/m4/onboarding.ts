@@ -27,7 +27,6 @@ export const onboardingSteps = [
 ] as const;
 export type OnboardingStep = (typeof onboardingSteps)[number];
 const Step = Enum(onboardingSteps);
-const Consent = Enum(["granted", "declined"]);
 const NetworkProfile = Enum(["public", "private", "local-loopback"]);
 
 /**
@@ -52,14 +51,6 @@ export const OnboardingChoices = Obj({
   ),
   environmentId: Type.Optional(id("env")),
   authSecretRefs: Type.Optional(Type.Array(id("sec"), { maxItems: 20, uniqueItems: true })),
-  consents: Type.Optional(
-    Obj({
-      scan: Type.Optional(Consent),
-      load: Type.Optional(Consent),
-      security: Type.Optional(Consent),
-      tunnel: Type.Optional(Consent),
-    }),
-  ),
   generation: Type.Optional(Obj({ mode: Enum(["proposals", "manual"]) })),
   resultRunId: Type.Optional(id("run")),
 });

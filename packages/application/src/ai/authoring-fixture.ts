@@ -129,12 +129,6 @@ export class AuthoringFixture {
       path: join(this.root, "prd.md"),
       format: "markdown",
     });
-    this.app.model.grantConsent(
-      this.projectId,
-      "fake",
-      ["documents", "requirements", "plans"],
-      true,
-    );
     this.setOutput({
       requirements: keys.map((key) => ({
         key,

@@ -5,7 +5,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   type GithubRepositoryPatch,
-  githubDefaultScopes,
   githubEventTypes,
   type InboundWebhookReceipt,
   type IntegrationMetadata,
@@ -149,12 +148,6 @@ export async function startGithubWorld(options: WorldOptions = {}): Promise<Gith
     name: "github-app",
     projectIds: [init.projectId],
     events: [...githubEventTypes],
-    consent: {
-      scopes: [
-        ...githubDefaultScopes,
-        ...(options.agentPullRequests ? ["github:contents:write"] : []),
-      ],
-    },
     secretRefs: [privateKeyRef, webhookSecretRef],
     settings: {
       appId: String(fake.appId),

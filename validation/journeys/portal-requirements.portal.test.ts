@@ -32,7 +32,7 @@ let stack: ServerStack;
 let model: FakeModel;
 let projectId = "";
 let mapProjectId = "";
-let noConsentProjectId = "";
+let plainProjectId = "";
 let environmentId = "";
 let desired: { sourceId: string };
 const open: OpenPortal[] = [];
@@ -117,7 +117,7 @@ beforeAll(async () => {
   stack = await startServerStack(fakeModelSettings(model.baseUrl));
   projectId = await createProject(stack, "Requirements journey");
   mapProjectId = await createProject(stack, "Feature map journey");
-  noConsentProjectId = await createProject(stack, "No consent journey");
+  plainProjectId = await createProject(stack, "Plain normalization journey");
   for (let index = 0; index < 3; index++) {
     const member = await stack.addMember("org_admin");
     const token = await stack.issueToken(member.principalId, ["R", "W", "X", "A"]);
@@ -134,8 +134,6 @@ beforeAll(async () => {
     networkProfile: "local-loopback",
   });
   const app = await asOwner(stack);
-  for (const id of [projectId, mapProjectId])
-    app.model.grantConsent(id, "fake", ["documents", "requirements"], true);
   await writeFile(join(stack.cwd, "desired.md"), "GET /health MUST return healthy=true.\n");
   await writeFile(join(stack.cwd, "code.md"), "app.get('/health',()=>({healthy:false}));\n");
   const first = await app.sources.add({ projectId, role: "prd", path: "desired.md" });
@@ -301,23 +299,24 @@ describe("requirements review", () => {
     expect(await origin.textContent()).toContain("GET /health MUST return healthy=true.");
   });
 
-  it("UX-012 normalization without a model consent is refused, shows its reason and calls no model", async () => {
+  it("UX-012 normalization needs no grant: it calls the configured model and lists the requirement", async () => {
+    model.setOutput({
+      requirements: [statement("cart", "The shop has a cart", 1, "The shop has a cart")],
+      conflicts: [],
+      openQuestions: [],
+    });
     const { page } = await portal(user);
     const app = await asOwner(stack);
     await writeFile(join(stack.cwd, "plain.md"), "The shop has a cart.\n");
-    await app.sources.add({ projectId: noConsentProjectId, role: "prd", path: "plain.md" });
-    await page.goto(`/projects/${noConsentProjectId}/requirements`);
+    await app.sources.add({ projectId: plainProjectId, role: "prd", path: "plain.md" });
+    await page.goto(`/projects/${plainProjectId}/requirements`);
     await page.getByRole("heading", { level: 1, name: "Requirements" }).waitFor();
     const callsBefore = model.calls();
     await page.getByLabel(/plain\.md/).check();
     await page.getByRole("button", { name: "Normalize" }).click();
-    const failure = page.getByTestId("normalize-failure");
-    await failure.waitFor();
-    expect(await failure.textContent()).toMatch(/POLICY_DENIED|PRECONDITION_FAILED|FORBIDDEN/);
-    expect(model.calls()).toBe(callsBefore);
-    expect((await client.request("GET", reviewUrl(noConsentProjectId))).text).not.toContain(
-      "Healthy",
-    );
+    await page.locator('[data-requirement="cart"]').waitFor();
+    expect(await page.getByTestId("normalize-failure").count()).toBe(0);
+    expect(model.calls()).toBeGreaterThan(callsBefore);
   });
 });
 

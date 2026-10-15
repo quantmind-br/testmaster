@@ -285,85 +285,44 @@ it("UX-048 purges an archived project over HTTP with the slug, replays it and li
   expect(single.json().data.id).toBe(operation.id);
 });
 
-it("UX-047 reads, grants and revokes model data sharing over HTTP without exposing credentials", async () => {
+it("UX-047 lists the model providers over HTTP without exposing credentials or any consent state", async () => {
   const f = await fixture({ providers: true });
   const projectId = f.init.projectId;
-  const owner = await f.actor("org_owner", ["R", "W", "A"]);
-  const viewer = await f.actor("viewer", ["R", "A"]);
-  const read = await f.call("GET", `/projects/${projectId}/model-consents`, viewer.token);
+  const viewer = await f.actor("viewer", ["R"]);
+  const read = await f.call("GET", `/projects/${projectId}/model-providers`, viewer.token);
   expect(read.statusCode, read.body).toBe(200);
-  expect(read.json().data.providers).toEqual([
-    {
-      id: "fake",
-      baseUrl: "http://127.0.0.1:4010",
-      remote: false,
-      models: ["model"],
-      allowedByProfile: true,
-      consent: null,
-    },
-    {
-      id: "remote",
-      baseUrl: "https://models.example.com",
-      remote: true,
-      models: ["model"],
-      allowedByProfile: false,
-      consent: null,
-    },
-  ]);
-  expect(read.json().data.dataClasses).toHaveLength(6);
-  // A viewer reads but cannot grant, even with an admin scope.
-  const denied = await f.call("PUT", `/projects/${projectId}/model-consents/fake`, viewer.token, {
-    payload: { dataClasses: ["documents"] },
+  expect(read.json().data).toEqual({
+    projectId,
+    providers: [
+      {
+        id: "fake",
+        baseUrl: "http://127.0.0.1:4010",
+        remote: false,
+        models: ["model"],
+        allowedByProfile: true,
+      },
+      {
+        id: "remote",
+        baseUrl: "https://models.example.com",
+        remote: true,
+        models: ["model"],
+        allowedByProfile: false,
+      },
+    ],
   });
-  expect(denied.statusCode).toBe(403);
-  const grant = await f.call("PUT", `/projects/${projectId}/model-consents/fake`, owner.token, {
-    payload: { dataClasses: ["documents", "plans"], allowUnknownCost: true },
-  });
-  expect(grant.statusCode, grant.body).toBe(200);
-  expect(grant.json().data.providers[0].consent).toMatchObject({
-    dataClasses: ["documents", "plans"],
-    allowUnknownCost: true,
-    grantedBy: owner.principalId,
-    revokedAt: null,
-  });
-  // Unsupported class is a schema error, a provider the profile does not allow is policy denied.
-  const badClass = await f.call("PUT", `/projects/${projectId}/model-consents/fake`, owner.token, {
-    payload: { dataClasses: ["telemetry"] },
-  });
-  expect(badClass.statusCode).toBe(400);
-  expect(badClass.json().error.code).toBe("INVALID_ARGUMENT");
-  const empty = await f.call("PUT", `/projects/${projectId}/model-consents/fake`, owner.token, {
-    payload: { dataClasses: [] },
-  });
-  expect(empty.statusCode).toBe(400);
-  const notAllowed = await f.call(
-    "PUT",
-    `/projects/${projectId}/model-consents/remote`,
-    owner.token,
-    {
-      payload: { dataClasses: ["documents"] },
-    },
-  );
-  expect(notAllowed.json().error.code).toBe("POLICY_DENIED");
-  const revoked = await f.call("DELETE", `/projects/${projectId}/model-consents/fake`, owner.token);
-  expect(revoked.statusCode, revoked.body).toBe(200);
-  expect(revoked.json().data.providers[0].consent.revokedAt).toEqual(expect.any(String));
-  expect(
-    (await f.call("DELETE", `/projects/${projectId}/model-consents/fake`, viewer.token)).statusCode,
-  ).toBe(403);
-  // A provider the configuration does not know has nothing to revoke: not found, and no audit row.
-  const auditRows = () =>
-    f.application.database.all("SELECT 1 FROM audit_events WHERE action='consent.revoked'").length;
-  const before = auditRows();
-  const ghost = await f.call("DELETE", `/projects/${projectId}/model-consents/ghost`, owner.token);
-  expect(ghost.statusCode).toBe(404);
-  expect(ghost.json().error.code).toBe("NOT_FOUND");
-  expect(auditRows()).toBe(before);
-  const everything = [read.body, grant.body, revoked.body, notAllowed.body].join("\n");
   for (const secret of ["HTTP-API-KEY-CANARY", "SETTINGS_FAKE_KEY", "apiKey", "private-path"])
-    expect(everything).not.toContain(secret);
+    expect(read.body).not.toContain(secret);
+  // The removed consent routes no longer exist, whatever the caller's role.
+  const owner = await f.actor("org_owner", ["R", "W", "A"]);
+  for (const method of ["GET", "PUT", "DELETE"]) {
+    const gone = await f.call(method, `/projects/${projectId}/model-consents/fake`, owner.token, {
+      payload: { dataClasses: ["documents"] },
+    });
+    expect(gone.statusCode, `${method} ${gone.body}`).toBe(404);
+    expect(gone.json().error.code).toBe("NOT_FOUND");
+  }
   // A project the workspace does not own is not found.
-  const unknown = await f.call("GET", `/projects/prj_${randomUUID()}/model-consents`, owner.token);
+  const unknown = await f.call("GET", `/projects/prj_${randomUUID()}/model-providers`, owner.token);
   expect(unknown.statusCode).toBe(404);
 });
 
@@ -437,15 +396,22 @@ it("M4-05 lists environment revisions over HTTP newest first and answers every p
     "GET /secrets/{id}/history",
     "POST /projects/{id}/purge",
     "GET /deletion-operations",
-    "GET /projects/{id}/model-consents",
-    "PUT /projects/{id}/model-consents/{provider}",
-    "DELETE /projects/{id}/model-consents/{provider}",
+    "GET /projects/{id}/model-providers",
     "GET /environments/{id}/revisions",
   ];
   const catalog = new Set(routeCatalog.map((route) => `${route.method} ${route.path}`));
   for (const key of keys) {
     expect(catalog.has(key)).toBe(true);
     expect(table.has(key)).toBe(true);
+  }
+  // The removed model-consent surface is neither catalogued nor implemented.
+  for (const key of [
+    "GET /projects/{id}/model-consents",
+    "PUT /projects/{id}/model-consents/{provider}",
+    "DELETE /projects/{id}/model-consents/{provider}",
+  ]) {
+    expect(catalog.has(key)).toBe(false);
+    expect(table.has(key)).toBe(false);
   }
   // Negative control: a catalog row no module implements still answers CAPABILITY_UNAVAILABLE.
   expect(table.has("GET /tunnels")).toBe(false);

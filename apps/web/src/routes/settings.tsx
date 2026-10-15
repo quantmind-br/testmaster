@@ -19,7 +19,7 @@ function ProjectSettings(): ReactNode {
             me={me}
             reloadProject={reload}
           />
-          <LlmSection project={project} me={me} />
+          <LlmSection project={project} />
           <BudgetSection project={project} me={me} />
           <LimitsSection />
         </>

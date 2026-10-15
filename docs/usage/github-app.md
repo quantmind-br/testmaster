@@ -60,7 +60,7 @@ for each repository set:
 | Include draft pull requests | Drafts are skipped by default. |
 
 The same settings are `PATCH /v1/integrations/{id}/github/repositories/{repositoryId}`. Administrator scope is
-required; consent scopes shown on the integration page are the only ones it may use.
+required; only repositories the installation grants can be configured.
 
 A repository the installation stops granting, or an installation that is suspended or deleted, can no longer
 be configured and starts nothing.

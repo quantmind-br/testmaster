@@ -14,8 +14,8 @@ finally lands in the dead-letter queue.
 | `webhook` | the signing secret (`settings.signingSecretRef`) | HTTPS only; redirects are never followed |
 
 Every secret must be bound (`allowedOrigins`) to the destination origin and listed in the
-integration's `secretRefs`. Creating or updating an integration needs consent for the provider's
-scope: `notify:slack`, `notify:email` or `notify:webhook`.
+integration's `secretRefs`. Creating or updating an integration needs the administrator scope; the
+provider (`slack`, `email` or `webhook`) is chosen by the integration settings.
 
 An integration subscribes to `run.completed`, `run.failed`, `run.recovered` (a pass after a
 non-passing Run of the same test and environment), `resource.orphaned` (cleanup could not be

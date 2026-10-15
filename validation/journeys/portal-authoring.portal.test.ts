@@ -122,7 +122,6 @@ async function newProject(
     path: join(stack.cwd, `prd-${projectId}.md`),
     format: "markdown",
   });
-  app.model.grantConsent(projectId, "fake", ["documents", "requirements", "plans"], true);
   model.setOutput({
     requirements: keys.map((key) => ({
       key,
@@ -269,7 +268,7 @@ describe("portal authoring on the server profile", () => {
     const batch = await generate(projectId, [
       plan(ra, "Health again"),
       plan(rb, "Health trimmed", (value) => {
-        value.steps = value.steps.slice(0, 2);
+        value.steps = [value.steps[0]!, value.steps[2]!];
       }),
     ]);
     const { page } = await portal();
@@ -305,7 +304,7 @@ describe("portal authoring on the server profile", () => {
     const other = await generate(projectId, [
       plan(ra, "Health third"),
       plan(rb, "Health fourth", (value) => {
-        value.steps = value.steps.slice(0, 2);
+        value.steps = [value.steps[0]!, value.steps[2]!];
       }),
     ]);
     const detail = await stack.ownerClient().request("GET", `/v1/proposal-batches/${other.id}`);

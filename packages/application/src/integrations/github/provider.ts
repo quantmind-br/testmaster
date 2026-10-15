@@ -14,7 +14,6 @@ import type {
   TestDeliveryContext,
 } from "../provider.js";
 import type { GithubService } from "./service.js";
-import { requiredScopesFor } from "./service.js";
 
 export const githubProviderVersion = "1.0.0";
 
@@ -30,8 +29,6 @@ export function createGithubProvider(
     supportedEvents: githubEventTypes,
     parseSettings: (input: unknown) =>
       validate("GithubIntegrationSettings", input) as GithubIntegrationSettings,
-    requiredScopes: (settings: GithubIntegrationSettings) =>
-      requiredScopesFor(settings.allowAgentPullRequests),
     async sendTest(
       _context: TestDeliveryContext,
       integration: StoredIntegration<GithubIntegrationSettings>,

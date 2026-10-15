@@ -18,7 +18,6 @@ export const onboardingSteps = [
 export type OnboardingStep = (typeof onboardingSteps)[number];
 
 export type NetworkProfile = "public" | "private" | "local-loopback";
-export type Consent = "granted" | "declined";
 
 export interface OnboardingChoices {
   mode?: "local" | "server";
@@ -32,7 +31,6 @@ export interface OnboardingChoices {
   };
   environmentId?: string;
   authSecretRefs?: string[];
-  consents?: { scan?: Consent; load?: Consent; security?: Consent; tunnel?: Consent };
   generation?: { mode: "proposals" | "manual" };
   resultRunId?: string;
 }
@@ -289,7 +287,7 @@ export interface FeatureCoverageMap {
   } | null;
   rows: {
     key: string;
-    kind: "requirement" | "endpoint" | "route" | "component" | "desired";
+    kind: "requirement" | "endpoint" | "route" | "desired";
     title: string;
     requirementIds: string[];
     sources: {

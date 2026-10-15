@@ -96,58 +96,6 @@ export function environmentImpact(
   return impacts;
 }
 
-export interface ConsentChange {
-  readonly providerId: string;
-  readonly remote: boolean;
-  readonly baseUrl: string;
-  readonly dataClasses: readonly string[];
-  readonly allowUnknownCost: boolean;
-  readonly revoke: boolean;
-}
-
-export function consentImpact(change: ConsentChange): readonly Impact[] {
-  if (change.revoke)
-    return [
-      {
-        area: "Reproducibility",
-        level: "info",
-        text: "Generation and analysis that need this provider stop being available for the project. Recorded results and cached responses are not recalculated.",
-      },
-      {
-        area: "Cost",
-        level: "none",
-        text: "No further spend with this provider from this project.",
-      },
-      {
-        area: "Data protection",
-        level: "info",
-        text: "No further data is sent to this provider. Data already sent is not recalled by revoking.",
-      },
-    ];
-  const classes = change.dataClasses.length > 0 ? change.dataClasses.join(", ") : "nothing";
-  return [
-    {
-      area: "Reproducibility",
-      level: "info",
-      text: "Model output can differ between calls. Runs of recorded tests stay deterministic; only generation and analysis use the model. Earlier results are not recomputed.",
-    },
-    {
-      area: "Cost",
-      level: change.allowUnknownCost ? "warning" : "info",
-      text: change.allowUnknownCost
-        ? "Calls to models with no known price are allowed, so the project budget cannot cap their spend."
-        : "Calls to models with no known price are refused, so the budget stays enforceable.",
-    },
-    {
-      area: "Data protection",
-      level: change.remote ? "warning" : "info",
-      text: change.remote
-        ? `These categories are sent to the remote provider ${change.providerId} at ${change.baseUrl}: ${classes}.`
-        : `The provider ${change.providerId} runs on this host. These categories are processed locally: ${classes}.`,
-    },
-  ];
-}
-
 export function budgetImpact(before: number | null, after: number): readonly Impact[] {
   return [
     {

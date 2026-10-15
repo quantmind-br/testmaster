@@ -64,20 +64,6 @@ export async function configureModel(session: Journey): Promise<string> {
     outputReservationTokens: 8192,
     tokenBudget: 100000,
   });
-  await session.command([
-    "consent",
-    "grant",
-    "--provider",
-    provider,
-    "--allow-unknown-cost",
-    "--data-class",
-    "documents",
-    "code_summary",
-    "requirements",
-    "plans",
-  ]);
-  const consent = await session.command(["consent", "status", "--provider", provider]);
-  expect(consent.consent).toMatchObject({ revokedAt: null });
   return text(identity.projectId);
 }
 

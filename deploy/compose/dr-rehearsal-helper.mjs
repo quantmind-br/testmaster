@@ -80,7 +80,6 @@ const tables = [
   "integrations",
   "outbox",
   "idempotency_receipts",
-  "consents",
   "server_tokens",
   "sessions",
   "cursor_signing_keys",
@@ -132,7 +131,6 @@ const commands = {
       schemaVersion: "1.0.0",
       capabilities: ["inbound-events"],
       parseSettings: (input) => ({ installation: String(input?.installation ?? "") }),
-      requiredScopes: () => [],
       sendTest: async () => ({ state: "delivered" }),
       receive: async () => {
         throw new Error("the rehearsal adapter receives nothing");
@@ -162,7 +160,6 @@ const commands = {
         name: "dr-rehearsal-hook",
         projectIds: [project.id],
         events: [],
-        consent: { scopes: [] },
         secretRefs: [],
         settings: { installation: "dr-rehearsal" },
       });
@@ -312,7 +309,6 @@ const commands = {
       "artifacts",
       "audit_events",
       "integrations",
-      "consents",
       "idempotency_receipts",
       "runs",
       "snapshots",

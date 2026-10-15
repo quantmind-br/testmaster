@@ -278,7 +278,7 @@ Essas perguntas não bloqueiam uma implementação independente porque os contra
 | BrowserGym/AgentLab [E26][browsergym] [E40][browsergym-paper] | Ambientes e avaliação de agentes web | Corpus de bugs/oracles/false pass de QA | Ferramenta de pesquisa, não aplicação consumer; inspecionar licença por componente; scores antigos não transplantam |
 | WebArena [E55][webarena] | Tarefas realistas de navegação em ambientes controlados | Defect detection, regressão, flake e healing semântico | Complemento de task completion; concluir tarefa não prova detectar bug |
 | Allure / reporters [E22][pw-reporters] [E42][allure] | Visualização/export de results, labels e attachments | Auth/review/PRD/DAG/jobs/team e UI do domínio | Exporter, não fonte de estado autoritativa nem plataforma de planejamento |
-| MCP SDK/protocolo [E24][mcp-spec] | Transporte, tools/resources e negociação | Permissões, consentimento, limites de job e modelo compartilhado | Stdio local primeiro; Streamable HTTP com auth no server, não inventar versão latest |
+| MCP SDK/protocolo [E24][mcp-spec] | Transporte, tools/resources e negociação | Permissões, aprovações, limites de job e modelo compartilhado | Stdio local primeiro; Streamable HTTP com auth no server, não inventar versão latest |
 
 As licenças catalogadas são Apache-2.0 para CLI TestSprite e Playwright MCP, MIT para Schemathesis/browser-use; demais dependências/transitivos precisam de inventário no momento de selecionar versão. Abrir um thin client Apache-2.0 não licencia copiar prompts, backend, marca ou contrato privado do fornecedor. TestMaster recomenda Apache-2.0 para seu código original, com decisão do titular antes da publicação. [E23][pw-mcp] [E25][schemathesis] [E27][browser-use] [E45][cli-vision] · [SPEC](SPEC.md)
 
@@ -310,7 +310,7 @@ Planner/model gateway é separado do sandbox de código e só recebe dados autor
 - **Artifacts:** filesystem local e object store S3-compatible no servidor; manifest correlacionado/hashes, namespaces por tenant, retenção/exclusão e redaction anterior à exposição.
 - **Interfaces:** CLI/MCP usam services locais ou cliente REST conforme perfil; Web usa API `/v1`. Transportes não têm regras de verdict próprias. `TESTMASTER_ENDPOINT` e `TESTMASTER_API_KEY` são variáveis CLI canônicas, não aliases de exemplos divergentes.
 - **Contratos:** JSON Schema 2020-12 e documentos `schemaVersion: "1.0.0"`; duração wire em ms. Defaults de Run/Attempt/step são 1800/300/30 segundos. Paginação padrão 50 e teto 100, conforme API; não importar default 20 do histórico TestSprite.
-- **Sandbox:** Docker rootless/seccomp/cap-drop/no-new-privileges, limits e egress guard. `--unsafe-local` é consentimento explícito, nunca fallback; proibido no servidor multiusuário. Rootless container sozinho não promete isolamento forte contra tenants adversariais: VM/host dedicado é outra fronteira.
+- **Sandbox:** Docker rootless/seccomp/cap-drop/no-new-privileges, limits e egress guard. `--unsafe-local` é opt-in inseguro explícito do operador, nunca fallback; proibido no servidor multiusuário. Rootless container sozinho não promete isolamento forte contra tenants adversariais: VM/host dedicado é outra fronteira.
 - **BYOK/local:** modelo opcional, capability negotiation e budgets. Ausência de modelo não força upload/cloud; temperature zero não garante determinismo do provedor. Replay aprovado funciona sem modelo no caminho crítico.
 
 Essas escolhas são normativas em [SPEC](SPEC.md), [Arquitetura](specs/02-architecture.md), [API](specs/04-api.md), [CLI/MCP](specs/05-cli-mcp.md) e [Segurança](specs/07-security.md), não descrição do backend TestSprite.
@@ -386,7 +386,7 @@ Em conflito, a ordem é SPEC → specs/03–04 → especializada → exemplo →
 
 ### 13.2 Como promover evidência no futuro
 
-Revisitar índice oficial e CLI pinado, registrar nova data/commit/versão e comparar capabilities/rollout/preços. Para afirmar comportamento observado do SaaS, seria necessário app de referência controlada, conta autorizada, consentimento de custo/upload e registro de run/build/env/model e artefatos. Só então se pode separar promessa de comportamento exercitado e medir qualidade com corpus/denominador. Não reaproveitar fixtures de dry-run, tempos ilustrativos ou marketing como prova runtime. [E46][docs-index] [E17][cli-pinned] [SOURCES, § 5](SOURCES.md)
+Revisitar índice oficial e CLI pinado, registrar nova data/commit/versão e comparar capabilities/rollout/preços. Para afirmar comportamento observado do SaaS, seria necessário app de referência controlada, conta autorizada, autorização expressa do responsável da conta para custo e upload, e registro de run/build/env/model e artefatos. Só então se pode separar promessa de comportamento exercitado e medir qualidade com corpus/denominador. Não reaproveitar fixtures de dry-run, tempos ilustrativos ou marketing como prova runtime. [E46][docs-index] [E17][cli-pinned] [SOURCES, § 5](SOURCES.md)
 
 Questões de produto ainda abertas — licença final, organização/registry, modelo padrão, eventual serviço hospedado, regiões e SLO contratual — estão identificadas no SPEC. Não exigem inventar chave, assinatura ou deployment agora; defaults conservadores e substituição de componentes permitem implementação local completa. A pesquisa não revela prompts/pesos/algoritmos secretos e não promete recriá-los.
 

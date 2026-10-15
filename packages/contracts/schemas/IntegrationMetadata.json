@@ -9,7 +9,7 @@
     "state",
     "projectIds",
     "events",
-    "consent",
+    "createdBy",
     "secretRefs",
     "settings",
     "adapter",
@@ -86,35 +86,10 @@
         "type": "string"
       }
     },
-    "consent": {
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "scopes",
-        "grantedBy",
-        "grantedAt"
-      ],
-      "properties": {
-        "scopes": {
-          "maxItems": 64,
-          "type": "array",
-          "items": {
-            "minLength": 1,
-            "maxLength": 200,
-            "type": "string"
-          }
-        },
-        "grantedBy": {
-          "minLength": 1,
-          "maxLength": 200,
-          "type": "string"
-        },
-        "grantedAt": {
-          "format": "date-time",
-          "pattern": "Z$",
-          "type": "string"
-        }
-      }
+    "createdBy": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
     },
     "secretRefs": {
       "maxItems": 16,

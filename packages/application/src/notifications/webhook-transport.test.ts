@@ -26,7 +26,6 @@ it("SEC-013 a webhook integration cannot be configured for a plain http URL, and
       name: "plain-http",
       projectIds: [h.projectId],
       events: ["run.completed", "run.failed"],
-      consent: { scopes: ["notify:webhook"] },
       secretRefs: [signing],
       settings: { url: plainUrl, signingSecretRef: signing },
     }),
@@ -55,7 +54,6 @@ it("SEC-013 a signing secret bound to another origin never sends the notificatio
     name: "wrong-origin",
     projectIds: [h.projectId],
     events: ["run.completed", "run.failed"],
-    consent: { scopes: ["notify:webhook"] },
     secretRefs: [elsewhere],
     settings: { url: receiver.url, signingSecretRef: elsewhere },
   });

@@ -76,7 +76,6 @@ async function fixture() {
   const app = await Application.open({ cwd: root, home, env: { HOME: home } });
   apps.push(app);
   const initialized = await app.init();
-  app.model.grantConsent(initialized.projectId, "fake", ["documents", "requirements"], true);
   return {
     app,
     root,

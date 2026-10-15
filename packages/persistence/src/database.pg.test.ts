@@ -223,6 +223,61 @@ describe("PostgreSQL engine", () => {
     );
   });
 
+  it("OPS-005 migration 0021 strips only choices.consents from stored onboarding state across the real chain", async () => {
+    const created = await database({ migrate: false });
+    const db = open(created);
+    const available = await loadMigrations("postgres");
+    expect(available.find((migration) => migration.version === 21)?.name).toBe(
+      "onboarding_remove_consents",
+    );
+    const directory = await mkdtemp(join(tmpdir(), "tm-pg-migrations-"));
+    cleanups.push(() => rm(directory, { recursive: true, force: true }));
+    for (const migration of available.filter((candidate) => candidate.version < 21))
+      await writeFile(
+        join(directory, `${String(migration.version).padStart(4, "0")}_${migration.name}.sql`),
+        migration.sql,
+      );
+    await db.migrate(directory);
+    expect(db.status().currentVersion).toBe(20);
+    const at = "2026-10-01T10:00:00.000Z";
+    const target = { baseUrl: "http://127.0.0.1:4010", networkProfile: "local-loopback" };
+    const state = (choices: Record<string, unknown>) => ({
+      projectId: "prj_a",
+      principalId: "usr_a",
+      version: 3,
+      saved: true,
+      currentStep: "target",
+      completedSteps: ["mode", "project"],
+      choices,
+      history: [{ at, step: "mode", event: "completed", changed: ["mode", "consents"] }],
+      updatedAt: at,
+    });
+    const legacy = {
+      "onboarding:ws:prj_a:usr_a": state({
+        mode: "local",
+        target,
+        consents: { scan: "granted", tunnel: "declined" },
+      }),
+      "onboarding:ws:prj_a:usr_b": state({ mode: "local", consents: {} }),
+      "onboarding:ws:prj_a:usr_c": state({ mode: "local", target }),
+      "other:ws:prj_a:usr_a": state({ consents: { scan: "granted" } }),
+    };
+    for (const [key, value] of Object.entries(legacy))
+      db.run("INSERT INTO operational_state(key,value) VALUES(?,?)", key, JSON.stringify(value));
+
+    await db.migrate();
+    expect(db.status()).toMatchObject({ currentVersion: available.length, pending: [] });
+    const read = (key: string) =>
+      JSON.parse(String(db.get("SELECT value FROM operational_state WHERE key=?", key)?.value));
+    expect(read("onboarding:ws:prj_a:usr_a")).toEqual({
+      ...legacy["onboarding:ws:prj_a:usr_a"],
+      choices: { mode: "local", target },
+    });
+    expect(read("onboarding:ws:prj_a:usr_b").choices).toEqual({ mode: "local" });
+    expect(read("onboarding:ws:prj_a:usr_c")).toEqual(legacy["onboarding:ws:prj_a:usr_c"]);
+    expect(read("other:ws:prj_a:usr_a")).toEqual(legacy["other:ws:prj_a:usr_a"]);
+  });
+
   it("OPS-005 rolls back a migration that fails after DDL and keeps earlier migrations", async () => {
     const created = await database({ migrate: false });
     const db = open(created);

@@ -26,7 +26,6 @@ export interface GithubSetupResult {
   appSlug: string;
   installUrl: string;
   webhookUrl: string;
-  scopes: string[];
 }
 
 const escapeHtml = (value: string): string =>
@@ -118,7 +117,6 @@ export async function runGithubSetup(
           appSlug: integration.name,
           installUrl,
           webhookUrl: `${new URL(input.manifest.publicOrigin).origin}/v1/integrations/github/webhooks`,
-          scopes: [...integration.consent.scopes],
         });
       } catch (error) {
         send(

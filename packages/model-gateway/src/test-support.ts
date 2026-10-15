@@ -71,14 +71,7 @@ export const testRequest: ModelRequest = {
     dataClasses: ["source"],
     maxInputBytes: 32_768,
     maxInputTokens: 32_768,
-    allowUnknownCost: true,
   },
-};
-export const grantedConsent = {
-  dataClasses: ["source"],
-  allowUnknownCost: true,
-  grantedAt: "2026-10-05T00:00:00Z",
-  revokedAt: null,
 };
 export const completion = {
   model: "model",

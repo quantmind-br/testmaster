@@ -14,7 +14,6 @@ import {
   notificationTypeLabels,
   providerLabels,
   redactionLevels,
-  requiredConsent,
   subscribableNotificationTypes,
   validateForm,
 } from "../../lib/notifications";
@@ -389,24 +388,6 @@ export function IntegrationFormPanel(props: IntegrationFormProps): ReactNode {
           </select>
         )}
       </FormField>
-      <CheckboxGroup
-        id={field("consent")}
-        legend="Consent"
-        hint="This integration needs your consent to these scopes before it may send."
-        error={errorOf("consent")}
-        options={[
-          {
-            value: requiredConsent[provider].scope,
-            label: (
-              <>
-                <code>{requiredConsent[provider].scope}</code> — {requiredConsent[provider].text}
-              </>
-            ),
-          },
-        ]}
-        selected={form.consented ? [requiredConsent[provider].scope] : []}
-        onChange={(scopes) => set("consented", scopes.length > 0)}
-      />
       <ActionFailure message={action.failure} />
       <div className="form-actions">
         <button type="submit" className="button" aria-disabled={action.busy}>

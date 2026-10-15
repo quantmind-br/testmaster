@@ -315,7 +315,7 @@ export function IntegrationsPanel({ integrations, projects }: IntegrationsPanelP
         open={revoking !== null}
         destructive
         title="Revoke this integration?"
-        description="Revoking is final. Consent and secret bindings are removed, the integration stops sending and pending deliveries stay pending. It cannot be resumed."
+        description="Revoking is final. Secret bindings are removed, the integration stops sending and pending deliveries stay pending. It cannot be resumed."
         context={
           revoking
             ? [

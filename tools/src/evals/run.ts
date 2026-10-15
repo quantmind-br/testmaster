@@ -479,18 +479,6 @@ export async function runEvaluation(
         reviewer: "preregistered external rule-based evaluator",
         humanReview: false,
       });
-      await command([
-        "consent",
-        "grant",
-        "--provider",
-        registration.provider.id,
-        "--allow-unknown-cost",
-        "--data-class",
-        "documents",
-        "code_summary",
-        "requirements",
-        "plans",
-      ]);
       await command(["budget", "set", "--tokens", String(registration.budget.maxTokens)]);
       phase = "sources";
       const revisions: string[] = [];

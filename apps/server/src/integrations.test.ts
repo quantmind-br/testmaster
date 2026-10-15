@@ -31,7 +31,6 @@ const provider: IntegrationProvider<Settings> = {
       throw new ContractError("INVALID_ARGUMENT", "installation is required");
     return { installation: String(input.installation) };
   },
-  requiredScopes: () => ["notify:post"],
   async sendTest(context): Promise<DeliveryOutcome> {
     tests.push({ test: context.test.test, label: context.test.label });
     return { state: "delivered", detail: "sent" };
@@ -115,7 +114,6 @@ async function fixture() {
     name: `hook-${randomUUID().slice(0, 8)}`,
     projectIds: [init.projectId],
     events: [],
-    consent: { scopes: ["notify:post"] },
     secretRefs: [],
     settings: { installation },
   });
@@ -166,13 +164,15 @@ it("INT-004 integration routes configure, patch, test and list over /v1 with tok
   const integration = created.json().data;
   expect(integration).toMatchObject({ state: "active", adapterStatus: "compatible" });
   expect(created.headers.etag).toBe('"1"');
-  // Consent below the adapter's requirement is refused and nothing is stored.
-  const noConsent = await f.send("POST", "/v1/integrations", {
+  // Attribution is the creating principal; no consent document exists on the integration.
+  expect(integration.createdBy).toBe(f.admin.identity.principalId);
+  expect(integration).not.toHaveProperty("consent");
+  // A consent field is not part of the request schema any more and nothing is stored.
+  const legacyConsent = await f.send("POST", "/v1/integrations", {
     ...f.input(),
-    consent: { scopes: [] },
+    consent: { scopes: ["notify:post"] },
   });
-  expect(noConsent.statusCode).toBe(422);
-  expect(noConsent.json().error).toMatchObject({ code: "PRECONDITION_FAILED" });
+  expect(legacyConsent.statusCode).toBe(400);
   // Unknown request fields are refused by the catalog schema before the service runs.
   expect((await f.send("POST", "/v1/integrations", { ...f.input(), extra: 1 })).statusCode).toBe(
     400,

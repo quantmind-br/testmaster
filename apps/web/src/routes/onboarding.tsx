@@ -274,7 +274,6 @@ function TargetStep({ projectId, choices, setChoices, issues }: StepProps): Reac
   };
   const update = (patch: Partial<NonNullable<OnboardingChoices["target"]>>) =>
     setChoices({ ...choices, target: { ...target, ...patch } });
-  const consents = choices.consents ?? {};
   const issueFor = (id: string) => issues.find((item) => item.fieldId === id)?.message ?? null;
   return (
     <>
@@ -370,34 +369,6 @@ function TargetStep({ projectId, choices, setChoices, issues }: StepProps): Reac
           />
         )}
       </FormField>
-      <fieldset>
-        <legend>Consents</legend>
-        {(
-          [
-            ["scan", "Scan the repository and the target for discovery"],
-            ["load", "Send load to the target (not used in this milestone)"],
-            ["security", "Run security probes against the target (not used in this milestone)"],
-          ] as const
-        ).map(([key, label]) => (
-          <label key={key} className="choice">
-            <input
-              type="checkbox"
-              checked={consents[key] === "granted"}
-              onChange={(event) =>
-                setChoices({
-                  ...choices,
-                  consents: { ...consents, [key]: event.target.checked ? "granted" : "declined" },
-                })
-              }
-            />{" "}
-            {label}
-          </label>
-        ))}
-        <label className="choice">
-          <input type="checkbox" checked={false} disabled /> Expose the target through a tunnel —
-          unavailable: TestMaster does not open tunnels in this milestone.
-        </label>
-      </fieldset>
     </>
   );
 }

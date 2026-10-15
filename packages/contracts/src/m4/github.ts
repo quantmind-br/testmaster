@@ -106,14 +106,6 @@ export const GithubIntegrationSettings = P.Obj({
   allowAgentPullRequests: Type.Boolean(),
   credentials: Credentials,
 });
-export const githubDefaultScopes = [
-  "github:metadata:read",
-  "github:contents:read",
-  "github:checks:write",
-  "github:pull_requests:write",
-  "github:deployments:read",
-] as const;
-
 export const githubContracts = {
   GithubRepositorySettings,
   GithubIntegrationSettings,
@@ -131,7 +123,6 @@ export const githubContracts = {
     /** URL that receives the manifest as a form post from the operator's browser. */
     createUrl: P.Name,
     manifest: P.Json,
-    scopes: Type.Array(P.Name),
   }),
   GithubManifestConversionInput: P.Obj({
     code: Type.String({ minLength: 4, maxLength: 200, pattern: "^[A-Za-z0-9_-]+$" }),

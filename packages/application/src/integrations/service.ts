@@ -224,7 +224,6 @@ export class IntegrationsService {
     validate("IntegrationInput", input);
     const provider = this.providers.resolve(input.provider);
     const settings = this.parseSettings(provider, input.settings);
-    this.requireConsent(provider, settings, input.consent.scopes);
     this.requireListedSecrets(provider, settings, input.secretRefs);
     return inTx(this.ctx, () => {
       this.checkEvents(provider, input.events);
@@ -245,11 +244,7 @@ export class IntegrationsService {
       const document = {
         projectIds: [...new Set(input.projectIds)],
         events: [...new Set(input.events)],
-        consent: {
-          scopes: [...new Set(input.consent.scopes)],
-          grantedBy: this.ctx.principalId,
-          grantedAt: at,
-        },
+        createdBy: this.ctx.principalId,
         secretRefs: [...new Set(input.secretRefs)],
         settings,
         lastTest: null,
@@ -304,19 +299,10 @@ export class IntegrationsService {
           : this.parseSettings(provider, patch.settings);
       const state: IntegrationState = patch.state ?? current.state;
       const at = this.now().toISOString();
-      const consent = patch.consent
-        ? {
-            scopes: [...new Set(patch.consent.scopes)],
-            grantedBy: this.ctx.principalId,
-            grantedAt: at,
-          }
-        : current.consent;
       const projectIds = [...new Set(patch.projectIds ?? current.projectIds)];
       const events = [...new Set(patch.events ?? current.events)];
       const secretRefs = [...new Set(patch.secretRefs ?? current.secretRefs)];
       if (!revoking) {
-        // Consent is re-checked on every change that could widen access, including resuming a pause.
-        this.requireConsent(provider, settings, consent.scopes);
         this.requireListedSecrets(provider, settings, secretRefs);
         if (patch.events) this.checkEvents(provider, events);
         this.checkReferences(
@@ -326,11 +312,11 @@ export class IntegrationsService {
         if (patch.name && patch.name !== current.name)
           this.requireFreeName(provider.id, patch.name);
       }
-      // Revocation ends access with no fallback: no consent and no secret binding survive.
+      // Revocation ends access with no fallback: no secret binding survives.
       const document = {
         projectIds,
         events,
-        consent: revoking ? { ...consent, scopes: [] } : consent,
+        createdBy: current.createdBy,
         secretRefs: revoking ? [] : secretRefs,
         settings,
         lastTest: current.lastTest,
@@ -381,7 +367,6 @@ export class IntegrationsService {
         reasonCode: `integration_${integration.state}`,
       });
     const provider = this.providers.resolve(integration.provider);
-    this.requireConsent(provider, integration.settings, integration.consent.scopes);
     const deliveryId = `tst_${randomUUID()}`;
     const correlationId = this.ctx.correlationId ?? randomUUID();
     const context = {
@@ -405,7 +390,7 @@ export class IntegrationsService {
       const document = {
         projectIds: fresh.projectIds,
         events: fresh.events,
-        consent: fresh.consent,
+        createdBy: fresh.createdBy,
         secretRefs: fresh.secretRefs,
         settings: fresh.settings,
         lastTest: {
@@ -783,7 +768,7 @@ export class IntegrationsService {
       projectIds: [...stored.projectIds],
       events: [...stored.events],
       secretRefs: [...stored.secretRefs],
-      consent: { ...stored.consent, scopes: [...stored.consent.scopes] },
+      createdBy: stored.createdBy,
       adapter: provider
         ? {
             id: provider.id,
@@ -809,31 +794,6 @@ export class IntegrationsService {
         provider: provider.id,
       });
     }
-  }
-
-  /** INT-004: the caller must have consented to every scope the adapter needs. */
-  private requireConsent(
-    provider: IntegrationProvider,
-    settings: unknown,
-    granted: readonly string[],
-  ): void {
-    let required: readonly string[];
-    try {
-      required = provider.requiredScopes(settings);
-    } catch (error) {
-      if (error instanceof ContractError) throw error;
-      throw new ContractError("INTERNAL", "Integration adapter failed", {
-        provider: provider.id,
-        reasonCode: "adapter_error",
-      });
-    }
-    const missing = required.filter((scope) => !granted.includes(scope));
-    if (missing.length)
-      throw new ContractError(
-        "PRECONDITION_FAILED",
-        "Integration consent does not cover every required scope",
-        { provider: provider.id, missingScopes: missing, nextActions: ["grant-consent"] },
-      );
   }
 
   /** Every secret the settings point at must be a listed, existing binding of the integration. */

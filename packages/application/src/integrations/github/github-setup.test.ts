@@ -46,7 +46,7 @@ describe("INT-014 SEC-047 App creation through the manifest flow", () => {
       "deployment_status",
       "check_run",
     ]);
-    expect(plain.scopes).not.toContain("github:contents:write");
+    expect(plain).not.toHaveProperty("scopes");
     expect(plain.createUrl).toBe(`https://github.com/settings/apps/new?state=${plain.state}`);
     const agent = w.app.github.manifest(
       input({ allowAgentPullRequests: true, organization: "acme" }),
@@ -55,7 +55,7 @@ describe("INT-014 SEC-047 App creation through the manifest flow", () => {
       (agent.manifest as { default_permissions: Record<string, string> }).default_permissions
         .contents,
     ).toBe("write");
-    expect(agent.scopes).toContain("github:contents:write");
+    expect(agent).not.toHaveProperty("scopes");
     expect(agent.createUrl).toBe(
       `https://github.com/organizations/acme/settings/apps/new?state=${agent.state}`,
     );
@@ -153,7 +153,7 @@ describe("INT-014 SEC-047 App creation through the manifest flow", () => {
   });
 });
 
-describe("INT-014 consent, test delivery and repository settings", () => {
+describe("INT-014 test delivery and repository settings", () => {
   it("INT-014 a test delivery proves the App credentials and creates no check, comment, Run or pull request", async () => {
     const w = await world();
     await w.install();
