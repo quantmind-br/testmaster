@@ -63,6 +63,9 @@ const McpRunReceipt = P.Obj({
   ...Ops.RunReceipt.properties,
   resources: P.Obj({ result: Type.String(), manifest: Type.String(), report: Type.String() }),
 });
+const { skippedFiles: _skipped, ...codeSnapshotProperties } =
+  Entities.entities.CodeSnapshot.properties;
+const CodeSnapshotSummary = P.Obj(codeSnapshotProperties);
 const supplemental = {
   DocumentValidationInput: P.Obj({
     schema: P.Enum(["ExecutablePlan", "ProjectConfig", "RunRequest"]),
@@ -592,14 +595,32 @@ const supplemental = {
     version: P.Nonnegative,
     resource: Type.String({ description: "testmaster://requirements/{projectId}" }),
   }),
+  /**
+   * Bounded by construction: lists are capped and carry their total and omitted counts; the full
+   * skipped list is in the stored discovery and the full feature list is the project features
+   * resource.
+   */
   CodeAnalysisReceipt: P.Obj({
-    codeSnapshot: Entities.entities.CodeSnapshot,
+    /** The stored snapshot without `skippedFiles`, which the receipt summarizes below. */
+    codeSnapshot: CodeSnapshotSummary,
     scannedFileCount: P.Nonnegative,
+    skippedFileCount: P.Nonnegative,
+    skippedByReason: Type.Array(
+      P.Obj({ reason: Type.String({ minLength: 1 }), count: P.Positive }),
+    ),
     skippedFiles: Type.Array(P.Obj({ path: Type.String(), reason: Type.String({ minLength: 1 }) })),
+    omittedSkippedFiles: P.Nonnegative,
     warnings: Type.Array(
       P.Obj({ path: Type.String(), code: Type.String({ minLength: 1 }), message: Type.String() }),
     ),
-    featureRefs: Type.Array(P.id("fea")),
+    omittedWarnings: P.Nonnegative,
+    featureCount: P.Nonnegative,
+    features: Type.Array(P.Obj({ id: P.id("fea"), stableKey: P.Name })),
+    omittedFeatures: P.Nonnegative,
+    featuresResource: Type.String({
+      description:
+        "testmaster://projects/{projectId}/features{?match,cursor}: every feature with its stable key, filterable by substring and paged; the ids testmaster_explore takes come from here",
+    }),
     /** Present for diff scope only: changed paths, the files the change reaches and the analyzed files it does not. */
     diff: Type.Optional(
       P.Obj({
@@ -617,6 +638,12 @@ const supplemental = {
           gaps: CodeDiffView.properties.impact.properties.gaps,
         }),
         fingerprint: CodeDiffView.properties.fingerprint,
+        /** `changes`, `selectedFiles` and `excludedFiles` are capped; these are the entries left out. */
+        omitted: P.Obj({
+          changes: P.Nonnegative,
+          selectedFiles: P.Nonnegative,
+          excludedFiles: P.Nonnegative,
+        }),
       }),
     ),
   }),

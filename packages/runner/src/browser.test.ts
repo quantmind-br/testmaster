@@ -546,6 +546,44 @@ it("lets an approved additional origin through without recording a denial", asyn
   expect(approved.abort).not.toHaveBeenCalled();
   expect(egressEvents()).toEqual([]);
 });
+const failedStepMessages = () =>
+  events.flatMap((event) =>
+    event.type === "step.finished" && event.payload.error ? [event.payload.error.message] : [],
+  );
+it("names the denied origin and resource type, and how to allow the origin, in the failed step", async () => {
+  const news = routeFor(
+    "https://raw.githubusercontent.com/org/repo/news.json?id=url-canary",
+    "fetch",
+  );
+  requestsOnClick(news);
+  expect(await runBrowser(runtime([click, assertion]))).toMatchObject({
+    outcome: "blocked",
+    reasonCode: "egress_denied",
+  });
+  const message = failedStepMessages().find((text) => text.includes("not authorized"));
+  expect(message).toContain("https://raw.githubusercontent.com (fetch request)");
+  expect(message).toContain("--additional-origin https://raw.githubusercontent.com");
+  expect(message).not.toContain("url-canary");
+});
+it("does not blame an authorized origin when the browser fails to forward its request", async () => {
+  const attempt = runtime([click, assertion]);
+  attempt.input.networkPolicy.allowedOrigins.push("https://cdn.example.test");
+  attempt.input.networkPolicy.additionalOrigins = ["https://cdn.example.test"];
+  const approved = routeFor("https://cdn.example.test/app.js", "script");
+  approved.continue.mockRejectedValue(new Error("Request is already handled"));
+  requestsOnClick(approved);
+  // Behaviour is unchanged: the attempt still stops as an egress denial.
+  expect(await runBrowser(attempt)).toMatchObject({
+    outcome: "blocked",
+    reasonCode: "egress_denied",
+  });
+  expect(approved.abort).toHaveBeenCalledWith("blockedbyclient");
+  const message = failedStepMessages().find((text) => text.includes("could not forward"));
+  expect(message).toContain("authorized origin https://cdn.example.test (script request)");
+  expect(failedStepMessages().some((text) => text.includes("origin is not authorized"))).toBe(
+    false,
+  );
+});
 it("never replays a stored session toward an additional origin", async () => {
   const secretRef = "sec_019bf434-20c0-7000-8000-000000000001";
   const attempt = runtime([assertion]);

@@ -1,6 +1,11 @@
 import { readFile } from "node:fs/promises";
 import { parse } from "@babel/parser";
-import { type ExecutablePlan, validate } from "@testmaster/contracts";
+import {
+  type ExecutablePlan,
+  type Expectation,
+  type PlanStep,
+  validate,
+} from "@testmaster/contracts";
 import { describe, expect, it } from "vitest";
 import { exportCode, exportImportedCode } from "./index.js";
 
@@ -287,5 +292,52 @@ describe("standalone deterministic code export", () => {
     // Positive control: the refusal is specific to the terminal runner.
     const backend = await fixture("backend");
     expect(() => exportCode(backend, { format: "pytest" })).not.toThrow();
+  });
+  it("exports manual redirects, cookie and header predicates and invalid credentials in both formats", async () => {
+    const plan = await fixture("backend");
+    const request = plan.steps[0];
+    if (request?.operation !== "request") throw new Error("Bad fixture");
+    request.input.redirect = "manual";
+    request.input.headers = { Authorization: { invalidCredential: { scheme: "Bearer" } } };
+    const assertion = (id: string, expectation: Expectation): PlanStep => ({
+      id,
+      kind: "assertion",
+      operation: "assert",
+      description: id,
+      input: { responseStepId: "get-health" },
+      expectation,
+    });
+    plan.steps = [
+      request,
+      assertion("moved", { predicate: "statusIn", values: [307] }),
+      assertion("login", { predicate: "headerMatches", header: "Location", pattern: "^/login" }),
+      assertion("no-cookie", { predicate: "cookieAbsent", name: "sid" }),
+    ];
+    const playwright = exportCode(plan, { format: "playwright" });
+    const helpers = playwright.files["helpers/standalone.ts"] ?? "";
+    expect(() => parse(helpers, { sourceType: "module", plugins: ["typescript"] })).not.toThrow();
+    for (const fragment of [
+      "input.redirect !== 'manual'",
+      "case 'headerMatches'",
+      "case 'cookieAbsent'",
+      "testmaster-invalid-",
+    ])
+      expect(helpers).toContain(fragment);
+    const python = exportCode(plan, { format: "pytest" }).files["standalone.py"] ?? "";
+    for (const fragment of [
+      'input.get("redirect") != "manual"',
+      'predicate == "headerMatches"',
+      'predicate == "cookieAbsent"',
+      "testmaster-invalid-",
+    ])
+      expect(python).toContain(fragment);
+    // Python regular expressions do not share every ECMAScript construct: refuse, do not translate.
+    plan.steps[2] = assertion("login", {
+      predicate: "headerMatches",
+      header: "Location",
+      pattern: "(?<scheme>[a-z]+)://",
+    });
+    expect(() => exportCode(plan, { format: "pytest" })).toThrow(/ECMAScript construct/);
+    expect(() => exportCode(plan, { format: "playwright" })).not.toThrow();
   });
 });

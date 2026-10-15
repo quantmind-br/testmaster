@@ -1,26 +1,5 @@
 {
   "additionalProperties": false,
-  "description": "Provide proposalIds or revisionIds (at least one); all must belong to one project",
-  "anyOf": [
-    {
-      "type": "object",
-      "properties": {
-        "proposalIds": true
-      },
-      "required": [
-        "proposalIds"
-      ]
-    },
-    {
-      "type": "object",
-      "properties": {
-        "revisionIds": true
-      },
-      "required": [
-        "revisionIds"
-      ]
-    }
-  ],
   "type": "object",
   "properties": {
     "proposalIds": {
@@ -30,7 +9,7 @@
         "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
         "type": "string"
       },
-      "description": "Accepted proposals"
+      "description": "Accepted proposals to generate code for; give proposalIds or revisionIds (at least one), all from one project"
     },
     "revisionIds": {
       "minItems": 1,
@@ -39,7 +18,7 @@
         "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
         "type": "string"
       },
-      "description": "Existing revisions"
+      "description": "Existing revisions to regenerate code for; give proposalIds or revisionIds (at least one), all from one project"
     },
     "budget": {
       "additionalProperties": false,

@@ -1,5 +1,10 @@
 import { expect, it } from "vitest";
-import { denialDisposition, deniedOrigin, EgressDenials } from "./egress.js";
+import {
+  denialDisposition,
+  deniedOrigin,
+  deniedSubrequestMessage,
+  EgressDenials,
+} from "./egress.js";
 
 it.each([
   ["image", "GET"],
@@ -44,6 +49,31 @@ it("reports the origin only, never path, query, fragment or credentials", () => 
   expect(deniedOrigin("http://cdn.example.test/a")).toBe("http://cdn.example.test");
   expect(deniedOrigin("data:text/plain,secret")).toBe("data:");
   expect(deniedOrigin("not a url")).toBe("unparsable");
+});
+
+it("names the denied origin and resource type and says how to allow the origin", () => {
+  const message = deniedSubrequestMessage(
+    "https://raw.githubusercontent.com:8443/org/repo/main/news.json?token=secret#frag",
+    "fetch",
+  );
+  expect(message).toContain("https://raw.githubusercontent.com:8443 (fetch request)");
+  expect(message).toContain("--additional-origin https://raw.githubusercontent.com:8443");
+  expect(message).toContain("testmaster env update <envId>");
+  // Only the origin is reported, never the path, the query or the fragment.
+  expect(message).not.toContain("news.json");
+  expect(message).not.toContain("secret");
+  expect(message).not.toContain("frag");
+});
+
+it("does not offer an ambiguous or non-http origin as one to allow", () => {
+  const ambiguous = deniedSubrequestMessage("https://user:pass@cdn.example.test/a.js", "script");
+  expect(ambiguous).toContain("Subrequest origin is not authorized: https://cdn.example.test");
+  expect(ambiguous).not.toContain("--additional-origin");
+  expect(ambiguous).not.toContain("pass");
+  const ftp = deniedSubrequestMessage("ftp://cdn.example.test/a", "other");
+  expect(ftp).toContain("ftp: (other request)");
+  expect(ftp).not.toContain("--additional-origin");
+  expect(deniedSubrequestMessage("not a url", "")).toContain("unparsable (unknown request)");
 });
 
 it("counts per origin and resource type, keeps the first method and escalates to fatal", () => {

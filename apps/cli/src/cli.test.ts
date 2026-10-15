@@ -364,3 +364,59 @@ it("run analyze renders useful text while JSON and read-only analysis preserve t
     app.close();
   }
 });
+
+it("run analyze --model says when the model was not used, in JSON and in text", async () => {
+  const root = await mkdtemp(join(tmpdir(), "tm-cli-model-status-"));
+  roots.push(root);
+  const app = await Application.open({ cwd: root, home: join(root, "home"), env: {} });
+  try {
+    const init = await app.init();
+    const test = app.tests.create({ projectId: init.projectId, plan: scaffoldPlan("backend") });
+    const run = app.runs.resolve({ testId: test.id, environmentId: init.environmentId });
+    Object.assign(run, { phase: "completed", status: "failed", outcome: "failed", gate: "failed" });
+    app.context.entities.insert("Run", run);
+    const call = async (args: string[]) => {
+      let stdout = "";
+      let stderr = "";
+      const runtime = new Runtime(
+        new Writable({
+          write(chunk, _encoding, callback) {
+            stdout += String(chunk);
+            callback();
+          },
+        }),
+        new Writable({
+          write(chunk, _encoding, callback) {
+            stderr += String(chunk);
+            callback();
+          },
+        }),
+      );
+      vi.spyOn(runtime, "app").mockResolvedValue(app);
+      await runCli(args, runtime);
+      return { stdout, stderr, exit: process.exitCode };
+    };
+    // No model provider is configured here, so the reading cannot be produced.
+    const json = await call(["--output", "json", "run", "analyze", run.id, "--model"]);
+    const envelope = JSON.parse(json.stdout) as {
+      data: { modelStatus: { state: string; reasonCode: string | null; message: string } };
+      warnings: string[];
+    };
+    expect(envelope.data.modelStatus.state).not.toBe("used");
+    expect(envelope.data.modelStatus.message).not.toBe("");
+    expect(envelope.warnings).toHaveLength(1);
+    expect(envelope.warnings[0]).toContain("The model was not used.");
+    const text = await call(["run", "analyze", run.id, "--model"]);
+    expect(text.exit).toBe(0);
+    expect(text.stdout).toContain("Diagnosis\nFailure:");
+    expect(text.stdout).toContain(`Model reading: ${envelope.data.modelStatus.state}`);
+    expect(text.stderr).toContain("The model was not used.");
+    // Control: without --model there is no model reading to report and nothing to warn about.
+    const plain = await call(["--output", "json", "run", "analyze", run.id]);
+    const plainEnvelope = JSON.parse(plain.stdout) as { data: object; warnings: string[] };
+    expect(plainEnvelope.data).not.toHaveProperty("modelStatus");
+    expect(plainEnvelope.warnings).toEqual([]);
+  } finally {
+    app.close();
+  }
+});

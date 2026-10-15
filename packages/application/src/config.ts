@@ -12,7 +12,7 @@ import {
   reasoningEfforts,
   validate,
 } from "@testmaster/contracts";
-import { scrubEvidenceText, semanticHash } from "@testmaster/domain";
+import { environmentSecretValues, scrubEvidenceValue, semanticHash } from "@testmaster/domain";
 
 import type { ProviderConfig } from "@testmaster/model-gateway";
 export interface ProfilePolicy {
@@ -40,14 +40,8 @@ export function exportEffectiveConfig(
   resolved: ResolvedConfig,
   env: NodeJS.ProcessEnv = process.env,
 ) {
-  const secrets = Object.entries(env)
-    .filter(([name]) => /(?:SECRET|TOKEN|PASSWORD|API_KEY|CREDENTIAL)/i.test(name))
-    .map(([, value]) => value)
-    .filter((value): value is string => Boolean(value));
   return {
-    ...(JSON.parse(
-      scrubEvidenceText(JSON.stringify(resolved.effectiveConfig), secrets).text,
-    ) as EffectiveConfig),
+    ...scrubEvidenceValue(resolved.effectiveConfig, environmentSecretValues(env)),
     operationalDefaults: defaults,
     logging: {
       retentionDays: resolved.logRetentionDays ?? defaults.logRetentionDays,

@@ -866,6 +866,44 @@ export class AuxiliaryLeaseRepository {
     };
     return this.database.inTransaction ? apply() : this.database.withTx(apply);
   }
+  /**
+   * Reopens a settled job whose paid effect never started, so the same semantic resource can be
+   * evaluated again after a deterministic refusal or an evidence-phase failure. The settled result
+   * is kept as an audit entry in `progress.unpaidSettlements`. A job that started a paid call is
+   * never reopened: that outcome is final and the call is never reissued.
+   */
+  reopenUnpaid(workspaceId: string, jobId: string, availableAt: string): AuxiliaryJob {
+    const apply = (): AuxiliaryJob => {
+      const job = this.get(workspaceId, jobId);
+      if (!job || (job.state !== "completed" && job.state !== "cancelled"))
+        throw new ContractError("PRECONDITION_FAILED", "Job is not settled");
+      if (job.progress.paidCallStarted)
+        throw new ContractError("PRECONDITION_FAILED", "Paid call outcome must stay settled");
+      const earlier = Array.isArray(job.progress.unpaidSettlements)
+        ? (job.progress.unpaidSettlements as unknown[])
+        : [];
+      const changed = this.database.run(
+        "UPDATE job_leases SET state='queued',lease_owner=NULL,lease_expires_at=NULL,available_at=?,data_json=? WHERE workspace_id=? AND id=? AND state=? AND fence=?",
+        availableAt,
+        canonicalJson({
+          payload: job.payload,
+          progress: {
+            ...job.progress,
+            // The whole settled result stays: it may name a stored receipt (an analysis id).
+            unpaidSettlements: [...earlier, { ...job.result, state: job.state }],
+          },
+          result: null,
+        }),
+        workspaceId,
+        jobId,
+        job.state,
+        job.fence,
+      );
+      if (!changed.changes) throw new ContractError("PRECONDITION_FAILED", "Job is not settled");
+      return this.get(workspaceId, jobId) as AuxiliaryJob;
+    };
+    return this.database.inTransaction ? apply() : this.database.withTx(apply);
+  }
   /** Reopens a dead-lettered delivery job for one new cycle; the stored payload is never changed. */
   requeueDeadLetter(workspaceId: string, jobId: string, availableAt: string): void {
     const apply = () => {

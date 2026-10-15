@@ -4,7 +4,10 @@ import math
 import re
 import hashlib
 import time
+import secrets
 import asyncio
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from urllib.parse import urljoin, urlsplit, urlunsplit, quote, urlencode
 import requests
@@ -26,6 +29,27 @@ def pointer(value, path=""):
         else:
             raise ValueError("Absent JSON Pointer")
     return value
+
+
+def removes_cookie(attributes):
+    values = {}
+    for attribute in attributes:
+        if attribute.find("=") > 0:
+            key, value = attribute.split("=", 1)
+            values[key.strip().lower()] = value.strip()
+    max_age = values.get("max-age")
+    if max_age is not None and re.fullmatch(r"-?\d+", max_age):
+        return int(max_age) <= 0
+    expires = values.get("expires")
+    if expires is None:
+        return False
+    try:
+        moment = parsedate_to_datetime(expires)
+    except (TypeError, ValueError):
+        return False
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    return moment <= datetime.now(timezone.utc)
 
 
 def json_type(value):
@@ -97,6 +121,10 @@ class PlanRuntime:
         if json_type(value) not in ("string", "number", "boolean"):
             raise ValueError("Expected scalar")
         return str(value).lower() if isinstance(value, bool) else str(value)
+
+    def invalid_credential(self, spec):
+        token = "testmaster-invalid-" + secrets.token_hex(16)
+        return token if "scheme" not in spec else spec["scheme"] + " " + token
 
     def string(self, ref):
         value = self.value(ref)
@@ -172,6 +200,11 @@ class PlanRuntime:
             assert response.status_code in expectation["values"]
         elif predicate == "headerEquals":
             assert equal(response.headers.get(expectation["header"]), self.value(expectation["value"]))
+        elif predicate == "headerMatches":
+            header = response.headers.get(expectation["header"])
+            assert header is not None and re.search(expectation["pattern"], header, re.ASCII) is not None
+        elif predicate == "cookieAbsent":
+            assert expectation["name"] not in response.testmaster_cookies
         elif predicate == "jsonEquals":
             assert equal(pointer(response.json(), path), self.value(expectation["value"]))
         elif predicate == "countEquals":
@@ -191,7 +224,7 @@ class PlanRuntime:
         headers = {}
         for name, ref in input.get("headers", {}).items():
             name = name.lower()
-            value = self.scalar(ref)
+            value = self.invalid_credential(ref["invalidCredential"]) if "invalidCredential" in ref else self.scalar(ref)
             if re.search(r"[\r\n\x00]", value) or name in headers or name in ("host", "connection", "content-length", "transfer-encoding", "forwarded", "via", "upgrade", "te", "trailer") or name.startswith(("proxy-", "x-forwarded-")):
                 raise ValueError("Forbidden header")
             headers[name] = value
@@ -218,14 +251,20 @@ class PlanRuntime:
             headers.setdefault("content-type", mime)
         expires = time.monotonic() + timeout / 1000
         method = input["method"]
+        cookies = []
         for redirects in range(11):
             remaining = expires - time.monotonic()
             if remaining <= 0:
                 raise TimeoutError("Request deadline")
             response = self.session.request(method, url, headers=headers, data=data, timeout=remaining, allow_redirects=False)
+            for cookie in response.raw.headers.getlist("Set-Cookie"):
+                pair, *attributes = cookie.split(";")
+                name = pair.split("=", 1)[0].strip() if "=" in pair else ""
+                if name and not removes_cookie(attributes) and name not in cookies:
+                    cookies.append(name)
             if len(response.content) > 10485760:
                 raise ValueError("Response body limit")
-            if response.status_code in (301, 302, 303, 307, 308) and "location" in response.headers:
+            if input.get("redirect") != "manual" and response.status_code in (301, 302, 303, 307, 308) and "location" in response.headers:
                 if redirects == 10:
                     raise ValueError("Redirect limit")
                 target = urljoin(url, response.headers["location"])
@@ -241,6 +280,7 @@ class PlanRuntime:
                 response.close()
                 url = target
                 continue
+            response.testmaster_cookies = cookies
             return response
         raise ValueError("Redirect limit")
 

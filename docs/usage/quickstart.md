@@ -92,7 +92,7 @@ testmaster test rerun "$TEST_ID" --wait --output json
   it then fails, a second envelope with the `error` follows on stdout and the exit code is set. Only your own
   interruption (Ctrl-C, SIGTERM) ends it without an error envelope.
 - Exit codes follow `specs/05-cli-mcp.md` §3 (0 passed, 1 failed gate, 6 precondition, 7 wait deadline,
-  8 capability unavailable, 9 policy/sandbox denied, 130/143 interrupted).
+  8 capability unavailable, 9 policy/sandbox denied, 15 run blocked by policy, 130/143 interrupted).
 - `test run --wait` without a running worker makes the CLI the ephemeral owner; Ctrl-C cancels durably.
   With `testmaster worker start` running, the CLI only waits and Ctrl-C detaches unless
   `--cancel-on-interrupt` is given. Without a worker and without `--wait`, admission is refused.

@@ -85,13 +85,25 @@ export function runCommands(program: Command, runtime: Runtime): void {
       .option("--model-id <id>", "Model id of the enrichment (requires --model)")
       .option("--discovery <id>", "Bind source targets to an authorized frozen discovery"),
     async (rt, args, options) => {
-      const analysis = await (await rt.app()).analysis.analyze(String(args[0]), {
+      const app = await rt.app();
+      const analysis = await app.analysis.analyze(String(args[0]), {
         model: options.model === true,
         ...(typeof options.provider === "string" ? { provider: options.provider } : {}),
         ...(typeof options.modelId === "string" ? { modelId: options.modelId } : {}),
         ...(typeof options.discovery === "string" ? { discoveryId: options.discovery } : {}),
       });
-      return { data: analysis, text: formatDiagnosisSummary(analysis), exit: 0 };
+      if (options.model !== true)
+        return { data: analysis, text: formatDiagnosisSummary(analysis), exit: 0 };
+      // A requested model reading that produced no model analysis says so, instead of looking
+      // like a successful enrichment: the status is the stored one when the reading was settled.
+      const modelStatus = app.analysis.modelStatus(analysis);
+      const line = `Model reading: ${modelStatus.state}${modelStatus.reasonCode ? ` (${modelStatus.reasonCode})` : ""}: ${modelStatus.message}`;
+      return {
+        data: { ...analysis, modelStatus },
+        text: `${formatDiagnosisSummary(analysis)}${line}\n`,
+        warnings: modelStatus.state === "used" ? [] : [`The model was not used. ${line}`],
+        exit: 0,
+      };
     },
   );
   runtime.bind(group.command("analysis <id>"), async (rt, args) => {

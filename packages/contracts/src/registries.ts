@@ -56,7 +56,7 @@ const reasonGroups: ReadonlyArray<{ codes: readonly string[]; mapping: ReasonMap
     mapping: {
       effect: "blocked",
       gate: "required_failure",
-      exit: 9,
+      exit: 15,
       reporter: "error",
     },
   },

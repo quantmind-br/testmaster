@@ -9,7 +9,13 @@ import {
   type TestRevision,
   validate,
 } from "@testmaster/contracts";
-import { canonicalJson, scrubEvidenceText, semanticHash } from "@testmaster/domain";
+import {
+  canonicalJson,
+  environmentSecretValues,
+  scrubEvidenceText,
+  scrubEvidenceValue,
+  semanticHash,
+} from "@testmaster/domain";
 import {
   AuxiliaryLeaseRepository,
   type EntityDocument,
@@ -36,7 +42,7 @@ import {
   healingReplacements,
 } from "./healing-patch.js";
 import { AUXILIARY_LEASE_MS, keepLeaseAlive } from "./job-lease.js";
-import type { ModelService } from "./model.js";
+import { type ModelService, unsentModelReasons } from "./model.js";
 
 export interface HealingInput {
   /** Configured provider id; the first provider allowed by the profile when absent. */
@@ -426,14 +432,25 @@ export class HealingService {
     const facts = this.analysis.get(failedRunId) ?? (await this.analysis.analyze(failedRunId, {}));
     const jobs = new AuxiliaryLeaseRepository(this.ctx.database);
     const prior = jobs.forTarget(this.ctx.workspaceId, "healing", failedRunId);
-    // One healing request per failed Run: any settled, leased or paid request stays final.
-    if (prior.some((job) => job.progress.paidCallStarted || job.state !== "queued"))
+    // A request that started a paid call, or whose outcome still has to be settled, is final for
+    // this Run. A request that never reached the provider (an evidence-phase failure or a
+    // deterministic refusal) is not: the same job is reopened below and evaluated again.
+    const final = prior.find(
+      (job) => job.progress.paidCallStarted || job.state === "reconciliation_required",
+    );
+    if (final)
       throw new ContractError(
         "PRECONDITION_FAILED",
         "Healing request already settled or requires reconciliation",
-        { reason: "no_regeneration", jobId: prior[0]?.jobId },
+        { reason: "no_regeneration", jobId: final.jobId },
       );
-    const { job } = jobs.enqueue(this.ctx.workspaceId, "healing", {
+    const running = prior.find((job) => job.state === "leased");
+    if (running)
+      throw new ContractError("PRECONDITION_FAILED", "Healing request is already running", {
+        reason: "already_running",
+        jobId: running.jobId,
+      });
+    const { job: enqueued } = jobs.enqueue(this.ctx.workspaceId, "healing", {
       operation: "propose",
       targetId: failedRunId,
       actorId: this.ctx.principalId,
@@ -444,6 +461,10 @@ export class HealingService {
       }),
       options: input as Record<string, unknown>,
     });
+    const job =
+      enqueued.state === "completed" || enqueued.state === "cancelled"
+        ? jobs.reopenUnpaid(this.ctx.workspaceId, enqueued.jobId, new Date().toISOString())
+        : enqueued;
     const fence = jobs.claim({
       workspaceId: this.ctx.workspaceId,
       queue: "healing",
@@ -523,31 +544,27 @@ export class HealingService {
           if (step.input.query) delete step.input.query;
         }
       }
-      const secretValues = Object.entries(process.env)
-        .filter(([name]) => /secret|token|password|credential|api_key/i.test(name))
-        .flatMap(([, value]) => (value ? [value] : []));
-      const data = JSON.parse(
-        scrubEvidenceText(
-          JSON.stringify({
-            plan: modelPlan,
-            allowedReplacements,
-            locatorEvidence: locatorEvidence.map((record) => ({
-              ...record,
-              candidates: modelCandidates(record.candidates),
-              candidateCount: record.candidates.length,
-              truncated: record.truncated || record.candidates.length > modelCandidateLimit,
-            })),
-            // Evidence references (content hashes) stay local; the model cites handles only.
-            facts: facts.facts.map((fact) => ({
-              text: fact.text,
-              evidenceHandles: fact.evidenceRefs.map(
-                (ref) =>
-                  evidence.find((item) => semanticHash(item.ref) === semanticHash(ref))!.evidenceId,
-              ),
-            })),
-          }),
-          secretValues,
-        ).text,
+      const secretValues = environmentSecretValues();
+      const data = scrubEvidenceValue(
+        {
+          plan: modelPlan,
+          allowedReplacements,
+          locatorEvidence: locatorEvidence.map((record) => ({
+            ...record,
+            candidates: modelCandidates(record.candidates),
+            candidateCount: record.candidates.length,
+            truncated: record.truncated || record.candidates.length > modelCandidateLimit,
+          })),
+          // Evidence references (content hashes) stay local; the model cites handles only.
+          facts: facts.facts.map((fact) => ({
+            text: fact.text,
+            evidenceHandles: fact.evidenceRefs.map(
+              (ref) =>
+                evidence.find((item) => semanticHash(item.ref) === semanticHash(ref))!.evidenceId,
+            ),
+          })),
+        },
+        secretValues,
       );
       // Leave room for the trusted instructions and response schema in the gateway's ceiling.
       if (Buffer.byteLength(JSON.stringify(data), "utf8") > 80000) refuse("evidence_too_large");
@@ -696,9 +713,17 @@ export class HealingService {
         );
         modelCallId = call ? String(call.id) : null;
       }
+      const unsentReason =
+        phase === "model" &&
+        modelCallId === null &&
+        error instanceof ContractError &&
+        unsentModelReasons.has(String(error.details.reasonCode))
+          ? String(error.details.reasonCode)
+          : null;
       // All diagnostic details are code-owned; schema errors can contain model values.
       const detail =
-        phase === "semantic"
+        unsentReason ??
+        (phase === "semantic"
           ? "semantic_invalid"
           : phase === "model" &&
               error instanceof ContractError &&
@@ -708,7 +733,7 @@ export class HealingService {
               ? "schema_invalid"
               : phase === "model"
                 ? "transport"
-                : "evidence_invalid";
+                : "evidence_invalid");
       // Provider, model and the upstream error code are configuration or registry values, never
       // model output. `modelCallRecorded` only says whether the gateway recorded a call row; a
       // transport failure after sending can leave none, so it never proves nothing was sent.
@@ -734,6 +759,7 @@ export class HealingService {
                 : {}),
             }
           : {};
+      if (current?.state === "leased" && unsentReason) jobs.mark(fence, { paidCallStarted: false });
       if (current?.state === "leased")
         jobs.finish(fence, "completed", {
           refused: true,
@@ -762,8 +788,9 @@ export class HealingService {
           ...modelFacts,
           ...(phase === "model"
             ? {
-                nextAction:
-                  "This Run's healing request is final; pass --provider/--model when healing the next eligible failed Run",
+                nextAction: unsentReason
+                  ? "Nothing was sent to the model; fix the provider configuration and propose again for this Run"
+                  : "This Run's healing request is final; pass --provider/--model when healing the next eligible failed Run",
               }
             : {}),
         },

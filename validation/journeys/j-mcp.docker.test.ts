@@ -113,8 +113,15 @@ it("MCP-001–004 built CLI initialize/list/run/evidence, reattach, and HTTP tok
         expect(resource).toBeDefined();
         const page = await client.readResource({ uri: text(resource) });
         const content = object(page.contents[0]);
-        expect(content).not.toHaveProperty("text");
-        expect(Buffer.from(text(content.blob), "base64").length).toBeGreaterThan(0);
+        // Textual artifacts are `text` contents, binary ones `blob`; both carry the paging in _meta.
+        const mimeType = text(content.mimeType).split(";")[0]?.trim().toLowerCase() ?? "";
+        if (/^text\/|\/(json|xml|x-ndjson)$|\+(json|xml)$/.test(mimeType)) {
+          expect(content).not.toHaveProperty("blob");
+          expect(text(content.text).length).toBeGreaterThan(0);
+        } else {
+          expect(content).not.toHaveProperty("text");
+          expect(Buffer.from(text(content.blob), "base64").length).toBeGreaterThan(0);
+        }
         expect(typeof object(content._meta)["testmaster:sizeBytes"]).toBe("number");
         session.oracles.push({
           check: "mcpDurableResumeAndVerifiedEvidence",

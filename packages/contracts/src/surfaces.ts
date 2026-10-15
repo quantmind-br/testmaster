@@ -715,6 +715,9 @@ export const mcpTools = {
     input: Obj({
       projectId: d(id("prj"), "Project id"),
       sourceRevisionIds: d(Type.Array(id("svr")), "Source revisions to normalize"),
+      provider: Type.Optional(
+        d(Name, "Model provider id; absent: the first allowed provider with a capable model"),
+      ),
       model: Type.Optional(
         d(Name, "Model id from the project's profiles; defaults to the first capable one"),
       ),
@@ -728,7 +731,7 @@ export const mcpTools = {
       envId: d(id("env"), "Environment to explore"),
       featureIds: d(
         Type.Array(id("fea")),
-        "Features to explore; empty with jobId resumes that job",
+        "Feature ids to explore, looked up by stable key at testmaster://projects/{projectId}/features; empty with jobId resumes that job",
       ),
       budget: Obj(
         {
@@ -802,40 +805,41 @@ export const mcpTools = {
   },
   testmaster_generate_tests: {
     milestone: "M2",
-    input: Obj(
-      {
-        proposalIds: Type.Optional(d(Type.Array(id("pro"), { minItems: 1 }), "Accepted proposals")),
-        revisionIds: Type.Optional(d(Type.Array(id("rev"), { minItems: 1 }), "Existing revisions")),
-        budget: Type.Optional(
-          Obj(
-            {
-              modelCalls: Type.Optional(
-                d(Type.Integer({ minimum: 1, maximum: 20 }), "Model calls, 1..20; default 10"),
-              ),
-            },
-            { description: "Optional model-call budget" },
-          ),
+    // Flat object on purpose: a top-level anyOf hides the other properties from clients that render
+    // the first branch only. "proposalIds or revisionIds" is enforced by the tool at runtime.
+    input: Obj({
+      proposalIds: Type.Optional(
+        d(
+          Type.Array(id("pro"), { minItems: 1 }),
+          "Accepted proposals to generate code for; give proposalIds or revisionIds (at least one), all from one project",
         ),
-        provider: Type.Optional(
-          d(Name, "Model provider id for code generation; absent: first allowed provider"),
+      ),
+      revisionIds: Type.Optional(
+        d(
+          Type.Array(id("rev"), { minItems: 1 }),
+          "Existing revisions to regenerate code for; give proposalIds or revisionIds (at least one), all from one project",
         ),
-        model: Type.Optional(
-          d(
-            Name,
-            "Model id for code generation, validated before any call; absent: the provider's first structured-output model",
-          ),
+      ),
+      budget: Type.Optional(
+        Obj(
+          {
+            modelCalls: Type.Optional(
+              d(Type.Integer({ minimum: 1, maximum: 20 }), "Model calls, 1..20; default 10"),
+            ),
+          },
+          { description: "Optional model-call budget" },
         ),
-      },
-      {
-        description:
-          "Provide proposalIds or revisionIds (at least one); all must belong to one project",
-        // Strict Ajv needs each branch's required property defined beside it.
-        anyOf: [
-          { type: "object", properties: { proposalIds: true }, required: ["proposalIds"] },
-          { type: "object", properties: { revisionIds: true }, required: ["revisionIds"] },
-        ],
-      },
-    ),
+      ),
+      provider: Type.Optional(
+        d(Name, "Model provider id for code generation; absent: first allowed provider"),
+      ),
+      model: Type.Optional(
+        d(
+          Name,
+          "Model id for code generation, validated before any call; absent: the provider's first structured-output model",
+        ),
+      ),
+    }),
     output: "GeneratedTestsReceipt",
   },
   testmaster_run_tests: {

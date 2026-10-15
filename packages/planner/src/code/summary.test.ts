@@ -153,6 +153,24 @@ describe("confined AST code summary", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+  it("analyzes a file whose only NUL byte lies past the first 8000 bytes", async () => {
+    const root = await repo();
+    try {
+      const padding = "// padding\n".repeat(800);
+      expect(Buffer.byteLength(padding)).toBeGreaterThan(8000);
+      await writeFile(join(root, "late.ts"), `${padding}export const SEP = "a\0b";\n`);
+      // The NUL at the very start is binary; the same bytes with the NUL late are code.
+      await writeFile(join(root, "early.ts"), `\0export const early = 1;\n${padding}`);
+      const summary = await summarizeCode(root);
+      expect(summary.scannedFiles).toContain("late.ts");
+      expect(summary.skippedFiles).not.toContainEqual({ path: "late.ts", reason: "binary" });
+      expect(summary.symbols.map((symbol) => symbol.name)).toContain("SEP");
+      expect(summary.skippedFiles).toContainEqual({ path: "early.ts", reason: "binary" });
+      expect(summary.scannedFiles).not.toContain("early.ts");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
   it("caps symbols per file and per run and reports symbols_truncated", async () => {
     const root = await repo();
     try {

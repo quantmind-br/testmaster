@@ -516,10 +516,23 @@ it("healing refuses missing provider without a candidate, persists the refusal a
   const jobs = f.app.database.all("SELECT data_json FROM job_leases WHERE queue='healing'");
   expect(jobs).toHaveLength(1);
   expect(String(jobs[0]!.data_json)).toContain("provider_unavailable");
+  // No paid call started, so the refusal is not final: the same request is evaluated again,
+  // refuses for the same reason, reuses the same job and keeps the earlier refusal as an audit.
   await expect(f.app.healing.propose(f.failed.id, {})).rejects.toMatchObject({
     code: "PRECONDITION_FAILED",
-    details: { reason: "no_regeneration" },
+    details: { reason: "provider_unavailable" },
   });
+  const leases = new AuxiliaryLeaseRepository(f.app.context.database);
+  const [job] = leases.forTarget(f.app.context.workspaceId, "healing", f.failed.id);
+  expect(leases.forTarget(f.app.context.workspaceId, "healing", f.failed.id)).toHaveLength(1);
+  expect(job).toMatchObject({
+    state: "completed",
+    result: { refused: true, reason: "provider_unavailable" },
+    progress: {
+      unpaidSettlements: [{ state: "completed", reason: "provider_unavailable" }],
+    },
+  });
+  expect(f.app.revisions.list(f.test.id)).toHaveLength(revisionCount);
 });
 it("healing refuses passed runs before creating a healing job", async () => {
   const f = await fixture("passed", false);
@@ -716,6 +729,43 @@ it("oversized evidence refuses before model dispatch rather than enlarging the c
     state: "completed",
     result: { refused: true, reason: "evidence_too_large" },
   });
+});
+
+async function envEvidenceFixture(text: string) {
+  const f = await generationFixture(abstention);
+  const current = f.service.analysis.get(f.failed.id)!;
+  vi.spyOn(f.service.analysis, "get").mockReturnValue({
+    ...current,
+    facts: [{ ...current.facts[0]!, text }],
+  });
+  await expect(f.service.propose(f.failed.id)).rejects.toMatchObject({
+    details: { reason: "model_abstained" },
+  });
+  return f.input[0]!.data as { facts: { text: string }[] };
+}
+it("boolean-valued environment flags do not corrupt the evidence sent to the model", async () => {
+  vi.stubEnv("INSPECTOR_MASK_SECRETS", "true");
+  vi.stubEnv("REQUIRE_API_KEY", "false");
+  vi.stubEnv("ALLOW_API_KEY_REVEAL", "false");
+  try {
+    const data = await envEvidenceFixture('Locator {"by":"label","exact":true,"value":"Password"}');
+    expect(data.facts[0]?.text).toBe('Locator {"by":"label","exact":true,"value":"Password"}');
+    expect(JSON.stringify(data)).not.toContain("[REDACTED]");
+  } finally {
+    vi.unstubAllEnvs();
+  }
+});
+it("a real credential in the environment is still redacted from the evidence sent to the model", async () => {
+  vi.stubEnv("INSPECTOR_MASK_SECRETS", "true");
+  vi.stubEnv("SERVICE_API_TOKEN", "tm-canary-credential-9876");
+  try {
+    const data = await envEvidenceFixture(
+      'Typed "tm-canary-credential-9876" into {"exact":true,"value":"Password"}',
+    );
+    expect(data.facts[0]?.text).toBe('Typed "[REDACTED]" into {"exact":true,"value":"Password"}');
+  } finally {
+    vi.unstubAllEnvs();
+  }
 });
 
 function repeatedControlPlan(differentOriginal = false, password = false): ExecutablePlan {
@@ -959,6 +1009,100 @@ it("an unexecuted step with a different original locator remains manual", async 
   expect(proposal.status).toBe("proposed");
   expect(proposal.approvalMode).toBeNull();
   expect(f.app.runs.admitHealingVerification).not.toHaveBeenCalled();
+});
+it("a failure before any model call leaves the Run healable and the retry reaches the model", async () => {
+  const f = await deferredFixture(true);
+  vi.mocked(f.app.runs.steps).mockImplementationOnce(() => {
+    throw new Error("transient evidence read failure");
+  });
+  await expect(f.service.propose(f.failed.id)).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+    details: { reason: "model_failure", detail: "evidence_invalid", phase: "evidence" },
+  });
+  expect(f.complete).not.toHaveBeenCalled();
+  const [settled] = f.jobs.forTarget(f.app.context.workspaceId, "healing", f.failed.id);
+  expect(settled).toMatchObject({ state: "completed", result: { reason: "model_failure" } });
+  expect(settled?.progress.paidCallStarted).toBeUndefined();
+  // The retry reopens the same job, reaches the model once and creates the proposal.
+  const proposal = await f.service.propose(f.failed.id);
+  expect(proposal.status).toBe("proposed");
+  expect(f.complete).toHaveBeenCalledTimes(1);
+  const jobs = f.jobs.forTarget(f.app.context.workspaceId, "healing", f.failed.id);
+  expect(jobs).toHaveLength(1);
+  expect(jobs[0]).toMatchObject({
+    state: "completed",
+    result: { proposalId: proposal.id },
+    progress: {
+      paidCallStarted: true,
+      unpaidSettlements: [
+        { reason: "model_failure", detail: "evidence_invalid", phase: "evidence" },
+      ],
+    },
+  });
+});
+it("a model refusal raised before anything is sent, such as a missing API key, leaves the Run healable", async () => {
+  const f = await deferredFixture(true);
+  f.complete.mockRejectedValueOnce(
+    new ContractError("PRECONDITION_FAILED", "Provider API key is unavailable", {
+      reasonCode: "provider_credentials_unavailable",
+      provider: "gateway",
+      apiKeyEnv: "GATEWAY_API_KEY",
+    }),
+  );
+  await expect(f.service.propose(f.failed.id)).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+    details: {
+      reason: "model_failure",
+      detail: "provider_credentials_unavailable",
+      phase: "model",
+      modelCallRecorded: false,
+      nextAction: expect.stringContaining("Nothing was sent to the model"),
+    },
+  });
+  const [settled] = f.jobs.forTarget(f.app.context.workspaceId, "healing", f.failed.id);
+  expect(settled?.progress.paidCallStarted).toBe(false);
+  // With the key in place the same job reopens and reaches the model.
+  const proposal = await f.service.propose(f.failed.id);
+  expect(proposal.status).toBe("proposed");
+  expect(f.complete).toHaveBeenCalledTimes(2);
+  const jobs = f.jobs.forTarget(f.app.context.workspaceId, "healing", f.failed.id);
+  expect(jobs).toHaveLength(1);
+  expect(jobs[0]?.progress).toMatchObject({
+    paidCallStarted: true,
+    unpaidSettlements: [{ detail: "provider_credentials_unavailable", phase: "model" }],
+  });
+});
+it("a healing request that is still running is reported as running and is not reopened", async () => {
+  const f = await generationFixture(abstention);
+  const current = f.service.analysis.get(f.failed.id)!;
+  vi.spyOn(f.service.analysis, "get").mockReturnValue({ ...current, facts: [] });
+  await expect(f.service.propose(f.failed.id)).rejects.toMatchObject({
+    details: { reason: "evidence_unavailable" },
+  });
+  const [job] = f.jobs.forTarget(f.app.context.workspaceId, "healing", f.failed.id);
+  f.app.database.run(
+    "UPDATE job_leases SET state='leased',lease_owner='other',lease_expires_at=? WHERE id=?",
+    new Date(Date.now() + 60000).toISOString(),
+    job!.jobId,
+  );
+  await expect(f.service.propose(f.failed.id)).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+    details: { reason: "already_running", jobId: job!.jobId },
+  });
+  expect(f.jobs.get(f.app.context.workspaceId, job!.jobId)?.state).toBe("leased");
+  expect(f.complete).not.toHaveBeenCalled();
+});
+it("a settled healing request whose paid call started can never be reopened", async () => {
+  const f = await generationFixture(abstention);
+  await expect(f.service.propose(f.failed.id)).rejects.toMatchObject({
+    details: { reason: "model_abstained" },
+  });
+  const [job] = f.jobs.forTarget(f.app.context.workspaceId, "healing", f.failed.id);
+  expect(job?.progress.paidCallStarted).toBe(true);
+  expect(() =>
+    f.jobs.reopenUnpaid(f.app.context.workspaceId, job!.jobId, new Date().toISOString()),
+  ).toThrow("Paid call outcome must stay settled");
+  expect(f.jobs.get(f.app.context.workspaceId, job!.jobId)?.state).toBe("completed");
 });
 it.each(["executed later", "different replacement", "renamed anchor", "ambiguous baseline"])(
   "deferred admission refuses %s",

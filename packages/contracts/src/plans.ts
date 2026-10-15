@@ -41,6 +41,27 @@ export const Locator = Type.Recursive((Self) => {
     Obj({ by: Type.Literal("css"), value: Name, ...scope }),
   ]);
 });
+/** Longest `headerMatches` pattern: it bounds the plan text the runner compiles. */
+export const headerPatternMaxLength = 512;
+/** RFC 6265 cookie-name token. */
+const CookieName = Type.String({ pattern: "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$", maxLength: 200 });
+/** Request headers whose value may be a deliberately invalid credential. */
+export const invalidCredentialHeaders = [
+  "authorization",
+  "cookie",
+  "x-api-key",
+  "api-key",
+] as const;
+/**
+ * A credential the target must reject, for negative authentication tests: the runner sends a
+ * fresh random token, so no real secret is needed. Only request header values accept it.
+ */
+export const InvalidCredential = Obj({
+  invalidCredential: Obj({
+    scheme: Type.Optional(Type.String({ pattern: "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$", maxLength: 64 })),
+  }),
+});
+const HeaderValue = Type.Union([Value, InvalidCredential]);
 const valuePredicate = <P extends string>(predicate: P) =>
   Obj({ predicate: Type.Literal(predicate), value: Value });
 export const Expectation = Type.Union([
@@ -73,6 +94,14 @@ export const Expectation = Type.Union([
     }),
   }),
   Obj({ predicate: Type.Literal("headerEquals"), header: Name, value: Value }),
+  /** ECMAScript pattern (`u` flag, unanchored) tested against the response header; the plan validator compiles it. */
+  Obj({
+    predicate: Type.Literal("headerMatches"),
+    header: Name,
+    pattern: Type.String({ minLength: 1, maxLength: headerPatternMaxLength }),
+  }),
+  /** No response of the request step (redirect hops included) sets a cookie with this name. */
+  Obj({ predicate: Type.Literal("cookieAbsent"), name: CookieName }),
   Obj({ predicate: Type.Literal("jsonSchema"), sourceRevisionId: id("svr"), pointer: JsonPointer }),
   Obj({
     predicate: Type.Literal("downloadMatches"),
@@ -109,8 +138,10 @@ export const RequestInput = Obj({
   pathSegments: Type.Array(Value),
   query: Type.Optional(Type.Array(Obj({ name: Value, value: Value }))),
   headers: Type.Optional(
-    Type.Record(Type.String({ pattern: "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$" }), Value),
+    Type.Record(Type.String({ pattern: "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$" }), HeaderValue),
   ),
+  /** `follow` (default) follows up to 10 redirects and reports the last response; `manual` reports the 3xx response itself. */
+  redirect: Type.Optional(Enum(["follow", "manual"])),
   body: Type.Optional(
     Type.Union([
       Obj({ kind: Type.Literal("json"), value: Value }),

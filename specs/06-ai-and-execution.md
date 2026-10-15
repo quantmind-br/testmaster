@@ -110,7 +110,7 @@ Aprovação automática opt-in (`--accept-generated`) só fora CI, com policy e 
 
 ### HTTP/API
 
-- Requests reais com redirects explícitos e egress guard em todos hops. Timeout connect/headers/body com teto total; request/response captura bounded e redacted.
+- Requests reais com redirects explícitos (`redirect: follow|manual`; `manual` expõe o 3xx como resposta do step, `follow` registra a cadeia em `http/<stepId>.json`) e egress guard em todos hops. Timeout connect/headers/body com teto total; request/response captura bounded e redacted.
 - Response 4xx/5xx esperada em teste negativo pode passar; exceção HTTP não é falha de transporte se houve resposta válida.
 - Retry transporte somente antes de efeito comprovado ou para operação idempotente autorizada. Eventual consistency usa polling de predicate com prazo e registro de tentativas, não aumenta timeout indefinidamente.
 - JSON Schema valida contra contrato da revisão; `additionalProperties`, nullable, number/string e status code tratados conforme versão OpenAPI. Não atualizar schema pelo observed.

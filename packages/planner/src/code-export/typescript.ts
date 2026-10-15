@@ -1,9 +1,17 @@
 export const typescriptRuntime = String.raw`import { expect, type Page, type Frame, type Locator, type APIRequestContext } from '@playwright/test';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { readFileSync, realpathSync, lstatSync } from 'node:fs';
 import { resolve, relative, isAbsolute } from 'node:path';
 
 type Data = any;
+function removesCookie(attributes: string[]): boolean {
+  const values = new Map<string, string>();
+  for(const attribute of attributes) { const at = attribute.indexOf('='); if(at > 0) values.set(attribute.slice(0, at).trim().toLowerCase(), attribute.slice(at + 1).trim()); }
+  const maxAge = values.get('max-age');
+  if(maxAge !== undefined && /^-?\d+$/.test(maxAge)) return Number(maxAge) <= 0;
+  const expires = values.get('expires');
+  return expires !== undefined && Date.parse(expires) <= Date.now();
+}
 export async function executePlan(plan: Data, initialPage: Page, request: APIRequestContext, baseURL: string) {
   if (!baseURL) throw new Error('BASE_URL must be configured');
   const inputs = JSON.parse(process.env.TEST_INPUTS_JSON ?? '{}');
@@ -35,6 +43,10 @@ export async function executePlan(plan: Data, initialPage: Page, request: APIReq
   const scalar = (v: Data): string => {
     if (typeof v === 'string' || typeof v === 'boolean' || (typeof v === 'number' && Number.isFinite(v))) return String(v);
     throw new Error('Expected a scalar input');
+  };
+  const invalidCredential = (spec: Data): string => {
+    const token = 'testmaster-invalid-' + randomBytes(16).toString('hex');
+    return spec.scheme === undefined ? token : spec.scheme + ' ' + token;
   };
   const string = (ref: Data): string => {
     const v = value(ref); if (typeof v !== 'string') throw new Error('Expected a string input'); return v;
@@ -96,6 +108,8 @@ export async function executePlan(plan: Data, initialPage: Page, request: APIReq
     switch(e.predicate) {
       case 'statusIn': expect(e.values).toContain(response.status); break;
       case 'headerEquals': expect(response.headers[e.header.toLowerCase()]).toStrictEqual(value(e.value)); break;
+      case 'headerMatches': { const header = response.headers[e.header.toLowerCase()]; expect(header, 'Header ' + e.header + ' is absent').toBeDefined(); expect(header).toMatch(new RegExp(e.pattern, 'u')); break; }
+      case 'cookieAbsent': expect(response.cookies).not.toContain(e.name); break;
       case 'jsonEquals': expect(pointer(JSON.parse(response.body), p)).toStrictEqual(value(e.value)); break;
       case 'countEquals': { const v = pointer(JSON.parse(response.body), p); expect(Array.isArray(v)).toBe(true); expect(v.length).toBe(e.value); break; }
       default: throw new Error('Unsupported HTTP predicate: ' + e.predicate);
@@ -108,7 +122,7 @@ export async function executePlan(plan: Data, initialPage: Page, request: APIReq
     for (const pair of input.query ?? []) url.searchParams.append(scalar(value(pair.name)), scalar(value(pair.value)));
     const headers: Data = {};
     for (const [name, ref] of Object.entries(input.headers ?? {})) {
-      const v = scalar(value(ref)); const lower = name.toLowerCase();
+      const v = 'invalidCredential' in (ref as Data) ? invalidCredential((ref as Data).invalidCredential) : scalar(value(ref)); const lower = name.toLowerCase();
       if (/[\r\n\u0000]/.test(v) || /^(host|connection|content-length|transfer-encoding|forwarded|via|upgrade|te|trailer)$/.test(lower) || /^(proxy-|x-forwarded-)/.test(lower) || lower in headers) throw new Error('Forbidden header');
       headers[lower] = v;
     }
@@ -122,21 +136,28 @@ export async function executePlan(plan: Data, initialPage: Page, request: APIReq
       if (Buffer.byteLength(data) > 10485760) throw new Error('Request body limit');
     }
     let target = url.href, method = input.method;
+    const cookies: string[] = [];
     const expires = Date.now() + timeout;
     for(let redirects = 0; ; redirects++) {
       const remaining = expires - Date.now(); if(remaining <= 0) throw new Error('Request deadline');
       const response = await request.fetch(target, {method, headers, data, timeout:remaining, failOnStatusCode:false, maxRedirects:0});
       const bytes = await response.body(); if(bytes.length > 10485760) throw new Error('Response body limit');
       const status = response.status(), incoming = response.headers();
+      for(const header of response.headersArray()) {
+        if(header.name.toLowerCase() !== 'set-cookie') continue;
+        const [pair = '', ...attributes] = header.value.split(';'), at = pair.indexOf('=');
+        const cookie = at < 0 ? '' : pair.slice(0, at).trim();
+        if(cookie && !removesCookie(attributes) && !cookies.includes(cookie)) cookies.push(cookie);
+      }
       await response.dispose();
-      if([301,302,303,307,308].includes(status) && incoming.location) {
+      if(input.redirect !== 'manual' && [301,302,303,307,308].includes(status) && incoming.location) {
         if(redirects >= 10) throw new Error('Redirect limit');
         const next = new URL(incoming.location,target);
         if(next.origin !== new URL(target).origin) for(const key of ['authorization','cookie','cookie2','x-api-key','api-key','set-cookie']) delete headers[key];
         if((status === 303 && method !== 'HEAD') || ((status === 301 || status === 302) && method === 'POST')) { method = 'GET'; data = undefined; delete headers['content-type']; }
         target = next.href; continue;
       }
-      return {status, headers:incoming, body:bytes.toString('utf8')};
+      return {status, headers:incoming, body:bytes.toString('utf8'), cookies};
     }
   }
   async function perform(step: Data): Promise<void> {

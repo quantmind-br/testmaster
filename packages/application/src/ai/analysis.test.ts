@@ -1118,6 +1118,59 @@ it("a requested reading reports its status: used, abstained by a rule, or unavai
     modelCallId: f.modelCallId,
   });
 });
+it("a missing provider credential is an unavailable model reading, and the retry reaches the model once the key is set", async () => {
+  const f = await fixture();
+  f.complete.mockRejectedValueOnce(
+    new ContractError("PRECONDITION_FAILED", "Provider API key is unavailable", {
+      reasonCode: "provider_credentials_unavailable",
+      provider: "fake",
+      apiKeyEnv: "FAKE_KEY",
+    }),
+  );
+  const options = { model: true, provider: "fake", modelId: "fake-model" };
+  const analysis = await f.service.analyze(f.run.id, options);
+  expect(analysis).toMatchObject({ source: "rules", modelCallId: null });
+  const expected = {
+    state: "unavailable",
+    reasonCode: "provider_credentials_unavailable",
+    message: "Provider API key is unavailable",
+    modelCallId: null,
+  };
+  expect(f.service.modelStatus(analysis)).toEqual(expected);
+  // Nothing was sent, so the same request evaluates again once the key is present.
+  f.complete.mockImplementationOnce(async () => ({
+    modelCallId: f.modelCallId,
+    output: {
+      failureKind: "unknown",
+      hypotheses: [],
+      recommendedAction: "collect_more_evidence",
+      fixTargetHandle: null,
+      limitations: [],
+      nextSteps: [],
+      evidenceGaps: [],
+    },
+  }));
+  const retried = await f.service.analyze(f.run.id, options);
+  expect(retried).toMatchObject({ source: "model", modelCallId: f.modelCallId });
+  expect(f.complete).toHaveBeenCalledTimes(2);
+  // The reading starts from the factual diagnosis, not from the refused one.
+  expect(retried.limitations.join(" ")).not.toMatch(/Model enrichment abstained/u);
+  // The refused reading stays stored with its status.
+  expect(f.service.modelStatus(analysis)).toEqual(expected);
+  // Control: a reading that abstained after the call is final and is not reissued.
+  const other = await fixture();
+  other.complete.mockRejectedValueOnce(
+    new ContractError("PRECONDITION_FAILED", "Model output was rejected"),
+  );
+  const abstained = await other.service.analyze(other.run.id, { model: true });
+  expect(other.service.modelStatus(abstained)).toMatchObject({
+    state: "abstained",
+    reasonCode: "PRECONDITION_FAILED",
+  });
+  const again = await other.service.analyze(other.run.id, { model: true });
+  expect(again.id).toBe(abstained.id);
+  expect(other.complete).toHaveBeenCalledTimes(1);
+});
 it("a model reading that outlasts the job lease keeps its lease and is stored", async () => {
   const f = await fixture();
   vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
@@ -2227,4 +2280,160 @@ it("the error fields a failing endpoint returned become a fact and reach the mod
   );
   const clean = await passed.service.analyze(passed.run.id, {});
   expect(clean.facts.map((fact) => fact.text).join("\n")).not.toContain("recorded error fields");
+});
+
+function requestStatusPlan(values: number[]): ExecutablePlan {
+  return {
+    schemaVersion: "1.0.0",
+    kind: "executable",
+    name: "Legacy redirect",
+    type: "backend",
+    runner: "http",
+    requirementRefs: ["req_00000000-0000-4000-8000-000000000003"],
+    steps: [
+      {
+        id: "request",
+        kind: "action",
+        operation: "request",
+        description: "Read legacy path",
+        input: { method: "GET", pathSegments: [{ literal: "legacy" }] },
+      },
+      {
+        id: "price",
+        kind: "assertion",
+        operation: "assert",
+        required: true,
+        description: "Redirects",
+        input: { responseStepId: "request" },
+        expectation: { predicate: "statusIn", values },
+      },
+    ],
+  };
+}
+const redirectHop = { url: "http://app.test/legacy", status: 307, location: "/current" };
+it("a statusIn expecting the redirect that the runner followed is a test defect, not a product bug", async () => {
+  const f = await fixture({
+    plan: requestStatusPlan([307]),
+    step: { expected: 307, observed: 200 },
+  });
+  await attachTerminalProcess(
+    f,
+    { response: { status: 200, url: "http://app.test/current" }, redirects: [redirectHop] },
+    { relativePath: "http/request.json", kind: "http" },
+  );
+  const analysis = await f.service.analyze(f.run.id, {});
+  expect(analysis).toMatchObject({ failureKind: "test_fragility", recommendedAction: "fix_test" });
+  expect(
+    analysis.hypotheses[0]?.supports.some((ref) => ref.relativePath === "http/request.json"),
+  ).toBe(true);
+  expect(analysis.facts.map((fact) => fact.text)).toContain(
+    "Step price (statusIn) expects status 307, but the runner followed 1 redirect of request step request (first hop 307 to /current) and recorded the final response status 200.",
+  );
+  expect(analysis.diagnosis?.conclusion.text).toContain("followed the redirect");
+  expect(analysis.diagnosis?.nextSteps[0]?.text).toContain('redirect to "manual"');
+  expect(analysis.diagnosis?.healing.advice).toBe("not_indicated");
+  // Control: the same mismatch without a followed redirect stays an observed product mismatch.
+  const plain = await fixture({
+    plan: requestStatusPlan([307]),
+    step: { expected: 307, observed: 200 },
+  });
+  await attachTerminalProcess(
+    plain,
+    { response: { status: 200 }, redirects: [] },
+    { relativePath: "http/request.json", kind: "http" },
+  );
+  expect(await plain.service.analyze(plain.run.id, {})).toMatchObject({
+    failureKind: "product_bug",
+    recommendedAction: "fix_product",
+  });
+  // Control: a followed redirect the assertion did not expect does not excuse the mismatch.
+  const unrelated = await fixture({
+    plan: requestStatusPlan([404]),
+    step: { expected: 404, observed: 200 },
+  });
+  await attachTerminalProcess(
+    unrelated,
+    { response: { status: 200 }, redirects: [redirectHop] },
+    { relativePath: "http/request.json", kind: "http" },
+  );
+  expect(await unrelated.service.analyze(unrelated.run.id, {})).toMatchObject({
+    failureKind: "product_bug",
+  });
+});
+it("a failure localizes to the first inconclusive step and never prints a placeholder", async () => {
+  const f = await fixture({
+    step: {
+      planStepId: "request",
+      status: "inconclusive",
+      reasonCode: "insufficient_evidence",
+      expected: null,
+      observed: null,
+      error: { code: "Error", message: "page.goto: net::ERR_ABORTED" },
+    },
+  });
+  const analysis = await f.service.analyze(f.run.id, {});
+  expect(analysis.diagnosis?.conclusion.text).toBe(
+    "The failure is localized to step request; the evidence does not establish a cause.",
+  );
+  expect(analysis.diagnosis?.nextSteps[0]?.text).toContain("for step request");
+  // Without any non-passed step result there is nothing to name, and no placeholder appears.
+  const none = await fixture({ step: { status: "passed", observed: 10 } });
+  const unlocalized = await none.service.analyze(none.run.id, {});
+  expect(unlocalized.diagnosis?.conclusion.text).toBe(
+    "The failure could not be localized to a recorded step result; the evidence does not establish a cause.",
+  );
+  expect(JSON.stringify(unlocalized.diagnosis)).not.toContain("step unavailable");
+  expect(unlocalized.diagnosis?.nextSteps[0]?.text).toContain("for the step that stopped the Run");
+});
+const labelPlan = (value: string): ExecutablePlan =>
+  ({
+    schemaVersion: "1.0.0",
+    kind: "executable",
+    name: "Login",
+    type: "frontend",
+    runner: "playwright",
+    requirementRefs: [],
+    steps: [
+      {
+        id: "submit",
+        kind: "action",
+        operation: "click",
+        description: "Focus the password field",
+        input: { locator: { by: "label", value, exact: true } },
+      },
+    ],
+  }) as unknown as ExecutablePlan;
+const clickStep = {
+  planStepId: "submit",
+  reasonCode: "assertion_timeout",
+  expected: null,
+  observed: null,
+  error: { code: "assertion_timeout", message: "Click timed out" },
+} satisfies Partial<StepResult>;
+it("boolean-valued environment flags do not redact JSON booleans in the diagnosis text", async () => {
+  vi.stubEnv("INSPECTOR_MASK_SECRETS", "true");
+  vi.stubEnv("REQUIRE_API_KEY", "false");
+  try {
+    const f = await fixture({ plan: labelPlan("Password"), step: clickStep });
+    const analysis = await f.service.analyze(f.run.id, {});
+    expect(analysis.diagnosis?.observation?.summary).toContain(
+      'Locator {"by":"label","exact":true,"value":"Password"}',
+    );
+    expect(JSON.stringify(analysis.diagnosis)).not.toContain("[REDACTED]");
+  } finally {
+    vi.unstubAllEnvs();
+  }
+});
+it("a credential value in the environment is still redacted from the diagnosis text", async () => {
+  vi.stubEnv("INSPECTOR_MASK_SECRETS", "true");
+  vi.stubEnv("SERVICE_API_TOKEN", "tm-canary-credential-9876");
+  try {
+    const f = await fixture({ plan: labelPlan("tm-canary-credential-9876"), step: clickStep });
+    const analysis = await f.service.analyze(f.run.id, {});
+    expect(analysis.diagnosis?.observation?.summary).toContain('"exact":true');
+    expect(analysis.diagnosis?.observation?.summary).toContain("[REDACTED]");
+    expect(JSON.stringify(analysis)).not.toContain("tm-canary-credential-9876");
+  } finally {
+    vi.unstubAllEnvs();
+  }
 });

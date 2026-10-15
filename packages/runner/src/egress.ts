@@ -55,6 +55,27 @@ export function deniedOrigin(url: string): string {
   }
 }
 
+/**
+ * Reason of a fatal browser denial: names the origin and resource type that the egress policy
+ * refused and, when the origin is an unambiguous http(s) one, how an operator allows it on purpose.
+ * `--additional-origin` replaces the environment's list, so the hint says to repeat existing entries.
+ */
+export function deniedSubrequestMessage(url: string, resourceType: string): string {
+  const origin = deniedOrigin(url);
+  const type = resourceType || "unknown";
+  const base = `Subrequest origin is not authorized: ${origin} (${type} request)`;
+  let allowable = false;
+  try {
+    // A fragment never reaches the server and does not make the origin ambiguous.
+    canonicalUrl(url.split("#", 1)[0] ?? "");
+    allowable = origin.startsWith("http://") || origin.startsWith("https://");
+  } catch {
+    /* An ambiguous URL (credentials, encoded authority, controls) is never offered as an origin to allow. */
+  }
+  if (!allowable) return base;
+  return `${base}. To allow it intentionally: testmaster env update <envId> --expected-version <n> --additional-origin ${origin} (repeat the environment's existing additional origins: the option replaces the list)`;
+}
+
 /** Per-attempt record of denied requests, deduplicated per origin and resource type with a count. */
 export class EgressDenials {
   private readonly entries = new Map<string, EgressDenial>();

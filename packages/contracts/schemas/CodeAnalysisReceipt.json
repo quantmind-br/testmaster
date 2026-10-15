@@ -4,9 +4,16 @@
   "required": [
     "codeSnapshot",
     "scannedFileCount",
+    "skippedFileCount",
+    "skippedByReason",
     "skippedFiles",
+    "omittedSkippedFiles",
     "warnings",
-    "featureRefs"
+    "omittedWarnings",
+    "featureCount",
+    "features",
+    "omittedFeatures",
+    "featuresResource"
   ],
   "properties": {
     "codeSnapshot": {
@@ -91,29 +98,6 @@
             "type": "string"
           }
         },
-        "skippedFiles": {
-          "type": "array",
-          "items": {
-            "additionalProperties": false,
-            "type": "object",
-            "required": [
-              "path",
-              "reason"
-            ],
-            "properties": {
-              "path": {
-                "minLength": 1,
-                "maxLength": 200,
-                "type": "string"
-              },
-              "reason": {
-                "minLength": 1,
-                "maxLength": 200,
-                "type": "string"
-              }
-            }
-          }
-        },
         "extensions": {
           "type": "object",
           "patternProperties": {
@@ -155,6 +139,31 @@
       "minimum": 0,
       "type": "integer"
     },
+    "skippedFileCount": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "skippedByReason": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason",
+          "count"
+        ],
+        "properties": {
+          "reason": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "count": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        }
+      }
+    },
     "skippedFiles": {
       "type": "array",
       "items": {
@@ -174,6 +183,10 @@
           }
         }
       }
+    },
+    "omittedSkippedFiles": {
+      "minimum": 0,
+      "type": "integer"
     },
     "warnings": {
       "type": "array",
@@ -199,12 +212,43 @@
         }
       }
     },
-    "featureRefs": {
+    "omittedWarnings": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "featureCount": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "features": {
       "type": "array",
       "items": {
-        "pattern": "^fea_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-        "type": "string"
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "stableKey"
+        ],
+        "properties": {
+          "id": {
+            "pattern": "^fea_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "stableKey": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          }
+        }
       }
+    },
+    "omittedFeatures": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "featuresResource": {
+      "description": "testmaster://projects/{projectId}/features{?match,cursor}: every feature with its stable key, filterable by substring and paged; the ids testmaster_explore takes come from here",
+      "type": "string"
     },
     "diff": {
       "additionalProperties": false,
@@ -217,7 +261,8 @@
         "dirtyHash",
         "changes",
         "impact",
-        "fingerprint"
+        "fingerprint",
+        "omitted"
       ],
       "properties": {
         "baseSha": {
@@ -327,6 +372,29 @@
         "fingerprint": {
           "pattern": "^[0-9a-f]{64}$",
           "type": "string"
+        },
+        "omitted": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "changes",
+            "selectedFiles",
+            "excludedFiles"
+          ],
+          "properties": {
+            "changes": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "selectedFiles": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "excludedFiles": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
         }
       }
     }

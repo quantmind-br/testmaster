@@ -4080,87 +4080,123 @@
                                     "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$": {
                                       "anyOf": [
                                         {
-                                          "additionalProperties": false,
-                                          "type": "object",
-                                          "required": [
-                                            "literal"
-                                          ],
-                                          "properties": {
-                                            "literal": {
-                                              "anyOf": [
-                                                {
-                                                  "type": "null"
-                                                },
-                                                {
-                                                  "type": "boolean"
-                                                },
-                                                {
-                                                  "type": "number"
-                                                },
-                                                {
-                                                  "type": "string"
-                                                },
-                                                {
-                                                  "type": "array",
-                                                  "items": {
-                                                    "$ref": "#/$defs/T0"
-                                                  }
-                                                },
-                                                {
-                                                  "type": "object",
-                                                  "patternProperties": {
-                                                    "^(.*)$": {
-                                                      "$ref": "#/$defs/T0"
+                                          "anyOf": [
+                                            {
+                                              "additionalProperties": false,
+                                              "type": "object",
+                                              "required": [
+                                                "literal"
+                                              ],
+                                              "properties": {
+                                                "literal": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "null"
+                                                    },
+                                                    {
+                                                      "type": "boolean"
+                                                    },
+                                                    {
+                                                      "type": "number"
+                                                    },
+                                                    {
+                                                      "type": "string"
+                                                    },
+                                                    {
+                                                      "type": "array",
+                                                      "items": {
+                                                        "$ref": "#/$defs/T0"
+                                                      }
+                                                    },
+                                                    {
+                                                      "type": "object",
+                                                      "patternProperties": {
+                                                        "^(.*)$": {
+                                                          "$ref": "#/$defs/T0"
+                                                        }
+                                                      }
                                                     }
-                                                  }
+                                                  ]
                                                 }
-                                              ]
+                                              }
+                                            },
+                                            {
+                                              "additionalProperties": false,
+                                              "type": "object",
+                                              "required": [
+                                                "secretRef"
+                                              ],
+                                              "properties": {
+                                                "secretRef": {
+                                                  "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                                  "type": "string"
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "additionalProperties": false,
+                                              "type": "object",
+                                              "required": [
+                                                "variableRef"
+                                              ],
+                                              "properties": {
+                                                "variableRef": {
+                                                  "minLength": 1,
+                                                  "maxLength": 200,
+                                                  "type": "string"
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "additionalProperties": false,
+                                              "type": "object",
+                                              "required": [
+                                                "artifactRef"
+                                              ],
+                                              "properties": {
+                                                "artifactRef": {
+                                                  "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                                  "type": "string"
+                                                }
+                                              }
                                             }
-                                          }
+                                          ]
                                         },
                                         {
                                           "additionalProperties": false,
                                           "type": "object",
                                           "required": [
-                                            "secretRef"
+                                            "invalidCredential"
                                           ],
                                           "properties": {
-                                            "secretRef": {
-                                              "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-                                              "type": "string"
-                                            }
-                                          }
-                                        },
-                                        {
-                                          "additionalProperties": false,
-                                          "type": "object",
-                                          "required": [
-                                            "variableRef"
-                                          ],
-                                          "properties": {
-                                            "variableRef": {
-                                              "minLength": 1,
-                                              "maxLength": 200,
-                                              "type": "string"
-                                            }
-                                          }
-                                        },
-                                        {
-                                          "additionalProperties": false,
-                                          "type": "object",
-                                          "required": [
-                                            "artifactRef"
-                                          ],
-                                          "properties": {
-                                            "artifactRef": {
-                                              "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-                                              "type": "string"
+                                            "invalidCredential": {
+                                              "additionalProperties": false,
+                                              "type": "object",
+                                              "properties": {
+                                                "scheme": {
+                                                  "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$",
+                                                  "maxLength": 64,
+                                                  "type": "string"
+                                                }
+                                              }
                                             }
                                           }
                                         }
                                       ]
                                     }
                                   }
+                                },
+                                "redirect": {
+                                  "anyOf": [
+                                    {
+                                      "const": "follow",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "const": "manual",
+                                      "type": "string"
+                                    }
+                                  ]
                                 },
                                 "body": {
                                   "anyOf": [
@@ -7567,6 +7603,50 @@
                                   "type": "object",
                                   "required": [
                                     "predicate",
+                                    "header",
+                                    "pattern"
+                                  ],
+                                  "properties": {
+                                    "predicate": {
+                                      "const": "headerMatches",
+                                      "type": "string"
+                                    },
+                                    "header": {
+                                      "minLength": 1,
+                                      "maxLength": 200,
+                                      "type": "string"
+                                    },
+                                    "pattern": {
+                                      "minLength": 1,
+                                      "maxLength": 512,
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "predicate",
+                                    "name"
+                                  ],
+                                  "properties": {
+                                    "predicate": {
+                                      "const": "cookieAbsent",
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$",
+                                      "maxLength": 200,
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "predicate",
                                     "sourceRevisionId",
                                     "pointer"
                                   ],
@@ -8109,87 +8189,123 @@
                                 "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$": {
                                   "anyOf": [
                                     {
-                                      "additionalProperties": false,
-                                      "type": "object",
-                                      "required": [
-                                        "literal"
-                                      ],
-                                      "properties": {
-                                        "literal": {
-                                          "anyOf": [
-                                            {
-                                              "type": "null"
-                                            },
-                                            {
-                                              "type": "boolean"
-                                            },
-                                            {
-                                              "type": "number"
-                                            },
-                                            {
-                                              "type": "string"
-                                            },
-                                            {
-                                              "type": "array",
-                                              "items": {
-                                                "$ref": "#/$defs/T0"
-                                              }
-                                            },
-                                            {
-                                              "type": "object",
-                                              "patternProperties": {
-                                                "^(.*)$": {
-                                                  "$ref": "#/$defs/T0"
+                                      "anyOf": [
+                                        {
+                                          "additionalProperties": false,
+                                          "type": "object",
+                                          "required": [
+                                            "literal"
+                                          ],
+                                          "properties": {
+                                            "literal": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "null"
+                                                },
+                                                {
+                                                  "type": "boolean"
+                                                },
+                                                {
+                                                  "type": "number"
+                                                },
+                                                {
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "type": "array",
+                                                  "items": {
+                                                    "$ref": "#/$defs/T0"
+                                                  }
+                                                },
+                                                {
+                                                  "type": "object",
+                                                  "patternProperties": {
+                                                    "^(.*)$": {
+                                                      "$ref": "#/$defs/T0"
+                                                    }
+                                                  }
                                                 }
-                                              }
+                                              ]
                                             }
-                                          ]
+                                          }
+                                        },
+                                        {
+                                          "additionalProperties": false,
+                                          "type": "object",
+                                          "required": [
+                                            "secretRef"
+                                          ],
+                                          "properties": {
+                                            "secretRef": {
+                                              "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                              "type": "string"
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "additionalProperties": false,
+                                          "type": "object",
+                                          "required": [
+                                            "variableRef"
+                                          ],
+                                          "properties": {
+                                            "variableRef": {
+                                              "minLength": 1,
+                                              "maxLength": 200,
+                                              "type": "string"
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "additionalProperties": false,
+                                          "type": "object",
+                                          "required": [
+                                            "artifactRef"
+                                          ],
+                                          "properties": {
+                                            "artifactRef": {
+                                              "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                              "type": "string"
+                                            }
+                                          }
                                         }
-                                      }
+                                      ]
                                     },
                                     {
                                       "additionalProperties": false,
                                       "type": "object",
                                       "required": [
-                                        "secretRef"
+                                        "invalidCredential"
                                       ],
                                       "properties": {
-                                        "secretRef": {
-                                          "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-                                          "type": "string"
-                                        }
-                                      }
-                                    },
-                                    {
-                                      "additionalProperties": false,
-                                      "type": "object",
-                                      "required": [
-                                        "variableRef"
-                                      ],
-                                      "properties": {
-                                        "variableRef": {
-                                          "minLength": 1,
-                                          "maxLength": 200,
-                                          "type": "string"
-                                        }
-                                      }
-                                    },
-                                    {
-                                      "additionalProperties": false,
-                                      "type": "object",
-                                      "required": [
-                                        "artifactRef"
-                                      ],
-                                      "properties": {
-                                        "artifactRef": {
-                                          "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-                                          "type": "string"
+                                        "invalidCredential": {
+                                          "additionalProperties": false,
+                                          "type": "object",
+                                          "properties": {
+                                            "scheme": {
+                                              "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$",
+                                              "maxLength": 64,
+                                              "type": "string"
+                                            }
+                                          }
                                         }
                                       }
                                     }
                                   ]
                                 }
                               }
+                            },
+                            "redirect": {
+                              "anyOf": [
+                                {
+                                  "const": "follow",
+                                  "type": "string"
+                                },
+                                {
+                                  "const": "manual",
+                                  "type": "string"
+                                }
+                              ]
                             },
                             "body": {
                               "anyOf": [
@@ -9652,6 +9768,50 @@
                                       }
                                     }
                                   ]
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate",
+                                "header",
+                                "pattern"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "headerMatches",
+                                  "type": "string"
+                                },
+                                "header": {
+                                  "minLength": 1,
+                                  "maxLength": 200,
+                                  "type": "string"
+                                },
+                                "pattern": {
+                                  "minLength": 1,
+                                  "maxLength": 512,
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate",
+                                "name"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "cookieAbsent",
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$",
+                                  "maxLength": 200,
+                                  "type": "string"
                                 }
                               }
                             },
@@ -13952,87 +14112,123 @@
                     "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$": {
                       "anyOf": [
                         {
-                          "additionalProperties": false,
-                          "type": "object",
-                          "required": [
-                            "literal"
-                          ],
-                          "properties": {
-                            "literal": {
-                              "anyOf": [
-                                {
-                                  "type": "null"
-                                },
-                                {
-                                  "type": "boolean"
-                                },
-                                {
-                                  "type": "number"
-                                },
-                                {
-                                  "type": "string"
-                                },
-                                {
-                                  "type": "array",
-                                  "items": {
-                                    "$ref": "#/$defs/T0"
-                                  }
-                                },
-                                {
-                                  "type": "object",
-                                  "patternProperties": {
-                                    "^(.*)$": {
-                                      "$ref": "#/$defs/T0"
+                          "anyOf": [
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "literal"
+                              ],
+                              "properties": {
+                                "literal": {
+                                  "anyOf": [
+                                    {
+                                      "type": "null"
+                                    },
+                                    {
+                                      "type": "boolean"
+                                    },
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "$ref": "#/$defs/T0"
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "patternProperties": {
+                                        "^(.*)$": {
+                                          "$ref": "#/$defs/T0"
+                                        }
+                                      }
                                     }
-                                  }
+                                  ]
                                 }
-                              ]
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "secretRef"
+                              ],
+                              "properties": {
+                                "secretRef": {
+                                  "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "variableRef"
+                              ],
+                              "properties": {
+                                "variableRef": {
+                                  "minLength": 1,
+                                  "maxLength": 200,
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "artifactRef"
+                              ],
+                              "properties": {
+                                "artifactRef": {
+                                  "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                  "type": "string"
+                                }
+                              }
                             }
-                          }
+                          ]
                         },
                         {
                           "additionalProperties": false,
                           "type": "object",
                           "required": [
-                            "secretRef"
+                            "invalidCredential"
                           ],
                           "properties": {
-                            "secretRef": {
-                              "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-                              "type": "string"
-                            }
-                          }
-                        },
-                        {
-                          "additionalProperties": false,
-                          "type": "object",
-                          "required": [
-                            "variableRef"
-                          ],
-                          "properties": {
-                            "variableRef": {
-                              "minLength": 1,
-                              "maxLength": 200,
-                              "type": "string"
-                            }
-                          }
-                        },
-                        {
-                          "additionalProperties": false,
-                          "type": "object",
-                          "required": [
-                            "artifactRef"
-                          ],
-                          "properties": {
-                            "artifactRef": {
-                              "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-                              "type": "string"
+                            "invalidCredential": {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "properties": {
+                                "scheme": {
+                                  "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$",
+                                  "maxLength": 64,
+                                  "type": "string"
+                                }
+                              }
                             }
                           }
                         }
                       ]
                     }
                   }
+                },
+                "redirect": {
+                  "anyOf": [
+                    {
+                      "const": "follow",
+                      "type": "string"
+                    },
+                    {
+                      "const": "manual",
+                      "type": "string"
+                    }
+                  ]
                 },
                 "body": {
                   "anyOf": [
@@ -17431,6 +17627,50 @@
                           }
                         }
                       ]
+                    }
+                  }
+                },
+                {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "predicate",
+                    "header",
+                    "pattern"
+                  ],
+                  "properties": {
+                    "predicate": {
+                      "const": "headerMatches",
+                      "type": "string"
+                    },
+                    "header": {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    "pattern": {
+                      "minLength": 1,
+                      "maxLength": 512,
+                      "type": "string"
+                    }
+                  }
+                },
+                {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "predicate",
+                    "name"
+                  ],
+                  "properties": {
+                    "predicate": {
+                      "const": "cookieAbsent",
+                      "type": "string"
+                    },
+                    "name": {
+                      "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$",
+                      "maxLength": 200,
+                      "type": "string"
                     }
                   }
                 },

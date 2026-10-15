@@ -140,9 +140,15 @@ const uiPredicates: Record<string, true> = {
 const httpPredicates: Record<string, true> = {
   statusIn: true,
   headerEquals: true,
+  headerMatches: true,
+  cookieAbsent: true,
   jsonEquals: true,
   countEquals: true,
 };
+/** ECMAScript pattern syntax that has no identical Python `re` meaning. */
+const pythonIncompatiblePattern = /\(\?<|\\[pPkuc]|\[\^?\]/u;
+const pythonIncompatibleReason =
+  "the pattern uses an ECMAScript construct (named group, lookbehind, \\u, \\p, \\k, \\c or an empty class) that Python regular expressions do not share; export to playwright instead";
 
 const playwrightPackage = {
   name: "exported-tests",
@@ -282,6 +288,12 @@ export function exportCode(input: ExecutablePlan, options: CodeExportOptions): C
         if (plan.runner === "http" && !response)
           unsupported(step.id, predicate, "HTTP assertions need responseStepId");
         if (
+          options.format === "pytest" &&
+          step.expectation.predicate === "headerMatches" &&
+          pythonIncompatiblePattern.test(step.expectation.pattern)
+        )
+          unsupported(step.id, predicate, pythonIncompatibleReason);
+        if (
           predicate === "urlEquals" &&
           "value" in step.expectation &&
           "literal" in step.expectation.value
@@ -297,13 +309,17 @@ export function exportCode(input: ExecutablePlan, options: CodeExportOptions): C
   }
   check(plan.steps);
   validatePlanSemantics(plan);
-  for (const cleanup of plan.cleanup ?? [])
-    if (!httpPredicates[cleanup.successPredicate.predicate])
-      unsupported(
-        cleanup.resourceRef,
-        cleanup.successPredicate.predicate,
-        "cleanup predicate is unsupported",
-      );
+  for (const cleanup of plan.cleanup ?? []) {
+    const success = cleanup.successPredicate;
+    if (!httpPredicates[success.predicate])
+      unsupported(cleanup.resourceRef, success.predicate, "cleanup predicate is unsupported");
+    if (
+      options.format === "pytest" &&
+      success.predicate === "headerMatches" &&
+      pythonIncompatiblePattern.test(success.pattern)
+    )
+      unsupported(cleanup.resourceRef, success.predicate, pythonIncompatibleReason);
+  }
   references(plan);
   const captures = new Set<string>();
   function produced(steps: PlanStep[]): void {

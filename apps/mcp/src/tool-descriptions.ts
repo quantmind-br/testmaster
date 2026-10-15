@@ -13,17 +13,17 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_bootstrap:
     "Create or find the project for an approved root; returns projectId, proposed config, preflight and missing actions. Idempotent per root; never installs or runs the app. Next: testmaster_analyze_code.",
   testmaster_analyze_code:
-    "Snapshot the code: whole codebase (no base), base..head, or base..working tree (dirty=true, needs base). Returns snapshot, scanned/skipped files, warnings and, for a diff, changes plus impact.selectedFiles (changed + dependents) and excludedFiles (analyzed, unaffected). Not a plan source.",
+    "Snapshot the code: whole codebase (no base), base..head, or base..working tree (dirty=true, needs base). Bounded receipt: counts, first 50 skipped files, first 100 features {id, stableKey}, diff impact. All features by key: testmaster://projects/{projectId}/features?match=. Not a plan source.",
   testmaster_normalize_requirements:
-    "Normalize source revisions into requirements and conflicts; returns sourceSnapshotId (fingerprint) and version. Slow: pass a progressToken. Humans approve requirements (CLI or portal), then testmaster_generate_plan.",
+    "Normalize source revisions into requirements and conflicts; returns sourceSnapshotId (fingerprint) and version. provider/model pick the model. Slow: _meta.progressToken gets progress notifications. Humans approve requirements (CLI or portal), then testmaster_generate_plan.",
   testmaster_explore:
-    "Browser exploration. budget: steps 1..100, modelCalls 1..steps, timeMs 1000..300000 (bounds browser time; waiting for the model is not counted and a model call is never cut). provider/model pick the model; mutationActions: form steps. Failure: extensions['testmaster:errorMessage']. wait=true blocks.",
+    "Browser exploration. featureIds: testmaster://projects/{projectId}/features?match=. budget: steps 1..100, modelCalls 1..steps, timeMs 1000..300000 (browser time only; a model call is never cut). provider/model pick the model; mutationActions: form steps. Failure: testmaster:errorMessage.",
   testmaster_generate_plan:
     "Generate plan proposals (candidates, not tests) from the approved requirement snapshot (sourceSnapshotId = its fingerprint). Declined: extensions['testmaster:unsupportedRequirements']; refused: INVALID_ARGUMENT details.refused, or partialGeneration. Next: testmaster_review_plan.",
   testmaster_review_plan:
     "Record accept or reject decisions for a proposal batch at expectedVersion. Unselected proposals stay pending. Next: testmaster_generate_tests.",
   testmaster_generate_tests:
-    "Generate executable candidates from accepted proposals or revisions, one project per call; provider/model pick the model; a model call has no deadline. Refused revisions go to validationErrors. Not execution evidence; review before testmaster_run_tests.",
+    "Generate executable candidates from accepted proposals (proposalIds) or revisions (revisionIds), at least one, one project per call; provider/model pick the model; a model call has no deadline. Refused revisions go to validationErrors. Not execution evidence; review before testmaster_run_tests.",
   testmaster_run_tests:
     "Run testIds with environmentId, or a list (suiteId, replay only), in the sandbox; returns the batch receipt with live run status. wait=true blocks until timeoutMs (UPSTREAM_TIMEOUT; runs continue), else poll testmaster_get_run. idempotencyKey makes retries safe.",
   testmaster_get_run:
@@ -45,5 +45,5 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_approve_healing:
     "Approve at expectedVersion; creates the candidate revision and a verification run, healed only when it passes (testmaster_get_run). A bearer token needs a HealingProposal:approve grant; scopes R, W, X, A never imply it.",
   testmaster_open_report:
-    "Return the testmaster://runs/{id}/report location of the committed report; read it as a paged blob resource and follow _meta next.",
+    "Return the testmaster://runs/{id}/report location of the committed report; read it as a paged text resource (JSON, cut on character boundaries) and follow _meta next, then concatenate the pages and parse.",
 };

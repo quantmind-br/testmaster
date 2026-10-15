@@ -259,7 +259,7 @@ it("J01 dead DOCKER_HOST refuses execution without a local process fallback or t
         ["test", "run", text(test.id), "--wait", "--timeout", "30"],
         { DOCKER_HOST: `unix://${join(session.temporary, "nonexistent-docker.sock")}` },
       ).result;
-      expect(result.exitCode).toBe(9);
+      expect(result.exitCode).toBe(15);
       expect(result.json).toBeDefined();
       expect(target.hits()).toBe(0);
       for (const runId of session.runIds) {

@@ -14,6 +14,7 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import {
   type ExecutablePlan,
+  type Expectation,
   type PlanStep,
   type RunnerEvent,
   validateRunnerWireEvent,
@@ -1168,4 +1169,338 @@ it("keeps a bounded excerpt of an oversized value when a JSON assertion fails", 
     "...(397 more items)",
   ]);
   expect(payload.expected).toEqual([]);
+});
+
+function assertStep(id: string, responseStepId: string, expectation: Expectation): PlanStep {
+  return {
+    id,
+    kind: "assertion",
+    operation: "assert",
+    description: id,
+    input: { responseStepId },
+    expectation,
+  };
+}
+function evidenceOf(artifacts: Map<string, Uint8Array>, stepId: string) {
+  const bytes = artifacts.get(`http/${stepId}.json`);
+  if (!bytes) throw new Error(`Missing evidence: http/${stepId}.json`);
+  return JSON.parse(new TextDecoder().decode(bytes)) as {
+    redirects: { url: string; status: number; location: string }[];
+    response: { status: number; url: string; headers: Record<string, string> };
+  };
+}
+function stepPayload(events: RunnerEvent[], stepId: string) {
+  return events.find((event) => event.type === "step.finished" && event.payload.stepId === stepId)!
+    .payload as { status: string; observed?: unknown; expected?: unknown };
+}
+
+it("returns the 3xx response itself with redirect manual and records the chain of a followed redirect", async () => {
+  const base = await serve((req, res) => {
+    if (req.url === "/dashboard") {
+      res.writeHead(307, { location: "/login" });
+      res.end();
+    } else if (req.url === "/old") {
+      res.writeHead(301, { location: "/dashboard" });
+      res.end();
+    } else res.end("login page");
+  });
+  const f = fixture(base);
+  await f.engine.perform(requestStep("manual", ["dashboard"], { redirect: "manual" }));
+  const manual = responseOf(f.engine, "manual");
+  expect(manual).toMatchObject({ status: 307, headers: { location: "/login" }, redirects: [] });
+  await assertResponse(f.runtime, manual, { predicate: "statusIn", values: [307] });
+  await assertResponse(f.runtime, manual, {
+    predicate: "headerEquals",
+    header: "Location",
+    value: { literal: "/login" },
+  });
+  expect(evidenceOf(f.artifacts, "manual")).toMatchObject({
+    redirects: [],
+    response: { status: 307, url: `${base}/dashboard`, headers: { location: "/login" } },
+  });
+  // Default: the same request follows the redirect and the chain is evidence.
+  await f.engine.perform(requestStep("followed", ["old"]));
+  const followed = responseOf(f.engine, "followed");
+  const hops = [
+    { url: `${base}/old`, status: 301, location: "/dashboard" },
+    { url: `${base}/dashboard`, status: 307, location: "/login" },
+  ];
+  expect(followed).toMatchObject({ status: 200, url: `${base}/login`, redirects: hops });
+  expect(evidenceOf(f.artifacts, "followed")).toMatchObject({
+    redirects: hops,
+    response: { status: 200, url: `${base}/login` },
+  });
+  // An explicit "follow" behaves like the default.
+  await f.engine.perform(requestStep("explicit", ["old"], { redirect: "follow" }));
+  expect(responseOf(f.engine, "explicit").redirects).toEqual(hops);
+});
+
+it("applies redirect manual to cleanup requests like to any other request", async () => {
+  const base = await serve((req, res) => {
+    if (req.method === "POST") {
+      res.statusCode = 201;
+      res.end(JSON.stringify({ id: "item", owner: "proof" }));
+    } else if (req.method === "DELETE") {
+      res.writeHead(303, { location: "/list" });
+      res.end();
+    } else res.end("list");
+  });
+  const create = requestStep("create", ["item"], {
+    method: "POST",
+    resource: {
+      resourceType: "fixture",
+      correlationKey: { literal: "item-correlation" },
+      handle: "/id",
+      ownerProof: "/owner",
+    },
+  });
+  const cleanup = (redirect: "follow" | "manual"): ExecutablePlan["cleanup"] => [
+    {
+      resourceRef: "create",
+      operation: "request",
+      input: { method: "DELETE", pathSegments: [{ variableRef: "create.handle" }], redirect },
+      successPredicate: { predicate: "statusIn", values: [303] },
+      deadlineMs: 1000,
+      required: true,
+    },
+  ];
+  const manual = fixture(base, { plan: plan([create], cleanup("manual")) });
+  await manual.engine.perform(create);
+  expect(
+    await manual.engine.cleanup({ outcome: "passed", reasonCode: "assertions_satisfied" }),
+  ).toMatchObject({ cleanupOutcome: "passed" });
+  const followed = fixture(base, { plan: plan([create], cleanup("follow")) });
+  await followed.engine.perform(create);
+  expect(
+    await followed.engine.cleanup({ outcome: "passed", reasonCode: "assertions_satisfied" }),
+  ).toMatchObject({ cleanupOutcome: "failed" });
+});
+
+it("sends a text body verbatim under any explicit media type and still refuses a mismatched json body", async () => {
+  const base = await serve((req, res) => {
+    const chunks: Buffer[] = [];
+    req.on("data", (chunk) => chunks.push(chunk));
+    req.on("end", () =>
+      res.end(
+        JSON.stringify({
+          contentType: req.headers["content-type"],
+          body: Buffer.concat(chunks).toString(),
+        }),
+      ),
+    );
+  });
+  const f = fixture(base);
+  for (const [id, contentType, body] of [
+    ["malformed", "application/json", '{"a":'],
+    ["custom", "application/vnd.api+json; charset=utf-8", "not json at all"],
+    ["xml", "application/xml", "<a>"],
+  ] as const) {
+    await f.engine.perform(
+      requestStep(id, [], {
+        method: "POST",
+        headers: { "Content-Type": { literal: contentType } },
+        body: { kind: "text", value: { literal: body } },
+      }),
+    );
+    await assertResponse(f.runtime, responseOf(f.engine, id), {
+      predicate: "jsonEquals",
+      value: { literal: { contentType, body } },
+    });
+  }
+  await f.engine.perform(
+    requestStep("default", [], {
+      method: "POST",
+      body: { kind: "text", value: { literal: "plain" } },
+    }),
+  );
+  await assertResponse(
+    f.runtime,
+    responseOf(f.engine, "default"),
+    { predicate: "jsonEquals", value: { literal: "text/plain" } },
+    "/contentType",
+  );
+  // The serialization of json, form and artifact bodies defines their type.
+  await expect(
+    f.engine.perform(
+      requestStep("mismatch", [], {
+        method: "POST",
+        headers: { "Content-Type": { literal: "text/plain" } },
+        body: { kind: "json", value: { literal: { a: 1 } } },
+      }),
+    ),
+  ).rejects.toMatchObject({ reasonCode: "security_precondition_failed" });
+});
+
+it("evaluates cookieAbsent over every response of the step, redirect hops included, without recording cookie values", async () => {
+  const base = await serve((req, res) => {
+    if (req.url === "/start") {
+      res.writeHead(302, {
+        location: "/end",
+        "set-cookie": ["sid=hop-secret-value; Path=/; HttpOnly", "theme=dark"],
+      });
+      res.end();
+    } else {
+      res.setHeader("set-cookie", "last=1");
+      res.end("done");
+    }
+  });
+  const f = fixture(base);
+  expect(
+    await f.runtime.runSteps(
+      [
+        requestStep("go", ["start"]),
+        assertStep("other", "go", { predicate: "cookieAbsent", name: "other" }),
+        assertStep("hop", "go", { predicate: "cookieAbsent", name: "sid" }),
+      ],
+      (step) => f.engine.perform(step),
+    ),
+  ).toMatchObject({ outcome: "failed", reasonCode: "assertion_mismatch" });
+  expect(responseOf(f.engine, "go").cookieNames).toEqual(["sid", "theme", "last"]);
+  expect(stepPayload(f.events, "other").status).toBe("passed");
+  expect(stepPayload(f.events, "hop")).toMatchObject({
+    status: "failed",
+    observed: ["sid", "theme", "last"],
+    expected: { absent: "sid" },
+  });
+  const recorded =
+    JSON.stringify(f.events) + new TextDecoder().decode(f.artifacts.get("http/go.json"));
+  expect(recorded).not.toContain("hop-secret-value");
+  // Without following, only the first response counts.
+  await f.engine.perform(requestStep("first", ["start"], { redirect: "manual" }));
+  const first = responseOf(f.engine, "first");
+  expect(first.cookieNames).toEqual(["sid", "theme"]);
+  await assertResponse(f.runtime, first, { predicate: "cookieAbsent", name: "last" });
+  await expect(
+    assertResponse(f.runtime, first, { predicate: "cookieAbsent", name: "theme" }),
+  ).rejects.toMatchObject({ reasonCode: "assertion_mismatch", outcome: "failed" });
+});
+
+it("cookieAbsent passes when a response clears the cookie instead of setting it", async () => {
+  const base = await serve((_req, res) => {
+    res.setHeader("set-cookie", [
+      // Anonymous redirect clearing a stale session, as OmniRoute's /dashboard does.
+      "auth_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT",
+      "sid=x; Max-Age=0",
+      // Max-Age wins over Expires (RFC 6265 §5.3): this one is set despite the past date.
+      "keep=1; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=60",
+      "late=1; Max-Age=60; Max-Age=-1",
+    ]);
+    res.writeHead(307, { location: "/login" });
+    res.end();
+  });
+  const f = fixture(base);
+  await f.engine.perform(requestStep("anon", ["dashboard"], { redirect: "manual" }));
+  const response = responseOf(f.engine, "anon");
+  expect(response.cookieNames).toEqual(["keep"]);
+  await assertResponse(f.runtime, response, { predicate: "cookieAbsent", name: "auth_token" });
+  await assertResponse(f.runtime, response, { predicate: "cookieAbsent", name: "sid" });
+  await assertResponse(f.runtime, response, { predicate: "cookieAbsent", name: "late" });
+  await expect(
+    assertResponse(f.runtime, response, { predicate: "cookieAbsent", name: "keep" }),
+  ).rejects.toMatchObject({ reasonCode: "assertion_mismatch", outcome: "failed" });
+});
+
+it("evaluates headerMatches as an unanchored pattern and never lets a bad pattern crash the runner", async () => {
+  const base = await serve((_req, res) => {
+    res.setHeader("X-Request-Id", "req-12345");
+    res.end("ok");
+  });
+  const f = fixture(base);
+  await f.engine.perform(requestStep("read", []));
+  const response = responseOf(f.engine, "read");
+  for (const pattern of ["^req-\\d+$", "12345", "^req"])
+    await assertResponse(f.runtime, response, {
+      predicate: "headerMatches",
+      header: "X-REQUEST-ID",
+      pattern,
+    });
+  await expect(
+    assertResponse(f.runtime, response, {
+      predicate: "headerMatches",
+      header: "x-request-id",
+      pattern: "^id-",
+    }),
+  ).rejects.toMatchObject({ reasonCode: "assertion_mismatch", outcome: "failed" });
+  // An absent header never matches, not even a pattern the empty string satisfies.
+  await expect(
+    assertResponse(f.runtime, response, {
+      predicate: "headerMatches",
+      header: "x-missing",
+      pattern: ".*",
+    }),
+  ).rejects.toMatchObject({ reasonCode: "assertion_mismatch", outcome: "failed" });
+  await expect(
+    assertResponse(f.runtime, response, {
+      predicate: "headerMatches",
+      header: "x-request-id",
+      pattern: "(",
+    }),
+  ).rejects.toMatchObject({ reasonCode: "oracle_uncertain", outcome: "inconclusive" });
+  expect(
+    await f.runtime.runSteps(
+      [
+        requestStep("again", []),
+        assertStep("shape", "again", {
+          predicate: "headerMatches",
+          header: "x-request-id",
+          pattern: "^id-",
+        }),
+      ],
+      (step) => f.engine.perform(step),
+    ),
+  ).toMatchObject({ outcome: "failed" });
+  expect(stepPayload(f.events, "shape")).toMatchObject({
+    observed: "req-12345",
+    expected: { matches: "^id-" },
+  });
+});
+
+it("sends a fresh invalid credential per request without turning a rejection into a credential failure", async () => {
+  const seen: string[] = [];
+  const base = await serve((req, res) => {
+    seen.push(String(req.headers.authorization ?? req.headers["x-api-key"]));
+    res.statusCode = 401;
+    res.end("{}");
+  });
+  const f = fixture(base);
+  const bearer = { Authorization: { invalidCredential: { scheme: "Bearer" } } };
+  await f.engine.perform(requestStep("a", [], { headers: bearer }));
+  await f.engine.perform(requestStep("b", [], { headers: bearer }));
+  await f.engine.perform(
+    requestStep("c", [], { headers: { "X-Api-Key": { invalidCredential: {} } } }),
+  );
+  await fixture(base).engine.perform(requestStep("d", [], { headers: bearer }));
+  expect(seen[0]).toMatch(/^Bearer testmaster-invalid-[0-9a-f]{32}$/u);
+  expect(seen[1]).toMatch(/^Bearer testmaster-invalid-[0-9a-f]{32}$/u);
+  expect(seen[2]).toMatch(/^testmaster-invalid-[0-9a-f]{32}$/u);
+  expect(new Set([seen[0], seen[1], seen[3]]).size).toBe(3);
+  // A 401 for a credential the plan made up is the expected answer, not a rejected static credential.
+  await expect(
+    assertResponse(f.runtime, responseOf(f.engine, "a"), { predicate: "statusIn", values: [200] }),
+  ).rejects.toMatchObject({ reasonCode: "assertion_mismatch" });
+  const real = fixture(base, {
+    variables: { auth: { value: "Bearer real-canary", sensitive: true } },
+  });
+  await real.engine.perform(
+    requestStep("real", [], { headers: { Authorization: { variableRef: "auth" } } }),
+  );
+  await expect(
+    assertResponse(real.runtime, responseOf(real.engine, "real"), {
+      predicate: "statusIn",
+      values: [200],
+    }),
+  ).rejects.toMatchObject({ reasonCode: "manual_auth_required" });
+  // Real credentials still come only from references; the fake form only fits credential headers.
+  const sent = seen.length;
+  await expect(
+    f.engine.perform(
+      requestStep("literal", [], { headers: { Authorization: { literal: "Bearer real" } } }),
+    ),
+  ).rejects.toMatchObject({ reasonCode: "security_precondition_failed" });
+  await expect(
+    f.engine.perform(
+      requestStep("misplaced", [], { headers: { "X-Test": { invalidCredential: {} } } }),
+    ),
+  ).rejects.toMatchObject({ reasonCode: "security_precondition_failed" });
+  expect(seen).toHaveLength(sent);
 });

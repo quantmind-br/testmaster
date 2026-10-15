@@ -8,9 +8,11 @@ import { canonicalJson, sha256 } from "@testmaster/domain";
 import ignore from "ignore";
 import type { CodeRef, CodeSummary, CodeSummaryOptions, CodeSymbol } from "./types.js";
 
-export const CODE_DETECTOR_VERSION = "1.3.0";
+export const CODE_DETECTOR_VERSION = "1.4.0";
 const DEFAULT_MAX_SYMBOLS_PER_FILE = 200;
 const DEFAULT_MAX_SYMBOLS = 20_000;
+/** Leading bytes inspected for a NUL byte; the same window Git uses to call a file binary. */
+const BINARY_SNIFF_BYTES = 8000;
 /** Relative import specifiers stored per summary; see `retainRelativeImports`. */
 export const MAX_RETAINED_IMPORTS = 20_000;
 /** Per-run limits applied when `CodeSummaryOptions` does not set them. */
@@ -707,7 +709,9 @@ export async function summarizeCode(
           continue;
         }
         total += bytes.length;
-        if (bytes.includes(0)) {
+        // Git's heuristic: a file is binary only when a NUL byte occurs in its first 8000 bytes.
+        // A NUL later on (for example a join separator in a source file) is still valid text.
+        if (bytes.subarray(0, BINARY_SNIFF_BYTES).includes(0)) {
           summary.skippedFiles.push({ path, reason: "binary" });
           continue;
         }

@@ -109,15 +109,41 @@ const RESOURCE_LINK_PROTOCOL = "2025-06-18";
 /** JSON-RPC code of an unknown resource (MCP specification). */
 const RESOURCE_NOT_FOUND = -32002;
 const RESOURCE_PAGE_BYTES = 65536;
+/** Entries of a project-features resource page. */
+const FEATURE_PAGE = 100;
+/** Longest list the analyze_code receipt carries inline; the rest is counted, not sent. */
+const RECEIPT_LIST_CAP = { skippedFiles: 50, warnings: 25, features: 100, diffFiles: 200 } as const;
 /** The part of a run receipt this server reads back. */
 interface McpReceipt {
   batchId: string;
   allMembers: string[];
 }
 type RunMember = BatchReceipt["memberRuns"][number];
+/** A resource page: JSON documents, or raw bytes served as `text` or `blob` by their media type. */
 type ResourcePayload =
   | { json: unknown }
-  | { blob: Buffer; mimeType: string; meta: Record<string, unknown> };
+  | { bytes: Buffer; mimeType: string; meta: Record<string, unknown> };
+const TEXT_MEDIA_TYPE =
+  /^(text\/.+|application\/(json|xml|x-ndjson|ndjson|jsonl|x-jsonlines|javascript|yaml|x-yaml)|.+\/.+\+(json|xml))$/;
+/** Textual media types are returned as `text` contents so agents can read them; the rest as `blob`. */
+function isTextual(mimeType: string): boolean {
+  return TEXT_MEDIA_TYPE.test((mimeType.split(";")[0] ?? "").trim().toLowerCase());
+}
+/** Length of the longest prefix of `page` that does not end inside a UTF-8 sequence. */
+function utf8PrefixLength(page: Buffer): number {
+  // A sequence has at most 4 bytes, so only the last 3 bytes can begin one that is unfinished.
+  for (let back = 1; back <= Math.min(3, page.length); back++) {
+    const byte = page[page.length - back] as number;
+    if ((byte & 0xc0) === 0x80) continue;
+    const needed = byte >= 0xf0 ? 4 : byte >= 0xe0 ? 3 : byte >= 0xc0 ? 2 : 1;
+    return needed > back && page.length - back > 0 ? page.length - back : page.length;
+  }
+  return page.length;
+}
+/** The first `limit` entries and how many were left out. */
+function capped<T>(items: readonly T[], limit: number) {
+  return { shown: items.slice(0, limit), omitted: Math.max(0, items.length - limit) };
+}
 interface SchemaNode {
   properties?: Record<string, SchemaNode>;
   items?: SchemaNode;
@@ -352,12 +378,17 @@ export class TestMasterMcp {
     this.server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => ({
       resourceTemplates: [
         ["testmaster://projects/{id}", "Project", "Project entity by project id"],
+        [
+          "testmaster://projects/{projectId}/features{?match,cursor}",
+          "Project features",
+          "Features of a project with their stable keys (route:GET:/login, endpoint:POST:/api/x), ordered by key and paged 100 at a time. match keeps the keys containing that text (case-insensitive); follow next for the following page. testmaster_explore featureIds come from here",
+        ],
         ["testmaster://runs/{id}/result", "Run result", "Phase, outcome and gate of a run"],
         ["testmaster://runs/{id}/manifest", "Evidence manifest", "Evidence manifest page of a run"],
         [
           "testmaster://runs/{id}/report",
           "Committed report",
-          "Committed JSON report, served as blob pages; _meta carries next, offset and sizeBytes",
+          "Committed JSON report as text pages (cut on UTF-8 character boundaries); concatenate the pages, then parse. _meta carries next, offset and sizeBytes",
         ],
         ["testmaster://revisions/{id}/plan", "Executable plan", "Plan of a test revision"],
         [
@@ -368,7 +399,7 @@ export class TestMasterMcp {
         [
           "testmaster://runs/{id}/artifacts/{path}{?attemptId,offset}",
           "Verified artifact page",
-          "Bytes of a verified artifact as a blob page with the artifact's own mimeType; _meta carries next, offset and sizeBytes",
+          "Bytes of a verified artifact with the artifact's own mimeType: text for JSON, text and other textual types (cut on UTF-8 character boundaries), blob (base64) for binary types; _meta carries next, offset and sizeBytes",
         ],
       ].map(([uriTemplate, name, description]) => ({
         uriTemplate: String(uriTemplate),
@@ -416,18 +447,23 @@ export class TestMasterMcp {
           throw new McpError(ErrorCode.InvalidParams, error.message, { uri, code: error.code });
         throw error;
       }
-      return {
-        contents: [
-          "json" in payload
-            ? { uri, mimeType: "application/json", text: JSON.stringify(payload.json) }
+      const content =
+        "json" in payload
+          ? { uri, mimeType: "application/json", text: JSON.stringify(payload.json) }
+          : isTextual(payload.mimeType)
+            ? {
+                uri,
+                mimeType: payload.mimeType,
+                text: payload.bytes.toString("utf8"),
+                _meta: payload.meta,
+              }
             : {
                 uri,
                 mimeType: payload.mimeType,
-                blob: payload.blob.toString("base64"),
+                blob: payload.bytes.toString("base64"),
                 _meta: payload.meta,
-              },
-        ],
-      };
+              };
+      return { contents: [content] };
     });
   }
   async connect(transport: Transport): Promise<void> {
@@ -758,13 +794,45 @@ export class TestMasterMcp {
         if (!detail.codeSnapshot)
           throw new ContractError("PRECONDITION_FAILED", "Discovery has no code snapshot");
         const { diff } = detail;
+        const { skippedFiles: storedSkipped, ...snapshot } = detail.codeSnapshot;
+        const skipped = storedSkipped ?? detail.summary.skippedFiles;
+        const byReason = new Map<string, number>();
+        for (const file of skipped) byReason.set(file.reason, (byReason.get(file.reason) ?? 0) + 1);
+        const skippedShown = capped(skipped, RECEIPT_LIST_CAP.skippedFiles);
+        const warnings = capped(detail.summary.warnings, RECEIPT_LIST_CAP.warnings);
+        const features = capped(
+          detail.featureMap.features
+            .map((feature) => ({ id: feature.id, stableKey: feature.stableKey }))
+            .sort((left, right) =>
+              left.stableKey < right.stableKey ? -1 : left.stableKey > right.stableKey ? 1 : 0,
+            ),
+          RECEIPT_LIST_CAP.features,
+        );
+        const changes = diff ? capped(diff.changes, RECEIPT_LIST_CAP.diffFiles) : undefined;
+        const selected = diff
+          ? capped(diff.impact.selectedFiles, RECEIPT_LIST_CAP.diffFiles)
+          : undefined;
+        const excluded = diff
+          ? capped(diff.impact.excludedFiles, RECEIPT_LIST_CAP.diffFiles)
+          : undefined;
         return {
-          codeSnapshot: detail.codeSnapshot,
+          codeSnapshot: snapshot,
           scannedFileCount: detail.summary.scannedFiles.length,
-          skippedFiles: detail.codeSnapshot.skippedFiles ?? detail.summary.skippedFiles,
-          warnings: detail.summary.warnings,
-          featureRefs: detail.featureMap.features.map((feature) => feature.id),
-          ...(diff
+          skippedFileCount: skipped.length,
+          skippedByReason: [...byReason]
+            .map(([reason, count]) => ({ reason, count }))
+            .sort(
+              (left, right) => right.count - left.count || (left.reason < right.reason ? -1 : 1),
+            ),
+          skippedFiles: skippedShown.shown,
+          omittedSkippedFiles: skippedShown.omitted,
+          warnings: warnings.shown,
+          omittedWarnings: warnings.omitted,
+          featureCount: detail.featureMap.features.length,
+          features: features.shown,
+          omittedFeatures: features.omitted,
+          featuresResource: `testmaster://projects/${String(args.projectId)}/features`,
+          ...(diff && changes && selected && excluded
             ? {
                 diff: {
                   baseSha: diff.baseSha,
@@ -772,15 +840,20 @@ export class TestMasterMcp {
                   mergeBase: diff.mergeBase,
                   includeWorkingTree: diff.includeWorkingTree,
                   dirtyHash: diff.dirtyHash,
-                  changes: diff.changes,
+                  changes: changes.shown,
                   impact: {
                     criticalSmoke: diff.impact.criticalSmoke,
                     authTouched: diff.impact.authTouched,
-                    selectedFiles: diff.impact.selectedFiles,
-                    excludedFiles: diff.impact.excludedFiles,
+                    selectedFiles: selected.shown,
+                    excludedFiles: excluded.shown,
                     gaps: diff.impact.gaps,
                   },
                   fingerprint: diff.fingerprint,
+                  omitted: {
+                    changes: changes.omitted,
+                    selectedFiles: selected.omitted,
+                    excludedFiles: excluded.omitted,
+                  },
                 },
               }
             : {}),
@@ -792,6 +865,7 @@ export class TestMasterMcp {
         const result = await app.requirements.normalize({
           projectId: String(args.projectId),
           sourceRevisionIds: args.sourceRevisionIds as string[],
+          ...(typeof args.provider === "string" ? { provider: args.provider } : {}),
           ...(typeof args.model === "string" ? { model: args.model } : {}),
           signal,
           onProgress: (step) => {
@@ -838,6 +912,18 @@ export class TestMasterMcp {
       case "testmaster_generate_tests": {
         const revisions = args.revisionIds as string[] | undefined;
         const proposals = args.proposalIds as string[] | undefined;
+        // The schema is a flat object so clients show every property; this is the "one of" rule.
+        if (!revisions && !proposals) {
+          const issues = [
+            { path: "", rule: "required", message: "must have proposalIds or revisionIds" },
+          ];
+          throw new ContractError(
+            "INVALID_ARGUMENT",
+            "Provide proposalIds or revisionIds (at least one); all must belong to one project",
+            { issues },
+            issues,
+          );
+        }
         const projects = new Set<string>();
         for (const id of revisions ?? [])
           projects.add(String(app.tests.get(String(app.revisions.get(id).testId)).projectId));
@@ -883,7 +969,10 @@ export class TestMasterMcp {
         for (const id of args.featureIds as string[]) {
           const feature = app.context.entities.get("Feature", app.context.workspaceId, id);
           if (!feature || feature.projectId !== args.projectId)
-            throw new ContractError("FORBIDDEN", "Feature is outside project");
+            throw new ContractError("FORBIDDEN", "Feature is outside project", {
+              featureId: id,
+              featuresResource: `testmaster://projects/${String(args.projectId)}/features`,
+            });
         }
         let jobId: string;
         let task: Promise<void> | undefined;
@@ -1164,6 +1253,14 @@ export class TestMasterMcp {
     switch (url.hostname) {
       case "projects":
         if (parts.length === 1) return { json: app.projects.get(id) };
+        if (parts.length === 2 && parts[1] === "features")
+          return {
+            json: this.features(
+              id,
+              url.searchParams.get("match") || undefined,
+              url.searchParams.get("cursor") ?? undefined,
+            ),
+          };
         break;
       case "revisions":
         if (parts.length === 2 && parts[1] === "plan") {
@@ -1197,18 +1294,19 @@ export class TestMasterMcp {
           );
           if (offset > serialized.length)
             throw new ContractError("INVALID_ARGUMENT", "Invalid report cursor");
-          const end = Math.min(offset + RESOURCE_PAGE_BYTES, serialized.length);
-          // A page is a byte slice of the JSON document: clients concatenate the pages, then parse.
+          const window = serialized.subarray(offset, offset + RESOURCE_PAGE_BYTES);
+          const more = offset + window.length < serialized.length;
+          // A page ends on a character boundary: clients concatenate the pages, then parse.
+          const end = offset + (more ? utf8PrefixLength(window) : window.length);
           return {
-            blob: serialized.subarray(offset, end),
+            bytes: serialized.subarray(offset, end),
             mimeType: "application/json",
             meta: {
               "testmaster:offset": offset,
               "testmaster:sizeBytes": serialized.length,
-              "testmaster:next":
-                end < serialized.length
-                  ? `testmaster://runs/${id}/report?cursor=${this.cursor(end, `report:${id}`)}`
-                  : null,
+              "testmaster:next": more
+                ? `testmaster://runs/${id}/report?cursor=${encodeURIComponent(this.cursor(end, `report:${id}`))}`
+                : null,
               "testmaster:result": this.result(id),
             },
           };
@@ -1221,17 +1319,23 @@ export class TestMasterMcp {
               : {}),
             offset,
           });
+          // A textual page that is not the last one must not end inside a character.
+          const length =
+            page.nextOffset !== null && isTextual(page.entry.mimeType)
+              ? utf8PrefixLength(page.bytes)
+              : page.bytes.length;
+          const next = page.nextOffset === null ? null : offset + length;
           return {
-            blob: page.bytes,
+            bytes: page.bytes.subarray(0, length),
             mimeType: page.entry.mimeType,
             meta: {
               "testmaster:artifact": page.entry,
               "testmaster:offset": offset,
               "testmaster:sizeBytes": page.entry.sizeBytes,
               "testmaster:next":
-                page.nextOffset === null
+                next === null
                   ? null
-                  : `testmaster://runs/${id}/artifacts/${parts[2]}?attemptId=${url.searchParams.get("attemptId") ?? ""}&offset=${page.nextOffset}`,
+                  : `testmaster://runs/${id}/artifacts/${parts[2]}?attemptId=${url.searchParams.get("attemptId") ?? ""}&offset=${next}`,
             },
           };
         }
@@ -1244,6 +1348,48 @@ export class TestMasterMcp {
         break;
     }
     throw new ContractError("NOT_FOUND", "Unknown resource");
+  }
+  /** One page of a project's features, ordered by stable key, optionally narrowed by key substring. */
+  private features(projectId: string, match: string | undefined, cursor: string | undefined) {
+    const app = this.options.application;
+    app.projects.get(projectId);
+    if (match !== undefined && match.length > 200)
+      throw new ContractError("INVALID_ARGUMENT", "match must be at most 200 characters", {
+        field: "match",
+      });
+    const binding = `features:${projectId}:${match ?? ""}`;
+    const offset = this.decodeCursor(cursor, binding);
+    // LIKE with an escaped pattern is the substring test both SQL engines share.
+    const filter = match === undefined ? "" : " AND lower(stable_key) LIKE ? ESCAPE '\\'";
+    const pattern =
+      match === undefined ? [] : [`%${match.toLowerCase().replace(/[\\%_]/g, "\\$&")}%`];
+    const where = [app.context.workspaceId, projectId, ...pattern];
+    const total = Number(
+      app.database.get<{ n: number | string }>(
+        `SELECT COUNT(*) AS n FROM features WHERE workspace_id=? AND project_id=?${filter}`,
+        ...where,
+      )?.n ?? 0,
+    );
+    if (offset > total) throw new ContractError("INVALID_ARGUMENT", "Invalid features cursor");
+    const rows = app.database.all<{ id: string; stable_key: string }>(
+      `SELECT id, stable_key FROM features WHERE workspace_id=? AND project_id=?${filter} ORDER BY stable_key, id LIMIT ? OFFSET ?`,
+      ...where,
+      FEATURE_PAGE,
+      offset,
+    );
+    const end = offset + rows.length;
+    return {
+      projectId,
+      ...(match === undefined ? {} : { match }),
+      total,
+      features: rows.map((row) => ({ id: row.id, stableKey: row.stable_key })),
+      next:
+        end < total
+          ? `testmaster://projects/${projectId}/features?${
+              match === undefined ? "" : `match=${encodeURIComponent(match)}&`
+            }cursor=${encodeURIComponent(this.cursor(end, binding))}`
+          : null,
+    };
   }
 }
 export function createMcpServer(options: McpOptions): TestMasterMcp {

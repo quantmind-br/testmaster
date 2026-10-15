@@ -132,7 +132,7 @@ delivered without sending anything; the delivery state lives in the Delivery ent
 
 | Symptom | Cause and action |
 |---|---|
-| `doctor` FAIL `runtime`, runs exit 9 | Docker daemon unreachable or hardened start failed. Fix Docker; TestMaster never falls back to unsandboxed execution. |
+| `doctor` FAIL `runtime` (exit 9); runs exit 15 | Docker daemon unreachable or hardened start failed. Fix Docker; TestMaster never falls back to unsandboxed execution. |
 | `doctor` FAIL `images` | `containers/images.lock.json` does not match local images or the seccomp profile hash. Run `node containers/build.mjs`. |
 | Any command exits 6 with `unsupported_node` (embedding applications see `doctor` FAIL `node`) | Node.js is not a 24.x release (`engines` `>=24 <25`). Install Node 24; the CLI opens nothing before this check. |
 | `doctor` FAIL `writablePaths` or admission refuses `storage_not_writable` | The data directory (`TESTMASTER_DATA_DIR`) is read-only or owned by another user. Fix permissions or the mount; no Run is admitted until it is writable. |

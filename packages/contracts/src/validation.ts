@@ -1,8 +1,13 @@
-import type { ValidateFunction } from "ajv";
+import type { ErrorObject, ValidateFunction } from "ajv";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import { schemaCatalog } from "./catalog.js";
-import type { ExecutablePlan, PlanStep } from "./plans.js";
+import {
+  type ExecutablePlan,
+  type Expectation,
+  invalidCredentialHeaders,
+  type PlanStep,
+} from "./plans.js";
 import type { RunnerEvent } from "./protocol.js";
 import { ContractError, requireCapability, type ValidationIssue } from "./registries.js";
 
@@ -207,6 +212,142 @@ export function validateAgainstSchema<T = unknown>(
     });
   return value as T;
 }
+/** Property names that tell the branches of a union apart. */
+const UNION_DISCRIMINATORS = ["kind", "operation", "predicate", "runner", "type", "by", "from"];
+function within(path: string, base: string): boolean {
+  return path === base || path.startsWith(`${base}/`);
+}
+function valueAt(root: unknown, pointer: string): unknown {
+  let current = root;
+  if (pointer === "") return current;
+  for (const encoded of pointer.slice(1).split("/")) {
+    if (current === null || typeof current !== "object") return undefined;
+    current = (current as Record<string, unknown>)[
+      encoded.replaceAll("~1", "/").replaceAll("~0", "~")
+    ];
+  }
+  return current;
+}
+function allowedValues(error: ErrorObject): unknown[] {
+  if (error.keyword === "const") return [error.params.allowedValue];
+  if (error.keyword === "enum") return error.params.allowedValues as unknown[];
+  return [];
+}
+function enumerationError(union: ErrorObject, path: string, allowed: unknown[]): ErrorObject {
+  const unique = [...new Set(allowed.map(String))];
+  return {
+    keyword: "enum",
+    instancePath: path,
+    schemaPath: union.schemaPath,
+    params: { allowedValues: unique },
+    message: `must be equal to one of the allowed values: ${unique.join(", ")}`,
+  };
+}
+/**
+ * Ajv reports every branch of a failed `anyOf`, so one wrong property of a step yields hundreds of
+ * issues about the other operations. This keeps the issues of the branch the instance selects
+ * through its discriminator properties; when no branch is selected it reports the allowed values
+ * of the discriminator once. A union without discriminators keeps its only branch that fails least.
+ */
+function pruneUnionErrors(errors: readonly ErrorObject[], root: unknown): ErrorObject[] {
+  const out: ErrorObject[] = [];
+  for (const error of errors) {
+    if (error.keyword !== "anyOf") {
+      out.push(error);
+      continue;
+    }
+    // The branch errors of a union are emitted just before its own `anyOf` error.
+    const parent = error.schemaPath.slice(0, error.schemaPath.lastIndexOf("/") + 1);
+    const branchBase = `${error.schemaPath}/`;
+    let start = out.length;
+    while (start > 0) {
+      const previous = out[start - 1] as ErrorObject;
+      if (!within(previous.instancePath, error.instancePath)) break;
+      if (previous.schemaPath.startsWith(parent) && !previous.schemaPath.startsWith(branchBase))
+        break;
+      start--;
+    }
+    const segment = out.splice(start);
+    const branches = new Map<number, ErrorObject[]>();
+    let current = 0;
+    for (const item of segment) {
+      if (item.schemaPath.startsWith(branchBase)) {
+        const match = /^(\d+)(?:\/|$)/u.exec(item.schemaPath.slice(branchBase.length));
+        if (match) current = Number(match[1]);
+      }
+      const list = branches.get(current);
+      if (list) list.push(item);
+      else branches.set(current, [item]);
+    }
+    const lists = [...branches.entries()].sort((a, b) => a[0] - b[0]).map(([, list]) => list);
+    out.push(...pruneUnion(error, segment, lists, root));
+  }
+  return out;
+}
+function pruneUnion(
+  union: ErrorObject,
+  segment: ErrorObject[],
+  lists: ErrorObject[][],
+  root: unknown,
+): ErrorObject[] {
+  // A union of literals reports one failed constant per branch: that is one enumeration.
+  if (
+    lists.length > 0 &&
+    lists.every(
+      (list) =>
+        list.length === 1 &&
+        list[0]?.keyword === "const" &&
+        list[0].instancePath === union.instancePath,
+    )
+  )
+    return [
+      enumerationError(
+        union,
+        union.instancePath,
+        lists.flatMap((list) => allowedValues(list[0] as ErrorObject)),
+      ),
+    ];
+  let candidates = lists;
+  for (const name of UNION_DISCRIMINATORS) {
+    const path = `${union.instancePath}/${name}`;
+    const mismatch = (error: ErrorObject): boolean =>
+      ((error.keyword === "const" || error.keyword === "enum") && error.instancePath === path) ||
+      (error.keyword === "required" &&
+        error.instancePath === union.instancePath &&
+        error.params.missingProperty === name);
+    if (!candidates.some((list) => list.some(mismatch))) continue;
+    const matching = candidates.filter((list) => !list.some(mismatch));
+    if (matching.length === 0) {
+      if (valueAt(root, path) === undefined)
+        return [
+          {
+            keyword: "required",
+            instancePath: union.instancePath,
+            schemaPath: union.schemaPath,
+            params: { missingProperty: name },
+            message: `must have required property '${name}'`,
+          },
+        ];
+      return [
+        enumerationError(
+          union,
+          path,
+          candidates.flatMap((list) =>
+            list.flatMap((error) => (error.instancePath === path ? allowedValues(error) : [])),
+          ),
+        ),
+      ];
+    }
+    candidates = matching;
+  }
+  if (candidates.length > 1) {
+    const fewest = Math.min(...candidates.map((list) => list.length));
+    const best = candidates.filter((list) => list.length === fewest);
+    if (best.length === 1) return best[0] as ErrorObject[];
+  }
+  if (candidates.length < lists.length) return candidates.flat();
+  return [...segment, union];
+}
 export function validate<T = unknown>(name: string, value: unknown): T {
   assertNfc(value);
   let validator = compiled.get(name);
@@ -215,15 +356,23 @@ export function validate<T = unknown>(name: string, value: unknown): T {
     compiled.set(name, validator);
   }
   if (!validator(value)) {
-    const issues = (validator.errors ?? []).map((error) => ({
-      path:
-        error.instancePath +
-        (error.keyword === "additionalProperties"
-          ? `/${String(error.params.additionalProperty)}`
-          : ""),
-      rule: error.keyword,
-      message: error.message ?? "Invalid value",
-    }));
+    const seen = new Set<string>();
+    const issues: ValidationIssue[] = [];
+    for (const error of pruneUnionErrors(validator.errors ?? [], value)) {
+      const issue = {
+        path:
+          error.instancePath +
+          (error.keyword === "additionalProperties"
+            ? `/${String(error.params.additionalProperty)}`
+            : ""),
+        rule: error.keyword,
+        message: error.message ?? "Invalid value",
+      };
+      const key = `${issue.path}\u0000${issue.rule}\u0000${issue.message}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      issues.push(issue);
+    }
     throw new ContractError("INVALID_ARGUMENT", `Invalid ${name}`, { issues }, issues);
   }
   const validateNestedPlans = (candidate: unknown): void => {
@@ -441,7 +590,15 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
         "visualMatches",
         "accessibilityViolations",
       ];
-      const responsePredicates = ["jsonEquals", "jsonSchema", "statusIn", "headerEquals"];
+      const responsePredicates = [
+        "jsonEquals",
+        "jsonSchema",
+        "statusIn",
+        "headerEquals",
+        "headerMatches",
+        "cookieAbsent",
+      ];
+      validatePattern(step.expectation, `${path}/expectation`, reject);
       if (
         locatorPredicates.includes(predicate) &&
         (!("locator" in input) || plan.runner !== "playwright")
@@ -486,8 +643,10 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
     }
   };
   walk(plan, "");
-  for (const [index, cleanup] of (plan.cleanup ?? []).entries())
+  for (const [index, cleanup] of (plan.cleanup ?? []).entries()) {
     validateHeaders(cleanup.input.headers ?? {}, `/cleanup/${index}/input/headers`, reject);
+    validatePattern(cleanup.successPredicate, `/cleanup/${index}/successPredicate`, reject);
+  }
   if (issues.length)
     throw new ContractError(
       "INVALID_ARGUMENT",
@@ -512,7 +671,21 @@ function validateHeaders(
       lower.startsWith("x-forwarded-")
     )
       reject(`${path}/${name}`, "header", "Destination or proxy override is forbidden");
-    const object = value as { literal?: unknown; secretRef?: string; variableRef?: string };
+    const object = value as {
+      literal?: unknown;
+      secretRef?: string;
+      variableRef?: string;
+      invalidCredential?: unknown;
+    };
+    if ("invalidCredential" in object) {
+      if (!(invalidCredentialHeaders as readonly string[]).includes(lower))
+        reject(
+          `${path}/${name}`,
+          "header",
+          `invalidCredential is only valid on ${invalidCredentialHeaders.join(", ")}`,
+        );
+      continue;
+    }
     if (
       "literal" in object &&
       (typeof object.literal !== "string" || /[\r\n]/.test(object.literal))
@@ -523,6 +696,19 @@ function validateHeaders(
       "literal" in object
     )
       reject(`${path}/${name}`, "secretRef", "Authentication headers require a reference");
+  }
+}
+/** A `headerMatches` pattern the runner could not compile is a plan error, never a runtime failure. */
+function validatePattern(expectation: Expectation, path: string, reject: Reject): void {
+  if (expectation.predicate !== "headerMatches") return;
+  try {
+    new RegExp(expectation.pattern, "u");
+  } catch (error) {
+    reject(
+      `${path}/pattern`,
+      "pattern",
+      `Pattern is not a valid ECMAScript regular expression with the u flag: ${error instanceof Error ? error.message : "invalid"}`,
+    );
   }
 }
 const terminalOnlyOperations: ReadonlySet<string> = new Set([

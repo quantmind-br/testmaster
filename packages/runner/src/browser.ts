@@ -17,7 +17,12 @@ import {
   type Locator,
   type Page,
 } from "playwright-core";
-import { denialDisposition, EgressDenials } from "./egress.js";
+import {
+  denialDisposition,
+  deniedOrigin,
+  deniedSubrequestMessage,
+  EgressDenials,
+} from "./egress.js";
 import { authorizeUrl, canonicalUrl, HttpEngine, readAuthorizedArtifact } from "./http.js";
 import { type ObservedPage, observePage } from "./observation.js";
 import {
@@ -1467,7 +1472,13 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
           await route.continue();
         } catch {
           await route.abort("blockedbyclient").catch(() => undefined);
-          deny("Subrequest origin is not authorized");
+          // The origin is allowed; the browser could not forward the request (for example the page
+          // or context closed mid-request). The attempt still stops, but the reason must not blame the origin.
+          deny(
+            runtime.scrub(
+              `Browser could not forward a request to the authorized origin ${deniedOrigin(request.url())} (${request.resourceType()} request)`,
+            ),
+          );
         }
         return;
       }
@@ -1485,7 +1496,8 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
         disposition,
       });
       await route.abort("blockedbyclient").catch(() => undefined);
-      if (disposition === "fatal") deny("Subrequest origin is not authorized");
+      if (disposition === "fatal")
+        deny(runtime.scrub(deniedSubrequestMessage(request.url(), request.resourceType())));
     });
     await context.routeWebSocket("**/*", (socket) => {
       void socket.close({

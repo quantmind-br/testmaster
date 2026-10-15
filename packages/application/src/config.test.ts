@@ -298,6 +298,18 @@ it("redacts env secrets and credential URL patterns from exported config without
   expect(resolved.effectiveConfig.config.project?.name).toBe(secret);
 });
 
+it("exports the config when credential-named variables hold flags, keeping booleans intact", async () => {
+  const paths = await fixture();
+  const resolved = await resolveConfig({ ...paths, env: {} });
+  const exported = exportEffectiveConfig(resolved, {
+    INSPECTOR_MASK_SECRETS: "true",
+    REQUIRE_API_KEY: "false",
+    ALLOW_API_KEY_REVEAL: "false",
+  });
+  expect(exported.config).toEqual(resolved.effectiveConfig.config);
+  expect(JSON.stringify(exported)).not.toContain("[REDACTED]");
+});
+
 it("validates operator log retention and exposes it without changing artifact retention", async () => {
   const paths = await fixture();
   const resolved = await resolveConfig({ ...paths, env: { TESTMASTER_LOG_RETENTION_DAYS: "7" } });

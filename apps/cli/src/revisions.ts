@@ -7,12 +7,20 @@ export function revisionCommands(test: Command, runtime: Runtime): void {
     group.command("create <test-id>").requiredOption("--plan <path>").option("--parent <id>"),
     async (rt, args, options) => {
       const plan = await rt.plan(required(options, "plan"));
+      const app = await rt.app();
+      const revision = app.revisions.create(String(args[0]), plan, string(options, "parent"));
+      const test = app.tests.get(revision.testId);
+      // A new revision never becomes the test's active one: runs keep using the active revision
+      // until it is promoted, so the receipt says so and gives the exact command.
+      const active = test.activeRevisionId === revision.id;
+      const promote = `testmaster test revision promote ${revision.id} --expected-version ${test.version}`;
       return {
-        data: await (await rt.app()).revisions.create(
-          String(args[0]),
-          plan,
-          string(options, "parent"),
-        ),
+        data: { ...revision, active, nextActions: active ? [] : [promote] },
+        warnings: active
+          ? []
+          : [
+              `Revision ${revision.id} is not active: runs keep using ${test.activeRevisionId ?? "no revision"}. Activate it with: ${promote}`,
+            ],
       };
     },
   );

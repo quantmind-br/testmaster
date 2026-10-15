@@ -207,9 +207,11 @@ export function exitCodeForRun(
   if (run.gate === "passed") return 0;
   const mapping = run.reasonCode ? reasonRegistry[run.reasonCode] : undefined;
   if (mapping) return mapping.exit;
-  if (run.outcome === "blocked") return 9;
+  if (run.outcome === "blocked") return 15;
   return 1;
 }
+// Lower rank wins. A blocked run (15) is a refusal to run, so it outranks a plain nonpass (1) but
+// not a wait deadline (7), which says nothing about the run's verdict.
 const exitRanks: Record<number, number> = {
   3: 0,
   9: 0,
@@ -222,15 +224,16 @@ const exitRanks: Record<number, number> = {
   10: 3,
   11: 3,
   7: 4,
-  1: 5,
-  0: 6,
+  15: 5,
+  1: 6,
+  0: 7,
 };
 export function batchExitCode(codes: readonly number[]): number {
   let chosen = 0;
   for (const code of codes) {
     if (!(code in exitRanks))
       throw new ContractError("INVALID_ARGUMENT", "Unknown exit code", { code });
-    if ((exitRanks[code] ?? 6) < (exitRanks[chosen] ?? 6)) chosen = code;
+    if ((exitRanks[code] ?? 7) < (exitRanks[chosen] ?? 7)) chosen = code;
   }
   return chosen;
 }

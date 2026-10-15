@@ -43,6 +43,57 @@ export function scrubEvidenceText(text: string, secrets: readonly string[] = [])
     .replace(/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/gu, "[REDACTED]");
   return { text: output, redacted: output !== text };
 }
+
+const secretVariableName = /secret|token|password|credential|api_key/iu;
+/** Shorter values are flags and counters (`true`, `false`, `1`), never credentials. */
+const minimumSecretLength = 8;
+/**
+ * Values of the environment variables that look like credentials, for scrubbing evidence. A flag
+ * such as `INSPECTOR_MASK_SECRETS=true` or `REQUIRE_API_KEY=false` is not a credential: treating it
+ * as one would redact every JSON `true`/`false` in the evidence.
+ */
+export function environmentSecretValues(env: NodeJS.ProcessEnv = process.env): string[] {
+  return [
+    ...new Set(
+      Object.entries(env).flatMap(([name, value]) =>
+        secretVariableName.test(name) && value !== undefined && value.length >= minimumSecretLength
+          ? [value]
+          : [],
+      ),
+    ),
+  ];
+}
+const sensitiveStringProperty =
+  /^(?:password|passwd|token|access_token|api_key|secret|document|cpf|email)$/iu;
+/**
+ * Deep-scrubs the strings of a JSON-compatible value (keys and values) with `scrubEvidenceText`
+ * and redacts string values of the sensitive property names that `scrubEvidenceText` redacts in
+ * JSON text. Numbers, booleans and null are never touched, so the result stays valid JSON
+ * whatever the secrets are; `undefined` properties are dropped as `JSON.stringify` does.
+ */
+export function scrubEvidenceValue<T>(value: T, secrets: readonly string[] = []): T {
+  const visit = (item: unknown): unknown => {
+    if (typeof item === "string") return scrubEvidenceText(item, secrets).text;
+    if (Array.isArray(item)) return item.map((entry) => visit(entry === undefined ? null : entry));
+    if (item && typeof item === "object")
+      return Object.fromEntries(
+        Object.entries(item).flatMap(([key, entry]) =>
+          entry === undefined
+            ? []
+            : [
+                [
+                  scrubEvidenceText(key, secrets).text,
+                  typeof entry === "string" && sensitiveStringProperty.test(key)
+                    ? "[REDACTED]"
+                    : visit(entry),
+                ],
+              ],
+        ),
+      );
+    return item;
+  };
+  return visit(value) as T;
+}
 export function scrubBytes(
   bytes: Uint8Array,
   secrets: readonly Uint8Array[],

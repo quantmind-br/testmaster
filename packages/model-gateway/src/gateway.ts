@@ -156,7 +156,12 @@ export class ModelGateway {
       throw new ContractError("INVALID_ARGUMENT", "Invalid model price table");
     }
     const key = this.options.env?.(provider.apiKeyEnv) ?? process.env[provider.apiKeyEnv];
-    if (!key) throw new ContractError("PRECONDITION_FAILED", "Provider API key is unavailable");
+    if (!key)
+      throw new ContractError("PRECONDITION_FAILED", "Provider API key is unavailable", {
+        reasonCode: "provider_credentials_unavailable",
+        provider: provider.id,
+        apiKeyEnv: provider.apiKeyEnv,
+      });
     const secrets = [...(input.dataPolicy.secrets ?? []), key];
     let messages = input.messages.map((message) => ({
       role: message.role,

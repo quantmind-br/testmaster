@@ -17,7 +17,9 @@ async function secretValue(runtime: Runtime, options: Options): Promise<string> 
       throw new ContractError("INVALID_ARGUMENT", "Secret environment variable is not set");
     return value;
   }
-  return readFile(runtime.path(file as string), "utf8");
+  // Editors, `echo` and `openssl rand > file` append a line terminator that is not part of the
+  // secret. Exactly one is removed; inner newlines and any further trailing ones are kept.
+  return (await readFile(runtime.path(file as string), "utf8")).replace(/\r?\n$/, "");
 }
 export function secretCommands(program: Command, runtime: Runtime): void {
   const group = program.command("secret").alias("secrets");
@@ -25,7 +27,7 @@ export function secretCommands(program: Command, runtime: Runtime): void {
     group
       .command("set <name>")
       .option("--from-env <variable>")
-      .option("--file <path>")
+      .option("--file <path>", "Read the secret from a file; one trailing newline is removed")
       .option("--ephemeral")
       .option("--allowed-origin <origin>", "Allowed origin (repeatable)", collect, []),
     async (rt, args, opts) => {
@@ -63,7 +65,10 @@ export function secretCommands(program: Command, runtime: Runtime): void {
     data: await (await rt.app()).secrets.remove(String(args[0])),
   }));
   runtime.bind(
-    group.command("rotate <id-or-name>").option("--from-env <variable>").option("--file <path>"),
+    group
+      .command("rotate <id-or-name>")
+      .option("--from-env <variable>")
+      .option("--file <path>", "Read the secret from a file; one trailing newline is removed"),
     async (rt, args, opts) => {
       const value = await secretValue(rt, opts);
       return { data: await (await rt.app()).secrets.rotate(String(args[0]), value) };

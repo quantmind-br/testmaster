@@ -203,37 +203,117 @@ it("bootstrap binds each root to one project and refuses clashes and bad targets
   expect(f.app.projects.list()).toHaveLength(4);
 });
 
-it("report resources are blob pages with the paging in _meta", async () => {
+it("report resources are text pages with the paging in _meta", async () => {
   const f = await fixture();
   const test = f.app.tests.create({ projectId: f.init.projectId, plan: scaffoldPlan("backend") });
   const run = f.app.runs.resolve({ testId: test.id, environmentId: f.init.environmentId });
   Object.assign(run, { phase: "completed", status: "passed", outcome: "passed", gate: "passed" });
   f.app.context.entities.insert("Run", run);
-  const document = JSON.stringify({ filler: "x".repeat(70000) });
+  // "é" takes two bytes and the prefix is 11 bytes, so a 65536-byte page ends inside a character
+  // unless pages are cut on character boundaries.
+  const document = JSON.stringify({ filler: "é".repeat(40000) });
   vi.spyOn(Object.getPrototypeOf(f.app.reports), "export").mockResolvedValue({
     content: document,
   } as never);
-  const uri = `testmaster://runs/${run.id}/report`;
-  const page = await f.client.readResource({ uri });
-  const content = page.contents[0] as Record<string, unknown>;
-  expect(content.mimeType).toBe("application/json");
-  expect(content).not.toHaveProperty("text");
-  const meta = content._meta as Record<string, unknown>;
-  expect(meta["testmaster:sizeBytes"]).toBe(Buffer.byteLength(document));
-  expect(meta["testmaster:offset"]).toBe(0);
-  const head = Buffer.from(String(content.blob), "base64");
-  expect(head.byteLength).toBeLessThanOrEqual(65536);
-  const next = meta["testmaster:next"];
-  expect(typeof next).toBe("string");
-  // Following next reaches the end of the document, and the concatenated pages are the document.
-  const tail = (await f.client.readResource({ uri: String(next) })).contents[0] as Record<
-    string,
-    unknown
-  >;
-  expect((tail._meta as Record<string, unknown>)["testmaster:next"]).toBeNull();
-  expect(Buffer.concat([head, Buffer.from(String(tail.blob), "base64")]).toString("utf8")).toBe(
-    document,
-  );
+  const pages: string[] = [];
+  let first: Record<string, unknown> | undefined;
+  let next: string | null = `testmaster://runs/${run.id}/report`;
+  while (next) {
+    const content = (await f.client.readResource({ uri: next })).contents[0] as Record<
+      string,
+      unknown
+    >;
+    const meta = content._meta as Record<string, unknown>;
+    first ??= content;
+    expect(content.mimeType).toBe("application/json");
+    expect(content).not.toHaveProperty("blob");
+    const text = String(content.text);
+    expect(text).not.toContain("\uFFFD");
+    expect(Buffer.byteLength(text)).toBeLessThanOrEqual(65536);
+    expect(meta["testmaster:offset"]).toBe(Buffer.byteLength(pages.join("")));
+    expect(meta["testmaster:sizeBytes"]).toBe(Buffer.byteLength(document));
+    pages.push(text);
+    next = meta["testmaster:next"] as string | null;
+  }
+  expect(first).toBeDefined();
+  expect(pages.length).toBeGreaterThan(1);
+  // The concatenated pages are the document, and it parses.
+  expect(pages.join("")).toBe(document);
+  expect(JSON.parse(pages.join(""))).toEqual(JSON.parse(document));
+});
+
+it("artifact pages are text for textual media types, cut on character boundaries, and blob for binary ones", async () => {
+  const f = await fixture();
+  // The server works on its own identity view of the application: spy on the shared prototype.
+  const serve = (bytes: Buffer, mimeType: string, pageBytes: number) =>
+    vi.spyOn(Object.getPrototypeOf(f.app.artifacts), "read").mockImplementation((async (
+      _runId: string,
+      _path: string,
+      options: { offset?: number } = {},
+    ) => {
+      const offset = options.offset ?? 0;
+      const page = bytes.subarray(offset, offset + pageBytes);
+      return {
+        bytes: page,
+        entry: { relativePath: "a", mimeType, sizeBytes: bytes.length },
+        nextOffset: offset + page.length < bytes.length ? offset + page.length : null,
+      };
+    }) as never);
+  const uri = `testmaster://runs/${missingRun}/artifacts/${encodeURIComponent("a")}`;
+  const readPages = async () => {
+    const pages: Record<string, unknown>[] = [];
+    let next: string | null = uri;
+    while (next) {
+      const content = (await f.client.readResource({ uri: next })).contents[0] as Record<
+        string,
+        unknown
+      >;
+      pages.push(content);
+      next = (content._meta as Record<string, unknown>)["testmaster:next"] as string | null;
+    }
+    return pages;
+  };
+
+  // 7-byte pages over multi-byte text end inside 2-, 3- and 4-byte characters.
+  const original = '{"k":"héllo wörld ✓ 日本語 😀 end"}';
+  serve(Buffer.from(original), "application/json", 7);
+  const pages = await readPages();
+  expect(pages.length).toBeGreaterThan(3);
+  for (const page of pages) {
+    expect(page).not.toHaveProperty("blob");
+    expect(page.mimeType).toBe("application/json");
+    expect(String(page.text)).not.toContain("\uFFFD");
+  }
+  expect(pages.map((page) => String(page.text)).join("")).toBe(original);
+
+  for (const mimeType of [
+    "text/plain",
+    "text/html; charset=utf-8",
+    "text/markdown",
+    "application/x-ndjson",
+    "application/vnd.api+json",
+    "application/xml",
+  ]) {
+    serve(Buffer.from("{}\n"), mimeType, 1024);
+    const [page] = await readPages();
+    expect(page?.text, mimeType).toBe("{}\n");
+    expect(page, mimeType).not.toHaveProperty("blob");
+  }
+
+  // Binary media types stay base64, byte for byte (0x89 and 0xff are not valid UTF-8).
+  const binary = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0xff, 0xfe]);
+  for (const mimeType of [
+    "image/png",
+    "application/zip",
+    "video/webm",
+    "application/octet-stream",
+  ]) {
+    serve(binary, mimeType, 1024);
+    const [page] = await readPages();
+    expect(page, mimeType).not.toHaveProperty("text");
+    expect(Buffer.from(String(page?.blob), "base64"), mimeType).toEqual(binary);
+    expect(page?.mimeType).toBe(mimeType);
+  }
 });
 
 it("analyze_code returns the snapshot with its scan summary", async () => {
@@ -248,7 +328,195 @@ it("analyze_code returns the snapshot with its scan summary", async () => {
   expect(analyzed.body.scannedFileCount).toBeGreaterThanOrEqual(1);
   expect(Array.isArray(analyzed.body.skippedFiles)).toBe(true);
   expect(Array.isArray(analyzed.body.warnings)).toBe(true);
-  expect(Array.isArray(analyzed.body.featureRefs)).toBe(true);
+  expect(analyzed.body.features).toContainEqual({
+    id: expect.stringMatching(/^fea_/),
+    stableKey: "endpoint:GET:/health",
+  });
+  expect(analyzed.body.featureCount).toBe(1);
+});
+
+it("analyze_code on a large repository returns a bounded receipt with counts instead of the full lists", async () => {
+  const f = await fixture();
+  const routes = Array.from({ length: 130 }, (_, i) => `app.get('/r${i}', () => {});`);
+  await writeFile(join(f.cwd, "server.ts"), `const app = {};\n${routes.join("\n")}\n`);
+  for (let i = 0; i < 70; i++) await writeFile(join(f.cwd, `note${i}.txt`), `note ${i}`);
+  const analyzed = await f.call("testmaster_analyze_code", {
+    projectId: f.init.projectId,
+    root: f.cwd,
+  });
+  expect(analyzed.isError, JSON.stringify(analyzed.body)).toBe(false);
+  const body = analyzed.body as {
+    codeSnapshot: Record<string, unknown>;
+    skippedFileCount: number;
+    skippedByReason: { reason: string; count: number }[];
+    skippedFiles: { path: string; reason: string }[];
+    omittedSkippedFiles: number;
+    featureCount: number;
+    features: { id: string; stableKey: string }[];
+    omittedFeatures: number;
+    featuresResource: string;
+  };
+  // The unbounded receipt of a 1291-feature repository was 440 KB; this one carries 130 features
+  // and 70+ skipped files and must stay well under the 32 KiB inline threshold.
+  expect(Buffer.byteLength(JSON.stringify(analyzed.body))).toBeLessThan(32768);
+  expect(analyzed.body).not.toHaveProperty("featureRefs");
+  // The skipped list is not duplicated inside the snapshot.
+  expect(body.codeSnapshot).not.toHaveProperty("skippedFiles");
+  expect(body.skippedFileCount).toBeGreaterThanOrEqual(70);
+  expect(body.skippedFiles).toHaveLength(50);
+  expect(body.omittedSkippedFiles).toBe(body.skippedFileCount - 50);
+  expect(body.skippedByReason.reduce((sum, item) => sum + item.count, 0)).toBe(
+    body.skippedFileCount,
+  );
+  expect(body.featureCount).toBe(130);
+  expect(body.features).toHaveLength(100);
+  expect(body.omittedFeatures).toBe(30);
+  expect(body.featuresResource).toBe(`testmaster://projects/${f.init.projectId}/features`);
+  const keys = body.features.map((feature) => feature.stableKey);
+  expect(keys).toEqual([...keys].sort());
+  const stored = f.app.context.entities.get(
+    "Feature",
+    f.app.context.workspaceId,
+    String(body.features[0]?.id),
+  );
+  expect(stored?.stableKey).toBe(body.features[0]?.stableKey);
+});
+
+it("the features resource maps stable keys to ids, filters by substring and pages", async () => {
+  const f = await fixture();
+  const ids: Record<string, string> = {};
+  const add = (stableKey: string, projectId = f.init.projectId) => {
+    const feature = entity(f.app.context, "fea", {
+      projectId,
+      stableKey,
+      routeRefs: [],
+      endpointRefs: [],
+      requirementRefs: [],
+    });
+    f.app.context.entities.insert("Feature", feature);
+    ids[stableKey] = feature.id;
+  };
+  for (const key of ["route:GET:/login", "route:GET:/logout", "endpoint:POST:/api/login"]) add(key);
+  for (let i = 0; i < 120; i++) add(`route:GET:/bulk/${i}`);
+  const other = f.app.projects.create({ name: "elsewhere" });
+  add("route:GET:/login-of-another-project", other.id);
+  const read = async (uri: string) =>
+    JSON.parse(String((await f.client.readResource({ uri })).contents[0]?.text)) as {
+      projectId: string;
+      match?: string;
+      total: number;
+      features: { id: string; stableKey: string }[];
+      next: string | null;
+    };
+  const base = `testmaster://projects/${f.init.projectId}/features`;
+
+  // A stable key resolves to its id; matching ignores case and never leaves the project.
+  const login = await read(`${base}?match=${encodeURIComponent("ROUTE:get:/login")}`);
+  expect(login.features).toEqual([{ id: ids["route:GET:/login"], stableKey: "route:GET:/login" }]);
+  expect(login.total).toBe(1);
+  expect((await read(`${base}?match=login`)).features.map((feature) => feature.stableKey)).toEqual([
+    "endpoint:POST:/api/login",
+    "route:GET:/login",
+  ]);
+  // LIKE wildcards in the match are literal text.
+  expect((await read(`${base}?match=${encodeURIComponent("/bulk/1%")}`)).total).toBe(0);
+  expect((await read(`${base}?match=${encodeURIComponent("/bulk/_")}`)).total).toBe(0);
+  // Keys containing "/bulk/1": 1, 10-19 and 100-119.
+  expect((await read(`${base}?match=${encodeURIComponent("/bulk/1")}`)).total).toBe(31);
+  expect((await read(`${base}?match=nothing-like-this`)).features).toEqual([]);
+
+  // Without a match every feature is reachable, 100 per page, in key order, each exactly once.
+  const seen: string[] = [];
+  let next: string | null = base;
+  let pages = 0;
+  while (next) {
+    const page = await read(next);
+    expect(page.total).toBe(123);
+    expect(page.features.length).toBeLessThanOrEqual(100);
+    seen.push(...page.features.map((feature) => feature.stableKey));
+    next = page.next;
+    pages++;
+  }
+  expect(pages).toBe(2);
+  expect(seen).toHaveLength(123);
+  expect(new Set(seen).size).toBe(123);
+  expect(seen).toEqual([...seen].sort());
+  // A cursor follows its own filter: reusing it with another match is refused.
+  const filtered = await read(`${base}?match=bulk`);
+  expect(filtered.next).not.toBeNull();
+  const cursor = new URL(String(filtered.next)).searchParams.get("cursor");
+  await expect(
+    f.client.readResource({
+      uri: `${base}?match=login&cursor=${encodeURIComponent(String(cursor))}`,
+    }),
+  ).rejects.toMatchObject({ code: -32602 });
+  // Unknown projects are unknown resources.
+  await expect(
+    f.client.readResource({
+      uri: "testmaster://projects/prj_019bf434-20c0-7000-8000-000000000001/features",
+    }),
+  ).rejects.toMatchObject({ code: -32002 });
+});
+
+it("no tool input is a top-level combinator, generate_tests shows every property and normalize takes a provider", async () => {
+  const f = await fixture();
+  const tools = (await f.client.listTools()).tools;
+  expect(tools).toHaveLength(20);
+  for (const tool of tools) {
+    for (const keyword of ["anyOf", "oneOf", "allOf", "not"])
+      expect(tool.inputSchema, `${tool.name} ${keyword}`).not.toHaveProperty(keyword);
+  }
+  const input = (name: string) => tools.find((tool) => tool.name === name)?.inputSchema;
+  expect(Object.keys(input("testmaster_generate_tests")?.properties ?? {}).sort()).toEqual([
+    "budget",
+    "model",
+    "proposalIds",
+    "provider",
+    "revisionIds",
+  ]);
+  expect(input("testmaster_generate_tests")?.required ?? []).toEqual([]);
+  expect(Object.keys(input("testmaster_normalize_requirements")?.properties ?? {})).toContain(
+    "provider",
+  );
+});
+
+it("generate_tests requires proposalIds or revisionIds at runtime and accepts either with model options", async () => {
+  const f = await fixture();
+  const neither = await f.call("testmaster_generate_tests", { provider: "p", model: "m" });
+  expect(neither.error?.code).toBe("INVALID_ARGUMENT");
+  expect(neither.error?.message).toContain("proposalIds or revisionIds");
+  expect(JSON.stringify(neither.error?.details.issues)).toContain("proposalIds or revisionIds");
+  // Control: revisionIds with provider, model and budget passes validation and fails on the unknown revision.
+  const withRevisions = await f.call("testmaster_generate_tests", {
+    revisionIds: ["rev_019bf434-20c0-7000-8000-000000000001"],
+    provider: "p",
+    model: "m",
+    budget: { modelCalls: 2 },
+  });
+  expect(withRevisions.error?.code).toBe("NOT_FOUND");
+});
+
+it("normalize_requirements forwards provider and model to the service", async () => {
+  const f = await fixture();
+  const normalize = vi
+    .spyOn(Object.getPrototypeOf(f.app.requirements), "normalize")
+    .mockResolvedValue({
+      requirements: [],
+      conflicts: [],
+      fingerprint: "fingerprint-1",
+      version: 1,
+    } as never);
+  const normalized = await f.call("testmaster_normalize_requirements", {
+    projectId: f.init.projectId,
+    sourceRevisionIds: ["svr_019bf434-20c0-7000-8000-000000000001"],
+    provider: "gateway",
+    model: "m1",
+  });
+  expect(normalized.isError, JSON.stringify(normalized.body)).toBe(false);
+  expect(normalized.body.sourceSnapshotId).toBe("fingerprint-1");
+  expect(normalize).toHaveBeenCalledWith(
+    expect.objectContaining({ provider: "gateway", model: "m1" }),
+  );
 });
 
 async function commitRepo(cwd: string) {

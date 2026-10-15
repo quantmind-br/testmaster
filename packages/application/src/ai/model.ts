@@ -16,6 +16,19 @@ function endpointOf(baseUrl: string): { origin: string; remote: boolean } {
     return { origin: "invalid-endpoint", remote: true };
   }
 }
+/**
+ * Refusals the model service or gateway raise before any request is sent (configuration,
+ * credentials, inventory). Nothing was paid, so a request that ended on one stays open: the next
+ * request evaluates it again instead of returning the refusal.
+ */
+export const unsentModelReasons: ReadonlySet<string> = new Set([
+  "provider_unavailable",
+  "provider_credentials_unavailable",
+  "model_not_declared",
+  "model_not_configured",
+  "model_capability_missing",
+  "model_not_in_inventory",
+]);
 export const promptVersions = {
   normalize: "normalize-3-evidence-handles",
   plan: "plan-4-integration-workflow",

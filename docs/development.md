@@ -262,7 +262,9 @@ a file that imports `http`/`https`/`http2` (or the `node:` forms) and calls `cre
 never under `app/` or `pages/`, in `.tsx`/`.jsx`, or in a test file (`*.test.*`, `*.spec.*`, or
 under `__tests__/`, `test/`, `tests/`: a stub server there is a fixture, not an application route).
 The method is the `method === "GET"` / `req.method === "GET"` comparison in the same `&&` chain,
-else `UNKNOWN`. Bumping `CODE_DETECTOR_VERSION` (now 1.3.0) stops old discovery jobs from resuming.
+else `UNKNOWN`. Bumping `CODE_DETECTOR_VERSION` (now 1.4.0) stops old discovery jobs from resuming.
+A file is skipped as `binary` only when a NUL byte occurs in its first 8000 bytes (Git's
+heuristic); a later NUL, such as a join separator in a source string, does not exclude the file.
 
 The project data directory (`<repo>/.testmaster/` by default, or `TESTMASTER_DATA_DIR`) is never
 listed or opened by repository provenance or by the working-tree diff, whether or not Git ignores
@@ -461,10 +463,26 @@ back to another model. The MCP tool spells the same choice `model` (`true`, or a
 analysis without a `modelCallId` (the database admits a parent only for `source: "model"`, so it
 has none) plus the limitation; only a real model call produces `source: "model"`. The outcome is
 structured in the model job's receipt (`modelStatus`: `used`, `abstained` or `unavailable` with a
-`reasonCode`, e.g. `model_not_in_inventory`), and `testmaster_analyze_run` returns it as
-`modelStatus` and in its text content, so an agent never mistakes a rules-only analysis for a model
-reading. A later enrichment with another model starts from the factual analysis, not from the
-abstention.
+`reasonCode`, e.g. `model_not_in_inventory`; a missing provider API key is `unavailable` with
+`provider_credentials_unavailable`), and `testmaster_analyze_run` returns it as `modelStatus` and
+in its text content, so an agent never mistakes a rules-only analysis for a model reading. The CLI
+(`run analyze --model`) returns the same `modelStatus` in `data`, prints a `Model reading:` line
+and warns on stderr when the model was not used. A reading refused before anything was sent (the
+`unsentModelReasons` of `ai/model.ts`: a missing API key, a model that is not declared, configured,
+capable or in the provider inventory) is not final: the job is settled unpaid, and the next request
+for the same reading reopens it (`reopenUnpaid`, the earlier receipt kept in
+`progress.unpaidSettlements`) and evaluates again, so fixing the configuration is enough. A reading
+that abstained after a model call stays stored. A later enrichment with another model, or a reopened
+one, starts from the factual analysis, not from the abstention.
+Evidence redaction scrubs only the values of credential-named environment variables with at least
+8 characters (`environmentSecretValues`), so flags such as `INSPECTOR_MASK_SECRETS=true` are never
+treated as secrets; structured evidence and the exported config are scrubbed structurally
+(`scrubEvidenceValue`), never by re-parsing scrubbed JSON text. An HTTP evidence file
+`http/<stepId>.json` carries `redirects` (the hops followed, in order). A failed `statusIn` that
+expects the redirect the runner followed (first hop in the expected statuses, or every expected
+status 3xx) is a test defect (`test_fragility`, `fix_test`: set `redirect: "manual"` on the
+request), not a product mismatch. The failure is localized to the first failed step, else the
+first inconclusive or blocked step; without either the conclusion says it could not be localized.
 The model catalog carries bounded sanitized frozen predicates and expected/observed structures,
 scoped verified evidence hashes, contrary passed steps, and verified locator observations.
 Artifact availability is one fact per artifact kind ("Verified N log artifacts available.") citing
@@ -492,9 +510,16 @@ model. With `--model` alone, lookup is confined to the first allowed provider; u
 when the model belongs to another provider. A model failure reports `provider`, `model`,
 `upstreamCode`, `upstreamStatus` and
 `modelCallRecorded` (whether the gateway recorded a call row; a transport failure after sending
-may leave none, so it does not prove nothing was sent). Each failed Run gets exactly one healing
-request: after any model failure it stays final (`no_regeneration`), and the next eligible failed
-Run is the place to pass another `--provider`/`--model`. Diagnosed product,
+may leave none, so it does not prove nothing was sent). Each failed Run gets exactly one paid
+healing request: once a paid call started (success, failure, abstention or unknown outcome) it
+stays final (`no_regeneration`), and the next eligible failed Run is the place to pass another
+`--provider`/`--model`. A request that failed or was refused before any model call (evidence
+phase, `provider_unavailable`, `evidence_unavailable`, `evidence_too_large`, `semantic_failure`,
+`evidence_invalid`, or a model refusal raised before anything is sent, the `unsentModelReasons` of
+`ai/model.ts` such as `provider_credentials_unavailable`) is not final: the next `propose` reopens
+the same job (the earlier refusal is
+kept in `progress.unpaidSettlements`) and evaluates again. A leased request answers
+`already_running`. Diagnosed product,
 contract or security failures abstain before model execution. The healing prompt carries the
 sanitized plan, factual statements cited by `E` handles, locator evidence only for steps that
 did not pass (candidate lists bounded with their original count and truncation flag) and, per
@@ -614,11 +639,12 @@ compensation preserves the owning Run's original verdict and records a separate 
   (`run_platform_success`), notifications, the CLI/MCP exit-code lookup and the rules analysis read
   this field; seeding a test Run without it hides the worker path, so drive the worker (see
   `egress-alert.test.ts`) when a rule depends on the reason. The exit code follows the reason
-  registry: a Run blocked by `manual_auth_required` or `missing_secret` exits 6, not 9.
+  registry: a Run blocked by `manual_auth_required` or `missing_secret` exits 6; a Run blocked by
+  a policy refusal exits 15 (exit 9 is a refusal to act: `POLICY_DENIED` or `doctor` FAIL).
 - `reduceOutcome` (packages/domain/src/run.ts) maps a policy refusal to `blocked` even after steps
   started: any reason whose registry effect is `blocked` (`egress_denied`,
   `security_precondition_failed`, `approval_required`) on the last Attempt, with no proven assertion
-  failure and no complete pass, keeps its `reasonCode` and exits 9. Other reasons after start
+  failure and no complete pass, keeps its `reasonCode` and exits 15. Other reasons after start
   (`attempt_timeout`, `worker_lost`, ...) stay `inconclusive`; `canRetry` never retries a refusal.
 - `secrets.set/rotate/remove/get/list/release` separate metadata from values; `release` is a
   supervisor-only integration port. `approvals.create/get/list/revoke/verify` bind explicit

@@ -12,7 +12,12 @@ import {
   type StepResult,
   validate,
 } from "@testmaster/contracts";
-import { canonicalJson, scrubEvidenceText, semanticHash } from "@testmaster/domain";
+import {
+  canonicalJson,
+  environmentSecretValues,
+  scrubEvidenceText,
+  semanticHash,
+} from "@testmaster/domain";
 import {
   type AuxiliaryFence,
   type AuxiliaryJob,
@@ -29,8 +34,7 @@ import { entity, requireEntity, type ServiceContext } from "../context.js";
 import type { AdmissionSnapshot } from "../provenance.js";
 import type { DiscoveryDetail, DiscoveryService } from "./discovery.js";
 import { AUXILIARY_LEASE_MS, keepLeaseAlive } from "./job-lease.js";
-import type { ModelService } from "./model.js";
-import { promptVersions } from "./model.js";
+import { type ModelService, promptVersions, unsentModelReasons } from "./model.js";
 
 export interface AnalysisInput {
   model?: boolean;
@@ -48,8 +52,9 @@ export interface AnalysisModelStatus {
 }
 /**
  * Status of a reading that produced no model analysis. A model that cannot be used at all (not
- * configured, absent from the provider inventory, no capability, policy) is `unavailable`; any
- * other refusal (rejected output, oversized evidence) is an `abstained` reading.
+ * configured, absent from the provider inventory, no capability, policy, no provider credential)
+ * is `unavailable`; any other refusal (rejected output, oversized evidence) is an `abstained`
+ * reading.
  */
 function abstentionStatus(error: unknown): AnalysisModelStatus {
   if (!(error instanceof ContractError))
@@ -61,9 +66,11 @@ function abstentionStatus(error: unknown): AnalysisModelStatus {
     };
   const reasonCode = error.details.reasonCode;
   return {
-    state: ["CAPABILITY_UNAVAILABLE", "POLICY_DENIED"].includes(error.code)
-      ? "unavailable"
-      : "abstained",
+    state:
+      ["CAPABILITY_UNAVAILABLE", "POLICY_DENIED"].includes(error.code) ||
+      reasonCode === "provider_credentials_unavailable"
+        ? "unavailable"
+        : "abstained",
     reasonCode: typeof reasonCode === "string" ? reasonCode : error.code,
     message: error.message,
     modelCallId: null,
@@ -115,6 +122,10 @@ function artifactAvailabilityFacts(evidence: Evidence[]) {
     evidenceRefs,
   }));
 }
+/** Prose reference to the step a diagnosis is localized to; never a placeholder identifier. */
+function stepReference(location: string | null): string {
+  return location === null ? "the step that stopped the Run" : `step ${location}`;
+}
 /**
  * Visible text of a model-selected next step. The prefix identifies the same action when the rules
  * already advised it, so a repeated suggestion is not listed twice.
@@ -123,7 +134,7 @@ const modelStepCatalog: Record<
   NextStepAction,
   {
     prefix: string;
-    text: (location: string, runner?: string, deniedOrigins?: readonly string[]) => string;
+    text: (location: string | null, runner?: string, deniedOrigins?: readonly string[]) => string;
   }
 > = {
   collect_more_evidence: {
@@ -140,29 +151,29 @@ const modelStepCatalog: Record<
     text: (_location, _runner, deniedOrigins) => securityReviewText(deniedOrigins ?? []),
   },
   compare_contract: {
-    prefix: "Compare the response from step",
+    prefix: "Compare the response from",
     text: (location) =>
-      `Compare the response from step ${location} with the approved schema and decide whether this is a contract revision or a regression.`,
+      `Compare the response from ${stepReference(location)} with the approved schema and decide whether this is a contract revision or a regression.`,
   },
   inspect_persistence: {
     prefix: "Inspect the creation response",
     text: (location) =>
-      `Inspect the creation response and the subsequent read for step ${location}, including entity identity and environment.`,
+      `Inspect the creation response and the subsequent read for ${stepReference(location)}, including entity identity and environment.`,
   },
   compare_requirement: {
-    prefix: "Compare the observed value at step",
+    prefix: "Compare the observed value at",
     text: (location) =>
-      `Compare the observed value at step ${location} with the approved requirement before changing product code or the test.`,
+      `Compare the observed value at ${stepReference(location)} with the approved requirement before changing product code or the test.`,
   },
   review_healing_proposal: {
     prefix: "Review the healing proposal",
     text: (location) =>
-      `Review the healing proposal for step ${location} and its identity evidence.`,
+      `Review the healing proposal for ${stepReference(location)} and its identity evidence.`,
   },
   inspect_locator_candidates: {
     prefix: "Inspect locator candidates",
     text: (location) =>
-      `Inspect locator candidates for step ${location} to distinguish a changed control from a missing or ambiguous target.`,
+      `Inspect locator candidates for ${stepReference(location)} to distinguish a changed control from a missing or ambiguous target.`,
   },
 };
 /** Inspection actions that fit each recorded cause; anything else is not shown as advice. */
@@ -191,7 +202,65 @@ type HttpStatusEvidence = {
   status: number;
   /** Bounded error fields of a 4xx/5xx JSON body, scrubbed by the runner. */
   failureExcerpt?: string;
+  /** Hops the runner followed before the final response, in order; empty when none. */
+  redirects: { url: string; status: number; location: string }[];
 };
+/** Redirect hops of a recorded HTTP exchange; malformed entries are dropped, never trusted. */
+function redirectHops(http: unknown): HttpStatusEvidence["redirects"] {
+  const hops =
+    http && typeof http === "object" && "redirects" in http && Array.isArray(http.redirects)
+      ? http.redirects
+      : [];
+  return hops.slice(0, 10).flatMap((hop: unknown) => {
+    if (!hop || typeof hop !== "object") return [];
+    const { url, status, location } = hop as Record<string, unknown>;
+    return typeof url === "string" &&
+      typeof location === "string" &&
+      typeof status === "number" &&
+      Number.isInteger(status) &&
+      status >= 300 &&
+      status <= 399
+      ? [{ url: url.slice(0, 512), status, location: location.slice(0, 512) }]
+      : [];
+  });
+}
+interface FollowedRedirect {
+  /** The failed statusIn assertion step. */
+  item: Evidence;
+  /** The HTTP evidence of the request step it verifies, with the hops the runner followed. */
+  http: Evidence & { value: HttpStatusEvidence };
+}
+/**
+ * Failed statusIn assertions whose request followed a redirect that the assertion was written
+ * for: the first hop's status is expected, or every expected status is a 3xx. The observed status
+ * then belongs to the redirect target, so the mismatch is not product behavior.
+ */
+function followedRedirects(evidence: readonly Evidence[]): FollowedRedirect[] {
+  return evidence.flatMap((item) => {
+    const { step, planStep } = item;
+    if (
+      step?.status !== "failed" ||
+      step.reasonCode !== "assertion_mismatch" ||
+      planStep?.kind !== "assertion" ||
+      planStep.required === false ||
+      planStep.expectation.predicate !== "statusIn" ||
+      !("responseStepId" in planStep.input)
+    )
+      return [];
+    const { values } = planStep.expectation;
+    const responseStepId = planStep.input.responseStepId;
+    const http = evidence.find(
+      (candidate): candidate is Evidence & { value: HttpStatusEvidence } =>
+        httpStatusEvidence(candidate.value) && candidate.value.stepId === responseStepId,
+    );
+    const first = http?.value.redirects[0];
+    return http &&
+      first &&
+      (values.includes(first.status) || values.every((value) => value >= 300 && value <= 399))
+      ? [{ item, http }]
+      : [];
+  });
+}
 function httpStatusEvidence(value: unknown): value is HttpStatusEvidence {
   return (
     value !== null &&
@@ -301,18 +370,13 @@ function egressDenialFacts(evidence: readonly Evidence[]): {
 }
 
 /** Evidence to collect for a step, worded for the runner that executed it. */
-function collectEvidenceText(location: string, runner: string | undefined): string {
+function collectEvidenceText(location: string | null, runner: string | undefined): string {
+  const where = stepReference(location);
   if (runner === "terminal")
-    return `Collect the process output, exit status and execution evidence for step ${location} to distinguish product, environment, and test explanations.`;
+    return `Collect the process output, exit status and execution evidence for ${where} to distinguish product, environment, and test explanations.`;
   if (runner === "playwright")
-    return `Collect the page state and execution evidence for step ${location} to distinguish product, environment, and test explanations.`;
-  return `Collect the response and execution evidence for step ${location} to distinguish product, contract, and environment explanations.`;
-}
-
-function evidenceSecrets(): string[] {
-  return Object.entries(process.env)
-    .filter(([key]) => /secret|token|password|credential|api_key/iu.test(key))
-    .flatMap(([, value]) => (value ? [value] : []));
+    return `Collect the page state and execution evidence for ${where} to distinguish product, environment, and test explanations.`;
+  return `Collect the response and execution evidence for ${where} to distinguish product, contract, and environment explanations.`;
 }
 
 function evidenceRendering(value: unknown, secrets: string[]): string | null {
@@ -499,6 +563,21 @@ function assertionMismatchFacts(
         text: scrubEvidenceText(text, secrets).text.slice(0, 1000),
         evidenceRefs: [item.ref],
       });
+  }
+  for (const { item, http } of followedRedirects(evidence)) {
+    const hops = http.value.redirects;
+    const expected = (
+      item.planStep?.kind === "assertion" && item.planStep.expectation.predicate === "statusIn"
+        ? item.planStep.expectation.values
+        : []
+    ).join(", ");
+    facts.push({
+      text: scrubEvidenceText(
+        `Step ${item.step!.planStepId} (statusIn) expects status ${expected}, but the runner followed ${hops.length} redirect${hops.length === 1 ? "" : "s"} of request step ${http.value.stepId} (first hop ${hops[0]!.status} to ${hops[0]!.location}) and recorded the final response status ${http.value.status}.`,
+        secrets,
+      ).text.slice(0, 1000),
+      evidenceRefs: [item.ref, http.ref],
+    });
   }
   // The error fields a failing endpoint returned name its own complaint; a passing run needs none.
   if (failed)
@@ -707,10 +786,9 @@ export class AnalysisService {
         message: "A model call produced this analysis.",
         modelCallId: analysis.modelCallId,
       };
-    const stored = this.jobs
-      .forTarget(this.ctx.workspaceId, "analysis", analysis.runId)
-      .find((job) => job.payload.operation === "model" && job.result?.analysisId === analysis.id)
-      ?.result?.modelStatus as AnalysisModelStatus | undefined;
+    const stored = this.modelReceipts(analysis.runId).find(
+      (receipt) => receipt.analysisId === analysis.id,
+    )?.modelStatus as AnalysisModelStatus | undefined;
     return (
       stored ?? {
         state: "abstained",
@@ -719,6 +797,21 @@ export class AnalysisService {
         modelCallId: null,
       }
     );
+  }
+  /**
+   * Receipts of the Run's model readings: the result of each settled model job, plus the unsent
+   * refusals that a later request reopened (kept in `progress.unpaidSettlements`).
+   */
+  private modelReceipts(runId: string): Record<string, unknown>[] {
+    return this.jobs
+      .forTarget(this.ctx.workspaceId, "analysis", runId)
+      .filter((job) => job.payload.operation === "model")
+      .flatMap((job) => [
+        ...(Array.isArray(job.progress.unpaidSettlements)
+          ? (job.progress.unpaidSettlements as Record<string, unknown>[])
+          : []),
+        ...(job.result ? [job.result] : []),
+      ]);
   }
   private persist(
     fields: Omit<Analysis, "id" | "workspaceId" | "createdAt" | "version" | "extensions">,
@@ -1015,6 +1108,7 @@ export class AnalysisService {
                 kind: "http",
                 stepId,
                 status,
+                redirects: redirectHops(http),
                 ...(excerpt ? { failureExcerpt: excerpt } : {}),
               };
             } else limitations.push(`HTTP status metadata ${entry.artifactId} is unavailable.`);
@@ -1086,7 +1180,7 @@ export class AnalysisService {
     failureKind: Analysis["failureKind"],
     supports: AnalysisEvidenceRef[],
   ): Promise<Diagnosis> {
-    const secrets = evidenceSecrets();
+    const secrets = environmentSecretValues();
     const steps = collected.evidence.filter((item) => item.step);
     const failed = steps.find((item) => item.step!.status === "failed");
     // A timed-out terminal process records no expected/observed values; its own artifact holds
@@ -1221,12 +1315,21 @@ export class AnalysisService {
             absence,
             evidenceRefs: failed ? [failed.ref, ...(timedOut ? [timedOut.ref] : [])] : supports,
           };
-    const location = failed?.step?.planStepId ?? "unavailable";
+    // The first step that did not pass: a failed step, else an inconclusive or blocked one (for
+    // example a navigation aborted before any assertion ran).
+    const localized =
+      failed ?? steps.find((item) => ["inconclusive", "blocked"].includes(item.step!.status));
+    const location = localized?.step?.planStepId ?? null;
+    const redirected =
+      failureKind === "test_fragility" ? followedRedirects(collected.evidence)[0] : undefined;
     const alternatives: Diagnosis["alternatives"] = [];
     const nextSteps: Diagnosis["nextSteps"] = [];
     let conclusion: Diagnosis["conclusion"] = {
       status: "cause_unknown",
-      text: `The failure is localized to step ${location}; the evidence does not establish a cause.`,
+      text:
+        location === null
+          ? "The failure could not be localized to a recorded step result; the evidence does not establish a cause."
+          : `The failure is localized to step ${location}; the evidence does not establish a cause.`,
     };
     let healing: Diagnosis["healing"] = {
       advice: "not_indicated",
@@ -1285,7 +1388,7 @@ export class AnalysisService {
           ? failed.planStep.input.responseStepId
           : location;
       next(
-        `Compare the response from step ${response} with the approved schema and decide whether this is a contract revision or a regression.`,
+        `Compare the response from ${stepReference(response)} with the approved schema and decide whether this is a contract revision or a regression.`,
       );
       healing.reason = "Changing the assertion would hide the observed contract divergence.";
     } else if (failureKind === "product_bug") {
@@ -1321,21 +1424,39 @@ export class AnalysisService {
           ["empty_collection", "missing_field", "null_value"].includes(absence ?? ""))
       ) {
         next(
-          `Inspect the creation response at step ${creation.step!.planStepId} and the read at step ${responseId ?? location}, including entity identity and environment.`,
+          `Inspect the creation response at step ${creation.step!.planStepId} and the read at ${stepReference(responseId ?? location)}, including entity identity and environment.`,
           [...supports, creation.ref, ...(read ? [read.ref] : [])],
         );
       } else
         next(
-          `Compare the observed value at step ${location} with the approved requirement before changing product code or the test.`,
+          `Compare the observed value at ${stepReference(location)} with the approved requirement before changing product code or the test.`,
         );
       healing.reason = "A test change would hide the observed behavior mismatch.";
+    } else if (failureKind === "test_fragility" && redirected) {
+      conclusion = {
+        status: "cause_partially_supported",
+        text: `The runner followed the redirect recorded for step ${redirected.http.value.stepId} (first hop ${redirected.http.value.redirects[0]!.status}), so the observed status ${redirected.http.value.status} is the redirect target's; the assertion expected the redirect response itself.`,
+      };
+      alternative(
+        "The redirect itself may be unintended product behavior; the recorded hop shows what the target answered first.",
+        "product_bug",
+      );
+      next(
+        `Set redirect to "manual" on request step ${redirected.http.value.stepId} so the redirect response is the one asserted, then rerun the test.`,
+        [redirected.item.ref, redirected.http.ref],
+      );
+      healing = {
+        advice: "not_indicated",
+        reason:
+          'Healing proposes locator changes only; the repair is to set redirect "manual" on the request step.',
+      };
     } else if (failureKind === "test_fragility") {
       conclusion = {
         status: "cause_partially_supported",
         text: "A unique baseline-equivalent control was observed; locator fragility is possible, not an established product cause.",
       };
       alternative("The control may have been removed or renamed intentionally.", "product_bug");
-      next(`Review the healing proposal for step ${location} and its identity evidence.`);
+      next(`Review the healing proposal for ${stepReference(location)} and its identity evidence.`);
       healing = {
         advice: "proposal_possible",
         reason:
@@ -1361,7 +1482,7 @@ export class AnalysisService {
       );
       if (locators.some((item) => (item.value as LocatorEvidence).candidates.length)) {
         next(
-          `Inspect locator candidates for step ${location} to distinguish a changed control from a missing or ambiguous target.`,
+          `Inspect locator candidates for ${stepReference(location)} to distinguish a changed control from a missing or ambiguous target.`,
           locators.map((item) => item.ref),
         );
         alternative("The target may be changed, removed, or ambiguous.", "unknown");
@@ -1409,7 +1530,7 @@ export class AnalysisService {
     const { evidence, plan } = collected;
     let failureKind: Analysis["failureKind"] = "unknown";
     let recommendedAction: Analysis["recommendedAction"] = "collect_more_evidence";
-    const secrets = evidenceSecrets();
+    const secrets = environmentSecretValues();
     let hypothesis: string | null = null;
     let supports: AnalysisEvidenceRef[] = [];
     const reasons = (codes: string[]) =>
@@ -1494,6 +1615,10 @@ export class AnalysisService {
                   candidate.value.status < 300,
               ),
           );
+      // The runner follows redirects by default and records the final response, so a statusIn that
+      // expects the redirect itself fails on the target's status; that is a test defect.
+      const followed = followedRedirects(evidence);
+      const redirectFollowed = followed[0];
       const successfulStatusMismatch = evidence.find(
         (item) =>
           item.step?.status === "failed" &&
@@ -1505,7 +1630,8 @@ export class AnalysisService {
           Number.isInteger(item.step.observed) &&
           item.step.observed >= 200 &&
           item.step.observed < 300 &&
-          !item.planStep.expectation.values.includes(item.step.observed),
+          !item.planStep.expectation.values.includes(item.step.observed) &&
+          !followed.some((entry) => entry.item === item),
       );
       let locatorSupport: AnalysisEvidenceRef[] = [];
       if (
@@ -1515,7 +1641,8 @@ export class AnalysisService {
         !schema &&
         !business &&
         !shapeMismatch &&
-        !successfulStatusMismatch
+        !successfulStatusMismatch &&
+        !redirectFollowed
       ) {
         const failedActions = evidence.filter(
           (item) =>
@@ -1604,6 +1731,12 @@ export class AnalysisService {
         hypothesis =
           "A required field named by an assertion was absent from an existing object of a successful response, so the response shape diverged from the approved expectation; source-level cause is not established.";
         supports = [shapeMismatch.ref];
+      } else if (redirectFollowed) {
+        failureKind = "test_fragility";
+        recommendedAction = "fix_test";
+        hypothesis =
+          "The runner followed a redirect, so the observed status is the redirect target's and not the response the assertion expects; the test, not the product, did not observe the redirect.";
+        supports = [redirectFollowed.item.ref, redirectFollowed.http.ref];
       } else if (successfulStatusMismatch) {
         failureKind = "product_bug";
         recommendedAction = "fix_product";
@@ -1709,12 +1842,7 @@ export class AnalysisService {
    * enrichment with another model starts from the factual diagnosis, not from an earlier abstention.
    */
   private factualRow(runId: string) {
-    const abstained = new Set(
-      this.jobs
-        .forTarget(this.ctx.workspaceId, "analysis", runId)
-        .filter((job) => job.payload.operation === "model")
-        .map((job) => job.result?.analysisId),
-    );
+    const abstained = new Set(this.modelReceipts(runId).map((receipt) => receipt.analysisId));
     return this.ctx.database
       .all(
         "SELECT id,data_json FROM analyses WHERE workspace_id=? AND run_id=? AND source='rules' ORDER BY created_at DESC,id DESC",
@@ -1753,7 +1881,7 @@ export class AnalysisService {
           throw new ContractError("INVALID_ARGUMENT", "Model cited unknown execution evidence");
         return ref;
       });
-    const secrets = evidenceSecrets();
+    const secrets = environmentSecretValues();
     const collected = await this.collect(run);
     const frozen = planSteps(collected.plan);
     const baselines: LocatorEvidence[] = [];
@@ -1900,6 +2028,10 @@ export class AnalysisService {
             status: record.status,
             ...(record.failureExcerpt
               ? { failureExcerpt: boundedEvidence(record.failureExcerpt, secrets) }
+              : {}),
+            // Hop statuses only: redirect targets are not needed to explain the final status.
+            ...(record.redirects.length
+              ? { redirectStatuses: record.redirects.map((hop) => hop.status) }
               : {}),
           });
         } else if (terminalProcessEvidence(record)) {
@@ -2126,7 +2258,7 @@ export class AnalysisService {
     } = factual;
     // Model next steps are typed selections: the application renders the visible text, and an
     // action that does not fit the recorded cause (or names an absent healing proposal) is dropped.
-    const location = layered.observation?.stepId ?? "unavailable";
+    const location = layered.observation?.stepId ?? null;
     const finalKind = keepFactual ? factual.failureKind : output.failureKind;
     let droppedSteps = 0;
     const modelSteps: Diagnosis["nextSteps"] = [];
@@ -2275,13 +2407,17 @@ export class AnalysisService {
             ["FORBIDDEN", "UNAUTHENTICATED"].includes(error.code)
           )
             throw error;
+          const status = abstentionStatus(error);
+          // Nothing was sent to the provider, so the next request for this reading reopens the job.
+          if (unsentModelReasons.has(String(status.reasonCode)))
+            this.jobs.mark(fence, { paidCallStarted: false });
           analysis = this.limited(
             factual,
             // ContractError messages are code-owned rule names, so they identify which
             // validation rejected the output without echoing model or evidence content.
             `Model enrichment abstained: ${error instanceof ContractError ? `${error.code}: ${error.message}` : "provider_or_validation_failure"}.`,
             fence,
-            abstentionStatus(error),
+            status,
           );
         }
       } else analysis = await this.factual(run, fence);
@@ -2365,15 +2501,25 @@ export class AnalysisService {
           }
         : (input.discoveryId ?? null),
     });
-    const job = this.jobs.enqueue(this.ctx.workspaceId, "analysis", {
+    const { job } = this.jobs.enqueue(this.ctx.workspaceId, "analysis", {
       operation: "model",
       targetId: runId,
       actorId: this.ctx.principalId,
       evidenceHash,
       configHash,
       options: input as Record<string, unknown>,
-    }).job;
-    return this.drive(job, run);
+    });
+    // A reading refused before anything was sent (no API key, model not configured) is not final:
+    // once the configuration is fixed, the same request reaches the model.
+    const refusal = job.result?.modelStatus as AnalysisModelStatus | undefined;
+    return this.drive(
+      job.state === "completed" &&
+        !job.progress.paidCallStarted &&
+        unsentModelReasons.has(String(refusal?.reasonCode))
+        ? this.jobs.reopenUnpaid(this.ctx.workspaceId, job.jobId, new Date().toISOString())
+        : job,
+      run,
+    );
   }
   private settlePaid(job: AuxiliaryJob): Analysis {
     authorizedRun(this.ctx, job.payload.targetId, "X");

@@ -169,7 +169,7 @@ describe("normative reducer", () => {
         firstAttemptOutcome: "blocked",
       });
       expect(evaluateGate(result.outcome, "not_required", policy)).toBe("failed");
-      expect(exitCodeForRun({ gate: "failed", outcome: result.outcome, reasonCode })).toBe(9);
+      expect(exitCodeForRun({ gate: "failed", outcome: result.outcome, reasonCode })).toBe(15);
     }
   });
   it("keeps a started attempt that timed out inconclusive and a not-started refusal blocked", () => {
@@ -336,6 +336,11 @@ describe("hashes policy and redaction", () => {
   });
   it("applies the batch exit precedence", () => {
     expect(batchExitCode([0, 1, 7, 10, 12, 6, 9])).toBe(9);
+    // A blocked run is not a plain nonpass, but a wait deadline still outranks it.
+    expect(batchExitCode([0, 1, 15])).toBe(15);
+    expect(batchExitCode([15, 1])).toBe(15);
+    expect(batchExitCode([1, 15, 7])).toBe(7);
+    expect(batchExitCode([15, 9])).toBe(9);
     expect(batchExitCode([1, 0])).toBe(1);
     expect(batchExitCode([12, 11])).toBe(12);
   });
@@ -343,8 +348,8 @@ describe("hashes policy and redaction", () => {
     expect(exitCodeForRun({ gate: "passed" })).toBe(0);
     expect(exitCodeForRun({ gate: "failed" })).toBe(1);
     expect(exitCodeForRun({ gate: "failed", reasonCode: "assertion_mismatch" })).toBe(1);
-    expect(exitCodeForRun({ gate: "failed", reasonCode: "security_precondition_failed" })).toBe(9);
-    expect(exitCodeForRun({ gate: "failed", outcome: "blocked" })).toBe(9);
+    expect(exitCodeForRun({ gate: "failed", reasonCode: "security_precondition_failed" })).toBe(15);
+    expect(exitCodeForRun({ gate: "failed", outcome: "blocked" })).toBe(15);
     expect(exitCodeForRun({ gate: "failed", reasonCode: "unsupported_capability" })).toBe(8);
     expect(exitCodeForRun({ gate: "failed", reasonCode: "missing_secret" })).toBe(6);
     expect(exitCodeForRun({ gate: "failed", reasonCode: "budget_exhausted" })).toBe(12);

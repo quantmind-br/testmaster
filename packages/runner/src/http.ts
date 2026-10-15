@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { closeSync, constants, openSync } from "node:fs";
 import { open } from "node:fs/promises";
 import { isIP } from "node:net";
@@ -6,6 +6,8 @@ import { isDeepStrictEqual } from "node:util";
 import {
   ContractError,
   type Expectation,
+  headerPatternMaxLength,
+  invalidCredentialHeaders,
   type PlanStep,
   parseStrictJson,
   SourceSchemaError,
@@ -42,11 +44,22 @@ interface OwnedResource {
   handleRef?: string;
   ownerProof?: unknown;
 }
+/** One redirect the engine followed: the request URL, the 3xx status and the raw `Location` value. */
+export interface RedirectHop {
+  url: string;
+  status: number;
+  location: string;
+}
 export interface HttpResponse {
   status: number;
   headers: Record<string, string>;
   body: Uint8Array;
+  /** Final URL: the request URL, or where the last followed redirect led. */
   url: string;
+  /** Redirects followed before this response, in order; empty when none or with `redirect: "manual"`. */
+  redirects: RedirectHop[];
+  /** Names of the cookies set by any response of the request, redirect hops included. */
+  cookieNames: string[];
   authenticated?: boolean;
 }
 export interface HttpEngineOptions {
@@ -80,6 +93,7 @@ const CREDENTIAL_HEADER: Record<string, true> = {
   "set-cookie": true,
 };
 const EVIDENCE_HEADERS: Record<string, true> = {
+  location: true,
   "content-type": true,
   "content-length": true,
   "cache-control": true,
@@ -351,6 +365,30 @@ export async function assertResponse(
       expected = await runtime.resolve(expectation.value);
       matches = isDeepStrictEqual(observed, expected);
       break;
+    case "headerMatches": {
+      let pattern: RegExp;
+      try {
+        if (expectation.pattern.length > headerPatternMaxLength)
+          throw new RangeError("Pattern is too long");
+        pattern = new RegExp(expectation.pattern, "u");
+      } catch {
+        throw new RuntimeError(
+          "oracle_uncertain",
+          "headerMatches pattern is not a valid bounded ECMAScript regular expression",
+          "inconclusive",
+        );
+      }
+      const header = response.headers[expectation.header.toLowerCase()];
+      observed = header ?? null;
+      expected = { matches: expectation.pattern };
+      matches = header !== undefined && pattern.test(header);
+      break;
+    }
+    case "cookieAbsent":
+      observed = response.cookieNames;
+      expected = { absent: expectation.name };
+      matches = !response.cookieNames.includes(expectation.name);
+      break;
     case "jsonEquals": {
       const target = assertedJsonValue(runtime, response, pointer);
       missingDiagnostic = target.diagnostic;
@@ -518,6 +556,36 @@ export async function readAuthorizedArtifact(
     }
   }
 }
+function isInvalidCredential(value: unknown): value is { invalidCredential: { scheme?: string } } {
+  return typeof value === "object" && value !== null && "invalidCredential" in value;
+}
+/**
+ * Names of the cookies a `Set-Cookie` header sets; a value is never kept. A header that removes
+ * its cookie (RFC 6265: `Max-Age` <= 0, or without `Max-Age` an `Expires` in the past) sets
+ * nothing, so a response that clears a session cookie still satisfies `cookieAbsent`.
+ */
+function setCookieNames(header: string | string[] | undefined): string[] {
+  const names: string[] = [];
+  for (const cookie of header === undefined ? [] : Array.isArray(header) ? header : [header]) {
+    const [pair = "", ...attributes] = cookie.split(";");
+    const name = pair.includes("=") ? pair.slice(0, pair.indexOf("=")).trim() : "";
+    if (name && !removesCookie(attributes)) names.push(name);
+  }
+  return names;
+}
+function removesCookie(attributes: readonly string[]): boolean {
+  // The last occurrence of an attribute wins (RFC 6265 §5.3).
+  const values = new Map<string, string>();
+  for (const attribute of attributes) {
+    const at = attribute.indexOf("=");
+    if (at > 0)
+      values.set(attribute.slice(0, at).trim().toLowerCase(), attribute.slice(at + 1).trim());
+  }
+  const maxAge = values.get("max-age");
+  if (maxAge !== undefined && /^-?\d+$/u.test(maxAge)) return Number(maxAge) <= 0;
+  const expires = values.get("expires");
+  return expires !== undefined && Date.parse(expires) <= Date.now();
+}
 function scalar(value: unknown): string {
   if (typeof value === "string") return value;
   if (typeof value === "boolean" || (typeof value === "number" && Number.isFinite(value)))
@@ -631,9 +699,21 @@ export class HttpEngine {
         lower.startsWith("x-forwarded-")
       )
         deny("Forbidden or duplicate request header");
-      if (CREDENTIAL_HEADER[lower] && !sensitiveInput(runtime, value))
-        deny("Credentials require a sensitive reference");
-      const resolved = scalar(await runtime.resolve(value));
+      let resolved: string;
+      if (isInvalidCredential(value)) {
+        if (!(invalidCredentialHeaders as readonly string[]).includes(lower))
+          deny("invalidCredential is only valid on credential headers");
+        const scheme = value.invalidCredential.scheme;
+        if (scheme !== undefined && !/^[!#$%&'*+.^_`|~0-9A-Za-z-]{1,64}$/u.test(scheme))
+          deny("Invalid credential scheme");
+        // Fresh per request: the target can only reject it, and no run reuses another's value.
+        const token = `testmaster-invalid-${randomBytes(16).toString("hex")}`;
+        resolved = scheme === undefined ? token : `${scheme} ${token}`;
+      } else {
+        if (CREDENTIAL_HEADER[lower] && !sensitiveInput(runtime, value))
+          deny("Credentials require a sensitive reference");
+        resolved = scalar(await runtime.resolve(value));
+      }
       // biome-ignore lint/suspicious/noControlCharactersInRegex: Header values reject NUL and line breaks.
       if (/[\r\n\u0000]/u.test(resolved)) deny("Invalid request header value");
       headers[lower] = resolved;
@@ -673,7 +753,10 @@ export class HttpEngine {
         }
       }
       if (body === undefined) deny("Request body could not be serialized");
+      // A text body is sent verbatim under any explicit media type (a malformed JSON payload is
+      // text labelled JSON); the other kinds are serialized here, so their type is fixed.
       if (
+        input.body.kind !== "text" &&
         headers["content-type"] &&
         headers["content-type"].split(";")[0]?.trim().toLowerCase() !== contentType?.toLowerCase()
       )
@@ -734,6 +817,13 @@ export class HttpEngine {
     try {
       let { url, headers, body } = prepared;
       let method: RequestInput["method"] = input.method;
+      const hops: RedirectHop[] = [];
+      const cookieNames: string[] = [];
+      const fakeCredentials = new Set(
+        Object.entries(input.headers ?? {}).flatMap(([name, value]) =>
+          isInvalidCredential(value) ? [name.toLowerCase()] : [],
+        ),
+      );
       for (let redirects = 0; ; redirects++) {
         url = authorizeUrl(runtime, url.href);
         deadline.throwIfAborted();
@@ -751,6 +841,8 @@ export class HttpEngine {
         for (const [name, value] of Object.entries(incoming.headers))
           if (value !== undefined)
             responseHeaders[name.toLowerCase()] = Array.isArray(value) ? value.join(", ") : value;
+        for (const name of setCookieNames(incoming.headers["set-cookie"]))
+          if (!cookieNames.includes(name)) cookieNames.push(name);
         const upstreamFailure = responseHeaders[UPSTREAM_FAILURE_HEADER];
         if (upstreamFailure !== undefined) {
           // Only the egress proxy can emit this marker (it strips it from target responses). The
@@ -778,7 +870,11 @@ export class HttpEngine {
           incoming.body.destroy();
           throw error;
         }
-        if (REDIRECT_STATUS[incoming.statusCode] && responseHeaders.location) {
+        if (
+          input.redirect !== "manual" &&
+          REDIRECT_STATUS[incoming.statusCode] &&
+          responseHeaders.location
+        ) {
           if (redirects >= 10)
             throw new RuntimeError("egress_denied", "HTTP redirect limit exceeded");
           const next = authorizeUrl(runtime, responseHeaders.location, url.href);
@@ -794,6 +890,11 @@ export class HttpEngine {
             body = undefined;
             delete headers["content-type"];
           }
+          hops.push({
+            url: url.href,
+            status: incoming.statusCode,
+            location: responseHeaders.location,
+          });
           url = next;
           continue;
         }
@@ -802,8 +903,12 @@ export class HttpEngine {
           headers: responseHeaders,
           body: Buffer.concat(chunks, bytes),
           url: url.href,
+          redirects: hops,
+          cookieNames,
           authenticated: Object.keys(headers).some(
-            (name) => CREDENTIAL_HEADER[name] || sensitiveInput(runtime, input.headers?.[name]),
+            (name) =>
+              (CREDENTIAL_HEADER[name] && !fakeCredentials.has(name)) ||
+              sensitiveInput(runtime, input.headers?.[name]),
           ),
         };
         if (resource) {
@@ -877,6 +982,7 @@ export class HttpEngine {
             ? Buffer.from(prepared.body)
             : (prepared.body ?? new Uint8Array());
         const evidence = {
+          redirects: hops,
           request: {
             method: input.method,
             url: prepared.url.href,
@@ -902,6 +1008,7 @@ export class HttpEngine {
           }),
           response: {
             status: response.status,
+            url: response.url,
             headers: Object.fromEntries(
               Object.entries(response.headers).filter(([name]) => EVIDENCE_HEADERS[name]),
             ),
