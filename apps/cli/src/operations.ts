@@ -196,11 +196,12 @@ export function operationsCommands(program: Command, runtime: Runtime): void {
         ...outcome.fired.map((alert) => `  fired ${alert.rule} (${alert.id})`),
         ...failed.map((rule) => `  error ${rule}: ${outcome.errors[rule]}`),
       ];
-      // A rule that could not be evaluated leaves its alerts as they were: the run is not clean.
+      // A rule that could not be evaluated leaves its alerts as they were: monitoring is unavailable,
+      // not a failed gate, so the exit code is 10 (platform unavailable), never 1.
       return {
         data: outcome,
         text: `${lines.join("\n")}\n`,
-        ...(failed.length ? { exit: 1 } : {}),
+        ...(failed.length ? { exit: 10 } : {}),
       };
     },
   );

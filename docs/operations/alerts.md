@@ -16,8 +16,8 @@ The alert controller runs in the server process (`server start --mode server`) e
 single-user local profile runs no alert loop, so nothing is evaluated there on its own;
 `testmaster ops alerts evaluate` (administrator scope) evaluates every rule once for the workspace
 and prints `{fired, resolved, errors}`. The same dedupe applies: a condition that already has an
-open alert fires nothing new. A rule that cannot be evaluated is listed in `errors`, leaves its
-open alerts as they are and makes the command exit 1.
+open alert fires nothing new. Firing alerts exit 0; a rule that cannot be evaluated is listed in
+`errors`, leaves its open alerts as they are and makes the command exit 10 (platform unavailable).
 
 Each alert carries `owner` and `runbook` (`docs/operations/alerts.md#<rule id>`). Roles:
 

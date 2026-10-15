@@ -160,3 +160,23 @@ it("OPS-028 ops alerts evaluate fires nothing for a quiet workspace or a Run blo
   );
   expect(rules).not.toContain("egress_denied");
 });
+
+it("OPS-028 ops alerts evaluate exits 10 when a rule cannot be evaluated and still raises the rules that could", async () => {
+  const f = await fixture();
+  seedCompleted(f, "denied", "egress_denied");
+  const original = f.app.alerts.evaluate.bind(f.app.alerts);
+  vi.spyOn(f.app.alerts, "evaluate").mockImplementation((probes = {}) =>
+    original({
+      ...probes,
+      storageUsedFraction: async () => {
+        throw new Error("statfs EIO");
+      },
+    }),
+  );
+  const broken = await f.invoke(["ops", "alerts", "evaluate"]);
+  expect(broken.exit).toBe(10);
+  const evaluation = broken.document.data as unknown as Evaluation;
+  expect(Object.keys(evaluation.errors).length).toBeGreaterThan(0);
+  expect(Object.keys(evaluation.errors).every((rule) => rule.startsWith("storage_"))).toBe(true);
+  expect(hostIndependent(evaluation)).toEqual(["egress_denied"]);
+});

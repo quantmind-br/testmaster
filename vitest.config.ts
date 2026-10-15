@@ -122,6 +122,7 @@ export default defineConfig({
           testTimeout: 300_000,
           hookTimeout: 600_000,
           fileParallelism: false,
+          setupFiles: ["packages/application/src/no-host-keychain.testing.ts"],
         },
       },
       {
@@ -134,6 +135,7 @@ export default defineConfig({
           testTimeout: 300_000,
           hookTimeout: 600_000,
           fileParallelism: false,
+          setupFiles: ["packages/application/src/no-host-keychain.testing.ts"],
           env: {
             DOCKER_HOST: rootlessDockerSocket,
             TESTMASTER_JOURNEY_DOCKER_HOST: rootlessDockerSocket,

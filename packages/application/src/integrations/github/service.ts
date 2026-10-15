@@ -295,7 +295,8 @@ export class GithubService {
     }
     if (!integration) {
       // A genuine mismatch (every candidate's secrets were readable) stays UNAUTHENTICATED. When a
-      // secret could not be read the delivery may well be genuine: 503 so GitHub redelivers.
+      // secret could not be read the delivery may well be genuine: 503 marks it as a server-side
+      // failure that can be redelivered (GitHub does not redeliver on its own).
       if (unreadable)
         throw new ContractError("UNAVAILABLE", "Webhook secret is unavailable; redeliver", {
           reasonCode: "webhook_secret_unavailable",
