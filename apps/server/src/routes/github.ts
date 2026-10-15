@@ -42,5 +42,4 @@ export const githubRoutes: RouteModule = {
     "POST /integrations/{id}/github/checks/{checkId}/retry",
     "POST /integrations/{id}/github/rotate-webhook-secret",
   ],
-  status: { "POST /integrations/github/manifests": 201 },
 };

@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Iterator
 
 
-def step(name: str, index: int = 0) -> Iterator[None]:
+def step(name: str, index: int | None = None) -> Iterator[None]:
     from .plugin import current_plugin
     plugin = current_plugin()
     if plugin is None:

@@ -35,6 +35,8 @@ export interface SuiteRunOptions {
   idempotencyKey?: string;
   /** Admit even when no worker is live; the Runs then wait for one. */
   wait?: boolean;
+  /** The caller's flag naming `wait`, quoted when no worker is live (CLI: `--queue`). */
+  waitFlag?: string;
   scheduleId?: string | null;
   /** Runs inside the admission transaction (a stale scheduler leader throws here). */
   guard?: () => void;
@@ -540,6 +542,7 @@ export class SuitesService {
     return this.batches.admit(request, {
       idempotencyKey: options.idempotencyKey,
       ...(options.wait === undefined ? {} : { wait: options.wait }),
+      ...(options.waitFlag ? { waitFlag: options.waitFlag } : {}),
       provenance: {
         suiteId: expansion.suiteId,
         scheduleId: options.scheduleId ?? null,

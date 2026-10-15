@@ -353,3 +353,24 @@ it("escapes hostile diagnosis hypotheses and warns honestly for historical analy
     expect(output).not.toContain("99%");
   }
 });
+
+it("renders the Markdown source binding as code with the JSON bytes intact", () => {
+  const input = snapshot();
+  input.provenance = {
+    assessedSha: "abc123",
+    checkoutSha: "def456",
+    binding: "verified",
+    targetBinding: "local-checkout",
+  };
+  const line = exportMarkdown(input)
+    .split("\n")
+    .find((candidate) => candidate.startsWith("Source binding: "));
+  expect(line).toBe(`Source binding: \`${JSON.stringify(input.provenance)}\``);
+  expect(line).not.toMatch(/&quot;|&amp;|\\[-{}]/u);
+  // A backtick inside the value cannot close the span early.
+  input.provenance = { ...input.provenance, assessedSha: "a`b``c" };
+  const hostile = exportMarkdown(input)
+    .split("\n")
+    .find((candidate) => candidate.startsWith("Source binding: "));
+  expect(hostile).toBe(`Source binding: \`\`\`${JSON.stringify(input.provenance)}\`\`\``);
+});

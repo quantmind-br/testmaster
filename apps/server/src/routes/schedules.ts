@@ -38,5 +38,4 @@ export const scheduleRoutes: RouteModule = {
     "POST /schedules/{id}/pause",
     "POST /schedules/{id}/resume",
   ],
-  status: { "POST /schedules": 201 },
 };

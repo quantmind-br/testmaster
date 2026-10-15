@@ -44,6 +44,4 @@ export interface RouteModule {
   readonly handlers: Readonly<Record<string, RouteHandler>>;
   /** Keys wrapped in `executeIdempotent`. */
   readonly synchronous?: readonly string[];
-  /** Non-200 success status codes. */
-  readonly status?: Readonly<Record<string, number>>;
 }

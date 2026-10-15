@@ -141,8 +141,11 @@ delivered without sending anything; the delivery state lives in the Delivery ent
 | Container fails at OCI init with a runc/libpathrs crash | Seccomp profile does not match the engine. The profile is generated from the engine's `moby/profiles` version (`containers/generate-seccomp.mjs`, `docs/adr/011-seccomp-profile.md`); regenerate after a Docker upgrade. |
 | Chromium sandbox fails to start | The attempt is `blocked` with `security_precondition_failed`; `--no-sandbox` is never used. Check that unprivileged user namespaces are enabled on the host. |
 | `secret set` refused | Neither `secret-tool` (D-Bus session) nor the vault key file is usable. Fix the keychain or create `~/.config/testmaster/vault.key` (0600), or use `--ephemeral` for the current process. |
-| Model commands refuse before sending anything | Missing provider in the user profile, provider not in `policy.json` `allowedModelProviders`, or no consent: `testmaster consent grant --provider <id> --data-class ...`. |
+| Model commands refuse before sending anything | Missing provider in the user profile, or provider not in `policy.json` `allowedModelProviders`. The allowlist is the only provider gate; there is no separate grant to make. |
 | `test run` without `--wait` returns `PRECONDITION_FAILED` | No live worker. Start `testmaster worker start` or use `--wait`. |
+| `suite run` returns `PRECONDITION_FAILED` "No live worker" | `suite run` has no `--wait`. Start `testmaster worker start`, or pass `--queue` to admit the BatchRun anyway; its Runs stay queued until a worker is live. Follow it with `plan get` or `run wait`. |
+| `backup restore` returns `PRECONDITION_FAILED` with `reasonCode: "backup_integrity"` | A backup file is missing, changed (size or SHA-256 differs from `manifest.json`), is not a regular file, the evidence index is malformed, or the database file (even with a matching hash) cannot be read or fails its integrity check. A destination this command created is removed; an existing `--out` is refused untouched. Do not edit the manifest: restore from another copy of the backup. |
+| `backup restore` returns `PRECONDITION_FAILED` with `reasonCode: "backup_version_unsupported"` | The backup's schema is newer than this release's migrations. Run a release that has them. |
 | Healing/compare/CI/schedules return exit 8 | `CAPABILITY_UNAVAILABLE`: feature belongs to M3+ (`testmaster capabilities`). |
 
 ## Local daemon, health and permissions
@@ -228,7 +231,7 @@ Every SQLite migration is forward-only and irreversible (no down migration exist
    restore merges the live revocations into the restored data directory. Install, upgrade and
    rollback never write `~/.config/testmaster` (policy, profiles, vault key), secrets or tombstones; a
    restored workspace keeps admission `suspended_restore` and drops server tokens until the explicit
-   review. Consents, approvals and grants revoked after the backup are not merged automatically; the
+   review. Approvals and grants revoked after the backup are not merged automatically; the
    review's `--revocations-confirmed` assertion is the operator's reconciliation step.
 
 The single-user backup is manual. Evidence: `packages/persistence/src/upgrade.test.ts`,
@@ -248,7 +251,7 @@ payloads as evidence.
 |---|---|---|
 | Suspected sandbox or egress bypass | A: `worker drain`, `worker stop`; X: `run cancel <run>`; stop controller, isolate host network as host operator | Do not restart until policy/image/seccomp and an independent boundary review pass. Keep labels, runtime facts, egress logs and original outcome. No rootless/multi-tenant certification inferred. |
 | Secret/token exposure | A: revoke affected capability through authorized token service; `secret remove <id>` or rotate with `secret rotate <id> --from-env VAR`; X cancel affected runs, A drain/stop | Preserve secret-reference versions, release/auth denials and revocation audit, not values. Do not restore a backup without merging current revocations. Local token revocation is an application service, not a promised CLI command. |
-| Compromised/unavailable model | A/W as required: `consent revoke --provider <id>` for project, drain affected exploration/agent work; run deterministic replay without provider | Do not resume generation until provider authorization, consent, budgets and grounded outputs are reviewed. Keep ModelCall usage/errors and accepted revision hashes; never rewrite deterministic verdict. |
+| Compromised/unavailable model | A/W as required: remove the provider from `allowedModelProviders` in `~/.config/testmaster/policy.json` (read when the application starts; restart a running server or worker), drain affected exploration/agent work; run deterministic replay without provider | Do not resume generation until provider authorization, budgets and grounded outputs are reviewed. Keep ModelCall usage/errors and accepted revision hashes; never rewrite deterministic verdict. |
 | Worker loss or uncertain external mutation | A: `worker reconcile --dry-run`, inspect run/resource evidence, then authorized `worker reconcile`; use explicit `resource cleanup` with resource-bound approval when applicable | Unknown effect is not a retry license. Preserve intent/created/uncertain handles, fences and cleanup results; stop if ownership proof is unavailable. |
 | Disk pressure or artifact tampering | A drain/stop; `backup create` only when safe space is available; preserve intact committed bundles and the partial failure, restore into an isolated directory if needed | Never delete active bundles or metadata to manufacture completeness. Stop if hashes or provenance disagree; no direct database repair. |
 | Migration/startup incompatibility | Stop controller/worker; preserve migration checksums/status and pre-upgrade backup; follow isolated rollback procedure above | Never downgrade schema in place or bypass compatibility refusal. |
@@ -289,7 +292,7 @@ of the daemon section (R reads, W authors, X executes/cancels, A administers and
 - Disk pressure or artifact tampering: `packages/application/src/upload-outage.test.ts` and
   `packages/persistence/src/disk-pressure.docker.test.ts`.
 - Migration/startup incompatibility: `packages/persistence/src/migration-startup.test.ts`.
-- Compromised/unavailable model: `packages/application/src/ai/core.test.ts` covers consent revocation and
+- Compromised/unavailable model: `packages/application/src/ai/core.test.ts` covers the provider allowlist refusal and
   a compromised endpoint that cannot redirect the controller.
 - Worker drain/stop and the viewer refusal used by every row: `packages/application/src/governance-runtime.test.ts`.
 
@@ -305,7 +308,7 @@ of the daemon section (R reads, W authors, X executes/cancels, A administers and
 
 - Suspected sandbox or egress bypass: A decides, only after the independent boundary review passes.
 - Secret/token exposure: A decides, after current revocations are merged and affected secrets rotated.
-- Compromised/unavailable model: A decides, after provider authorization, consent and budgets are reviewed.
+- Compromised/unavailable model: A decides, after provider authorization and budgets are reviewed.
 - Worker loss or uncertain external mutation: A decides, after `worker reconcile` leaves no uncertain handle.
 - Disk pressure or artifact tampering: A decides, after hashes verify and usage is below the 90 % watermark.
 - Migration/startup incompatibility: A decides, after the isolated restore review completes.

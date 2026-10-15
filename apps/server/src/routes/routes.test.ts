@@ -2,15 +2,6 @@ import { routeCatalog } from "@testmaster/contracts";
 import { expect, it } from "vitest";
 import { buildRouteTable, routeModules } from "./index.js";
 
-it("C4 builds one route table from the registered modules and every key is a catalog row", () => {
-  const table = buildRouteTable();
-  const catalog = new Set(routeCatalog.map((route) => `${route.method} ${route.path}`));
-  expect(table.size).toBeGreaterThan(80);
-  for (const key of table.keys()) expect(catalog.has(key)).toBe(true);
-  expect(table.get("POST /runs")?.status).toBe(202);
-  expect(table.get("POST /projects")?.synchronous).toBe(true);
-  expect(table.get("GET /projects")?.synchronous).toBe(false);
-});
 it("C4 refuses a route key claimed by two modules", () => {
   const [core] = routeModules;
   if (!core) throw new Error("core module is registered");
@@ -26,5 +17,15 @@ it("C4 refuses a handler key that does not exist in the route catalog", () => {
   );
   expect(() => buildRouteTable([{ handlers: {}, synchronous: ["POST /projects"] }])).toThrow(
     /has no handler/,
+  );
+});
+it("C4 registers a handler for every catalog route except the ones catalogued as unavailable", () => {
+  const table = buildRouteTable();
+  for (const route of routeCatalog) {
+    const key = `${route.method} ${route.path}`;
+    expect(table.has(key), key).toBe(route.response.kind !== "unavailable");
+  }
+  expect(() => buildRouteTable([{ handlers: { "POST /tunnels": () => ({}) } }])).toThrow(
+    /catalogued as unavailable/,
   );
 });

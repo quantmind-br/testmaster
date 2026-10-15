@@ -2,7 +2,7 @@ import { ContractError, type HealingReview } from "@testmaster/contracts";
 import { exitCodeForRun } from "@testmaster/domain";
 import type { Command } from "commander";
 import { waitForRun } from "./execution.js";
-import { integer, type Runtime, required, version } from "./runtime.js";
+import { integer, type Runtime, required, string, version } from "./runtime.js";
 
 export function healingReviewText(review: HealingReview): string {
   const cell = (value: unknown) => JSON.stringify(value).replace(/\|/g, "\\|");
@@ -74,15 +74,20 @@ export function healingCommands(program: Command, runtime: Runtime): void {
   runtime.bind(
     heal
       .command("propose <failedRunId>")
-      .option("--deadline-ms <milliseconds>", "Model deadline", integer),
+      .option("--deadline-ms <milliseconds>", "Model deadline", integer)
+      .option("--provider <id>", "Configured model provider (default: first allowed provider)")
+      .option("--model <id>", "Model of the provider (default: its first structured-output model)"),
     async (rt, args, options) => {
       const app = await rt.app();
       const deadlineMs = typeof options.deadlineMs === "number" ? options.deadlineMs : undefined;
+      const provider = string(options, "provider");
+      const model = string(options, "model");
       return {
-        data: await app.healing.propose(
-          String(args[0]),
-          deadlineMs ? { budget: { deadlineMs } } : {},
-        ),
+        data: await app.healing.propose(String(args[0]), {
+          ...(provider ? { provider } : {}),
+          ...(model ? { model } : {}),
+          ...(deadlineMs ? { budget: { deadlineMs } } : {}),
+        }),
       };
     },
   );

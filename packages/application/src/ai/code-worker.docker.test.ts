@@ -19,7 +19,7 @@ it.each(["playwright", "pytest"] as const)(
       await writeFile(
         join(root, path),
         format === "pytest"
-          ? "def test_health(tm_request):\n    response = tm_request.get('/api/health', timeout=3)\n    assert response.status_code == 200\n    assert response.json()['status'] == 'ok'\n"
+          ? "def test_health(tm_request):\n    response = tm_request.get('/api/health', timeout=3)\n    assert response.status_code == 200\n    assert response.json()['status'] == 'ok'\n\ndef test_health_body(tm_request):\n    response = tm_request.get('/api/health', timeout=3)\n    assert response.json()['status'] == 'ok'\n"
           : "import {test,expect} from '@playwright/test'; test('health',async({request})=>{ const r=await request.get('/api/health'); expect(r.status()).toBe(200); expect((await r.json()).status).toBe('ok'); });",
       );
       const authored = await app.codeImport.import({ projectId: init.projectId, path, format });
@@ -35,6 +35,15 @@ it.each(["playwright", "pytest"] as const)(
       expect(app.runs.steps(receipt.runId)).toContainEqual(
         expect.objectContaining({ planStepId: "imported-code", status: "passed" }),
       );
+      if (format === "pytest") {
+        const steps = app.runs
+          .steps(receipt.runId)
+          .filter((step) => step.planStepId !== "imported-code");
+        expect(steps.map((step) => ({ index: step.index, status: step.status }))).toEqual([
+          { index: 0, status: "passed" },
+          { index: 1, status: "passed" },
+        ]);
+      }
       expect(app.runs.events(receipt.runId)).toContainEqual(
         expect.objectContaining({
           type: "runner.finished",

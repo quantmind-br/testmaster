@@ -1,0 +1,69 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "enabled",
+    "milestone",
+    "disabledReason"
+  ],
+  "properties": {
+    "id": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "milestone": {
+      "anyOf": [
+        {
+          "const": "M0",
+          "type": "string"
+        },
+        {
+          "const": "M1",
+          "type": "string"
+        },
+        {
+          "const": "M2",
+          "type": "string"
+        },
+        {
+          "const": "M3",
+          "type": "string"
+        },
+        {
+          "const": "M4",
+          "type": "string"
+        },
+        {
+          "const": "M5",
+          "type": "string"
+        },
+        {
+          "const": "M6",
+          "type": "string"
+        }
+      ]
+    },
+    "disabledReason": {
+      "anyOf": [
+        {
+          "maxLength": 8000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "experimental": {
+      "type": "boolean"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:CapabilityFeature",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

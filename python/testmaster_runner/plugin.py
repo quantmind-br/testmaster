@@ -34,18 +34,37 @@ class PythonPlugin:
     def __post_init__(self) -> None:
         self._started: dict[str, float] = {}
         self._reports: dict[str, list[Any]] = {}
+        self._indexes: dict[str, int] = {}
+        self._next_index = 0
+        self._used_indexes: set[int] = {1000000}  # Reserved by the imported-code wrapper.
+        self._used_step_ids: set[str] = {"imported-code"}
+        self._pytest_steps: dict[str, str] = {}
 
-    def emit_step_start(self, nodeid: str, index: int = 0) -> str:
+    def emit_step_start(self, nodeid: str, index: int | None = None) -> str:
+        if index is None:
+            index = self._next_index
+            while index in self._used_indexes:
+                index += 1
+        if index < 0 or index in self._used_indexes:
+            raise ValueError("Step indexes must be nonnegative and unique")
+        self._used_indexes.add(index)
+        self._next_index = max(self._next_index, index + 1)
         step_id = _step_id(nodeid)
+        if step_id in self._used_step_ids:
+            step_id = f"{step_id[:180]}_{index}"
+            while step_id in self._used_step_ids:
+                step_id += "_"
+        self._used_step_ids.add(step_id)
+        self._indexes[step_id] = index
         self._started[step_id] = time.monotonic()
         self.protocol.emit("step.started", {"stepId": step_id, "index": index})
         return step_id
 
-    def emit_step_finish(self, step_id: str, status: str, index: int = 0, error: str | None = None) -> None:
+    def emit_step_finish(self, step_id: str, status: str, error: str | None = None) -> None:
         started = self._started.pop(step_id, time.monotonic())
         payload: dict[str, Any] = {
             "stepId": step_id,
-            "index": index,
+            "index": self._indexes.pop(step_id),
             "status": status,
             "durationMs": max(0, round((time.monotonic() - started) * 1000)),
             "evidencePaths": [],
@@ -56,19 +75,19 @@ class PythonPlugin:
         self.protocol.emit("step.finished", payload)
 
     @contextmanager
-    def step(self, name: str, index: int = 0) -> Iterator[None]:
+    def step(self, name: str, index: int | None = None) -> Iterator[None]:
         step_id = self.emit_step_start(name, index)
         try:
             yield
         except BaseException as exc:
             self.failed = True
-            self.emit_step_finish(step_id, "failed", index, str(exc))
+            self.emit_step_finish(step_id, "failed", str(exc))
             raise
         else:
-            self.emit_step_finish(step_id, "passed", index)
+            self.emit_step_finish(step_id, "passed")
 
     def pytest_runtest_logstart(self, nodeid: str, location: tuple[str, int | None, str]) -> None:
-        self.emit_step_start(nodeid)
+        self._pytest_steps[nodeid] = self.emit_step_start(nodeid)
 
     def _diagnose(self, report: Any) -> bool:
         # Source listings can contain imports or launch calls unrelated to the failure.
@@ -118,7 +137,7 @@ class PythonPlugin:
             status = "blocked"
         if skipped or (failed and all(report.when != "call" for report in reports if report.failed)):
             self.incomplete = True
-        self.emit_step_finish(_step_id(nodeid), status, error=failed)
+        self.emit_step_finish(self._pytest_steps.pop(nodeid), status, error=failed)
 
     def fixture_page(self) -> Any:
         from playwright.sync_api import sync_playwright

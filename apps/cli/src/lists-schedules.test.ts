@@ -210,6 +210,27 @@ it("REQ-034 UX-042 suite run admits one batch per idempotency key and refuses a 
   expect((confirmed.document.data as { notDispatched: unknown[] }).notDispatched).toHaveLength(1);
 });
 
+it("REQ-034 suite run without a live worker names --queue, the flag it accepts, never --wait", async () => {
+  const f = await fixture();
+  const suite = (await f.invoke(["suite", "create", "--name", "nightly", ...f.bindings])).document
+    .data as unknown as { id: string };
+  vi.spyOn(Object.getPrototypeOf(f.app.worker), "live").mockReturnValue(false);
+  const refused = await f.invoke(["suite", "run", suite.id]);
+  expect(refused.exit).not.toBe(0);
+  expect(refused.document.error).toMatchObject({
+    code: "PRECONDITION_FAILED",
+    message: "No live worker; start a worker or use --queue",
+    details: { nextActions: ["worker start", "--queue"] },
+  });
+  expect(f.app.database.all("SELECT id FROM batches")).toHaveLength(0);
+  const waited = await f.invoke(["suite", "run", suite.id, "--wait"]);
+  expect(waited.exit).not.toBe(0);
+  expect(waited.document.error?.code).toBe("INVALID_ARGUMENT");
+  const queued = await f.invoke(["suite", "run", suite.id, "--queue"]);
+  expect(queued.exit).toBe(0);
+  expect(queued.document.data).toMatchObject({ requested: 3, accepted: 3 });
+});
+
 it("REQ-035 OPS-016 schedule commands preview, create, edit, pause, resume, list history and archive", async () => {
   const f = await fixture();
   const suite = f.app.suites.create({

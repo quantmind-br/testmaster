@@ -15,7 +15,7 @@ import type {
   SourceParseResult,
 } from "./types.js";
 
-export const SOURCE_PARSER_VERSION = "1.0.0";
+export const SOURCE_PARSER_VERSION = "1.1.0";
 const requirement =
   /\b(must|shall|should|required|requirement|acceptance|deve|precisa|obrigat[oó]rio|crit[eé]rio)\b/iu;
 const pointerKey = (key: string) => key.replaceAll("~", "~0").replaceAll("/", "~1");
@@ -29,36 +29,280 @@ function structured(text: string): Record<string, unknown> {
   if (doc.errors.length) throw new Error(doc.errors.map((e) => e.message).join("; "));
   return object(doc.toJS({ maxAliasCount: 100 }));
 }
-// Follow references and structural edges, with a stack rather than a global seen set:
-// repeated acyclic references are valid, cycles and excessive expansion are not.
+// Keys whose value maps arbitrary names to schemas or objects: a child called `$ref` or `allOf`
+// there is a name, not a keyword.
+const NAME_MAPS: Record<string, true> = {
+  properties: true,
+  patternProperties: true,
+  dependentSchemas: true,
+  dependencies: true,
+  $defs: true,
+  definitions: true,
+  schemas: true,
+  responses: true,
+  parameters: true,
+  requestBodies: true,
+  headers: true,
+  examples: true,
+  links: true,
+  callbacks: true,
+  securitySchemes: true,
+  securityDefinitions: true,
+  pathItems: true,
+  paths: true,
+  webhooks: true,
+  content: true,
+  encoding: true,
+  mapping: true,
+  variables: true,
+};
+// Schema keywords that apply to the same instance location as the schema that holds them. The
+// dependent maps name properties, but each mapped schema still applies to that same instance.
+const SAME_INSTANCE: Record<string, true> = {
+  dependentSchemas: true,
+  dependencies: true,
+  allOf: true,
+  anyOf: true,
+  oneOf: true,
+  not: true,
+  if: true,
+  // biome-ignore lint/suspicious/noThenProperty: `then` is the JSON Schema keyword; this is a static string-keyed registry, never a thenable.
+  then: true,
+  else: true,
+};
+// A bundled operation carries the definitions its remaining `$ref`s need under this key.
+const DEFINITIONS_KEY = "$defs";
+const REFERENCE_DEPTH_LIMIT = 100;
+const EXPANSION_LIMIT_NODES = 2_000_000;
+function resolvePointer(root: Record<string, unknown>, ref: string): unknown {
+  if (typeof ref !== "string") throw new Error("invalid_reference: $ref must be a string");
+  if (!ref.startsWith("#/"))
+    throw new Error("external_reference: External references are disabled");
+  let target: unknown = root;
+  for (const key of ref.slice(2).split("/")) {
+    if (/%/.test(key) || /~(?![01])/u.test(key))
+      throw new Error("invalid_reference: Invalid JSON pointer");
+    const decoded = key.replaceAll("~1", "/").replaceAll("~0", "~");
+    if (!target || typeof target !== "object" || !Object.hasOwn(target, decoded))
+      throw new Error("missing_reference: Unresolved JSON pointer");
+    target = (target as Record<string, unknown>)[decoded];
+  }
+  return target;
+}
+// Every `$ref` must be local and resolvable. Recursion through properties, items or other
+// instance-descending keywords is legitimate (a tree schema); a reference cycle that never
+// descends into the instance (`A: {$ref: B}, B: {$ref: A}`, `allOf: [{$ref: self}]`) denotes no
+// schema at all and is refused. Dereferencing shares one object per target, so memory stays
+// linear while the tree a validator walks can grow exponentially with fan-out references; the
+// expanded size is estimated here, before any dereferencing, and bounded. Work is linear in the
+// document. A reference into a recursive target is not expanded, which is how the parser
+// dereferences it.
 function checkReferences(root: Record<string, unknown>): void {
-  let visits = 0;
-  const walk = (node: unknown, stack: Set<object>, depth: number): void => {
-    if (depth > 100 || ++visits > 100000)
-      throw new Error("reference_limit: Reference depth or expansion limit exceeded");
-    if (!node || typeof node !== "object") return;
-    if (stack.has(node)) throw new Error("cyclic_reference: Circular reference");
-    stack.add(node);
-    if (!Array.isArray(node) && "$ref" in node) {
-      const ref = (node as Record<string, unknown>).$ref;
-      if (typeof ref !== "string") throw new Error("invalid_reference: $ref must be a string");
-      if (!ref.startsWith("#/"))
-        throw new Error("external_reference: External references are disabled");
-      let target: unknown = root;
-      for (const key of ref.slice(2).split("/")) {
-        if (/%/.test(key) || /~(?![01])/u.test(key))
-          throw new Error("invalid_reference: Invalid JSON pointer");
-        const decoded = key.replaceAll("~1", "/").replaceAll("~0", "~");
-        if (!target || typeof target !== "object" || !Object.hasOwn(target, decoded))
-          throw new Error("missing_reference: Unresolved JSON pointer");
-        target = (target as Record<string, unknown>)[decoded];
-      }
-      walk(target, stack, depth + 1);
-    }
-    for (const child of Object.values(node)) walk(child, stack, depth + 1);
-    stack.delete(node);
+  const contained = new Map<object, object[]>();
+  const refTo = new Map<object, object>();
+  const sameInstance = new Map<object, object[]>();
+  const push = (map: Map<object, object[]>, from: object, to: object) => {
+    const edges = map.get(from);
+    if (edges) edges.push(to);
+    else map.set(from, [to]);
   };
-  walk(root, new Set(), 0);
+  const trail: string[] = [];
+  const walk = (node: unknown, names: boolean, parent: object | null, neutral: boolean): void => {
+    if (trail.length > REFERENCE_DEPTH_LIMIT)
+      throw new Error(
+        `reference_limit: Reference depth limit ${REFERENCE_DEPTH_LIMIT} exceeded at /${trail.map(pointerKey).join("/")}`,
+      );
+    if (!node || typeof node !== "object") return;
+    if (parent) {
+      push(contained, parent, node);
+      if (neutral) push(sameInstance, parent, node);
+    }
+    if (contained.has(node) || refTo.has(node)) return;
+    contained.set(node, []);
+    if (Array.isArray(node)) {
+      node.forEach((child, index) => {
+        trail.push(String(index));
+        walk(child, false, node, neutral);
+        trail.pop();
+      });
+      return;
+    }
+    if (!names && "$ref" in node) {
+      const target = resolvePointer(root, (node as Record<string, unknown>).$ref as string);
+      if (target && typeof target === "object") {
+        refTo.set(node, target);
+        push(sameInstance, node, target);
+      }
+    }
+    for (const [key, child] of Object.entries(node)) {
+      trail.push(key);
+      walk(
+        child,
+        !names && Object.hasOwn(NAME_MAPS, key),
+        node,
+        // A name map's entries inherit how the map itself was reached: those of
+        // `dependentSchemas` stay on the instance, those of `properties` descend.
+        names ? neutral : Object.hasOwn(SAME_INSTANCE, key),
+      );
+      trail.pop();
+    }
+  };
+  walk(root, false, null, false);
+  // 1. A cycle made only of same-instance edges never reaches the instance: refuse it.
+  const state = new Map<object, "open" | "done">();
+  for (const start of sameInstance.keys()) {
+    if (state.has(start)) continue;
+    state.set(start, "open");
+    const stack: { node: object; next: number }[] = [{ node: start, next: 0 }];
+    while (stack.length) {
+      const frame = stack[stack.length - 1] as { node: object; next: number };
+      const edges = sameInstance.get(frame.node);
+      if (!edges || frame.next >= edges.length) {
+        state.set(frame.node, "done");
+        stack.pop();
+        continue;
+      }
+      const next = edges[frame.next++] as object;
+      const status = state.get(next);
+      if (status === "open") throw new Error("cyclic_reference: Circular reference");
+      if (status === undefined) {
+        state.set(next, "open");
+        stack.push({ node: next, next: 0 });
+      }
+    }
+  }
+  // 2. Members of any cycle (strongly connected components of containment plus reference edges).
+  const neighbours = (node: object): object[] => {
+    const target = refTo.get(node);
+    const children = contained.get(node) ?? [];
+    return target ? [...children, target] : children;
+  };
+  const index = new Map<object, number>();
+  const low = new Map<object, number>();
+  const open = new Set<object>();
+  const pending: object[] = [];
+  const recursive = new Set<object>();
+  for (const start of contained.keys()) {
+    if (index.has(start)) continue;
+    index.set(start, index.size);
+    low.set(start, index.get(start) as number);
+    pending.push(start);
+    open.add(start);
+    const frames: { node: object; edges: object[]; next: number }[] = [
+      { node: start, edges: neighbours(start), next: 0 },
+    ];
+    while (frames.length) {
+      const frame = frames[frames.length - 1] as (typeof frames)[number];
+      if (frame.next < frame.edges.length) {
+        const next = frame.edges[frame.next++] as object;
+        if (!index.has(next)) {
+          index.set(next, index.size);
+          low.set(next, index.get(next) as number);
+          pending.push(next);
+          open.add(next);
+          frames.push({ node: next, edges: neighbours(next), next: 0 });
+        } else if (open.has(next))
+          low.set(frame.node, Math.min(low.get(frame.node) as number, index.get(next) as number));
+        continue;
+      }
+      frames.pop();
+      const parent = frames[frames.length - 1];
+      if (parent)
+        low.set(
+          parent.node,
+          Math.min(low.get(parent.node) as number, low.get(frame.node) as number),
+        );
+      if (low.get(frame.node) !== index.get(frame.node)) continue;
+      const component: object[] = [];
+      let member: object | undefined;
+      do {
+        member = pending.pop() as object;
+        open.delete(member);
+        component.push(member);
+      } while (member !== frame.node);
+      if (component.length > 1 || frame.edges.includes(frame.node))
+        for (const value of component) recursive.add(value);
+    }
+  }
+  // 3. Bound the expanded size of each top-level entry (operation, component group, ...).
+  const sizes = new Map<object, number>();
+  const size = (node: object, active: Set<object>): number => {
+    const known = sizes.get(node);
+    if (known !== undefined) return known;
+    if (active.has(node)) throw new Error("cyclic_reference: Circular reference");
+    active.add(node);
+    let total = 1;
+    for (const child of contained.get(node) ?? []) total += size(child, active);
+    const target = refTo.get(node);
+    if (target && !recursive.has(target)) total += size(target, active);
+    active.delete(node);
+    sizes.set(node, total);
+    return total;
+  };
+  const entries: [string, unknown][] = [];
+  const isObject = (value: unknown): value is Record<string, unknown> =>
+    !!value && typeof value === "object" && !Array.isArray(value);
+  for (const [key, value] of Object.entries(root)) {
+    if (key !== "paths" || !isObject(value)) {
+      entries.push([`/${pointerKey(key)}`, value]);
+      continue;
+    }
+    for (const [path, item] of Object.entries(value)) {
+      if (!isObject(item)) entries.push([`/paths/${pointerKey(path)}`, item]);
+      else
+        for (const [method, operation] of Object.entries(item))
+          entries.push([`/paths/${pointerKey(path)}/${pointerKey(method)}`, operation]);
+    }
+  }
+  let total = 0;
+  for (const [pointer, value] of entries) {
+    if (!value || typeof value !== "object") continue;
+    const expanded = size(value, new Set());
+    total += expanded;
+    if (expanded > EXPANSION_LIMIT_NODES || total > EXPANSION_LIMIT_NODES)
+      throw new Error(
+        `reference_limit: Reference expansion limit ${EXPANSION_LIMIT_NODES} nodes exceeded at ${pointer}`,
+      );
+  }
+}
+// The parser dereferences every `$ref` whose target holds no recursion and leaves the rest as
+// references, so the document stays finite. Those remaining references point into the
+// document; a consumer that sees one operation alone cannot follow them. Rewrite them to
+// `#/$defs/<pointer>` and carry the (also rewritten) targets, transitively, in the operation's
+// own `$defs`, which makes each operation, and any schema inside it once `$defs` is attached
+// at its root, a self-contained JSON Schema.
+function bundleOperation(api: Record<string, unknown>, operation: unknown): unknown {
+  const used = new Set<string>();
+  const memo = new Map<object, unknown>();
+  const rewrite = (node: unknown): unknown => {
+    if (!node || typeof node !== "object") return node;
+    const known = memo.get(node);
+    if (known !== undefined) return known;
+    const out = Array.isArray(node)
+      ? node.map(rewrite)
+      : Object.fromEntries(
+          Object.entries(node).map(([key, child]) => {
+            if (key === "$ref" && typeof child === "string" && child.startsWith("#/")) {
+              used.add(child);
+              return [key, `#/${DEFINITIONS_KEY}/${pointerKey(child.slice(2))}`];
+            }
+            return [key, rewrite(child)];
+          }),
+        );
+    memo.set(node, out);
+    return out;
+  };
+  const bundled = rewrite(operation);
+  if (!used.size) return operation;
+  const definitions: Record<string, unknown> = {};
+  for (const ref of used)
+    Object.defineProperty(definitions, ref.slice(2), {
+      value: rewrite(resolvePointer(api, ref)),
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    });
+  return { ...(bundled as Record<string, unknown>), [DEFINITIONS_KEY]: definitions };
 }
 export async function parseSource(input: SourceParseInput): Promise<SourceParseResult> {
   const chunks: SourceChunk[] = [];
@@ -191,9 +435,10 @@ export async function parseSource(input: SourceParseInput): Promise<SourceParseR
           !(typeof api.openapi === "string" && /^3\.[01]\./u.test(api.openapi))
         )
           throw new Error("unsupported_openapi: Expected OpenAPI 3.0/3.1 or Swagger 2.0");
+        // Targets that hold recursion stay references so the dereferenced document is finite.
         const result = await validateApi(api as Parameters<typeof validateApi>[0], {
           resolve: { external: false, file: false },
-          dereference: { circular: false },
+          dereference: { circular: "ignore" },
         });
         if (!result.valid)
           throw new Error(`invalid_openapi: ${result.errors.map((e) => e.message).join("; ")}`);
@@ -210,7 +455,11 @@ export async function parseSource(input: SourceParseInput): Promise<SourceParseR
             )
               continue;
             const jsonPointer = `/paths/${pointerKey(path)}/${method}`;
-            operations.push({ path, method: method.toUpperCase(), operation });
+            operations.push({
+              path,
+              method: method.toUpperCase(),
+              operation: bundleOperation(api, operation),
+            });
             add("operation", canonicalJson(operation), { jsonPointer });
           }
         for (const key of [

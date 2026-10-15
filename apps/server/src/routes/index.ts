@@ -47,16 +47,19 @@ export interface ResolvedRoute {
 export function buildRouteTable(
   modules: readonly RouteModule[] = routeModules,
 ): Map<string, ResolvedRoute> {
-  const known = new Set(routeCatalog.map((route) => `${route.method} ${route.path}`));
+  const catalog = new Map(routeCatalog.map((route) => [`${route.method} ${route.path}`, route]));
   const table = new Map<string, ResolvedRoute>();
   for (const module of modules) {
     for (const [key, handler] of Object.entries(module.handlers)) {
-      if (!known.has(key)) throw new Error(`Route handler ${key} is not in the route catalog`);
+      const route = catalog.get(key);
+      if (!route) throw new Error(`Route handler ${key} is not in the route catalog`);
+      if (route.response.kind === "unavailable")
+        throw new Error(`Route handler ${key} is catalogued as unavailable`);
       if (table.has(key)) throw new Error(`Route ${key} is claimed by more than one module`);
       table.set(key, {
         handler,
         synchronous: module.synchronous?.includes(key) ?? false,
-        status: module.status?.[key] ?? 200,
+        status: route.response.status,
       });
     }
     for (const key of module.synchronous ?? [])

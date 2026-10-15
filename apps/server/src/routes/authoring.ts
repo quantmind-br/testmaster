@@ -63,8 +63,4 @@ export const authoringRoutes: RouteModule = {
         ...(context.idempotencyKey ? { idempotencyKey: context.idempotencyKey } : {}),
       }),
   },
-  status: {
-    "POST /proposals/{id}/refinements": 201,
-    "POST /tests/{id}/refinements": 201,
-  },
 };

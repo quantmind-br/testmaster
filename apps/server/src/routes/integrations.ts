@@ -26,5 +26,4 @@ export const integrationRoutes: RouteModule = {
         }),
   },
   synchronous: ["POST /integrations", "PATCH /integrations/{id}"],
-  status: { "POST /integrations": 201 },
 };

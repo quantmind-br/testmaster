@@ -60,6 +60,11 @@ not a list option). `suite add|remove|update|archive` change a list; fixed snaps
 `--member <test>:<revision>:<environment>` or `--selection-file`. A command run with `--endpoint` that has no
 remote implementation fails with `CAPABILITY_UNAVAILABLE` naming the command.
 
+`suite run` has no `--wait`. It admits one BatchRun and returns its receipt, and needs a live worker
+(`testmaster worker start`). With none, it is refused with `PRECONDITION_FAILED` and the next actions
+`worker start` and `--queue`; `--queue` admits the BatchRun anyway and its Runs stay queued until a worker is live.
+Follow the batch with `plan get` or `run wait`.
+
 ### MCP
 
 `testmaster_run_tests` accepts either `testIds` plus `environmentId`, or `suiteId`. A `suiteId` run is

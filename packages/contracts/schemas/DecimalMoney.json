@@ -1,0 +1,27 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "amount",
+    "currency",
+    "scale"
+  ],
+  "properties": {
+    "amount": {
+      "pattern": "^\\d+$",
+      "type": "string"
+    },
+    "currency": {
+      "pattern": "^[A-Z]{3}$",
+      "type": "string"
+    },
+    "scale": {
+      "minimum": 0,
+      "maximum": 18,
+      "type": "integer"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:DecimalMoney",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

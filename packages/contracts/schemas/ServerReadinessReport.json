@@ -1,0 +1,223 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "status",
+    "components",
+    "reasons",
+    "schema",
+    "atRestEncryption",
+    "worker"
+  ],
+  "properties": {
+    "status": {
+      "anyOf": [
+        {
+          "const": "ready",
+          "type": "string"
+        },
+        {
+          "const": "unavailable",
+          "type": "string"
+        }
+      ]
+    },
+    "components": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "persistence",
+        "admission",
+        "schema",
+        "tenantIsolation",
+        "storage",
+        "masterKey"
+      ],
+      "properties": {
+        "persistence": {
+          "anyOf": [
+            {
+              "const": "ready",
+              "type": "string"
+            },
+            {
+              "const": "unavailable",
+              "type": "string"
+            }
+          ]
+        },
+        "admission": {
+          "anyOf": [
+            {
+              "const": "ready",
+              "type": "string"
+            },
+            {
+              "const": "unavailable",
+              "type": "string"
+            }
+          ]
+        },
+        "schema": {
+          "anyOf": [
+            {
+              "const": "ready",
+              "type": "string"
+            },
+            {
+              "const": "unavailable",
+              "type": "string"
+            }
+          ]
+        },
+        "tenantIsolation": {
+          "anyOf": [
+            {
+              "const": "ready",
+              "type": "string"
+            },
+            {
+              "const": "unavailable",
+              "type": "string"
+            }
+          ]
+        },
+        "storage": {
+          "anyOf": [
+            {
+              "const": "ready",
+              "type": "string"
+            },
+            {
+              "const": "unavailable",
+              "type": "string"
+            }
+          ]
+        },
+        "masterKey": {
+          "anyOf": [
+            {
+              "const": "ready",
+              "type": "string"
+            },
+            {
+              "const": "unavailable",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "const": "database_unreachable",
+            "type": "string"
+          },
+          {
+            "const": "admission_disabled",
+            "type": "string"
+          },
+          {
+            "const": "schema_behind",
+            "type": "string"
+          },
+          {
+            "const": "schema_ahead",
+            "type": "string"
+          },
+          {
+            "const": "rls_role_bypass",
+            "type": "string"
+          },
+          {
+            "const": "rls_unprotected_tables",
+            "type": "string"
+          },
+          {
+            "const": "storage_unwritable",
+            "type": "string"
+          },
+          {
+            "const": "storage_low_space",
+            "type": "string"
+          },
+          {
+            "const": "master_key_unavailable",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    "schema": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "databaseVersion",
+        "supportedVersion",
+        "state"
+      ],
+      "properties": {
+        "databaseVersion": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "supportedVersion": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "state": {
+          "anyOf": [
+            {
+              "const": "current",
+              "type": "string"
+            },
+            {
+              "const": "behind",
+              "type": "string"
+            },
+            {
+              "const": "ahead",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    "atRestEncryption": {
+      "const": "operator_attested",
+      "type": "string"
+    },
+    "worker": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "status",
+        "ready"
+      ],
+      "properties": {
+        "status": {
+          "anyOf": [
+            {
+              "const": "ready",
+              "type": "string"
+            },
+            {
+              "const": "degraded",
+              "type": "string"
+            }
+          ]
+        },
+        "ready": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:ServerReadinessReport",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

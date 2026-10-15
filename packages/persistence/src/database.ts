@@ -92,6 +92,12 @@ export type TxDatabase = PersistenceDatabase;
 const writerLockKey = 7_340_041;
 /** Advisory lock that serializes PostgreSQL schema migrations (ADR-015). */
 const migrationLockKey = 7_340_042;
+/**
+ * SQLite migrations that rebuild a table other tables reference (create new, copy, drop, rename).
+ * They run with foreign keys off, as SQLite requires for that recipe, and the migration is rolled
+ * back if the copy leaves a dangling reference.
+ */
+const tableRebuildMigrations = ["authored_code_artifacts", "terminal_runner"];
 const migrationTimeoutMs = 600_000;
 const bypassRefusal = "Database role bypasses row-level security";
 
@@ -118,6 +124,30 @@ function unavailable(capability: string): ContractError {
     `${capability} is not available on the PostgreSQL engine`,
     { capability },
   );
+}
+
+/** A backup that no longer matches what was written; restoring it is refused, never repaired. */
+function backupIntegrity(message: string, relativePath?: string): ContractError {
+  return new ContractError(
+    "PRECONDITION_FAILED",
+    relativePath === undefined ? message : `${message}: ${relativePath}`,
+    {
+      reasonCode: "backup_integrity",
+      ...(relativePath === undefined ? {} : { relativePath }),
+      nextActions: ["verify_backup_source", "use_another_backup"],
+    },
+  );
+}
+
+async function readBackupJson(directory: string, name: string): Promise<unknown> {
+  try {
+    return JSON.parse(await readFile(join(directory, name), "utf8"));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT")
+      throw backupIntegrity("Backup file is missing", name);
+    if (error instanceof SyntaxError) throw backupIntegrity("Backup file is not valid JSON", name);
+    throw error;
+  }
 }
 
 export class PersistenceDatabase {
@@ -522,11 +552,11 @@ export class PersistenceDatabase {
           )
         : 0;
     if (currentVersion === available.length) return;
-    const rebuildsArtifacts = available.some(
+    const rebuildsTables = available.some(
       (migration) =>
-        migration.version > currentVersion && migration.name === "authored_code_artifacts",
+        migration.version > currentVersion && tableRebuildMigrations.includes(migration.name),
     );
-    if (rebuildsArtifacts) sqlite.exec("PRAGMA foreign_keys=OFF");
+    if (rebuildsTables) sqlite.exec("PRAGMA foreign_keys=OFF");
     sqlite.exec("PRAGMA busy_timeout=0");
     try {
       try {
@@ -547,7 +577,7 @@ export class PersistenceDatabase {
           )
           .run(migration.version, migration.name, migration.checksum, new Date().toISOString());
       }
-      if (rebuildsArtifacts && this.all("PRAGMA foreign_key_check").length)
+      if (rebuildsTables && this.all("PRAGMA foreign_key_check").length)
         throw new Error("Migration produced a foreign key violation");
       sqlite.exec("COMMIT");
     } catch (error) {
@@ -555,7 +585,7 @@ export class PersistenceDatabase {
       throw error;
     } finally {
       sqlite.exec("PRAGMA busy_timeout=5000");
-      if (rebuildsArtifacts) sqlite.exec("PRAGMA foreign_keys=ON");
+      if (rebuildsTables) sqlite.exec("PRAGMA foreign_keys=ON");
     }
   }
   /**
@@ -780,8 +810,7 @@ export class PersistenceDatabase {
     options: {
       revocations?: SqlRow[];
       tombstones?: SqlRow[];
-      /** Consent and approval rows revoked in the live ledger after the backup was taken. */
-      consentRevocations?: SqlRow[];
+      /** Approval rows revoked in the live ledger after the backup was taken. */
       approvalRevocations?: SqlRow[];
       /** False when the caller could not read the post-backup ledger; the restore stays suspended and says so. */
       ledgerAvailable?: boolean;
@@ -793,17 +822,27 @@ export class PersistenceDatabase {
     const destination = resolve(destinationDir);
     const manifest = validate<BackupManifest>(
       "BackupManifest",
-      JSON.parse(await readFile(join(source, "manifest.json"), "utf8")),
+      await readBackupJson(source, "manifest.json"),
     );
     const available = await loadMigrations();
     if (manifest.databaseVersion > available.length)
-      throw new Error("Backup database version is unsupported");
+      throw new ContractError("PRECONDITION_FAILED", "Backup database version is unsupported", {
+        reasonCode: "backup_version_unsupported",
+        databaseVersion: manifest.databaseVersion,
+        supportedVersion: available.length,
+        nextActions: ["use_newer_release"],
+      });
     const paths: Record<string, true> = {};
     for (const file of manifest.files) {
-      if (paths[file.relativePath]) throw new Error("Duplicate backup file");
+      if (paths[file.relativePath])
+        throw backupIntegrity("Duplicate backup file", file.relativePath);
       paths[file.relativePath] = true;
       const path = join(source, file.relativePath);
-      const info = await lstat(path);
+      const info = await lstat(path).catch((error: unknown) => {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT")
+          throw backupIntegrity("Backup file is missing", file.relativePath);
+        throw error;
+      });
       if (
         !info.isFile() ||
         info.isSymbolicLink() ||
@@ -811,38 +850,48 @@ export class PersistenceDatabase {
         info.size !== file.sizeBytes ||
         (await fileSha256(path)) !== file.sha256
       )
-        throw new Error(`Backup integrity failure: ${file.relativePath}`);
+        throw backupIntegrity("Backup integrity failure", file.relativePath);
     }
     if (!paths["testmaster.db"] || !paths["evidence-index.json"])
-      throw new Error("Backup requires database and evidence index");
-    const index = JSON.parse(
-      await readFile(join(source, "evidence-index.json"), "utf8"),
-    ) as EvidenceIndex;
+      throw backupIntegrity("Backup requires database and evidence index");
+    const index = (await readBackupJson(source, "evidence-index.json")) as EvidenceIndex | null;
+    if (typeof index !== "object" || index === null || typeof index.complete !== "boolean")
+      throw backupIntegrity("Backup evidence index is malformed", "evidence-index.json");
     await mkdir(destination, { mode: 0o700 });
-    for (const file of manifest.files) {
-      const target = join(destination, file.relativePath);
-      await mkdir(dirname(target), { recursive: true, mode: 0o700 });
-      await copyFile(join(source, file.relativePath), target);
-      await chmod(target, 0o600);
-    }
-    const restored = await PersistenceDatabase.open(join(destination, "testmaster.db"), {
-      migrate: false,
-    });
+    // From here the destination exists because this call created it, so every failure removes it.
+    let restored: PersistenceDatabase | undefined;
     try {
-      if (
-        restored.get("PRAGMA integrity_check")?.integrity_check !== "ok" ||
-        restored.all("PRAGMA foreign_key_check").length
-      )
-        throw new Error("Restored database integrity check failed");
-      if (restored.status().currentVersion !== manifest.databaseVersion)
-        throw new Error("Backup database schema version mismatch");
+      for (const file of manifest.files) {
+        const target = join(destination, file.relativePath);
+        await mkdir(dirname(target), { recursive: true, mode: 0o700 });
+        await copyFile(join(source, file.relativePath), target);
+        await chmod(target, 0o600);
+      }
+      try {
+        restored = await PersistenceDatabase.open(join(destination, "testmaster.db"), {
+          migrate: false,
+        });
+        if (
+          restored.get("PRAGMA integrity_check")?.integrity_check !== "ok" ||
+          restored.all("PRAGMA foreign_key_check").length
+        )
+          throw backupIntegrity("Restored database integrity check failed");
+        if (restored.status().currentVersion !== manifest.databaseVersion)
+          throw backupIntegrity("Backup database schema version mismatch");
+      } catch (error) {
+        // A file with a valid hash that SQLite cannot read is a corrupt backup; other errors keep their type.
+        if ((error as NodeJS.ErrnoException).code === "ERR_SQLITE_ERROR")
+          throw backupIntegrity("Restored database cannot be read", "testmaster.db");
+        throw error;
+      }
       if (!options.keepSchema) await restored.migrate();
       const ledgerAvailable = options.ledgerAvailable !== false;
-      restored.withTx(() =>
-        applyRestoreTightening(restored, { ...options, evidenceComplete: index.complete }),
+      const database = restored;
+      database.withTx(() =>
+        applyRestoreTightening(database, { ...options, evidenceComplete: index.complete }),
       );
       return {
-        database: restored,
+        database,
         manifest,
         evidenceComplete: index.complete,
         postBackupLedger: ledgerAvailable ? "replayed" : "unavailable",
@@ -850,8 +899,8 @@ export class PersistenceDatabase {
         requiresOperatorReview: true,
       };
     } catch (error) {
-      restored.close();
-      await rm(destination, { recursive: true });
+      restored?.close();
+      await rm(destination, { recursive: true, force: true });
       throw error;
     }
   }

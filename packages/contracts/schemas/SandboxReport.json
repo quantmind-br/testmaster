@@ -1,0 +1,71 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "available",
+    "mode",
+    "seccomp",
+    "cgroupVersion",
+    "diagnostics"
+  ],
+  "properties": {
+    "available": {
+      "type": "boolean"
+    },
+    "mode": {
+      "anyOf": [
+        {
+          "const": "rootless",
+          "type": "string"
+        },
+        {
+          "const": "rootful",
+          "type": "string"
+        },
+        {
+          "const": "unknown",
+          "type": "string"
+        }
+      ]
+    },
+    "seccomp": {
+      "type": "boolean"
+    },
+    "cgroupVersion": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "const": "seccomp_unavailable",
+            "type": "string"
+          },
+          {
+            "const": "cgroup_v2_required",
+            "type": "string"
+          },
+          {
+            "const": "resource_limits_unsupported",
+            "type": "string"
+          },
+          {
+            "const": "docker_daemon_unavailable",
+            "type": "string"
+          }
+        ]
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:SandboxReport",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

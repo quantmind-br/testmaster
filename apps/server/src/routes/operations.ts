@@ -70,9 +70,4 @@ export const operationsRoutes: RouteModule = {
     "POST /incidents/{id}/events",
     "POST /incidents/{id}/close",
   ],
-  status: {
-    "POST /incidents": 201,
-    "POST /operations/backups": 202,
-    "POST /operations/restores": 202,
-  },
 };

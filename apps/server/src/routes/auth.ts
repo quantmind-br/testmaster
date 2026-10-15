@@ -67,5 +67,4 @@ export const authRoutes: RouteModule = {
       context.service.authCheckpoints.cancel(id(context)),
   },
   synchronous: ["POST /auth-checkpoints"],
-  status: { "POST /auth-profiles": 201, "POST /auth-checkpoints": 201 },
 };

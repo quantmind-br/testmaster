@@ -25,5 +25,4 @@ export const suiteRoutes: RouteModule = {
       }),
   },
   synchronous: ["POST /suites", "PATCH /suites/{id}", "DELETE /suites/{id}"],
-  status: { "POST /suites": 201, "POST /suites/{id}/runs": 202 },
 };

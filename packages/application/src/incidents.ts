@@ -213,6 +213,7 @@ export class IncidentsService {
   }
 
   create(input: IncidentInput): IncidentView {
+    validate("IncidentInput", input);
     this.ctx.authorize("A");
     return authoringTransaction(this.ctx, () => {
       const now = new Date().toISOString();

@@ -1,0 +1,178 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "status",
+    "components",
+    "worker"
+  ],
+  "properties": {
+    "status": {
+      "anyOf": [
+        {
+          "const": "ready",
+          "type": "string"
+        },
+        {
+          "const": "unavailable",
+          "type": "string"
+        }
+      ]
+    },
+    "components": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "persistence",
+        "admission"
+      ],
+      "properties": {
+        "persistence": {
+          "anyOf": [
+            {
+              "const": "ready",
+              "type": "string"
+            },
+            {
+              "const": "unavailable",
+              "type": "string"
+            }
+          ]
+        },
+        "admission": {
+          "anyOf": [
+            {
+              "const": "ready",
+              "type": "string"
+            },
+            {
+              "const": "unavailable",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    "worker": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "status",
+        "runners"
+      ],
+      "properties": {
+        "status": {
+          "anyOf": [
+            {
+              "const": "ready",
+              "type": "string"
+            },
+            {
+              "const": "degraded",
+              "type": "string"
+            }
+          ]
+        },
+        "runners": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "http",
+            "playwright",
+            "python",
+            "terminal"
+          ],
+          "properties": {
+            "http": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "anyOf": [
+                    {
+                      "const": "ready",
+                      "type": "string"
+                    },
+                    {
+                      "const": "unavailable",
+                      "type": "string"
+                    }
+                  ]
+                }
+              }
+            },
+            "playwright": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "anyOf": [
+                    {
+                      "const": "ready",
+                      "type": "string"
+                    },
+                    {
+                      "const": "unavailable",
+                      "type": "string"
+                    }
+                  ]
+                }
+              }
+            },
+            "python": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "anyOf": [
+                    {
+                      "const": "ready",
+                      "type": "string"
+                    },
+                    {
+                      "const": "unavailable",
+                      "type": "string"
+                    }
+                  ]
+                }
+              }
+            },
+            "terminal": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "anyOf": [
+                    {
+                      "const": "ready",
+                      "type": "string"
+                    },
+                    {
+                      "const": "unavailable",
+                      "type": "string"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:LocalReadinessReport",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -4,8 +4,9 @@ import { flattenSteps } from "../plan-analysis.js";
 
 /**
  * What an OpenAPI source revision exposes to plans: a document shaped like the original
- * (`/paths/<path>/<method>` with dereferenced operations) plus the path prefix its first server
- * declares. The parser dereferences `$ref`s in place, so schemas are self-contained.
+ * (`/paths/<path>/<method>` with operations) plus the path prefix its first server declares. The
+ * parser inlines every `$ref` whose target holds no recursion; each remaining (recursive)
+ * reference reads `#/$defs/<pointer>` and its target lives in the operation's own `$defs`.
  */
 export interface SourceView {
   document: { paths: Record<string, Record<string, unknown>> };
@@ -59,22 +60,44 @@ export function loadSourceView(ctx: ServiceContext, revisionId: string): SourceV
   return { document: { paths }, basePath: serverBasePath(state.result.chunks) };
 }
 
-/** The object at a JSON pointer, or undefined when the pointer does not reach one. */
+function refersToDefinitions(node: unknown): boolean {
+  if (!node || typeof node !== "object") return false;
+  if (Array.isArray(node)) return node.some(refersToDefinitions);
+  return Object.entries(node).some(([key, child]) =>
+    // Only a string is a reference; an object under `$ref` is a property schema named "$ref".
+    key === "$ref" && typeof child === "string"
+      ? child.startsWith("#/$defs/")
+      : refersToDefinitions(child),
+  );
+}
+
+/**
+ * The object at a JSON pointer, or undefined when the pointer does not reach one. A schema that
+ * reaches recursive definitions comes back with its operation's `$defs` attached, so it validates
+ * on its own wherever the pointer cuts into the operation.
+ */
 export function resolveSourceSchema(
   view: SourceView,
   pointer: string,
 ): Record<string, unknown> | undefined {
   if (pointer !== "" && !pointer.startsWith("/")) return undefined;
   let value: unknown = view.document;
-  for (const token of pointer === "" ? [] : pointer.slice(1).split("/")) {
+  let definitions: unknown;
+  for (const [index, token] of (pointer === "" ? [] : pointer.slice(1).split("/")).entries()) {
     const key = token.replaceAll("~1", "/").replaceAll("~0", "~");
     if (!value || typeof value !== "object" || !Object.hasOwn(value, key)) return undefined;
     value = (value as Record<string, unknown>)[key];
+    if (index === 2 && value && typeof value === "object")
+      definitions = (value as Record<string, unknown>).$defs;
   }
   // The whole document is not a schema for a response body.
   if (pointer === "" || !value || typeof value !== "object" || Array.isArray(value))
     return undefined;
-  return value as Record<string, unknown>;
+  const schema = value as Record<string, unknown>;
+  if (!definitions || typeof definitions !== "object" || !refersToDefinitions(schema))
+    return schema;
+  const own = schema.$defs && typeof schema.$defs === "object" ? schema.$defs : {};
+  return { ...schema, $defs: { ...own, ...definitions } };
 }
 
 function schemaExpectations(plan: ExecutablePlan): { sourceRevisionId: string; pointer: string }[] {

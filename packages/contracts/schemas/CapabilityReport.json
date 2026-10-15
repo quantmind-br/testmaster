@@ -1,0 +1,270 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "features",
+    "runners",
+    "sandbox",
+    "limits"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0",
+      "type": "string"
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "enabled",
+          "milestone",
+          "disabledReason"
+        ],
+        "properties": {
+          "id": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "milestone": {
+            "anyOf": [
+              {
+                "const": "M0",
+                "type": "string"
+              },
+              {
+                "const": "M1",
+                "type": "string"
+              },
+              {
+                "const": "M2",
+                "type": "string"
+              },
+              {
+                "const": "M3",
+                "type": "string"
+              },
+              {
+                "const": "M4",
+                "type": "string"
+              },
+              {
+                "const": "M5",
+                "type": "string"
+              },
+              {
+                "const": "M6",
+                "type": "string"
+              }
+            ]
+          },
+          "disabledReason": {
+            "anyOf": [
+              {
+                "maxLength": 8000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "experimental": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "runners": {
+      "maxItems": 4,
+      "uniqueItems": true,
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "const": "playwright",
+            "type": "string"
+          },
+          {
+            "const": "http",
+            "type": "string"
+          },
+          {
+            "const": "python",
+            "type": "string"
+          },
+          {
+            "const": "terminal",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    "sandbox": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "available",
+        "mode",
+        "seccomp",
+        "cgroupVersion",
+        "diagnostics"
+      ],
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "mode": {
+          "anyOf": [
+            {
+              "const": "rootless",
+              "type": "string"
+            },
+            {
+              "const": "rootful",
+              "type": "string"
+            },
+            {
+              "const": "unknown",
+              "type": "string"
+            }
+          ]
+        },
+        "seccomp": {
+          "type": "boolean"
+        },
+        "cgroupVersion": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "diagnostics": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "const": "seccomp_unavailable",
+                "type": "string"
+              },
+              {
+                "const": "cgroup_v2_required",
+                "type": "string"
+              },
+              {
+                "const": "resource_limits_unsupported",
+                "type": "string"
+              },
+              {
+                "const": "docker_daemon_unavailable",
+                "type": "string"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "limits": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "executionTimeoutMs": {
+          "minimum": 1,
+          "maximum": 7200000,
+          "default": 1800000,
+          "type": "integer"
+        },
+        "attemptTimeoutMs": {
+          "minimum": 1,
+          "maximum": 900000,
+          "default": 300000,
+          "type": "integer"
+        },
+        "stepTimeoutMs": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "networkRequestTimeoutMs": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "preparationTimeoutMs": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "collectionGraceMs": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "analysisGraceMs": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "maxAttempts": {
+          "minimum": 1,
+          "maximum": 2,
+          "default": 2,
+          "type": "integer"
+        },
+        "bodyBytes": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "artifactBytes": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "attemptArtifactBytes": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "logBytes": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "executor": {
+          "anyOf": [
+            {
+              "const": "docker",
+              "type": "string"
+            },
+            {
+              "const": "process",
+              "type": "string"
+            }
+          ]
+        },
+        "mode": {
+          "anyOf": [
+            {
+              "const": "replay",
+              "type": "string"
+            },
+            {
+              "const": "agent",
+              "type": "string"
+            }
+          ]
+        },
+        "concurrency": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:CapabilityReport",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

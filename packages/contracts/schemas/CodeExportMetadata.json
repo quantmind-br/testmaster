@@ -1,0 +1,183 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "version",
+    "format",
+    "framework",
+    "entrypoint",
+    "planHash",
+    "assertionIds",
+    "requiredInputs",
+    "setupCommands",
+    "runCommand",
+    "runtime",
+    "files"
+  ],
+  "properties": {
+    "version": {
+      "const": "1.0.0",
+      "type": "string"
+    },
+    "format": {
+      "anyOf": [
+        {
+          "const": "playwright",
+          "type": "string"
+        },
+        {
+          "const": "pytest",
+          "type": "string"
+        }
+      ]
+    },
+    "framework": {
+      "anyOf": [
+        {
+          "const": "playwright-test",
+          "type": "string"
+        },
+        {
+          "const": "playwright-sync",
+          "type": "string"
+        },
+        {
+          "const": "playwright-async",
+          "type": "string"
+        },
+        {
+          "const": "requests",
+          "type": "string"
+        },
+        {
+          "const": "pytest",
+          "type": "string"
+        }
+      ]
+    },
+    "entrypoint": {
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+      "type": "string"
+    },
+    "planHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "assertionIds": {
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
+    "requiredInputs": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "secrets",
+        "variables",
+        "artifacts",
+        "popupAliases"
+      ],
+      "properties": {
+        "secrets": {
+          "type": "array",
+          "items": {
+            "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          }
+        },
+        "variables": {
+          "type": "array",
+          "items": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          }
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          }
+        },
+        "popupAliases": {
+          "type": "array",
+          "items": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          }
+        }
+      }
+    },
+    "setupCommands": {
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      }
+    },
+    "runCommand": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "runtime": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "playwright"
+      ],
+      "properties": {
+        "node": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "python": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "playwright": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        }
+      }
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "path",
+          "sha256",
+          "sizeBytes"
+        ],
+        "properties": {
+          "path": {
+            "minLength": 1,
+            "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+            "type": "string"
+          },
+          "sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "sizeBytes": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:CodeExportMetadata",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,388 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "requirements",
+    "conflicts",
+    "openQuestions",
+    "version",
+    "fingerprint"
+  ],
+  "properties": {
+    "requirements": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "workspaceId",
+          "createdAt",
+          "version",
+          "text",
+          "acceptanceCriteria",
+          "sourceRefs",
+          "originKind",
+          "confidence",
+          "approval",
+          "extensions"
+        ],
+        "properties": {
+          "id": {
+            "pattern": "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "workspaceId": {
+            "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "version": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "text": {
+            "maxLength": 8000,
+            "type": "string"
+          },
+          "acceptanceCriteria": {
+            "type": "array",
+            "items": {
+              "maxLength": 8000,
+              "type": "string"
+            }
+          },
+          "sourceRefs": {
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "minProperties": 1,
+              "dependentRequired": {
+                "attemptId": [
+                  "runId"
+                ],
+                "stepId": [
+                  "runId",
+                  "attemptId"
+                ],
+                "observationSeq": [
+                  "runId"
+                ],
+                "codeSnapshotId": [
+                  "relativePath",
+                  "contentHash"
+                ]
+              },
+              "type": "object",
+              "properties": {
+                "artifactId": {
+                  "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "sourceRevisionId": {
+                  "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "snapshotId": {
+                  "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "relativePath": {
+                  "minLength": 1,
+                  "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+                  "type": "string"
+                },
+                "offset": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "length": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "page": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "jsonPointer": {
+                  "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                  "type": "string"
+                },
+                "contentHash": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                },
+                "runId": {
+                  "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "attemptId": {
+                  "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "stepId": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "observationSeq": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "codeSnapshotId": {
+                  "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "originKind": {
+            "anyOf": [
+              {
+                "const": "explicit",
+                "type": "string"
+              },
+              {
+                "const": "user_spec",
+                "type": "string"
+              },
+              {
+                "const": "inferred",
+                "type": "string"
+              },
+              {
+                "const": "observed",
+                "type": "string"
+              }
+            ]
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "maximum": 1,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "approval": {
+            "anyOf": [
+              {
+                "pattern": "^apr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "extensions": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "testmaster:projectId"
+            ],
+            "properties": {
+              "testmaster:projectId": {
+                "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "testmaster:key": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "testmaster:reason": {
+                "maxLength": 8000,
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "conflicts": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "requirementIds",
+          "reason",
+          "sourceRefs",
+          "resolution"
+        ],
+        "properties": {
+          "id": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "requirementIds": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "pattern": "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            }
+          },
+          "reason": {
+            "maxLength": 8000,
+            "type": "string"
+          },
+          "sourceRefs": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "minProperties": 1,
+              "dependentRequired": {
+                "attemptId": [
+                  "runId"
+                ],
+                "stepId": [
+                  "runId",
+                  "attemptId"
+                ],
+                "observationSeq": [
+                  "runId"
+                ],
+                "codeSnapshotId": [
+                  "relativePath",
+                  "contentHash"
+                ]
+              },
+              "type": "object",
+              "properties": {
+                "artifactId": {
+                  "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "sourceRevisionId": {
+                  "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "snapshotId": {
+                  "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "relativePath": {
+                  "minLength": 1,
+                  "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+                  "type": "string"
+                },
+                "offset": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "length": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "page": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "jsonPointer": {
+                  "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                  "type": "string"
+                },
+                "contentHash": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                },
+                "runId": {
+                  "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "attemptId": {
+                  "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "stepId": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "observationSeq": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "codeSnapshotId": {
+                  "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "resolution": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "selectedRequirementId",
+                  "reason",
+                  "actorId"
+                ],
+                "properties": {
+                  "selectedRequirementId": {
+                    "pattern": "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "reason": {
+                    "minLength": 1,
+                    "maxLength": 2000,
+                    "type": "string"
+                  },
+                  "actorId": {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "openQuestions": {
+      "type": "array",
+      "items": {
+        "maxLength": 8000,
+        "type": "string"
+      }
+    },
+    "version": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "fingerprint": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "const": "",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:RequirementSnapshotView",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

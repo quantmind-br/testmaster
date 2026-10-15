@@ -482,15 +482,4 @@ export const coreRoutes: RouteModule = {
     // DELETE /artifacts/{id} is idempotent by its own deletion key and opens its own transaction,
     // so it must not run inside the idempotency wrapper's transaction.
   ],
-  status: {
-    "POST /runs": 202,
-    "POST /batches": 202,
-    "POST /projects/{id}/discovery": 202,
-    "POST /projects/{id}/proposal-batches": 202,
-    "POST /projects": 201,
-    "POST /projects/{id}/environments": 201,
-    "POST /projects/{id}/tests": 201,
-    "POST /tests/{id}/revisions": 201,
-    "POST /uploads": 201,
-  },
 };

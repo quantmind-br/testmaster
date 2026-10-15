@@ -147,6 +147,13 @@ function markdown(text: unknown): string {
     .replace(/[\\`*_{}[\]()#+.!|~-]/g, "\\$&")
     .replace(/\r?\n/g, " ");
 }
+/** Inline code that keeps the text byte-for-byte: no HTML entities, and a fence longer than any backtick run inside. */
+function codeSpan(text: string): string {
+  const run = Math.max(0, ...[...text.matchAll(/`+/g)].map((match) => match[0].length));
+  const fence = "`".repeat(run + 1);
+  const padded = text.startsWith("`") || text.endsWith("`") ? ` ${text} ` : text;
+  return `${fence}${padded}${fence}`;
+}
 function validateSnapshot(snapshot: ReportSnapshot): void {
   const seen = new Set<string>();
   for (const item of snapshot.runs) {
@@ -211,7 +218,7 @@ export function exportMarkdown(snapshot: ReportSnapshot): string {
     `Selection: ${snapshot.selection.requested}; not dispatched: ${snapshot.selection.notDispatched.length}; excluded: ${snapshot.selection.excluded.length}`,
     ...snapshot.completeness.reasons.map((reason) => `- Incomplete: ${markdown(reason)}`),
     ...(snapshot.provenance
-      ? [`Source binding: ${markdown(JSON.stringify(snapshot.provenance))}`]
+      ? [`Source binding: ${codeSpan(JSON.stringify(snapshot.provenance))}`]
       : []),
     ...Object.entries(snapshot.coverage ?? {}).map(
       ([name, metric]) =>

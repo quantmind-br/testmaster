@@ -265,6 +265,7 @@ export function suiteCommands(program: Command, runtime: Runtime): void {
       const receipt = await (await rt.app()).suites.run(String(args[0]), runInput(opts), {
         origin: "cli",
         ...(opts.queue === true ? { wait: true } : {}),
+        waitFlag: "--queue",
         ...(string(opts, "idempotencyKey")
           ? { idempotencyKey: string(opts, "idempotencyKey") as string }
           : {}),

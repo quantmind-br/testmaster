@@ -1,0 +1,48 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "eventId",
+    "seq",
+    "type",
+    "jobId",
+    "attemptId"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0",
+      "type": "string"
+    },
+    "eventId": {
+      "pattern": "^evt_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "seq": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "type": {
+      "anyOf": [
+        {
+          "const": "discovery.accepted",
+          "type": "string"
+        },
+        {
+          "const": "discovery.updated",
+          "type": "string"
+        }
+      ]
+    },
+    "jobId": {
+      "pattern": "^dsc_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "attemptId": {
+      "type": "null"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:DiscoveryEvent",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

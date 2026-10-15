@@ -89,3 +89,61 @@ def test_request_fixture_resolves_relative_urls_against_run_environment(monkeypa
         assert session.trust_env is True
     finally:
         fixture.close()
+
+
+def test_pytest_items_and_nested_steps_have_distinct_paired_indexes(tmp_path):
+    import pytest
+
+    source = tmp_path / "test_items.py"
+    source.write_text("def test_first():\n    assert 2 + 2 == 4\n\ndef test_second():\n    assert 2 + 2 == 5\n")
+    protocol = Protocol()
+    plugin = PythonPlugin(protocol, {})
+    result = pytest.main([str(source), "-q", "--noconftest", "-o", "addopts="], plugins=[plugin])
+    assert result == pytest.ExitCode.TESTS_FAILED
+    starts = [payload for kind, payload in protocol.events if kind == "step.started"]
+    finishes = [payload for kind, payload in protocol.events if kind == "step.finished"]
+    assert [event["index"] for event in starts] == [0, 1]
+    assert [(event["stepId"], event["index"]) for event in finishes] == [(event["stepId"], event["index"]) for event in starts]
+    assert [event["status"] for event in finishes] == ["passed", "failed"]
+
+    plugin.pytest_runtest_logstart("test_outer", ("test_items.py", 0, "test_outer"))
+    with plugin.step("nested"):
+        pass
+    plugin.pytest_runtest_logfinish("test_outer", ("test_items.py", 0, "test_outer"))
+    finishes = [payload for kind, payload in protocol.events if kind == "step.finished"]
+    assert [event["index"] for event in finishes] == [0, 1, 3, 2]
+    assert plugin.completed == 3
+
+
+def test_explicit_step_index_cannot_reuse_an_emitted_index():
+    import pytest
+
+    plugin = PythonPlugin(Protocol(), {})
+    with plugin.step("explicit", index=5):
+        pass
+    with plugin.step("automatic"):
+        pass
+    with pytest.raises(ValueError, match="nonnegative and unique"):
+        with plugin.step("duplicate", index=5):
+            pass
+    finishes = [payload for kind, payload in plugin.protocol.events if kind == "step.finished"]
+    assert [event["index"] for event in finishes] == [5, 6]
+
+
+def test_colliding_and_nested_step_names_keep_their_original_failures():
+    import pytest
+
+    plugin = PythonPlugin(Protocol(), {})
+    with pytest.raises(AssertionError, match="business mismatch"):
+        with plugin.step("same"):
+            with plugin.step("same"):
+                raise AssertionError("business mismatch")
+    for nodeid in ["test_value[1/2]", "test_value[1_2]"]:
+        plugin.pytest_runtest_logstart(nodeid, ("test_items.py", 0, "test_value"))
+        plugin.pytest_runtest_logfinish(nodeid, ("test_items.py", 0, "test_value"))
+    starts = [payload for kind, payload in plugin.protocol.events if kind == "step.started"]
+    finishes = [payload for kind, payload in plugin.protocol.events if kind == "step.finished"]
+    assert len({event["stepId"] for event in starts}) == 4
+    assert {(event["stepId"], event["index"]) for event in finishes} == {(event["stepId"], event["index"]) for event in starts}
+    assert [event["status"] for event in finishes] == ["failed", "failed", "passed", "passed"]
+    assert [event["error"]["message"] for event in finishes[:2]] == ["business mismatch", "business mismatch"]

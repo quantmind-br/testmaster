@@ -32,5 +32,4 @@ export const workerRoutes: RouteModule = {
     },
   },
   synchronous: ["POST /workers", "POST /workers/{id}/drain", "POST /workers/{id}/revoke"],
-  status: { "POST /workers": 201 },
 };

@@ -40,7 +40,7 @@ An incident view holds these parts. Fill them as facts arrive; do not wait for t
 
 ```bash
 testmaster ops incident create --title "..." --severity critical --category tenant_exposure \
-  --summary "..." --version <commit> --resource Run:run_...
+  --summary "..." --affected-version <commit> --resource Run:run_...
 testmaster ops incident update <incident-id> --kind timeline --text "UTC 10:42 token revoked"
 testmaster ops incident update <incident-id> --kind evidence --text "..." --evidence audit_event:<id>
 testmaster ops incident update <incident-id> --kind reach --text "..." ...
@@ -77,7 +77,7 @@ entry.
 ## During the incident
 
 1. Contain first with the authenticated operations that exist: `ops pause|drain`,
-   `worker drain`, `run cancel`, `secret remove|rotate`, `consent revoke`, token revocation, and
+   `worker drain`, `run cancel`, `secret remove|rotate`, removing a provider from `allowedModelProviders`, token revocation, and
    `ops reconcile preview|apply`. Record each action as a timeline entry.
 2. Preserve before repair: database, audit export, sealed manifests, bounded logs, the images lock and
    redacted configuration. Do not edit rows, remove failed assertions or export secret values.

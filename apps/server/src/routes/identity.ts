@@ -136,9 +136,4 @@ export const identityRoutes: RouteModule = {
       ),
     "DELETE /tokens/{id}": (context) => context.service.tokens.revoke(context.params.id as string),
   },
-  status: {
-    "POST /workspaces": 201,
-    "POST /workspaces/{id}/members": 201,
-    "POST /tokens": 201,
-  },
 };
