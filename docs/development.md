@@ -22,7 +22,8 @@
 
 Dependency direction (NFR-009): `contracts` ← `domain` ← `persistence`, `evidence` ← `sandbox`,
 `model-gateway`, `planner`, `reporting` ← `application` ← `apps/*`. `runner` imports only
-`contracts`, `domain`, `playwright-core`, `undici`.
+`contracts`, `domain`, `playwright-core`, `undici`, and, for the terminal runner (ADR-025),
+`@lydell/node-pty` and `@xterm/headless`.
 
 ## Tests
 
@@ -48,6 +49,11 @@ Python runner images remove build-time pip/uv installers after their frozen depe
 runtime dependencies require a reviewed rebuilt image. `python/runtime.json` records the pinned
 image ID and exact package versions. Shared evidence text uses known-secret and common sensitive
 header/URL/JSON/form/e-mail/document patterns; this is not a guarantee of unknown PII anonymity.
+Python pytest items and `testmaster.step(name, index=None)` allocate distinct attempt-local
+indexes, including nested steps; finish events retain their start index. Explicit indexes must
+be nonnegative and unused (`1000000` belongs to the imported-code wrapper). Repeated or sanitized
+colliding names receive distinct step IDs, so an inner failure cannot overwrite its parent's
+evidence.
 Controller-side raw-pattern hits and malformed JSON/NDJSON are withheld as `redaction_failed`,
 and protocol artifact chunks never enter public observation events. Archive extraction accepts
 an AbortSignal and removes incomplete staging on failure/cancellation; nested archives are
@@ -177,8 +183,8 @@ Attempts run only through the hardened sandbox. Explicit unsafe process executio
 both `--unsafe-local` and operator authorization and is labelled `isolation: none`.
 
 Worker admission reserves aggregate CPU, memory, PIDs and scratch disk before the lease claim
-in the same transaction. CPU and RAM retain 25% host headroom; browser, HTTP and Python have
-independent pool slots. A job that cannot fit stays queued without an Attempt, and published worker
+in the same transaction. CPU and RAM retain 25% host headroom; browser, HTTP, Python and terminal have
+independent pool slots (the terminal pool reuses the browser concurrency default). A job that cannot fit stays queued without an Attempt, and published worker
 metadata includes verified image IDs and its resource budgets. `worker.run({capacity})` can narrow
 operator budgets for a smaller dedicated host; repository run flags cannot expand those budgets.
 Queued cancellation completes the job atomically without a container; repeated and terminal
@@ -217,6 +223,54 @@ effective configuration and policy; changed image/capabilities or tampered input
 refuse with `security_precondition_failed` and a typed incompatibility. Explicit revision or
 environment overrides create a fresh admission. Retried Attempts never silently adopt a new
 image lock. No model is called by deterministic rerun.
+
+Untracked-file provenance hashes are streamed in bounded chunks without changing the existing
+content hash format. A process reuses hashes only while device, inode, size, mtime and ctime
+remain unchanged, and never caches files changed in the last two seconds (filesystem timestamp
+race guard). On the local (SQLite) profile the identity-to-digest cache is also persisted across
+processes in `<dataDir>/provenance-cache/untracked-hashes.json` (file 0600, directory 0700, atomic
+temp-and-rename write, versioned with the digest algorithm, at most 100000 entries and 32 MiB;
+entries for paths not seen in the latest scan are dropped). It stores repository-relative paths,
+identities and digests only, never content, and it is a separate file from the database. A
+missing, corrupt, oversized, foreign-version or other-repository file is ignored and rewritten,
+and a write failure never fails admission, so a cold CLI process re-reads only files whose
+identity changed. The server (PostgreSQL) profile keeps the in-process cache only. Files changing
+during a read and non-regular untracked files are refused rather than assigned an unreliable
+identity.
+
+The working-tree diff (`collectDiffChanges` in `packages/planner/src/code/diff.ts`) hashes untracked
+files with the same streaming digest (`hashConfinedCodeFile`), so an untracked file larger than the
+25 MiB code-read limit is hashed rather than aborting the analysis; the read limit applies only to
+files whose content is parsed. `summarizeDiffScope` (`code/scope.ts`) limits a diff analysis to the
+changed files plus their reverse relative-import closure: `git grep` over-approximates importers
+(untracked files included for a working tree, the pinned head's blobs otherwise), then the AST
+confirms them. The pinned head is staged from git objects into
+`<dataDir>/discovery-snapshots/` (candidate blobs and ancestor `.gitignore` blobs only, removed
+afterwards). A failing `git grep` aborts with `PRECONDITION_FAILED` (`details.step =
+importer_closure`); aliased (tsconfig/bundler) imports are not followed and are declared as a gap.
+Codebase mode caps symbols (200/file, 20000/run) and keeps relative imports only, so the discovery
+state stays below `MAX_STATE_BYTES`; `PAYLOAD_TOO_LARGE` from `saveAiState` carries
+`details.key/bytes/limitBytes`. Component exports are summary features, not feature-map entities,
+and Next route handlers become `endpoint:METHOD:/path` features. Route handlers exported through a
+destructuring declaration (`export const { GET, POST } = createFromSource(source)`) are resolved by
+the names the pattern binds (`{ handler: GET }` binds `GET`; `{ GET: handler }` binds `handler`, which
+is no method; rest elements are ignored). A comparison of a request path with a literal starting
+with `/` becomes a `node-http` route: `path|pathname|route`, any `<object>.pathname`
+(`url.pathname`, `new URL(req.url).pathname`) or any `<object>.url` (`req.url`), in either operand
+order; a `.url` comparison with a literal containing `?` is ignored (it carries a query string). Only
+a file that imports `http`/`https`/`http2` (or the `node:` forms) and calls `createServer` counts,
+never under `app/` or `pages/`, in `.tsx`/`.jsx`, or in a test file (`*.test.*`, `*.spec.*`, or
+under `__tests__/`, `test/`, `tests/`: a stub server there is a fixture, not an application route).
+The method is the `method === "GET"` / `req.method === "GET"` comparison in the same `&&` chain,
+else `UNKNOWN`. Bumping `CODE_DETECTOR_VERSION` (now 1.3.0) stops old discovery jobs from resuming.
+
+The project data directory (`<repo>/.testmaster/` by default, or `TESTMASTER_DATA_DIR`) is never
+listed or opened by repository provenance or by the working-tree diff, whether or not Git ignores
+it. The process that scans holds the SQLite database open, and POSIX `fcntl` locks are per
+process and released when any descriptor of the file closes, so even a read-only hash would let a
+concurrent CLI writer delete the live `-wal`/`-shm` and corrupt the server's view. Excluding it
+also keeps `dirtyHash` stable across runs, which write their own evidence there. A data directory
+outside the repository is unaffected; `testmaster init` still does not edit `.gitignore`.
 
 Reports reopening verified bundles declare `evidence-replay`; manifests distinguish
 `strict-execution-replay` from fresh agent-mode `fresh-llm-regeneration`. External target/data
@@ -321,15 +375,19 @@ M1 journeys use the built CLI and real reference app in `validation/journeys/`. 
 observed JSON summaries under `validation/results/`. The separately exercised manual quickstart
 transcript is `validation/results/quickstart-m1.md`.
 M2 source/discovery/requirement/proposal/usage commands share application services. Declare
-OpenAI-compatible `modelProviders` only in the selected user profile, grant their IDs in the
-operator policy's `allowedModelProviders`, then explicitly `consent grant --provider ID
---data-class documents requirements --allow-unknown-cost` for an unpriced provider before
-normalization/planning. Unknown-cost consent defaults to false, is stored with data-class
-consent, audited by its digest, and revoked with the grant. Repo content cannot configure
-providers or tools. Prices remain `unknown`, never zero, unless the profile declares a price
-table (`prices.<model>`: `currency`, `scale`, integer `inputPerMillion`/`outputPerMillion`,
-optional `cacheReadPerMillion` applied only to provider-reported cached input, and `version`
-naming its source); monetary ceilings refuse unknown reservations. No token or monetary
+OpenAI-compatible `modelProviders` only in the selected user profile and list their IDs in the
+operator policy's `allowedModelProviders`; that allowlist is the only provider gate. There is no
+consent, grant or revoke step per project, provider or data class: a provider outside the allowlist
+never receives a byte (`POLICY_DENIED`), credentials, secrets, environment values, private keys,
+storage state and raw traces are never sent whatever the request declares, and the request's
+`dataPolicy.dataClasses` is descriptive metadata that enters the cache key and audit only. Repo
+content cannot configure providers or tools. Prices remain `unknown`, never zero, unless the
+profile declares a price table (`prices.<model>`: `currency`, `scale`, integer
+`inputPerMillion`/`outputPerMillion`, optional `cacheReadPerMillion` applied only to
+provider-reported cached input, and `version` naming its source). An unpriced model runs and its cost
+stays `unknown`, except under a monetary project ceiling: the reservation is then unknown, so the call
+is refused before the request is sent with `QUOTA_EXCEEDED` and `reasonCode: "budget_exhausted"`;
+the token ceiling keeps applying to unpriced models. No token or monetary
 ceiling exists by default. `budget set --tokens N` (or authenticated `POST /v1/projects/{id}/budget`
 with `{ "tokens": N }` and an Idempotency-Key) opts into an independent cumulative project
 input+output quota; until then `tokenBudget.limit` is null. Reservations atomically charge
@@ -386,11 +444,21 @@ factual predecessor; `run analyze RUN --model --deadline-ms N` requests optional
 A timeout, unavailable capture, or rejected enrichment returns a partial diagnosis and cannot
 rewrite the Run outcome, gate, Attempts, or artifacts. Identical requests reuse their retained
 receipt rather than issuing another model call; unknown usage keeps its conservative charge.
+`--provider ID --model-id ID` (REST/MCP `provider`, `modelId`) choose the model of the reading and
+require `--model`; the choice is validated before any job or reservation exists and never falls
+back to another model. A reading that abstains is stored as a `source: "rules"` analysis without a
+`modelCallId` (the database admits a parent only for `source: "model"`, so it has none) plus the
+limitation; only a real model call produces `source: "model"`. A later enrichment with another
+model starts from the factual analysis, not from the abstention.
 The model catalog carries bounded sanitized frozen predicates and expected/observed structures,
 scoped verified evidence hashes, contrary passed steps, and verified locator observations.
+Artifact availability is one fact per artifact kind ("Verified N log artifacts available.") citing
+every artifact of that kind. For a non-passed step the locator catalog also lists visible unnamed
+`input`/`select`/`textarea` candidates, so a label locator that matched nothing still shows the
+controls the page offered.
 Status/timeout alone does not prove a product cause; absent JSON is not an approved schema violation.
 `run analyze RUN --model --discovery DISCOVERY` (REST analysis body `discoveryId`) additionally
-requires `code_summary` consent and the same workspace/project, repository, assessed commit and
+requires the same workspace/project, repository, assessed commit and
 dirty identity frozen at Run admission. Only manifest-verified summary paths/symbols are offered;
 no working-tree source bytes or private absolute paths are transmitted. `fixTarget` binds the exact
 CodeSnapshot/path/hash as a proposed inspection location, not source causality or edit permission.
@@ -398,10 +466,21 @@ Unbound Runs disclose the missing source binding. The controlled-provider OPS-01
 tests timeout/idempotency/accounting and positive/negative source bindings; it is deterministic
 acceptance, not evidence of live-model diagnostic quality.
 
-M3 healing is an explicit separate workflow: `heal propose RUN [--deadline-ms N]`,
+M3 healing is an explicit separate workflow: `heal propose RUN [--provider ID] [--model ID]
+[--deadline-ms N]`,
 `heal get PROPOSAL`, `heal approve PROPOSAL --expected-version N [--wait]`, and
 `heal reject PROPOSAL --reason TEXT`. Proposals require a terminal failed declarative Run,
-an authorized structured-output provider and `execution_evidence` consent. Diagnosed product,
+an allowed structured-output provider. Without `--provider`/`--model`
+(`provider`/`model` in the API body and MCP input) the first allowed provider's first
+structured-output model is used; an explicit choice must be configured, allowed by the profile and
+structured-output capable, is validated before any job exists and is never replaced by another
+model. With `--model` alone, lookup is confined to the first allowed provider; use both flags
+when the model belongs to another provider. A model failure reports `provider`, `model`,
+`upstreamCode`, `upstreamStatus` and
+`modelCallRecorded` (whether the gateway recorded a call row; a transport failure after sending
+may leave none, so it does not prove nothing was sent). Each failed Run gets exactly one healing
+request: after any model failure it stays final (`no_regeneration`), and the next eligible failed
+Run is the place to pass another `--provider`/`--model`. Diagnosed product,
 contract or security failures abstain before model execution. The healing prompt carries the
 sanitized plan, factual statements cited by `E` handles, locator evidence only for steps that
 did not pass (candidate lists bounded with their original count and truncation flag) and, per
@@ -466,7 +545,13 @@ five-minute expiry. Run SSE uses signed `Last-Event-ID` cursors and 15-second he
 slow clients disconnect and reattach instead of dropping terminal events. Upload byte streams
 use `application/octet-stream` and `X-Upload-Token` in addition to the bearer installation token;
 only explicit completion after exact size/hash verification permits ingestion. OpenAPI is served
-at `/v1/openapi.json`. M4+ routes return `CAPABILITY_UNAVAILABLE` with their milestone. Manual
+at `/v1/openapi.json`, generated by `node packages/contracts/dist/generate.js` from the route
+catalog: each route declares its response kind (`item`, `page` for `{items, hasMore, nextCursor}`,
+`items` for an unpaged `{items}`, `empty`, `stream`, `binary`, `text`), item schema, success status
+and any further status with the same body (`206`, `503`). The server takes each route's success
+status from that declaration, and `apps/server/src/response-contract.test.ts` validates real
+responses against the generated schemas. Routes without a handler (M5/M6) are marked unavailable
+and return `CAPABILITY_UNAVAILABLE` with their milestone. Manual
 resource compensation is available through `resource get` (approval binding), `approval create --reason TEXT`,
 and `resource cleanup --approval ID --expected-version N --idempotency-key KEY`. It replays only
 the recorded compensation inside a fresh hardened sandbox with the original environment policy,
@@ -489,8 +574,26 @@ compensation preserves the owning Run's original verdict and records a separate 
   supervisor control. Ephemeral dispatch must include expanded dependencies, not just the
   requested run IDs. `retention.maintenance()` is internal worker maintenance.
 - `artifacts.get(runId, {attemptId?, out?, failedOnly?, allowRestrictedRaw?})` verifies sealed
-  bundles. `reports.snapshot/export` produce JSON, Markdown, HTML, JUnit or Allure.
+  bundles. `failedOnly` selects the evidence of non-passed steps; when none of them holds evidence
+  (an assertion that read a response) it falls back to the response step it read, then to the
+  nearest preceding step with evidence, then to the attempt's `log`/`network`/`console` entries. It
+  only selects entries the manifest already holds and a passed run keeps its empty subset.
+  `reports.snapshot/export` produce JSON, Markdown, HTML, JUnit or Allure.
   `backups.create/restore` require admin scope; restore never executes restored jobs.
+- Every `run.completed` outbox event (and so every `runs.events` payload) is the Run document plus
+  the Run's final `reasonCode`: admission refusals publish theirs directly, and the worker passes
+  the final reason to `ExecutionRepository.finalize(fence, run, reasonCode)` (the reduced reason, or
+  `upstream_failed`, `execution_deadline`, or the registered execution-error reason). The Run
+  document itself still has no reason field. Alerts (`egress_denied`), telemetry
+  (`run_platform_success`), notifications, the CLI/MCP exit-code lookup and the rules analysis read
+  this field; seeding a test Run without it hides the worker path, so drive the worker (see
+  `egress-alert.test.ts`) when a rule depends on the reason. The exit code follows the reason
+  registry: a Run blocked by `manual_auth_required` or `missing_secret` exits 6, not 9.
+- `reduceOutcome` (packages/domain/src/run.ts) maps a policy refusal to `blocked` even after steps
+  started: any reason whose registry effect is `blocked` (`egress_denied`,
+  `security_precondition_failed`, `approval_required`) on the last Attempt, with no proven assertion
+  failure and no complete pass, keeps its `reasonCode` and exits 9. Other reasons after start
+  (`attempt_timeout`, `worker_lost`, ...) stay `inconclusive`; `canRetry` never retries a refusal.
 - `secrets.set/rotate/remove/get/list/release` separate metadata from values; `release` is a
   supervisor-only integration port. `approvals.create/get/list/revoke/verify` bind explicit
   mutation approval to the exact admitted revision, environment and policy.
@@ -524,6 +627,38 @@ compensation preserves the owning Run's original verdict and records a separate 
   login barriers remain `unreachable` with `login_required`. `ready` means the operator-declared
   `testmaster:completionText` was observed (the feature-state extension labels it `full`); absent
   completion evidence remains `partial`, never complete coverage by route visitation alone.
+  An observed route that no `--feature` named is a Feature keyed by its path, unique per project:
+  exploring the same URL again reuses that Feature (its observed title is refreshed under the
+  Feature's optimistic version) instead of inserting a duplicate. A rejected observation or a
+  failed Feature write is recorded in the job itself (`testmaster:resolutionFailures`, and
+  `testmaster:errorMessage` when the job aborts), not only in the sandbox protocol log. A job that
+  ends non-passing without aborting (`failed`/`inconclusive`) also carries `testmaster:errorMessage`:
+  the first failed action resolution (a model that could not be used, e.g. a declared model absent
+  from the provider inventory), else a first page that offered nothing to explore (below), else the
+  first failed navigation recorded in the browser network log (`browser/network.json`, already
+  scrubbed by the runtime), else the outcome and reason code.
+  `--provider ID`/`--model ID` (MCP `provider`/`model`) choose the action-resolution model and are
+  validated before the job exists, without fallback to another model.
+  The browser observation the model and the Feature state are built from is read after a bounded
+  settle wait (two reads at least 500 ms apart that agree, within the step deadline and 5 s;
+  otherwise `settled: false`), so a single-page app is not observed half-rendered. It carries
+  `controls` (tag, type, role, name, placeholder, test id, visibility of each input, select,
+  textarea and button; never a value, checked state or typed text) and `hasPasswordField` (a
+  password input is detected, never read), and its text includes form labels and links; only
+  `[data-sensitive]` subtrees and field contents stay out. An approved `mutationActions` entry is
+  offered when its locator equals a control's `testId`, `aria-label`, button text, placeholder or
+  role+name locator (`exact: true`, key order `by,value|role,name,exact`). A password field on a
+  Feature that is not itself a login route makes it `unreachable` with `login_required` (DISC-001).
+  When an open exploration (no `--feature`) first observes a page with no same-origin link and no
+  approved action, the run is `inconclusive` (`insufficient_evidence`), the job `failed`, and no
+  model is called; its `testmaster:errorMessage` reads, for example, "Exploration observed no
+  same-origin link at <url>: 2 form controls, password field present, 0 approved actions." A
+  feature-seeded exploration treats the seeded page as the target, so a page with nothing to follow
+  is a complete observation. Stopping after at least one observation because no unvisited link
+  remains is legitimate and also costs no model call. The closing `observed` (body visible) step
+  stays because a plan needs one required assertion, but it only confirms the page is still
+  rendered: a run that observed nothing to act on is ended by the runner before it and never
+  reaches it. Runner changes need `node containers/build.mjs --only testmaster-runner`.
   `--job ID --retry-feature ID...` creates a new job/cost ledger for only eligible selected features,
   preserving all unselected results and the original job. `--video` is explicit restricted-raw opt-in,
   requires raw/admin permission, and is refused for production exploration. Default exploration has
@@ -607,7 +742,7 @@ uses the provider default. Invalid values are rejected before network access. Th
 effort participates in the model configuration hash, prompt hash and gateway cache key and
 is preserved during repairs. Provider rejection remains an error, never a silent fallback.
 TestMaster does not send max_tokens, max_completion_tokens, temperature, top_p, seed,
-penalties or enable_thinking. Proposal budgets accept only deadlineMs. Consent, input
+penalties or enable_thinking. Proposal budgets accept only deadlineMs. Provider allowlist, input
 admission, cancellation, response validation and accounting
 remain local. Output capability metadata is used only for conservative budget reservations,
 falling back to declared context capacity or the admitted input allowance; no token limit is
@@ -624,6 +759,52 @@ and a 100000-token project admission quota. Neither reservation is a remote outp
 Failed journeys capture supplemental model usage before removing their isolated workspace.
 Round-specific captures preserve prior `validation/results` bytes and do not alter historical
 benchmark ledgers. Measurement integrity is separate from generation graduation/public release.
+
+Model refusals carry `details.reasonCode` (no milestone label): `provider_unavailable`,
+`model_not_declared`, `model_capability_missing`, `model_not_in_inventory` (with
+`declaredModelsPresent`/`declaredModelsAbsent` from the last provider listing),
+`model_substituted` (the provider answered with a different model) and `model_not_configured`
+(with the requested provider/model and the available model ids). There is never a silent
+fallback to another model. A response that fails local validation is persisted on its
+`model_calls` record, returned by the usage report and repeated in the final error and in a
+deadline/cancellation error that follows an invalid attempt as
+`validationFailure {code, message, issues, omittedIssues}`: at most 5 issues of validator path,
+rule and message, clipped (message 300, path 200, rule 60, issue message 200 characters) and
+scrubbed with the request's secrets. Model output text is never included.
+
+Model cache: `ModelService.complete` builds a new `ModelGateway` for every call without passing
+`cache`, so the gateway's `MemoryModelCache` (`model.ts`, `gateway.ts` constructor) is always
+empty and `cache_hit` is always 0, even within one process. No persistent cache store exists
+(`model_calls` keeps only `responseHash`). A retried normalization therefore pays for its model
+calls again. This is a documented limitation, not a behavior change.
+
+Semantic checks in the repair loop: `ModelRequest.check(output)` (model-gateway `types.ts`) runs
+after schema validation, also on a cache hit (a cached output that fails it is a miss, so it is
+validated on the paid path). It throws a `ContractError` whose `issues` become the repair prompt
+(at most 20) and a bounded `validationFailure` on the invalid `model_calls` record; a non-`ContractError`
+is a defect, recorded `failed` and never repaired. After two repairs the gateway rethrows the check's own
+error (message, code, details) plus `repairs`, `candidateStatus`, `invalidAttempts`, `validationFailure`
+and `modelCallId` (the last invalid call). `deadlineMs` is one deadline for the whole call: the abort
+signal is created once, so repairs and checks share it (a slow check shortens the repair budget);
+each attempt reserves budget separately. `generate_plan` runs every per-proposal check in
+that hook (evidence, requirement refs, plan validity, offered secrets, schema pointers, HTTP
+status-only plans, type/runner, integration workflow) and collects all refused proposals, not the
+first. A batch still refused after the repairs fails `INVALID_ARGUMENT` with the first cause as
+message and `details {atomicity: "all_or_nothing", refused: [{index, requirementIds, reasonCode,
+message, pointers?}], modelCallId}`, nothing stored; `partialGeneration` (MCP, CLI `plan generate
+--partial`; the REST body has no such field) stores the proposals that pass and records the refused
+ones in `extensions['testmaster:refusedProposals']` (they count as covering their requirements, are
+never stored, and a batch with none valid is still refused whole). Known gap: `proposals.edit` only
+re-runs the planner checks, not the secret, schema-pointer and status-only ones.
+
+`generate_tests` takes `provider`/`model` (checked by `ModelService.select` before any call) and runs
+the code importer as the response check, so a refusal is repair feedback. The generation prompt
+interpolates `CODE_IMPORT_RULES` (planner `code-import`), built from the same constants the importer
+enforces. The importer names the forbidden identifier and the line, never the code; it also refuses
+the forbidden names as string keys (`x['require']`), `module` and `?.constructor`. A candidate still
+refused after the repairs is listed in `validationErrors`; when every candidate is refused the call
+fails `INVALID_ARGUMENT` (`reasonCode generated_code_refused`, `requested`, `validationErrors`,
+`modelCallIds`). The receipt carries `requested`.
 
 Round 4 (`116f682e197727e867f2b4937caacbbb0be37fc8`) observed all eight planned trials:
 all full-source normalizations failed semantic grounding validation; no generated proposals,
@@ -852,6 +1033,17 @@ review surface, not model quality, population safety, human usability or workloa
 REST/MCP approval tokens require an explicit project-scoped `HealingProposal:approve` grant.
 All processes use the same project-frozen execution configuration, including configuration origins;
 the scenario does not weaken execution-identity, authorization or automatic-healing guards.
+Approval and verification admission commit in one transaction after every refusal was checked
+(`assertVerificationAdmissible`): a refused admission leaves the proposal's version, status and
+limitations unchanged, and a successful approval is two version steps (approval, then the link to
+the verification Run). Under `CI=true` the resolver forces `healing.mode` off with origin
+`environment` (recorded as `ResolvedConfig.overrides`, outside the hashed `effectiveConfig`), so a
+shell with `CI=true` cannot approve a proposal whose failed Run was admitted without it: the
+`REVISION_CONFLICT` message and `details` (`reasonCode: execution_configuration_changed`,
+`changed`, `overrides`, `nextActions`) name the keys and their frozen/current origins, never values.
+A bearer token without the grant is refused with `FORBIDDEN` `details.reasonCode`
+`approval_grant_required` (`approval_not_permitted` for a deny grant or role) and `requiredGrant`;
+scopes R/W/X/A never imply the grant.
 
 
 Plan/ID reconciliation: VAL-053 and VAL-054 already existed in the normative corpus (registry

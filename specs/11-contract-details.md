@@ -47,8 +47,8 @@ Regras comuns: nomes 1–200 caracteres; descrições até 8.000 caracteres; ste
 | `schemaVersion` | sim, `"1.0.0"` | versão do documento, não versão do banco |
 | `kind` | sim, `"executable"` | `IntentPlan` é outro contrato |
 | `name` | sim, string | intenção legível, não ID de recurso |
-| `type` | sim, `frontend\|backend\|integration` | integration é workflow; runner precisa suportar passos selecionados |
-| `runner` | sim, `playwright\|http` | código Python/TS importado usa CodeReference, não DSL com eval |
+| `type` | sim, `frontend\|backend\|integration\|cli` | integration é workflow; runner precisa suportar passos selecionados; `cli` é o teste de programa de terminal (seção 3.5) |
+| `runner` | sim, `playwright\|http\|terminal` | código Python/TS importado usa CodeReference, não DSL com eval; `terminal` ⇔ `type: cli` (regra `runner`) |
 | `requirementRefs` | sim, array | pode estar vazio para teste manual, declarando cobertura não mapeada |
 | `steps` | sim, array 1–200 | ao menos uma assertion obrigatória, além das ações |
 | `dependsOn` | não, array | bindings explícitos de producer/revision/output e fixture validity |
@@ -108,6 +108,60 @@ Assertions usam operação `assert` e expectation discriminada: `visible`, `hidd
 
 O ambiente, baseUrl e auth são resolvidos no Run, não embutidos nesse plano. O controle negativo de avaliação remove a validação de senha: o mesmo teste deve falhar. Esse exemplo não afirma que uma app do usuário contém os locators ou mensagens acima.
 
+### 3.5 Runner `terminal` (`type: cli`)
+
+O par `type: "cli"` e `runner: "terminal"` é obrigatório nos dois sentidos; qualquer outra combinação é recusada pela regra `runner`. O runner executa um programa por vez sem shell implícito (nenhuma operação interpreta `$()`, pipes, redirecionamento ou globbing) e tem dois modos: **pipes** (`run`: stdout e stderr separados, exit code) e **PTY** (`launch`: sessão interativa cuja tela é lida de um emulador de terminal headless, não de texto com sequências ANSI removidas por regex). `IntentPlan`, a saída de geração por modelo e proposals não aceitam `cli`: planos de terminal são autorados como `ExecutablePlan` (`test scaffold --type cli` imprime um ponto de partida).
+
+`program` usa exatamente uma forma: `{artifactRef}` — fixture do projeto (`artifact import-fixture`) executado diretamente do bind read-only de input, com modo 0555 apenas para fixtures referenciados como programa, argv0 `fixture-<artifactId>` e limite `min(bodyBytes, artifactBytes)` (default 10 MiB) — ou `{path}` — caminho absoluto dentro da imagem do runner, sem segmento `..`. O programa precisa ser ELF ou script com shebang; o diretório temporário do sandbox é `noexec`, então nada escrito durante o Attempt (inclusive por `writeFile`) pode ser executado. `cwd` é relativo ao diretório de trabalho do Attempt e confinado a ele.
+
+| Operation | Input | Semântica e erro observável |
+|---|---|---|
+| `run` | `program`, `args` (≤256 valores), `env` (≤64), `cwd`, `stdin`, `capture` (≤32) | executa via pipes, fecha stdin após o texto e espera o exit dentro de `timeoutMs`; estourar mata a árvore de processos e falha com `assertion_timeout`; `capture[]` usa `name`, `from` (`stdout\|stderr`), `jsonPointer?`, `valueType`, `sensitive` e compartilha o espaço de nomes de captures de `request` |
+| `launch` | `program`, `args`, `env`, `cwd`, `cols` 20–500, `rows` 5–200 | inicia uma sessão PTY; uma segunda enquanto a primeira vive é recusada (`blocked`, `unsupported_capability`) |
+| `sendText` | `text` | escreve UTF-8 no PTY |
+| `sendKeys` | `keys` 1–100: `Enter`, `Tab`, `Shift+Tab`, `Backspace`, `Delete`, `Escape`, `Space`, `Up`, `Down`, `Left`, `Right`, `Home`, `End`, `PageUp`, `PageDown`, `Insert`, `F1`–`F12`, `Ctrl+A`–`Ctrl+Z`, `Alt+<A-Za-z0-9>` | codifica cada tecla como um terminal físico; cursor e Home/End seguem o modo DECCKM que o programa ligou |
+| `resize` | `cols`, `rows` | redimensiona PTY e emulador juntos e registra o evento |
+| `signal` | `SIGINT\|SIGTERM\|SIGHUP\|SIGQUIT\|SIGKILL` | sinal para o grupo de processos da sessão; sessão já terminada falha com `assertion_mismatch` |
+| `waitForText` | `text`, `state` (`present\|absent`, default present), `row` 0–199, `deadlineMs` | polling da tela até o deadline; estouro é `assertion_timeout` com a última tela na mensagem; sessão que termina antes disso é `assertion_mismatch` |
+| `waitForExit` | `deadlineMs` | espera o fim da sessão e registra exit code, sinal e processos remanescentes |
+| `writeFile` | `{root, path, content}` ou `{root, path, artifactRef}`; `root` é `workdir` ou `home` | prepara arquivos no diretório de trabalho ou no HOME isolado; caminho confinado à raiz, sem escrever através de symlink; modo 0644, sem bit executável |
+
+Operações de sessão (`sendText`, `sendKeys`, `resize`, `signal`, `waitForText`, `waitForExit`) exigem um `launch` anterior (regra `session`); uma sessão já terminada recusa interação nova com `assertion_mismatch`, sem esperar o deadline. O ambiente do programa é explícito e não herda o do runner: `PATH`, `HOME`, `TMPDIR` e `PWD` apontam para diretórios novos do Attempt, `LANG=C.UTF-8`, `TZ` do environment (default UTC), `TERM=xterm-256color` com `COLUMNS`/`LINES` no PTY ou `TERM=dumb` em pipes, e as variáveis de proxy HTTP(S) apontam para o forwarder de egress, de modo que só a origem do `baseUrl` do environment é alcançável. `env` do plano é aplicado por cima, mas os nomes `HOME`, `TMPDIR`, `PWD`, `HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY`, `ALL_PROXY` (em qualquer caixa) e o prefixo `TESTMASTER_` são reservados (regra `environment`). Literais de `args` e `env` são string, number ou boolean; literais de `text`, `content`, `stdin` e `waitForText.text` são string (regra `valueType`). `cleanup` é recusado em planos de terminal. Toda operação não-assertion tem risco inferido no mínimo `write` e segue as aprovações de produção.
+
+Asserções usam `assert` com um destes inputs, além dos de browser/HTTP:
+
+| Input | Observa |
+|---|---|
+| `{processStepId, stream?: stdout\|stderr\|output, jsonPointer?}` | `run` anterior (`stdout`/`stderr`) ou `launch` anterior (`output`: scrollback do buffer normal do emulador); sem `stream`, observa o processo (exit, vazamento) |
+| `{screen: {row?}}` | viewport atual do emulador, ou uma linha física dela; exige `launch` anterior |
+| `{file: {root, path}, jsonPointer?}` | arquivo em `workdir` ou `home`, caminho confinado |
+| `{clipboard: "osc52"}` | último conteúdo copiado por OSC 52; exige `launch` anterior |
+
+| Predicado | Inputs permitidos |
+|---|---|
+| `exitCodeIn {values: 0..255}`, `noLingeringProcesses` | somente `processStepId`, sem `stream` nem `jsonPointer` |
+| `textEquals`, `textContains`, `textNotContains` | `processStepId` com `stream`, `screen`, `file` ou `clipboard`; `jsonPointer` não vale aqui |
+| `jsonEquals` | `processStepId` com `stdout`/`stderr`, ou `file`; único lugar em que `jsonPointer` é válido |
+| `fileExists`, `fileAbsent` | somente `file`, sem `jsonPointer` |
+
+`processStepId` aponta para um `run` ou `launch` anterior e `stream` precisa combinar com o tipo (`stdout`/`stderr` ⇒ `run`, `output` ⇒ `launch`; regra `processReference`). Predicados exclusivos de terminal (`textNotContains`, `exitCodeIn`, `noLingeringProcesses`, `fileExists`, `fileAbsent`) e os inputs `processStepId`, `screen`, `file` e `clipboard` são recusados em planos de outros runners (regra `predicateInput`). Asserção sobre estado vivo (tela, `output` de sessão, arquivos, clipboard, exit e vazamento de sessão) repete a leitura até `timeoutMs` do passo, também as negativas, e a falha reporta a última observação; asserção sobre sessão já encerrada ou sobre um `run` completo é avaliada uma vez.
+
+Encerramento e vazamento: ao fim de cada processo o runner varre `/proc`; dentro do container conta todo processo exceto init e o harness, num host de teste só os descendentes do Attempt. O número alimenta `noLingeringProcesses` e os processos achados são mortos. Fim do plano, timeout ou cancelamento enviam SIGHUP e SIGTERM ao grupo e, após uma carência curta, SIGKILL ao grupo e aos remanescentes. Todo prazo é limitado pelo tempo restante do Attempt.
+
+| Situação | Resultado e `reasonCode` |
+|---|---|
+| asserção diverge, ou sessão já terminou antes da interação | `failed`, `assertion_mismatch` |
+| `run`, espera ou asserção viva estoura o prazo do passo | `failed`, `assertion_timeout` |
+| prazo do Attempt expira | `inconclusive`, `execution_deadline` |
+| programa não inicia (ausente, sem permissão, formato inválido, diretório inexistente) | `blocked`, `unsupported_capability`, errno em `diagnosticCode` |
+| stream ou arquivo acima de `bodyBytes` observado por asserção/capture | `inconclusive`, `artifact_limit_exceeded` |
+| fixture não autorizado ou caminho escapa da raiz | `blocked`, `security_precondition_failed` |
+| cancelamento | `cancelled`, `user_cancelled`, com a árvore de processos encerrada |
+
+Evidências, todas passadas pelo scrub de secrets antes de serem emitidas: `terminal.process` (`terminal/<step>.json`: programa e sha256, args higienizados, `cwd` relativo, nomes de variáveis, exit, sinal, duração, `timedOut`, `lingeringProcesses`, tamanho e sha256 dos streams, registros OSC 52), `terminal.stdout` e `terminal.stderr` (≤1 MiB cada), `terminal.cast` (asciicast v2 da sessão, ≤4 MiB, com eventos `o`, `i`, `r` e `m`, higienizado por rajada de saída) e `terminal.screen` (`terminal/steps/<step>-screen.txt`, após cada passo de sessão e em toda falha). OSC 52 é registrado como evidência e alimenta `{clipboard: "osc52"}`, mas nunca é repassado ao host.
+
+Recusado explicitamente com `CAPABILITY_UNAVAILABLE`, não emulado: geração, edição e refinamento de planos de terminal por modelo, healing, agent mode, export de código e execução `unsafe-local` (`unsafe-local-terminal`). Fora do escopo, sem superfície alguma: Windows (ConPTY), macOS, clipboard nativo do host e gravação de vídeo. Binários acima do limite de fixture não são importados; o limite é aumentado por configuração, não contornado.
+
 ## 4. HTTP declarativo e integração
 
 Action `request` contém `method`, `pathSegments`, `query`, `headers`, `body`, `capture`, `resource`. `method` enum GET/HEAD/POST/PUT/PATCH/DELETE/OPTIONS; method não determina sozinho risco. Header names normalizados; duplicatas incompatíveis, CRLF, host override/proxy headers e segredo inline são recusados. Auth profile aplica credencial ao origin permitido, não a redirects arbitrários.
@@ -159,7 +213,7 @@ A ordem abaixo é normativa, com evidência atribuída ao Attempt e fence válid
 1. Run já terminal: manter resultado; registrar/no-op evento tardio, sem reabrir.
 2. Assertion obrigatória comprovadamente falhou em qualquer Attempt: `failed`, mesmo com retry-pass, cancelamento ou perda posterior de artifacts opcionais.
 3. Cancelamento autorizado interrompeu ações, sem falha comprovada: `cancelled`; registrar efeitos possivelmente não revertidos.
-4. Não pôde iniciar por precondição/policy/capability/producer: `blocked`.
+4. Não pôde iniciar por precondição/policy/capability/producer: `blocked`. A policy refusal also blocks after steps started: when the last Attempt ends with `egress_denied`, `security_precondition_failed` or `approval_required` (registry effect `blocked`) and no assertion failed, the Run is `blocked` with that `reasonCode`, `firstAttemptOutcome` is `blocked` for a first-Attempt refusal, and the refusal is never retried (`passedOnRetry=false`). A refusal is a decision, not uncertainty; timeouts, lost workers and other interruptions after start stay in step 5.
 5. Execução iniciada sem evidência suficiente para concluir todas assertions obrigatórias: `inconclusive`.
 6. Todas assertions obrigatórias satisfeitas e nenhum step obrigatório omitido: `passed`.
 7. Seleção inválida ou plano sem assertion: recusar admission; não fabricar Run passed.
@@ -221,7 +275,7 @@ Rotas estão no [catálogo API](04-api.md). SSO/SCIM seguem protocolos próprios
 | `assertions_satisfied` | todas assertions requeridas concluídas | outcome passed; gate ainda verifica cleanup |
 | `assertion_mismatch`, `assertion_timeout` | oracle contradiz esperado | failed, preservado após retry/cancel |
 | `missing_secret`, `credential_revoked`, `manual_auth_required`, `auth_checkpoint_expired` | credencial/challenge faltante ou revogado | blocked antes da ação; após início, preservar falha ou inconclusive/cancelled conforme reducer |
-| `security_precondition_failed`, `approval_required`, `egress_denied` | enforcement/aprovação/rede | recusar admission ou interromper ações; nunca contornar policy |
+| `security_precondition_failed`, `approval_required`, `egress_denied` | enforcement/aprovação/rede | recusar admission ou interromper ações; nunca contornar policy. The Run is `blocked` with the same code even after steps started (registry effect `blocked`, never `inconclusive`) and is never retried. A passive browser subresource (image, font, stylesheet, media) denied by egress is aborted at request level and recorded as `egress.denied` without blocking the run; any other denial blocks it. A passing run never carries `egress_denied` |
 | `upstream_failed`, `unsupported_capability`, `dependency_cycle`, `ambiguous_producer` | DAG ou runner inviável | recusa/blocked; não consumer passed |
 | `worker_lost`, `worker_lease_expired`, `execution_deadline`, `attempt_timeout` | interrupção de plataforma | failed se já provado; senão inconclusive após início, blocked antes |
 | `insufficient_evidence`, `oracle_uncertain` | evidência/oracle não conclui | inconclusive; hipótese não substitui resultado |
@@ -233,7 +287,7 @@ Rotas estão no [catálogo API](04-api.md). SSO/SCIM seguem protocolos próprios
 | `cleanup_failed`, `cleanup_inconclusive` | compensação sem êxito comprovado | cleanupOutcome não passed, gate obrigatório failed |
 | `optional_step_skipped`, `stopped_after_failure`, `cancelled_before_step` | step não executado | skipped/not_run com causa; obrigatório omitido impede passed |
 
-Novos motivos precisam de mapping reducer/gate/exit/reporter e negative fixture; ampliar catálogo não pode ampliar estados públicos de Run. Os exemplos de security/operations usam somente os significados dessa tabela.
+Novos motivos precisam de mapping reducer/gate/exit/reporter e negative fixture; ampliar catálogo não pode ampliar estados públicos de Run. Os exemplos de security/operations usam somente os significados dessa tabela. O runner `terminal` (seção 3.5) não cria motivo novo: usa `assertion_mismatch`, `assertion_timeout`, `execution_deadline`, `unsupported_capability`, `security_precondition_failed`, `artifact_limit_exceeded` e `user_cancelled` com os significados acima.
 
 ### 8.3 Comparações
 
@@ -263,3 +317,4 @@ JUnit tem testcase por Run/célula, classname estável por projeto/teste, proper
 - CONTRACT-004: troca de environment/model/source depois do admission não altera snapshot; dispatch incompatível é blocked e não improvisa engine.
 - CONTRACT-005: storage/manifest cross-tenant, hash incorreto e path traversal são recusados; arquivo autorizado grande é streamed.
 - CONTRACT-006: API/CLI/MCP compartilham contracts; catálogo OpenAPI, schemas publicados e exemplos passam na mesma conformance suite antes de liberar o marco.
+- CONTRACT-007: um plano `cli`/`terminal` com `run` e com `launch` é validado pelo schema e pela semântica (par type/runner, sessão prévia, referência de processo, matriz predicado/input, nomes de ambiente reservados); programa ausente, programa pendurado, neto remanescente e sessão encerrada antes da interação produzem `blocked`, `assertion_timeout`, `noLingeringProcesses` reprovado e `assertion_mismatch` respectivamente, e o mesmo teste passa contra o programa saudável.

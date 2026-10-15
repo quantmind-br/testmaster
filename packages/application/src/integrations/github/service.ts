@@ -69,7 +69,7 @@ const handledPullActions = new Set([
 ]);
 const COMMENT_MAX_ATTEMPTS = 10;
 
-/** Settings, consent and references of a stored `github` integration. */
+/** Settings, owner and references of a stored `github` integration. */
 export interface GithubIntegration {
   id: string;
   workspaceId: string;
@@ -78,7 +78,7 @@ export interface GithubIntegration {
   projectIds: string[];
   events: string[];
   secretRefs: string[];
-  consent: { grantedBy: string; scopes: string[] };
+  createdBy: string;
   settings: GithubIntegrationSettings;
   version: number;
 }
@@ -169,16 +169,16 @@ export class GithubService {
       projectIds: [...stored.projectIds],
       events: [...stored.events],
       secretRefs: [...stored.secretRefs],
-      consent: { grantedBy: stored.consent.grantedBy, scopes: [...stored.consent.scopes] },
+      createdBy: stored.createdBy,
       settings: stored.settings as GithubIntegrationSettings,
       version: stored.version,
     };
   }
-  /** Runs as the principal who granted consent: accountable, and re-authorized at every claim. */
+  /** Runs as the principal that created the integration: accountable, and re-authorized at every claim. */
   actingApp(integration: GithubIntegration, correlation?: string): Application {
     return this.scope.forIdentity(
       {
-        principalId: integration.consent.grantedBy,
+        principalId: integration.createdBy,
         scopes: ["R", "W", "X"],
         workspaceId: integration.workspaceId,
         credential: { kind: "system", id: `integration:${integration.id}` },
@@ -269,11 +269,13 @@ export class GithubService {
   // ---------------------------------------------------------------- inbound webhooks
   /**
    * Verifies the signature, parses and classifies one delivery without side effects. A valid
-   * signature is the only way to learn anything: bad or unattributable signatures are `UNAUTHENTICATED`.
+   * signature is the only way to learn anything: bad or unattributable signatures are `UNAUTHENTICATED`,
+   * except that an unreadable webhook secret is `UNAVAILABLE` (retryable): nothing was verified.
    */
   async receive(context: IntegrationContext, request: InboundRequest): Promise<InboundOutcome> {
     const appId = request.headers["x-github-hook-installation-target-id"];
     let integration: GithubIntegration | null = null;
+    let unreadable = false;
     for (const candidate of context
       .findIntegrations("github")
       .map((stored) => this.fromStored(stored))) {
@@ -282,6 +284,8 @@ export class GithubService {
       try {
         secrets = await this.webhookSecrets(candidate);
       } catch {
+        // No HMAC was checked for this candidate: that is not evidence of a bad signature.
+        unreadable = true;
         continue;
       }
       if (verifyHmacSha256(request.headers["x-hub-signature-256"], request.rawBody, secrets)) {
@@ -289,7 +293,16 @@ export class GithubService {
         break;
       }
     }
-    if (!integration) throw new ContractError("UNAUTHENTICATED", "Webhook signature is invalid");
+    if (!integration) {
+      // A genuine mismatch (every candidate's secrets were readable) stays UNAUTHENTICATED. When a
+      // secret could not be read the delivery may well be genuine: 503 so GitHub redelivers.
+      if (unreadable)
+        throw new ContractError("UNAVAILABLE", "Webhook secret is unavailable; redeliver", {
+          reasonCode: "webhook_secret_unavailable",
+          retryable: true,
+        });
+      throw new ContractError("UNAUTHENTICATED", "Webhook signature is invalid");
+    }
     const eventType = request.headers["x-github-event"];
     const deliveryId = request.headers["x-github-delivery"];
     if (!eventType || !deliveryId)
@@ -783,7 +796,7 @@ export class GithubService {
       projectIds: [],
       events: [],
       secretRefs: [],
-      consent: { grantedBy: "", scopes: [] },
+      createdBy: "",
       settings: undefined as never,
       version: 0,
     };
@@ -1617,7 +1630,6 @@ export class GithubService {
       expiresAt,
       createUrl: manifestCreateUrl(state, input.organization),
       manifest: manifest as never,
-      scopes: [...requiredScopesFor(input.allowAgentPullRequests === true)],
     };
   }
   /** Exchanges the one-time code GitHub sent to the redirect URL and stores the App credentials as secrets. */
@@ -1699,7 +1711,6 @@ export class GithubService {
       name: app.slug,
       projectIds: input.projectIds,
       events: [...githubEventTypes],
-      consent: { scopes: [...requiredScopesFor(pending.allowAgentPullRequests)] },
       secretRefs: [privateKeyRef, webhookSecretRef, ...(clientSecretRef ? [clientSecretRef] : [])],
       settings,
     } as never);
@@ -1839,15 +1850,4 @@ export class GithubService {
   }
 }
 
-function requiredScopesFor(allowAgent: boolean): string[] {
-  return [
-    "github:metadata:read",
-    "github:contents:read",
-    "github:checks:write",
-    "github:pull_requests:write",
-    "github:deployments:read",
-    ...(allowAgent ? ["github:contents:write"] : []),
-  ];
-}
-
-export { manifestPermissions, requiredScopesFor };
+export { manifestPermissions };

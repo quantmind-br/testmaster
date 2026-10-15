@@ -116,20 +116,20 @@
       "ownerRole": "AI",
       "status": "verified",
       "scenario": [
-        "packages/model-gateway/src/gateway.test.ts::denies absent consent and disallowed providers before any request, with a positive boundary control"
+        "packages/model-gateway/src/gateway.test.ts::needs no grant, denies disallowed providers and never-sent data classes before any request"
       ],
       "oracle": [
-        "Boundary listener observes zero requests for disallowed provider/absent consent, then a real positive-control request."
+        "Boundary listener observes zero requests for a disallowed provider and for never-sent data classes (no grant is involved), then a real positive-control request."
       ],
       "evidence": ["packages/model-gateway/src/gateway.test.ts"],
       "code": ["packages/application/src/ai/model.ts", "packages/model-gateway/src/gateway.ts"],
       "note": "Unit boundary test, not a string-only proof.",
       "coverage": {
         "positive": [
-          "packages/model-gateway/src/gateway.test.ts::denies absent consent and disallowed providers before any request, with a positive boundary control"
+          "packages/model-gateway/src/gateway.test.ts::needs no grant, denies disallowed providers and never-sent data classes before any request"
         ],
         "negative": [
-          "packages/model-gateway/src/gateway.test.ts::denies absent consent and disallowed providers before any request, with a positive boundary control"
+          "packages/model-gateway/src/gateway.test.ts::needs no grant, denies disallowed providers and never-sent data classes before any request"
         ],
         "criticalAssertions": [
           {
@@ -138,7 +138,7 @@
           },
           {
             "path": "packages/model-gateway/src/gateway.test.ts",
-            "assertion": "await expect(f.gateway.complete(testRequest)).rejects.toMatchObject({ code: \"POLICY_DENIED\" });"
+            "assertion": "new ModelGateway({ ...f.options, allowedProviders: [] }).complete(testRequest),"
           },
           {
             "path": "packages/model-gateway/src/gateway.test.ts",
@@ -491,7 +491,7 @@
         "validation/results/m2-capabilities-qwen38.json"
       ],
       "code": ["packages/application/src/application.ts", "apps/server/src/server.ts"],
-      "note": "Runtime exposes implemented M0-M3 local surfaces; missing images disable sandbox-dependent operations while model-free services remain available. M4-M6 remain unavailable; provider consent and model configuration are invocation prerequisites, not availability-network probes. M3 deterministic versus external/model residuals are mapped separately.",
+      "note": "Runtime exposes implemented M0-M3 local surfaces; missing images disable sandbox-dependent operations while model-free services remain available. M4-M6 remain unavailable; model configuration and the operator's provider allowlist are invocation prerequisites, not availability-network probes. M3 deterministic versus external/model residuals are mapped separately.",
       "coverage": {
         "positive": [
           "validation/journeys/surface-capabilities.docker.test.ts::capabilities HTTP endpoint refuses to advertise missing runner images and disabled later features"
@@ -568,7 +568,7 @@
         "validation/journeys/network-boundary.docker.test.ts::NFR-002/UX-002/M1-08 real CLI replay tree connects only to the authorized shop without keys, telemetry overrides or offline flags"
       ],
       "oracle": [
-        "Static replay module graph excludes gateway; replay runs with model consent revoked; gateway provider contract is independent of runner."
+        "Static replay module graph excludes gateway; the final deterministic replay of a promoted candidate leaves the model usage ledger unchanged; gateway provider contract is independent of runner."
       ],
       "evidence": [
         "validation/results/m2-evidence-handles/live-agent/M2-agent-execution.json",
@@ -1349,6 +1349,60 @@
           {
             "path": "validation/journeys/surface-parity.docker.test.ts",
             "assertion": "expect(errorOf(command.json), fixture.name).toMatchObject(expected);"
+          }
+        ]
+      }
+    },
+    {
+      "id": "CONTRACT-007",
+      "title": "Plano de terminal validado e veredictos de erro",
+      "sourceFile": "specs/11-contract-details.md",
+      "milestone": "M5",
+      "ownerRole": "Execution",
+      "status": "verified",
+      "scenario": [
+        "packages/contracts/src/terminal-plan.test.ts::accepts a run asserted by exit code and a session asserted by screen",
+        "packages/contracts/src/terminal-plan.test.ts::resolves process references and their stream kind",
+        "packages/contracts/src/terminal-plan.test.ts::binds the type to the runner in both directions",
+        "packages/contracts/src/terminal-plan.test.ts::requires a prior launch for session operations and session inputs",
+        "packages/contracts/src/terminal-plan.test.ts::enforces the predicate and input matrix",
+        "packages/contracts/src/terminal-plan.test.ts::reserves environment names and checks literal types"
+      ],
+      "oracle": [
+        "Contract tests accept valid run and launch plans and reject every wrong type/runner pair, missing session, dangling process reference, forbidden predicate/input pair and reserved environment name by rule name."
+      ],
+      "evidence": [
+        "packages/contracts/src/terminal-plan.test.ts",
+        "specs/11-contract-details.md"
+      ],
+      "code": [
+        "packages/contracts/src/plans.ts",
+        "packages/contracts/src/validation.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012).",
+      "coverage": {
+        "positive": [
+          "packages/contracts/src/terminal-plan.test.ts::accepts a run asserted by exit code and a session asserted by screen",
+          "packages/contracts/src/terminal-plan.test.ts::resolves process references and their stream kind"
+        ],
+        "negative": [
+          "packages/contracts/src/terminal-plan.test.ts::binds the type to the runner in both directions",
+          "packages/contracts/src/terminal-plan.test.ts::requires a prior launch for session operations and session inputs",
+          "packages/contracts/src/terminal-plan.test.ts::enforces the predicate and input matrix",
+          "packages/contracts/src/terminal-plan.test.ts::reserves environment names and checks literal types"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/contracts/src/terminal-plan.test.ts",
+            "assertion": "expect(rules(plan([keys, assertion({ processStepId: \"go\" }, exit)]))).toContain("
+          },
+          {
+            "path": "packages/contracts/src/terminal-plan.test.ts",
+            "assertion": "expect(rules(plan([assertion({ processStepId: \"ghost\" }, exit)]))).toContain("
+          },
+          {
+            "path": "packages/contracts/src/terminal-plan.test.ts",
+            "assertion": "expect(rules(http({ processStepId: \"x\" }, exit))).toContain(\"predicateInput:/steps/0/input\");"
           }
         ]
       }
@@ -2247,7 +2301,7 @@
       "status": "verified",
       "scenario": [
         "packages/application/src/integrations/integrations.test.ts::INT-001 an integration exposes its adapter version, schemaVersion and capabilities and validates against the /v1 contract",
-        "packages/application/src/integrations/integrations.test.ts::INT-001 integration routes are declared under /v1 with distinct request and response contracts",
+        "apps/server/src/integrations.test.ts::INT-004 integration routes configure, patch, test and list over /v1 with token authentication and administrator scope",
         "packages/application/src/integrations/integrations.test.ts::INT-001 an integration whose adapter is not registered is described as unregistered and cannot run",
         "packages/application/src/integrations/integrations.test.ts::INT-001 an adapter built for another schemaVersion is refused with an update action before any adapter code runs",
         "packages/application/src/integrations/integrations.test.ts::INT-001 malformed adapter declarations are rejected at registration",
@@ -2257,7 +2311,7 @@
         "packages/application/src/integrations/integrations.pg.test.ts::INT-001 INT-002 PostgreSQL row-level security hides one tenant's integrations and deliveries from another"
       ],
       "oracle": [
-        "An integration reports its adapter's version, schemaVersion and declared capabilities and validates against the /v1 IntegrationMetadata contract; an adapter built for another core schemaVersion is refused with the update-adapter action before any of its code runs.",
+        "An integration reports its adapter's version, schemaVersion and declared capabilities and validates against the /v1 IntegrationMetadata contract; an adapter built for another core schemaVersion is refused with the update-adapter action before any of its code runs. Over HTTP the /v1 integration routes create (adapterStatus compatible), patch, test and list integrations behind token authentication.",
         "Adapter faults surface as structured errors without the adapter's message, and an unrecognized delivery state or inbound disposition is a failure or contract violation, never delivered or accepted.",
         "On PostgreSQL, a workspace-scoped connection sees only its own integrations and deliveries under row-level security while webhook intake resolves installations across tenants in the controller scope."
       ],
@@ -2284,7 +2338,7 @@
       "coverage": {
         "positive": [
           "packages/application/src/integrations/integrations.test.ts::INT-001 an integration exposes its adapter version, schemaVersion and capabilities and validates against the /v1 contract",
-          "packages/application/src/integrations/integrations.test.ts::INT-001 integration routes are declared under /v1 with distinct request and response contracts",
+          "apps/server/src/integrations.test.ts::INT-004 integration routes configure, patch, test and list over /v1 with token authentication and administrator scope",
           "packages/application/src/integrations/integrations.pg.test.ts::INT-001 INT-002 PostgreSQL intake resolves the installation across tenants, dedupes per workspace and records tampering"
         ],
         "negative": [
@@ -2296,6 +2350,10 @@
           "packages/application/src/integrations/integrations.pg.test.ts::INT-001 INT-002 PostgreSQL row-level security hides one tenant's integrations and deliveries from another"
         ],
         "criticalAssertions": [
+          {
+            "path": "apps/server/src/integrations.test.ts",
+            "assertion": "expect(integration).toMatchObject({ state: \"active\", adapterStatus: \"compatible\" });"
+          },
           {
             "path": "packages/application/src/integrations/integrations.test.ts",
             "assertion": "expect(created.adapterStatus).toBe(\"compatible\");"
@@ -2538,16 +2596,16 @@
     },
     {
       "id": "INT-004",
-      "title": "Configurar integração exige consentimento de escopo e teste de entrega claramente rotulado.",
+      "title": "Configurar integração exige a permissão administrativa do escopo, registra o principal que a criou (`createdBy`) e oferece teste de entrega claramente rotulado.",
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "Integrations",
       "status": "verified",
       "scenario": [
-        "packages/application/src/integrations/integrations.test.ts::INT-004 widening settings or resuming re-checks consent against what the adapter now requires",
+        "packages/application/src/integrations/integrations.test.ts::INT-004 updating or resuming keeps the creating principal and needs no scope grant",
         "packages/application/src/integrations/integrations.test.ts::INT-004 a test delivery is labelled, carries the test marker and never becomes a delivery, Run or event of record",
-        "packages/application/src/integrations/integrations.test.ts::INT-004 creating an integration without consent for every required scope is refused and stores nothing",
-        "packages/application/src/integrations/integrations.test.ts::INT-004 revoking ends access with no fallback: no consent, no secrets, no test, no update, no reactivation",
+        "packages/application/src/integrations/integrations.test.ts::INT-004 an integration records who created it and carries no consent document",
+        "packages/application/src/integrations/integrations.test.ts::INT-004 revoking ends access with no fallback: no secrets, no test, no update, no reactivation",
         "packages/application/src/integrations/integrations.test.ts::INT-004 only an administrator of the workspace may configure, list or test an integration",
         "packages/application/src/integrations/integrations.test.ts::INT-004 projects and secrets of another workspace, archived projects and revoked secrets cannot be bound",
         "packages/application/src/integrations/integrations.test.ts::INT-004 optimistic versions and unique names guard configuration changes",
@@ -2555,9 +2613,9 @@
         "packages/application/src/integrations/integrations.test.ts::INT-004 a test delivery only resolves the integrations of its own workspace while webhook intake spans all"
       ],
       "oracle": [
-        "Creating or widening an integration without consent for every scope its adapter requires is refused with the missing scopes and stores nothing; a test delivery carries the test marker and the label 'test notification' and creates no delivery, Run or outbox event of record.",
-        "Revoking an integration clears its consent and secret bindings, refuses tests and updates and cannot be undone, even directly in the database; only workspace administrators can configure, list or test integrations.",
-        "Over HTTP, configuration routes need a token with administrator scope and refuse missing consent; a test delivery resolves only its own workspace's integrations."
+        "Creating an integration records its creating principal (createdBy) and carries no consent document; a legacy consent field is refused with INVALID_ARGUMENT and nothing is stored; a test delivery carries the test marker and the label 'test notification' and creates no delivery, Run or outbox event of record.",
+        "Revoking an integration clears its secret bindings, refuses tests and updates and cannot be undone, even directly in the database; updating or resuming needs no scope grant and keeps the creating principal; only workspace administrators can configure, list or test integrations.",
+        "Over HTTP, configuration routes need a token with administrator scope and refuse a legacy consent field with 400; a test delivery resolves only its own workspace's integrations."
       ],
       "evidence": [
         "validation/results/m4-acceptance/fd/049-fd-final-verbose-unit/output.log",
@@ -2581,14 +2639,15 @@
       ],
       "coverage": {
         "positive": [
-          "packages/application/src/integrations/integrations.test.ts::INT-004 widening settings or resuming re-checks consent against what the adapter now requires",
+          "packages/application/src/integrations/integrations.test.ts::INT-004 an integration records who created it and carries no consent document",
+          "packages/application/src/integrations/integrations.test.ts::INT-004 updating or resuming keeps the creating principal and needs no scope grant",
           "packages/application/src/integrations/integrations.test.ts::INT-004 a test delivery is labelled, carries the test marker and never becomes a delivery, Run or event of record",
           "apps/server/src/integrations.test.ts::INT-004 integration routes configure, patch, test and list over /v1 with token authentication and administrator scope",
           "packages/application/src/integrations/integrations.test.ts::INT-004 a test delivery only resolves the integrations of its own workspace while webhook intake spans all"
         ],
         "negative": [
-          "packages/application/src/integrations/integrations.test.ts::INT-004 creating an integration without consent for every required scope is refused and stores nothing",
-          "packages/application/src/integrations/integrations.test.ts::INT-004 revoking ends access with no fallback: no consent, no secrets, no test, no update, no reactivation",
+          "packages/application/src/integrations/integrations.test.ts::INT-004 an integration records who created it and carries no consent document",
+          "packages/application/src/integrations/integrations.test.ts::INT-004 revoking ends access with no fallback: no secrets, no test, no update, no reactivation",
           "packages/application/src/integrations/integrations.test.ts::INT-004 only an administrator of the workspace may configure, list or test an integration",
           "packages/application/src/integrations/integrations.test.ts::INT-004 projects and secrets of another workspace, archived projects and revoked secrets cannot be bound",
           "packages/application/src/integrations/integrations.test.ts::INT-004 optimistic versions and unique names guard configuration changes"
@@ -2596,7 +2655,11 @@
         "criticalAssertions": [
           {
             "path": "packages/application/src/integrations/integrations.test.ts",
-            "assertion": "expect((missing as ContractError).code).toBe(\"PRECONDITION_FAILED\");"
+            "assertion": "expect(await codeOf(() => f.service.test(created.id))).toBe(\"PRECONDITION_FAILED\");"
+          },
+          {
+            "path": "packages/application/src/integrations/integrations.test.ts",
+            "assertion": "expect(await codeOf(() => f.service.create(withConsent as never))).toBe(\"INVALID_ARGUMENT\");"
           },
           {
             "path": "packages/application/src/integrations/integrations.test.ts",
@@ -2620,7 +2683,7 @@
           },
           {
             "path": "apps/server/src/integrations.test.ts",
-            "assertion": "expect(noConsent.statusCode).toBe(422);"
+            "assertion": "expect(legacyConsent.statusCode).toBe(400);"
           },
           {
             "path": "packages/application/src/integrations/integrations.test.ts",
@@ -2628,7 +2691,7 @@
           }
         ]
       },
-      "note": "Consent is checked against the scopes the adapter returns for the stored settings; adapter-specific scope names and test message formats are proven by each adapter's own slice."
+      "note": "Authorization is the ordinary administrator scope: the creating principal is recorded as createdBy and no consent document exists on an integration or in the contract; adapter-specific settings and test message formats are proven by each adapter's own slice."
     },
     {
       "id": "INT-005",
@@ -3993,7 +4056,7 @@
     },
     {
       "id": "INT-024",
-      "title": "Túnel remoto opcional (M5) tem consentimento, escopo, autenticação, expiração e indicador live.",
+      "title": "Túnel remoto opcional (M5) exige ativação explícita, aprovação conforme SEC-039, escopo, autenticação, expiração e indicador live.",
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M5",
       "ownerRole": "Integrations",
@@ -7384,7 +7447,7 @@
     },
     {
       "id": "J18",
-      "title": "Qualidade avançada com consentimento",
+      "title": "Qualidade avançada com política e aprovação",
       "sourceFile": "specs/10-validation.md",
       "milestone": "M5",
       "ownerRole": "Quality",
@@ -8356,7 +8419,7 @@
       "status": "verified",
       "scenario": [
         "Atomic independent money/token quotas with unknown usage retained",
-        "Recorded unknown-price consent gates all outgoing provider requests",
+        "Unpriced model admitted while no monetary ceiling exists and refused before any outgoing request once a monetary budget is exhausted",
         "Deterministic Docker replay completes despite AI budget stop",
         "validation/journeys/model-accounting.docker.test.ts::VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run and attributed evidence",
         "packages/persistence/src/persistence.test.ts::bounds concurrent model compute slots even without a price or monetary quota",
@@ -8379,7 +8442,7 @@
         "packages/persistence/src/usage.ts",
         "packages/application/src/ai/model.ts"
       ],
-      "note": "Existing gateway policy/repair/cache regressions plus new cumulative token/consent/compute and real Docker acceptance pass.",
+      "note": "Existing gateway policy/repair/cache regressions plus new cumulative token, unpriced-budget and compute checks and real Docker acceptance pass.",
       "coverage": {
         "positive": [
           "validation/journeys/model-accounting.docker.test.ts::VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run and attributed evidence",
@@ -10104,7 +10167,7 @@
         "packages/application/src/settings.pg.test.ts::M4-05 answers another workspace's environment with not found for revisions"
       ],
       "oracle": [
-        "The settings, secrets and retention pages (environments, model data sharing, budget, limits, secrets, retention and deletion) call only public /v1 catalog routes; every portal settings route answers over HTTP.",
+        "The settings, secrets and retention pages (environments, model providers, budget, limits, secrets, retention and deletion) call only public /v1 catalog routes; every portal settings route answers over HTTP.",
         "Environment revisions are listed newest first without variables and another workspace's environment answers not found. Setup, review, run and artifact pages of the portal are appended by the other portal slices."
       ],
       "evidence": [
@@ -10267,7 +10330,7 @@
         "validation/journeys/j12-github.pg.test.ts::J12 INT-014 INT-018 INT-023 the management routes run inside the idempotency transaction on PostgreSQL: settings, secret rotation and dead-letter retry",
         "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green",
         "validation/journeys/j12-github.docker.test.ts::J12 INT-017 SEC-047 a preview that redirects to another origin is stopped by the sandbox egress policy and the foreign origin is never reached",
-        "validation/journeys/github-portal.portal.test.ts::INT-004 INT-017 lists the App, shows consent and labels a test delivery, accessibly at 320 px",
+        "validation/journeys/github-portal.portal.test.ts::INT-004 INT-017 lists the App and labels a test delivery, accessibly at 320 px",
         "validation/journeys/github-portal.portal.test.ts::OPS-037 INT-015 shows pull requests with their gate, links the portal batch and requires sign-in for the link in the check output",
         "validation/journeys/github-portal.portal.test.ts::INT-023 a dead-lettered check is retried from the keyboard and a delivery problem never changes the verdict",
         "packages/application/src/integrations/github/github-pr.test.ts::INT-015 INT-019 keeps A's verdict on SHA A and gives B no green check until B's own preview passes",
@@ -10313,7 +10376,7 @@
         "positive": [
           "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing",
           "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green",
-          "validation/journeys/github-portal.portal.test.ts::INT-004 INT-017 lists the App, shows consent and labels a test delivery, accessibly at 320 px",
+          "validation/journeys/github-portal.portal.test.ts::INT-004 INT-017 lists the App and labels a test delivery, accessibly at 320 px",
           "validation/journeys/github-portal.portal.test.ts::OPS-037 INT-015 shows pull requests with their gate, links the portal batch and requires sign-in for the link in the check output",
           "packages/application/src/integrations/github/github-webhooks.test.ts::INT-014 accepts a correctly signed pull_request delivery and records one pull with both checks queued",
           "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit"
@@ -10528,6 +10591,18 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M5",
       "ownerRole": "Quality",
+      "status": "planned",
+      "scenario": [],
+      "oracle": [],
+      "evidence": [],
+      "code": []
+    },
+    {
+      "id": "M5-09",
+      "title": "Runner de terminal (CLI, PTY e TUI)",
+      "sourceFile": "ROADMAP.md",
+      "milestone": "M5",
+      "ownerRole": "Execution",
       "status": "planned",
       "scenario": [],
       "oracle": [],
@@ -13467,9 +13542,7 @@
         "validation/journeys/m1-recovery.docker.test.ts::J17 backup restores to an isolated suspended destination with retained identities and no replayed effects",
         "packages/application/src/release.test.ts::carries image revocations into a restored data directory and keeps the restore suspended",
         "packages/application/src/release.test.ts::declares an unverifiable post-backup ledger and keeps the restore suspended",
-        "packages/application/src/release.test.ts::carries consent revocations made after the backup into the restored directory",
-        "packages/persistence/src/persistence.test.ts::OPS-025 replays post-backup consent and approval revocations and invalidates server tokens",
-        "packages/persistence/src/persistence.test.ts::OPS-025 keeps a consent revoked in the backup even when the live ledger regranted it",
+        "packages/persistence/src/persistence.test.ts::OPS-025 replays post-backup approval revocations and invalidates server tokens",
         "packages/persistence/src/persistence.test.ts::OPS-025 declares an unreadable post-backup ledger and keeps the restore suspended",
         "packages/persistence/src/persistence.test.ts::backs up WAL consistently and restores in suspended isolation preserving IDs",
         "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-025 the scheduler does nothing while the restored copy is isolated and resumes when it is released",
@@ -13483,7 +13556,7 @@
         "packages/application/src/restore-isolation.pg.test.ts::OPS-025 M4-02 a restored server-profile copy fires no schedule, sends no notification and publishes no check until the review is confirmed and the owner releases it"
       ],
       "oracle": [
-        "Revoked secrets, images, consents and approvals cannot resurrect after restore; jobs and outbox are non-dispatchable and server tokens are invalidated; terminal identities are retained; the restore process opens no outbound connection and dispatches no outbox message; when the post-backup ledger cannot be read the restore declares postBackupLedger unavailable, stays suspended and review --apply refuses without --ledger-loss-accepted.",
+        "Revoked secrets, images and approvals cannot resurrect after restore; jobs and outbox are non-dispatchable and server tokens are invalidated; terminal identities are retained; the restore process opens no outbound connection and dispatches no outbox message; when the post-backup ledger cannot be read the restore declares postBackupLedger unavailable, stays suspended and review --apply refuses without --ledger-loss-accepted.",
         "A restored GitHub installation that was revoked stays revoked after restoring a backup taken while it was active, and one that was never revoked keeps working.",
         "A restored server starts isolated (operational_state restore:isolated and admission suspended_restore): admission is paused, schedules, integrations and outbox dispatch read application.operations.isolated() and do nothing, alert evaluation is skipped, and isolation ends only when an operator confirms the restore review and releases it; the DR rehearsal records the same gates on a fresh stack.",
         "On PostgreSQL a real backup restored into a fresh database starts isolated with every integration paused and every token dropped: every registered server controller and the scheduler do nothing, no notification leaves, no check or comment is published and an inbound webhook is refused without being recorded, even after an administrator resumed the integrations. Only the owner may release, and only after the review; after the release the same pending schedule, notification and check proceed, the refused webhook delivery is processed on redelivery, and a schedule created by a revoked token stays paused as owner_revoked."
@@ -13521,15 +13594,14 @@
         "packages/application/src/notifications/service.ts",
         "packages/persistence/src/restore-tightening.ts"
       ],
-      "note": "Verified for the local single-user profile. Restore replays secret, image, retention, deletion, consent and approval revocations from the live ledger (it only tightens state, never reinstates). When the live ledger is unreadable or the live database has no workspace row, restore declares postBackupLedger=unavailable and exclusionsGuaranteed=false, writes restore_review=post_backup_ledger_unavailable, and review --apply requires --ledger-loss-accepted in addition to --revocations-confirmed. Review still opens admission only after the audited operator decision. A remote, lost-host ledger remains unavailable (M4). Grants are consents in the local schema; no separate grants table exists. M4 S6: the scheduler controller does nothing while operational_state restore:isolated is set and resumes when it is released. M4 S8 notification dispatch sends nothing while the restore isolation flag is set. M4 S7 adds the revoked GitHub installation restore proof. S2b added the restore:isolated flag, application.operations.isolated() and the review-then-release gate. M4 proved scheduler, notification, GitHub and inbound-webhook isolation of a restored server-profile copy on PostgreSQL (restore-isolation.pg.test.ts).",
+      "note": "Verified for the local single-user profile. Restore replays secret, image, retention, deletion and approval revocations from the live ledger (it only tightens state, never reinstates). When the live ledger is unreadable or the live database has no workspace row, restore declares postBackupLedger=unavailable and exclusionsGuaranteed=false, writes restore_review=post_backup_ledger_unavailable, and review --apply requires --ledger-loss-accepted in addition to --revocations-confirmed. Review still opens admission only after the audited operator decision. A remote, lost-host ledger remains unavailable (M4). M4 S6: the scheduler controller does nothing while operational_state restore:isolated is set and resumes when it is released. M4 S8 notification dispatch sends nothing while the restore isolation flag is set. M4 S7 adds the revoked GitHub installation restore proof. S2b added the restore:isolated flag, application.operations.isolated() and the review-then-release gate. M4 proved scheduler, notification, GitHub and inbound-webhook isolation of a restored server-profile copy on PostgreSQL (restore-isolation.pg.test.ts).",
       "coverage": {
         "positive": [
           "validation/journeys/crash-recovery.docker.test.ts::J17 backup during active Docker execution is coherent, incomplete objects are explicit and restore merges later revocation",
           "validation/journeys/recovery-controls.docker.test.ts::OPS-025 restore requires explicit admin review and new Attempt decision without automatic effects",
           "validation/journeys/m1-recovery.docker.test.ts::J17 backup restores to an isolated suspended destination with retained identities and no replayed effects",
           "packages/application/src/release.test.ts::carries image revocations into a restored data directory and keeps the restore suspended",
-          "packages/application/src/release.test.ts::carries consent revocations made after the backup into the restored directory",
-          "packages/persistence/src/persistence.test.ts::OPS-025 replays post-backup consent and approval revocations and invalidates server tokens",
+          "packages/persistence/src/persistence.test.ts::OPS-025 replays post-backup approval revocations and invalidates server tokens",
           "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-025 the scheduler does nothing while the restored copy is isolated and resumes when it is released",
           "packages/application/src/notifications/resilience.test.ts::OPS-025 an isolated restore sends nothing until the flag is cleared",
           "packages/application/src/integrations/github/github-restore.test.ts::OPS-037 a restored installation that was never revoked keeps working (the tombstone is not a blanket block)",
@@ -13540,7 +13612,6 @@
           "validation/journeys/recovery-controls.docker.test.ts::OPS-025 restore requires explicit admin review and new Attempt decision without automatic effects",
           "validation/journeys/recovery-controls.docker.test.ts::OPS-025 isolated restore opens no outbound connection and dispatches no outbox message",
           "packages/application/src/release.test.ts::declares an unverifiable post-backup ledger and keeps the restore suspended",
-          "packages/persistence/src/persistence.test.ts::OPS-025 keeps a consent revoked in the backup even when the live ledger regranted it",
           "packages/persistence/src/persistence.test.ts::OPS-025 declares an unreadable post-backup ledger and keeps the restore suspended",
           "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-025 the scheduler does nothing while the restored copy is isolated and resumes when it is released",
           "packages/application/src/notifications/rules.test.ts::INT-025 a paused integration holds its deliveries and resuming delivers them while a revoked one dead-letters",
@@ -13569,10 +13640,6 @@
           {
             "path": "packages/application/src/release.test.ts",
             "assertion": "exclusionsGuaranteed: false,"
-          },
-          {
-            "path": "packages/application/src/release.test.ts",
-            "assertion": "database.get(\"SELECT revoked_at FROM consents WHERE id=?\", consentId)?.revoked_at,"
           },
           {
             "path": "packages/persistence/src/persistence.test.ts",
@@ -13973,15 +14040,19 @@
       "ownerRole": "Operations",
       "status": "verified",
       "scenario": [
-        "Unknown-price consent denied before HTTP boundary, positive grant and revoked grant",
+        "Unpriced model admitted while no monetary ceiling exists and refused before the HTTP boundary once a monetary budget limit is set or exhausted; no grant is involved",
         "Independent token reservations and max-two model compute slots",
         "Mid-generation quota cutoff leaves admitted Docker replay untouched",
+        "packages/model-gateway/src/gateway.test.ts::admits an unpriced model when the ledger has room and refuses it before the call when the budget is exhausted",
+        "packages/persistence/src/persistence.test.ts::refuses an unpriced reservation only while a monetary budget limit exists",
         "validation/journeys/model-accounting.docker.test.ts::VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run and attributed evidence",
         "packages/persistence/src/persistence.test.ts::bounds concurrent model compute slots even without a price or monetary quota",
         "packages/persistence/src/persistence.test.ts::reserves independent cumulative tokens atomically and retains unknown-response charges"
       ],
       "oracle": [
-        "packages/application/src/ai/core.test.ts: records consent before data crosses a real boundary, and source injection cannot add tools",
+        "packages/application/src/ai/core.test.ts: needs no consent: a permitted provider is called directly, source injection cannot add tools, and policy refusals stay enforced",
+        "packages/model-gateway/src/gateway.test.ts: admits an unpriced model when the ledger has room and refuses it before the call when the budget is exhausted",
+        "packages/persistence/src/persistence.test.ts: refuses an unpriced reservation only while a monetary budget limit exists",
         "packages/persistence/src/persistence.test.ts: reserves independent cumulative tokens atomically and retains unknown-response charges",
         "packages/persistence/src/persistence.test.ts: bounds concurrent model compute slots even without a price or monetary quota",
         "validation/journeys/model-accounting.docker.test.ts: VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run and attributed evidence"
@@ -14002,16 +14073,32 @@
       "note": "Verified M2 accounting remains historical; M3 analysis/healing now use the same admitted accounting path and immutable failure handling. Controlled-provider budgets are not model-quality proof; M5 distributed compute pools remain outside local scope.",
       "coverage": {
         "positive": [
+          "packages/model-gateway/src/gateway.test.ts::admits an unpriced model when the ledger has room and refuses it before the call when the budget is exhausted",
+          "packages/persistence/src/persistence.test.ts::refuses an unpriced reservation only while a monetary budget limit exists",
           "validation/journeys/model-accounting.docker.test.ts::VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run and attributed evidence",
           "packages/persistence/src/persistence.test.ts::bounds concurrent model compute slots even without a price or monetary quota",
           "packages/persistence/src/persistence.test.ts::reserves independent cumulative tokens atomically and retains unknown-response charges"
         ],
         "negative": [
+          "packages/model-gateway/src/gateway.test.ts::admits an unpriced model when the ledger has room and refuses it before the call when the budget is exhausted",
+          "packages/persistence/src/persistence.test.ts::refuses an unpriced reservation only while a monetary budget limit exists",
           "validation/journeys/model-accounting.docker.test.ts::VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run and attributed evidence",
           "packages/persistence/src/persistence.test.ts::bounds concurrent model compute slots even without a price or monetary quota",
           "packages/persistence/src/persistence.test.ts::reserves independent cumulative tokens atomically and retains unknown-response charges"
         ],
         "criticalAssertions": [
+          {
+            "path": "packages/model-gateway/src/gateway.test.ts",
+            "assertion": "expect(exhausted.counts().completions).toBe(0);"
+          },
+          {
+            "path": "packages/model-gateway/src/gateway.test.ts",
+            "assertion": "expect((await open.gateway.complete(testRequest)).cost).toBe(\"unknown\");"
+          },
+          {
+            "path": "packages/persistence/src/persistence.test.ts",
+            "assertion": "expect(await ledger.reserve({ ...request, idempotencyKey: \"limited-1\" })).toEqual({\n      ok: false,\n      reasonCode: \"budget_exhausted\",\n      remaining: \"unknown\",\n    });"
+          },
           {
             "path": "validation/journeys/model-accounting.docker.test.ts",
             "assertion": "expect(run.outcome).toBe(\"passed\");"
@@ -14756,7 +14843,7 @@
         "packages/application/src/worker.ts",
         "deploy/systemd/testmaster-worker@.service"
       ],
-      "note": "Verified for the local single-user profile only. Upgrade is offline: preflight, drain, backup, migrate, readiness. Rollback is allowed only when the installed schema is compatible; otherwise it is a planned restore with --keep-schema. Install, upgrade and rollback never write config, policy or secrets. Revoked image IDs are refused and are carried into restores. Not covered and not claimed: per-component rolling upgrades (the local profile has one controller with an embedded worker; resumption is a controller restart), distributed profiles (M4+), release signatures and license approval (other items). Consent and approval revocations made after a backup are merged into the restored directory (OPS-025), and a restore that cannot read its post-backup ledger says so and stays suspended until --ledger-loss-accepted. The support matrix cites only repository paths that exist, and labels host facts that no repository file pins (Docker 29.x, host OS and kernel, image Node version) as observations. M4 added the per-component schema compatibility gate for workers and servers.",
+      "note": "Verified for the local single-user profile only. Upgrade is offline: preflight, drain, backup, migrate, readiness. Rollback is allowed only when the installed schema is compatible; otherwise it is a planned restore with --keep-schema. Install, upgrade and rollback never write config, policy or secrets. Revoked image IDs are refused and are carried into restores. Not covered and not claimed: per-component rolling upgrades (the local profile has one controller with an embedded worker; resumption is a controller restart), distributed profiles (M4+), release signatures and license approval (other items). Approval revocations made after a backup are merged into the restored directory (OPS-025), and a restore that cannot read its post-backup ledger says so and stays suspended until --ledger-loss-accepted. The support matrix cites only repository paths that exist, and labels host facts that no repository file pins (Docker 29.x, host OS and kernel, image Node version) as observations. M4 added the per-component schema compatibility gate for workers and servers.",
       "coverage": {
         "positive": [
           "packages/persistence/src/upgrade.test.ts::upgrades in order: preflight, drain, backup of the old schema, migrate, readiness",
@@ -15442,7 +15529,7 @@
       "ownerRole": "Core",
       "status": "verified",
       "scenario": [
-        "packages/application/src/authoring.test.ts::validates both complete declarative examples and describes dry-run without a verdict",
+        "packages/application/src/authoring.test.ts::validates every complete declarative example and describes dry-run without a verdict",
         "packages/application/src/authoring.test.ts::shares strict parsing and semantics including byte bounds and missing assertions",
         "validation/journeys/m1-boundaries.docker.test.ts::CLI-002 invalid and valid offline dry-runs make no writes or fetches, with an exercised positive boundary control"
       ],
@@ -15462,7 +15549,7 @@
       "note": "Acceptance exercised by the cited unit scenarios; pass evidence is the orchestrator-reported final 420-test unit gate, not a rerun by this mapper.",
       "coverage": {
         "positive": [
-          "packages/application/src/authoring.test.ts::validates both complete declarative examples and describes dry-run without a verdict"
+          "packages/application/src/authoring.test.ts::validates every complete declarative example and describes dry-run without a verdict"
         ],
         "negative": [
           "packages/application/src/authoring.test.ts::shares strict parsing and semantics including byte bounds and missing assertions",
@@ -18134,6 +18221,91 @@
       "code": []
     },
     {
+      "id": "REQ-057",
+      "title": "Runner de terminal (CLI, PTY e TUI)",
+      "sourceFile": "specs/01-requirements.md",
+      "milestone": "M5",
+      "ownerRole": "Execution",
+      "status": "verified",
+      "scenario": [
+        "packages/runner/src/terminal.test.ts::reports exit code, stdout and stderr separately and feeds stdin",
+        "packages/runner/src/terminal.test.ts::encodes cursor keys by the DECCKM mode the program set and shows the alternate screen",
+        "packages/runner/src/terminal.test.ts::shows only the visible columns of an alternate screen after it is narrowed",
+        "packages/sandbox/src/attempt/terminal.docker.test.ts::runs a CLI fixture and a PTY session in the sandbox and leaves no process behind",
+        "packages/runner/src/terminal.test.ts::fails a wrong exit code with assertion_mismatch and the observed code",
+        "packages/runner/src/terminal.test.ts::counts and kills a process that outlives the program, and passes when nothing does",
+        "packages/runner/src/terminal.test.ts::kills the whole process tree when a run exceeds its time and reports assertion_timeout",
+        "packages/runner/src/terminal.test.ts::blocks a program that cannot be started instead of failing the assertion",
+        "packages/sandbox/src/attempt/terminal.docker.test.ts::counts a process that outlives the program and still tears the sandbox down",
+        "packages/sandbox/src/attempt/terminal.docker.test.ts::fails a hung program with assertion_timeout and does not need the container to be killed"
+      ],
+      "oracle": [
+        "Deterministic runner and sandbox tests drive a CLI program through pipes and a TUI program through a PTY and its headless emulator; a wrong exit code, a leaked grandchild, a hung program and a missing program each produce the specific failed/blocked verdict and no process survives."
+      ],
+      "evidence": [
+        "packages/runner/src/terminal.test.ts",
+        "packages/sandbox/src/attempt/terminal.docker.test.ts",
+        "packages/contracts/src/terminal-plan.test.ts",
+        "docs/adr/025-terminal-runner.md",
+        "docs/usage/terminal-tests.md",
+        "specs/11-contract-details.md"
+      ],
+      "code": [
+        "packages/runner/src/terminal.ts",
+        "packages/runner/src/terminal-session.ts",
+        "packages/runner/src/terminal-processes.ts",
+        "packages/contracts/src/plans.ts",
+        "packages/contracts/src/validation.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012). Linux x64 runner image only; Windows, macOS, the host clipboard and unsafe-local are refused or out of scope.",
+      "coverage": {
+        "positive": [
+          "packages/runner/src/terminal.test.ts::reports exit code, stdout and stderr separately and feeds stdin",
+          "packages/runner/src/terminal.test.ts::encodes cursor keys by the DECCKM mode the program set and shows the alternate screen",
+          "packages/runner/src/terminal.test.ts::shows only the visible columns of an alternate screen after it is narrowed",
+          "packages/sandbox/src/attempt/terminal.docker.test.ts::runs a CLI fixture and a PTY session in the sandbox and leaves no process behind"
+        ],
+        "negative": [
+          "packages/runner/src/terminal.test.ts::fails a wrong exit code with assertion_mismatch and the observed code",
+          "packages/runner/src/terminal.test.ts::counts and kills a process that outlives the program, and passes when nothing does",
+          "packages/runner/src/terminal.test.ts::kills the whole process tree when a run exceeds its time and reports assertion_timeout",
+          "packages/runner/src/terminal.test.ts::blocks a program that cannot be started instead of failing the assertion",
+          "packages/sandbox/src/attempt/terminal.docker.test.ts::counts a process that outlives the program and still tears the sandbox down",
+          "packages/sandbox/src/attempt/terminal.docker.test.ts::fails a hung program with assertion_timeout and does not need the container to be killed"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/runner/src/terminal.test.ts",
+            "assertion": "expect(result).toEqual({ outcome: \"passed\", reasonCode: \"assertions_satisfied\" });"
+          },
+          {
+            "path": "packages/runner/src/terminal.test.ts",
+            "assertion": "expect(finished(\"code\").error?.message).toContain(\"last observation: 2\");"
+          },
+          {
+            "path": "packages/runner/src/terminal.test.ts",
+            "assertion": "expect(bad.finished(\"clean\").error?.message).toContain(\"last observation: 1\");"
+          },
+          {
+            "path": "packages/runner/src/terminal.test.ts",
+            "assertion": "expect(artifacts.get(\"terminal/steps/seen-screen.txt\")?.text).toContain(\"buffer=alternate\");"
+          },
+          {
+            "path": "packages/runner/src/terminal.test.ts",
+            "assertion": "expect(missing.result).toEqual({ outcome: \"blocked\", reasonCode: \"unsupported_capability\" });"
+          },
+          {
+            "path": "packages/sandbox/src/attempt/terminal.docker.test.ts",
+            "assertion": "expect(finished(\"clean\")?.reasonCode).toBe(\"assertion_mismatch\");"
+          },
+          {
+            "path": "packages/sandbox/src/attempt/terminal.docker.test.ts",
+            "assertion": "expect(finished(\"hang\")?.reasonCode).toBe(\"assertion_timeout\");"
+          }
+        ]
+      }
+    },
+    {
       "id": "SEC-001",
       "title": "Modelo de ameaça versionado",
       "sourceFile": "specs/07-security.md",
@@ -18475,7 +18647,7 @@
         "DOM/data request to expand file context never loads excluded/outside files",
         "Provider payload secret scrubbing and cache scope",
         "Compromised model endpoint HTTP 307 redirect toward separately recorded exfil endpoint",
-        "Deterministic pinned replay after source changes with no provider consent",
+        "Deterministic pinned replay after source changes makes no model call",
         "packages/model-gateway/src/gateway.test.ts::scrubs secrets at the outbound boundary, persists raw prompts only opted-in, and scopes cache",
         "packages/application/src/ai/core.test.ts::a compromised model endpoint cannot redirect the controller or forward its credential"
       ],
@@ -21555,6 +21727,244 @@
       "code": []
     },
     {
+      "id": "SEC-049",
+      "title": "Programa de terminal sem shell implícito e com origem controlada",
+      "sourceFile": "specs/07-security.md",
+      "milestone": "M5",
+      "ownerRole": "Security",
+      "status": "verified",
+      "scenario": [
+        "packages/application/src/input-fixtures.test.ts::stages only terminal program fixtures as executable and names every fixture file",
+        "packages/runner/src/terminal.test.ts::runs a program from a fixture with its fixture name as argv[0]",
+        "packages/contracts/src/terminal-plan.test.ts::refuses a program path that escapes upward or is relative",
+        "packages/runner/src/terminal.test.ts::writes files into the workdir and the home and asserts on them, never outside"
+      ],
+      "oracle": [
+        "Only fixtures a terminal plan names as its program get the executable mode; data fixtures stay 0644; a program path with an upward segment or a relative path is rejected and writeFile never leaves workdir or home."
+      ],
+      "evidence": [
+        "packages/application/src/input-fixtures.test.ts",
+        "packages/runner/src/terminal.test.ts",
+        "packages/contracts/src/terminal-plan.test.ts",
+        "docs/adr/025-terminal-runner.md"
+      ],
+      "code": [
+        "packages/runner/src/terminal.ts",
+        "packages/application/src/input-fixtures.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012).",
+      "coverage": {
+        "positive": [
+          "packages/application/src/input-fixtures.test.ts::stages only terminal program fixtures as executable and names every fixture file",
+          "packages/runner/src/terminal.test.ts::runs a program from a fixture with its fixture name as argv[0]"
+        ],
+        "negative": [
+          "packages/contracts/src/terminal-plan.test.ts::refuses a program path that escapes upward or is relative",
+          "packages/runner/src/terminal.test.ts::writes files into the workdir and the home and asserts on them, never outside"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/input-fixtures.test.ts",
+            "assertion": "expect(await mode(program!.id)).toBe(0o555);"
+          },
+          {
+            "path": "packages/application/src/input-fixtures.test.ts",
+            "assertion": "expect(await mode(data!.id)).toBe(0o644);"
+          }
+        ]
+      }
+    },
+    {
+      "id": "SEC-050",
+      "title": "Sequências de terminal não alcançam o host",
+      "sourceFile": "specs/07-security.md",
+      "milestone": "M5",
+      "ownerRole": "Security",
+      "status": "verified",
+      "scenario": [
+        "packages/runner/src/terminal.test.ts::captures OSC 52 in the emulator without drawing it",
+        "packages/runner/src/terminal.test.ts::redacts a secret copied with OSC 52 from the recording, where it travels as base64"
+      ],
+      "oracle": [
+        "An OSC 52 sequence is captured by the emulator as clipboard evidence, never drawn, and a secret travelling inside it as base64 is scrubbed from the recording."
+      ],
+      "evidence": [
+        "packages/runner/src/terminal.test.ts",
+        "docs/adr/025-terminal-runner.md"
+      ],
+      "code": [
+        "packages/runner/src/terminal-session.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012).",
+      "coverage": {
+        "positive": [
+          "packages/runner/src/terminal.test.ts::captures OSC 52 in the emulator without drawing it"
+        ],
+        "negative": [
+          "packages/runner/src/terminal.test.ts::redacts a secret copied with OSC 52 from the recording, where it travels as base64"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/runner/src/terminal.test.ts",
+            "assertion": "expect(artifact.text, path).not.toContain(prefix);"
+          },
+          {
+            "path": "packages/runner/src/terminal.test.ts",
+            "assertion": "expect(artifacts.get(\"terminal/tui.json\")?.text).toContain(\"osc52\");"
+          }
+        ]
+      }
+    },
+    {
+      "id": "SEC-051",
+      "title": "Encerramento da árvore de processos e contagem de vazamento",
+      "sourceFile": "specs/07-security.md",
+      "milestone": "M5",
+      "ownerRole": "Security",
+      "status": "verified",
+      "scenario": [
+        "packages/sandbox/src/attempt/terminal.docker.test.ts::runs a CLI fixture and a PTY session in the sandbox and leaves no process behind",
+        "packages/runner/src/terminal.test.ts::counts and kills a process that outlives the program, and passes when nothing does",
+        "packages/runner/src/terminal.test.ts::kills the whole process tree when a run exceeds its time and reports assertion_timeout",
+        "packages/runner/src/terminal.test.ts::kills the process tree on cancellation",
+        "packages/sandbox/src/attempt/terminal.docker.test.ts::cancels a running program: the attempt ends promptly and its container is gone"
+      ],
+      "oracle": [
+        "A grandchild left behind is counted by noLingeringProcesses and killed, a hung or cancelled run leaves no live pid, and a cancelled attempt leaves no container."
+      ],
+      "evidence": [
+        "packages/runner/src/terminal.test.ts",
+        "packages/sandbox/src/attempt/terminal.docker.test.ts"
+      ],
+      "code": [
+        "packages/runner/src/terminal-processes.ts",
+        "packages/runner/src/terminal.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012).",
+      "coverage": {
+        "positive": [
+          "packages/sandbox/src/attempt/terminal.docker.test.ts::runs a CLI fixture and a PTY session in the sandbox and leaves no process behind"
+        ],
+        "negative": [
+          "packages/runner/src/terminal.test.ts::counts and kills a process that outlives the program, and passes when nothing does",
+          "packages/runner/src/terminal.test.ts::kills the whole process tree when a run exceeds its time and reports assertion_timeout",
+          "packages/runner/src/terminal.test.ts::kills the process tree on cancellation",
+          "packages/sandbox/src/attempt/terminal.docker.test.ts::cancels a running program: the attempt ends promptly and its container is gone"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/runner/src/terminal.test.ts",
+            "assertion": "expect(alive(pid)).toBe(false);"
+          },
+          {
+            "path": "packages/sandbox/src/attempt/terminal.docker.test.ts",
+            "assertion": "expect(listing.stdout.trim()).toBe(\"\");"
+          },
+          {
+            "path": "packages/sandbox/src/attempt/terminal.docker.test.ts",
+            "assertion": "expect(finished(\"clean\")?.reasonCode).toBe(\"assertion_mismatch\");"
+          }
+        ]
+      }
+    },
+    {
+      "id": "SEC-052",
+      "title": "Redaction na sessão de terminal",
+      "sourceFile": "specs/07-security.md",
+      "milestone": "M5",
+      "ownerRole": "Security",
+      "status": "verified",
+      "scenario": [
+        "packages/runner/src/terminal.test.ts::redacts a secret typed into the session from the recording and the evidence",
+        "packages/runner/src/terminal.test.ts::captures a JSON field of stdout as a variable and keeps it out of evidence when sensitive",
+        "packages/runner/src/terminal.test.ts::redacts a secret copied with OSC 52 from the recording, where it travels as base64"
+      ],
+      "oracle": [
+        "A sensitive value typed into a session, captured from stdout or copied through OSC 52 never appears in any evidence artifact, cast included."
+      ],
+      "evidence": [
+        "packages/runner/src/terminal.test.ts"
+      ],
+      "code": [
+        "packages/runner/src/terminal.ts",
+        "packages/runner/src/terminal-session.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012).",
+      "coverage": {
+        "positive": [
+          "packages/runner/src/terminal.test.ts::redacts a secret typed into the session from the recording and the evidence"
+        ],
+        "negative": [
+          "packages/runner/src/terminal.test.ts::captures a JSON field of stdout as a variable and keeps it out of evidence when sensitive",
+          "packages/runner/src/terminal.test.ts::redacts a secret copied with OSC 52 from the recording, where it travels as base64"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/runner/src/terminal.test.ts",
+            "assertion": "expect(artifact.text, path).not.toContain(\"hunter2-secret-value\");"
+          },
+          {
+            "path": "packages/runner/src/terminal.test.ts",
+            "assertion": "expect(artifact.text, path).not.toContain(\"tok-9f8e7d6c5b4a\");"
+          }
+        ]
+      }
+    },
+    {
+      "id": "SEC-053",
+      "title": "Superfícies de terminal recusadas e risco de execução",
+      "sourceFile": "specs/07-security.md",
+      "milestone": "M5",
+      "ownerRole": "Security",
+      "status": "verified",
+      "scenario": [
+        "packages/sandbox/src/docker/executor.test.ts::gives the terminal kind its own 1 CPU, 1 GiB, 256 PID envelope and refuses limits above it",
+        "packages/application/src/ai/healing.test.ts::healing and agent mode refuse terminal tests explicitly, while factual analysis stays generic",
+        "packages/planner/src/proposals/proposals.test.ts::refuses terminal plans as proposals, edits or refinements before judging their assertions",
+        "packages/planner/src/code-export/export.test.ts::refuses terminal plans explicitly in every format instead of taking the Playwright path"
+      ],
+      "oracle": [
+        "Healing, agent mode, proposal generation and code export refuse terminal tests with CAPABILITY_UNAVAILABLE while the same operations on HTTP tests are not refused, and the terminal executor kind enforces its own resource envelope."
+      ],
+      "evidence": [
+        "packages/application/src/ai/healing.test.ts",
+        "packages/planner/src/proposals/proposals.test.ts",
+        "packages/planner/src/code-export/export.test.ts",
+        "packages/sandbox/src/docker/executor.test.ts"
+      ],
+      "code": [
+        "packages/application/src/ai/healing.ts",
+        "packages/planner/src/proposals/index.ts",
+        "packages/planner/src/code-export/index.ts",
+        "packages/sandbox/src/docker/executor.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012). The unsafe-local refusal is exercised by unsafe-runtime.test.ts but is not cited here.",
+      "coverage": {
+        "positive": [
+          "packages/sandbox/src/docker/executor.test.ts::gives the terminal kind its own 1 CPU, 1 GiB, 256 PID envelope and refuses limits above it"
+        ],
+        "negative": [
+          "packages/application/src/ai/healing.test.ts::healing and agent mode refuse terminal tests explicitly, while factual analysis stays generic",
+          "packages/planner/src/proposals/proposals.test.ts::refuses terminal plans as proposals, edits or refinements before judging their assertions",
+          "packages/planner/src/code-export/export.test.ts::refuses terminal plans explicitly in every format instead of taking the Playwright path"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/ai/healing.test.ts",
+            "assertion": "message: \"Agent mode is not available for terminal tests\","
+          },
+          {
+            "path": "packages/planner/src/code-export/export.test.ts",
+            "assertion": "\"Code export is not available for terminal tests; replay them with the terminal runner\","
+          },
+          {
+            "path": "packages/sandbox/src/docker/executor.test.ts",
+            "assertion": "expect(resourceLimitsEnforced(facts as InspectFacts, \"terminal\")).toBe(true);"
+          }
+        ]
+      }
+    },
+    {
       "id": "UX-001",
       "title": "CLI, MCP e web usam a mesma autorização, objetos persistidos e semântica de revisão/Run.",
       "sourceFile": "specs/09-web-and-integrations.md",
@@ -21989,6 +22399,8 @@
         "validation/journeys/portal-onboarding.portal.test.ts::UX-009 saves progress on the server per principal and resumes in a fresh browser at the same step",
         "validation/journeys/portal-onboarding.portal.test.ts::UX-009 never stores or sends a credential: embedded userinfo and password fields are refused, and the URL stays clean",
         "packages/application/src/onboarding.test.ts::UX-009 resumes the saved step, choices and history for the same principal and project",
+        "packages/application/src/onboarding.test.ts::UX-009 resumes and saves wizard state migrated from the consent era, keeping version and history",
+        "packages/persistence/src/onboarding-migration.test.ts::migration 0021 strips only choices.consents from stored onboarding state across the real chain",
         "packages/application/src/onboarding.test.ts::UX-009 never stores credentials and reduces the target to an origin",
         "packages/application/src/onboarding.test.ts::UX-009 refuses to complete a step whose choice is missing and rejects foreign references",
         "apps/server/src/onboarding-routes.test.ts::UX-009 serves the wizard state with an ETag and refuses a write without or with a stale If-Match",
@@ -22015,6 +22427,8 @@
         "positive": [
           "validation/journeys/portal-onboarding.portal.test.ts::UX-009 saves progress on the server per principal and resumes in a fresh browser at the same step",
           "packages/application/src/onboarding.test.ts::UX-009 resumes the saved step, choices and history for the same principal and project",
+          "packages/application/src/onboarding.test.ts::UX-009 resumes and saves wizard state migrated from the consent era, keeping version and history",
+          "packages/persistence/src/onboarding-migration.test.ts::migration 0021 strips only choices.consents from stored onboarding state across the real chain",
           "apps/server/src/onboarding-routes.test.ts::UX-009 serves the wizard state with an ETag and refuses a write without or with a stale If-Match",
           "apps/web/src/lib/onboarding.test.ts::UX-009 moves between steps in order and stops at both ends"
         ],
@@ -22025,6 +22439,14 @@
           "apps/server/src/onboarding-routes.test.ts::UX-009 serves the wizard state with an ETag and refuses a write without or with a stale If-Match"
         ],
         "criticalAssertions": [
+          {
+            "path": "packages/application/src/onboarding.test.ts",
+            "assertion": "expect(saved.history).toEqual(migrated.history);"
+          },
+          {
+            "path": "packages/persistence/src/onboarding-migration.test.ts",
+            "assertion": "expect(read(\"onboarding:ws:prj_a:usr_b\").choices).toEqual({ mode: \"local\" });"
+          },
           {
             "path": "validation/journeys/portal-onboarding.portal.test.ts",
             "assertion": "expect(await second.page.getByLabel(\"Base URL\").inputValue()).toBe(target.url);"
@@ -22225,7 +22647,7 @@
         "validation/journeys/portal-requirements.portal.test.ts::UX-012 a conflict between a specification and the code shows the span on each side and blocks approval until a reasoned decision is recorded",
         "validation/journeys/portal-requirements.portal.test.ts::UX-012 a re-normalization that rewords a requirement shows the interpretation change with the text before and after",
         "validation/journeys/portal-requirements.portal.test.ts::UX-012 a requirement whose source was updated is flagged as resting on a superseded revision, and the old span stays readable",
-        "validation/journeys/portal-requirements.portal.test.ts::UX-012 normalization without a model consent is refused, shows its reason and calls no model",
+        "validation/journeys/portal-requirements.portal.test.ts::UX-012 normalization needs no grant: it calls the configured model and lists the requirement",
         "packages/application/src/ai/requirements-review.test.ts::UX-012 links each requirement to the exact span it came from and flags an origin that was superseded",
         "packages/application/src/ai/requirements-review.test.ts::UX-012 records interpretation changes, edits, approvals and approval resets with before and after text",
         "packages/application/src/ai/requirements-review.test.ts::UX-012 shows a conflict with the spans on both sides and keeps approval blocked until a decision with a reason is recorded",
@@ -22233,7 +22655,7 @@
       ],
       "oracle": [
         "Every requirement links to the exact source span it came from (source, revision, byte range, span hash, excerpt) and says whether that revision is still current; a requirement whose source was updated is flagged as resting on a superseded revision while the old span stays readable.",
-        "A conflict shows the span on each side and keeps approval blocked until a decision with a statement and a reason is recorded by a person; a re-normalization records the text before and after, and normalization without model consent is refused with no model call."
+        "A conflict shows the span on each side and keeps approval blocked until a decision with a statement and a reason is recorded by a person; a re-normalization records the text before and after, and normalization needs no grant: it calls the configured model and lists the requirement."
       ],
       "evidence": [
         "validation/results/m4-acceptance/s4a/002-s4a-unit-targeted/output.log",
@@ -22249,6 +22671,7 @@
       ],
       "coverage": {
         "positive": [
+          "validation/journeys/portal-requirements.portal.test.ts::UX-012 normalization needs no grant: it calls the configured model and lists the requirement",
           "validation/journeys/portal-requirements.portal.test.ts::UX-012 a conflict between a specification and the code shows the span on each side and blocks approval until a reasoned decision is recorded",
           "validation/journeys/portal-requirements.portal.test.ts::UX-012 a re-normalization that rewords a requirement shows the interpretation change with the text before and after",
           "validation/journeys/portal-requirements.portal.test.ts::UX-012 a requirement whose source was updated is flagged as resting on a superseded revision, and the old span stays readable",
@@ -22257,7 +22680,6 @@
           "apps/server/src/onboarding-routes.test.ts::UX-012 serves the requirement review, the discovery list and the feature map from catalog routes"
         ],
         "negative": [
-          "validation/journeys/portal-requirements.portal.test.ts::UX-012 normalization without a model consent is refused, shows its reason and calls no model",
           "packages/application/src/ai/requirements-review.test.ts::UX-012 shows a conflict with the spans on both sides and keeps approval blocked until a decision with a reason is recorded",
           "validation/journeys/portal-requirements.portal.test.ts::UX-012 a conflict between a specification and the code shows the span on each side and blocks approval until a reasoned decision is recorded"
         ],
@@ -22276,7 +22698,15 @@
           },
           {
             "path": "validation/journeys/portal-requirements.portal.test.ts",
-            "assertion": "expect(model.calls()).toBe(callsBefore);"
+            "assertion": "await page.locator('[data-requirement=\"cart\"]').waitFor();"
+          },
+          {
+            "path": "validation/journeys/portal-requirements.portal.test.ts",
+            "assertion": "expect(await page.getByTestId(\"normalize-failure\").count()).toBe(0);"
+          },
+          {
+            "path": "validation/journeys/portal-requirements.portal.test.ts",
+            "assertion": "expect(model.calls()).toBeGreaterThan(callsBefore);"
           },
           {
             "path": "packages/application/src/ai/requirements-review.test.ts",
@@ -22658,7 +23088,7 @@
     },
     {
       "id": "UX-019",
-      "title": "Nenhuma proposta gerada vira teste ativo em CI por consentimento implícito.",
+      "title": "Nenhuma proposta gerada vira teste ativo em CI por aceitação implícita.",
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
@@ -22669,7 +23099,7 @@
         "apps/server/src/authoring.test.ts::UX-019 a read-only token previews but is told it cannot accept, and cannot refine"
       ],
       "oracle": [
-        "Accepting a proposal is refused with POLICY_DENIED and a stated reason for API, worker and operator credentials and is allowed for a person's interactive session; the preview states the policy (and a role without write permission is told it cannot accept), the portal disables the action with that reason, and nothing becomes a test through the refused paths. Consent given in an interactive session is not inherited by automation."
+        "Accepting a proposal is refused with POLICY_DENIED and a stated reason for API, worker and operator credentials and is allowed for a person's interactive session; the preview states the policy (and a role without write permission is told it cannot accept), the portal disables the action with that reason, and nothing becomes a test through the refused paths. Acceptance given in an interactive session is not inherited by automation."
       ],
       "evidence": [
         "validation/results/m4-acceptance/s4b/069-ev-authoring-unit/output.log",
@@ -24298,21 +24728,18 @@
       "status": "verified",
       "scenario": [
         "apps/web/src/global-ux.test.ts::UX-047 states the reproducibility, cost and data-protection effect of an environment change",
-        "apps/web/src/global-ux.test.ts::UX-047 warns that unknown-cost calls escape the budget and that revoking does not recall data",
-        "validation/journeys/portal-settings.portal.test.ts::UX-047 UX-007 sets data-sharing consent by named category with impact first, and revokes it",
+        "apps/web/src/global-ux.test.ts::UX-047 states how a lifetime token budget change affects cost",
+        "validation/journeys/portal-settings.portal.test.ts::UX-047 UX-007 lists the model providers read-only with the policy verdict, has no data-sharing controls and does not serve the removed model-consent routes",
         "validation/journeys/portal-settings.portal.test.ts::UX-047 UX-054 sets the token budget with a field-bound error, an impact statement and a persisted limit",
-        "packages/application/src/settings.test.ts::UX-047 shows the supported data classes and providers, grants and revokes consent, and never exposes endpoint credentials",
-        "apps/server/src/settings.test.ts::UX-047 reads, grants and revokes model data sharing over HTTP without exposing credentials",
+        "packages/application/src/settings.test.ts::UX-047 shows the configured model providers and profile admission, and never exposes endpoint credentials",
+        "apps/server/src/settings.test.ts::UX-047 lists the model providers over HTTP without exposing credentials or any consent state",
         "apps/server/src/settings.test.ts::UX-047 exposes the lifetime token budget and storage bytes and refuses budget changes to viewers",
         "apps/web/src/global-ux.test.ts::UX-047 says nothing will be saved when no setting changed",
-        "packages/application/src/settings.test.ts::UX-047 refuses unsupported data classes, providers the profile does not allow and unknown providers",
-        "packages/application/src/settings.test.ts::UX-047 refuses to revoke a provider that is not configured and writes no audit row for it",
-        "packages/application/src/settings.test.ts::UX-047 keeps the grantor on the consent record and never reports an unknown grantor",
-        "packages/application/src/settings.test.ts::UX-047 lets every role read the consent settings but only the admin column change them"
+        "packages/application/src/settings.test.ts::UX-047 lets every role read the model providers and refuses an unknown project"
       ],
       "oracle": [
-        "Before an environment, model-sharing or budget change is saved, the portal states its effect on reproducibility, cost and data protection with text and a shape; nothing is saved when nothing changed.",
-        "Model data sharing is granted per provider and named data class, refused for classes or providers the profile does not allow, records the real grantor, and revoking never recalls data already sent; only the admin column may change it."
+        "Before an environment or budget change is saved, the portal states its effect on reproducibility, cost and data protection with text and a shape; nothing is saved when nothing changed.",
+        "The portal, the application and the HTTP route list the configured model providers read-only with the policy verdict (allowed or blocked by the operator's profile, local or remote) and never expose endpoint credentials, data-sharing controls or consent state; the removed model-consent routes answer 404, an unknown project is not found, and every role may read the providers."
       ],
       "evidence": [
         "validation/results/m4-acceptance/s5b/007-web-unit-final/output.log",
@@ -24330,19 +24757,18 @@
       "coverage": {
         "positive": [
           "apps/web/src/global-ux.test.ts::UX-047 states the reproducibility, cost and data-protection effect of an environment change",
-          "apps/web/src/global-ux.test.ts::UX-047 warns that unknown-cost calls escape the budget and that revoking does not recall data",
-          "validation/journeys/portal-settings.portal.test.ts::UX-047 UX-007 sets data-sharing consent by named category with impact first, and revokes it",
+          "apps/web/src/global-ux.test.ts::UX-047 states how a lifetime token budget change affects cost",
+          "validation/journeys/portal-settings.portal.test.ts::UX-047 UX-007 lists the model providers read-only with the policy verdict, has no data-sharing controls and does not serve the removed model-consent routes",
           "validation/journeys/portal-settings.portal.test.ts::UX-047 UX-054 sets the token budget with a field-bound error, an impact statement and a persisted limit",
-          "packages/application/src/settings.test.ts::UX-047 shows the supported data classes and providers, grants and revokes consent, and never exposes endpoint credentials",
-          "apps/server/src/settings.test.ts::UX-047 reads, grants and revokes model data sharing over HTTP without exposing credentials",
+          "packages/application/src/settings.test.ts::UX-047 shows the configured model providers and profile admission, and never exposes endpoint credentials",
+          "apps/server/src/settings.test.ts::UX-047 lists the model providers over HTTP without exposing credentials or any consent state",
           "apps/server/src/settings.test.ts::UX-047 exposes the lifetime token budget and storage bytes and refuses budget changes to viewers"
         ],
         "negative": [
           "apps/web/src/global-ux.test.ts::UX-047 says nothing will be saved when no setting changed",
-          "packages/application/src/settings.test.ts::UX-047 refuses unsupported data classes, providers the profile does not allow and unknown providers",
-          "packages/application/src/settings.test.ts::UX-047 refuses to revoke a provider that is not configured and writes no audit row for it",
-          "packages/application/src/settings.test.ts::UX-047 keeps the grantor on the consent record and never reports an unknown grantor",
-          "packages/application/src/settings.test.ts::UX-047 lets every role read the consent settings but only the admin column change them"
+          "apps/server/src/settings.test.ts::UX-047 lists the model providers over HTTP without exposing credentials or any consent state",
+          "validation/journeys/portal-settings.portal.test.ts::UX-047 UX-007 lists the model providers read-only with the policy verdict, has no data-sharing controls and does not serve the removed model-consent routes",
+          "packages/application/src/settings.test.ts::UX-047 lets every role read the model providers and refuses an unknown project"
         ],
         "criticalAssertions": [
           {
@@ -24355,11 +24781,11 @@
           },
           {
             "path": "apps/web/src/global-ux.test.ts",
-            "assertion": "    expect(lax[1]?.level).toBe(\"warning\");"
+            "assertion": "expect(budgetImpact(1000, 5000)[1]?.text).toContain(\"was 1,000\");"
           },
           {
             "path": "validation/journeys/portal-settings.portal.test.ts",
-            "assertion": "    expect(consent?.dataClasses.sort()).toEqual([\"dom\", \"requirements\"]);"
+            "assertion": "expect(await remote.innerText()).toContain(\"does not allow this provider\");"
           },
           {
             "path": "validation/journeys/portal-settings.portal.test.ts",
@@ -24367,11 +24793,11 @@
           },
           {
             "path": "packages/application/src/settings.test.ts",
-            "assertion": "  expect(revoked()).toBe(0);"
+            "assertion": "expect(user.scoped.model.settings(f.init.projectId).providers).toHaveLength(2);"
           },
           {
             "path": "apps/server/src/settings.test.ts",
-            "assertion": "  expect(notAllowed.json().error.code).toBe(\"POLICY_DENIED\");"
+            "assertion": "expect(gone.json().error.code).toBe(\"NOT_FOUND\");"
           }
         ]
       }
@@ -26253,7 +26679,7 @@
       "scenario": [
         "validation/journeys/m1-boundaries.docker.test.ts::CLI-002 invalid and valid offline dry-runs make no writes or fetches, with an exercised positive boundary control",
         "validation/journeys/m1-boundaries.docker.test.ts::CLI-004 secret canary crosses the authorized HTTP boundary but is absent from argv, logs, reports and public artifacts",
-        "packages/model-gateway/src/gateway.test.ts::denies absent consent and disallowed providers before any request, with a positive boundary control"
+        "packages/model-gateway/src/gateway.test.ts::needs no grant, denies disallowed providers and never-sent data classes before any request"
       ],
       "oracle": [
         "Positive recorder sees real fetch/authorized model request; denied/dry-run path zero requests; canary scanner positive control sees sentinel and public files do not."
@@ -26271,19 +26697,19 @@
       "note": "Acceptance exercised by the cited unit scenarios; pass evidence is the orchestrator-reported final 420-test unit gate, not a rerun by this mapper. Applies to the cited specific boundaries, not an untested blanket no-network replay guarantee.",
       "coverage": {
         "positive": [
-          "packages/model-gateway/src/gateway.test.ts::denies absent consent and disallowed providers before any request, with a positive boundary control"
+          "packages/model-gateway/src/gateway.test.ts::needs no grant, denies disallowed providers and never-sent data classes before any request"
         ],
         "negative": [
-          "packages/model-gateway/src/gateway.test.ts::denies absent consent and disallowed providers before any request, with a positive boundary control"
+          "packages/model-gateway/src/gateway.test.ts::needs no grant, denies disallowed providers and never-sent data classes before any request"
         ],
         "criticalAssertions": [
           {
             "path": "packages/model-gateway/src/gateway.test.ts",
-            "assertion": "f.grant();\n    const result = await f.gateway.complete(testRequest);\n    expect(result.output).toEqual({ amount: 1, currency: \"USD\", scale: 2 });"
+            "assertion": "const result = await f.gateway.complete(testRequest);\n    expect(result.output).toEqual({ amount: 1, currency: \"USD\", scale: 2 });"
           },
           {
             "path": "packages/model-gateway/src/gateway.test.ts",
-            "assertion": "await expect(f.gateway.complete(testRequest)).rejects.toMatchObject({ code: \"POLICY_DENIED\" });\n    await expect(\n      new ModelGateway({ ...f.options, allowedProviders: [] }).complete(testRequest),\n    ).rejects.toMatchObject({ code: \"POLICY_DENIED\" });\n    expect(f.counts().requests).toBe(0);"
+            "assertion": "await expect(\n      new ModelGateway({ ...f.options, allowedProviders: [] }).complete(testRequest),\n    ).rejects.toMatchObject({ code: \"POLICY_DENIED\" });\n    await expect(\n      f.gateway.complete({\n        ...testRequest,\n        dataPolicy: { ...testRequest.dataPolicy, dataClasses: [\"source\", \"env\"] },\n      }),\n    ).rejects.toMatchObject({ code: \"POLICY_DENIED\" });\n    expect(f.counts().requests).toBe(0);"
           }
         ]
       }
@@ -27550,7 +27976,7 @@
     },
     {
       "id": "VAL-043",
-      "title": "Probes de segurança têm scope/allowlist/consent, isolamento, redaction e oracle independente.",
+      "title": "Probes de segurança têm scope/allowlist/approval, isolamento, redaction e oracle independente.",
       "sourceFile": "specs/10-validation.md",
       "milestone": "M5",
       "ownerRole": "Quality",
@@ -28699,6 +29125,12 @@
       "milestone": "M4",
       "requirements": ["OPS-024", "API-008"],
       "gate": "M4 normative acceptance; capability unavailable until milestone"
+    },
+    {
+      "id": "terminal",
+      "milestone": "M5",
+      "requirements": ["REQ-057"],
+      "gate": "M5 terminal runner; positive/negative evidence and protected assertions"
     },
     {
       "id": "distributed",

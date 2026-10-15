@@ -184,6 +184,26 @@ export function operationsCommands(program: Command, runtime: Runtime): void {
   runtime.bind(workspaceOption(alerts.command("ack <id>")), async (rt, args, options) => ({
     data: (await target(rt, options)).alerts.acknowledge(String(args[0])),
   }));
+  runtime.bind(
+    workspaceOption(alerts.command("evaluate")).description(
+      "Evaluate every alert rule once for the workspace (admin); the local profile runs no alert loop",
+    ),
+    async (rt, _args, options) => {
+      const outcome = await (await target(rt, options)).alerts.evaluate();
+      const failed = Object.keys(outcome.errors);
+      const lines = [
+        `Alerts evaluated: ${outcome.fired.length} fired, ${outcome.resolved.length} resolved, ${failed.length} rule errors`,
+        ...outcome.fired.map((alert) => `  fired ${alert.rule} (${alert.id})`),
+        ...failed.map((rule) => `  error ${rule}: ${outcome.errors[rule]}`),
+      ];
+      // A rule that could not be evaluated leaves its alerts as they were: the run is not clean.
+      return {
+        data: outcome,
+        text: `${lines.join("\n")}\n`,
+        ...(failed.length ? { exit: 1 } : {}),
+      };
+    },
+  );
   runtime.bind(workspaceOption(ops.command("alert-rules")), async (rt, _args, options) => ({
     data: { items: (await target(rt, options)).alerts.rules() },
   }));
@@ -236,7 +256,7 @@ export function operationsCommands(program: Command, runtime: Runtime): void {
       .requiredOption("--category <category>")
       .requiredOption("--summary <text>")
       .option("--detected-at <iso>")
-      .option("--version <v>", "Affected version (repeatable)", collect, [])
+      .option("--affected-version <v>", "Affected version (repeatable)", collect, [])
       .option("--resource <type:id>", "Affected resource (repeatable)", collect, []),
     async (rt, _args, options) => ({
       data: (await target(rt, options)).incidents.create({
@@ -245,7 +265,7 @@ export function operationsCommands(program: Command, runtime: Runtime): void {
         category: required(options, "category") as "outage",
         summary: required(options, "summary"),
         ...(string(options, "detectedAt") ? { detectedAt: required(options, "detectedAt") } : {}),
-        versions: strings(options, "version"),
+        versions: strings(options, "affectedVersion"),
         resources: resources(strings(options, "resource")),
       }),
     }),

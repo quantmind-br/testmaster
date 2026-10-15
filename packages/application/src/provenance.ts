@@ -1,10 +1,26 @@
 import { execFileSync } from "node:child_process";
-import { lstatSync, readFileSync, readlinkSync } from "node:fs";
-import { join } from "node:path";
+import { createHash, randomBytes } from "node:crypto";
+import {
+  chmodSync,
+  closeSync,
+  constants,
+  fstatSync,
+  lstatSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  readlinkSync,
+  readSync,
+  renameSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, join } from "node:path";
 import type { ExecutablePlan, RunRequest } from "@testmaster/contracts";
 import { type ArtifactManifest, ContractError, validate } from "@testmaster/contracts";
 import { semanticHash } from "@testmaster/domain";
 import type { EntityDocument } from "@testmaster/persistence";
+import { dataDirectoryPrefixes, insideDataDirectory } from "@testmaster/planner";
 import type { ImageLock } from "@testmaster/sandbox";
 import type { ResolvedConfig } from "./config.js";
 import { requireEntity, type ServiceContext } from "./context.js";
@@ -29,9 +45,203 @@ export interface RuntimeIdentity {
   browserName: string | null;
   browserVersion: string | null;
 }
+// Cache only unchanged inodes; ctime detects edits even when mtime is restored.
+interface HashEntry {
+  identity: string;
+  hash: string;
+}
+const untrackedHashes = new Map<string, HashEntry>();
+const hashBuffer = Buffer.allocUnsafe(192 * 1024);
+
+/**
+ * Cross-process copy of the identity -> hash cache, kept in the local project state directory so a
+ * fresh CLI process does not re-read every untracked file. It is only a shortcut: an entry is used
+ * under exactly the in-process rules (dev, ino, size, mtimeNs and ctimeNs all match, the file is
+ * older than the timestamp tick) and an unreadable, corrupt, foreign or oversized file is ignored.
+ * It holds repository-relative paths, identities and digests, never file content. It is a separate
+ * file from the SQLite database and never touches it.
+ */
+const PERSISTENT_CACHE_DIRECTORY = "provenance-cache";
+const PERSISTENT_CACHE_FILE = "untracked-hashes.json";
+/** Bumped whenever the identity format or the digest construction changes. */
+const PERSISTENT_CACHE_VERSION = 1;
+/** Digest construction: sha256 of the JSON string of the base64 content (semanticHash of base64). */
+const PERSISTENT_CACHE_ALGORITHM = "sha256-json-base64-v1";
+const PERSISTENT_CACHE_MAX_ENTRIES = 100_000;
+const PERSISTENT_CACHE_MAX_BYTES = 32 * 1024 * 1024;
+const PERSISTENT_CACHE_MAX_FILE_BYTES = 64 * 1024 * 1024;
+const IDENTITY_FORMAT = /^\d+:\d+:\d+:\d+:\d+$/u;
+const DIGEST_FORMAT = /^[0-9a-f]{64}$/u;
+
+class PersistentHashCache {
+  readonly loaded: Map<string, HashEntry>;
+  private readonly seen = new Map<string, HashEntry>();
+  private bytes = 0;
+  private readonly rootId: string;
+  private readonly file: string;
+  constructor(dataDir: string, root: string) {
+    // Only a digest of the checkout path is persisted, so no absolute path reaches the file.
+    this.rootId = createHash("sha256").update(root).digest("hex");
+    this.file = join(dataDir, PERSISTENT_CACHE_DIRECTORY, PERSISTENT_CACHE_FILE);
+    this.loaded = this.load();
+  }
+  private load(): Map<string, HashEntry> {
+    let fd: number | undefined;
+    try {
+      fd = openSync(this.file, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+      const info = fstatSync(fd);
+      if (!info.isFile() || info.size > PERSISTENT_CACHE_MAX_FILE_BYTES) return new Map();
+      // JSON.parse yields any; every field is validated before use.
+      const parsed = JSON.parse(readFileSync(fd, "utf8")) as Record<string, unknown> | null;
+      if (
+        !parsed ||
+        typeof parsed !== "object" ||
+        parsed.version !== PERSISTENT_CACHE_VERSION ||
+        parsed.algorithm !== PERSISTENT_CACHE_ALGORITHM ||
+        parsed.root !== this.rootId ||
+        !Array.isArray(parsed.entries)
+      )
+        return new Map();
+      const entries = new Map<string, HashEntry>();
+      for (const row of parsed.entries as unknown[]) {
+        if (
+          !Array.isArray(row) ||
+          row.length !== 3 ||
+          typeof row[0] !== "string" ||
+          typeof row[1] !== "string" ||
+          typeof row[2] !== "string" ||
+          !IDENTITY_FORMAT.test(row[1]) ||
+          !DIGEST_FORMAT.test(row[2])
+        )
+          return new Map();
+        entries.set(row[0], { identity: row[1], hash: row[2] });
+      }
+      return entries;
+    } catch {
+      return new Map();
+    } finally {
+      if (fd !== undefined) closeSync(fd);
+    }
+  }
+  /** Records an entry trusted in this scan; entries not recorded are dropped when the file is saved. */
+  remember(key: string, entry: HashEntry): void {
+    if (this.seen.has(key)) return;
+    const size = key.length + entry.identity.length + entry.hash.length + 16;
+    if (
+      this.seen.size >= PERSISTENT_CACHE_MAX_ENTRIES ||
+      this.bytes + size > PERSISTENT_CACHE_MAX_BYTES
+    )
+      return;
+    this.bytes += size;
+    this.seen.set(key, entry);
+  }
+  /** Rewrites the file atomically when this scan changed it. Failures never affect admission. */
+  save(): void {
+    if (
+      this.seen.size === this.loaded.size &&
+      [...this.seen].every(([key, entry]) => {
+        const previous = this.loaded.get(key);
+        return previous?.identity === entry.identity && previous.hash === entry.hash;
+      })
+    )
+      return;
+    const directory = dirname(this.file);
+    const temp = join(
+      directory,
+      `.${PERSISTENT_CACHE_FILE}.${process.pid}.${randomBytes(6).toString("hex")}.tmp`,
+    );
+    try {
+      mkdirSync(directory, { recursive: true, mode: 0o700 });
+      chmodSync(directory, 0o700);
+      const body = JSON.stringify({
+        version: PERSISTENT_CACHE_VERSION,
+        algorithm: PERSISTENT_CACHE_ALGORITHM,
+        root: this.rootId,
+        entries: [...this.seen].map(([key, entry]) => [key, entry.identity, entry.hash]),
+      });
+      writeFileSync(temp, body, { flag: "wx", mode: 0o600 });
+      renameSync(temp, this.file);
+    } catch {
+      try {
+        unlinkSync(temp);
+      } catch {}
+    }
+  }
+}
+function untrackedFileHash(
+  path: string,
+  persisted: { cache: PersistentHashCache; key: string } | null,
+): string {
+  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+  try {
+    const before = fstatSync(fd, { bigint: true });
+    if (!before.isFile())
+      throw new ContractError(
+        "PRECONDITION_FAILED",
+        "Repository contains a non-regular untracked file",
+      );
+    const identity = [before.dev, before.ino, before.size, before.mtimeNs, before.ctimeNs].join(
+      ":",
+    );
+    // Files changed in the current filesystem timestamp tick must not be trusted from cache.
+    const stable = before.ctimeNs < BigInt(Date.now() - 2000) * 1_000_000n;
+    if (stable) {
+      const hit = [untrackedHashes.get(path), persisted?.cache.loaded.get(persisted.key)].find(
+        (entry) => entry?.identity === identity,
+      );
+      if (hit) {
+        persisted?.cache.remember(persisted.key, hit);
+        return hit.hash;
+      }
+    }
+    // Preserve semanticHash(base64(bytes)) without allocating the entire file or JSON string.
+    const hash = createHash("sha256").update('"');
+    let offset = 0;
+    let pending = 0;
+    while (true) {
+      const count = readSync(fd, hashBuffer, pending, hashBuffer.length - pending, offset);
+      offset += count;
+      const available = pending + count;
+      const encoded = count === 0 ? available : available - (available % 3);
+      hash.update(hashBuffer.subarray(0, encoded).toString("base64"));
+      pending = available - encoded;
+      if (!count) break;
+      if (pending) hashBuffer.copy(hashBuffer, 0, encoded, available);
+    }
+    const after = fstatSync(fd, { bigint: true });
+    if (
+      before.size !== after.size ||
+      before.mtimeNs !== after.mtimeNs ||
+      before.ctimeNs !== after.ctimeNs
+    )
+      throw new ContractError(
+        "PRECONDITION_FAILED",
+        "Repository changed while collecting provenance",
+      );
+    const value = hash.update('"').digest("hex");
+    const entry = { identity, hash: value };
+    if (stable && (untrackedHashes.size < 100_000 || untrackedHashes.has(path)))
+      untrackedHashes.set(path, entry);
+    else untrackedHashes.delete(path);
+    if (stable) persisted?.cache.remember(persisted.key, entry);
+    return value;
+  } finally {
+    closeSync(fd);
+  }
+}
+
+/**
+ * `dataDir` is the project data directory (SQLite database, evidence). It is never listed or read:
+ * this process holds the database open, and closing any other descriptor of a database file drops
+ * the process's POSIX locks on it, which lets a concurrent writer delete the live WAL and SHM.
+ * Its churn would also change `dirtyHash` on every run.
+ * `persistCache` (with `dataDir`) also keeps the untracked-file digest cache in
+ * `<dataDir>/provenance-cache/` so a fresh process reuses it; local project state only.
+ */
 export function resolveRepositoryProvenance(
   cwd: string,
   claims?: RunRequest["provenance"],
+  options: { dataDir?: string; persistCache?: boolean } = {},
 ): RepositoryProvenance {
   const git = (args: string[], filterOverrides: string[] = []) =>
     execFileSync(
@@ -154,9 +364,10 @@ export function resolveRepositoryProvenance(
   )
     refuse("repositoryId");
   if (claims?.repositoryId) repositoryId = claims.repositoryId;
+  const dataPrefixes = dataDirectoryPrefixes(root, options.dataDir);
   const paths = String(git(["-C", root, "ls-files", "--others", "--exclude-standard", "-z"]))
     .split("\0")
-    .filter(Boolean)
+    .filter((path) => path && !insideDataDirectory(path, dataPrefixes))
     .sort();
   const diff = String(
     git(
@@ -164,27 +375,28 @@ export function resolveRepositoryProvenance(
       filterOverrides,
     ),
   );
-  const dirtyHash =
-    diff || paths.length
-      ? semanticHash({
-          diff,
-          untracked: paths.map((path) => {
-            const absolute = join(root, path);
-            const info = lstatSync(absolute);
-            // Git lists an untracked nested repository as one `dir/` entry; its content is not
-            // hashed, but the entry still marks the tree dirty.
-            if (info.isDirectory()) return { path, hash: null };
-            return {
-              path,
-              hash: semanticHash(
-                info.isSymbolicLink()
-                  ? readlinkSync(absolute)
-                  : readFileSync(absolute).toString("base64"),
-              ),
-            };
-          }),
-        })
+  const persisted =
+    options.persistCache && options.dataDir && paths.length
+      ? new PersistentHashCache(options.dataDir, root)
       : null;
+  let dirtyHash: string | null = null;
+  if (diff || paths.length) {
+    const untracked = paths.map((path) => {
+      const absolute = join(root, path);
+      const info = lstatSync(absolute);
+      // Git lists an untracked nested repository as one `dir/` entry; its content is not
+      // hashed, but the entry still marks the tree dirty.
+      if (info.isDirectory()) return { path, hash: null };
+      return {
+        path,
+        hash: info.isSymbolicLink()
+          ? semanticHash(readlinkSync(absolute))
+          : untrackedFileHash(absolute, persisted && { cache: persisted, key: path }),
+      };
+    });
+    persisted?.save();
+    dirtyHash = semanticHash({ diff, untracked });
+  }
   if (claims?.dirtyHash !== undefined && claims.dirtyHash !== dirtyHash) refuse("dirtyHash");
   return {
     repositoryId,
@@ -210,8 +422,15 @@ export function resolveRunProvenance(
   ctx: ServiceContext,
   cwd: string,
   claims?: RunRequest["provenance"],
+  options: { dataDir?: string } = {},
 ): RepositoryProvenance {
-  if (!claims?.deploymentId) return resolveRepositoryProvenance(cwd, claims);
+  // The server profile (PostgreSQL) keeps only the in-process cache; its storage root is not a
+  // per-checkout state directory.
+  if (!claims?.deploymentId)
+    return resolveRepositoryProvenance(cwd, claims, {
+      ...options,
+      persistCache: ctx.database.engine === "sqlite",
+    });
   const unbound: RepositoryProvenance = {
     repositoryId: claims.repositoryId ?? null,
     commitSha: null,
@@ -325,7 +544,7 @@ export function admissionSnapshot(
     const source = requireEntity(ctx, "SourceRevision", id);
     return { id, contentHash: String(source.contentHash) };
   });
-  const repository = resolveRunProvenance(ctx, config.cwd, claims);
+  const repository = resolveRunProvenance(ctx, config.cwd, claims, { dataDir: config.dataDir });
   const limitations = [
     "mutable-external-target",
     "mutable-external-payload",

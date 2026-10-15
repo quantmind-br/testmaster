@@ -101,6 +101,33 @@ describe("INT-014 REQ-033 webhook intake", () => {
     expect(w.fake.requests).toHaveLength(0);
   });
 
+  it("INT-014 INT-023 an unreadable webhook secret is a retryable unavailable error, not a signature failure, and creates no pull or Run", async () => {
+    const w = await world();
+    await w.install();
+    const before = w.app.database.all("SELECT id FROM inbound_webhook_deliveries").length;
+    await w.app.secrets.remove(w.secrets.webhookSecretRef);
+    const error = await rejects(w.openPr(7, SHA_A));
+    expect(error).toMatchObject({
+      code: "UNAVAILABLE",
+      details: { reasonCode: "webhook_secret_unavailable", retryable: true },
+    });
+    expect(pullCount(w)).toBe(0);
+    expect(runCount(w)).toBe(0);
+    expect(w.app.database.all("SELECT id FROM inbound_webhook_deliveries").length).toBe(before);
+    expect(w.fake.requests).toHaveLength(0);
+  });
+
+  it("INT-014 INT-023 a wrong secret stays UNAUTHENTICATED while every secret is readable, and the right one is accepted", async () => {
+    const w = await world();
+    await w.install();
+    expect(await rejects(w.openPr(7, SHA_A, { deliver: { secret: "wrong" } }))).toMatchObject({
+      code: "UNAUTHENTICATED",
+    });
+    expect(pullCount(w)).toBe(0);
+    await expect(w.openPr(7, SHA_A)).resolves.toMatchObject({ outcome: "accepted" });
+    expect(pullCount(w)).toBe(1);
+  });
+
   it("INT-014 checks the content type and the 5 MiB limit before looking at the signature", async () => {
     const w = await world();
     await w.install();

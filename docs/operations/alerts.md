@@ -9,8 +9,15 @@ are `firing`, `acknowledged` and `resolved`; a rule resolves its alert when the 
 GET  /v1/alert-rules     rules, severity, owner, runbook link and thresholds
 GET  /v1/alerts          alerts of the workspace
 GET  /v1/operations/status   admin status: admission, isolation, backup, retention
-testmaster ops alerts list | ack <id>      testmaster ops alert-rules
+testmaster ops alerts list | ack <id> | evaluate      testmaster ops alert-rules
 ```
+
+The alert controller runs in the server process (`server start --mode server`) every 60 s. The
+single-user local profile runs no alert loop, so nothing is evaluated there on its own;
+`testmaster ops alerts evaluate` (administrator scope) evaluates every rule once for the workspace
+and prints `{fired, resolved, errors}`. The same dedupe applies: a condition that already has an
+open alert fires nothing new. A rule that cannot be evaluated is listed in `errors`, leaves its
+open alerts as they are and makes the command exit 1.
 
 Each alert carries `owner` and `runbook` (`docs/operations/alerts.md#<rule id>`). Roles:
 
@@ -188,7 +195,7 @@ never change a Run's verdict to make a dashboard green, and never export secret 
 * **Verification:** the next generation request is admitted under the new limit, or is refused with
   the same explicit reason; the alert resolves when budget is available.
 * **Escalation:** an unexpected spike (cost not explained by planned work): incident
-  (`ai_degradation`, medium) and review of the provider and consents.
+  (`ai_degradation`, medium) and review of the provider and its price table.
 
 ## cancellation_stuck
 
@@ -236,7 +243,9 @@ never change a Run's verdict to make a dashboard green, and never export secret 
 * **Owner:** security-owner
 * **Severity:** high
 * **Trigger:** the egress proxy or network boundary denied a sandbox connection (destination outside
-  the allow-list, private or metadata address, or a direct connection attempt).
+  the allow-list, private or metadata address, or a direct connection attempt). The rule counts
+  distinct Runs, in the last 15 minutes, whose `run.completed` or `run.execution_error` event carries
+  the reason `egress_denied`; the worker records the Run's final reason on `run.completed`.
 * **Impact:** the connection was blocked; a Run may fail or be `blocked` with the denial reason. A
   repeated or direct attempt may indicate a sandbox bypass attempt.
 * **First actions:**

@@ -17,6 +17,7 @@ import {
 import { propagateTaint, requirePublic, scrubBytes, scrubText } from "./redaction.js";
 import {
   type AttemptObservation,
+  canRetry,
   evaluateGate,
   initialRunState,
   type RunAction,
@@ -145,6 +146,71 @@ describe("normative reducer", () => {
       ).outcome,
     ).toBe("passed");
     expect(evaluateGate("passed", "failed", { ...policy, cleanupRequired: true })).toBe("failed");
+  });
+  it("blocks a started attempt refused by policy and keeps the refusal reason", () => {
+    const started: AttemptObservation = {
+      attemptId: "p",
+      number: 1,
+      started: true,
+      steps: [
+        { stepId: "open", required: true, status: "passed", assertion: false, reliable: true },
+      ],
+    };
+    for (const reasonCode of [
+      "egress_denied",
+      "security_precondition_failed",
+      "approval_required",
+    ]) {
+      const result = reduceOutcome([{ ...started, reasonCode }], ["assert"], ["open", "assert"]);
+      expect(result).toEqual({
+        outcome: "blocked",
+        reasonCode,
+        passedOnRetry: false,
+        firstAttemptOutcome: "blocked",
+      });
+      expect(evaluateGate(result.outcome, "not_required", policy)).toBe("failed");
+      expect(exitCodeForRun({ gate: "failed", outcome: result.outcome, reasonCode })).toBe(9);
+    }
+  });
+  it("keeps a started attempt that timed out inconclusive and a not-started refusal blocked", () => {
+    const started: AttemptObservation = {
+      attemptId: "t",
+      number: 1,
+      started: true,
+      steps: [
+        { stepId: "open", required: true, status: "passed", assertion: false, reliable: true },
+      ],
+      reasonCode: "attempt_timeout",
+    };
+    expect(reduceOutcome([started], ["assert"], ["open", "assert"])).toEqual({
+      outcome: "inconclusive",
+      reasonCode: "attempt_timeout",
+      passedOnRetry: false,
+      firstAttemptOutcome: "inconclusive",
+    });
+    const refused = reduceOutcome(
+      [{ ...started, started: false, steps: [], reasonCode: "egress_denied" }],
+      ["assert"],
+      ["assert"],
+    );
+    expect(refused.outcome).toBe("blocked");
+    expect(refused.reasonCode).toBe("egress_denied");
+    expect(refused.firstAttemptOutcome).toBe("blocked");
+  });
+  it("lets a proven assertion failure outrank a policy refusal in a later attempt", () => {
+    const result = reduceOutcome(
+      [failed, { ...passed, number: 2, steps: [], reasonCode: "egress_denied" }],
+      ["assert"],
+      ["assert"],
+    );
+    expect(result.outcome).toBe("failed");
+    expect(result.reasonCode).toBe("assertion_mismatch");
+    expect(result.passedOnRetry).toBe(false);
+  });
+  it("never retries a policy refusal as flaky infrastructure", () => {
+    for (const reasonCode of ["egress_denied", "security_precondition_failed", "approval_required"])
+      expect(canRetry({ ...failed, steps: [], reasonCode }, 3)).toBe(false);
+    expect(canRetry({ ...failed, steps: [], reasonCode: "attempt_timeout" }, 3)).toBe(true);
   });
 });
 describe("batch identities and dependency admission", () => {

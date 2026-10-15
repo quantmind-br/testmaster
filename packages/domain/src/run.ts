@@ -1,4 +1,4 @@
-import { ContractError } from "@testmaster/contracts";
+import { ContractError, reasonRegistry } from "@testmaster/contracts";
 export type RunPhase =
   | "queued"
   | "preparing"
@@ -111,6 +111,11 @@ export interface ReducedOutcome {
   passedOnRetry: boolean;
   firstAttemptOutcome: RunOutcome | null;
 }
+/**
+ * Reducer rule for policy refusals: a reason whose registry effect is `blocked`
+ * (`egress_denied`, `security_precondition_failed`, `approval_required`) is a decision, not
+ * uncertainty, so it blocks the Run even after steps started (spec 11 §6, step 4).
+ */
 export function reduceOutcome(
   attempts: readonly AttemptObservation[],
   requiredAssertionIds: readonly string[],
@@ -148,7 +153,9 @@ export function reduceOutcome(
       firstAttemptOutcome = "failed";
     else if (complete(first)) firstAttemptOutcome = "passed";
     else if (first.cancelAuthorized && first.stopConfirmed) firstAttemptOutcome = "cancelled";
-    else firstAttemptOutcome = first.started ? "inconclusive" : "blocked";
+    else if (!first.started || reasonRegistry[first.reasonCode ?? ""]?.effect === "blocked")
+      firstAttemptOutcome = "blocked";
+    else firstAttemptOutcome = "inconclusive";
   }
   const passedOnRetry = Boolean(
     failure &&
@@ -179,10 +186,14 @@ export function reduceOutcome(
       passedOnRetry: false,
       firstAttemptOutcome,
     };
-  if (!ordered.some((attempt) => attempt.started))
+  const lastReason = ordered.at(-1)?.reasonCode;
+  if (
+    !ordered.some((attempt) => attempt.started) ||
+    reasonRegistry[lastReason ?? ""]?.effect === "blocked"
+  )
     return {
       outcome: "blocked",
-      reasonCode: ordered.at(-1)?.reasonCode ?? "security_precondition_failed",
+      reasonCode: lastReason ?? "security_precondition_failed",
       passedOnRetry: false,
       firstAttemptOutcome,
     };

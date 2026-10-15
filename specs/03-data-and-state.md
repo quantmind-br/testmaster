@@ -11,9 +11,9 @@ Schema público `1.0.0`; IDs `<prefix>_<uuid>`; UUIDv7 preferido, v4 permitido n
 | Workspace `ws` | name, mode, settingsVersion, quotaPolicyId | fronteira de autorização/storage; local tem workspace padrão |
 | Principal `usr`/`svc` | kind, displayName, disabledAt | humano/serviço separados; sem secret plaintext |
 | Membership `mem` | workspaceId, principalId, role, projectRestrictions | unique workspace+principal; revogação invalida sessões |
-| Project `prj` | workspaceId, name, slug, defaultEnvironmentId, archivedAt | pode conter frontend/backend/integration; tipo por teste |
+| Project `prj` | workspaceId, name, slug, defaultEnvironmentId, archivedAt | pode conter frontend/backend/integration/cli; tipo por teste |
 | Environment `env` | projectId, name, activeRevisionId, archivedAt | nome único por projeto, default não pode ser removido sem substituição |
-| EnvironmentRevision `evr` | targetOrigins, networkProfile, authProfileRefs, locale, timezone, variables, production | snapshot; segredos só referências |
+| EnvironmentRevision `evr` | targetOrigins, networkProfile, authProfileRefs, additionalOrigins, locale, timezone, variables, production | snapshot; segredos só referências; additionalOrigins são origens exatas extras permitidas ao tráfego da página (default `[]`), nunca targetOrigins |
 | SecretReference `sec` | workspaceId, provider, locator, secretVersion, allowedOrigins | valor fora das respostas públicas; disclosure auditado |
 | Source `src` | projectId, role, displayName, origin, activeRevisionId | identidade independente de basename; upload mesmo nome não sobrescreve outro |
 | SourceRevision `svr` | contentHash, mediaType, sizeBytes, parserVersion, status, parentId | immutable bytes; chunks por offset/page/JSON pointer |
@@ -69,6 +69,7 @@ running/collecting ─→ inconclusive (cannot determine required result)
 | Todas assertions obrigatórias executadas e satisfeitas | passed | `assertions_satisfied` |
 | Assertion observada contradiz esperado | failed | `assertion_mismatch`, mesmo se cleanup falhar |
 | Credencial ausente, producer falhou, capability indisponível antes da ação | blocked | `missing_secret`, `upstream_failed`, `unsupported_capability` |
+| Policy refusal (egress denied, security precondition, missing approval), before or after steps started | blocked | `egress_denied`, `security_precondition_failed`, `approval_required` |
 | Worker perdido após efeito incerto, evidence obrigatória ausente, oracle sem confiança | inconclusive | `worker_lost`, `insufficient_evidence`, `oracle_uncertain` |
 | Cancel vence CAS terminal sem falha comprovada anterior | cancelled | `user_cancelled`, `deadline_cancelled`, `tunnel_lost`; se já há falha comprovada, preservar failed |
 | Cancel chega depois da conclusão | resultado anterior | receipt `already_terminal`, não reescreve |

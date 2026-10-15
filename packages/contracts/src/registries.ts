@@ -3,6 +3,7 @@ export type ReducerEffect =
   | "passed"
   | "failed"
   | "blocked_before_start"
+  | "blocked"
   | "inconclusive"
   | "cancelled_if_confirmed"
   | "evidence"
@@ -53,7 +54,7 @@ const reasonGroups: ReadonlyArray<{ codes: readonly string[]; mapping: ReasonMap
   {
     codes: ["security_precondition_failed", "approval_required", "egress_denied"],
     mapping: {
-      effect: "blocked_before_start",
+      effect: "blocked",
       gate: "required_failure",
       exit: 9,
       reporter: "error",
@@ -242,6 +243,7 @@ const features: Record<Milestone, readonly string[]> = {
     "accessibilityViolations",
     "memory",
     "visual-baselines",
+    "terminal",
   ],
   M6: ["sso", "scim", "portability", "break-glass"],
 };
@@ -269,6 +271,7 @@ export const implementedFeatures: ReadonlySet<string> = new Set([
     "auth-dynamic",
   ],
   ...["admin-operations", "metrics", "incidents", "server-backup"],
+  "terminal",
 ]);
 export const capabilityRegistry: Readonly<Record<string, Capability>> = Object.freeze(
   Object.fromEntries(

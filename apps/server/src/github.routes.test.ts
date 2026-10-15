@@ -145,6 +145,35 @@ it("INT-014 the GitHub webhook route rejects other content types and oversize bo
   expect(f.world.app.database.get("SELECT COUNT(*) AS n FROM github_pulls")?.n).toBe(0);
 });
 
+it("INT-014 INT-023 the GitHub webhook route answers 503 retryable for an unreadable secret and records no authentication failure, unlike a wrong secret", async () => {
+  const f = await fixture();
+  await f.world.install();
+  const denials = Number(
+    f.world.app.database.get("SELECT COUNT(*) AS n FROM audit_events WHERE action='auth.denied'")
+      ?.n,
+  );
+  // Control: a wrong secret is a 401 and is counted as an authentication failure.
+  expect((await f.webhook("pull_request", f.pr(8, SHA_A), { secret: "wrong" })).statusCode).toBe(
+    401,
+  );
+  const counted = () =>
+    Number(
+      f.world.app.database.get("SELECT COUNT(*) AS n FROM audit_events WHERE action='auth.denied'")
+        ?.n,
+    );
+  expect(counted()).toBe(denials + 1);
+  await f.world.app.secrets.remove(f.world.secrets.webhookSecretRef);
+  const unavailable = await f.webhook("pull_request", f.pr(7, SHA_A));
+  expect(unavailable.statusCode).toBe(503);
+  expect(unavailable.json().error).toMatchObject({
+    code: "UNAVAILABLE",
+    retryable: true,
+    details: { reasonCode: "webhook_secret_unavailable" },
+  });
+  expect(counted()).toBe(denials + 1);
+  expect(f.world.app.database.get("SELECT COUNT(*) AS n FROM github_pulls")?.n).toBe(0);
+});
+
 it("INT-018 INT-014 an installation event over HTTP does not reach other tenants' routes and an unknown installation creates no Run", async () => {
   const f = await fixture();
   await f.world.install();

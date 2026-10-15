@@ -31,6 +31,7 @@ import {
   verifyBundle,
 } from "@testmaster/evidence";
 import {
+  auxiliaryQueues,
   type EntityDocument,
   ExecutionRepository,
   type Fence,
@@ -53,6 +54,7 @@ import { CodeImportService } from "./ai/code-import.js";
 import { sourceSchemasFor } from "./ai/source-documents.js";
 import { auditSecurity } from "./audit.js";
 import { type AuthProfilesService, authBlockReasons } from "./auth/index.js";
+import { attemptAdditionalOrigins } from "./authoring.js";
 import { runMatrixCell } from "./comparisons.js";
 import type { ResolvedConfig } from "./config.js";
 import { entity, type RunActor, requireEntity, type ServiceContext } from "./context.js";
@@ -73,9 +75,17 @@ import {
   type WorkerHandshake,
 } from "./worker-handshake.js";
 import { fairShareCap } from "./worker-pool.js";
+import { isWriterContention, retryWriterContention } from "./writer-contention.js";
 
+/**
+ * Run jobs only. Diagnosis, healing and delivery work shares `job_leases` but its `resource_id`
+ * is a semantic hash, never a Run id; the services that own those queues reconcile them.
+ */
+const runJobFilter = `queue NOT IN (${auxiliaryQueues.map((queue) => `'${queue}'`).join(",")})`;
 /** How often a running worker compares its migrations with the database's (OPS-038). */
 const schemaCheckIntervalMs = 2000;
+/** How long an attempt's lease heartbeat tolerates a contended writer before the attempt stops. */
+const leaseContentionToleranceMs = 15000;
 
 export interface WorkerHost {
   config: ResolvedConfig;
@@ -89,6 +99,10 @@ export interface WorkerHost {
   auth?: () => AuthProfilesService;
   dockerCommand?: DockerCommand;
   docker?: AttemptRuntimeExecutor;
+}
+/** Maps a revision runner to the sandbox executor kind; the Playwright runner uses the browser envelope. */
+export function executorKindOf(runner: unknown): ExecutorKind {
+  return runner === "python" || runner === "http" || runner === "terminal" ? runner : "browser";
 }
 export function planSteps(plan: ExecutablePlan): PlanStep[] {
   const output: PlanStep[] = [];
@@ -451,10 +465,20 @@ export class WorkerService {
     const poll = setInterval(() => {
       if (this.cancelled(run.id)) controller.abort();
     }, 100);
+    let heartbeatFailingSince: number | null = null;
     const heartbeat = setInterval(() => {
       try {
         leases.heartbeat(fence);
+        heartbeatFailingSince = null;
       } catch (error) {
+        // Contention is tolerated while the 30 s lease is still safely valid; anything else, or
+        // contention that outlasts the tolerance, stops the attempt.
+        heartbeatFailingSince ??= performance.now();
+        if (
+          isWriterContention(error) &&
+          performance.now() - heartbeatFailingSince < leaseContentionToleranceMs
+        )
+          return;
         heartbeatError = error;
         controller.abort();
       }
@@ -479,19 +503,23 @@ export class WorkerService {
       } catch (error) {
         if (!(error instanceof ContractError)) throw error;
         recordTiming();
-        execution.finalize(fence, {
-          ...run,
-          phase: "completed",
-          status: "blocked",
-          outcome: "blocked",
-          gate: "failed",
-          cleanupOutcome: "not_required",
-          analysisStatus: "not_requested",
-          gatePolicy: {
-            ...(run.gatePolicy as Record<string, unknown>),
-            requiredDependenciesPassed: false,
+        execution.finalize(
+          fence,
+          {
+            ...run,
+            phase: "completed",
+            status: "blocked",
+            outcome: "blocked",
+            gate: "failed",
+            cleanupOutcome: "not_required",
+            analysisStatus: "not_requested",
+            gatePolicy: {
+              ...(run.gatePolicy as Record<string, unknown>),
+              requiredDependenciesPassed: false,
+            },
           },
-        });
+          "upstream_failed",
+        );
         database.withTx(() =>
           new OutboxRepository(database).append(
             this.ctx.workspaceId,
@@ -504,13 +532,17 @@ export class WorkerService {
       }
       if (executionRemainingMs === 0) {
         const reduced = reduceOutcome(this.observations(run.id, plan), assertions, requiredSteps);
-        execution.finalize(fence, {
-          ...run,
-          phase: "completed",
-          status: reduced.outcome === "failed" ? "failed" : "inconclusive",
-          outcome: reduced.outcome === "failed" ? "failed" : "inconclusive",
-          gate: "failed",
-        });
+        execution.finalize(
+          fence,
+          {
+            ...run,
+            phase: "completed",
+            status: reduced.outcome === "failed" ? "failed" : "inconclusive",
+            outcome: reduced.outcome === "failed" ? "failed" : "inconclusive",
+            gate: "failed",
+          },
+          reduced.outcome === "failed" ? reduced.reasonCode : "execution_deadline",
+        );
         database.withTx(() =>
           new OutboxRepository(database).append(
             this.ctx.workspaceId,
@@ -633,6 +665,11 @@ export class WorkerService {
       const origins = Array.from(
         new Set([...(env.targetOrigins as string[]), new URL(String(cell.baseUrl)).origin]),
       );
+      const additionalOrigins = attemptAdditionalOrigins(
+        env as { additionalOrigins?: string[] },
+        origins,
+        Boolean(admitted.profilePolicy.offline),
+      );
       const agent =
         run.mode === "agent"
           ? new AgentModeService(this.ctx, {
@@ -688,12 +725,7 @@ export class WorkerService {
             run.mode === "agent",
           ),
           snapshotId,
-          kind:
-            imported?.bundle.format === "pytest"
-              ? "python"
-              : plan?.runner === "http"
-                ? "http"
-                : "browser",
+          kind: imported?.bundle.format === "pytest" ? "python" : executorKindOf(plan?.runner),
           imageId:
             imported?.dependencyLock.imageId ??
             lock?.["testmaster-runner"].imageId ??
@@ -702,7 +734,8 @@ export class WorkerService {
           ...(plan ? { plan } : {}),
           ...(agent ? { resolveAction: agent.resolveAction } : {}),
           networkPolicy: {
-            allowedOrigins: origins,
+            allowedOrigins: [...origins, ...additionalOrigins],
+            ...(additionalOrigins.length ? { additionalOrigins } : {}),
             networkProfile: env.networkProfile as "local-loopback" | "private" | "public",
             baseUrl: String(cell.baseUrl),
           },
@@ -1084,15 +1117,19 @@ export class WorkerService {
           );
       }
       recordTiming();
-      execution.finalize(fence, {
-        ...run,
-        phase: "completed",
-        status: reduced.outcome,
-        outcome: reduced.outcome,
-        gate,
-        cleanupOutcome,
-        analysisStatus: "not_requested",
-      });
+      execution.finalize(
+        fence,
+        {
+          ...run,
+          phase: "completed",
+          status: reduced.outcome,
+          outcome: reduced.outcome,
+          gate,
+          cleanupOutcome,
+          analysisStatus: "not_requested",
+        },
+        reduced.reasonCode,
+      );
       database.withTx(() =>
         new OutboxRepository(database).append(this.ctx.workspaceId, run.id, "run.reduced", {
           ...reduced,
@@ -1140,30 +1177,42 @@ export class WorkerService {
             details: { error: (error as Error).message },
           });
         }
-        execution.finalize(fence, {
-          ...run,
-          phase: "completed",
-          status: reduced.outcome,
-          outcome: reduced.outcome,
-          gate: "failed",
-          cleanupOutcome,
-          analysisStatus: "not_requested",
-        });
+        const errorReason =
+          error instanceof PolicyDenied
+            ? "security_precondition_failed"
+            : error instanceof EvidenceQuotaError
+              ? // Collection exceeded the configured artifact limits (spec 11).
+                "artifact_limit_exceeded"
+              : error instanceof ContractError
+                ? (error.details.reasonCode ?? "insufficient_evidence")
+                : "insufficient_evidence";
+        // A proven verdict keeps its own reason; otherwise the error's registered reason is final.
+        const finalReason =
+          (reduced.outcome === "blocked" || reduced.outcome === "inconclusive") &&
+          typeof errorReason === "string" &&
+          Object.hasOwn(reasonRegistry, errorReason)
+            ? errorReason
+            : reduced.reasonCode;
+        execution.finalize(
+          fence,
+          {
+            ...run,
+            phase: "completed",
+            status: reduced.outcome,
+            outcome: reduced.outcome,
+            gate: "failed",
+            cleanupOutcome,
+            analysisStatus: "not_requested",
+          },
+          finalReason,
+        );
         database.withTx(() =>
           new OutboxRepository(database).append(
             this.ctx.workspaceId,
             run.id,
             "run.execution_error",
             {
-              reasonCode:
-                error instanceof PolicyDenied
-                  ? "security_precondition_failed"
-                  : error instanceof EvidenceQuotaError
-                    ? // Collection exceeded the configured artifact limits (spec 11).
-                      "artifact_limit_exceeded"
-                    : error instanceof ContractError
-                      ? (error.details.reasonCode ?? "insufficient_evidence")
-                      : "insufficient_evidence",
+              reasonCode: errorReason,
               ...(error instanceof ContractError ? { details: error.details } : {}),
               error: error instanceof ContractError ? error.code : "INTERNAL",
               ...(error &&
@@ -1217,7 +1266,7 @@ export class WorkerService {
         dryRun: true,
         actor: this.ctx.principalId,
         actions: this.ctx.database.all(
-          "SELECT id,resource_id,state,fence FROM job_leases WHERE workspace_id=? AND dispatchable=1 AND (state='reconciliation_required' OR (state='leased' AND lease_expires_at<=?))",
+          `SELECT id,resource_id,state,fence FROM job_leases WHERE workspace_id=? AND dispatchable=1 AND ${runJobFilter} AND (state='reconciliation_required' OR (state='leased' AND lease_expires_at<=?))`,
           this.ctx.workspaceId,
           new Date().toISOString(),
         ),
@@ -1502,7 +1551,7 @@ export class WorkerService {
     const leases = new LeaseRepository(database);
     const expired = leases.expire();
     const pending = database.all(
-      "SELECT * FROM job_leases WHERE workspace_id=? AND state='reconciliation_required' AND dispatchable=1",
+      `SELECT * FROM job_leases WHERE workspace_id=? AND state='reconciliation_required' AND dispatchable=1 AND ${runJobFilter}`,
       this.ctx.workspaceId,
     );
     for (const job of pending) {
@@ -1697,6 +1746,8 @@ export class WorkerService {
       handshake?: WorkerHandshake;
       /** An enrolled worker (REQ-038) this process becomes instead of registering a new row. */
       workerId?: string;
+      /** How long one operation keeps retrying a contended writer lock before the worker fails. */
+      writerContentionBudgetMs?: number;
     } = {},
   ) {
     if (options.ephemeral && options.runIds?.length) {
@@ -1739,6 +1790,8 @@ export class WorkerService {
           browser: defaults.browserConcurrency,
           http: defaults.httpConcurrency,
           python: defaults.pythonConcurrency,
+          // Terminal sessions share the heavyweight envelope class (1 GiB, 256 PIDs) of the browser pool.
+          terminal: defaults.browserConcurrency,
         },
       },
     );
@@ -1764,8 +1817,16 @@ export class WorkerService {
       const run = this.host.runs.get(id);
       const revision = requireEntity(this.ctx, "TestRevision", run.revisionId);
       const runner = revision.runnerKind ?? (revision.plan as ExecutablePlan | null)?.runner;
-      return runner === "python" ? "python" : runner === "http" ? "http" : "browser";
+      return executorKindOf(runner);
     };
+    const tasks = new Set<Promise<void>>();
+    // Writer contention is transient: operations repeat within a bounded budget. Waiting stops on
+    // the abort signal only while nothing is in flight, so a draining worker keeps its tasks.
+    const contended = <T>(operation: () => T | Promise<T>): Promise<T> =>
+      retryWriterContention(operation, {
+        signal: tasks.size === 0 ? options.signal : undefined,
+        budgetMs: options.writerContentionBudgetMs,
+      });
     if (!options.ephemeral && handshake) {
       const declared = {
         identityRef: this.owner,
@@ -1780,43 +1841,51 @@ export class WorkerService {
           capacity: JSON.stringify(capacity),
           schemaVersions: JSON.stringify(handshake.schemaVersions),
           runnerVersion: handshake.runnerVersion,
-          actions: JSON.stringify(handshake.actions),
+          // The action list outgrew the 200-character label bound; the label carries its size and digest.
+          actions: `${handshake.actions.length}:${semanticHash(handshake.actions)}`,
           slots: String(this.host.config.effectiveConfig.config.execution?.concurrency ?? 2),
         },
         state: "ready",
         lastHeartbeatAt: new Date().toISOString(),
       };
-      if (options.workerId) this.adoptEnrolled(options.workerId, declared);
-      else {
-        const worker = entity(this.ctx, "wrk", declared);
-        this.ctx.entities.insert("Worker", worker);
-        this.workerId = worker.id;
-      }
+      // The id is fixed before the first attempt: a contended transaction never started, so a
+      // repeat can neither duplicate the row nor skip it.
+      const registered = options.workerId ? null : entity(this.ctx, "wrk", declared);
+      await contended(() => {
+        if (options.workerId) this.adoptEnrolled(options.workerId, declared);
+        else if (registered) this.ctx.entities.insert("Worker", registered);
+      });
+      this.workerId = options.workerId ?? registered?.id ?? null;
     }
-    await this.maintenance();
     let lastMaintenance = Date.now();
     let drainStart: number | null = null;
-    const tasks = new Set<Promise<void>>();
     // A build older than the database must not claim: it stops claiming, lets in-flight work
     // finish under its fenced leases, and ends with `worker_schema_behind` (ADR-015, OPS-038).
     let schemaRefusal: ContractError | null = null;
     let lastSchemaCheck = 0;
+    let outcome:
+      | { failed: false; value: { workerId: string | null; drained: true } }
+      | { failed: true; error: unknown };
     try {
+      await contended(() => this.maintenance());
       for (;;) {
         if (this.workerId) {
-          database.withTx(() =>
-            database.run(
-              "UPDATE workers SET last_heartbeat_at=? WHERE workspace_id=? AND id=?",
-              new Date().toISOString(),
+          // One unit so a contended heartbeat repeats whole; the worker stays ready while it is alive.
+          const row = await contended(() => {
+            database.withTx(() =>
+              database.run(
+                "UPDATE workers SET last_heartbeat_at=? WHERE workspace_id=? AND id=?",
+                new Date().toISOString(),
+                this.ctx.workspaceId,
+                this.workerId,
+              ),
+            );
+            return database.get(
+              "SELECT state FROM workers WHERE workspace_id=? AND id=?",
               this.ctx.workspaceId,
               this.workerId,
-            ),
-          );
-          const row = database.get(
-            "SELECT state FROM workers WHERE workspace_id=? AND id=?",
-            this.ctx.workspaceId,
-            this.workerId,
-          );
+            );
+          });
           if (row?.state !== "ready") this.drainRequested = true;
           // Revocation is not a drain: work in flight stops now and its fenced writes are refused.
           if (row?.state === "revoked")
@@ -1833,11 +1902,13 @@ export class WorkerService {
             );
             this.drainRequested = true;
             if (this.workerId)
-              database.withTx(() =>
-                database.run(
-                  "UPDATE workers SET state='draining' WHERE workspace_id=? AND id=? AND state='ready'",
-                  this.ctx.workspaceId,
-                  this.workerId,
+              await contended(() =>
+                database.withTx(() =>
+                  database.run(
+                    "UPDATE workers SET state='draining' WHERE workspace_id=? AND id=? AND state='ready'",
+                    this.ctx.workspaceId,
+                    this.workerId,
+                  ),
                 ),
               );
           }
@@ -1868,74 +1939,80 @@ export class WorkerService {
         );
         if (this.isQuarantined()) {
           if (Date.now() - lastMaintenance >= defaults.reconcilerIntervalMs) {
-            await this.maintenance();
+            await contended(() => this.maintenance());
             lastMaintenance = Date.now();
           }
           await delay(200);
           continue;
         }
         if (!this.drainRequested && !done && tasks.size < concurrency) {
-          const candidates = database
-            .all(
-              "SELECT r.id FROM runs r JOIN job_leases j ON j.workspace_id=r.workspace_id AND j.resource_id=r.id WHERE r.workspace_id=? AND j.state='queued' ORDER BY j.available_at,j.id",
-              this.ctx.workspaceId,
-            )
-            .map((row) => String(row.id))
-            .filter(
-              (id) =>
-                (!runIds || runIds.includes(id)) &&
-                (this.cancelled(id) ||
-                  typeof runMatrixCell(this.host.runs.get(id)).flakePredecessorRunId !== "string" ||
-                  this.host.runs.get(
-                    String(runMatrixCell(this.host.runs.get(id)).flakePredecessorRunId),
-                  ).phase === "completed") &&
-                (!handshake ||
-                  !lock ||
-                  supportsQueuedRun(
-                    handshake,
-                    this.host.runs.get(id),
-                    requireEntity(this.ctx, "TestRevision", this.host.runs.get(id).revisionId),
-                    lock,
-                  )) &&
-                (this.cancelled(id) ||
-                  this.dependencies(this.host.runs.get(id)).every(
-                    (binding) => this.host.runs.get(binding.producerRunId).phase === "completed",
-                  )),
-            );
-          // A Run whose admitting actor lost execute access ends blocked before any Attempt starts.
-          for (const id of [...candidates]) {
-            const run = this.host.runs.get(id);
-            const actor = runMatrixCell(run).actor as RunActor | undefined;
-            if (!actor || this.cancelled(id)) continue;
-            const project = requireEntity(this.ctx, "TestCase", run.testId).projectId;
-            if (this.ctx.reauthorizeActor(actor, String(project))) continue;
-            this.host.runs.blockActorRevoked(id);
-            candidates.splice(candidates.indexOf(id), 1);
-          }
-          // Cross-tenant demand is read before the transaction: a workspace-bound claim cannot see other tenants.
-          const maxLeased = candidates.length
-            ? fairShareCap({
-                database: database.forWorkspace("*"),
+          // Selection, actor revocation and the claim repeat as a unit while the writer is contended.
+          const fence = await contended(() => {
+            const candidates = database
+              .all(
+                "SELECT r.id FROM runs r JOIN job_leases j ON j.workspace_id=r.workspace_id AND j.resource_id=r.id WHERE r.workspace_id=? AND j.state='queued' ORDER BY j.available_at,j.id",
+                this.ctx.workspaceId,
+              )
+              .map((row) => String(row.id))
+              .filter(
+                (id) =>
+                  (!runIds || runIds.includes(id)) &&
+                  (this.cancelled(id) ||
+                    typeof runMatrixCell(this.host.runs.get(id)).flakePredecessorRunId !==
+                      "string" ||
+                    this.host.runs.get(
+                      String(runMatrixCell(this.host.runs.get(id)).flakePredecessorRunId),
+                    ).phase === "completed") &&
+                  (!handshake ||
+                    !lock ||
+                    supportsQueuedRun(
+                      handshake,
+                      this.host.runs.get(id),
+                      requireEntity(this.ctx, "TestRevision", this.host.runs.get(id).revisionId),
+                      lock,
+                    )) &&
+                  (this.cancelled(id) ||
+                    this.dependencies(this.host.runs.get(id)).every(
+                      (binding) => this.host.runs.get(binding.producerRunId).phase === "completed",
+                    )),
+              );
+            // A Run whose admitting actor lost execute access ends blocked before any Attempt starts.
+            for (const id of [...candidates]) {
+              const run = this.host.runs.get(id);
+              const actor = runMatrixCell(run).actor as RunActor | undefined;
+              if (!actor || this.cancelled(id)) continue;
+              const project = requireEntity(this.ctx, "TestCase", run.testId).projectId;
+              if (this.ctx.reauthorizeActor(actor, String(project))) continue;
+              this.host.runs.blockActorRevoked(id);
+              candidates.splice(candidates.indexOf(id), 1);
+            }
+            // Cross-tenant demand is read before the transaction: a workspace-bound claim cannot see other tenants.
+            const maxLeased = candidates.length
+              ? fairShareCap({
+                  database: database.forWorkspace("*"),
+                  workspaceId: this.ctx.workspaceId,
+                  now: new Date(),
+                })
+              : undefined;
+            // The transaction makes resource reservation and lease claim indivisible across local owners.
+            return database.withTx(() => {
+              if (this.isQuarantined()) return null;
+              const reserved = database
+                .all(
+                  `SELECT resource_id FROM job_leases WHERE state='leased' AND dispatchable=1 AND ${runJobFilter}`,
+                )
+                .map((row) => kindOf(String(row.resource_id)));
+              const eligible = candidates.filter((id) =>
+                fitsCapacity(capacity, reserved, kindOf(id)),
+              );
+              return leases.claim({
                 workspaceId: this.ctx.workspaceId,
-                now: new Date(),
-              })
-            : undefined;
-          // The transaction makes resource reservation and lease claim indivisible across local owners.
-          const fence = database.withTx(() => {
-            if (this.isQuarantined()) return null;
-            const reserved = database
-              .all("SELECT resource_id FROM job_leases WHERE state='leased' AND dispatchable=1")
-              .map((row) => kindOf(String(row.resource_id)));
-            const eligible = candidates.filter((id) =>
-              fitsCapacity(capacity, reserved, kindOf(id)),
-            );
-            return leases.claim({
-              workspaceId: this.ctx.workspaceId,
-              owner: this.owner,
-              queue: "local",
-              runIds: eligible,
-              ...(maxLeased !== undefined ? { maxLeased } : {}),
-              ...(this.workerId ? { workerId: this.workerId } : {}),
+                owner: this.owner,
+                queue: "local",
+                runIds: eligible,
+                ...(maxLeased !== undefined ? { maxLeased } : {}),
+                ...(this.workerId ? { workerId: this.workerId } : {}),
+              });
             });
           });
           if (fence) {
@@ -1947,24 +2024,40 @@ export class WorkerService {
           }
         }
         if (Date.now() - lastMaintenance >= defaults.reconcilerIntervalMs) {
-          await this.maintenance();
+          await contended(() => this.maintenance());
           lastMaintenance = Date.now();
         }
         await delay(100);
       }
       await Promise.all(tasks);
       if (schemaRefusal) throw schemaRefusal;
-      return { workerId: this.workerId, drained: true };
-    } finally {
-      if (this.workerId)
-        database.withTx(() =>
-          database.run(
-            "UPDATE workers SET state='offline',last_heartbeat_at=? WHERE workspace_id=? AND id=? AND state<>'revoked'",
-            new Date().toISOString(),
-            this.ctx.workspaceId,
-            this.workerId,
+      outcome = { failed: false, value: { workerId: this.workerId, drained: true } };
+    } catch (error) {
+      // A fatal loop error stops in-flight attempts under their fences instead of leaving them
+      // running in a worker that is about to report itself offline.
+      outcome = { failed: true, error };
+      for (const controller of this.active.values()) controller.abort();
+      await Promise.allSettled(tasks);
+    }
+    let offlineFailure: { error: unknown } | null = null;
+    if (this.workerId)
+      try {
+        await contended(() =>
+          database.withTx(() =>
+            database.run(
+              "UPDATE workers SET state='offline',last_heartbeat_at=? WHERE workspace_id=? AND id=? AND state<>'revoked'",
+              new Date().toISOString(),
+              this.ctx.workspaceId,
+              this.workerId,
+            ),
           ),
         );
-    }
+      } catch (error) {
+        offlineFailure = { error };
+      }
+    // A failed offline mark never replaces the error that ended the loop; after a clean drain it is reported.
+    if (outcome.failed) throw outcome.error;
+    if (offlineFailure) throw offlineFailure.error;
+    return outcome.value;
   }
 }

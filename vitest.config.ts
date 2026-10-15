@@ -38,6 +38,16 @@ const postgresParityExclusions: ReadonlyArray<{ file: string; reason: string }> 
     reason:
       "Backs up and restores the SQLite metadata file; PostgreSQL backups go through pg_dump (operations slice) and the tombstone-over-active-row rule itself runs on PostgreSQL in github-delivery.test.ts.",
   },
+  {
+    file: "packages/persistence/src/integration-created-by-migration.test.ts",
+    reason:
+      "Subject is the SQLite 0020 migration run against a legacy SQLite data directory one migration behind; PostgreSQL schemas are created by db migrate.",
+  },
+  {
+    file: "apps/server/src/writer-contention.test.ts",
+    reason:
+      "Subject is the SQLite single-writer lock (a second connection holding BEGIN IMMEDIATE under busy_timeout); PostgreSQL has no such lock.",
+  },
 ];
 
 /**
@@ -98,6 +108,8 @@ export default defineConfig({
             "**/*.portal.test.ts",
           ],
           testTimeout: 20_000,
+          // Tests never touch the developer's desktop keyring; see the file for the failure it prevents.
+          setupFiles: ["packages/application/src/no-host-keychain.testing.ts"],
         },
       },
       {
@@ -170,7 +182,10 @@ export default defineConfig({
           hookTimeout: 120_000,
           maxWorkers: 8,
           globalSetup: ["packages/persistence/src/testing/global-setup.ts"],
-          setupFiles: ["packages/persistence/src/testing/parity-setup.ts"],
+          setupFiles: [
+            "packages/application/src/no-host-keychain.testing.ts",
+            "packages/persistence/src/testing/parity-setup.ts",
+          ],
         },
       },
       {
