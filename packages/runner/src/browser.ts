@@ -17,8 +17,16 @@ import {
   type Locator,
   type Page,
 } from "playwright-core";
-import { authorizeUrl, HttpEngine, readAuthorizedArtifact } from "./http.js";
-import { type RunnerResult, type Runtime, RuntimeError, storageStateRefusal } from "./runtime.js";
+import { denialDisposition, EgressDenials } from "./egress.js";
+import { authorizeUrl, canonicalUrl, HttpEngine, readAuthorizedArtifact } from "./http.js";
+import { type ObservedPage, observePage } from "./observation.js";
+import {
+  abortVerdict,
+  type RunnerResult,
+  type Runtime,
+  RuntimeError,
+  storageStateRefusal,
+} from "./runtime.js";
 
 type Scope = Page | Frame;
 type AssertionStep = Extract<PlanStep, { operation: "assert" }>;
@@ -27,6 +35,8 @@ interface DownloadOutput {
   mimeType: string;
   sha256: string;
 }
+const SETTLE_INTERVAL_MS = 500;
+const SETTLE_LIMIT_MS = 5_000;
 const LOG_BYTES = 1024 * 1024;
 const DOM_BYTES = 1024 * 1024;
 const ARTIFACT_BYTES = 64 * 1024 * 1024;
@@ -72,8 +82,16 @@ async function loadStorageState(runtime: Runtime): Promise<LoadedStorageState | 
   } catch {
     throw new RuntimeError("manual_auth_required", "Stored browser state is unreadable", "blocked");
   }
+  // Additional origins admit page subrequests only; a stored session never reaches them.
+  const additional = new Set(
+    (runtime.input.networkPolicy.additionalOrigins ?? []).map(
+      (origin) => canonicalUrl(origin).origin,
+    ),
+  );
   const hosts = new Set(
-    runtime.input.networkPolicy.allowedOrigins.map((origin) => new URL(origin).hostname),
+    runtime.input.networkPolicy.allowedOrigins
+      .filter((origin) => !additional.has(canonicalUrl(origin).origin))
+      .map((origin) => new URL(origin).hostname),
   );
   const cookies = (parsed.cookies ?? []).filter((cookie) =>
     hosts.has(String(cookie.domain ?? "").replace(/^\./u, "")),
@@ -133,6 +151,8 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
   let scope: Scope;
   let tempDirectory: string | undefined;
   let violation: RuntimeError | undefined;
+  const denials = new EgressDenials();
+  let currentStepId: string | undefined;
   let popupIndex = 0;
   let expectedDownloadPage: Page | undefined;
   let result: RunnerResult = { outcome: "inconclusive", reasonCode: "insufficient_evidence" };
@@ -141,6 +161,7 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
   let activeAgentStep: string | undefined;
   let activeMutationAllowed = false;
   let explorationStopped = false;
+  let observationCount = 0;
   const abort = () => {
     void context?.close().catch(() => undefined);
     void browser?.close().catch(() => undefined);
@@ -346,7 +367,15 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       return;
     }
     if (expectation.predicate === "urlEquals") {
-      if ("locator" in input || "outputName" in input)
+      if (
+        "locator" in input ||
+        "outputName" in input ||
+        "processStepId" in input ||
+        "screen" in input ||
+        "file" in input ||
+        "clipboard" in input ||
+        "responseStepId" in input
+      )
         throw new RuntimeError("security_precondition_failed", "URL assertion requires page input");
       const expected = await stringValue(expectation.value);
       const selected = pageFor(input.pageAlias);
@@ -1040,6 +1069,29 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
         .catch(() => undefined);
     }
   }
+  /**
+   * Reads the page until two reads at least SETTLE_INTERVAL_MS apart agree, so a single-page app
+   * that is still rendering is not observed half-built. The wait ends at the step deadline or
+   * SETTLE_LIMIT_MS, whichever is first; a page that never agrees is reported as not settled.
+   */
+  async function observeSettled(
+    step: PlanStep,
+  ): Promise<{ observed: ObservedPage; settled: boolean }> {
+    const until = performance.now() + deadline(step, SETTLE_LIMIT_MS);
+    let observed = await page.evaluate(observePage);
+    while (performance.now() + SETTLE_INTERVAL_MS <= until) {
+      await delay(SETTLE_INTERVAL_MS, undefined, { signal: runtime.signal });
+      const next = await page.evaluate(observePage);
+      if (
+        observed.text === next.text &&
+        JSON.stringify(observed.controls) === JSON.stringify(next.controls) &&
+        observed.elements.length === next.elements.length
+      )
+        return { observed: next, settled: true };
+      observed = next;
+    }
+    return { observed, settled: false };
+  }
   async function resolveAgentStep(step: PlanStep): Promise<PlanStep | null> {
     const agent = runtime.input.agent;
     if (!agent?.resolveSteps.includes(step.id)) return step;
@@ -1049,46 +1101,28 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
         "Agent request budget or action boundary exceeded",
       );
     if (explorationStopped) return null;
-    const observed = await page.evaluate(() => ({
-      title: document.title,
-      text: Array.from(document.querySelectorAll("h1,h2,h3,p,label,a,button,main"))
-        .filter((node) => !node.closest("[data-sensitive],form"))
-        .map((node) => node.textContent ?? "")
-        .join("\n")
-        .slice(0, 12000),
-      elements: Array.from(
-        document.querySelectorAll(
-          "a[href],button,input:not([type=password]),textarea,select,[data-testid]",
-        ),
-      )
-        .slice(0, 100)
-        .map((node) => ({
-          tag: node.tagName.toLowerCase(),
-          testId: node.getAttribute("data-testid"),
-          label: node.getAttribute("aria-label"),
-          text: (node.textContent ?? "").slice(0, 200),
-          href: node instanceof HTMLAnchorElement ? node.href : null,
-        })),
-    }));
+    const { observed, settled } = await observeSettled(step);
+    const first = observationCount++ === 0;
     const actions: PlanStep[] = [];
     for (const element of observed.elements) {
-      const locator: LocatorSpec | undefined = element.testId
-        ? { by: "testId", value: element.testId }
-        : element.label
-          ? { by: "label", value: element.label, exact: true }
-          : element.tag === "button" && element.text
-            ? { by: "role", role: "button", name: element.text, exact: true }
-            : undefined;
+      // Most specific first: the first candidate is the only locator a replayed agent step uses.
+      const candidates: LocatorSpec[] = [];
+      if (element.testId) candidates.push({ by: "testId", value: element.testId });
+      if (element.label) candidates.push({ by: "label", value: element.label, exact: true });
+      if (element.tag === "button" && element.text)
+        candidates.push({ by: "role", role: "button", name: element.text, exact: true });
+      if (element.placeholder)
+        candidates.push({ by: "placeholder", value: element.placeholder, exact: true });
+      if (element.role && element.name)
+        candidates.push({ by: "role", role: element.role, name: element.name, exact: true });
+      const locator: LocatorSpec | undefined = candidates[0];
       if (agent.exploration) {
-        if (locator)
-          for (const approved of agent.mutationActions ?? []) {
-            if (
-              approved.kind === "action" &&
-              "locator" in approved.input &&
-              JSON.stringify(approved.input.locator) === JSON.stringify(locator)
-            )
-              actions.push({ ...approved, id: step.id });
-          }
+        for (const approved of agent.mutationActions ?? []) {
+          if (approved.kind !== "action" || !("locator" in approved.input)) continue;
+          const wanted = JSON.stringify(approved.input.locator);
+          if (candidates.some((candidate) => JSON.stringify(candidate) === wanted))
+            actions.push({ ...approved, id: step.id });
+        }
         if (!element.href) continue;
         try {
           const target = authorizeUrl(runtime, element.href);
@@ -1107,10 +1141,20 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
         actions.push(validate<PlanStep>("Step", { ...step, input: { ...step.input, locator } }));
       } else if (step.operation === "navigate") actions.push(step);
     }
+    const cleaned = (value: string | null): string | null =>
+      value === null ? null : runtime.scrub(value);
     const observation = {
       url: page.url(),
       title: runtime.scrub(observed.title),
       text: runtime.scrub(observed.text),
+      settled,
+      hasPasswordField: observed.hasPasswordField,
+      controls: observed.controls.map((control) => ({
+        ...control,
+        name: cleaned(control.name),
+        placeholder: cleaned(control.placeholder),
+        testId: cleaned(control.testId),
+      })),
       actions,
     };
     await runtime.artifact(
@@ -1122,6 +1166,18 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
     const selected = await runtime.protocol.agent(step.id, observation);
     if (selected === null) {
       explorationStopped = true;
+      if (agent.exploration && agent.requireActionable && first && actions.length === 0) {
+        // The closing assertion is skipped after this failure; keep a picture of what was seen.
+        await evidence(step, "after");
+        const at = new URL(observation.url);
+        at.search = "";
+        at.hash = "";
+        throw new RuntimeError(
+          "insufficient_evidence",
+          `Exploration observed no same-origin link at ${at.href}: ${observation.controls.length} form controls, ${observation.hasPasswordField ? "password field present" : "no password field"}, 0 approved actions.${settled ? "" : " The page had not settled."}`,
+          "inconclusive",
+        );
+      }
       return null;
     }
     validate("Step", selected);
@@ -1136,6 +1192,7 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
     return selected;
   }
   async function withEvidence(step: PlanStep): Promise<void> {
+    currentStepId = step.id;
     // Resolve known secret references before either screenshot can expose them.
     if (step.operation === "fill") await runtime.resolve(step.input.value);
     if (
@@ -1329,13 +1386,38 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
         deny("Agent mutation is not explicitly authorized");
         return;
       }
+      const request = route.request();
+      let authorized = false;
       try {
-        authorizeUrl(runtime, route.request().url());
-        await route.continue();
+        authorizeUrl(runtime, request.url());
+        authorized = true;
       } catch {
-        await route.abort("blockedbyclient").catch(() => undefined);
-        deny("Subrequest origin is not authorized");
+        /* Refused below; a malformed URL is refused like an unapproved origin. */
       }
+      if (authorized) {
+        try {
+          await route.continue();
+        } catch {
+          await route.abort("blockedbyclient").catch(() => undefined);
+          deny("Subrequest origin is not authorized");
+        }
+        return;
+      }
+      // The proxy never sees a request aborted here, so this is the only record of the denial.
+      const disposition = denialDisposition(
+        request.url(),
+        request.method(),
+        request.resourceType(),
+      );
+      denials.record({
+        stepId: currentStepId ?? "attempt",
+        url: request.url(),
+        method: request.method(),
+        resourceType: request.resourceType(),
+        disposition,
+      });
+      await route.abort("blockedbyclient").catch(() => undefined);
+      if (disposition === "fatal") deny("Subrequest origin is not authorized");
     });
     await context.routeWebSocket("**/*", (socket) => {
       void socket.close({
@@ -1384,7 +1466,8 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
     if (violation && result.outcome === "passed")
       result = { outcome: violation.outcome, reasonCode: violation.reasonCode };
   } catch (error) {
-    if (runtime.signal.aborted) result = { outcome: "cancelled", reasonCode: "user_cancelled" };
+    const aborted = abortVerdict(runtime.signal);
+    if (aborted) result = aborted;
     else if (violation) result = { outcome: violation.outcome, reasonCode: violation.reasonCode };
     else if (error instanceof RuntimeError)
       result = { outcome: error.outcome, reasonCode: error.reasonCode };
@@ -1453,6 +1536,17 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       await runtime
         .emit("log", { level: "warn", message: "Raw video unavailable" })
         .catch(() => undefined);
+    }
+    try {
+      for (const denial of denials.list())
+        await runtime.emit("egress.denied", { ...denial, origin: runtime.scrub(denial.origin) });
+      if (denials.omittedCount)
+        await runtime.emit("log", {
+          level: "warn",
+          message: `egress_denials_omitted:${denials.omittedCount}`,
+        });
+    } catch {
+      /* The protocol channel closed (cancellation); the denial remains in network.json. */
     }
     try {
       await runtime.artifact(

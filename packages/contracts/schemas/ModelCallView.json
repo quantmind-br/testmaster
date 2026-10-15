@@ -1,0 +1,366 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "workspaceId",
+    "projectId",
+    "createdAt",
+    "purpose",
+    "provider",
+    "model",
+    "promptHash",
+    "inputRefs",
+    "usage",
+    "cost",
+    "priceTableVersion",
+    "costBasis",
+    "latency",
+    "outcome",
+    "cacheHit",
+    "repairAttempt",
+    "transportAttempt",
+    "reservationId",
+    "responseHash",
+    "finishReason"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^mdl_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "workspaceId": {
+      "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "projectId": {
+      "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "purpose": {
+      "anyOf": [
+        {
+          "const": "summarize",
+          "type": "string"
+        },
+        {
+          "const": "normalize",
+          "type": "string"
+        },
+        {
+          "const": "plan",
+          "type": "string"
+        },
+        {
+          "const": "resolve_action",
+          "type": "string"
+        },
+        {
+          "const": "generate_code",
+          "type": "string"
+        },
+        {
+          "const": "classify",
+          "type": "string"
+        },
+        {
+          "const": "analyze",
+          "type": "string"
+        },
+        {
+          "const": "heal",
+          "type": "string"
+        }
+      ]
+    },
+    "provider": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "model": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "promptHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "modelConfigHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "sourceRevisionIds": {
+      "type": "array",
+      "items": {
+        "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    },
+    "runId": {
+      "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "inputRefs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "usage": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "inputTokens",
+        "outputTokens",
+        "reasoningTokens"
+      ],
+      "properties": {
+        "inputTokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "outputTokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reasoningTokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cachedInputTokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "cost": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "amount",
+            "currency",
+            "scale"
+          ],
+          "properties": {
+            "amount": {
+              "pattern": "^\\d+$",
+              "type": "string"
+            },
+            "currency": {
+              "pattern": "^[A-Z]{3}$",
+              "type": "string"
+            },
+            "scale": {
+              "minimum": 0,
+              "maximum": 18,
+              "type": "integer"
+            }
+          }
+        },
+        {
+          "const": "unknown",
+          "type": "string"
+        }
+      ]
+    },
+    "priceTableVersion": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "costBasis": {
+      "anyOf": [
+        {
+          "const": "estimated",
+          "type": "string"
+        },
+        {
+          "const": "unknown",
+          "type": "string"
+        },
+        {
+          "const": "not_billed",
+          "type": "string"
+        }
+      ]
+    },
+    "latency": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "outcome": {
+      "anyOf": [
+        {
+          "const": "success",
+          "type": "string"
+        },
+        {
+          "const": "invalid",
+          "type": "string"
+        },
+        {
+          "const": "failed",
+          "type": "string"
+        },
+        {
+          "const": "cancelled",
+          "type": "string"
+        }
+      ]
+    },
+    "cacheHit": {
+      "type": "boolean"
+    },
+    "repairAttempt": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "transportAttempt": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "reservationId": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "responseHash": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "finishReason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "failureReason": {
+      "anyOf": [
+        {
+          "const": "output_truncated",
+          "type": "string"
+        },
+        {
+          "const": "content_filtered",
+          "type": "string"
+        }
+      ]
+    },
+    "validationFailure": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "code",
+        "message",
+        "issues",
+        "omittedIssues"
+      ],
+      "properties": {
+        "code": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 300,
+          "type": "string"
+        },
+        "issues": {
+          "maxItems": 5,
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "path",
+              "rule",
+              "message"
+            ],
+            "properties": {
+              "path": {
+                "maxLength": 200,
+                "type": "string"
+              },
+              "rule": {
+                "maxLength": 60,
+                "type": "string"
+              },
+              "message": {
+                "maxLength": 200,
+                "type": "string"
+              }
+            }
+          }
+        },
+        "omittedIssues": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:ModelCallView",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

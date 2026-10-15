@@ -7,23 +7,40 @@
   "properties": {
     "runId": {
       "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "description": "Failed run to diagnose"
     },
     "model": {
-      "type": "boolean"
+      "type": "boolean",
+      "description": "Also ask a model to read the recorded evidence"
+    },
+    "provider": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string",
+      "description": "Model provider id for the model reading; requires model=true"
+    },
+    "modelId": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string",
+      "description": "Model id for the model reading; requires model=true. Absent: first capable model"
     },
     "discoveryId": {
       "pattern": "^dsc_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "description": "Discovery job to cross-reference"
     },
     "budget": {
       "additionalProperties": false,
+      "description": "Optional time budget",
       "type": "object",
       "properties": {
         "deadlineMs": {
           "minimum": 1,
           "maximum": 600000,
-          "type": "integer"
+          "type": "integer",
+          "description": "Time budget in milliseconds"
         }
       }
     }

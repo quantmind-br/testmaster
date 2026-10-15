@@ -19,8 +19,10 @@ import {
 } from "@testmaster/persistence";
 import {
   EvidenceCatalog,
-  resolveGeneratedProposals,
+  type GeneratedProposal,
+  inspectGeneratedProposals,
   type SourceEvidenceRef,
+  type UnsupportedRequirement,
   validateGeneratedProposals,
   validateProposalPlan,
 } from "@testmaster/planner";
@@ -104,6 +106,66 @@ function validateIntegrationPlan(plan: ExecutablePlan): void {
     "Integration proposals require at least two requests, a capture consumed by a later request, and a required business assertion over that downstream response",
   );
 }
+/** A generated proposal refused by the semantic checks; `index` is its position in the model output. */
+interface GenerationRefusal {
+  index: number;
+  requirementIds: string[];
+  reasonCode: string;
+  message: string;
+  pointers?: string[];
+}
+interface GenerationInspection {
+  valid: GeneratedProposal[];
+  refused: GenerationRefusal[];
+  unsupported: UnsupportedRequirement[];
+}
+/**
+ * The atomic refusal of a generated batch: nothing is stored. The message is the first refusal's,
+ * so a single refused proposal reports exactly its cause; `details.refused` lists every one.
+ */
+function refusalError(
+  refused: readonly GenerationRefusal[],
+  extra: Record<string, unknown> = {},
+): ContractError {
+  const [first, ...rest] = refused;
+  if (!first) throw new ContractError("INTERNAL", "A refusal needs at least one refused proposal");
+  return new ContractError(
+    "INVALID_ARGUMENT",
+    rest.length
+      ? `${first.message} (${rest.length} more refused proposal${rest.length === 1 ? "" : "s"}; see details.refused)`
+      : first.message,
+    { atomicity: "all_or_nothing", refused, ...extra },
+    refused.map((item) => ({
+      path: `/proposals/${item.index}`,
+      rule: item.reasonCode,
+      message: item.pointers?.length
+        ? `${item.message}: ${item.pointers.join(", ")}`
+        : item.message,
+    })),
+  );
+}
+/** Every selected requirement is proposed or declined exactly once; a refused proposal still claims its own. */
+function coverageGap(
+  state: GenerationInspection,
+  requirementIds: readonly string[],
+): ContractError | undefined {
+  const claims = [
+    ...state.valid.map((proposal) => proposal.requirementRefs),
+    ...state.refused.map((item) => item.requirementIds),
+  ];
+  const covered = (requirementId: string): number =>
+    claims.filter((refs) => refs.includes(requirementId)).length +
+    state.unsupported.filter((item) => item.requirementId === requirementId).length;
+  if (
+    claims.length + state.unsupported.length !== requirementIds.length ||
+    requirementIds.some((requirementId) => covered(requirementId) !== 1)
+  )
+    return new ContractError(
+      "INVALID_ARGUMENT",
+      "Generation must cover each selected requirement exactly once",
+    );
+  return undefined;
+}
 export class ProposalsService {
   constructor(
     readonly ctx: ServiceContext,
@@ -132,6 +194,11 @@ export class ProposalsService {
     signal?: AbortSignal;
     idempotencyKey?: string;
     budget?: { deadlineMs?: number };
+    /**
+     * After the repairs, store the proposals that pass and list the refused ones in
+     * `testmaster:refusedProposals`; absent, one refused proposal refuses the whole batch.
+     */
+    partialGeneration?: boolean;
   }): Promise<StoredBatch> {
     this.ctx.authorize("W", input.projectId);
     if (input.budget && Object.keys(input.budget).some((key) => key !== "deadlineMs"))
@@ -164,7 +231,11 @@ export class ProposalsService {
     }
     const snapshot = this.requirements.snapshot(input.projectId);
     if (input.sourceSnapshotId && input.sourceSnapshotId !== snapshot.fingerprint)
-      throw new ContractError("PRECONDITION_FAILED", "Requirement snapshot fingerprint changed");
+      throw new ContractError(
+        "PRECONDITION_FAILED",
+        "sourceSnapshotId must be the current requirement snapshot fingerprint returned by testmaster_normalize_requirements and readable at testmaster://requirements/{projectId}; the supplied value does not match (the snapshot changed since it was read, or the value is not a fingerprint)",
+        { reasonCode: "requirement_snapshot_mismatch" },
+      );
     const requirements = snapshot.requirements.filter(
       (item) => !input.requirementIds || input.requirementIds.includes(item.id),
     );
@@ -184,58 +255,26 @@ export class ProposalsService {
         ? 'Choose each plan\'s type from the requirement: "backend" with runner "http" when it is observable through HTTP API status, headers or JSON; "frontend" with runner "playwright" when it is observable only in the browser UI.'
         : `Every plan must have type "${type}" and runner "${planRunners[type]}".${type === "integration" ? ' Build an HTTP workflow with at least two request steps: capture a value from an earlier response and use its "stepId.captureName" variableRef in a later request pathSegments, query, headers or body. Include a required deterministic business assertion referencing that later request through responseStepId. A single request, unused capture, or assertion only over the initial response is not an integration workflow.' : ""}`;
     const secrets = this.offeredSecrets();
-    const output = await this.model.complete<unknown>({
-      projectId: input.projectId,
-      purpose: "plan",
-      responseSchema: "AIProposalsOutput",
-      data: {
-        // Locators (paths, JSON pointers) stay visible; outputs cite only the opaque handles.
-        requirements: requirements.map(({ sourceRefs, ...requirement }) => ({
-          ...requirement,
-          evidence: (sourceRefs as SourceEvidenceRef[]).map((ref) => ({
-            evidenceId: catalog.handle(ref),
-            ...ref,
-          })),
-        })),
-        type,
-        sourceSnapshotId: snapshot.fingerprint,
-        // Names and ids only: values never leave the vault.
-        ...(secrets.length ? { secrets } : {}),
-      },
-      instructions: `Return exactly one independent executable proposal per supplied requirement, not an intent. ${typeInstruction} Copy requirement IDs exactly and cite only the evidenceId values supplied with that requirement. Use deterministic business assertions deriving expected values only from approved requirements. Include an assertion that would fail if the required feature were broken; body/html visibility and broad all-status checks are trivial and rejected, and an HTTP 200 status check alone is trivial too: add a body, schema or header assertion. HTTP paths are relative pathSegments of literal values, written as the source document's paths (a declared server path prefix such as /v1 is added to the request automatically). A jsonSchema assertion's pointer must be a non-empty JSON pointer into the cited source document that reaches the response schema, for example /paths/~1items/get/responses/200/content/application~1json/schema; an empty pointer is rejected. When a secrets entry fits the target API, send its credential as a header whose value is {"secretRef": <entry id>} (for example authorization) on every request unless the source explicitly declares the operation public (security: []): specifications often omit security, and a request without a needed credential only proves the 401. Use only secretRef ids from the supplied secrets and never invent secret values. Frontend locators use testId/role/label. Do not invent absolute destinations or secret values.`,
-      sourceRevisionIds: [...new Set(catalog.refs.map((ref) => ref.sourceRevisionId))],
-      dataClasses: ["requirements"],
-      ...input.budget,
-      ...(input.provider ? { provider: input.provider } : {}),
-      ...(input.model ? { model: input.model } : {}),
-      ...(input.signal ? { signal: input.signal } : {}),
-    });
-    const generated = resolveGeneratedProposals(
-      output.output,
-      requirements.map((item) => item.id),
-      catalog,
-    );
+    const declineInstruction =
+      'A requirement that is not observable through HTTP responses or the browser for this request (for example a command-line program: its exit status, stdout, stderr or a terminal UI) must NOT get an invented endpoint, page or assertion. List it instead in "unsupported" as {"requirementId": <exact requirement id>, "reason": <one short sentence>} and give it no proposal. Every supplied requirement appears exactly once, either as a proposal or in "unsupported"; "proposals" may be empty when every requirement is declined. Always answer with the JSON shape {"proposals": [...], "unsupported": [...]}; never return an "error" property or any other shape.';
+    const requirementIds = requirements.map((item) => item.id);
     const offeredSecrets = new Set(secrets.map((secret) => secret.secretRef));
-    generated.proposals = generated.proposals.map((proposal) => {
-      const plan = applyServerBasePath(
-        this.ctx,
-        proposal.plan,
-        proposal.evidenceRefs.map((ref) => ref.sourceRevisionId),
-      );
-      const unknownSecret = secretRefsOf(plan).find((ref) => !offeredSecrets.has(ref));
-      if (unknownSecret)
-        throw new ContractError(
-          "INVALID_ARGUMENT",
-          "Generated proposal references a secret that was not offered",
-          { secretRef: unknownSecret },
-        );
-      const unresolved = unresolvedSchemaPointers(this.ctx, plan);
-      if (unresolved.length)
-        throw new ContractError(
-          "INVALID_ARGUMENT",
-          "Generated jsonSchema assertion does not reach a schema in the cited source revision",
-          { pointers: unresolved },
-        );
+    const unrunnable = (
+      plan: ExecutablePlan,
+    ): Pick<GenerationRefusal, "reasonCode" | "message" | "pointers"> | undefined => {
+      if (secretRefsOf(plan).some((ref) => !offeredSecrets.has(ref)))
+        return {
+          reasonCode: "secret_not_offered",
+          message: "Generated proposal references a secret that was not offered",
+        };
+      const pointers = unresolvedSchemaPointers(this.ctx, plan);
+      if (pointers.length)
+        return {
+          reasonCode: "schema_pointer_unresolved",
+          message:
+            "Generated jsonSchema assertion does not reach a schema in the cited source revision",
+          pointers,
+        };
       // Any HTTP 200 passes for an unrelated page (e.g. an HTML portal behind a mistyped path),
       // so a success status only counts together with an assertion over the body or headers.
       if (
@@ -247,39 +286,125 @@ export class ProposalsService {
             !(step.expectation.predicate === "statusIn" && step.expectation.values.includes(200)),
         )
       )
-        throw new ContractError(
-          "INVALID_ARGUMENT",
-          "A generated HTTP proposal needs a body, schema or header assertion beyond a 200 status check",
+        return {
+          reasonCode: "http_status_only",
+          message:
+            "A generated HTTP proposal needs a body, schema or header assertion beyond a 200 status check",
+        };
+      if (
+        !(allowed as readonly string[]).includes(plan.type) ||
+        plan.runner !== planRunners[plan.type as keyof typeof planRunners]
+      )
+        return {
+          reasonCode: "plan_type_mismatch",
+          message:
+            type === "auto"
+              ? "Generated proposals must be backend/http or frontend/playwright plans"
+              : `Generated proposals must be ${type} plans using the ${planRunners[type]} runner`,
+        };
+      if (type === "integration") {
+        try {
+          validateIntegrationPlan(plan);
+        } catch (error) {
+          if (error instanceof ContractError)
+            return { reasonCode: "integration_workflow_invalid", message: error.message };
+          throw error;
+        }
+      }
+      return undefined;
+    };
+    // Output-wide defects throw; each proposal that fails on its own is collected, all of them.
+    const inspect = (raw: unknown): GenerationInspection => {
+      const inspected = inspectGeneratedProposals(raw, requirementIds, catalog);
+      const refused: GenerationRefusal[] = inspected.refused.map((item) => ({
+        index: item.index,
+        requirementIds: item.requirementIds,
+        reasonCode: item.reasonCode,
+        message: item.error.message,
+      }));
+      const valid: { index: number; proposal: GeneratedProposal }[] = [];
+      for (const { index, proposal } of inspected.accepted) {
+        const plan = applyServerBasePath(
+          this.ctx,
+          proposal.plan,
+          proposal.evidenceRefs.map((ref) => ref.sourceRevisionId),
         );
-      return { ...proposal, plan };
-    });
-    if (
-      generated.proposals.some(
-        ({ plan }) =>
-          !(allowed as readonly string[]).includes(plan.type) ||
-          plan.runner !== planRunners[plan.type as keyof typeof planRunners],
-      )
-    )
+        const reason = unrunnable(plan);
+        if (reason) refused.push({ index, requirementIds: proposal.requirementRefs, ...reason });
+        else valid.push({ index, proposal: { ...proposal, plan } });
+      }
+      refused.sort((a, b) => a.index - b.index);
+      return {
+        valid: valid.map((item) => item.proposal),
+        refused,
+        unsupported: inspected.unsupported,
+      };
+    };
+    // The gateway runs this inside its repair loop, so the model sees every refusal as feedback.
+    let latestRaw: unknown;
+    const check = (raw: unknown): void => {
+      latestRaw = raw;
+      const state = inspect(raw);
+      if (state.refused.length) throw refusalError(state.refused);
+      const gap = coverageGap(state, requirementIds);
+      if (gap) throw gap;
+    };
+    // Only an explicit `partialGeneration` keeps the last attempt's valid proposals after the
+    // repairs ran out; the gateway reports the check's own error and the invalid call's id.
+    const recoverPartial = (error: unknown): { modelCallId: string; output: unknown } => {
+      const modelCallId =
+        error instanceof ContractError && error.details.atomicity === "all_or_nothing"
+          ? error.details.modelCallId
+          : undefined;
+      if (!input.partialGeneration || typeof modelCallId !== "string" || latestRaw === undefined)
+        throw error;
+      return { modelCallId, output: latestRaw };
+    };
+    const output = await this.model
+      .complete<unknown>({
+        projectId: input.projectId,
+        purpose: "plan",
+        responseSchema: "AIProposalsOutput",
+        data: {
+          // Locators (paths, JSON pointers) stay visible; outputs cite only the opaque handles.
+          requirements: requirements.map(({ sourceRefs, ...requirement }) => ({
+            ...requirement,
+            evidence: (sourceRefs as SourceEvidenceRef[]).map((ref) => ({
+              evidenceId: catalog.handle(ref),
+              ...ref,
+            })),
+          })),
+          type,
+          sourceSnapshotId: snapshot.fingerprint,
+          // Names and ids only: values never leave the vault.
+          ...(secrets.length ? { secrets } : {}),
+        },
+        instructions: `Return exactly one independent executable proposal per supplied requirement that an HTTP or browser plan can observe, not an intent. ${declineInstruction} ${typeInstruction} Copy requirement IDs exactly and cite only the evidenceId values supplied with that requirement. Use deterministic business assertions deriving expected values only from approved requirements. Include an assertion that would fail if the required feature were broken; body/html visibility and broad all-status checks are trivial and rejected, and an HTTP 200 status check alone is trivial too: add a body, schema or header assertion. HTTP paths are relative pathSegments of literal values, written as the source document's paths (a declared server path prefix such as /v1 is added to the request automatically). A jsonSchema assertion's pointer must be a non-empty JSON pointer into the cited source document that reaches the response schema, for example /paths/~1items/get/responses/200/content/application~1json/schema; an empty pointer is rejected. When a secrets entry fits the target API, send its credential as a header whose value is {"secretRef": <entry id>} (for example authorization) on every request unless the source explicitly declares the operation public (security: []): specifications often omit security, and a request without a needed credential only proves the 401. Use only secretRef ids from the supplied secrets and never invent secret values. Frontend locators use testId/role/label. Do not invent absolute destinations or secret values.`,
+        sourceRevisionIds: [...new Set(catalog.refs.map((ref) => ref.sourceRevisionId))],
+        dataClasses: ["requirements"],
+        ...input.budget,
+        ...(input.provider ? { provider: input.provider } : {}),
+        ...(input.model ? { model: input.model } : {}),
+        ...(input.signal ? { signal: input.signal } : {}),
+        check,
+      })
+      .catch(recoverPartial);
+    const generated = inspect(output.output);
+    if (generated.refused.length && !generated.valid.length)
+      throw refusalError(generated.refused, { modelCallId: output.modelCallId });
+    const gap = coverageGap(generated, requirementIds);
+    if (gap) throw gap;
+    if (!generated.valid.length)
       throw new ContractError(
-        "INVALID_ARGUMENT",
-        type === "auto"
-          ? "Generated proposals must be backend/http or frontend/playwright plans"
-          : `Generated proposals must be ${type} plans using the ${planRunners[type]} runner`,
-      );
-    if (type === "integration")
-      for (const { plan } of generated.proposals) validateIntegrationPlan(plan);
-    if (
-      generated.proposals.length !== requirements.length ||
-      requirements.some(
-        (requirement) =>
-          generated.proposals.filter((proposal) =>
-            proposal.requirementRefs.includes(requirement.id),
-          ).length !== 1,
-      )
-    )
-      throw new ContractError(
-        "INVALID_ARGUMENT",
-        "Generation must cover each selected requirement exactly once",
+        "CAPABILITY_UNAVAILABLE",
+        "None of the selected requirements can be observed through HTTP or the browser, so no plan was generated. Terminal (CLI/TUI) tests cannot be generated by the model: write them by hand (docs/usage/terminal-tests.md)",
+        {
+          capability: "plan-generation",
+          reasonCode: "requirement_not_observable",
+          unsupported: generated.unsupported,
+          modelCallId: output.modelCallId,
+          hint: "Author terminal plans manually; see docs/usage/terminal-tests.md",
+        },
       );
     const commit = () => {
       if (this.requirements.snapshot(input.projectId).fingerprint !== snapshot.fingerprint)
@@ -293,10 +418,20 @@ export class ProposalsService {
         extensions: {
           "testmaster:requirementVersion": snapshot.version,
           "testmaster:modelCallId": output.modelCallId,
+          ...(generated.unsupported.length
+            ? { "testmaster:unsupportedRequirements": generated.unsupported }
+            : {}),
+          ...(generated.refused.length
+            ? {
+                "testmaster:refusedProposals": generated.refused.map(
+                  ({ index: _index, ...refusal }) => refusal,
+                ),
+              }
+            : {}),
         },
       }) as StoredBatch;
       this.ctx.entities.insert("ProposalBatch", batch);
-      for (const item of generated.proposals) {
+      for (const item of generated.valid) {
         const proposal = entity(this.ctx, "pro", {
           batchId: batch.id,
           ...item,

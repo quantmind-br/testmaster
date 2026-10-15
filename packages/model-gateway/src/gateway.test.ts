@@ -1,13 +1,8 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { ContractError } from "@testmaster/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 import { MemoryModelCache, ModelGateway } from "./gateway.js";
-import {
-  completion,
-  grantedConsent,
-  TestBudgetLedger,
-  testProvider,
-  testRequest,
-} from "./test-support.js";
+import { completion, TestBudgetLedger, testProvider, testRequest } from "./test-support.js";
 import type { ModelCallRecord } from "./types.js";
 
 const servers: Server[] = [];
@@ -26,7 +21,6 @@ async function fixture(
   let requests = 0;
   let listings = 0;
   let completions = 0;
-  let consent: typeof grantedConsent | null = grantedConsent;
   const records: ModelCallRecord[] = [];
   const payloads: string[] = [];
   const server = createServer(async (req, res) => {
@@ -55,11 +49,6 @@ async function fixture(
     allowedProviders: ["fake"],
     allowedEndpoints: [endpoint],
     env: () => "fake-api-key",
-    consentStore: {
-      async find() {
-        return consent;
-      },
-    },
     budgetLedger: ledger,
     recorder: {
       async record(call: ModelCallRecord) {
@@ -74,12 +63,6 @@ async function fixture(
     records,
     payloads,
     ledger,
-    revoke() {
-      consent = null;
-    },
-    grant() {
-      consent = grantedConsent;
-    },
     counts() {
       return { requests, completions };
     },
@@ -111,21 +94,35 @@ it("records output_truncated and charges one completion without blind repairs", 
   expect(f.ledger.settlements).toHaveLength(1);
 });
 describe("policy-controlled model requests", () => {
-  it("denies absent consent and disallowed providers before any request, with a positive boundary control", async () => {
+  it("needs no grant, denies disallowed providers and never-sent data classes before any request", async () => {
     const f = await fixture();
-    f.revoke();
-    await expect(f.gateway.complete(testRequest)).rejects.toMatchObject({ code: "POLICY_DENIED" });
     await expect(
       new ModelGateway({ ...f.options, allowedProviders: [] }).complete(testRequest),
     ).rejects.toMatchObject({ code: "POLICY_DENIED" });
+    await expect(
+      f.gateway.complete({
+        ...testRequest,
+        dataPolicy: { ...testRequest.dataPolicy, dataClasses: ["source", "env"] },
+      }),
+    ).rejects.toMatchObject({ code: "POLICY_DENIED" });
     expect(f.counts().requests).toBe(0);
-    f.grant();
     const result = await f.gateway.complete(testRequest);
     expect(result.output).toEqual({ amount: 1, currency: "USD", scale: 2 });
     expect(f.counts()).toEqual({ requests: 2, completions: 1 });
     expect(result.usage).toEqual({ inputTokens: 20, outputTokens: 10, reasoningTokens: 3 });
     expect(result.reasoningContent).toContain("Checked");
     expect(result.cost).toBe("unknown");
+  });
+
+  it("admits an unpriced model when the ledger has room and refuses it before the call when the budget is exhausted", async () => {
+    const exhausted = await fixture(undefined, new TestBudgetLedger(0n));
+    await expect(exhausted.gateway.complete(testRequest)).rejects.toMatchObject({
+      code: "QUOTA_EXCEEDED",
+      details: { reasonCode: "budget_exhausted" },
+    });
+    expect(exhausted.counts().completions).toBe(0);
+    const open = await fixture();
+    expect((await open.gateway.complete(testRequest)).cost).toBe("unknown");
   });
 
   it("leaves generation and reasoning defaults to the provider, including repair requests", async () => {
@@ -213,7 +210,16 @@ describe("policy-controlled model requests", () => {
     );
     await expect(f.gateway.complete(testRequest)).rejects.toMatchObject({
       code: "INVALID_ARGUMENT",
-      details: { repairs: 2, candidateStatus: "invalid" },
+      details: {
+        repairs: 2,
+        candidateStatus: "invalid",
+        invalidAttempts: 3,
+        validationFailure: {
+          code: "INVALID_ARGUMENT",
+          issues: expect.arrayContaining([expect.objectContaining({ path: "/amount" })]),
+          omittedIssues: 0,
+        },
+      },
     });
     expect(f.counts().completions).toBe(3);
     expect(f.records.map((record) => [record.outcome, record.repairAttempt])).toEqual([
@@ -221,7 +227,247 @@ describe("policy-controlled model requests", () => {
       ["invalid", 1],
       ["invalid", 2],
     ]);
+    // Every repair record keeps why its response was refused, never the response itself.
+    expect(f.records.map((record) => record.validationFailure?.code)).toEqual([
+      "INVALID_ARGUMENT",
+      "INVALID_ARGUMENT",
+      "INVALID_ARGUMENT",
+    ]);
+    expect(f.records.every((record) => record.validationFailure?.issues.length)).toBe(true);
+    expect(JSON.stringify(f.records[0]?.validationFailure)).not.toContain("bad");
     expect(f.ledger.settlements).toHaveLength(3);
+  });
+
+  it("feeds a failed semantic check back as repair feedback and records the call invalid", async () => {
+    const f = await fixture((_req, res, _body, number) =>
+      res.end(
+        JSON.stringify({
+          ...completion,
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  amount: number === 1 ? 7 : 1,
+                  currency: "USD",
+                  scale: 2,
+                }),
+              },
+              finish_reason: "stop",
+            },
+          ],
+        }),
+      ),
+    );
+    const check = async (output: unknown) => {
+      if (
+        typeof output === "object" &&
+        output !== null &&
+        "amount" in output &&
+        output.amount === 7
+      )
+        throw new ContractError("INVALID_ARGUMENT", "Amount is not allowed", {}, [
+          { path: "/amount", rule: "forbidden_amount", message: "Seven is refused" },
+        ]);
+    };
+    const result = await f.gateway.complete({ ...testRequest, check });
+    expect(result.output).toMatchObject({ amount: 1 });
+    expect(f.counts().completions).toBe(2);
+    expect(f.records.map((record) => record.outcome)).toEqual(["invalid", "success"]);
+    expect(f.records[0]?.validationFailure).toMatchObject({
+      code: "INVALID_ARGUMENT",
+      message: "Amount is not allowed",
+      issues: [{ path: "/amount", rule: "forbidden_amount", message: "Seven is refused" }],
+    });
+    // The repair request names the refused path, rule and reason; the refused value is not echoed.
+    const repair = f.payloads.at(-1) ?? "";
+    expect(repair).toContain("forbidden_amount");
+    expect(repair).toContain("Seven is refused");
+    // Control: a check that accepts adds no repair and no invalid record.
+    const accepting = await fixture();
+    await accepting.gateway.complete({ ...testRequest, check: async () => {} });
+    expect(accepting.records.map((record) => record.outcome)).toEqual(["success"]);
+  });
+
+  it("surfaces the check's own error with the repair account once repairs run out", async () => {
+    const f = await fixture();
+    const refusal = () =>
+      new ContractError("INVALID_ARGUMENT", "Every candidate is refused", {
+        atomicity: "all_or_nothing",
+      });
+    await expect(
+      f.gateway.complete({
+        ...testRequest,
+        check: async () => {
+          throw refusal();
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: "INVALID_ARGUMENT",
+      message: "Every candidate is refused",
+      details: {
+        atomicity: "all_or_nothing",
+        repairs: 2,
+        candidateStatus: "invalid",
+        invalidAttempts: 3,
+        modelCallId: expect.stringMatching(/^mdl_/u),
+      },
+    });
+    expect(f.counts().completions).toBe(3);
+    expect(f.records.map((record) => record.outcome)).toEqual(["invalid", "invalid", "invalid"]);
+    expect(f.ledger.settlements).toHaveLength(3);
+    // The reported call is the last invalid attempt's record.
+    const error = await f.gateway
+      .complete({
+        ...testRequest,
+        cache: false,
+        check: async () => {
+          throw refusal();
+        },
+      })
+      .catch((caught: unknown) => caught);
+    expect(error).toMatchObject({ details: { modelCallId: f.records.at(-1)?.id } });
+  });
+
+  it("never repairs a defect thrown by the check and re-checks a cached output", async () => {
+    const f = await fixture();
+    await expect(
+      f.gateway.complete({
+        ...testRequest,
+        check: () => {
+          throw new TypeError("check defect");
+        },
+      }),
+    ).rejects.toThrow("check defect");
+    expect(f.counts().completions).toBe(1);
+    expect(f.records.map((record) => record.outcome)).toEqual(["failed"]);
+    // A cached output that fails the check is a miss: the paid path runs and validates it.
+    const cached = await fixture();
+    await cached.gateway.complete(testRequest);
+    let checks = 0;
+    const second = await cached.gateway.complete({
+      ...testRequest,
+      check: () => {
+        checks += 1;
+        if (checks === 1) throw new ContractError("INVALID_ARGUMENT", "Stale cache entry");
+      },
+    });
+    expect(second.cacheHit).toBe(false);
+    expect(checks).toBe(2);
+    expect(cached.counts().completions).toBe(2);
+    // Control: a cached output that passes the check is still served from the cache.
+    const third = await cached.gateway.complete({ ...testRequest, check: () => {} });
+    expect(third.cacheHit).toBe(true);
+    expect(cached.counts().completions).toBe(2);
+  });
+
+  it("reports the last validation failure when the deadline hits during a repair", async () => {
+    const f = await fixture((_req, res, _body, n) => {
+      // The first response is invalid; the repair request is never answered.
+      if (n === 1)
+        res.end(
+          JSON.stringify({
+            ...completion,
+            choices: [{ message: { content: '{"amount":"bad"}' }, finish_reason: "stop" }],
+          }),
+        );
+    });
+    await expect(f.gateway.complete({ ...testRequest, deadlineMs: 500 })).rejects.toMatchObject({
+      code: "UPSTREAM_TIMEOUT",
+      details: {
+        candidateStatus: "invalid",
+        invalidAttempts: 1,
+        validationFailure: { code: "INVALID_ARGUMENT" },
+      },
+    });
+    expect(f.records.map((record) => record.outcome)).toEqual(["invalid", "cancelled"]);
+    // Control: a deadline with no invalid attempt carries no validation summary.
+    const silent = await fixture(() => {});
+    const timeout = await silent.gateway
+      .complete({ ...testRequest, deadlineMs: 150 })
+      .catch((error: unknown) => error);
+    expect(timeout).toMatchObject({ code: "UPSTREAM_TIMEOUT", details: {} });
+    expect(timeout).not.toHaveProperty("details.validationFailure");
+  });
+
+  it("bounds and scrubs the persisted validation summary without model output values", async () => {
+    const step = { id: "s", kind: "action", operation: "request", input: { method: "BREW" } };
+    const oversized = {
+      proposals: [
+        {
+          plan: {
+            schemaVersion: "1.0.0",
+            kind: "executable",
+            name: "Broken",
+            type: "backend",
+            runner: "http",
+            requirementRefs: [],
+            steps: Array.from({ length: 40 }, (_, index) => ({ ...step, id: `s${index}` })),
+          },
+          requirementRefs: ["req_01900000-0000-7000-8000-000000000001"],
+          evidenceIds: ["E1"],
+          warnings: [],
+        },
+      ],
+    };
+    const big = await fixture((_req, res) =>
+      res.end(
+        JSON.stringify({
+          ...completion,
+          choices: [{ message: { content: JSON.stringify(oversized) }, finish_reason: "stop" }],
+        }),
+      ),
+    );
+    await expect(
+      big.gateway.complete({
+        ...testRequest,
+        responseSchema: "AIProposalsOutput",
+        dataPolicy: { ...testRequest.dataPolicy, maxInputBytes: 1048576, maxInputTokens: 100000 },
+      }),
+    ).rejects.toMatchObject({ details: { validationFailure: { code: "INVALID_ARGUMENT" } } });
+    for (const record of big.records) {
+      const summary = record.validationFailure;
+      expect(summary?.issues.length).toBe(5);
+      expect(summary?.omittedIssues).toBeGreaterThan(0);
+      expect(summary?.message.length).toBeLessThanOrEqual(300);
+      for (const issue of summary?.issues ?? []) {
+        expect(issue.path.length).toBeLessThanOrEqual(200);
+        expect(issue.rule.length).toBeLessThanOrEqual(60);
+        expect(issue.message.length).toBeLessThanOrEqual(200);
+      }
+      expect(JSON.stringify(summary)).not.toContain("BREW");
+    }
+    // A secret used as a property name never reaches the persisted summary or the error.
+    const canaryKey = "canary-credential-key";
+    const leaky = await fixture((_req, res) =>
+      res.end(
+        JSON.stringify({
+          ...completion,
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({ amount: "value-canary-77", [canaryKey]: "x" }),
+              },
+              finish_reason: "stop",
+            },
+          ],
+        }),
+      ),
+    );
+    const failure = await leaky.gateway
+      .complete({
+        ...testRequest,
+        dataPolicy: { ...testRequest.dataPolicy, secrets: [canaryKey] },
+      })
+      .catch((error: unknown) => error);
+    if (!(failure instanceof ContractError)) throw new Error("Expected a ContractError");
+    expect(failure.code).toBe("INVALID_ARGUMENT");
+    const persisted = JSON.stringify([
+      leaky.records.map((record) => record.validationFailure),
+      failure.details,
+    ]);
+    expect(persisted).toContain("validationFailure");
+    expect(persisted).not.toContain(canaryKey);
+    expect(persisted).not.toContain("value-canary-77");
   });
 
   it("repairs a schema-invalid candidate successfully", async () => {
@@ -416,8 +662,14 @@ describe("policy-controlled model requests", () => {
       (await f.gateway.complete({ ...input, inputRefs: ["diff:new-head-and-dirty-hash"] }))
         .cacheHit,
     ).toBe(true);
-    f.revoke();
-    await expect(f.gateway.complete(input)).rejects.toMatchObject({ code: "POLICY_DENIED" });
+    const before = f.counts();
+    await expect(
+      f.gateway.complete({
+        ...input,
+        dataPolicy: { ...input.dataPolicy, dataClasses: ["credentials"] },
+      }),
+    ).rejects.toMatchObject({ code: "POLICY_DENIED" });
+    expect(f.counts()).toEqual(before);
   });
 
   it("retries an intermittently missing inventory entry a bounded number of times", async () => {
@@ -427,9 +679,19 @@ describe("policy-controlled model requests", () => {
     await expect(flaky.gateway.complete(testRequest)).resolves.toMatchObject({ cacheHit: false });
     expect(flaky.counts().completions).toBe(1);
     const absent = await fixture(undefined, undefined, () => ["other"]);
-    await expect(absent.gateway.complete(testRequest)).rejects.toMatchObject({
+    const refusal = await absent.gateway.complete(testRequest).catch((error: unknown) => error);
+    expect(refusal).toMatchObject({
       code: "CAPABILITY_UNAVAILABLE",
+      details: {
+        capability: "model",
+        provider: "fake",
+        reasonCode: "model_not_in_inventory",
+        declaredModelsPresent: [],
+        declaredModelsAbsent: ["model"],
+      },
     });
+    // The milestone label never applied to a missing model; the reason code replaces it.
+    expect(refusal).not.toHaveProperty("details.milestone");
     expect(absent.counts().completions).toBe(0);
     expect(absent.counts().requests).toBe(4);
   });
@@ -444,6 +706,7 @@ describe("policy-controlled model requests", () => {
     });
     await expect(missing.complete(testRequest)).rejects.toMatchObject({
       code: "CAPABILITY_UNAVAILABLE",
+      details: { capability: "structuredJson", reasonCode: "model_capability_missing" },
     });
     expect(f.counts().requests).toBe(0);
     await expect(
@@ -458,7 +721,22 @@ describe("policy-controlled model requests", () => {
     );
     await expect(changed.gateway.complete(testRequest)).rejects.toMatchObject({
       code: "CAPABILITY_UNAVAILABLE",
+      details: {
+        reasonCode: "model_substituted",
+        requestedModel: "model",
+        resolvedModel: "other-model",
+      },
     });
+    // Undeclared provider and model are distinct, named refusals before any request.
+    await expect(f.gateway.complete({ ...testRequest, provider: "ghost" })).rejects.toMatchObject({
+      details: { reasonCode: "provider_unavailable", availableProviders: ["fake"] },
+    });
+    await expect(
+      f.gateway.complete({ ...testRequest, model: "ghost-model" }),
+    ).rejects.toMatchObject({
+      details: { reasonCode: "model_not_declared", declaredModels: ["model"] },
+    });
+    expect(f.counts().requests).toBe(0);
     expect(changed.counts().completions).toBe(1);
   });
 
@@ -552,13 +830,13 @@ describe("policy-controlled model requests", () => {
     expect(f.records).toHaveLength(1);
   });
 
-  it("rechecks consent before repair and stops without the second call", async () => {
+  it("rechecks the provider allowlist before repair and stops without the second call", async () => {
     const f = await fixture((_req, res) =>
       res.end(JSON.stringify({ ...completion, choices: [{ message: { content: "invalid" } }] })),
     );
     f.options.recorder.record = async (record) => {
       f.records.push(record);
-      f.revoke();
+      f.options.allowedProviders.length = 0;
     };
     await expect(f.gateway.complete(testRequest)).rejects.toMatchObject({ code: "POLICY_DENIED" });
     expect(f.counts().completions).toBe(1);

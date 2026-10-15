@@ -4,18 +4,19 @@
   "required": [
     "projectId",
     "sourceSnapshotId",
-    "type",
-    "budget"
+    "type"
   ],
   "properties": {
     "projectId": {
       "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "description": "Project id"
     },
     "sourceSnapshotId": {
       "minLength": 1,
       "maxLength": 200,
-      "type": "string"
+      "type": "string",
+      "description": "Fingerprint of the human-approved requirement snapshot (testmaster://requirements/{projectId})"
     },
     "type": {
       "anyOf": [
@@ -35,71 +36,44 @@
           "const": "integration",
           "type": "string"
         }
-      ]
+      ],
+      "description": "Kind of tests to propose; auto lets the model choose per requirement"
+    },
+    "requirementIds": {
+      "minItems": 1,
+      "maxItems": 100,
+      "type": "array",
+      "items": {
+        "pattern": "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      },
+      "description": "Restrict the plan to these requirements"
+    },
+    "model": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string",
+      "description": "Model id from the project's profiles"
     },
     "budget": {
-      "anyOf": [
-        {
-          "type": "null"
-        },
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "number"
-        },
-        {
-          "type": "string"
-        },
-        {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/T0"
-          }
-        },
-        {
-          "type": "object",
-          "patternProperties": {
-            "^(.*)$": {
-              "$ref": "#/$defs/T0"
-            }
-          }
+      "additionalProperties": false,
+      "description": "Optional time budget",
+      "type": "object",
+      "properties": {
+        "deadlineMs": {
+          "minimum": 1,
+          "maximum": 600000,
+          "type": "integer",
+          "description": "Time budget in milliseconds"
         }
-      ]
+      }
+    },
+    "partialGeneration": {
+      "type": "boolean",
+      "description": "After the repairs, store the proposals that pass the checks and list the refused ones in extensions['testmaster:refusedProposals']; default false: one refused proposal refuses the whole batch"
     }
   },
-  "$defs": {
-    "T0": {
-      "anyOf": [
-        {
-          "type": "null"
-        },
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "number"
-        },
-        {
-          "type": "string"
-        },
-        {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/T0"
-          }
-        },
-        {
-          "type": "object",
-          "patternProperties": {
-            "^(.*)$": {
-              "$ref": "#/$defs/T0"
-            }
-          }
-        }
-      ]
-    }
-  },
+  "$defs": {},
   "$id": "urn:testmaster:Mcp_testmaster_generate_plan",
   "$schema": "https://json-schema.org/draft/2020-12/schema"
 }

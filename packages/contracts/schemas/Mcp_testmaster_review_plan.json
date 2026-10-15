@@ -10,25 +10,29 @@
   "properties": {
     "batchId": {
       "pattern": "^pbt_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "description": "Proposal batch id"
     },
     "expectedVersion": {
       "minimum": 1,
-      "type": "integer"
+      "type": "integer",
+      "description": "Batch version being reviewed, for optimistic concurrency"
     },
     "acceptIds": {
       "type": "array",
       "items": {
         "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
         "type": "string"
-      }
+      },
+      "description": "Proposals to accept"
     },
     "rejectIds": {
       "type": "array",
       "items": {
         "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
         "type": "string"
-      }
+      },
+      "description": "Proposals to reject"
     }
   },
   "$defs": {},

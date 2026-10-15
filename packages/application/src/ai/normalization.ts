@@ -10,11 +10,19 @@ import {
 } from "@testmaster/planner";
 import type { ModelInput, ModelService } from "./model.js";
 
+export interface NormalizeProgress {
+  completed: number;
+  total: number;
+  message: string;
+}
+
 /** Bounded extraction, with prior statements available for cross-source conflict detection. */
 export async function normalizeSources(
   model: ModelService,
   input: Omit<ModelInput, "purpose" | "responseSchema" | "data">,
   sources: SourceParseResult[],
+  /** Synchronous; a throwing callback aborts normalization. */
+  onProgress?: (progress: NormalizeProgress) => void,
 ) {
   const chunks = sources.flatMap((source) => source.chunks);
   const catalog = new EvidenceCatalog(chunks.map((chunk) => chunk.evidenceRef));
@@ -48,6 +56,9 @@ export async function normalizeSources(
     bytes += size;
   }
   if (current.length) batches.push(current);
+  // One unit per model batch plus one for cross-source reconciliation.
+  const total = batches.length + (sources.length > 1 ? 1 : 0);
+  onProgress?.({ completed: 0, total, message: `Normalizing ${batches.length} source batch(es)` });
   const merged: NormalizedRequirements = { requirements: [], conflicts: [], openQuestions: [] };
   const callIds: string[] = [];
   for (const [index, batch] of batches.entries()) {
@@ -76,6 +87,11 @@ export async function normalizeSources(
       evidence,
     );
     Object.assign(merged, combined);
+    onProgress?.({
+      completed: index + 1,
+      total,
+      message: `Normalized batch ${index + 1} of ${batches.length}`,
+    });
   }
   // Exact duplicates are merged without collapsing contradictory statements or dropping citations.
   const aliases = new Map<string, string>();
@@ -128,6 +144,7 @@ export async function normalizeSources(
       ).values(),
     ];
     merged.openQuestions = [...new Set([...merged.openQuestions, ...output.openQuestions])];
+    onProgress?.({ completed: total, total, message: "Reconciled conflicts across sources" });
   }
   return { normalized: validateNormalization(merged, evidence), modelCallIds: callIds };
 }

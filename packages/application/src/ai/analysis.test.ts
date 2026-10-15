@@ -17,7 +17,7 @@ import { type ArtifactsService, EvidenceUnavailableError } from "../artifacts.js
 import type { ServiceContext } from "../context.js";
 import { AnalysisService, resolveAnalysisEvidence } from "./analysis.js";
 import type { DiscoveryDetail } from "./discovery.js";
-import type { ModelService } from "./model.js";
+import { ModelService } from "./model.js";
 
 const databases: PersistenceDatabase[] = [];
 afterEach(() => {
@@ -188,12 +188,17 @@ async function fixture(
   });
   const model = {
     complete,
-    consent: vi.fn(async () => ({
-      dataClasses: ["execution_evidence", "code_summary"],
-      revokedAt: null,
-    })),
+    select: ModelService.prototype.select,
     config: {
-      modelProviders: [{ id: "fake" }],
+      modelProviders: [
+        {
+          id: "fake",
+          models: [
+            { id: "fake-model", capabilities: { structuredJson: true } },
+            { id: "plain-model", capabilities: { structuredJson: false } },
+          ],
+        },
+      ],
       profilePolicy: { allowedModelProviders: ["fake"] },
       effectiveConfig: { policyHash: "a".repeat(64) },
     },
@@ -366,8 +371,12 @@ it("structured catalog retains frozen assertion semantics and verified reference
     }),
   );
 });
-async function attachLocatorEvidence(f: Awaited<ReturnType<typeof fixture>>, namedCount: number) {
-  const candidates = Array.from({ length: 52 }, (_, index) => {
+async function attachLocatorEvidence(
+  f: Awaited<ReturnType<typeof fixture>>,
+  namedCount: number,
+  extra: LocatorEvidence["candidates"] = [],
+) {
+  const generated = Array.from({ length: 52 }, (_, index) => {
     const identity = {
       role: index >= 52 - namedCount ? "button" : "",
       name: index === 51 ? "Checkout" : index >= 52 - namedCount ? `Control ${index}` : "",
@@ -382,6 +391,7 @@ async function attachLocatorEvidence(f: Awaited<ReturnType<typeof fixture>>, nam
       visible: true,
     };
   });
+  const candidates = [...generated, ...extra];
   const payload = {
     schemaVersion: "1.0.0" as const,
     stepId: "price",
@@ -573,10 +583,15 @@ it("model failure retains byte-identical immutable factual predecessor and does 
   const before = f.db.get("SELECT data_json FROM analyses WHERE id=?", factual.id)?.data_json;
   const enriched = await f.service.analyze(f.run.id, { model: true });
   expect(enriched).toMatchObject({
-    source: "model",
-    parentId: factual.id,
+    source: "rules",
+    parentId: null,
+    modelCallId: null,
     failureKind: factual.failureKind,
   });
+  expect(enriched.id).not.toBe(factual.id);
+  expect(enriched.limitations.some((value) => value.includes("Model enrichment abstained"))).toBe(
+    true,
+  );
   expect(f.db.get("SELECT data_json FROM analyses WHERE id=?", factual.id)?.data_json).toBe(before);
   expect(() => f.db.run("UPDATE analyses SET data_json=? WHERE id=?", "{}", factual.id)).toThrow();
   expect(() => f.db.run("DELETE FROM analyses WHERE id=?", enriched.id)).toThrow();
@@ -601,7 +616,8 @@ it("schema-valid enrichment that contradicts the rules cause abstains and names 
   }));
   const enriched = await f.service.analyze(f.run.id, { model: true });
   expect(enriched).toMatchObject({
-    source: "model",
+    source: "rules",
+    parentId: null,
     modelCallId: null,
     failureKind: "product_bug",
   });
@@ -655,7 +671,7 @@ it("lost paid lease settles with unknown usage and never reissues enrichment", a
   expect(f.service.jobs.get(f.ctx.workspaceId, job.jobId)?.result).toMatchObject({
     unknownUsage: true,
   });
-  expect(f.service.get(f.run.id)?.parentId).toBe(factual.id);
+  expect(f.service.get(f.run.id)).toMatchObject({ source: "rules", parentId: null });
 });
 it("approved-schema mismatch takes precedence over generic business mismatch", async () => {
   const f = await fixture({ schema: true });
@@ -727,6 +743,94 @@ it("persisted supervisor security refusal precedes business mismatch and resolve
     contentHash: semanticHash(value),
   });
   expect(await resolveAnalysisEvidence(f.ctx, f.artifacts, f.run.id, ref)).toEqual(value);
+});
+type AnalysisFixture = Awaited<ReturnType<typeof fixture>>;
+function recordRunnerEvent(
+  f: AnalysisFixture,
+  seq: number,
+  type: string,
+  payload: Record<string, unknown>,
+) {
+  const event = {
+    protocolVersion: "1.0.0",
+    seq,
+    attemptId: f.step.attemptId,
+    occurredAt: new Date().toISOString(),
+    type,
+    payload,
+  };
+  const id = `evt_00000000-0000-4000-8000-0000000000${String(60 + seq)}`;
+  f.db.run(
+    "INSERT INTO observations(workspace_id,id,created_at,attempt_id,event_id,seq,fence,data_json) VALUES(?,?,?,?,?,?,?,?)",
+    f.ctx.workspaceId,
+    id,
+    event.occurredAt,
+    f.step.attemptId,
+    id,
+    seq,
+    1,
+    canonicalJson(event),
+  );
+  return event;
+}
+const blockedByEgress = { outcome: "blocked", reasonCode: "egress_denied" };
+it("a blocked run names the denied origin in the hypothesis, conclusion, facts and security next step", async () => {
+  const f = await fixture();
+  const denial = recordRunnerEvent(f, 3, "egress.denied", {
+    stepId: "request",
+    origin: "https://tracker.example.test",
+    method: "GET",
+    resourceType: "script",
+    disposition: "fatal",
+    count: 2,
+  });
+  recordRunnerEvent(f, 4, "runner.finished", blockedByEgress);
+  const analysis = await f.service.analyze(f.run.id, {});
+  expect(analysis.failureKind).toBe("security_policy");
+  expect(analysis.hypotheses[0]?.text).toContain("https://tracker.example.test");
+  expect(analysis.hypotheses[0]?.supports).toContainEqual(
+    expect.objectContaining({ observationSeq: 3, contentHash: semanticHash(denial) }),
+  );
+  expect(analysis.facts.map((fact) => fact.text)).toContain(
+    "The network policy denied 2 script requests to https://tracker.example.test; the denial blocked the run.",
+  );
+  expect(analysis.diagnosis?.conclusion.text).toContain("https://tracker.example.test");
+  const review = analysis.diagnosis?.nextSteps.find((step) =>
+    step.text.startsWith("Review the refused security precondition"),
+  );
+  expect(review?.text).toContain("https://tracker.example.test");
+  expect(review?.text).toContain("--additional-origin");
+  expect(review?.evidenceRefs).toEqual([
+    expect.objectContaining({ observationSeq: 3, contentHash: semanticHash(denial) }),
+  ]);
+});
+it("a security refusal without a recorded denial keeps the generic review step", async () => {
+  const f = await fixture();
+  recordRunnerEvent(f, 4, "runner.finished", blockedByEgress);
+  const analysis = await f.service.analyze(f.run.id, {});
+  expect(analysis.failureKind).toBe("security_policy");
+  expect(analysis.facts.map((fact) => fact.text).join("\n")).not.toContain("network policy");
+  expect(analysis.diagnosis?.nextSteps.map((step) => step.text)).toContain(
+    "Review the refused security precondition and its recorded reason codes; do not change the test.",
+  );
+});
+it("a passing run still surfaces an aborted passive denial as a fact without a failure", async () => {
+  const f = await fixture({ passed: true });
+  recordRunnerEvent(f, 3, "egress.denied", {
+    stepId: "request",
+    origin: "https://flagcdn.com",
+    method: "GET",
+    resourceType: "image",
+    disposition: "aborted",
+    count: 3,
+  });
+  const analysis = await f.service.analyze(f.run.id, {});
+  expect(analysis.facts.map((fact) => fact.text)).toContain(
+    "The network policy aborted 3 image requests to https://flagcdn.com; the page continued and the run was not failed by it.",
+  );
+  expect(analysis.diagnosis?.conclusion.status).toBe("no_failure");
+  expect(analysis.hypotheses).toEqual([]);
+  expect(analysis.failureKind).not.toBe("security_policy");
 });
 
 it("authorized frozen source handle persists exact snapshot path and content binding", async () => {
@@ -919,11 +1023,76 @@ it("unknown model handles reject the entire enrichment and preserve the factual 
     },
   }));
   const result = await f.service.analyze(f.run.id, { model: true });
-  expect(result.parentId).toBe(factual.id);
+  expect(result).toMatchObject({ source: "rules", parentId: null });
   expect(result.modelCallId).toBeNull();
   expect(result.limitations.some((value) => value.includes("unknown execution evidence"))).toBe(
     true,
   );
+});
+it("an abstained enrichment is not labeled as model output and a later explicit model enriches the factual row", async () => {
+  const f = await fixture();
+  const factual = await f.service.analyze(f.run.id);
+  // The default model is unavailable, so the enrichment abstains without a model call.
+  const abstained = await f.service.analyze(f.run.id, { model: true });
+  expect(abstained).toMatchObject({ source: "rules", modelCallId: null, parentId: null });
+  expect(abstained.limitations.some((value) => value.includes("Model enrichment abstained"))).toBe(
+    true,
+  );
+  expect(f.service.get(f.run.id)?.id).toBe(abstained.id);
+  // Control: an explicit working model enriches from the factual diagnosis, not from the abstention.
+  f.complete.mockImplementationOnce(async () => ({
+    modelCallId: f.modelCallId,
+    output: {
+      failureKind: "unknown",
+      hypotheses: [],
+      recommendedAction: "collect_more_evidence",
+      fixTargetHandle: null,
+      limitations: [],
+      nextSteps: [],
+      evidenceGaps: [],
+    },
+  }));
+  const enriched = await f.service.analyze(f.run.id, {
+    model: true,
+    provider: "fake",
+    modelId: "fake-model",
+  });
+  expect(f.complete).toHaveBeenLastCalledWith(
+    expect.objectContaining({ provider: "fake", model: "fake-model" }),
+  );
+  expect(enriched).toMatchObject({ source: "model", parentId: factual.id });
+  expect(enriched.modelCallId).toBe(f.modelCallId);
+  expect(enriched.limitations.some((value) => value.includes("Model enrichment abstained"))).toBe(
+    false,
+  );
+});
+it("an invalid explicit model choice is refused before any job or provider call", async () => {
+  const f = await fixture();
+  await expect(
+    f.service.analyze(f.run.id, { model: true, provider: "missing" }),
+  ).rejects.toMatchObject({
+    code: "CAPABILITY_UNAVAILABLE",
+    details: { reasonCode: "provider_unavailable", availableProviders: ["fake"] },
+  });
+  await expect(
+    f.service.analyze(f.run.id, { model: true, provider: "fake", modelId: "absent" }),
+  ).rejects.toMatchObject({
+    code: "CAPABILITY_UNAVAILABLE",
+    details: { reasonCode: "model_not_configured", availableModels: ["fake-model", "plain-model"] },
+  });
+  await expect(
+    f.service.analyze(f.run.id, { model: true, provider: "fake", modelId: "plain-model" }),
+  ).rejects.toMatchObject({
+    code: "CAPABILITY_UNAVAILABLE",
+    details: { reasonCode: "model_capability_missing" },
+  });
+  // A choice without the switch would silently run the rules only.
+  await expect(f.service.analyze(f.run.id, { provider: "fake" })).rejects.toMatchObject({
+    code: "INVALID_ARGUMENT",
+  });
+  expect(f.complete).not.toHaveBeenCalled();
+  expect(f.db.get("SELECT COUNT(*) AS n FROM analyses")?.n).toBe(0);
+  expect(f.db.get("SELECT COUNT(*) AS n FROM job_leases WHERE queue='analysis'")?.n).toBe(0);
 });
 it("stale source identity is refused before dispatch and unbound Runs disclose missing targets", async () => {
   const bound = await fixture({ source: true });
@@ -1646,4 +1815,196 @@ it("layered observations remain bounded and scrubbed while retaining immutable e
   } finally {
     vi.unstubAllEnvs();
   }
+});
+
+async function attachTerminalProcess(
+  f: Awaited<ReturnType<typeof fixture>>,
+  metadata: Record<string, unknown>,
+) {
+  const fixtures = relationalFixtures(f.db);
+  const snapshot = fixtures.find((item) => item.kind === "Snapshot")!;
+  const artifact = fixtures.find((item) => item.kind === "Artifact")!;
+  for (const item of [snapshot, artifact]) {
+    if (item.kind === "Artifact") {
+      Object.assign(item.dto, { state: "available", hash: "a".repeat(64) });
+      item.row.state = "available";
+      item.row.hash = "a".repeat(64);
+      item.row.data_json = canonicalJson(item.dto);
+    }
+    const insert = fixtureInsert(item);
+    f.db.run(insert.sql, ...insert.values);
+  }
+  const entries = [
+    {
+      artifactId: artifact.dto.id,
+      relativePath: "terminal/go.json",
+      kind: "terminal.process",
+      sizeBytes: 300,
+      state: "available",
+      redactionStatus: "sanitized",
+      sha256: "a".repeat(64),
+    },
+  ];
+  vi.mocked(f.artifacts.get).mockResolvedValue({
+    manifest: { snapshotId: snapshot.dto.id, attemptId: f.step.attemptId, entries },
+  } as never);
+  f.artifacts.read = vi.fn(async () => ({
+    bytes: Buffer.from(JSON.stringify(metadata)),
+  })) as never;
+  return { artifactId: String(artifact.dto.id) };
+}
+const hangingProcessPlan = {
+  schemaVersion: "1.0.0",
+  kind: "executable",
+  name: "Hang",
+  type: "cli",
+  runner: "terminal",
+  requirementRefs: [],
+  steps: [
+    {
+      id: "go",
+      kind: "action",
+      operation: "run",
+      description: "Run",
+      input: { program: { path: "/bin/sleep" }, args: [{ literal: "60" }] },
+      timeoutMs: 100,
+    },
+  ],
+} as unknown as ExecutablePlan;
+const processStep = {
+  planStepId: "go",
+  reasonCode: "assertion_timeout",
+  expected: null,
+  observed: null,
+  error: { code: "assertion_timeout", message: "Process go did not exit within 100 ms" },
+} satisfies Partial<StepResult>;
+
+it("terminal process timeout is diagnosed from the terminal.process artifact, not as a null value", async () => {
+  const f = await fixture({ plan: hangingProcessPlan, step: processStep });
+  const { artifactId } = await attachTerminalProcess(f, {
+    stepId: "go",
+    kind: "run",
+    exitCode: null,
+    signal: "SIGKILL",
+    durationMs: 100,
+    timedOut: true,
+    lingeringProcesses: 2,
+    stdout: { bytes: 4, sha256: "b".repeat(64), truncated: false },
+  });
+  const analysis = await f.service.analyze(f.run.id);
+  const diagnosis = analysis.diagnosis!;
+  expect(analysis.failureKind).toBe("unknown");
+  expect(diagnosis.observation?.absence).toBeNull();
+  expect(diagnosis.observation?.expected).not.toBeNull();
+  expect(diagnosis.observation?.expected).not.toBe("null");
+  expect(diagnosis.observation?.observed).toContain("SIGKILL");
+  expect(diagnosis.observation?.observed).toContain("2");
+  expect(diagnosis.observation?.evidenceRefs).toContainEqual(
+    expect.objectContaining({ artifactId, relativePath: "terminal/go.json" }),
+  );
+  expect(diagnosis.conclusion.status).toBe("cause_unknown");
+  expect(diagnosis.evidenceGaps.some((gap) => gap.includes("outlived"))).toBe(true);
+  expect(diagnosis.nextSteps.length).toBeGreaterThan(0);
+  for (const step of diagnosis.nextSteps) expect(step.text).not.toMatch(/response/iu);
+  expect(diagnosis.nextSteps[0]?.text).toContain("terminal/go.stdout.txt");
+  expect(diagnosis.nextSteps[0]?.evidenceRefs).toContainEqual(
+    expect.objectContaining({ artifactId }),
+  );
+});
+
+it("a terminal step failure without a recorded timeout keeps the null observation and unknown cause", async () => {
+  const f = await fixture({ plan: hangingProcessPlan, step: processStep });
+  await attachTerminalProcess(f, {
+    stepId: "go",
+    kind: "run",
+    exitCode: 1,
+    signal: null,
+    durationMs: 30,
+    timedOut: false,
+    lingeringProcesses: 0,
+  });
+  const analysis = await f.service.analyze(f.run.id);
+  const diagnosis = analysis.diagnosis!;
+  expect(diagnosis.observation?.absence).toBe("null_value");
+  expect(diagnosis.conclusion.status).toBe("cause_unknown");
+  expect(diagnosis.evidenceGaps.some((gap) => gap.includes("outlived"))).toBe(false);
+  expect(diagnosis.nextSteps.length).toBeGreaterThan(0);
+  for (const step of diagnosis.nextSteps) expect(step.text).not.toMatch(/response/iu);
+  expect(diagnosis.nextSteps[0]?.text).not.toContain("terminal/go.stdout.txt");
+});
+it("a failed step lists a visible unnamed form control and still omits hidden or non-form nodes", async () => {
+  const f = await fixture({ passed: false });
+  const control = (tag: string, visible: boolean) => {
+    const identity = {
+      role: "",
+      name: "",
+      tag,
+      type: tag === "input" ? "password" : "",
+      attributes: { id: "pw", placeholder: "Password" },
+    };
+    return { ...identity, fingerprint: locatorFingerprint(identity), matched: false, visible };
+  };
+  await attachLocatorEvidence(f, 1, [
+    control("input", true),
+    control("input", false),
+    control("div", true),
+  ]);
+  await f.service.analyze(f.run.id, { model: true });
+  const request = f.complete.mock.calls[0]![0] as {
+    data: { measurements: Record<string, unknown>[] };
+  };
+  const locator = request.data.measurements.find((item) => item.kind === "locator")!;
+  const listed = locator.candidates as Record<string, unknown>[];
+  expect(listed).toHaveLength(2);
+  expect(listed).toContainEqual(
+    expect.objectContaining({
+      tag: "input",
+      type: "password",
+      visible: true,
+      attributes: expect.objectContaining({ placeholder: "Password" }),
+    }),
+  );
+  expect(locator.unlistedCandidateCount).toBe(55 - 2);
+});
+it("artifact availability facts aggregate per kind and cite every artifact of that kind", async () => {
+  const f = await fixture({ passed: false });
+  const fixtures = relationalFixtures(f.db);
+  const snapshot = fixtures.find((item) => item.kind === "Snapshot")!;
+  const artifact = fixtures.find((item) => item.kind === "Artifact")!;
+  Object.assign(artifact.dto, { state: "available", hash: "a".repeat(64) });
+  artifact.row.state = "available";
+  artifact.row.hash = "a".repeat(64);
+  artifact.row.data_json = canonicalJson(artifact.dto);
+  for (const item of [snapshot, artifact]) {
+    const insert = fixtureInsert(item);
+    f.db.run(insert.sql, ...insert.values);
+  }
+  const entry = (relativePath: string, kind: string) => ({
+    artifactId: artifact.dto.id,
+    relativePath,
+    kind,
+    sizeBytes: 10,
+    state: "available",
+    redactionStatus: "sanitized",
+    sha256: "a".repeat(64),
+  });
+  const entries = [
+    entry("logs/container.log", "log"),
+    entry("logs/egress.ndjson", "network"),
+    entry("logs/runner.log", "log"),
+  ];
+  vi.mocked(f.artifacts.get).mockResolvedValue({
+    manifest: { snapshotId: snapshot.dto.id, attemptId: f.step.attemptId, entries },
+  } as never);
+  const analysis = await f.service.analyze(f.run.id);
+  const availability = analysis.facts.filter((fact) => fact.text.startsWith("Verified "));
+  expect(availability.map((fact) => fact.text)).toEqual([
+    "Verified 2 log artifacts available.",
+    "Verified 1 network artifact available.",
+  ]);
+  expect(availability[0]!.evidenceRefs.map((ref) => ref.relativePath)).toEqual([
+    "logs/container.log",
+    "logs/runner.log",
+  ]);
+  expect(analysis.facts.some((fact) => fact.text.endsWith("is available."))).toBe(false);
 });

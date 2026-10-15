@@ -13,7 +13,8 @@ export interface RunnerInput {
   networkPolicy: NetworkPolicy;
   secrets: { secretRef: string; secretVersion: number }[];
   variables?: Record<string, { value: unknown; sensitive: boolean }>;
-  artifacts?: Record<string, { path: string; mimeType: string; sizeBytes: number }>;
+  /** `name` is the fixture file name inside the read-only input bind; used as argv[0] of terminal programs. */
+  artifacts?: Record<string, { path: string; mimeType: string; sizeBytes: number; name?: string }>;
   schemas?: Record<string, unknown>;
   policy?: {
     popupAliases?: string[];
@@ -35,6 +36,12 @@ export interface RunnerInput {
     mutationStepIds: string[];
     maxRequests: number;
     mutationActions?: PlanStep[];
+    /**
+     * Exploration only. The first observation must offer at least one action (an observed
+     * same-origin link or an approved mutation); when it offers none the run is inconclusive
+     * (`insufficient_evidence`) instead of passing without having explored anything.
+     */
+    requireActionable?: boolean;
   };
   /**
    * Dynamic authentication prepared by the host (SEC-022, SEC-024). `storageState` names a vault
@@ -77,6 +84,18 @@ export function storageStateRefusal(input: RunnerInput): RunnerResult | undefine
   );
   return present ? { outcome: "blocked", reasonCode: "unsupported_capability" } : undefined;
 }
+/**
+ * What an aborted attempt reports when nothing worse was proven first. The abort reason decides:
+ * the attempt deadline is `inconclusive/execution_deadline` (a deadline says nothing about the
+ * product), any other abort, a requested cancel included, is `cancelled/user_cancelled`.
+ */
+export function abortVerdict(signal: AbortSignal): RunnerResult | undefined {
+  if (!signal.aborted) return undefined;
+  const reason = signal.reason;
+  if (reason instanceof Error && reason.message === "attempt_timeout")
+    return { outcome: "inconclusive", reasonCode: "execution_deadline" };
+  return { outcome: "cancelled", reasonCode: "user_cancelled" };
+}
 export class Runtime {
   readonly secrets = new Set<string>();
   readonly variables: Map<string, { value: unknown; sensitive: boolean }>;
@@ -97,16 +116,23 @@ export class Runtime {
     return this.protocol.emit(type, payload);
   }
   artifact(path: string, kind: string, mimeType: string, bytes: Uint8Array): Promise<void> {
-    if (this.activeStep) {
-      const paths = this.evidence.get(this.activeStep) ?? [];
-      paths.push(path);
-      this.evidence.set(this.activeStep, paths);
-    }
+    this.reference([path]);
     const safe =
       mimeType.startsWith("text/") || /json|xml|javascript/u.test(mimeType)
         ? Buffer.from(this.scrub(Buffer.from(bytes).toString("utf8")))
         : bytes;
     return this.protocol.artifact(path, kind, mimeType, safe);
+  }
+  /**
+   * Cites artifacts that were already written as evidence of the step running now, so a
+   * failed step points at the output it judged even when an earlier step produced it. Callers
+   * pass only paths they know exist: the manifest rejects references to unknown artifacts.
+   */
+  reference(paths: readonly string[]): void {
+    if (!this.activeStep) return;
+    const cited = this.evidence.get(this.activeStep) ?? [];
+    for (const path of paths) if (!cited.includes(path)) cited.push(path);
+    this.evidence.set(this.activeStep, cited);
   }
   scrub(text: string): string {
     return scrubEvidenceText(text, [...this.secrets]).text;
@@ -157,24 +183,43 @@ export class Runtime {
     }
     throw new RuntimeError("security_precondition_failed", "Unknown input value form");
   }
+  /**
+   * Runs the steps in order. `teardown` flushes what only exists once the run is over (the
+   * evidence of sessions nobody waited on). It runs once, while the step after which nothing
+   * more executes is still active, so that evidence is attached to the failing step, or to
+   * the last step when none failed, instead of belonging to no step.
+   */
   async runSteps(
     steps: PlanStep[],
     perform: (step: PlanStep) => Promise<void>,
+    teardown?: () => Promise<void>,
   ): Promise<RunnerResult> {
     let result: RunnerResult = { outcome: "passed", reasonCode: "assertions_satisfied" };
-    for (const step of steps) {
+    let tornDown = teardown === undefined;
+    for (const [position, step] of steps.entries()) {
       const index = this.index++;
+      const last = position === steps.length - 1;
       if (result.outcome !== "passed" || this.signal.aborted) {
-        if (this.signal.aborted && result.outcome === "passed")
-          result = { outcome: "cancelled", reasonCode: "user_cancelled" };
-        await this.emit("step.finished", {
-          stepId: step.id,
-          index,
-          status: "skipped",
-          reasonCode: this.signal.aborted ? "cancelled_before_step" : "stopped_after_failure",
-          durationMs: 0,
-          evidencePaths: [],
-        });
+        const verdict = abortVerdict(this.signal);
+        if (verdict && result.outcome === "passed") result = verdict;
+        const previousStep = this.activeStep;
+        try {
+          if (!tornDown) {
+            tornDown = true;
+            this.activeStep = step.id;
+            await teardown?.();
+          }
+          await this.emit("step.finished", {
+            stepId: step.id,
+            index,
+            status: "skipped",
+            reasonCode: this.signal.aborted ? "cancelled_before_step" : "stopped_after_failure",
+            durationMs: 0,
+            evidencePaths: this.evidence.get(step.id) ?? [],
+          });
+        } finally {
+          this.activeStep = previousStep;
+        }
         continue;
       }
       await this.emit("step.started", { stepId: step.id, index });
@@ -184,29 +229,45 @@ export class Runtime {
       const started = performance.now();
       try {
         await perform(step);
+        const durationMs = Math.round(performance.now() - started);
+        if (!tornDown && (last || this.signal.aborted)) {
+          tornDown = true;
+          await teardown?.();
+        }
+        // An action that returns normally after the abort (a killed process tree does) was cut
+        // short, not completed; an assertion that returned holds a real observation.
+        const interrupted = step.kind === "assertion" ? undefined : abortVerdict(this.signal);
         await this.emit("step.finished", {
           stepId: step.id,
           index,
-          status: "passed",
-          durationMs: Math.round(performance.now() - started),
+          status: interrupted?.outcome ?? "passed",
+          ...(interrupted ? { reasonCode: interrupted.reasonCode } : {}),
+          durationMs,
           evidencePaths: this.evidence.get(step.id) ?? [],
           ...this.comparisons.get(step.id),
         });
+        if (interrupted && step.required !== false) result = interrupted;
       } catch (error) {
-        const reason = this.signal.aborted
-          ? "user_cancelled"
+        const verdict = abortVerdict(this.signal);
+        const reason = verdict
+          ? verdict.reasonCode
           : error instanceof RuntimeError
             ? error.reasonCode
             : step.kind === "assertion"
               ? "assertion_timeout"
               : "insufficient_evidence";
-        const outcome = this.signal.aborted
-          ? "cancelled"
+        const outcome = verdict
+          ? verdict.outcome
           : error instanceof RuntimeError
             ? error.outcome
             : step.kind === "assertion"
               ? "failed"
               : "inconclusive";
+        const durationMs = Math.round(performance.now() - started);
+        if (!tornDown && (last || this.signal.aborted || step.required !== false)) {
+          tornDown = true;
+          await teardown?.();
+        }
         await this.emit("step.finished", {
           stepId: step.id,
           index,
@@ -224,7 +285,7 @@ export class Runtime {
               8000,
             ),
           },
-          durationMs: Math.round(performance.now() - started),
+          durationMs,
           evidencePaths: this.evidence.get(step.id) ?? [],
           ...this.comparisons.get(step.id),
         });

@@ -5,7 +5,8 @@ import { runBrowser } from "./browser.js";
 import { startForwarder } from "./forwarder/index.js";
 import { runHttp } from "./http.js";
 import { ProtocolClient } from "./protocol.js";
-import { type RunnerInput, type RunnerResult, Runtime } from "./runtime.js";
+import { abortVerdict, type RunnerInput, type RunnerResult, Runtime } from "./runtime.js";
+import { runTerminal } from "./terminal.js";
 
 async function readInput(): Promise<RunnerInput> {
   const candidates = [
@@ -23,7 +24,22 @@ async function readInput(): Promise<RunnerInput> {
   }
   throw new Error("attempt_input_missing");
 }
-function resultFromError(error: unknown): RunnerResult {
+/**
+ * The supervisor tells the runner why it stops. Only a requested cancel and the attempt deadline
+ * are verdicts the runner stands behind and reports with `runner.finished`; a broken protocol
+ * socket leaves nobody to report to, and the supervisor then rules the attempt malformed.
+ */
+function shouldReport(signal: AbortSignal): boolean {
+  if (!signal.aborted) return true;
+  const reason = signal.reason;
+  return (
+    reason instanceof Error &&
+    (reason.message === "user_cancelled" || reason.message === "attempt_timeout")
+  );
+}
+function resultFromError(error: unknown, signal: AbortSignal): RunnerResult {
+  const aborted = abortVerdict(signal);
+  if (aborted) return aborted;
   if (error instanceof Error && error.message === "user_cancelled")
     return { outcome: "cancelled", reasonCode: "user_cancelled" };
   return { outcome: "inconclusive", reasonCode: "insufficient_evidence" };
@@ -62,7 +78,7 @@ export async function runHarness(): Promise<RunnerResult> {
     if (input.imported) {
       await runtime.emit("step.started", { stepId: "imported-code", index: 1000000 });
       result = await runImported(runtime);
-      if (!runtime.signal.aborted)
+      if (shouldReport(runtime.signal))
         await runtime.emit("step.finished", {
           stepId: "imported-code",
           index: 1000000,
@@ -73,8 +89,9 @@ export async function runHarness(): Promise<RunnerResult> {
         });
     } else if (!input.plan) throw new Error("attempt_plan_missing");
     else if (input.plan.runner === "playwright") result = await runBrowser(runtime);
+    else if (input.plan.runner === "terminal") result = await runTerminal(runtime);
     else result = await runHttp(runtime);
-    if (!runtime.signal.aborted)
+    if (shouldReport(runtime.signal))
       await runtime.emit("runner.finished", {
         outcome: result.outcome,
         reasonCode: result.reasonCode,
@@ -82,8 +99,8 @@ export async function runHarness(): Promise<RunnerResult> {
       });
     return result;
   } catch (error) {
-    result = resultFromError(error);
-    if (!runtime.signal.aborted) {
+    result = resultFromError(error, runtime.signal);
+    if (shouldReport(runtime.signal)) {
       try {
         if (input.imported)
           await runtime.emit("step.finished", {
@@ -201,7 +218,9 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
       child.once("error", reject);
     });
     await queue;
-    if (runtime.signal.aborted) return { outcome: "cancelled", reasonCode: "user_cancelled" };
+    const aborted = abortVerdict(runtime.signal);
+    if (aborted)
+      return failures ? { outcome: "failed", reasonCode: "assertion_mismatch" } : aborted;
     return count === 0
       ? { outcome: "inconclusive", reasonCode: "insufficient_evidence" }
       : failures || code !== 0

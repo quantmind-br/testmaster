@@ -31,13 +31,15 @@ export interface BudgetLedger {
   settle(reservationId: string, usage: TokenUsage, cost: Cost): Promise<void>;
   release(reservationId: string, reason: string): Promise<void>;
 }
-export interface ConsentStore {
-  find(q: { workspaceId: string; projectId: string; providerId: string }): Promise<{
-    dataClasses: string[];
-    grantedAt: string;
-    revokedAt: string | null;
-    allowUnknownCost?: boolean;
-  } | null>;
+/**
+ * Bounded, scrubbed account of why a model response failed local validation. It carries schema
+ * paths, rule names and validator messages only, never model output text.
+ */
+export interface ValidationFailureSummary {
+  code: string;
+  message: string;
+  issues: { path: string; rule: string; message: string }[];
+  omittedIssues: number;
 }
 export interface ModelCallRecord {
   id: string;
@@ -65,6 +67,7 @@ export interface ModelCallRecord {
   responseHash: string | null;
   finishReason: string | null;
   failureReason?: "output_truncated" | "content_filtered";
+  validationFailure?: ValidationFailureSummary;
   rawPrompt?: string;
 }
 export interface ModelCallRecorder {
@@ -135,12 +138,18 @@ export interface ModelRequest {
   tools?: ModelTool[];
   requiredCapabilities?: (keyof ModelCapabilities)[];
   deadlineMs: number;
+  /**
+   * Semantic validation of the schema-valid output (grounding, policy, importability). It throws
+   * a ContractError, whose `issues` become repair feedback and a bounded recorded validation
+   * failure, exactly like a schema violation. Any other error is a defect and is not repaired.
+   * The deadline spans every attempt, so a slow check also consumes the repair budget.
+   */
+  check?: (output: unknown) => Promise<void> | void;
   reasoningEffort?: ReasoningEffort;
   dataPolicy: {
     dataClasses: string[];
     maxInputBytes: number;
     maxInputTokens: number;
-    allowUnknownCost: boolean;
     recordRawPrompt?: boolean;
     secrets?: string[];
   };
@@ -169,7 +178,6 @@ export interface GatewayOptions {
   providers: ProviderConfig[];
   allowedProviders: string[];
   allowedEndpoints: string[];
-  consentStore: ConsentStore;
   budgetLedger: BudgetLedger;
   recorder: ModelCallRecorder;
   cache?: ModelCache;

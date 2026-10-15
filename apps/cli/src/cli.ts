@@ -33,6 +33,7 @@ import { identityCommands, serverCommands } from "./server.js";
 import { setupCommands } from "./setup.js";
 import { sourceCommands } from "./sources.js";
 import { testCommands } from "./tests.js";
+import { tokenCommands } from "./tokens.js";
 import { unavailableCommands } from "./unavailable.js";
 import { usageCommands } from "./usage.js";
 import { workerCommands } from "./workers.js";
@@ -82,6 +83,7 @@ export function createCli(runtime: Runtime): Command {
   explorationCommands(program, runtime);
   mcpCommands(program, runtime);
   serverCommands(program, runtime);
+  tokenCommands(program, runtime);
   identityCommands(program, runtime);
   resourceCommands(program, runtime);
   operationsCommands(program, runtime);
@@ -146,13 +148,7 @@ export async function runCli(
   } catch (error) {
     if (error instanceof CommanderError && error.exitCode === 0)
       runtime.pending = { data: { help }, text: help };
-    else
-      failure =
-        error instanceof CommanderError
-          ? new ContractError("INVALID_ARGUMENT", "Invalid command arguments", {
-              reason: error.code,
-            })
-          : error;
+    else failure = error instanceof CommanderError ? argumentError(error) : error;
   } finally {
     try {
       await runtime.close();
@@ -166,4 +162,20 @@ export async function runCli(
     process.removeListener("SIGTERM", sigterm);
     process.removeListener("SIGHUP", sighup);
   }
+}
+// Commander messages for these codes name only the declared option or argument, never a value
+// typed on the command line (unknown options and invalid choices echo the user's token).
+const NAMING_CODES = new Set([
+  "commander.missingMandatoryOptionValue",
+  "commander.optionMissingArgument",
+  "commander.missingArgument",
+  "commander.excessArguments",
+]);
+function argumentError(error: CommanderError): ContractError {
+  const message = NAMING_CODES.has(error.code)
+    ? error.message.replace(/^error: /u, "")
+    : "Invalid command arguments";
+  return new ContractError("INVALID_ARGUMENT", message.charAt(0).toUpperCase() + message.slice(1), {
+    reason: error.code,
+  });
 }

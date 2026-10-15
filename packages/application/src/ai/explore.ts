@@ -6,15 +6,58 @@ import { semanticHash, uuidV7IdGenerator } from "@testmaster/domain";
 import { FileEvidenceStore } from "@testmaster/evidence";
 import type { EntityDocument } from "@testmaster/persistence";
 import {
+  type BrowserObservation,
   type ExplorationBudget,
   explorationPlan,
   selectAction,
   validateObservation,
 } from "@testmaster/planner";
 import { AttemptExecutor } from "@testmaster/sandbox";
+import { attemptAdditionalOrigins } from "../authoring.js";
 import type { ResolvedConfig } from "../config.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "../context.js";
 import { ModelService } from "./model.js";
+
+/** A route that is itself a login page, so a password field there is expected. */
+const loginRoute = /(^|\/)(log-?in|sign-?in)(\/|$)/i;
+/**
+ * Cause of a failed exploration, most specific first: the first action-resolution failure (a model
+ * that could not be used explains why nothing was observed), then a first page that offered
+ * nothing to explore, then the first failed navigation of the stored browser network log, then
+ * the outcome and reason code.
+ */
+async function failureCause(
+  bundleDir: string | undefined,
+  outcome: string,
+  reasonCode: string | null | undefined,
+  resolutionFailure: { stepId: string; code: string; message: string } | undefined,
+  emptyFirst: BrowserObservation | undefined,
+): Promise<string> {
+  if (resolutionFailure)
+    return `Action resolution failed at ${resolutionFailure.stepId}: ${resolutionFailure.code}: ${resolutionFailure.message.slice(0, 300)}`;
+  if (emptyFirst && reasonCode === "insufficient_evidence") {
+    const at = new URL(emptyFirst.url);
+    at.search = "";
+    at.hash = "";
+    return `Exploration observed no same-origin link at ${at.href}: ${emptyFirst.controls?.length ?? 0} form controls, ${emptyFirst.hasPasswordField ? "password field present" : "no password field"}, 0 approved actions.${emptyFirst.settled === false ? " The page had not settled." : ""}`;
+  }
+  if (bundleDir) {
+    try {
+      // The runtime scrubbed the log before it was stored.
+      const log = JSON.parse(await readFile(join(bundleDir, "browser/network.json"), "utf8")) as {
+        entries?: { url?: unknown; failure?: unknown }[];
+      };
+      const hit = log.entries?.find(
+        (entry) => typeof entry.url === "string" && typeof entry.failure === "string",
+      );
+      if (hit)
+        return `Navigation to ${String(hit.url).slice(0, 200)} failed: ${String(hit.failure).slice(0, 200)}`;
+    } catch {
+      // A missing or malformed network log falls through to the reason code.
+    }
+  }
+  return `Exploration ended ${outcome} (${reasonCode ?? "no reason code"}) without observing the target.`;
+}
 export interface ExploreInput {
   projectId: string;
   environmentId?: string;
@@ -25,6 +68,9 @@ export interface ExploreInput {
   featureIds?: string[];
   retryFeatureIds?: string[];
   video?: boolean;
+  /** Explicit provider and model of the action-resolution calls; the first allowed structured model when absent. */
+  provider?: string;
+  model?: string;
 }
 interface PreparedExploration {
   job: EntityDocument;
@@ -76,6 +122,15 @@ export class ExploreService {
     this.ctx.authorize("X", input.projectId);
     this.ctx.authorize("W", input.projectId);
     requireEntity(this.ctx, "Project", input.projectId);
+    // An explicit choice is refused before the job exists and never falls back to another model.
+    if (input.provider !== undefined || input.model !== undefined)
+      new ModelService(this.ctx, this.config).select(
+        {
+          ...(input.provider !== undefined ? { provider: input.provider } : {}),
+          ...(input.model !== undefined ? { model: input.model } : {}),
+        },
+        "Exploration",
+      );
     const environment = input.environmentId
       ? requireEntity(this.ctx, "Environment", input.environmentId)
       : allEntities(this.ctx, "Environment").find(
@@ -288,6 +343,11 @@ export class ExploreService {
       }
     }
     const { job, env, origins, budget, plan } = prepared;
+    const additionalOrigins = attemptAdditionalOrigins(
+      env as { additionalOrigins?: string[] },
+      origins,
+      this.config.profilePolicy.offline === true,
+    );
     const ids = {
       workspaceId: this.ctx.workspaceId,
       runId: uuidV7IdGenerator.next("run"),
@@ -305,9 +365,24 @@ export class ExploreService {
     }[] = [];
     const features: Record<string, unknown>[] = [...prepared.features];
     const visited = new Set<string>();
+    let observed = 0;
+    let emptyFirst: BrowserObservation | undefined;
     let modelCalls = 0;
     const calls: { id: string; cost: unknown; usage: unknown }[] = [];
     const resolutionFailures: { stepId: string; code: string; message: string }[] = [];
+    const recordFailure = (stepId: string, error: unknown) => {
+      const failure = {
+        stepId,
+        code: error instanceof ContractError ? error.code : "INTERNAL_ERROR",
+        message: error instanceof Error ? error.message : "Action resolution failed",
+      };
+      resolutionFailures.push(failure);
+      const feature = observations.at(-1);
+      if (feature) {
+        feature.status = "partial";
+        feature.errors.push(`${failure.code}: ${failure.message}`);
+      }
+    };
     const controller = new AbortController();
     const abort = () => controller.abort();
     signal?.addEventListener("abort", abort, { once: true });
@@ -346,7 +421,8 @@ export class ExploreService {
           inputDir,
           plan,
           networkPolicy: {
-            allowedOrigins: origins,
+            allowedOrigins: [...origins, ...additionalOrigins],
+            ...(additionalOrigins.length ? { additionalOrigins } : {}),
             baseUrl: input.url,
             networkProfile: env.networkProfile as "public" | "private" | "local-loopback",
           },
@@ -363,60 +439,64 @@ export class ExploreService {
               exploration: true,
               mutationStepIds: [],
               mutationActions: input.mutationActions ?? [],
+              // In a feature-seeded exploration the seeded page is the target, so a page with no
+              // link to follow is a complete observation; in an open one it is no exploration.
+              requireActionable: !prepared.features.length,
               maxRequests: budget.modelCalls,
             },
           },
           resolveAction: async (stepId: string, value: unknown): Promise<PlanStep | null> => {
-            const observation = validateObservation(value, origins);
-            const url = new URL(observation.url);
-            url.search = "";
-            url.hash = "";
-            if (!visited.has(url.href)) {
-              visited.add(url.href);
-              const expected = prepared.features[0];
-              const feature =
-                expected ??
-                entity(this.ctx, "fea", {
-                  projectId: input.projectId,
-                  stableKey: url.pathname,
-                  requirementRefs: [],
-                  routeRefs: [url.pathname],
-                  endpointRefs: [],
-                  extensions: {
-                    "testmaster:title": observation.title,
-                    "testmaster:observed": true,
-                  },
+            let observation: BrowserObservation;
+            try {
+              observation = validateObservation(value, origins);
+              if (++observed === 1 && !prepared.features.length && !observation.actions.length)
+                emptyFirst = observation;
+              const url = new URL(observation.url);
+              url.search = "";
+              url.hash = "";
+              if (!visited.has(url.href)) {
+                visited.add(url.href);
+                const expected = prepared.features[0];
+                const feature =
+                  expected ??
+                  this.observedFeature(input.projectId, url.pathname, observation.title);
+                const completionText = (
+                  feature.extensions as Record<string, unknown> | undefined
+                )?.["testmaster:completionText"];
+                const routes = feature.routeRefs as string[];
+                // A password field means the page asks for a login. That is a different
+                // feature's page unless this Feature is itself the login page (DISC-001).
+                const loginRequired =
+                  observation.text.includes("Please sign in") ||
+                  (expected &&
+                    ((url.pathname === "/login" && !routes.includes("/login")) ||
+                      (observation.hasPasswordField === true &&
+                        !routes.some((route) => loginRoute.test(route)))));
+                observations.push({
+                  featureId: feature.id,
+                  status: loginRequired
+                    ? "unreachable"
+                    : typeof completionText === "string" &&
+                        observation.text.includes(completionText)
+                      ? "ready"
+                      : "partial",
+                  evidenceRefs: [
+                    {
+                      snapshotId: ids.snapshotId,
+                      relativePath: `browser/steps/${stepId}-observation.json`,
+                    },
+                  ],
+                  errors: loginRequired ? ["login_required"] : [],
                 });
-              const completionText = (feature.extensions as Record<string, unknown> | undefined)?.[
-                "testmaster:completionText"
-              ];
-              const loginRequired =
-                observation.text.includes("Please sign in") ||
-                (expected &&
-                  url.pathname === "/login" &&
-                  !(expected.routeRefs as string[]).includes("/login"));
-              observations.push({
-                featureId: feature.id,
-                status: loginRequired
-                  ? "unreachable"
-                  : typeof completionText === "string" && observation.text.includes(completionText)
-                    ? "ready"
-                    : "partial",
-                evidenceRefs: [
-                  {
-                    snapshotId: ids.snapshotId,
-                    relativePath: `browser/steps/${stepId}-observation.json`,
-                  },
-                ],
-                errors: loginRequired ? ["login_required"] : [],
-              });
-              if (!expected) {
-                this.ctx.entities.insert("Feature", feature);
-                features.push(feature);
+                if (!expected && !features.some((value) => value.id === feature.id))
+                  features.push(feature);
               }
+            } catch (error) {
+              // A failure here (for example a rejected observation or Feature write) must be
+              // visible in the job, not only in the sandbox protocol log.
+              recordFailure(stepId, error);
+              throw error;
             }
-            if (++modelCalls > budget.modelCalls)
-              throw new ContractError("POLICY_DENIED", "Exploration model budget exceeded");
             const available = {
               ...observation,
               actions: observation.actions.filter(
@@ -426,6 +506,12 @@ export class ExploreService {
                     !visited.has(new URL(action.input.path, input.url).href)),
               ),
             };
+            // Nothing to select: a model call could only answer null. This covers both an empty
+            // first observation (the runner ends that run inconclusive) and a legitimate stop
+            // once every observed link is visited.
+            if (!available.actions.length) return null;
+            if (++modelCalls > budget.modelCalls)
+              throw new ContractError("POLICY_DENIED", "Exploration model budget exceeded");
             try {
               const output = await new ModelService(this.ctx, this.config).complete<{
                 index: number | null;
@@ -433,6 +519,8 @@ export class ExploreService {
                 projectId: input.projectId,
                 purpose: "resolve_action",
                 responseSchema: "AgentActionSelection",
+                ...(input.provider !== undefined ? { provider: input.provider } : {}),
+                ...(input.model !== undefined ? { model: input.model } : {}),
                 data: {
                   goal: "Explore another observed route, stop when none remain",
                   observation: available,
@@ -445,17 +533,7 @@ export class ExploreService {
               calls.push({ id: output.modelCallId, cost: output.cost, usage: output.usage });
               return selectAction(output.output, available, stepId);
             } catch (error) {
-              const failure = {
-                stepId,
-                code: error instanceof ContractError ? error.code : "INTERNAL_ERROR",
-                message: error instanceof Error ? error.message : "Action resolution failed",
-              };
-              resolutionFailures.push(failure);
-              const feature = observations.at(-1);
-              if (feature) {
-                feature.status = "partial";
-                feature.errors.push(`${failure.code}: ${failure.message}`);
-              }
+              recordFailure(stepId, error);
               throw error;
             }
           },
@@ -498,6 +576,18 @@ export class ExploreService {
           "testmaster:evidenceBundle": result.bundle ?? null,
           "testmaster:partial": true,
           "testmaster:reasonCode": result.reasonCode,
+          // Code-owned cause so a failed job explains itself without the evidence bundle.
+          ...(result.outcome === "passed" || result.outcome === "cancelled"
+            ? {}
+            : {
+                "testmaster:errorMessage": await failureCause(
+                  result.bundle?.bundleDir,
+                  result.outcome,
+                  result.reasonCode,
+                  resolutionFailures[0],
+                  emptyFirst,
+                ),
+              }),
           "testmaster:resolutionFailures": resolutionFailures,
           "testmaster:featureStates": observations.map((result) => ({
             featureId: result.featureId,
@@ -535,6 +625,10 @@ export class ExploreService {
           extensions: {
             ...(job.extensions as Record<string, unknown>),
             "testmaster:error": error instanceof ContractError ? error.code : "INTERNAL_ERROR",
+            // Code-owned failure text so the job itself explains why it failed.
+            "testmaster:errorMessage":
+              error instanceof Error ? error.message.slice(0, 500) : "Exploration failed",
+            "testmaster:resolutionFailures": resolutionFailures,
           },
         },
         { projectId: input.projectId },
@@ -546,5 +640,42 @@ export class ExploreService {
       signal?.removeEventListener("abort", abort);
       await rm(inputDir, { recursive: true, force: true });
     }
+  }
+  /**
+   * The Feature for an observed route. Its stable key is the route path, so re-exploring a URL
+   * reuses the stored Feature (and refreshes its observed title under optimistic versioning)
+   * instead of inserting a duplicate that the unique `(project, stable key)` identity refuses.
+   * The lookup and the write share one transaction, so a concurrent exploration in another
+   * process cannot observe the Feature absent and then collide with this insert.
+   */
+  private observedFeature(projectId: string, stableKey: string, title: string): EntityDocument {
+    const observe = (): EntityDocument => {
+      const [existing] = this.ctx.entities.page("Feature", this.ctx.workspaceId, {
+        limit: 1,
+        where: { projectId, stableKey },
+      }).items;
+      if (!existing) {
+        const created = entity(this.ctx, "fea", {
+          projectId,
+          stableKey,
+          requirementRefs: [],
+          routeRefs: [stableKey],
+          endpointRefs: [],
+          extensions: { "testmaster:title": title, "testmaster:observed": true },
+        });
+        this.ctx.entities.insert("Feature", created);
+        return created;
+      }
+      const extensions = (existing.extensions ?? {}) as Record<string, unknown>;
+      if (extensions["testmaster:observed"] !== true || extensions["testmaster:title"] === title)
+        return existing;
+      const refreshed = { ...existing, extensions: { ...extensions, "testmaster:title": title } };
+      const version = Number(existing.version);
+      this.ctx.entities.update("Feature", this.ctx.workspaceId, existing.id, version, refreshed, {
+        projectId,
+      });
+      return { ...refreshed, version: version + 1 };
+    };
+    return this.ctx.database.inTransaction ? observe() : this.ctx.database.withTx(observe);
   }
 }

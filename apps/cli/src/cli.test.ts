@@ -48,6 +48,33 @@ describe("CLI machine output and offline authoring", () => {
     expect(result.stdout.trim().split("\n")).toHaveLength(1);
     expect(result.stdout + result.stderr).not.toContain("never-echo-this");
   });
+  it("names a missing required option or argument without echoing typed values", async () => {
+    const option = await invoke(["--json", "source", "add", "README.md"]);
+    expect(option.exit).toBe(5);
+    expect(option.document.error).toMatchObject({
+      code: "INVALID_ARGUMENT",
+      message: expect.stringContaining("--role"),
+      details: { reason: "commander.missingMandatoryOptionValue" },
+    });
+    const value = await invoke(["--json", "artifact", "import-fixture", "bin/tool", "--name"]);
+    expect(value.document.error).toMatchObject({
+      message: expect.stringContaining("--name"),
+      details: { reason: "commander.optionMissingArgument" },
+    });
+    // An invalid choice echoes the typed token in commander's text, so it keeps the generic message.
+    const choice = await invoke([
+      "--json",
+      "source",
+      "add",
+      "a.md",
+      "--role",
+      "prd",
+      "--format",
+      "never-echo-this",
+    ]);
+    expect(choice.document.error).toMatchObject({ message: "Invalid command arguments" });
+    expect(choice.stdout).not.toContain("never-echo-this");
+  });
   it("validates bad dry-run input without creating application state", async () => {
     const root = await mkdtemp(join(tmpdir(), "testmaster-cli-"));
     roots.push(root);
@@ -99,6 +126,34 @@ describe("CLI machine output and offline authoring", () => {
       unresolvedPreconditions: [],
     });
     expect(await readdir(root)).toEqual(["plan.json"]);
+  });
+  it("scaffolds a terminal plan that validates offline and refuses an unknown scaffold type", async () => {
+    const root = await mkdtemp(join(tmpdir(), "testmaster-cli-"));
+    roots.push(root);
+    const scaffold = await invoke(["--json", "--cwd", root, "test", "scaffold", "--type", "cli"]);
+    expect(scaffold.exit).toBe(0);
+    expect(scaffold.document.data).toMatchObject({
+      kind: "executable",
+      type: "cli",
+      runner: "terminal",
+    });
+    await writeFile(join(root, "plan.json"), JSON.stringify(scaffold.document.data));
+    const lint = await invoke(["--json", "--cwd", root, "test", "lint", "--plan", "plan.json"]);
+    expect(lint.exit).toBe(0);
+    const unknown = await invoke([
+      "--json",
+      "--cwd",
+      root,
+      "test",
+      "scaffold",
+      "--type",
+      "integration",
+    ]);
+    expect(unknown.exit).toBe(5);
+    expect(unknown.document.error).toMatchObject({
+      code: "INVALID_ARGUMENT",
+      message: "Type must be frontend, backend or cli",
+    });
   });
   it("writes the GitHub workflow to an explicit file without colliding with the output format", async () => {
     const root = await mkdtemp(join(tmpdir(), "testmaster-cli-"));
@@ -189,6 +244,29 @@ describe("CLI machine output and offline authoring", () => {
     expect(result.exit).toBe(0);
     expect(result.document.data).toMatchObject({ projectId: expect.any(String) });
     expect(listen).not.toHaveBeenCalled();
+  });
+  it("init writes the given base URL into the configuration file it creates", async () => {
+    const root = await mkdtemp(join(tmpdir(), "testmaster-cli-"));
+    roots.push(root);
+    await mkdir(join(root, "home"));
+    vi.stubEnv("HOME", join(root, "home"));
+    vi.stubEnv("XDG_CONFIG_HOME", join(root, "home", ".config"));
+    const base = ["--json", "--cwd", root];
+    const result = await invoke([
+      ...base,
+      "init",
+      "--name",
+      "tool",
+      "--base-url",
+      "http://127.0.0.1:9",
+    ]);
+    expect(result.exit).toBe(0);
+    const written = JSON.parse(await readFile(join(root, "testmaster.config.json"), "utf8"));
+    expect(written.environment).toMatchObject({ baseUrl: "http://127.0.0.1:9" });
+    // The reopened configuration and the stored environment agree on the origin.
+    const shown = await invoke([...base, "config", "show"]);
+    expect(JSON.stringify(shown.document.data)).toContain('"baseUrl":"http://127.0.0.1:9"');
+    expect(JSON.stringify(shown.document.data)).not.toContain("127.0.0.1:3000");
   });
   it("preserves partial receipt ownership in one signal envelope", async () => {
     let stdout = "";

@@ -19,7 +19,7 @@ import { issueLocalToken } from "../local-auth.js";
 import type { AnalysisService } from "./analysis.js";
 import { HealingService, modelCandidates } from "./healing.js";
 import { applyHealingPatch, healingReplacements } from "./healing-patch.js";
-import type { ModelInput, ModelService } from "./model.js";
+import { type ModelInput, ModelService } from "./model.js";
 
 const apps: Application[] = [],
   roots: string[] = [];
@@ -377,7 +377,15 @@ it("local capability issuance cannot broaden issuer resource grants or expiry", 
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
 });
 
-async function generationFixture(output: unknown, plan = scaffoldPlan("backend")) {
+const controlledProviders = [
+  { id: "controlled", models: [{ id: "model", capabilities: { structuredJson: true } }] },
+];
+async function generationFixture(
+  output: unknown,
+  plan = scaffoldPlan("backend"),
+  providers: unknown[] = controlledProviders,
+  allowed = ["controlled"],
+) {
   const f = await fixture("passed", false, plan);
   const input: ModelInput[] = [];
   const complete = vi.fn(async (request: ModelInput) => {
@@ -386,12 +394,10 @@ async function generationFixture(output: unknown, plan = scaffoldPlan("backend")
   });
   const model = {
     complete,
-    consent: async () => ({ dataClasses: ["execution_evidence"] }),
+    select: ModelService.prototype.select,
     config: {
-      modelProviders: [
-        { id: "controlled", models: [{ id: "model", capabilities: { structuredJson: true } }] },
-      ],
-      profilePolicy: { allowedModelProviders: ["controlled"] },
+      modelProviders: providers,
+      profilePolicy: { allowedModelProviders: allowed },
       effectiveConfig: { policyHash: "a".repeat(64) },
     },
   } as unknown as ModelService;
@@ -523,6 +529,32 @@ it("healing refuses passed runs before creating a healing job", async () => {
   });
   expect(f.app.database.all("SELECT id FROM job_leases WHERE queue='healing'")).toHaveLength(0);
 });
+it("healing and agent mode refuse terminal tests explicitly, while factual analysis stays generic", async () => {
+  const f = await fixture("failed", false, scaffoldPlan("cli"));
+  const before = f.app.database.all("SELECT id FROM job_leases WHERE queue='healing'").length;
+  await expect(f.app.healing.propose(f.failed.id, {})).rejects.toMatchObject({
+    code: "CAPABILITY_UNAVAILABLE",
+    message: "Healing is not available for terminal tests; fix the plan or the program under test",
+    details: { capability: "healing", runner: "terminal", reason: "terminal_runner" },
+  });
+  expect(f.app.database.all("SELECT id FROM job_leases WHERE queue='healing'")).toHaveLength(
+    before,
+  );
+  expect(() => f.app.agentMode.authorizeRevision(String(f.test.activeRevisionId))).toThrow(
+    expect.objectContaining({
+      code: "CAPABILITY_UNAVAILABLE",
+      message: "Agent mode is not available for terminal tests",
+    }),
+  );
+  const analysis = await f.app.analysis.analyze(f.failed.id, {});
+  expect(analysis.runId).toBe(f.failed.id);
+  // Negative control: the same failure on an HTTP test is not refused by the terminal guard.
+  const http = await fixture("failed", false);
+  await expect(http.app.healing.propose(http.failed.id, {})).rejects.not.toMatchObject({
+    code: "CAPABILITY_UNAVAILABLE",
+    details: { reason: "terminal_runner" },
+  });
+});
 
 it.each([
   ["UPSTREAM_TIMEOUT", "deadline"],
@@ -537,6 +569,136 @@ it.each([
   });
   const job = f.jobs.forTarget(f.app.context.workspaceId, "healing", f.failed.id)[0]!;
   expect(JSON.stringify(job.result)).not.toContain("model-content-canary");
+});
+
+const abstention = { kind: "abstain", reason: "Insufficient evidence", evidenceHandles: ["E1"] };
+const structured = { structuredJson: true };
+const providersWithAlternative = [
+  ...controlledProviders,
+  {
+    id: "other",
+    models: [
+      { id: "flash", capabilities: structured },
+      { id: "plain", capabilities: { structuredJson: false } },
+    ],
+  },
+];
+
+it("an explicit provider and model reach the model call, while the default stays provider-owned", async () => {
+  const explicit = await generationFixture(
+    abstention,
+    scaffoldPlan("backend"),
+    providersWithAlternative,
+    ["controlled", "other"],
+  );
+  await expect(
+    explicit.service.propose(explicit.failed.id, { provider: "other", model: "flash" }),
+  ).rejects.toMatchObject({ details: { reason: "model_abstained" } });
+  expect(explicit.input[0]).toMatchObject({ provider: "other", model: "flash" });
+  // A provider alone selects that provider's first structured-output model.
+  const providerOnly = await generationFixture(
+    abstention,
+    scaffoldPlan("backend"),
+    providersWithAlternative,
+    ["controlled", "other"],
+  );
+  await expect(
+    providerOnly.service.propose(providerOnly.failed.id, { provider: "other" }),
+  ).rejects.toMatchObject({ details: { reason: "model_abstained" } });
+  expect(providerOnly.input[0]).toMatchObject({ provider: "other", model: "flash" });
+  // Without a selection nothing is forwarded, so the model service keeps its own default.
+  const implicit = await generationFixture(
+    abstention,
+    scaffoldPlan("backend"),
+    providersWithAlternative,
+    ["controlled", "other"],
+  );
+  await expect(implicit.service.propose(implicit.failed.id)).rejects.toMatchObject({
+    details: { reason: "model_abstained" },
+  });
+  expect(implicit.input[0]).not.toHaveProperty("provider");
+  expect(implicit.input[0]).not.toHaveProperty("model");
+});
+
+it("an unusable explicit selection is refused before any job or model call and never falls back", async () => {
+  const f = await generationFixture(abstention, scaffoldPlan("backend"), providersWithAlternative, [
+    "controlled",
+  ]);
+  const attempt = (selection: { provider?: string; model?: string }) =>
+    f.service.propose(f.failed.id, selection);
+  await expect(attempt({ provider: "ghost" })).rejects.toMatchObject({
+    code: "CAPABILITY_UNAVAILABLE",
+    details: { reasonCode: "provider_unavailable", availableProviders: ["controlled", "other"] },
+  });
+  await expect(attempt({ provider: "other" })).rejects.toMatchObject({ code: "POLICY_DENIED" });
+  await expect(attempt({ model: "missing" })).rejects.toMatchObject({
+    code: "CAPABILITY_UNAVAILABLE",
+    details: {
+      reasonCode: "model_not_configured",
+      provider: "controlled",
+      availableModels: ["model"],
+    },
+  });
+  await expect(attempt({ provider: "controlled", model: "flash" })).rejects.toMatchObject({
+    details: { reasonCode: "model_not_configured" },
+  });
+  expect(f.complete).not.toHaveBeenCalled();
+  expect(f.jobs.forTarget(f.app.context.workspaceId, "healing", f.failed.id)).toHaveLength(0);
+  // Positive control: the same run still accepts a valid selection afterwards.
+  await expect(attempt({ provider: "controlled", model: "model" })).rejects.toMatchObject({
+    details: { reason: "model_abstained" },
+  });
+  expect(f.complete).toHaveBeenCalledTimes(1);
+});
+
+it("a structured-output requirement applies to the explicit model", async () => {
+  const f = await generationFixture(abstention, scaffoldPlan("backend"), providersWithAlternative, [
+    "controlled",
+    "other",
+  ]);
+  await expect(
+    f.service.propose(f.failed.id, { provider: "other", model: "plain" }),
+  ).rejects.toMatchObject({
+    code: "CAPABILITY_UNAVAILABLE",
+    details: { reasonCode: "model_capability_missing", provider: "other", model: "plain" },
+  });
+  expect(f.complete).not.toHaveBeenCalled();
+});
+
+it("a failed model request reports the selected model and stays final for the Run", async () => {
+  const f = await generationFixture(abstention, scaffoldPlan("backend"), providersWithAlternative, [
+    "controlled",
+    "other",
+  ]);
+  f.complete.mockImplementationOnce(async () => {
+    throw new ContractError("UNAVAILABLE", "model-content-canary", { status: 404 });
+  });
+  await expect(f.service.propose(f.failed.id)).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+    details: {
+      reason: "model_failure",
+      detail: "transport",
+      phase: "model",
+      provider: "controlled",
+      model: "model",
+      upstreamCode: "UNAVAILABLE",
+      upstreamStatus: 404,
+      modelCallRecorded: false,
+      nextAction: expect.stringContaining("next eligible failed Run"),
+    },
+  });
+  const [job] = f.jobs.forTarget(f.app.context.workspaceId, "healing", f.failed.id);
+  expect(job?.result).toMatchObject({ provider: "controlled", model: "model" });
+  expect(JSON.stringify(job)).not.toContain("model-content-canary");
+  // A missing call record never proves nothing was sent or billed: neither the same nor another
+  // explicit selection regenerates this Run's healing request.
+  await expect(f.service.propose(f.failed.id)).rejects.toMatchObject({
+    details: { reason: "no_regeneration" },
+  });
+  await expect(
+    f.service.propose(f.failed.id, { provider: "other", model: "flash" }),
+  ).rejects.toMatchObject({ details: { reason: "no_regeneration" } });
+  expect(f.complete).toHaveBeenCalledTimes(1);
 });
 
 it("oversized evidence refuses before model dispatch rather than enlarging the ceiling", async () => {
@@ -714,43 +876,46 @@ async function deferredFixture(differentOriginal = false, password = false) {
     bytes: Buffer.from(JSON.stringify(records.get(id)![Number(path)])),
     nextOffset: null,
   })) as ArtifactsService["read"];
-  vi.spyOn(f.app.runs, "admitHealingVerification").mockImplementation(async (proposalId) => {
-    const proposal = f.service.get(proposalId);
-    const candidateVerification = f.app.runs.resolve({
-      testId: f.test.id,
-      environmentId: String(f.failed.matrixCell.environmentId),
-      revisionId: proposal.candidateRevisionId,
-      origin: "verification",
-      mode: "replay",
-      limits: { maxAttempts: 1 },
-    });
-    Object.assign(candidateVerification, {
-      phase: "completed",
-      status: "passed",
-      outcome: "passed",
-      gate: "passed",
-    });
-    f.app.context.entities.insert("Run", candidateVerification);
-    Object.assign(f.verification, candidateVerification);
-    const verification = f.verification;
-    vi.spyOn(f.app.runs, "get").mockImplementation((id) =>
-      id === verification.id
-        ? candidateVerification
-        : id === failed.id
-          ? frozen
-          : id === baseline.id
-            ? baseline
-            : f.app.context.entities.get("Run", f.app.context.workspaceId, id)!,
-    );
-    f.app.context.entities.update(
-      "HealingProposal",
-      f.app.context.workspaceId,
-      proposalId,
-      Number(proposal.version),
-      { ...proposal, verificationRunId: verification.id, version: Number(proposal.version) + 1 },
-    );
-    return { runId: verification.id, ownership: "ephemeral" as const };
-  });
+  vi.spyOn(f.app.runs, "admitHealingVerification").mockImplementation(
+    async (proposalId, approval) => {
+      approval?.write();
+      const proposal = f.service.get(proposalId);
+      const candidateVerification = f.app.runs.resolve({
+        testId: f.test.id,
+        environmentId: String(f.failed.matrixCell.environmentId),
+        revisionId: proposal.candidateRevisionId,
+        origin: "verification",
+        mode: "replay",
+        limits: { maxAttempts: 1 },
+      });
+      Object.assign(candidateVerification, {
+        phase: "completed",
+        status: "passed",
+        outcome: "passed",
+        gate: "passed",
+      });
+      f.app.context.entities.insert("Run", candidateVerification);
+      Object.assign(f.verification, candidateVerification);
+      const verification = f.verification;
+      vi.spyOn(f.app.runs, "get").mockImplementation((id) =>
+        id === verification.id
+          ? candidateVerification
+          : id === failed.id
+            ? frozen
+            : id === baseline.id
+              ? baseline
+              : f.app.context.entities.get("Run", f.app.context.workspaceId, id)!,
+      );
+      f.app.context.entities.update(
+        "HealingProposal",
+        f.app.context.workspaceId,
+        proposalId,
+        Number(proposal.version),
+        { ...proposal, verificationRunId: verification.id, version: Number(proposal.version) + 1 },
+      );
+      return { runId: verification.id, ownership: "ephemeral" as const };
+    },
+  );
   return { ...f, records, replacement };
 }
 it("a repeated locator on an unexecuted step is deferred and promoted only after verification identity proof", async () => {
@@ -1129,4 +1294,136 @@ it("model locator candidates keep the matched and interactive elements ahead of 
   ).toBe(true);
   const matched = element("div", { matched: true });
   expect(modelCandidates([renamed, matched])[0]).toBe(matched);
+});
+
+/** A reviewable proposal whose approval can be admitted: a browser plan and a locator replacement. */
+async function proposedFixture() {
+  const plan = browser();
+  const f = await fixture("passed", false, plan);
+  const replacement = { by: "testId", value: "email-new" };
+  const healedPlan = applyHealingPatch(
+    f.app.revisions.get(String(f.test.activeRevisionId)).plan!,
+    patch("fill_email", "/input/locator", replacement),
+  ).plan;
+  const candidate = entity(f.app.context, "rev", {
+    ...f.candidate,
+    id: entity(f.app.context, "rev", {}).id,
+    ordinal: 3,
+    plan: healedPlan,
+    contentHash: semanticHash(healedPlan, "plan"),
+  });
+  f.app.context.entities.insert("TestRevision", candidate);
+  const proposal = {
+    ...f.proposal,
+    candidateRevisionId: candidate.id,
+    changes: [{ stepId: "fill_email", path: "/input/locator", value: replacement }],
+    status: "proposed",
+    approvalMode: null,
+    reviewerId: null,
+    policyHash: null,
+    verificationRunId: null,
+  };
+  f.app.context.entities.insert("HealingProposal", proposal);
+  return { ...f, proposal };
+}
+it("a refused approval admission leaves the proposal untouched and names the CI override", async () => {
+  const f = await proposedFixture();
+  const root = roots.at(-1)!;
+  const home = join(root, "home");
+  const ci = await Application.open({ cwd: root, home, env: { HOME: home, CI: "true" } });
+  apps.push(ci);
+  expect(ci.config.overrides).toEqual([{ key: "healing.mode", source: "CI" }]);
+  expect(f.app.config.overrides).toBeUndefined();
+  const refusal = await ci.healing.approve(f.proposal.id, 1).catch((error: unknown) => error);
+  expect(refusal).toBeInstanceOf(ContractError);
+  const error = refusal as ContractError;
+  expect(error.code).toBe("REVISION_CONFLICT");
+  expect(error.message).toContain("healing.mode");
+  expect(error.message).toContain("CI=true");
+  expect(error.details).toMatchObject({
+    reasonCode: "execution_configuration_changed",
+    failedRunId: f.failed.id,
+    overrides: [{ key: "healing.mode", source: "CI" }],
+    nextActions: expect.arrayContaining([expect.stringContaining("without CI=true")]),
+  });
+  expect(error.details.changed).toContainEqual(
+    expect.objectContaining({ key: "healing.mode", currentOrigin: "environment" }),
+  );
+  const untouched = f.app.healing.get(f.proposal.id);
+  expect(untouched).toMatchObject({ status: "proposed", version: 1, limitations: [] });
+  expect(untouched.verificationRunId).toBeNull();
+  // Control: the configuration that admitted the failed Run approves the same proposal.
+  vi.spyOn(f.app, "preflight").mockResolvedValue();
+  const approved = await f.app.healing.approve(f.proposal.id, 1);
+  expect(approved.status).toBe("approved");
+  expect(approved.verificationRunId).toMatch(/^run_/);
+});
+function approvalIdentity(app: Application, projectId: string, withGrant: boolean) {
+  return {
+    principalId: app.context.principalId,
+    scopes: ["R", "W", "X", "A"] as ("R" | "W" | "X" | "A")[],
+    grants: withGrant
+      ? [
+          {
+            resourceType: "HealingProposal",
+            actions: ["approve" as const],
+            projectIds: [projectId],
+            environmentIds: [],
+            expiresAt: null,
+            grantedBy: app.context.principalId,
+          },
+        ]
+      : [],
+  };
+}
+it("a bearer token without the HealingProposal approve grant is refused with the grant named", async () => {
+  const f = await proposedFixture();
+  for (const scopes of [
+    ["R", "W", "X", "A"],
+    ["R", "A"],
+  ] as const) {
+    const bearer = f.app.forIdentity({
+      ...approvalIdentity(f.app, String(f.test.projectId), false),
+      scopes: [...scopes],
+    });
+    const refusal = await bearer.healing.approve(f.proposal.id, 1).catch((error: unknown) => error);
+    expect(refusal).toBeInstanceOf(ContractError);
+    expect(refusal).toMatchObject({
+      code: "FORBIDDEN",
+      details: {
+        scope: "healing:approve",
+        reasonCode: "approval_grant_required",
+        requiredGrant: { resourceType: "HealingProposal", action: "approve" },
+        nextActions: expect.any(Array),
+      },
+    });
+    expect((refusal as ContractError).message).toContain("HealingProposal:approve");
+  }
+  expect(f.app.healing.get(f.proposal.id)).toMatchObject({ status: "proposed", version: 1 });
+});
+it("a bearer token with an explicit approve grant approves, and a deny grant is not a missing grant", async () => {
+  const f = await proposedFixture();
+  const denied = f.app.forIdentity({
+    ...approvalIdentity(f.app, String(f.test.projectId), true),
+    grants: [
+      {
+        resourceType: "HealingProposal",
+        actions: ["approve"],
+        projectIds: [String(f.test.projectId)],
+        environmentIds: [],
+        expiresAt: null,
+        grantedBy: f.app.context.principalId,
+        deny: true,
+      },
+    ],
+  });
+  await expect(denied.healing.approve(f.proposal.id, 1)).rejects.toMatchObject({
+    code: "FORBIDDEN",
+    details: { reasonCode: "approval_not_permitted", requiredGrant: { action: "approve" } },
+  });
+  const bearer = f.app.forIdentity(approvalIdentity(f.app, String(f.test.projectId), true));
+  vi.spyOn(bearer, "preflight").mockResolvedValue();
+  const approved = await bearer.healing.approve(f.proposal.id, 1);
+  expect(approved.status).toBe("approved");
+  expect(approved.verificationRunId).toMatch(/^run_/);
 });

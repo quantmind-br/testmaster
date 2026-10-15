@@ -22,13 +22,9 @@ import {
   type InspectFacts,
   prepareSocketsDir,
 } from "../docker/executor.js";
-import {
-  canonicalUrl,
-  EgressPolicy,
-  type NetworkPolicy as LegacyPolicy,
-  PolicyDenied,
-} from "../egress/policy.js";
+import { PolicyDenied } from "../egress/policy.js";
 import { EgressProxy } from "../egress/proxy.js";
+import { attemptEgressPolicy } from "./egress.js";
 
 export interface SecretRelease {
   secretRef: string;
@@ -135,31 +131,7 @@ export class AttemptExecutor {
       },
     );
     const policy = input.networkPolicy;
-    const base = policy.baseUrl ? canonicalUrl(policy.baseUrl) : undefined;
-    const legacy: LegacyPolicy = {
-      defaultAction: "deny",
-      allowedOrigins: policy.allowedOrigins,
-      privateTargets: (policy.privateTargets ?? []).map((target) => ({
-        hostname: target.host,
-        port: target.port,
-        cidr: target.host.includes(":") ? `${target.host}/128` : `${target.host}/32`,
-      })),
-      allowedProtocols: ["http", "https"],
-      allowRedirects: true,
-      maxRedirects: 10,
-      allowInsecureTls: policy.allowInsecureTls ?? false,
-    };
-    const egress = new EgressPolicy(
-      legacy,
-      policy.networkProfile === "local-loopback" && base
-        ? {
-            networkProfile: "local-loopback",
-            baseUrl: base.url,
-            host: base.hostname === "::1" ? "::1" : "127.0.0.1",
-            port: base.port,
-          }
-        : undefined,
-    );
+    const egress = attemptEgressPolicy(policy);
     const proxy = new EgressProxy({
       socketPath: egressPath,
       policy: egress,
@@ -438,7 +410,10 @@ export class AttemptExecutor {
       if (malformed) {
         runnerOutcome = "inconclusive";
         runnerReason = "insufficient_evidence";
-      } else if (signal?.aborted) {
+      } else if (signal?.aborted && (runnerOutcome as AttemptResult["outcome"]) !== "failed") {
+        // A failure proven before the stop request still decides the run; only the absence of
+        // one lets the requested cancel win (specs/03 §3, OPS-014). The cast undoes flow
+        // narrowing: `runner.finished` assigns runnerOutcome inside the event callback.
         runnerOutcome = "cancelled";
         runnerReason = "user_cancelled";
       }
@@ -529,11 +504,30 @@ export class AttemptExecutor {
         "application/json",
         JSON.stringify(facts),
       );
+    // The proxy never sees a request the browser route handler aborts, so the runner's own
+    // denials join the log here, tagged with their layer. Origin only: no path, query or headers.
+    const routeDenials = events
+      .flatMap((event) =>
+        event.type === "egress.denied"
+          ? [
+              `${JSON.stringify({
+                origin: event.payload.origin,
+                decision: "deny",
+                reason: "origin_not_allowed",
+                layer: "browser_route",
+                resourceType: event.payload.resourceType,
+                disposition: event.payload.disposition,
+                count: event.payload.count,
+              })}\n`,
+            ]
+          : [],
+      )
+      .join("");
     await artifact(
       "logs/egress.ndjson",
       "network",
       "application/x-ndjson",
-      await readFile(join(sockets, "egress.ndjson"), "utf8").catch(() => ""),
+      (await readFile(join(sockets, "egress.ndjson"), "utf8").catch(() => "")) + routeDenials,
     );
     const bundle = await staging.commit({
       redactionPolicyHash:

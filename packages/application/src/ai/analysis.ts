@@ -33,6 +33,9 @@ import { promptVersions } from "./model.js";
 
 export interface AnalysisInput {
   model?: boolean;
+  /** Explicit provider and model id of the enrichment call; both need `model: true`. */
+  provider?: string;
+  modelId?: string;
   discoveryId?: string;
   budget?: { deadlineMs?: number };
 }
@@ -52,22 +55,50 @@ type Evidence = {
   value: unknown;
   text: string;
   reason?: string | undefined;
+  /** Set on manifest artifact evidence; availability facts aggregate per kind. */
+  artifactKind?: string;
   step?: StepResult;
   planStep?: PlanStep | undefined;
 };
 type Diagnosis = NonNullable<Analysis["diagnosis"]>;
+/** One availability fact per artifact kind, citing every artifact of that kind. */
+function artifactAvailabilityFacts(evidence: Evidence[]) {
+  const slots: { kind?: string; text: string; evidenceRefs: AnalysisEvidenceRef[] }[] = [];
+  for (const item of evidence) {
+    const slot =
+      item.artifactKind === undefined
+        ? undefined
+        : slots.find((candidate) => candidate.kind === item.artifactKind);
+    if (slot) slot.evidenceRefs.push(item.ref);
+    else
+      slots.push({
+        ...(item.artifactKind === undefined ? {} : { kind: item.artifactKind }),
+        text: item.text,
+        evidenceRefs: [item.ref],
+      });
+  }
+  return slots.map(({ kind, text, evidenceRefs }) => ({
+    text:
+      kind === undefined
+        ? text
+        : `Verified ${evidenceRefs.length} ${kind} artifact${evidenceRefs.length === 1 ? "" : "s"} available.`,
+    evidenceRefs,
+  }));
+}
 /**
  * Visible text of a model-selected next step. The prefix identifies the same action when the rules
  * already advised it, so a repeated suggestion is not listed twice.
  */
 const modelStepCatalog: Record<
   NextStepAction,
-  { prefix: string; text: (location: string) => string }
+  {
+    prefix: string;
+    text: (location: string, runner?: string, deniedOrigins?: readonly string[]) => string;
+  }
 > = {
   collect_more_evidence: {
-    prefix: "Collect the response and execution evidence",
-    text: (location) =>
-      `Collect the response and execution evidence for step ${location} to distinguish product, contract, and environment explanations.`,
+    prefix: "Collect the ",
+    text: collectEvidenceText,
   },
   restore_environment: {
     prefix: "Restore the observed environment",
@@ -76,8 +107,7 @@ const modelStepCatalog: Record<
   },
   review_security_precondition: {
     prefix: "Review the refused security precondition",
-    text: () =>
-      "Review the refused security precondition and its recorded reason codes; do not change the test.",
+    text: (_location, _runner, deniedOrigins) => securityReviewText(deniedOrigins ?? []),
   },
   compare_contract: {
     prefix: "Compare the response from step",
@@ -140,6 +170,107 @@ function httpStatusEvidence(value: unknown): value is HttpStatusEvidence {
     value.status >= 100 &&
     value.status <= 599
   );
+}
+
+type TerminalProcessEvidence = {
+  kind: "terminal";
+  stepId: string;
+  timedOut: boolean;
+  exitCode: number | null;
+  signal: string | null;
+  lingeringProcesses: number | null;
+  durationMs: number | null;
+};
+function terminalProcessEvidence(value: unknown): value is TerminalProcessEvidence {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "kind" in value &&
+    value.kind === "terminal" &&
+    "stepId" in value &&
+    typeof value.stepId === "string" &&
+    "timedOut" in value &&
+    typeof value.timedOut === "boolean"
+  );
+}
+
+/** Code-composed description of a process that hit its time limit; no external text enters it. */
+function terminalObserved(process: TerminalProcessEvidence): string {
+  const parts = [
+    process.durationMs === null
+      ? "The process did not exit within its time limit"
+      : `The process was still running after ${process.durationMs} ms (time limit reached)`,
+    process.signal ? `terminated by ${process.signal}` : null,
+    process.exitCode === null ? "no exit code was recorded" : `exit code ${process.exitCode}`,
+    process.lingeringProcesses
+      ? `${process.lingeringProcesses} lingering process(es) had to be reaped`
+      : null,
+  ];
+  return `${parts.filter(Boolean).join("; ")}.`;
+}
+
+interface EgressDenialEvidence {
+  origin: string;
+  resourceType: string;
+  disposition: "aborted" | "fatal";
+  count: number;
+}
+/** Payload of a persisted `egress.denied` runner observation; null for any other evidence. */
+function egressDenial(value: unknown): EgressDenialEvidence | null {
+  if (value === null || typeof value !== "object") return null;
+  const event = value as { type?: unknown; payload?: unknown };
+  if (event.type !== "egress.denied" || event.payload === null || typeof event.payload !== "object")
+    return null;
+  const { origin, resourceType, disposition, count } = event.payload as Record<string, unknown>;
+  if (
+    typeof origin !== "string" ||
+    typeof resourceType !== "string" ||
+    (disposition !== "aborted" && disposition !== "fatal") ||
+    typeof count !== "number"
+  )
+    return null;
+  return { origin, resourceType, disposition, count };
+}
+/** Origins whose denial blocked the run (origin only, never a path or query), at most five. */
+function fatalDeniedOrigins(evidence: readonly Evidence[]): string[] {
+  const origins = new Set<string>();
+  for (const item of evidence) {
+    const denial = egressDenial(item.value);
+    if (denial?.disposition === "fatal") origins.add(denial.origin);
+  }
+  return [...origins].slice(0, 5);
+}
+/** Advice for a refused security precondition; names the denied origin when the runner recorded one. */
+function securityReviewText(deniedOrigins: readonly string[]): string {
+  if (!deniedOrigins.length)
+    return "Review the refused security precondition and its recorded reason codes; do not change the test.";
+  return `Review the refused security precondition: the network policy denied requests to ${deniedOrigins.join(", ")}. If the page legitimately needs ${deniedOrigins.length === 1 ? "that origin" : "those origins"}, approve ${deniedOrigins.length === 1 ? "it" : "them"} as additional origins of the environment (testmaster env update --additional-origin, which replaces the current list); do not change the test.`;
+}
+/** One fact per recorded denial, whatever the outcome: a passing run still surfaces what it dropped. */
+function egressDenialFacts(evidence: readonly Evidence[]): {
+  facts: { text: string; evidenceRefs: AnalysisEvidenceRef[] }[];
+  omitted: number;
+} {
+  const denials = evidence.flatMap((item) => {
+    const denial = egressDenial(item.value);
+    return denial ? [{ denial, ref: item.ref }] : [];
+  });
+  return {
+    facts: denials.slice(0, 10).map(({ denial, ref }) => ({
+      text: `The network policy ${denial.disposition === "aborted" ? "aborted" : "denied"} ${denial.count} ${denial.resourceType} request${denial.count === 1 ? "" : "s"} to ${denial.origin}${denial.disposition === "aborted" ? "; the page continued and the run was not failed by it" : "; the denial blocked the run"}.`,
+      evidenceRefs: [ref],
+    })),
+    omitted: Math.max(0, denials.length - 10),
+  };
+}
+
+/** Evidence to collect for a step, worded for the runner that executed it. */
+function collectEvidenceText(location: string, runner: string | undefined): string {
+  if (runner === "terminal")
+    return `Collect the process output, exit status and execution evidence for step ${location} to distinguish product, environment, and test explanations.`;
+  if (runner === "playwright")
+    return `Collect the page state and execution evidence for step ${location} to distinguish product, environment, and test explanations.`;
+  return `Collect the response and execution evidence for step ${location} to distinguish product, contract, and environment explanations.`;
 }
 
 function evidenceSecrets(): string[] {
@@ -498,11 +629,12 @@ export class AnalysisService {
       if (!Number.isSafeInteger(ref.line) || ref.line < 1)
         throw new ContractError("INVALID_ARGUMENT", "Discovery file location is invalid");
     }
+    const boundFiles = new Set(
+      detail.summary.fileRefs.map((ref) => `${ref.path}\0${ref.contentHash}`),
+    );
     for (const symbol of detail.summary.symbols) {
       if (
-        !detail.summary.fileRefs.some(
-          (ref) => ref.path === symbol.ref.path && ref.contentHash === symbol.ref.contentHash,
-        ) ||
+        !boundFiles.has(`${symbol.ref.path}\0${symbol.ref.contentHash}`) ||
         !Number.isSafeInteger(symbol.ref.line) ||
         symbol.ref.line < 1
       )
@@ -603,6 +735,7 @@ export class AnalysisService {
         limitations.push("Malformed persisted observation was excluded.");
         continue;
       }
+      const denial = egressDenial(value);
       evidence.push({
         value,
         reason: value.payload?.reasonCode,
@@ -612,7 +745,9 @@ export class AnalysisService {
           observationSeq: Number(row.seq),
           contentHash: semanticHash(value),
         },
-        text: `Persisted ${value.type} observation${value.payload?.reasonCode ? `: ${value.payload.reasonCode}` : ""}.`,
+        text: denial
+          ? `Persisted egress.denied observation: ${denial.origin} (${denial.resourceType}, ${denial.disposition}).`
+          : `Persisted ${value.type} observation${value.payload?.reasonCode ? `: ${value.payload.reasonCode}` : ""}.`,
       });
     }
     for (const row of this.ctx.database.all(
@@ -623,6 +758,8 @@ export class AnalysisService {
       const value = JSON.parse(String(row.data_json)) as {
         reasonCode?: string;
         diagnosticCode?: string;
+        control?: string;
+        diagnostic?: string;
       };
       const reason =
         typeof value.reasonCode === "string" && Object.hasOwn(reasonRegistry, value.reasonCode)
@@ -633,11 +770,16 @@ export class AnalysisService {
         ["ECONNREFUSED", "ENOTFOUND", "EHOSTUNREACH", "ENETUNREACH"].includes(value.diagnosticCode)
           ? value.diagnosticCode
           : null;
+      // Admission refusals name the refused control (and, for runner images, why it failed).
+      const control =
+        reason === "security_precondition_failed" && typeof value.control === "string"
+          ? ` (control ${value.control}${typeof value.diagnostic === "string" ? `: ${value.diagnostic}` : ""})`
+          : "";
       evidence.push({
         value,
         reason: reason ?? (diagnostic ? "network_unreachable" : undefined),
         ref: { runId: run.id, observationSeq: Number(row.seq), contentHash: semanticHash(value) },
-        text: `Persisted ${String(row.type)} observation${reason ? `: ${reason}` : diagnostic ? `: ${diagnostic}` : ""}.`,
+        text: `Persisted ${String(row.type)} observation${reason ? `: ${reason}${control}` : diagnostic ? `: ${diagnostic}` : ""}.`,
       });
     }
     try {
@@ -714,10 +856,48 @@ export class AnalysisService {
             limitations.push(`Malformed HTTP status metadata ${entry.artifactId} was excluded.`);
           }
         }
+        if (entry.kind === "terminal.process" && entry.sizeBytes <= 262144) {
+          const page = await this.artifacts.read(run.id, entry.relativePath, {
+            attemptId: bundle.manifest.attemptId,
+            maxBytes: 262144,
+          });
+          try {
+            // Only numbers, booleans and a signal name are kept: stdout, stderr, arguments and
+            // clipboard text in the metadata never reach the diagnosis or the model.
+            const meta: unknown = JSON.parse(Buffer.from(page.bytes).toString("utf8"));
+            const record =
+              meta && typeof meta === "object" ? (meta as Record<string, unknown>) : {};
+            const count = (field: unknown) =>
+              typeof field === "number" && Number.isFinite(field) ? field : null;
+            if (
+              typeof record.stepId === "string" &&
+              entry.relativePath === `terminal/${record.stepId}.json` &&
+              typeof record.timedOut === "boolean"
+            )
+              value = {
+                kind: "terminal",
+                stepId: record.stepId,
+                timedOut: record.timedOut,
+                exitCode: count(record.exitCode),
+                signal:
+                  typeof record.signal === "string" && /^SIG[A-Z0-9]{1,12}$/u.test(record.signal)
+                    ? record.signal
+                    : null,
+                lingeringProcesses: count(record.lingeringProcesses),
+                durationMs: count(record.durationMs),
+              } satisfies TerminalProcessEvidence;
+            else limitations.push(`Terminal process metadata ${entry.artifactId} is unavailable.`);
+          } catch {
+            limitations.push(
+              `Malformed terminal process metadata ${entry.artifactId} was excluded.`,
+            );
+          }
+        }
         evidence.push({
           ref,
           value,
           text: `Verified ${entry.kind} artifact ${entry.artifactId} is available.`,
+          artifactKind: entry.kind,
         });
       }
     } catch (error) {
@@ -743,6 +923,30 @@ export class AnalysisService {
     const secrets = evidenceSecrets();
     const steps = collected.evidence.filter((item) => item.step);
     const failed = steps.find((item) => item.step!.status === "failed");
+    // A timed-out terminal process records no expected/observed values; its own artifact holds
+    // the evidence, which is what the diagnosis reports instead of a null value.
+    const processId = failed?.planStep
+      ? "processStepId" in failed.planStep.input
+        ? String(failed.planStep.input.processStepId)
+        : failed.planStep.operation === "run" || failed.planStep.operation === "launch"
+          ? failed.planStep.id
+          : null
+      : null;
+    const processEvidence = collected.evidence.find(
+      (item) => terminalProcessEvidence(item.value) && item.value.stepId === processId,
+    );
+    const terminal =
+      processEvidence && terminalProcessEvidence(processEvidence.value)
+        ? processEvidence.value
+        : null;
+    const timedOut =
+      processId &&
+      processEvidence &&
+      terminal?.timedOut &&
+      failed?.step?.expected == null &&
+      failed?.step?.observed == null
+        ? { processId, process: terminal, ref: processEvidence.ref }
+        : null;
     const gaps = [...collected.limitations];
     const baselineRow = this.ctx.database.get(
       "SELECT id FROM runs WHERE workspace_id=? AND test_id=? AND revision_id=? AND environment_revision_id=? AND outcome='passed' AND gate='passed' AND id<>? ORDER BY created_at DESC,id DESC LIMIT 1",
@@ -822,9 +1026,13 @@ export class AnalysisService {
     else if (pointer) absence = "missing_field";
     else if (Array.isArray(failed?.step?.observed) && failed.step.observed.length === 0)
       absence = "empty_collection";
-    else if (failed?.step?.observed === null) absence = "null_value";
+    else if (failed?.step?.observed === null && !timedOut) absence = "null_value";
     else if (run.outcome !== "passed" && (!failed || !collected.snapshotId))
       absence = "evidence_unavailable";
+    if (timedOut?.process.lingeringProcesses)
+      gaps.push(
+        `${timedOut.process.lingeringProcesses} process(es) outlived process ${timedOut.processId}; their state after the sweep is not recorded.`,
+      );
     const observation: Diagnosis["observation"] =
       run.outcome === "passed"
         ? null
@@ -834,10 +1042,18 @@ export class AnalysisService {
             summary: failed
               ? stepSummary(failed, secrets)
               : `Run ${run.outcome}; no failed step result is available.`,
-            expected: failed ? evidenceRendering(failed.step!.expected, secrets) : null,
-            observed: failed ? evidenceRendering(failed.step!.observed, secrets) : null,
+            expected: failed
+              ? timedOut
+                ? `Process ${timedOut.processId} exits within its step time limit`
+                : evidenceRendering(failed.step!.expected, secrets)
+              : null,
+            observed: failed
+              ? timedOut
+                ? terminalObserved(timedOut.process)
+                : evidenceRendering(failed.step!.observed, secrets)
+              : null,
             absence,
-            evidenceRefs: failed ? [failed.ref] : supports,
+            evidenceRefs: failed ? [failed.ref, ...(timedOut ? [timedOut.ref] : [])] : supports,
           };
     const location = failed?.step?.planStepId ?? "unavailable";
     const alternatives: Diagnosis["alternatives"] = [];
@@ -857,13 +1073,34 @@ export class AnalysisService {
     if (run.outcome === "passed")
       conclusion = { status: "no_failure", text: "The Run passed; no failure was observed." };
     else if (failureKind === "security_policy") {
+      const denied = collected.evidence.filter(
+        (item) => egressDenial(item.value)?.disposition === "fatal",
+      );
+      const origins = fatalDeniedOrigins(collected.evidence);
       conclusion = {
         status: "cause_supported",
-        text: "Execution was refused by an observed security precondition.",
+        text: origins.length
+          ? `Execution was refused by an observed security precondition: the network policy denied requests to ${origins.join(", ")}.`
+          : "Execution was refused by an observed security precondition.",
       };
-      next(
-        "Review the refused security precondition and its recorded reason codes; do not change the test.",
+      const images = collected.evidence.find(
+        (item) =>
+          item.reason === "security_precondition_failed" &&
+          typeof item.value === "object" &&
+          item.value !== null &&
+          "control" in item.value &&
+          item.value.control === "runner_images",
       );
+      if (images)
+        next(
+          "The pinned runner images could not be verified on this host: run `testmaster doctor` (check images), reinstall TestMaster or rebuild the runner images so the image lock matches the local Docker image store, then rerun the unchanged test.",
+          [images.ref],
+        );
+      else
+        next(
+          securityReviewText(origins),
+          denied.length ? denied.map((item) => item.ref) : supports,
+        );
       healing.reason = "Changing the test would bypass the refused precondition.";
     } else if (failureKind === "environment") {
       conclusion = {
@@ -938,6 +1175,20 @@ export class AnalysisService {
         reason:
           "A uniquely equivalent control supports proposing a locator-only change for review.",
       };
+    } else if (timedOut && failed) {
+      conclusion = {
+        status: "cause_unknown",
+        text: `Process ${timedOut.processId} did not exit within its time limit and was terminated (recorded timedOut); why it did not exit is not established.`,
+      };
+      alternative(
+        "The program may be waiting for input or on a child process (product behavior).",
+        "product_bug",
+      );
+      alternative("The time limit may be too low for this environment or load.", "environment");
+      next(
+        `Inspect the captured output and exit status of process ${timedOut.processId} (terminal/${timedOut.processId}.stdout.txt, terminal/${timedOut.processId}.stderr.txt, terminal/${timedOut.processId}.json) to see where it stopped before changing the limit or the program.`,
+        [timedOut.ref, failed.ref],
+      );
     } else {
       const locators = collected.evidence.filter(
         (item) => verifiedLocator(item.value) && item.value.stepId === failed?.step?.planStepId,
@@ -972,7 +1223,7 @@ export class AnalysisService {
             "unknown",
           );
         next(
-          `Collect the response and execution evidence for step ${location} to distinguish product, contract, and environment explanations.`,
+          collectEvidenceText(location, collected.plan?.runner),
           failed ? [failed.ref] : supports,
         );
       }
@@ -1158,9 +1409,10 @@ export class AnalysisService {
       if (security.length) {
         failureKind = "security_policy";
         recommendedAction = "fix_environment";
-        hypothesis =
-          "Execution was refused by an observed security or evidence-sanitization precondition.";
-        supports = security.map((item) => item.ref);
+        const denied = evidence.filter((item) => egressDenial(item.value)?.disposition === "fatal");
+        const origins = fatalDeniedOrigins(evidence);
+        hypothesis = `Execution was refused by an observed security or evidence-sanitization precondition${origins.length ? `: the network policy denied requests to ${origins.join(", ")}` : ""}.`;
+        supports = [...security, ...denied].map((item) => item.ref);
       } else if (environment.length || network.length) {
         failureKind = "environment";
         recommendedAction = "fix_environment";
@@ -1206,6 +1458,11 @@ export class AnalysisService {
           "Evidence collection failed; persisted execution observations remain available.",
         );
     }
+    const denialFacts = egressDenialFacts(evidence);
+    if (denialFacts.omitted)
+      collected.limitations.push(
+        `${denialFacts.omitted} further egress denials are recorded as observations but not listed as facts.`,
+      );
     return this.persist(
       {
         runId: run.id,
@@ -1218,7 +1475,8 @@ export class AnalysisService {
             text: `Run finished with outcome ${run.outcome} and gate ${run.gate}.`,
             evidenceRefs: [{ runId: run.id, contentHash: semanticHash(run) }],
           },
-          ...evidence.map((item) => ({ text: item.text, evidenceRefs: [item.ref] })),
+          ...artifactAvailabilityFacts(evidence),
+          ...denialFacts.facts,
         ],
         hypotheses: hypothesis
           ? [
@@ -1247,6 +1505,11 @@ export class AnalysisService {
       fence,
     );
   }
+  /**
+   * Records that enrichment produced nothing: the stored analysis is the rules analysis plus the
+   * limitation, so it stays `source: "rules"` with no model call. The schema admits a parent only
+   * for `source: "model"`, so this row has none; the model job's receipt points at it.
+   */
   private limited(factual: Analysis, limitation: string, fence?: AuxiliaryFence): Analysis {
     const {
       id: _id,
@@ -1259,13 +1522,32 @@ export class AnalysisService {
     return this.persist(
       {
         ...fields,
-        parentId: factual.id,
-        source: "model",
+        parentId: null,
+        source: "rules",
         modelCallId: null,
         limitations: [...new Set([...factual.limitations, limitation])],
       },
       fence,
     );
+  }
+  /**
+   * Latest rules analysis of the Run that is not the outcome of an abstained enrichment, so a later
+   * enrichment with another model starts from the factual diagnosis, not from an earlier abstention.
+   */
+  private factualRow(runId: string) {
+    const abstained = new Set(
+      this.jobs
+        .forTarget(this.ctx.workspaceId, "analysis", runId)
+        .filter((job) => job.payload.operation === "model")
+        .map((job) => job.result?.analysisId),
+    );
+    return this.ctx.database
+      .all(
+        "SELECT id,data_json FROM analyses WHERE workspace_id=? AND run_id=? AND source='rules' ORDER BY created_at DESC,id DESC",
+        this.ctx.workspaceId,
+        runId,
+      )
+      .find((row) => !abstained.has(row.id));
   }
   private async enrich(
     run: Run,
@@ -1275,14 +1557,6 @@ export class AnalysisService {
   ): Promise<Analysis> {
     const source = this.source(run, input.discoveryId);
     const projectId = String(requireEntity(this.ctx, "TestCase", run.testId).projectId);
-    if (source) {
-      const provider = this.model.config.modelProviders.find((value) =>
-        this.model.config.profilePolicy.allowedModelProviders.includes(value.id),
-      );
-      const consent = provider ? await this.model.consent(projectId, provider.id) : null;
-      if (!consent || consent.revokedAt !== null || !consent.dataClasses.includes("code_summary"))
-        throw new ContractError("POLICY_DENIED", "Code summary consent is absent or revoked");
-    }
     const refs: AnalysisEvidenceRef[] = [
       ...new Map(
         [
@@ -1404,7 +1678,11 @@ export class AnalysisService {
                 ? item.candidate.matched
                 : item.candidate.matched ||
                   item.equivalence?.equivalent ||
-                  (item.candidate.role && item.candidate.name),
+                  (item.candidate.role && item.candidate.name) ||
+                  // A visible form control without a role or accessible name is still the only
+                  // way to tell the model what the page offered where the locator matched nothing.
+                  (item.candidate.visible &&
+                    ["input", "select", "textarea"].includes(item.candidate.tag.toLowerCase())),
             )
             .sort(
               (a, b) =>
@@ -1443,6 +1721,16 @@ export class AnalysisService {
           });
         } else if (httpStatusEvidence(record)) {
           Object.assign(entry, { kind: "http", stepId: record.stepId, status: record.status });
+        } else if (terminalProcessEvidence(record)) {
+          Object.assign(entry, {
+            kind: "terminal",
+            stepId: record.stepId,
+            timedOut: record.timedOut,
+            exitCode: record.exitCode,
+            signal: record.signal,
+            lingeringProcesses: record.lingeringProcesses,
+            durationMs: record.durationMs,
+          });
         } else {
           measurements.push({
             evidenceId: handle,
@@ -1542,6 +1830,8 @@ export class AnalysisService {
       runId: run.id,
       purpose: "analyze",
       responseSchema: "AIAnalysisOutput",
+      ...(input.provider !== undefined ? { provider: input.provider } : {}),
+      ...(input.modelId !== undefined ? { model: input.modelId } : {}),
       ...(input.budget?.deadlineMs !== undefined ? { deadlineMs: input.budget.deadlineMs } : {}),
       dataClasses: source ? ["execution_evidence", "code_summary"] : ["execution_evidence"],
       inputRefs: refs.map((ref) => semanticHash(ref)),
@@ -1677,7 +1967,11 @@ export class AnalysisService {
         ![...layered.nextSteps, ...modelSteps].some((had) => had.text.startsWith(entry.prefix))
       )
         modelSteps.push({
-          text: entry.text(location),
+          text: entry.text(
+            location,
+            collected.plan?.runner,
+            fatalDeniedOrigins(collected.evidence),
+          ),
           source: "model",
           evidenceRefs: resolve(step.evidence),
         });
@@ -1778,11 +2072,7 @@ export class AnalysisService {
         jobId: job.jobId,
       });
     }
-    const factualRow = this.ctx.database.get(
-      "SELECT data_json FROM analyses WHERE workspace_id=? AND run_id=? AND source='rules' ORDER BY created_at DESC,id DESC LIMIT 1",
-      this.ctx.workspaceId,
-      run.id,
-    );
+    const factualRow = this.factualRow(run.id);
     let analysis: Analysis;
     try {
       if (input.model) {
@@ -1823,9 +2113,21 @@ export class AnalysisService {
   }
   async analyze(runId: string, input: AnalysisInput = {}): Promise<Analysis> {
     validate("AnalysisInput", input);
+    const explicitModel = input.provider !== undefined || input.modelId !== undefined;
+    if (explicitModel && !input.model)
+      throw new ContractError("INVALID_ARGUMENT", "provider and modelId require model: true");
     const run = authorizedRun(this.ctx, runId, "X");
     if (run.phase !== "completed" || run.outcome === null)
       throw new ContractError("PRECONDITION_FAILED", "Only terminal Runs can be analyzed");
+    // An explicit choice is refused before any job or reservation exists and never falls back.
+    if (explicitModel)
+      this.model.select(
+        {
+          ...(input.provider !== undefined ? { provider: input.provider } : {}),
+          ...(input.modelId !== undefined ? { model: input.modelId } : {}),
+        },
+        "Analysis",
+      );
     const source = this.source(run, input.discoveryId);
     const evidenceHash = semanticHash({
       run,
@@ -1865,6 +2167,8 @@ export class AnalysisService {
       policy: this.model.config.effectiveConfig.policyHash,
       prompt: promptVersions.analyze,
       deadlineMs: input.budget?.deadlineMs ?? 180000,
+      provider: input.provider ?? null,
+      modelId: input.modelId ?? null,
       discovery: source
         ? {
             id: input.discoveryId,

@@ -7,15 +7,18 @@
   "properties": {
     "runId": {
       "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "description": "Run id"
     },
     "wait": {
-      "type": "boolean"
+      "type": "boolean",
+      "description": "Block until the run completes"
     },
     "timeoutMs": {
       "minimum": 1,
       "maximum": 6000000,
-      "type": "integer"
+      "type": "integer",
+      "description": "Wait deadline in ms; the run continues after it"
     }
   },
   "$defs": {},

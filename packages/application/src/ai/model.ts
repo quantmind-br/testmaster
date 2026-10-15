@@ -1,16 +1,7 @@
-import {
-  ContractError,
-  type ModelConsentSettings,
-  modelDataClassDescriptions,
-  modelDataClasses,
-} from "@testmaster/contracts";
+import { ContractError, type ModelProviderSettings } from "@testmaster/contracts";
 import { canonicalJson, sha256 } from "@testmaster/domain";
 import type { ModelRequest, ModelResult } from "@testmaster/model-gateway";
-import {
-  SqliteBudgetLedger,
-  SqliteConsentStore,
-  SqliteModelCallRecorder,
-} from "@testmaster/persistence";
+import { SqliteBudgetLedger, SqliteModelCallRecorder } from "@testmaster/persistence";
 import type { ResolvedConfig } from "../config.js";
 import { requireEntity, type ServiceContext } from "../context.js";
 
@@ -29,7 +20,7 @@ export const promptVersions = {
   normalize: "normalize-3-evidence-handles",
   plan: "plan-4-integration-workflow",
   resolve_action: "resolve-action-1",
-  generate_code: "generate-code-1",
+  generate_code: "generate-code-2-importer-rules",
   summarize: "summarize-1",
   classify: "classify-1",
   analyze: "analyze-7-code-owned-advice",
@@ -50,78 +41,26 @@ export interface ModelInput {
   signal?: AbortSignal;
   deadlineMs?: number;
   reasoningEffort?: ModelRequest["reasoningEffort"];
+  /** Semantic validation of the schema-valid output; see ModelRequest.check. */
+  check?: ModelRequest["check"];
 }
 export class ModelService {
   readonly ledger: SqliteBudgetLedger;
-  readonly consents: SqliteConsentStore;
   constructor(
     readonly ctx: ServiceContext,
     readonly config: ResolvedConfig,
   ) {
     this.ledger = new SqliteBudgetLedger(ctx.database);
-    this.consents = new SqliteConsentStore(ctx.database);
-  }
-  grantConsent(
-    projectId: string,
-    providerId: string,
-    dataClasses: string[],
-    allowUnknownCost = false,
-  ): void {
-    this.ctx.authorize("A", projectId);
-    requireEntity(this.ctx, "Project", projectId);
-    if (
-      !this.config.modelProviders.some((provider) => provider.id === providerId) ||
-      !this.config.profilePolicy.allowedModelProviders.includes(providerId)
-    )
-      throw new ContractError("POLICY_DENIED", "Provider is not authorized by the user profile");
-    if (
-      !dataClasses.length ||
-      dataClasses.some((value) => !(modelDataClasses as readonly string[]).includes(value))
-    )
-      throw new ContractError("INVALID_ARGUMENT", "Explicit supported data classes are required");
-    this.consents.grant(
-      { workspaceId: this.ctx.workspaceId, projectId, providerId },
-      [...new Set(dataClasses)],
-      this.ctx.principalId,
-      allowUnknownCost,
-    );
-  }
-  revokeConsent(projectId: string, providerId: string): void {
-    this.ctx.authorize("A", projectId);
-    requireEntity(this.ctx, "Project", projectId);
-    // Only a configured provider, or one that still holds a consent record, has anything to revoke.
-    if (
-      !this.config.modelProviders.some((provider) => provider.id === providerId) &&
-      !this.ctx.database.get(
-        "SELECT 1 FROM consents WHERE workspace_id=? AND project_id=? AND provider_id=?",
-        this.ctx.workspaceId,
-        projectId,
-        providerId,
-      )
-    )
-      throw new ContractError("NOT_FOUND", "Model provider is not configured");
-    this.consents.revoke(
-      { workspaceId: this.ctx.workspaceId, projectId, providerId },
-      this.ctx.principalId,
-    );
-  }
-  async consent(projectId: string, providerId: string) {
-    this.ctx.authorize("R", projectId);
-    return this.consents.find({ workspaceId: this.ctx.workspaceId, projectId, providerId });
   }
   /**
-   * What a project shares with each configured model provider and under which consent. Never
-   * exposes credentials: only the endpoint origin, model ids and consent facts are returned.
+   * The model providers a project can use and whether the profile policy admits each. Never
+   * exposes credentials: only the endpoint origin and model ids are returned.
    */
-  settings(projectId: string): ModelConsentSettings {
+  settings(projectId: string): ModelProviderSettings {
     this.ctx.authorize("R", projectId);
     requireEntity(this.ctx, "Project", projectId);
     return {
       projectId,
-      dataClasses: modelDataClasses.map((id) => ({
-        id,
-        description: modelDataClassDescriptions[id],
-      })),
       providers: this.config.modelProviders.map((provider) => {
         const endpoint = endpointOf(provider.baseUrl);
         return {
@@ -130,54 +69,67 @@ export class ModelService {
           remote: endpoint.remote,
           models: provider.models.map((model) => model.id),
           allowedByProfile: this.config.profilePolicy.allowedModelProviders.includes(provider.id),
-          consent: this.consentFacts(projectId, provider.id),
         };
       }),
-    } as ModelConsentSettings;
+    } as ModelProviderSettings;
   }
-  private consentFacts(
-    projectId: string,
-    providerId: string,
-  ): ModelConsentSettings["providers"][number]["consent"] {
-    const row = this.ctx.database.get<{
-      data_classes_json: string;
-      granted_at: string;
-      revoked_at: string | null;
-      allow_unknown_cost: number;
-      data_json: string;
-    }>(
-      "SELECT data_classes_json,granted_at,revoked_at,allow_unknown_cost,data_json FROM consents WHERE workspace_id=? AND project_id=? AND provider_id=?",
-      this.ctx.workspaceId,
-      projectId,
-      providerId,
-    );
-    if (!row) return null;
-    const dataClasses = JSON.parse(row.data_classes_json) as string[];
-    const allowUnknownCost = row.allow_unknown_cost === 1;
-    const grantedBy =
-      (JSON.parse(row.data_json) as { grantedBy?: string }).grantedBy ??
-      // Consents granted before the actor was kept on the row: the grant event for exactly this grant.
-      this.ctx.database.get<{ actor: string }>(
-        "SELECT actor FROM audit_events WHERE workspace_id=? AND action='consent.granted' AND resource_id=? AND timestamp=? AND after_hash=? ORDER BY created_at DESC,id DESC",
-        this.ctx.workspaceId,
-        projectId,
-        row.granted_at,
-        sha256(canonicalJson({ providerId, dataClasses, allowUnknownCost })),
-      )?.actor;
-    // Never invent a grantor: a consent whose actor cannot be established is not reported.
-    if (!grantedBy)
-      throw new ContractError(
-        "PRECONDITION_FAILED",
-        "The consent record has no recorded grantor; grant it again",
-        { reason: "consent_actor_missing" },
+  /**
+   * Resolves an explicit provider/model choice against the configuration and the profile policy
+   * before any job, usage reservation or provider call exists. An explicit choice never falls back
+   * to another model; an absent choice resolves to the first allowed provider and its first
+   * structured-output model. `subject` names the operation in the capability refusal.
+   */
+  select(
+    choice: { provider?: string; model?: string },
+    subject: string,
+  ): { explicit: boolean; providerId: string | undefined; modelId: string | undefined } {
+    const { modelProviders, profilePolicy } = this.config;
+    const explicit = choice.provider !== undefined || choice.model !== undefined;
+    const unavailable = (
+      message: string,
+      reasonCode: string,
+      extra: Record<string, unknown> = {},
+    ) =>
+      new ContractError("CAPABILITY_UNAVAILABLE", message, {
+        capability: choice.model ?? choice.provider ?? "model",
+        reasonCode,
+        ...extra,
+      });
+    const provider =
+      choice.provider === undefined
+        ? modelProviders.find((value) => profilePolicy.allowedModelProviders.includes(value.id))
+        : modelProviders.find((value) => value.id === choice.provider);
+    if (explicit && !provider)
+      throw unavailable("Model provider is not configured", "provider_unavailable", {
+        availableProviders: modelProviders.map((value) => value.id),
+      });
+    if (provider && !profilePolicy.allowedModelProviders.includes(provider.id) && explicit)
+      throw new ContractError("POLICY_DENIED", "Provider is not authorized by the user profile", {
+        provider: provider.id,
+      });
+    if (!choice.model)
+      return {
+        explicit,
+        providerId: provider?.id,
+        modelId: provider?.models.find((value) => value.capabilities.structuredJson)?.id,
+      };
+    const model = provider!.models.find((value) => value.id === choice.model);
+    if (!model)
+      throw unavailable("Model is not configured for the provider", "model_not_configured", {
+        provider: provider!.id,
+        availableModels: provider!.models.map((value) => value.id),
+      });
+    if (!model.capabilities.structuredJson)
+      throw unavailable(
+        `${subject} requires a structured-output model`,
+        "model_capability_missing",
+        {
+          provider: provider!.id,
+          model: model.id,
+          requiredCapability: "structuredJson",
+        },
       );
-    return {
-      dataClasses,
-      allowUnknownCost,
-      grantedBy,
-      grantedAt: row.granted_at,
-      revokedAt: row.revoked_at,
-    };
+    return { explicit, providerId: provider!.id, modelId: model.id };
   }
   async complete<T>(input: ModelInput): Promise<ModelResult<T>> {
     this.ctx.authorize("X", input.projectId);
@@ -190,10 +142,20 @@ export class ModelService {
     const model = provider?.models.find((value) =>
       input.model ? value.id === input.model : value.capabilities.structuredJson,
     );
+    if (!provider && input.provider !== undefined)
+      throw new ContractError("CAPABILITY_UNAVAILABLE", "Model provider is not configured", {
+        capability: "model",
+        reasonCode: "provider_unavailable",
+        provider: input.provider,
+        availableProviders: this.config.modelProviders.map((value) => value.id),
+      });
     if (!provider || !model)
       throw new ContractError("CAPABILITY_UNAVAILABLE", "No configured structured-output model", {
         capability: "model",
-        milestone: "M2",
+        reasonCode: "model_not_configured",
+        provider: input.provider ?? provider?.id ?? null,
+        model: input.model ?? null,
+        availableModels: provider?.models.map((value) => value.id) ?? [],
       });
     if (
       input.deadlineMs !== undefined &&
@@ -210,7 +172,6 @@ export class ModelService {
       providers: this.config.modelProviders,
       allowedProviders: this.config.profilePolicy.allowedModelProviders,
       allowedEndpoints: this.config.modelProviders.map((value) => value.baseUrl),
-      consentStore: this.consents,
       budgetLedger: this.ledger,
       recorder: new SqliteModelCallRecorder(this.ctx.database),
     });
@@ -251,16 +212,9 @@ export class ModelService {
         dataClasses: input.dataClasses ?? ["documents"],
         maxInputBytes: 1048576,
         maxInputTokens: 100000,
-        allowUnknownCost:
-          (
-            await this.consents.find({
-              workspaceId: this.ctx.workspaceId,
-              projectId: input.projectId,
-              providerId: provider.id,
-            })
-          )?.allowUnknownCost === true,
       },
       ...(input.signal ? { signal: input.signal } : {}),
+      ...(input.check ? { check: input.check } : {}),
     });
   }
 }

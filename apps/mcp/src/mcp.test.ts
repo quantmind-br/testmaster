@@ -48,6 +48,9 @@ it("SDK handshake advertises contract schemas, records protocol and dispatches M
       const getRun = tools.find((tool) => tool.name === "testmaster_get_run")?.description ?? "";
       expect(getRun).toContain("testmaster_get_evidence");
       expect(getRun).toContain("testmaster_analyze_run");
+      const approve =
+        tools.find((tool) => tool.name === "testmaster_approve_healing")?.description ?? "";
+      expect(approve).toContain("HealingProposal:approve");
       for (const tool of tools) {
         expect(tool.inputSchema.type).toBe("object");
         expect(tool.outputSchema?.type).toBe("object");
@@ -115,7 +118,12 @@ it("MCP enforces token scopes, configured/client roots and symlink confinement b
     });
     const writeDenied = await client.callTool({
       name: "testmaster_bootstrap",
-      arguments: { projectRoot: cwd, target: "codex", scope: ["R"], mode: "replay" },
+      arguments: {
+        projectRoot: cwd,
+        target: "http://127.0.0.1:3000",
+        scope: ["codebase"],
+        mode: "replay",
+      },
     });
     expect(writeDenied.isError).toBe(true);
     expect(JSON.parse(String((writeDenied.content as { text: string }[])[0]?.text))).toMatchObject({
@@ -161,7 +169,12 @@ it("MCP enforces token scopes, configured/client roots and symlink confinement b
     writer.setRequestHandler(ListRootsRequestSchema, () => ({ roots: [] }));
     const excluded = await writer.callTool({
       name: "testmaster_bootstrap",
-      arguments: { projectRoot: cwd, target: "codex", scope: ["R"], mode: "replay" },
+      arguments: {
+        projectRoot: cwd,
+        target: "http://127.0.0.1:3000",
+        scope: ["codebase"],
+        mode: "replay",
+      },
     });
     expect(excluded.isError).toBe(true);
     expect(JSON.parse(String((excluded.content as { text: string }[])[0]?.text))).toMatchObject({

@@ -79,8 +79,7 @@ it("REQ-054 a chat refinement becomes a new proposal with a reviewable diff and 
   expect(detail.proposals).toHaveLength(2);
   const refined = detail.proposals.find((item) => item.id !== proposal.id);
   const original = detail.proposals.find((item) => item.id === proposal.id);
-  if (!refined || refined.plan.kind !== "executable" || !original)
-    throw new Error("Missing refined proposal");
+  if (refined?.plan.kind !== "executable" || !original) throw new Error("Missing refined proposal");
   expect(thread.proposal).toEqual({ id: refined.id, batchId: batch.id });
   expect(original).toMatchObject({ state: "proposed", version: proposal.version, plan: base });
   expect(refined.extensions).toMatchObject({
@@ -321,4 +320,36 @@ it("REQ-054 refinement replays by idempotency key and refuses viewers, stale bat
     code: "PRECONDITION_FAILED",
     details: expect.objectContaining({ reason: "batch_stale" }),
   });
+});
+
+it("a refinement the model declines through unsupported is refused with the reasons and persists nothing", async () => {
+  const { f, proposal, requirement, base } = await open();
+  f.setOutput({
+    proposals: [],
+    unsupported: [{ requirementId: requirement.id, reason: "Only a terminal can observe this" }],
+  });
+  const calls = f.completions;
+  await expect(
+    f.app.refinements.refineProposal(proposal.id, {
+      message: "Also check the version field",
+      expectedVersion: proposal.version ?? 1,
+    }),
+  ).rejects.toMatchObject({
+    code: "INVALID_ARGUMENT",
+    details: {
+      unsupported: [{ requirementId: requirement.id, reason: "Only a terminal can observe this" }],
+    },
+  });
+  expect(f.completions).toBe(calls + 1);
+  expect(f.app.refinements.thread({ kind: "proposal", id: proposal.id }).turns).toEqual([]);
+  expect(counts(f)).toEqual({ tests: 0, revisions: 0, proposals: 1 });
+  // Positive control: answering with a revised proposal still works.
+  answer(f, requirement.id, base, (plan) => {
+    plan.steps.push(versionCheck);
+  });
+  const thread = await f.app.refinements.refineProposal(proposal.id, {
+    message: "Also check the version field",
+    expectedVersion: proposal.version ?? 1,
+  });
+  expect(thread.proposal).not.toBeNull();
 });

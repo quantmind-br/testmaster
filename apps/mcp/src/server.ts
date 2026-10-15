@@ -1,5 +1,6 @@
-import { realpath } from "node:fs/promises";
-import { isAbsolute, relative, resolve } from "node:path";
+import { createHash } from "node:crypto";
+import { lstat, readFile, realpath } from "node:fs/promises";
+import { basename, isAbsolute, join, relative, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -8,9 +9,11 @@ import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import {
   CallToolRequestSchema,
   type CallToolResult,
+  ErrorCode,
   ListResourcesRequestSchema,
   ListResourceTemplatesRequestSchema,
   ListToolsRequestSchema,
+  McpError,
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import {
@@ -28,6 +31,7 @@ import {
   type HealingReview,
   jsonSchema,
   mcpToolCatalog,
+  parseStrictJson,
   type RunResult,
   type SuiteRunInput,
   validate,
@@ -53,6 +57,96 @@ const readTools: Record<string, true> = {
   testmaster_open_report: true,
   testmaster_compare_runs: true,
 };
+type ToolName = keyof typeof toolDescriptions;
+interface Annotations {
+  readOnlyHint: boolean;
+  destructiveHint: boolean;
+  idempotentHint: boolean;
+}
+const READ_ONLY: Annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true };
+const ADDITIVE: Annotations = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: false,
+};
+const DESTRUCTIVE: Annotations = {
+  readOnlyHint: false,
+  destructiveHint: true,
+  idempotentHint: false,
+};
+/**
+ * Read tools never write; additive tools create records without altering existing ones; destructive
+ * tools start execution or change the state of existing records. Keep `readTools` consistent.
+ */
+const annotations: Record<ToolName, Annotations> = {
+  testmaster_capabilities: READ_ONLY,
+  testmaster_validate_document: READ_ONLY,
+  testmaster_get_run: READ_ONLY,
+  testmaster_get_analysis: READ_ONLY,
+  testmaster_review_healing: READ_ONLY,
+  testmaster_get_evidence: READ_ONLY,
+  testmaster_open_report: READ_ONLY,
+  testmaster_compare_runs: READ_ONLY,
+  testmaster_bootstrap: { ...ADDITIVE, idempotentHint: true },
+  testmaster_analyze_code: ADDITIVE,
+  testmaster_normalize_requirements: ADDITIVE,
+  testmaster_explore: ADDITIVE,
+  testmaster_generate_plan: ADDITIVE,
+  testmaster_generate_tests: ADDITIVE,
+  testmaster_propose_healing: ADDITIVE,
+  testmaster_analyze_run: ADDITIVE,
+  testmaster_run_tests: DESTRUCTIVE,
+  testmaster_review_plan: DESTRUCTIVE,
+  testmaster_approve_healing: DESTRUCTIVE,
+  testmaster_cancel_run: { ...DESTRUCTIVE, idempotentHint: true },
+};
+/** Structured output above this size is also announced as a resource link where the protocol allows. */
+const LARGE_TEXT_BYTES = 32768;
+/** `resource_link` content exists from this protocol revision. */
+const RESOURCE_LINK_PROTOCOL = "2025-06-18";
+/** JSON-RPC code of an unknown resource (MCP specification). */
+const RESOURCE_NOT_FOUND = -32002;
+const RESOURCE_PAGE_BYTES = 65536;
+/** The part of a run receipt this server reads back. */
+interface McpReceipt {
+  batchId: string;
+  allMembers: string[];
+}
+type RunMember = BatchReceipt["memberRuns"][number];
+type ResourcePayload =
+  | { json: unknown }
+  | { blob: Buffer; mimeType: string; meta: Record<string, unknown> };
+interface SchemaNode {
+  properties?: Record<string, SchemaNode>;
+  items?: SchemaNode;
+  anyOf?: SchemaNode[];
+  enum?: unknown[];
+  const?: unknown;
+  description?: string;
+}
+function schemaNodeAt(schema: SchemaNode, path: string): SchemaNode | undefined {
+  let node: SchemaNode | undefined = schema;
+  for (const raw of path.split("/").slice(1)) {
+    const segment = raw.replaceAll("~1", "/").replaceAll("~0", "~");
+    node = node?.properties && segment in node.properties ? node.properties[segment] : node?.items;
+  }
+  return node;
+}
+/** Replaces the opaque `anyOf`/`const` messages of an enumeration by the values it allows. */
+function describeIssue(schema: SchemaNode, issue: { path: string; rule: string; message: string }) {
+  if (!["anyOf", "const", "enum"].includes(issue.rule)) return issue.message;
+  const node = schemaNodeAt(schema, issue.path);
+  if (!node) return issue.message;
+  const literals =
+    node.enum ??
+    (node.anyOf?.length && node.anyOf.every((branch) => "const" in branch)
+      ? node.anyOf.map((branch) => branch.const)
+      : node.const !== undefined
+        ? [node.const]
+        : undefined);
+  if (literals) return `must be one of: ${literals.map(String).join(", ")}`;
+  return node.description ? `${issue.message}: ${node.description}` : issue.message;
+}
 function unavailable(name: string, milestone = "M2"): never {
   throw new ContractError("CAPABILITY_UNAVAILABLE", "Capability is unavailable", {
     capability: name,
@@ -85,14 +179,14 @@ export class TestMasterMcp {
     this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
       tools: mcpToolCatalog.map((tool) => ({
         name: tool.name,
-        description: toolDescriptions[tool.name as keyof typeof toolDescriptions],
+        description: toolDescriptions[tool.name as ToolName],
         inputSchema: jsonSchema(tool.inputSchema) as { type: "object" },
-        outputSchema: jsonSchema(tool.outputSchema) as { type: "object" },
-        annotations: {
-          readOnlyHint: Boolean(readTools[tool.name]),
-          destructiveHint: !readTools[tool.name],
-          idempotentHint: Boolean(readTools[tool.name]),
+        // Several tools share an output schema; a client compiling every outputSchema needs distinct ids.
+        outputSchema: {
+          ...(jsonSchema(tool.outputSchema) as { type: "object" }),
+          $id: `urn:testmaster:${tool.name}:output`,
         },
+        annotations: annotations[tool.name as ToolName],
       })),
     }));
     this.server.setRequestHandler(
@@ -103,7 +197,7 @@ export class TestMasterMcp {
           this.options.authenticate?.();
           const tool = mcpToolCatalog.find((item) => item.name === request.params.name);
           if (!tool) throw new ContractError("NOT_FOUND", "Unknown tool");
-          const args = validate<Arguments>(tool.inputSchema, request.params.arguments ?? {});
+          const args = this.parseArguments(tool, request.params.arguments ?? {});
           const scope = readTools[tool.name]
             ? "R"
             : [
@@ -122,11 +216,16 @@ export class TestMasterMcp {
           this.options.application.context.authorize(scope);
           if (!tool.enabled) unavailable(tool.name, tool.milestone);
           const progressToken = request.params._meta?.progressToken;
-          const progress = async (value: number, message: string) => {
+          const progress = async (value: number, message: string, total?: number) => {
             if (progressToken !== undefined)
               await extra.sendNotification({
                 method: "notifications/progress",
-                params: { progressToken, progress: value, message },
+                params: {
+                  progressToken,
+                  progress: value,
+                  ...(total !== undefined ? { total } : {}),
+                  message,
+                },
               });
           };
           const value = request.params._meta?.["testmaster:correlationId"];
@@ -163,10 +262,40 @@ export class TestMasterMcp {
                     ].join("\n");
                   })()
                 : null;
+          const json = JSON.stringify(data);
+          if (
+            tool.name === "testmaster_normalize_requirements" &&
+            Buffer.byteLength(json) > LARGE_TEXT_BYTES &&
+            /^\d{4}-\d{2}-\d{2}$/.test(this.protocolVersion) &&
+            this.protocolVersion >= RESOURCE_LINK_PROTOCOL
+          ) {
+            const normalized = data as {
+              requirements: unknown[];
+              conflicts: unknown[];
+              version: number;
+              resource: string;
+            };
+            // structuredContent stays complete; only the duplicated JSON text is replaced by a pointer.
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: `Normalized ${normalized.requirements.length} requirements and ${normalized.conflicts.length} conflicts (snapshot version ${normalized.version}). The complete result is in structuredContent and readable at ${normalized.resource}.`,
+                },
+                {
+                  type: "resource_link",
+                  uri: normalized.resource,
+                  name: "Requirement snapshot",
+                  mimeType: "application/json",
+                },
+              ],
+              structuredContent: data,
+            };
+          }
           return {
             content: [
               ...(summary ? [{ type: "text" as const, text: summary }] : []),
-              { type: "text", text: JSON.stringify(data) },
+              { type: "text", text: json },
               ...links,
             ],
             structuredContent: data,
@@ -203,31 +332,54 @@ export class TestMasterMcp {
     );
     this.server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => ({
       resourceTemplates: [
-        ["testmaster://projects/{id}", "Project"],
-        ["testmaster://runs/{id}/result", "Run result"],
-        ["testmaster://runs/{id}/manifest", "Evidence manifest"],
-        ["testmaster://runs/{id}/report", "Committed report"],
-        ["testmaster://revisions/{id}/plan", "Executable plan"],
-        ["testmaster://requirements/{id}", "Requirements"],
-        ["testmaster://runs/{id}/artifacts/{path}{?attemptId,offset}", "Verified artifact page"],
-      ].map(([uriTemplate, name]) => ({
+        ["testmaster://projects/{id}", "Project", "Project entity by project id"],
+        ["testmaster://runs/{id}/result", "Run result", "Phase, outcome and gate of a run"],
+        ["testmaster://runs/{id}/manifest", "Evidence manifest", "Evidence manifest page of a run"],
+        [
+          "testmaster://runs/{id}/report",
+          "Committed report",
+          "Committed JSON report, served as blob pages; _meta carries next, offset and sizeBytes",
+        ],
+        ["testmaster://revisions/{id}/plan", "Executable plan", "Plan of a test revision"],
+        [
+          "testmaster://requirements/{projectId}",
+          "Requirements",
+          "Requirement snapshot of a project id, with its fingerprint and version; a requirement id returns one requirement",
+        ],
+        [
+          "testmaster://runs/{id}/artifacts/{path}{?attemptId,offset}",
+          "Verified artifact page",
+          "Bytes of a verified artifact as a blob page with the artifact's own mimeType; _meta carries next, offset and sizeBytes",
+        ],
+      ].map(([uriTemplate, name, description]) => ({
         uriTemplate: String(uriTemplate),
         name: String(name),
-        mimeType: "application/json",
+        description: String(description),
+        mimeType: uriTemplate?.includes("/artifacts/")
+          ? "application/octet-stream"
+          : "application/json",
       })),
     }));
     this.server.setRequestHandler(ListResourcesRequestSchema, async (request) => {
-      const runs = options.application.runs.list();
       this.options.authenticate?.();
-      const offset = this.decodeCursor(request.params?.cursor, "resources");
-      const items = runs.slice(offset, offset + 50);
-      return {
-        resources: items.map((run) => ({
+      // Project ids are discoverable here: no tool lists projects.
+      const entries = [
+        ...options.application.projects.list().map((project) => ({
+          uri: `testmaster://projects/${project.id}`,
+          name: String(project.name),
+          mimeType: "application/json",
+        })),
+        ...options.application.runs.list().map((run) => ({
           uri: `testmaster://runs/${run.id}/result`,
           name: run.id,
           mimeType: "application/json",
         })),
-        ...(offset + items.length < runs.length
+      ];
+      const offset = this.decodeCursor(request.params?.cursor, "resources");
+      const items = entries.slice(offset, offset + 50);
+      return {
+        resources: items,
+        ...(offset + items.length < entries.length
           ? { nextCursor: this.cursor(offset + items.length, "resources") }
           : {}),
       };
@@ -235,8 +387,28 @@ export class TestMasterMcp {
     this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
       const uri = request.params.uri;
       this.options.authenticate?.();
-      const data = await this.resource(uri);
-      return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(data) }] };
+      let payload: ResourcePayload;
+      try {
+        payload = await this.resource(uri);
+      } catch (error) {
+        if (error instanceof ContractError && error.code === "NOT_FOUND")
+          throw new McpError(RESOURCE_NOT_FOUND, error.message, { uri, code: error.code });
+        if (error instanceof ContractError && error.code === "INVALID_ARGUMENT")
+          throw new McpError(ErrorCode.InvalidParams, error.message, { uri, code: error.code });
+        throw error;
+      }
+      return {
+        contents: [
+          "json" in payload
+            ? { uri, mimeType: "application/json", text: JSON.stringify(payload.json) }
+            : {
+                uri,
+                mimeType: payload.mimeType,
+                blob: payload.blob.toString("base64"),
+                _meta: payload.meta,
+              },
+        ],
+      };
     });
   }
   async connect(transport: Transport): Promise<void> {
@@ -266,6 +438,11 @@ export class TestMasterMcp {
     await this.server.close();
     await Promise.allSettled(this.jobs);
   }
+  /** Resolves once every in-flight tool call has answered (stdin ended: finish, then close). */
+  async drain(): Promise<void> {
+    while (this.activeSignals.size) await delay(50);
+    await delay(10);
+  }
   async confined(path: string): Promise<string> {
     const absolute = resolve(this.options.application.config.cwd, path);
     const approved = await Promise.all(this.options.roots.map((root) => realpath(root)));
@@ -274,10 +451,14 @@ export class TestMasterMcp {
       return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
     };
     if (!approved.some((root) => inside(root, absolute)))
-      throw new ContractError("FORBIDDEN", "Path is outside approved roots");
+      throw new ContractError("FORBIDDEN", "Path is outside approved roots", {
+        approvedRoots: approved,
+      });
     const canonical = await realpath(absolute);
     if (!approved.some((root) => inside(root, canonical)))
-      throw new ContractError("FORBIDDEN", "Symlink escapes approved roots");
+      throw new ContractError("FORBIDDEN", "Symlink escapes approved roots", {
+        approvedRoots: approved,
+      });
     if (this.server.getClientCapabilities()?.roots) {
       const clientRoots = (await this.server.listRoots()).roots.map((root) => {
         try {
@@ -288,7 +469,9 @@ export class TestMasterMcp {
       });
       const canonicalRoots = await Promise.all(clientRoots.map((root) => realpath(root)));
       if (!canonicalRoots.some((root) => inside(root, absolute) && inside(root, canonical)))
-        throw new ContractError("FORBIDDEN", "Path is outside client roots");
+        throw new ContractError("FORBIDDEN", "Path is outside client roots", {
+          clientRoots: canonicalRoots,
+        });
     }
     return canonical;
   }
@@ -315,9 +498,14 @@ export class TestMasterMcp {
   private result(runId: string): RunResult {
     const app = this.options.application;
     const run = app.runs.get(runId);
-    const reduced = object(
-      app.runs.events(runId).findLast((event) => event.type === "run.reduced")?.payload ?? {},
+    const events = app.runs.events(runId);
+    const reduced = object(events.findLast((event) => event.type === "run.reduced")?.payload ?? {});
+    // A Run refused at admission is never reduced; its completion event carries the reason.
+    const completed = object(
+      events.findLast((event) => event.type === "run.completed")?.payload ?? {},
     );
+    const reasonCode =
+      reduced.reasonCode ?? (run.outcome === "blocked" ? completed.reasonCode : undefined);
     return {
       runId,
       phase: run.phase,
@@ -329,14 +517,15 @@ export class TestMasterMcp {
       passedOnRetry: Boolean(reduced.passedOnRetry),
       firstAttemptOutcome: (reduced.firstAttemptOutcome ??
         null) as RunResult["firstAttemptOutcome"],
-      ...(typeof reduced.reasonCode === "string" ? { reasonCode: reduced.reasonCode } : {}),
+      ...(typeof reasonCode === "string" ? { reasonCode } : {}),
     };
   }
   private async wait(
     runIds: string[],
     signal: AbortSignal,
-    progress: (value: number, message: string) => Promise<void>,
+    progress: (value: number, message: string, total?: number) => Promise<void>,
     timeoutMs = 1800000,
+    resume: Record<string, unknown> = {},
   ) {
     const app = this.options.application;
     const deadline = Date.now() + timeoutMs;
@@ -349,16 +538,18 @@ export class TestMasterMcp {
         throw new ContractError("PRECONDITION_FAILED", "Wait cancelled", { runIds });
       }
       if (Date.now() >= deadline)
-        throw new ContractError("PRECONDITION_FAILED", "Wait deadline exceeded", {
-          runIds,
-          waitTimeout: true,
-        });
+        throw new ContractError(
+          "UPSTREAM_TIMEOUT",
+          "Wait deadline exceeded; the runs continue. Poll testmaster_get_run or repeat the call to read the receipt",
+          { runIds, waitTimeout: true, runsContinue: true, ...resume },
+        );
       await progress(++count, "Waiting for durable runs");
       await delay(250);
     }
     await progress(++count, "Runs completed");
   }
-  private receipt(jobId: string): BatchReceipt {
+  /** The batch receipt with every member read live: status, queue position and resource links. */
+  private receipt(jobId: string): McpReceipt {
     const app = this.options.application;
     const batch = app.batches.get(jobId);
     const event = app.database.get(
@@ -367,16 +558,35 @@ export class TestMasterMcp {
       jobId,
     );
     if (!event) throw new ContractError("NOT_FOUND", "Job receipt unavailable");
-    const accepted = JSON.parse(String(event.data_json));
+    const accepted = JSON.parse(String(event.data_json)) as {
+      memberRuns: RunMember[];
+      expanded: RunMember[];
+      rejected: unknown;
+    };
     const aggregate = object(batch.aggregate);
-    return validate<BatchReceipt>("BatchReceipt", {
+    const live = (member: RunMember) => {
+      const run = app.runs.get(member.runId);
+      const { queue, ...rest } = member;
+      return {
+        ...rest,
+        status: run.status,
+        // The queue position is an admission-time fact; it only describes a run still waiting.
+        ...(run.status === "queued" && queue ? { queue } : {}),
+        resources: {
+          result: `testmaster://runs/${member.runId}/result`,
+          manifest: `testmaster://runs/${member.runId}/manifest`,
+          report: `testmaster://runs/${member.runId}/report`,
+        },
+      };
+    };
+    return validate<McpReceipt>("McpBatchReceipt", {
       batchId: jobId,
       jobId,
       requested: batch.requestedCount,
       accepted: accepted.memberRuns.length,
       notDispatched: accepted.rejected,
-      memberRuns: accepted.memberRuns,
-      expanded: accepted.expanded,
+      memberRuns: accepted.memberRuns.map(live),
+      expanded: accepted.expanded.map(live),
       allMembers: batch.memberRuns,
       counts: aggregate.counts,
       gate: aggregate.gate,
@@ -386,7 +596,7 @@ export class TestMasterMcp {
     name: string,
     args: Arguments,
     signal: AbortSignal,
-    progress: (value: number, message: string) => Promise<void>,
+    progress: (value: number, message: string, total?: number) => Promise<void>,
     app: Application,
   ): Promise<unknown> {
     switch (name) {
@@ -430,6 +640,8 @@ export class TestMasterMcp {
         const budget = object(args.budget ?? {});
         return app.analysis.analyze(String(args.runId), {
           model: args.model === true,
+          ...(typeof args.provider === "string" ? { provider: args.provider } : {}),
+          ...(typeof args.modelId === "string" ? { modelId: args.modelId } : {}),
           ...(typeof args.discoveryId === "string" ? { discoveryId: args.discoveryId } : {}),
           ...(typeof budget.deadlineMs === "number"
             ? { budget: { deadlineMs: budget.deadlineMs } }
@@ -439,7 +651,7 @@ export class TestMasterMcp {
       case "testmaster_cancel_run":
         return app.runs.cancel(String(args.runId));
       case "testmaster_run_tests": {
-        let receipt: BatchReceipt;
+        let receipt: McpReceipt;
         if (args.jobId) receipt = this.receipt(String(args.jobId));
         else {
           const idempotency = args.idempotencyKey
@@ -492,6 +704,7 @@ export class TestMasterMcp {
             signal,
             progress,
             args.timeoutMs as number | undefined,
+            { jobId: receipt.batchId },
           );
         return this.receipt(receipt.batchId);
       }
@@ -501,39 +714,66 @@ export class TestMasterMcp {
         app.runs.get(String(args.runId));
         return { location: `testmaster://runs/${args.runId}/report` };
       }
-      case "testmaster_bootstrap": {
-        const root = await this.confined(String(args.projectRoot));
-        const project = app.projects.create({ name: root.split("/").at(-1) ?? "Local project" });
-        return {
-          projectId: project.id,
-          config: app.config.effectiveConfig.config,
-          preflight: [{ check: "approved_root", passed: true }],
-          nextActions: [
-            "Add sources and an environment",
-            "Review generated candidates before execution",
-          ],
-        };
-      }
+      case "testmaster_bootstrap":
+        return this.bootstrap(args, app);
       case "testmaster_analyze_code": {
         const root = await this.confined(String(args.root));
         const detail = await app.discovery.discover({
           projectId: String(args.projectId),
           root,
-          scope: args.base ? "diff" : "codebase",
+          // A dirty request is a diff request: without a base the service refuses it instead of
+          // silently scanning the whole codebase.
+          scope: args.base || args.dirty ? "diff" : "codebase",
           ...(args.base ? { base: String(args.base) } : {}),
           ...(args.head ? { head: String(args.head) } : {}),
           ...(args.dirty ? { workingTree: true } : {}),
         });
         if (!detail.codeSnapshot)
           throw new ContractError("PRECONDITION_FAILED", "Discovery has no code snapshot");
-        return detail.codeSnapshot;
+        const { diff } = detail;
+        return {
+          codeSnapshot: detail.codeSnapshot,
+          scannedFileCount: detail.summary.scannedFiles.length,
+          skippedFiles: detail.codeSnapshot.skippedFiles ?? detail.summary.skippedFiles,
+          warnings: detail.summary.warnings,
+          featureRefs: detail.featureMap.features.map((feature) => feature.id),
+          ...(diff
+            ? {
+                diff: {
+                  baseSha: diff.baseSha,
+                  headSha: diff.headSha,
+                  mergeBase: diff.mergeBase,
+                  includeWorkingTree: diff.includeWorkingTree,
+                  dirtyHash: diff.dirtyHash,
+                  changes: diff.changes,
+                  impact: {
+                    criticalSmoke: diff.impact.criticalSmoke,
+                    authTouched: diff.impact.authTouched,
+                    selectedFiles: diff.impact.selectedFiles,
+                    excludedFiles: diff.impact.excludedFiles,
+                    gaps: diff.impact.gaps,
+                  },
+                  fingerprint: diff.fingerprint,
+                },
+              }
+            : {}),
+        };
       }
       case "testmaster_normalize_requirements": {
+        // Progress notifications are fire-and-forget: a closed transport must not fail the call.
+        let notifications: Promise<void> = Promise.resolve();
         const result = await app.requirements.normalize({
           projectId: String(args.projectId),
           sourceRevisionIds: args.sourceRevisionIds as string[],
+          ...(typeof args.model === "string" ? { model: args.model } : {}),
           signal,
+          onProgress: (step) => {
+            notifications = notifications
+              .then(() => progress(step.completed, step.message, step.total))
+              .catch(() => {});
+          },
         });
+        await notifications;
         return {
           requirements: result.requirements,
           conflicts: result.conflicts.map((conflict) => {
@@ -544,6 +784,9 @@ export class TestMasterMcp {
               );
             return { left: conflict.sourceRefs[0], right: conflict.sourceRefs[1] };
           }),
+          sourceSnapshotId: result.fingerprint,
+          version: result.version,
+          resource: `testmaster://requirements/${String(args.projectId)}`,
         };
       }
       case "testmaster_generate_plan":
@@ -551,7 +794,12 @@ export class TestMasterMcp {
           projectId: String(args.projectId),
           sourceSnapshotId: String(args.sourceSnapshotId),
           type: args.type as PlanGenerationType,
-          budget: args.budget as { deadlineMs?: number },
+          ...(Array.isArray(args.requirementIds)
+            ? { requirementIds: args.requirementIds as string[] }
+            : {}),
+          ...(typeof args.model === "string" ? { model: args.model } : {}),
+          ...(args.budget ? { budget: args.budget as { deadlineMs?: number } } : {}),
+          ...(args.partialGeneration === true ? { partialGeneration: true } : {}),
           signal,
         });
       case "testmaster_review_plan":
@@ -577,18 +825,21 @@ export class TestMasterMcp {
         if (projects.size !== 1)
           throw new ContractError(
             "INVALID_ARGUMENT",
-            "Generate tests requires one project selection",
+            "Provide proposalIds or revisionIds that belong to a single project",
           );
         const result = await app.codeGeneration.generate(
           {
             projectId: [...projects][0] as string,
             ...(revisions ? { revisionIds: revisions } : {}),
             ...(proposals ? { proposalIds: proposals } : {}),
-            budget: args.budget as { modelCalls?: number },
+            ...(args.budget ? { budget: args.budget as { modelCalls?: number } } : {}),
+            ...(typeof args.provider === "string" ? { provider: args.provider } : {}),
+            ...(typeof args.model === "string" ? { model: args.model } : {}),
           },
           signal,
         );
         return {
+          requested: result.requested,
           candidates: result.candidates.map((candidate) => candidate.id),
           validationErrors: result.validationErrors,
         };
@@ -626,6 +877,8 @@ export class TestMasterMcp {
             ...(args.jobId
               ? { jobId: String(args.jobId), retryFeatureIds: args.featureIds as string[] }
               : {}),
+            ...(typeof args.provider === "string" ? { provider: args.provider } : {}),
+            ...(typeof args.model === "string" ? { model: args.model } : {}),
             budget: args.budget as { steps: number; timeMs: number; modelCalls: number },
           });
           jobId = begun.job.id;
@@ -656,6 +909,8 @@ export class TestMasterMcp {
       case "testmaster_propose_healing": {
         const budget = object(args.budget ?? {});
         return app.healing.propose(String(args.failedRunId), {
+          ...(typeof args.provider === "string" ? { provider: args.provider } : {}),
+          ...(typeof args.model === "string" ? { model: args.model } : {}),
           ...(typeof budget.deadlineMs === "number"
             ? { budget: { deadlineMs: budget.deadlineMs } }
             : {}),
@@ -668,6 +923,151 @@ export class TestMasterMcp {
       default:
         unavailable(name);
     }
+  }
+  /** Rejects arguments with one deduplicated issue list that names the allowed values. */
+  private parseArguments(tool: { name: string; inputSchema: string }, raw: unknown): Arguments {
+    try {
+      return validate<Arguments>(tool.inputSchema, raw);
+    } catch (error) {
+      if (!(error instanceof ContractError) || error.code !== "INVALID_ARGUMENT") throw error;
+      const schema = jsonSchema(tool.inputSchema) as SchemaNode;
+      const enumerations = new Set(
+        error.issues.filter((issue) => issue.rule === "anyOf").map((issue) => issue.path),
+      );
+      const seen = new Set<string>();
+      const issues = [];
+      for (const issue of error.issues) {
+        // An enumeration also reports one `const` issue per allowed literal; the `anyOf` one covers them.
+        if (issue.rule === "const" && enumerations.has(issue.path)) continue;
+        const message = describeIssue(schema, issue);
+        const key = `${issue.path}|${issue.rule}|${message}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        issues.push({ ...issue, message });
+      }
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        `Invalid arguments for ${tool.name}`,
+        { issues },
+        issues,
+      );
+    }
+  }
+  /**
+   * Finds or creates the project of an approved root. A root is bound to its project by the
+   * `project.id` of its `testmaster.config.json` or by a stored mapping, so repeated calls agree.
+   * Nothing is written to the root and the target is never contacted.
+   */
+  private async bootstrap(args: Arguments, app: Application) {
+    let target: URL;
+    try {
+      target = new URL(String(args.target));
+    } catch {
+      throw new ContractError("INVALID_ARGUMENT", "target must be an http(s) URL", {
+        field: "target",
+      });
+    }
+    if (!["http:", "https:"].includes(target.protocol) || target.username || target.password)
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        "target must be an http(s) URL without credentials",
+        {
+          field: "target",
+        },
+      );
+    const root = await this.confined(String(args.projectRoot));
+    const configFile = join(root, "testmaster.config.json");
+    let configPresent = false;
+    let configuredId: string | undefined;
+    try {
+      const info = await lstat(configFile);
+      if (info.isFile() && info.size <= 1048576) {
+        configPresent = true;
+        const parsed = parseStrictJson(await readFile(configFile));
+        const section =
+          parsed && typeof parsed === "object" && "project" in parsed ? parsed.project : undefined;
+        const id =
+          section && typeof section === "object" && "id" in section ? section.id : undefined;
+        if (typeof id === "string") configuredId = id;
+      }
+    } catch {
+      // The file is only a hint: a missing, unreadable or invalid one falls through to the stored mapping.
+    }
+    const known = (id: string | undefined) => {
+      if (!id) return undefined;
+      try {
+        return app.projects.get(id);
+      } catch (error) {
+        if (error instanceof ContractError && error.code === "NOT_FOUND") return undefined;
+        throw error;
+      }
+    };
+    const mappingKey = `mcp.bootstrap:${app.context.workspaceId}:${createHash("sha256").update(root).digest("hex")}`;
+    const mapped = app.database.get("SELECT value FROM operational_state WHERE key=?", mappingKey);
+    let project = known(configuredId) ?? known(mapped ? String(mapped.value) : undefined);
+    if (!project) {
+      const name = basename(root) || "Local project";
+      // Same derivation as ProjectsService.create, so a clash is detected before the write.
+      const slug = name
+        .normalize("NFC")
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}]+/gu, "-")
+        .replace(/^-|-$/g, "");
+      const clash = app.projects.list().find((item) => item.slug === slug);
+      if (clash)
+        throw new ContractError(
+          "PRECONDITION_FAILED",
+          "A project with this name already exists but is not bound to this root",
+          { projectId: clash.id, slug },
+        );
+      project = app.database.withTx(() => {
+        const created = app.projects.create({ name, slug });
+        app.database.run(
+          "INSERT INTO operational_state(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+          mappingKey,
+          created.id,
+        );
+        return created;
+      });
+    }
+    const base = app.config.effectiveConfig.config;
+    const loopback =
+      target.hostname === "localhost" ||
+      target.hostname === "[::1]" ||
+      /^127\./.test(target.hostname);
+    const scope = args.scope as string[];
+    const environments = app.environments.list(project.id);
+    const isOrigin = target.pathname === "/" && !target.search && !target.hash;
+    const bound = configuredId === project.id;
+    return {
+      projectId: project.id,
+      config: {
+        ...base,
+        project: { name: String(project.name), id: project.id },
+        environment: {
+          ...base.environment,
+          baseUrl: String(args.target),
+          networkProfile: loopback ? "local-loopback" : "public",
+        },
+        execution: { ...base.execution, mode: args.mode },
+      },
+      preflight: [
+        { check: "approved_root", passed: true },
+        { check: "target_is_http_url", passed: true },
+        { check: "target_has_no_credentials", passed: true },
+        { check: "target_is_origin", passed: isOrigin },
+        { check: "config_file_present", passed: configPresent },
+        { check: "config_matches_project", passed: bound },
+      ],
+      nextActions: [
+        ...(environments.length
+          ? []
+          : [`Create an environment for ${target.origin.slice(0, 120)} (CLI)`]),
+        ...(bound ? [] : [`Set project.id to ${project.id} in testmaster.config.json (CLI init)`]),
+        "Add sources (CLI)",
+        `Run testmaster_analyze_code on this root (${scope.join(", ")})`,
+      ],
+    };
   }
   private async evidence(args: Arguments) {
     const bundle = await this.options.application.artifacts.get(String(args.runId), {
@@ -725,7 +1125,7 @@ export class TestMasterMcp {
         nextOffset < bundle.manifest.entries.length ? this.cursor(nextOffset, binding) : null,
     };
   }
-  private async resource(uri: string): Promise<unknown> {
+  private async resource(uri: string): Promise<ResourcePayload> {
     const app = this.options.application;
     let url: URL;
     try {
@@ -739,18 +1139,20 @@ export class TestMasterMcp {
     const id = parts[0] ?? "";
     switch (url.hostname) {
       case "projects":
-        if (parts.length === 1) return app.projects.get(id);
+        if (parts.length === 1) return { json: app.projects.get(id) };
         break;
       case "revisions":
-        if (parts.length === 2 && parts[1] === "plan") return app.revisions.get(id).plan;
+        if (parts.length === 2 && parts[1] === "plan") return { json: app.revisions.get(id).plan };
         break;
       case "runs":
-        if (parts.length === 2 && parts[1] === "result") return this.result(id);
+        if (parts.length === 2 && parts[1] === "result") return { json: this.result(id) };
         if (parts.length === 2 && parts[1] === "manifest")
-          return this.evidence({
-            runId: id,
-            ...(url.searchParams.has("cursor") ? { cursor: url.searchParams.get("cursor") } : {}),
-          });
+          return {
+            json: await this.evidence({
+              runId: id,
+              ...(url.searchParams.has("cursor") ? { cursor: url.searchParams.get("cursor") } : {}),
+            }),
+          };
         if (parts.length === 2 && parts[1] === "report") {
           const report = await app.reports.export(id, "json");
           const serialized = Buffer.from(
@@ -762,39 +1164,50 @@ export class TestMasterMcp {
           );
           if (offset > serialized.length)
             throw new ContractError("INVALID_ARGUMENT", "Invalid report cursor");
-          const end = Math.min(offset + 65536, serialized.length);
+          const end = Math.min(offset + RESOURCE_PAGE_BYTES, serialized.length);
+          // A page is a byte slice of the JSON document: clients concatenate the pages, then parse.
           return {
-            result: this.result(id),
-            encoding: "base64",
-            data: serialized.subarray(offset, end).toString("base64"),
-            sizeBytes: serialized.length,
-            next:
-              end < serialized.length
-                ? `testmaster://runs/${id}/report?cursor=${this.cursor(end, `report:${id}`)}`
-                : null,
+            blob: serialized.subarray(offset, end),
+            mimeType: "application/json",
+            meta: {
+              "testmaster:offset": offset,
+              "testmaster:sizeBytes": serialized.length,
+              "testmaster:next":
+                end < serialized.length
+                  ? `testmaster://runs/${id}/report?cursor=${this.cursor(end, `report:${id}`)}`
+                  : null,
+              "testmaster:result": this.result(id),
+            },
           };
         }
         if (parts.length === 3 && parts[1] === "artifacts") {
+          const offset = Number(url.searchParams.get("offset") ?? 0);
           const page = await app.artifacts.read(id, decodeURIComponent(String(parts[2])), {
             ...(url.searchParams.has("attemptId")
               ? { attemptId: String(url.searchParams.get("attemptId")) }
               : {}),
-            offset: Number(url.searchParams.get("offset") ?? 0),
+            offset,
           });
           return {
-            artifact: page.entry,
-            encoding: "base64",
-            data: page.bytes.toString("base64"),
-            next:
-              page.nextOffset === null
-                ? null
-                : `testmaster://runs/${id}/artifacts/${parts[2]}?attemptId=${url.searchParams.get("attemptId") ?? ""}&offset=${page.nextOffset}`,
+            blob: page.bytes,
+            mimeType: page.entry.mimeType,
+            meta: {
+              "testmaster:artifact": page.entry,
+              "testmaster:offset": offset,
+              "testmaster:sizeBytes": page.entry.sizeBytes,
+              "testmaster:next":
+                page.nextOffset === null
+                  ? null
+                  : `testmaster://runs/${id}/artifacts/${parts[2]}?attemptId=${url.searchParams.get("attemptId") ?? ""}&offset=${page.nextOffset}`,
+            },
           };
         }
         break;
       case "requirements":
         if (parts.length === 1)
-          return id.startsWith("prj_") ? app.requirements.snapshot(id) : app.requirements.get(id);
+          return {
+            json: id.startsWith("prj_") ? app.requirements.snapshot(id) : app.requirements.get(id),
+          };
         break;
     }
     throw new ContractError("NOT_FOUND", "Unknown resource");

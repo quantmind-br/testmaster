@@ -57,3 +57,26 @@ it("shares repeated generated executable schema nodes without widening validatio
   expect(() => validateAgainstSchema(original, invalid)).toThrow();
   expect(() => validateAgainstSchema(compact as Record<string, unknown>, invalid)).toThrow();
 });
+
+it("lets the prompted proposal schema decline a requirement without widening it", () => {
+  const original = {
+    ...jsonSchema("AIProposalsOutput"),
+    $id: "urn:testmaster:AIProposalsOutput:original-decline-test",
+  };
+  const compact = compactPromptSchema(original) as Record<string, unknown>;
+  compact.$id = "urn:testmaster:AIProposalsOutput:compact-decline-test";
+  const requirementId = "req_01900000-0000-7000-8000-000000000001";
+  const decline = { proposals: [], unsupported: [{ requirementId, reason: "CLI exit status" }] };
+  expect(validateAgainstSchema(original, decline)).toBe(decline);
+  expect(validateAgainstSchema(compact, decline)).toBe(decline);
+  for (const invalid of [
+    { error: "cannot generate" },
+    { ...decline, error: "cannot generate" },
+    { proposals: [], unsupported: [{ requirementId, reason: "" }] },
+    { proposals: [], unsupported: [{ requirementId: "not-an-id", reason: "CLI exit status" }] },
+    { proposals: [], unsupported: [{ requirementId, reason: "x", extra: true }] },
+  ]) {
+    expect(() => validateAgainstSchema(original, invalid)).toThrow();
+    expect(() => validateAgainstSchema(compact, invalid)).toThrow();
+  }
+});

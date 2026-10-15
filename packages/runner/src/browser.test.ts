@@ -5,8 +5,9 @@ import { type PlanStep, type RunnerEvent, validate } from "@testmaster/contracts
 import { semanticHash } from "@testmaster/domain";
 import type * as Playwright from "playwright-core";
 import { type Browser, errors } from "playwright-core";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, type Mock, vi } from "vitest";
 import { runBrowser } from "./browser.js";
+import { observePage } from "./observation.js";
 import { ProtocolClient } from "./protocol.js";
 import { type RunnerInput, Runtime } from "./runtime.js";
 
@@ -410,6 +411,146 @@ it("binds popup aliases only from approved policy and does not switch implicitly
     reasonCode: "egress_denied",
   });
 });
+interface RouteDouble {
+  request: () => { url: () => string; method: () => string; resourceType: () => string };
+  abort: Mock;
+  continue: Mock;
+}
+function routeFor(url: string, resourceType: string, method = "GET"): RouteDouble {
+  return {
+    request: () => ({ url: () => url, method: () => method, resourceType: () => resourceType }),
+    abort: vi.fn(async () => undefined),
+    continue: vi.fn(async () => undefined),
+  };
+}
+/** Fires the route handler Chromium would call for each request while the click step runs. */
+function requestsOnClick(...routes: RouteDouble[]): void {
+  context.page.onClick = () => {
+    const handler = (context.route.mock.calls as unknown[][])[0]?.[1] as
+      | ((route: RouteDouble) => Promise<void>)
+      | undefined;
+    if (!handler) throw new Error("Route handler was not installed");
+    for (const route of routes) void handler(route);
+  };
+}
+const egressEvents = () =>
+  events.flatMap((event) => (event.type === "egress.denied" ? [event.payload] : []));
+it("aborts passive subresources from an unapproved origin, records them once per origin and type, and still passes", async () => {
+  const flag = routeFor("https://cdn.example.test/flags/br.png?token=url-canary", "image");
+  const second = routeFor("https://cdn.example.test/flags/ar.png", "image");
+  const font = routeFor("https://cdn.example.test/f.woff2", "font", "HEAD");
+  requestsOnClick(flag, second, font);
+  expect(await runBrowser(runtime([click, assertion]))).toMatchObject({
+    outcome: "passed",
+    reasonCode: "assertions_satisfied",
+  });
+  expect(flag.abort).toHaveBeenCalledWith("blockedbyclient");
+  expect(flag.continue).not.toHaveBeenCalled();
+  expect(egressEvents()).toEqual([
+    {
+      stepId: "click",
+      origin: "https://cdn.example.test",
+      method: "GET",
+      resourceType: "image",
+      disposition: "aborted",
+      count: 2,
+    },
+    {
+      stepId: "click",
+      origin: "https://cdn.example.test",
+      method: "HEAD",
+      resourceType: "font",
+      disposition: "aborted",
+      count: 1,
+    },
+  ]);
+  // Origin only: neither the path nor the query leaves the route handler.
+  expect(JSON.stringify(egressEvents())).not.toContain("url-canary");
+  expect(JSON.stringify(egressEvents())).not.toContain("flags");
+});
+it.each([
+  ["script", "GET"],
+  ["xhr", "GET"],
+  ["fetch", "GET"],
+  ["document", "GET"],
+  ["eventsource", "GET"],
+  ["manifest", "GET"],
+  ["other", "GET"],
+  ["image", "POST"],
+])("blocks the run when a %s %s request targets an unapproved origin", async (type, method) => {
+  const request = routeFor("https://tracker.example.test/collect?id=url-canary", type, method);
+  requestsOnClick(request);
+  expect(await runBrowser(runtime([click, assertion]))).toMatchObject({
+    outcome: "blocked",
+    reasonCode: "egress_denied",
+  });
+  expect(request.abort).toHaveBeenCalledWith("blockedbyclient");
+  expect(request.continue).not.toHaveBeenCalled();
+  expect(egressEvents()).toEqual([
+    expect.objectContaining({
+      origin: "https://tracker.example.test",
+      resourceType: type,
+      disposition: "fatal",
+      count: 1,
+    }),
+  ]);
+  expect(JSON.stringify(egressEvents())).not.toContain("url-canary");
+});
+it("never downgrades an unapproved passive request whose URL is ambiguous", async () => {
+  const ambiguous = routeFor("https://cdn.example.test\\@evil.example.test/a.png", "image");
+  requestsOnClick(ambiguous);
+  expect(await runBrowser(runtime([click, assertion]))).toMatchObject({
+    outcome: "blocked",
+    reasonCode: "egress_denied",
+  });
+  expect(egressEvents()).toEqual([expect.objectContaining({ disposition: "fatal" })]);
+});
+it("lets an approved additional origin through without recording a denial", async () => {
+  const attempt = runtime([click, assertion]);
+  attempt.input.networkPolicy.allowedOrigins.push("https://cdn.example.test");
+  attempt.input.networkPolicy.additionalOrigins = ["https://cdn.example.test"];
+  const approved = routeFor("https://cdn.example.test/flags/br.png", "image");
+  const script = routeFor("https://cdn.example.test/app.js", "script");
+  requestsOnClick(approved, script);
+  expect(await runBrowser(attempt)).toMatchObject({
+    outcome: "passed",
+    reasonCode: "assertions_satisfied",
+  });
+  expect(approved.continue).toHaveBeenCalledOnce();
+  expect(script.continue).toHaveBeenCalledOnce();
+  expect(approved.abort).not.toHaveBeenCalled();
+  expect(egressEvents()).toEqual([]);
+});
+it("never replays a stored session toward an additional origin", async () => {
+  const secretRef = "sec_019bf434-20c0-7000-8000-000000000001";
+  const attempt = runtime([assertion]);
+  attempt.input.networkPolicy.allowedOrigins.push("https://cdn.example.test");
+  attempt.input.networkPolicy.additionalOrigins = ["https://cdn.example.test"];
+  Object.assign(attempt.input, {
+    secrets: [{ secretRef, secretVersion: 1 }],
+    auth: { storageState: { secretRef } },
+  });
+  const cookie = (domain: string) => ({
+    name: "sid",
+    value: `session-for-${domain}`,
+    domain,
+    path: "/",
+    expires: -1,
+    httpOnly: true,
+    secure: false,
+    sameSite: "Lax",
+  });
+  vi.spyOn(attempt.protocol, "secret").mockResolvedValue(
+    JSON.stringify({ cookies: [cookie("fixture.test"), cookie("cdn.example.test")], origins: [] }),
+  );
+  const newContext = vi.fn(async () => context);
+  launch.mockResolvedValue({ newContext, close: closeBrowser } as unknown as Browser);
+  expect(await runBrowser(attempt)).toMatchObject({ outcome: "passed" });
+  const options = newContext.mock.calls[0]?.[0] as unknown as {
+    storageState: { cookies: { domain: string }[] };
+  };
+  expect(options.storageState.cookies.map((entry) => entry.domain)).toEqual(["fixture.test"]);
+});
 it("captures before/after evidence and scrubs DOM and console canaries", async () => {
   const attempt = runtime([click, assertion]);
   attempt.secrets.add("canary");
@@ -724,4 +865,216 @@ it("refuses storage-state input as unsupported before launching Chromium", async
     });
   }
   expect(launch).not.toHaveBeenCalled();
+});
+
+function exploring(
+  agent: Partial<NonNullable<RunnerInput["agent"]>> = {},
+  explore: Partial<PlanStep> = {},
+): Runtime {
+  const step = {
+    id: "explore-0",
+    description: "Follow a grounded admitted link",
+    kind: "action",
+    operation: "navigate",
+    input: { path: "/" },
+    ...explore,
+  } as PlanStep;
+  const attempt = runtime([step, assertion]);
+  Object.assign(attempt.input, {
+    agent: {
+      resolveSteps: ["explore-0"],
+      exploration: true,
+      mutationStepIds: [],
+      maxRequests: 1,
+      ...agent,
+    },
+  });
+  return attempt;
+}
+const observedPage = (over: Record<string, unknown> = {}) => ({
+  title: "Sign in",
+  text: "Skip to content",
+  controls: [],
+  hasPasswordField: false,
+  elements: [],
+  ...over,
+});
+/** The browser answers each `observePage` read from the queue, and the last one repeatedly. */
+function pageReads(...reads: unknown[]) {
+  let next = 0;
+  return vi
+    .spyOn(context.page, "evaluate")
+    .mockImplementation((async (fn: unknown) =>
+      fn === observePage
+        ? reads[Math.min(next++, reads.length - 1)]
+        : "<html>canary</html>") as never);
+}
+const observationOf = (path = "browser/steps/explore-0-observation.json") =>
+  JSON.parse(String(artifacts.find((entry) => entry.path === path)?.bytes));
+
+it("a first observation with no action ends the exploration inconclusive and describes the page", async () => {
+  const attempt = exploring({ requireActionable: true });
+  const agent = vi.spyOn(attempt.protocol, "agent").mockResolvedValue(null);
+  pageReads(
+    observedPage({
+      hasPasswordField: true,
+      controls: [
+        {
+          tag: "input",
+          type: "password",
+          role: null,
+          name: null,
+          placeholder: "Enter your password",
+          testId: null,
+          visible: true,
+        },
+        {
+          tag: "button",
+          type: "submit",
+          role: "button",
+          name: "Continue",
+          placeholder: null,
+          testId: null,
+          visible: true,
+        },
+      ],
+    }),
+  );
+  expect(await runBrowser(attempt)).toMatchObject({
+    outcome: "inconclusive",
+    reasonCode: "insufficient_evidence",
+  });
+  // The host still sees the observation (it records the Feature state), and it is described, not valued.
+  expect(agent).toHaveBeenCalledTimes(1);
+  expect(observationOf()).toMatchObject({
+    settled: true,
+    hasPasswordField: true,
+    actions: [],
+    controls: [{ type: "password", placeholder: "Enter your password" }, { name: "Continue" }],
+  });
+  expect(
+    events.filter((event) => event.type === "step.finished").map((event) => event.payload),
+  ).toMatchObject([
+    {
+      stepId: "explore-0",
+      status: "inconclusive",
+      reasonCode: "insufficient_evidence",
+      error: {
+        message:
+          "Exploration observed no same-origin link at http://fixture.test/: 2 form controls, password field present, 0 approved actions.",
+      },
+    },
+    { stepId: "assert", status: "skipped" },
+  ]);
+  // What was seen is kept even though the closing assertion never ran.
+  expect(artifacts.some((entry) => entry.path === "browser/steps/explore-0-after.png")).toBe(true);
+
+  // Control: a seeded exploration treats the page itself as the target, so no link is fine.
+  artifacts.length = 0;
+  events.length = 0;
+  const seeded = exploring({ requireActionable: false });
+  vi.spyOn(seeded.protocol, "agent").mockResolvedValue(null);
+  expect(await runBrowser(seeded)).toMatchObject({ outcome: "passed" });
+
+  // Control: a first page with an observed link is explored, not refused.
+  const linked = exploring({ requireActionable: true });
+  const choose = vi.spyOn(linked.protocol, "agent").mockResolvedValue(null);
+  pageReads(
+    observedPage({
+      elements: [
+        {
+          tag: "a",
+          testId: null,
+          label: null,
+          placeholder: null,
+          role: "link",
+          name: null,
+          text: "Orders",
+          href: "http://fixture.test/orders",
+        },
+      ],
+    }),
+  );
+  expect(await runBrowser(linked)).toMatchObject({ outcome: "passed" });
+  expect(choose.mock.calls[0]?.[1]).toMatchObject({
+    actions: [{ operation: "navigate", input: { path: "http://fixture.test/orders" } }],
+  });
+  // Neither passing exploration reported insufficient evidence anywhere.
+  expect(
+    JSON.stringify(events.filter((event) => event.type === "step.finished").map((e) => e.payload)),
+  ).not.toContain("insufficient_evidence");
+});
+
+it("waits for two equal reads before observing and reports a page that never settles", async () => {
+  const reads = pageReads(
+    observedPage({ text: "Loading..." }),
+    observedPage({ text: "Sign in form" }),
+    observedPage({ text: "Sign in form" }),
+  );
+  const settling = exploring();
+  vi.spyOn(settling.protocol, "agent").mockResolvedValue(null);
+  await runBrowser(settling);
+  const observations = reads.mock.calls.filter(([fn]) => fn === observePage);
+  expect(observations).toHaveLength(3);
+  expect(observationOf()).toMatchObject({ settled: true, text: "Sign in form" });
+
+  // The wait is bounded by the step deadline: a page that keeps changing is observed as it stands.
+  artifacts.length = 0;
+  let tick = 0;
+  vi.spyOn(context.page, "evaluate").mockImplementation((async (fn: unknown) =>
+    fn === observePage
+      ? observedPage({ text: `clock ${tick++}` })
+      : "<html>canary</html>") as never);
+  const drifting = exploring({}, { timeoutMs: 600 });
+  vi.spyOn(drifting.protocol, "agent").mockResolvedValue(null);
+  await runBrowser(drifting);
+  expect(tick).toBe(2);
+  expect(observationOf()).toMatchObject({ settled: false, text: "clock 1" });
+});
+
+it("offers an approved mutation when it matches a control by placeholder or by role and name", async () => {
+  const approved = (locator: unknown, value: string): PlanStep =>
+    ({
+      id: "approved",
+      description: "Fill",
+      kind: "action",
+      operation: "fill",
+      input: { locator, value: { literal: value } },
+    }) as PlanStep;
+  const byPlaceholder = approved(
+    { by: "placeholder", value: "Enter your email", exact: true },
+    "a@example.com",
+  );
+  const byRole = approved(
+    { by: "role", role: "textbox", name: "Email", exact: true },
+    "b@example.com",
+  );
+  const elsewhere = approved({ by: "placeholder", value: "Search", exact: true }, "c");
+  const attempt = exploring({ mutationActions: [byPlaceholder, byRole, elsewhere] });
+  const choose = vi.spyOn(attempt.protocol, "agent").mockResolvedValue(null);
+  pageReads(
+    observedPage({
+      elements: [
+        {
+          tag: "input",
+          testId: null,
+          label: null,
+          placeholder: "Enter your email",
+          role: "textbox",
+          name: "Email",
+          text: "",
+          href: null,
+        },
+      ],
+    }),
+  );
+  await runBrowser(attempt);
+  // Both approved locators match the one control; the unrelated approval is not offered.
+  expect(choose.mock.calls[0]?.[1]).toMatchObject({
+    actions: [
+      { ...byPlaceholder, id: "explore-0" },
+      { ...byRole, id: "explore-0" },
+    ],
+  });
+  expect(choose.mock.calls[0]?.[1]).toHaveProperty("actions.length", 2);
 });

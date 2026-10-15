@@ -10,89 +10,75 @@
   "properties": {
     "projectId": {
       "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "description": "Project id"
     },
     "envId": {
       "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "description": "Environment to explore"
     },
     "featureIds": {
       "type": "array",
       "items": {
         "pattern": "^fea_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
         "type": "string"
-      }
+      },
+      "description": "Features to explore; empty with jobId resumes that job"
     },
     "budget": {
-      "anyOf": [
-        {
-          "type": "null"
+      "additionalProperties": false,
+      "description": "Exploration budget; modelCalls must not exceed steps",
+      "type": "object",
+      "required": [
+        "steps",
+        "modelCalls",
+        "timeMs"
+      ],
+      "properties": {
+        "steps": {
+          "minimum": 1,
+          "maximum": 100,
+          "type": "integer",
+          "description": "Browser steps, 1..100"
         },
-        {
-          "type": "boolean"
+        "modelCalls": {
+          "minimum": 1,
+          "maximum": 100,
+          "type": "integer",
+          "description": "Model calls, 1..steps"
         },
-        {
-          "type": "number"
-        },
-        {
-          "type": "string"
-        },
-        {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/T0"
-          }
-        },
-        {
-          "type": "object",
-          "patternProperties": {
-            "^(.*)$": {
-              "$ref": "#/$defs/T0"
-            }
-          }
+        "timeMs": {
+          "minimum": 1000,
+          "maximum": 300000,
+          "type": "integer",
+          "description": "Time budget in ms, 1000..300000"
         }
-      ]
+      }
+    },
+    "provider": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string",
+      "description": "Model provider id for action resolution; absent: first allowed provider"
+    },
+    "model": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string",
+      "description": "Model id for action resolution; absent: the provider's first capable model"
     },
     "jobId": {
       "pattern": "^dsc_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "description": "Existing exploration job to resume or retry"
     },
     "wait": {
-      "type": "boolean"
+      "type": "boolean",
+      "description": "Block until the job ends instead of returning its id"
     }
   },
-  "$defs": {
-    "T0": {
-      "anyOf": [
-        {
-          "type": "null"
-        },
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "number"
-        },
-        {
-          "type": "string"
-        },
-        {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/T0"
-          }
-        },
-        {
-          "type": "object",
-          "patternProperties": {
-            "^(.*)$": {
-              "$ref": "#/$defs/T0"
-            }
-          }
-        }
-      ]
-    }
-  },
+  "$defs": {},
   "$id": "urn:testmaster:Mcp_testmaster_explore",
   "$schema": "https://json-schema.org/draft/2020-12/schema"
 }

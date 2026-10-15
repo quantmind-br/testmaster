@@ -10,7 +10,7 @@ function input(runtime: Runtime, options: Options) {
   if (scope === "diff" && (!base || (!head && !workingTree)))
     throw new ContractError(
       "PRECONDITION_REQUIRED",
-      "Diff discovery requires --base and --head or --working-tree",
+      "Diff discovery requires --base, plus --head or --working-tree",
     );
   if (head && workingTree)
     throw new ContractError("INVALID_ARGUMENT", "--head and --working-tree are mutually exclusive");

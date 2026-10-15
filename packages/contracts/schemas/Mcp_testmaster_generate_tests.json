@@ -1,87 +1,73 @@
 {
   "additionalProperties": false,
-  "type": "object",
-  "required": [
-    "budget"
+  "description": "Provide proposalIds or revisionIds (at least one); all must belong to one project",
+  "anyOf": [
+    {
+      "type": "object",
+      "properties": {
+        "proposalIds": true
+      },
+      "required": [
+        "proposalIds"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "revisionIds": true
+      },
+      "required": [
+        "revisionIds"
+      ]
+    }
   ],
+  "type": "object",
   "properties": {
     "proposalIds": {
+      "minItems": 1,
       "type": "array",
       "items": {
         "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
         "type": "string"
-      }
+      },
+      "description": "Accepted proposals"
     },
     "revisionIds": {
+      "minItems": 1,
       "type": "array",
       "items": {
         "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
         "type": "string"
-      }
+      },
+      "description": "Existing revisions"
     },
     "budget": {
-      "anyOf": [
-        {
-          "type": "null"
-        },
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "number"
-        },
-        {
-          "type": "string"
-        },
-        {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/T0"
-          }
-        },
-        {
-          "type": "object",
-          "patternProperties": {
-            "^(.*)$": {
-              "$ref": "#/$defs/T0"
-            }
-          }
+      "additionalProperties": false,
+      "description": "Optional model-call budget",
+      "type": "object",
+      "properties": {
+        "modelCalls": {
+          "minimum": 1,
+          "maximum": 20,
+          "type": "integer",
+          "description": "Model calls, 1..20; default 10"
         }
-      ]
+      }
+    },
+    "provider": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string",
+      "description": "Model provider id for code generation; absent: first allowed provider"
+    },
+    "model": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string",
+      "description": "Model id for code generation, validated before any call; absent: the provider's first structured-output model"
     }
   },
-  "$defs": {
-    "T0": {
-      "anyOf": [
-        {
-          "type": "null"
-        },
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "number"
-        },
-        {
-          "type": "string"
-        },
-        {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/T0"
-          }
-        },
-        {
-          "type": "object",
-          "patternProperties": {
-            "^(.*)$": {
-              "$ref": "#/$defs/T0"
-            }
-          }
-        }
-      ]
-    }
-  },
+  "$defs": {},
   "$id": "urn:testmaster:Mcp_testmaster_generate_tests",
   "$schema": "https://json-schema.org/draft/2020-12/schema"
 }

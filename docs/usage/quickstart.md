@@ -75,7 +75,7 @@ The application under test must already be running (here on `127.0.0.1:3000`).
 ```bash
 testmaster init --mode local --name shop --base-url http://127.0.0.1:3000
 testmaster doctor
-testmaster test scaffold --type frontend > testmaster_tests/login.plan.json   # or write a plan by hand
+testmaster test scaffold --type frontend > testmaster_tests/login.plan.json   # frontend|backend|cli; or write a plan by hand
 testmaster test lint --plan testmaster_tests/login.plan.json                   # offline validation
 testmaster test create --plan testmaster_tests/login.plan.json --output json   # immutable revision
 testmaster test run "$TEST_ID" --wait --output json                              # replay mode, heal off
@@ -85,7 +85,12 @@ testmaster report export "$RUN_ID" --format junit --out report.xml              
 testmaster test rerun "$TEST_ID" --wait --output json
 ```
 
+`--type cli` scaffolds a terminal-runner plan for a command-line or TUI program; see [Terminal tests](terminal-tests.md).
+
 - `--output json` (or `--json`) prints exactly one JSON envelope on stdout; diagnostics go to stderr.
+  A long-running command (`server start`, `backup agent`) prints its receipt envelope as soon as it is running; if
+  it then fails, a second envelope with the `error` follows on stdout and the exit code is set. Only your own
+  interruption (Ctrl-C, SIGTERM) ends it without an error envelope.
 - Exit codes follow `specs/05-cli-mcp.md` §3 (0 passed, 1 failed gate, 6 precondition, 7 wait deadline,
   8 capability unavailable, 9 policy/sandbox denied, 130/143 interrupted).
 - `test run --wait` without a running worker makes the CLI the ephemeral owner; Ctrl-C cancels durably.
@@ -117,11 +122,14 @@ the original outcome/gate, and abstains when evidence cannot establish a cause. 
 are disclosed with a null snapshot rather than manufactured evidence. A successful analysis
 command exits 0 even when the analyzed Run failed.
 
-Optional enrichment is explicit: grant the provider the `execution_evidence` data class, then use
-`testmaster run analyze "$RUN_ID" --model --deadline-ms 180000`. Only sanitized execution summaries
-and bounded measurements cross that boundary, not raw trace/video or sensitive captures. Model
-refusal/failure retains the factual predecessor and records a limitation in a separate immutable
-analysis. Identical requests reuse their stored receipt; interrupted paid calls are not reissued.
+Optional enrichment is explicit: use
+`testmaster run analyze "$RUN_ID" --model --deadline-ms 180000` with a provider the operator policy
+allows. Only sanitized execution summaries and bounded measurements cross that boundary, not raw
+trace/video or sensitive captures. Choose the model with `--provider ID --model-id ID`; an unknown
+choice is refused before any work. Model refusal/failure retains the factual predecessor and records a
+limitation in a separate immutable analysis that stays `source: "rules"` (it never claims to be model
+output). Identical requests reuse their stored receipt;
+interrupted paid calls are not reissued.
 
 Reports preserve execution outcomes even when evidence is missing, expired or fails integrity:
 the affected member has `evidenceState: "unavailable"`, null snapshot/manifest and explicit
@@ -166,12 +174,16 @@ execution rather than silently broadening authorization.
 
 ## Model-assisted path (experimental)
 
-Model providers are declared only in the user profile `~/.config/testmaster/profiles.json`, allowed by the
-operator policy `~/.config/testmaster/policy.json`, and require explicit consent per project, provider and
-data class. Without consent no byte is sent to the provider. Unpriced models additionally require an
-explicit unknown-cost grant. No token or monetary ceiling applies unless you set one. The current live validation model
-is `qwen3.8-flash` on QuantForge, selected explicitly by the operator. Provider availability is checked
-at execution time; configuring a model does not authorize data transfer or establish generation quality.
+Model providers are declared only in the user profile `~/.config/testmaster/profiles.json` and allowed by the
+operator policy `~/.config/testmaster/policy.json` (`allowedModelProviders`). A provider that is not in that
+policy never receives a byte; there is no per-project, per-provider or per-data-class opt-in step beyond
+it, and repository files cannot enable a provider. Credentials, secrets, environment values, private keys,
+storage state and raw traces are never sent, and what is sent is minimised and redacted. A model without a
+price table runs with its cost recorded as `unknown` unless a monetary project budget exists, in which case
+the call is refused before it is sent because the ceiling could not be enforced. No token or monetary ceiling
+applies unless you set one. The current live validation model is `qwen3.8-flash` on QuantForge, selected
+explicitly by the operator. Provider availability is checked at execution time; configuring a model does not
+establish generation quality.
 
 ```json
 {
@@ -197,7 +209,7 @@ at execution time; configuring a model does not authorize data transfer or estab
 
 Prices are per million tokens in integer minor units of `scale` decimal places (here USD with 6
 places: `150000` is $0.15). They produce local estimates, not provider invoices; `cacheReadPerMillion`
-applies only to cached input the provider reports. With a price table no unknown-cost grant is needed.
+applies only to cached input the provider reports. Without a price table the cost stays `unknown`.
 
 To control reasoning effort, add `"reasoningEffort": "medium"` to the model entry
 (alongside `id` and `capabilities`). Supported values: `low`, `medium`, `high`, `xhigh`, `max`.
@@ -206,7 +218,6 @@ when configured; it still omits token ceilings, sampling parameters and `enable_
 
 ```bash
 echo '{"allowedModelProviders":["quantforge"]}' > ~/.config/testmaster/policy.json
-testmaster consent grant --provider quantforge --data-class documents code_summary requirements plans
 testmaster budget set --tokens 12000000                    # optional cumulative project token quota
 testmaster source add PRD.md --role prd --format markdown
 testmaster source add openapi.yaml --role api --format openapi
@@ -222,7 +233,38 @@ testmaster test revision promote "$CANDIDATE" --expected-version <n>
 testmaster usage                                           # model calls, tokens, budget; unknown cost stays unknown
 ```
 
+Heal with a specific model using
+`testmaster heal propose "$RUN_ID" --provider quantforge --model <id>`; without them the first
+allowed provider's first structured-output model is used.
+
 Exact flags: `testmaster <group> <command> --help`.
+
+## Third-party subresources and additional origins
+
+A browser run may reach only the environment target. When the page loads something from another origin (a CDN
+image, a web font, a flag service), the request is aborted. A passive subresource (`image`, `font`,
+`stylesheet` or `media`, fetched with `GET`/`HEAD`) is dropped and recorded without failing the run, so a
+passing test stays `passed` with `assertions_satisfied`. Any other denied request (script, `XHR`/`fetch`,
+WebSocket, document, popup) ends the run `blocked/egress_denied`. `testmaster run analyze` names the denied origin.
+Each denial is written once per origin and resource type to the `egress.denied` runner event and to
+`logs/egress.ndjson`; only the origin is recorded.
+
+```bash
+testmaster env update "$ENV_ID" --expected-version 1 \
+  --additional-origin https://flagcdn.com --additional-origin https://fonts.example.test
+testmaster env update "$ENV_ID" --expected-version 2 --clear-additional-origins
+testmaster env revisions "$ENV_ID"          # newest first; shows additionalOrigins per revision
+```
+
+`--additional-origin` replaces the whole list (`additionalOrigins` in the API; at most 32 exact `http(s)`
+origins, no wildcard, path, query or credentials). Approving an origin lets page scripts and requests send data
+there, so list only origins you trust. Additional origins are not target origins: no secret or auth profile
+binds to them and a stored session is never replayed to them. Literal IPs and `localhost` must fit the network
+profile; DNS names are classified when the proxy connects. The proxy reaches a private or loopback address for an
+additional origin only like it does for the `baseUrl`: that exact host and port, and only inside the ranges the
+network profile permits (`local-loopback` loopback, `private` private ranges; the `public` profile never reaches
+either). Offline profiles ignore the list. Every change creates a new environment revision, so earlier approvals do
+not apply.
 
 ## Selective reruns and read-only preview
 
@@ -263,9 +305,14 @@ inside the sandbox.
 
 ```bash
 testmaster server start --port 7331                 # loopback /v1 API, bearer token file 0600
-testmaster mcp serve --transport stdio --root "$PWD" # MCP for coding agents
+testmaster token issue --token-file ~/.local/share/testmaster/mcp.token   # R,W,X token file; the token is never printed
+testmaster mcp serve --transport stdio --root "$PWD" \
+  --token-file ~/.local/share/testmaster/mcp.token   # MCP for coding agents; register this command in the agent
 testmaster agent install --target claude             # preview; add --yes to apply
 ```
+
+`token issue` works on the local profile only; repeating it for the same file reuses the token, and a
+different `--scope` set needs another file. On a server profile, tokens come from `/v1/tokens` or the portal.
 
 Agent skill files are written atomically inside managed markers, with backups under
 `.testmaster/agent-backups/`; edited managed blocks are reported as drift, never overwritten.

@@ -10,7 +10,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   ContractError,
@@ -38,6 +38,7 @@ import {
   DockerExecutor,
   dockerCommand,
   type ImageLock,
+  PolicyDenied,
   verifyImageLock,
 } from "@testmaster/sandbox";
 import { AgentSkillsService } from "./agent-skills/service.js";
@@ -193,6 +194,54 @@ interface SharedRuntime {
   /** Workspace system scopes handed to controller loops, built once per workspace. */
   systemScopes?: Map<string, Application>;
   ephemeralSecrets: Map<string, string>;
+}
+const IMAGE_REMEDY =
+  "reinstall TestMaster (`make install` in a source checkout) or rebuild the runner images (`containers/build.sh`) so the installed image lock and the local Docker image store agree";
+/** Why the pinned runner images cannot be used: a stable diagnostic and an actionable message. */
+export function runnerImageProblem(error: unknown): {
+  diagnostic: string;
+  message: string;
+  imageId?: string;
+} {
+  if (error instanceof ContractError && error.details.diagnostic === "image_unavailable") {
+    const imageId = String(error.details.imageId);
+    return {
+      diagnostic: "image_unavailable",
+      imageId,
+      message: `Pinned runner image ${imageId} is not in the local Docker image store; ${IMAGE_REMEDY}`,
+    };
+  }
+  // Only a missing lock or seccomp file is "missing"; a missing docker binary is not.
+  const missingFile =
+    error instanceof Error &&
+    "code" in error &&
+    error.code === "ENOENT" &&
+    "path" in error &&
+    typeof error.path === "string" &&
+    /(?:images\.lock|seccomp_profile)\.json$/u.test(error.path)
+      ? basename(error.path)
+      : null;
+  const reason =
+    error instanceof PolicyDenied
+      ? error.reason
+      : missingFile
+        ? "image_lock_missing"
+        : "image_verification_failed";
+  const messages: Record<string, string> = {
+    image_lock_mismatch: `The local runner image differs from the image ID pinned in the image lock; ${IMAGE_REMEDY}`,
+    image_revoked:
+      "The pinned runner image is revoked; install a release whose image lock pins a non-revoked image",
+    seccomp_hash_mismatch: `The seccomp profile differs from the hash pinned in the image lock; ${IMAGE_REMEDY}`,
+    invalid_seccomp_provenance: `The image lock carries no valid seccomp provenance; ${IMAGE_REMEDY}`,
+    invalid_image_lock: `The image lock file is invalid; ${IMAGE_REMEDY}`,
+    image_lock_missing: `The installed ${missingFile} is missing; ${IMAGE_REMEDY}`,
+  };
+  return Object.hasOwn(messages, reason)
+    ? { diagnostic: reason, message: messages[reason]! }
+    : {
+        diagnostic: "image_verification_failed",
+        message: `Runner image or seccomp verification failed; ${IMAGE_REMEDY}`,
+      };
 }
 export class Application {
   readonly context: ServiceContext;
@@ -914,10 +963,29 @@ export class Application {
       const allowed = roleDecides
         ? rbacMatrix[role][column] === "allow"
         : decision.allowed && decision.granted;
-      if (!decision.allowed || !allowed)
-        throw new ContractError("FORBIDDEN", "Action is not authorized", {
-          scope: `${{ HealingProposal: "healing", Artifact: "artifacts", SecretReference: "secrets", AgentPullRequest: "github" }[resourceType]}:${action}`,
-        });
+      if (!decision.allowed || !allowed) {
+        const scope = `${{ HealingProposal: "healing", Artifact: "artifacts", SecretReference: "secrets", AgentPullRequest: "github" }[resourceType]}:${action}`;
+        if (action === "approve" && resourceType === "HealingProposal") {
+          // Name the missing grant, never the caller's own grants, role or other projects.
+          const grantMissing = !roleDecides && decision.allowed && !decision.granted;
+          throw new ContractError(
+            "FORBIDDEN",
+            grantMissing
+              ? "Approving a healing proposal needs a HealingProposal:approve grant on this token; scopes R, W, X and A do not imply it. A human can approve with `testmaster heal approve <proposalId> --expected-version <N>`."
+              : "This credential is not permitted to approve healing proposals. A human approver can approve with `testmaster heal approve <proposalId> --expected-version <N>`.",
+            {
+              scope,
+              reasonCode: grantMissing ? "approval_grant_required" : "approval_not_permitted",
+              requiredGrant: { resourceType: "HealingProposal", action: "approve" },
+              nextActions: [
+                "testmaster heal approve <proposalId> --expected-version <N> (human CLI session)",
+                "Ask a project admin for a HealingProposal:approve grant on this token",
+              ],
+            },
+          );
+        }
+        throw new ContractError("FORBIDDEN", "Action is not authorized", { scope });
+      }
       auditSecurity(this.context, "grant", projectId, "allowed");
     } catch (error) {
       if (this.context.workspaceId)
@@ -979,16 +1047,23 @@ export class Application {
     const project = this.projects.create({
       name: options.name ?? config.project?.name ?? "Local project",
     });
+    const baseUrl = options.baseUrl ?? config.environment?.baseUrl ?? "http://127.0.0.1:3000";
     const environment = this.environments.create({
       projectId: project.id,
       name: "local",
-      baseUrl: options.baseUrl ?? config.environment?.baseUrl ?? "http://127.0.0.1:3000",
+      baseUrl,
       networkProfile: config.environment?.networkProfile ?? "local-loopback",
       locale: config.environment?.locale ?? "pt-BR",
       timezone: config.environment?.timezone ?? "America/Sao_Paulo",
     });
     this.environments.setDefault(project.id, environment.id, project.version ?? 1);
     config.project = { name: String(project.name), id: project.id };
+    // The written file must name the origin and profile the local environment was created with.
+    config.environment = {
+      ...config.environment,
+      baseUrl,
+      networkProfile: config.environment?.networkProfile ?? "local-loopback",
+    };
     const path = join(this.config.cwd, "testmaster.config.json");
     let exists = false;
     try {
@@ -1110,10 +1185,13 @@ export class Application {
     try {
       const images = await this.images();
       await measureRuntimeIdentities(images, this.seccompPath);
-    } catch {
-      throw new ContractError("POLICY_DENIED", "Runner image lock or seccomp verification failed", {
+    } catch (error) {
+      const problem = runnerImageProblem(error);
+      throw new ContractError("POLICY_DENIED", problem.message, {
         reasonCode: "security_precondition_failed",
         control: "runner_images",
+        diagnostic: problem.diagnostic,
+        ...(problem.imageId ? { imageId: problem.imageId } : {}),
       });
     }
   }
@@ -1126,7 +1204,10 @@ export class Application {
           10000,
         );
         if (result.code !== 0)
-          throw new ContractError("POLICY_DENIED", "Pinned runner image is unavailable");
+          throw new ContractError("POLICY_DENIED", "Pinned runner image is unavailable", {
+            diagnostic: "image_unavailable",
+            imageId,
+          });
         return result.stdout.toString().trim();
       },
       undefined,
@@ -1176,6 +1257,7 @@ export class Application {
       ["http", "testmaster-runner"],
       ["playwright", "testmaster-runner"],
       ["python", "testmaster-runner-python"],
+      ["terminal", "testmaster-runner"],
     ] as const) {
       let ready = runtime.available;
       if (ready) {
@@ -1256,11 +1338,19 @@ export class Application {
   async doctor(options: { target?: string; nodeVersion?: string } = {}) {
     const node = nodeSupport(options.nodeVersion ?? process.versions.node);
     let lock: ImageLock | null = null;
-    let images = "PASS";
+    let images: { status: string; diagnostics?: string[]; imageId?: string; reason?: string } = {
+      status: "PASS",
+    };
     try {
       lock = await this.images();
-    } catch {
-      images = "FAIL";
+    } catch (error) {
+      const problem = runnerImageProblem(error);
+      images = {
+        status: "FAIL",
+        diagnostics: [problem.diagnostic],
+        ...(problem.imageId ? { imageId: problem.imageId } : {}),
+        reason: problem.message,
+      };
     }
     const probeDir = await mkdtemp(join(tmpdir(), "tm-doctor-"));
     await mkdir(join(probeDir, "input"));
@@ -1409,7 +1499,7 @@ export class Application {
         actual: node.actual,
       },
       runtime: { status: runtime.available ? "PASS" : "FAIL", ...runtime },
-      images: { status: images },
+      images,
       storage: { status: storage, availableBytes },
       writablePaths,
       database,
@@ -1449,6 +1539,7 @@ export class Application {
       ] as const
     ).filter((name) => checks[name].status === "FAIL");
     const recommendations = [
+      ...(images.reason ? [`Runner images: ${images.reason}.`] : []),
       ...(storage === "WARN" ? ["Less than 1 GiB is free on the data-directory volume."] : []),
       ...(timezone.status === "WARN"
         ? ["Set environment.timezone to an IANA name such as UTC or America/Sao_Paulo."]
@@ -1477,17 +1568,21 @@ export class Application {
   async capabilities() {
     const docker = await new DockerExecutor().doctor();
     let imageReady = false;
+    let imageReason: string | null = null;
     if (docker.available) {
       try {
         await this.images();
         imageReady = true;
-      } catch {}
-    }
+      } catch (error) {
+        imageReason = runnerImageProblem(error).message;
+      }
+    } else imageReason = "Hardened Docker sandbox is unavailable";
     const sandboxFeatures: Record<string, true> = {
       "local-execution": true,
       playwright: true,
       http: true,
       python: true,
+      terminal: true,
       docker: true,
       "agent-mode": true,
       resolve_action: true,
@@ -1509,13 +1604,16 @@ export class Application {
         enabled,
         disabledReason: enabled
           ? null
-          : (feature.disabledReason ?? "Policy or sandbox unavailable"),
+          : (feature.disabledReason ??
+            (sandboxFeatures[feature.id] && imageReason
+              ? imageReason
+              : "Policy or sandbox unavailable")),
       };
     });
     return {
       schemaVersion: "1.0.0",
       features,
-      runners: imageReady ? ["playwright", "http", "python"] : [],
+      runners: imageReady ? ["playwright", "http", "python", "terminal"] : [],
       sandbox: docker,
       limits: this.config.effectiveConfig.config.execution,
     };

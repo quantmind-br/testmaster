@@ -8,25 +8,30 @@
   "properties": {
     "projectId": {
       "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "description": "Project id"
     },
     "root": {
       "minLength": 1,
       "maxLength": 200,
-      "type": "string"
+      "type": "string",
+      "description": "Directory to analyze; must be inside an approved root"
     },
     "base": {
       "minLength": 1,
       "maxLength": 200,
-      "type": "string"
+      "type": "string",
+      "description": "Base git ref of a diff analysis (needs head or dirty); omit for the whole codebase"
     },
     "head": {
       "minLength": 1,
       "maxLength": 200,
-      "type": "string"
+      "type": "string",
+      "description": "Head git ref of a diff analysis; required with base unless dirty is true"
     },
     "dirty": {
-      "type": "boolean"
+      "type": "boolean",
+      "description": "Diff base against the working tree instead of a head ref; requires base"
     }
   },
   "$defs": {},

@@ -11,25 +11,45 @@
     "projectRoot": {
       "minLength": 1,
       "maxLength": 200,
-      "type": "string"
+      "type": "string",
+      "description": "Project root directory; must be inside an approved root"
     },
     "target": {
-      "minLength": 1,
-      "maxLength": 200,
-      "type": "string"
+      "pattern": "^https?://[^\\s]+$",
+      "maxLength": 2048,
+      "type": "string",
+      "description": "http(s) URL of the application under test, without credentials; it is never probed"
     },
     "scope": {
+      "minItems": 1,
+      "uniqueItems": true,
       "type": "array",
       "items": {
-        "minLength": 1,
-        "maxLength": 200,
-        "type": "string"
-      }
+        "anyOf": [
+          {
+            "const": "codebase",
+            "type": "string"
+          },
+          {
+            "const": "diff",
+            "type": "string"
+          }
+        ]
+      },
+      "description": "What the project will analyze: codebase and/or diff"
     },
     "mode": {
-      "minLength": 1,
-      "maxLength": 200,
-      "type": "string"
+      "anyOf": [
+        {
+          "const": "replay",
+          "type": "string"
+        },
+        {
+          "const": "agent",
+          "type": "string"
+        }
+      ],
+      "description": "Execution mode of the proposed config: replay (deterministic) or agent"
     }
   },
   "$defs": {},

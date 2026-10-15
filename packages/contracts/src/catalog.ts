@@ -10,6 +10,10 @@ import { listContracts } from "./m4/lists.js";
 import { deliveryContracts, notificationContracts } from "./m4/notifications.js";
 import { onboardingContracts } from "./m4/onboarding.js";
 import { operationsContracts } from "./m4/operations.js";
+import { runResponseContracts } from "./m4/responses-runs.js";
+import { CodeDiffView, sourceResponseContracts } from "./m4/responses-sources.js";
+import { systemResponseContracts } from "./m4/responses-system.js";
+import { viewResponseContracts } from "./m4/responses-views.js";
 import { runViewContracts } from "./m4/runs.js";
 import { scheduleContracts } from "./m4/schedules.js";
 import { settingsContracts } from "./m4/settings.js";
@@ -54,6 +58,11 @@ const HealingPatch = P.Obj({
   evidenceHandles: evidenceIds(1),
   explanation: P.Description,
 });
+/** REST `RunReceipt` plus the MCP resources of the run; status is read live, never frozen at admission. */
+const McpRunReceipt = P.Obj({
+  ...Ops.RunReceipt.properties,
+  resources: P.Obj({ result: Type.String(), manifest: Type.String(), report: Type.String() }),
+});
 const supplemental = {
   DocumentValidationInput: P.Obj({
     schema: P.Enum(["ExecutablePlan", "ProjectConfig", "RunRequest"]),
@@ -95,12 +104,24 @@ const supplemental = {
   AIProposalsOutput: P.Obj({
     proposals: Type.Array(
       P.Obj({
-        plan: Plans.ExecutablePlan,
+        plan: Plans.ModelExecutablePlan,
         requirementRefs: Type.Array(P.id("req"), { minItems: 1 }),
         evidenceIds: evidenceIds(1),
         warnings: names,
       }),
-      { minItems: 1, maxItems: 50 },
+      { maxItems: 50 },
+    ),
+    // A requirement the model cannot cover with an HTTP or browser plan is declined here
+    // instead of being given an invented endpoint; the service enforces that each requirement
+    // is either proposed or declined.
+    unsupported: Type.Optional(
+      Type.Array(
+        P.Obj({
+          requirementId: P.id("req"),
+          reason: Type.String({ minLength: 1, maxLength: 500 }),
+        }),
+        { maxItems: 100 },
+      ),
     ),
   }),
   Empty: P.Obj({}),
@@ -116,6 +137,13 @@ const supplemental = {
     name: P.Name,
     baseUrl: Type.String({ format: "uri" }),
     networkProfile: P.Enum(["public", "private", "local-loopback"]),
+    additionalOrigins: Type.Optional(
+      Type.Array(Type.String({ format: "uri" }), {
+        maxItems: 32,
+        description:
+          "Exact extra origins (scheme, host, port; no path, query, credentials or wildcard) page subrequests may reach. Replaces the previous list; [] clears it. They never receive credentials and are not target origins.",
+      }),
+    ),
     authRefs: Type.Optional(Type.Array(P.id("aup"))),
     production: Type.Optional(Type.Boolean()),
   }),
@@ -256,6 +284,9 @@ const supplemental = {
   }),
   AnalysisInput: P.Obj({
     model: Type.Optional(Type.Boolean()),
+    /** Explicit provider/model id for the enrichment call (`model` is the on/off switch); the first allowed structured model when absent. Both require `model: true`. */
+    provider: Type.Optional(P.Name),
+    modelId: Type.Optional(P.Name),
     /** Authorized code discovery whose snapshot grounds optional source fix targets. */
     discoveryId: Type.Optional(P.id("dsc")),
     budget: Type.Optional(
@@ -289,6 +320,9 @@ const supplemental = {
     evidenceGaps: Type.Array(P.Name, { maxItems: 20 }),
   }),
   HealingInput: P.Obj({
+    /** Explicit provider/model for the healing call; the first allowed structured model when absent. */
+    provider: Type.Optional(P.Name),
+    model: Type.Optional(P.Name),
     budget: Type.Optional(
       P.Obj({ deadlineMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 600000 })) }),
     ),
@@ -550,7 +584,53 @@ const supplemental = {
     requirements: Type.Array(Entities.entities.Requirement),
     conflicts: Type.Array(P.Obj({ left: P.EvidenceRef, right: P.EvidenceRef })),
   }),
+  NormalizedRequirements: P.Obj({
+    requirements: Type.Array(Entities.entities.Requirement),
+    conflicts: Type.Array(P.Obj({ left: P.EvidenceRef, right: P.EvidenceRef })),
+    sourceSnapshotId: Type.String({
+      description:
+        "Fingerprint of the requirement snapshot; pass it as testmaster_generate_plan.sourceSnapshotId after a human approves the requirements",
+    }),
+    version: P.Nonnegative,
+    resource: Type.String({ description: "testmaster://requirements/{projectId}" }),
+  }),
+  CodeAnalysisReceipt: P.Obj({
+    codeSnapshot: Entities.entities.CodeSnapshot,
+    scannedFileCount: P.Nonnegative,
+    skippedFiles: Type.Array(P.Obj({ path: Type.String(), reason: Type.String({ minLength: 1 }) })),
+    warnings: Type.Array(
+      P.Obj({ path: Type.String(), code: Type.String({ minLength: 1 }), message: Type.String() }),
+    ),
+    featureRefs: Type.Array(P.id("fea")),
+    /** Present for diff scope only: changed paths, the files the change reaches and the analyzed files it does not. */
+    diff: Type.Optional(
+      P.Obj({
+        baseSha: CodeDiffView.properties.baseSha,
+        headSha: CodeDiffView.properties.headSha,
+        mergeBase: CodeDiffView.properties.mergeBase,
+        includeWorkingTree: CodeDiffView.properties.includeWorkingTree,
+        dirtyHash: CodeDiffView.properties.dirtyHash,
+        changes: CodeDiffView.properties.changes,
+        impact: P.Obj({
+          criticalSmoke: CodeDiffView.properties.impact.properties.criticalSmoke,
+          authTouched: CodeDiffView.properties.impact.properties.authTouched,
+          selectedFiles: CodeDiffView.properties.impact.properties.selectedFiles,
+          excludedFiles: CodeDiffView.properties.impact.properties.excludedFiles,
+          gaps: CodeDiffView.properties.impact.properties.gaps,
+        }),
+        fingerprint: CodeDiffView.properties.fingerprint,
+      }),
+    ),
+  }),
+  McpRunReceipt,
+  McpBatchReceipt: P.Obj({
+    ...Ops.BatchReceipt.properties,
+    memberRuns: Type.Array(McpRunReceipt),
+    expanded: Type.Array(McpRunReceipt),
+  }),
   GeneratedTestsReceipt: P.Obj({
+    /** Revisions the call tried to generate code for; `candidates` plus failures show partial success. */
+    requested: P.Nonnegative,
     candidates: Type.Array(P.id("rev")),
     validationErrors: Type.Array(P.Obj({ path: P.Name, message: P.Description })),
   }),
@@ -655,6 +735,10 @@ export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({
   ...runViewContracts,
   ...authContracts,
   ...operationsContracts,
+  ...runResponseContracts,
+  ...sourceResponseContracts,
+  ...systemResponseContracts,
+  ...viewResponseContracts,
   ...Object.fromEntries(
     Object.entries(mcpTools).map(([name, tool]) => [`Mcp_${name}`, tool.input]),
   ),

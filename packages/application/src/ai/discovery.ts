@@ -1,8 +1,6 @@
-import { execFile } from "node:child_process";
-import { chmod, mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
-import { dirname, join, resolve, sep } from "node:path";
+import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
+import { join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
 import {
   type CodeSnapshot,
   ContractError,
@@ -19,15 +17,16 @@ import {
   OutboxRepository,
 } from "@testmaster/persistence";
 import {
-  analyzeDiff,
   buildStaticFeatureMap,
   CODE_DETECTOR_VERSION,
   type CodeDiff,
   type CodeSummary,
   type PythonCodeSummary,
   type PythonSummaryRunner,
+  retainRelativeImports,
   SOURCE_PARSER_VERSION,
   summarizeCode,
+  summarizeDiffScope,
 } from "@testmaster/planner";
 import { DockerExecutor, dockerCommand, verifyImageLock } from "@testmaster/sandbox";
 import type { ResolvedConfig } from "../config.js";
@@ -39,7 +38,6 @@ import { promptVersions } from "./model.js";
 import { readAiState, replayAiReceipt, type SourcesService, saveAiState } from "./sources.js";
 
 type StoredJob = DiscoveryJob & EntityDocument;
-const execFileAsync = promisify(execFile);
 export interface DiscoverInput {
   projectId: string;
   root?: string;
@@ -396,33 +394,30 @@ export class DiscoveryService {
       maxFileBytes: 1024 * 1024,
       maxTotalBytes: 64 * 1024 * 1024,
       maxFiles: 20000,
+      maxSymbolsPerFile: 200,
+      maxSymbols: 20000,
       pythonRunner: this.pythonRunner,
     };
-    if (scope === "diff" && !input.workingTree) {
-      const pinned = await analyzeDiff({
+    if (scope === "diff") {
+      // Only the changed files, their importers and critical tests are read; the rest is listed
+      // as excluded. A pinned head is staged from git objects, never from the working tree.
+      const scoped = await summarizeDiffScope({
         repoRoot: root,
         base: input.base as string,
-        head: input.head as string,
+        ...(input.head ? { head: input.head } : {}),
+        ...(input.workingTree ? { workingTree: true, dataDir: this.config.dataDir } : {}),
+        summary: options,
+        stagingDir: join(this.config.dataDir, "discovery-snapshots"),
       });
-      summary = await this.summarizePinned(root, pinned.headSha, options);
-      diff = await analyzeDiff({
-        repoRoot: root,
-        base: pinned.baseSha,
-        head: pinned.headSha,
-        summary,
-      });
-    } else {
-      summary = await summarizeCode(root, options);
-      if (scope === "diff")
-        diff = await analyzeDiff({
-          repoRoot: root,
-          base: input.base as string,
-          ...(input.head ? { head: input.head } : {}),
-          workingTree: true,
-          summary,
-        });
-    }
-    const repository = resolveRepositoryProvenance(root);
+      summary = scoped.summary;
+      diff = scoped.diff;
+    } else summary = await summarizeCode(root, options);
+    // The import graph is complete up to here; only relative specifiers are stored, bounded.
+    retainRelativeImports(summary);
+    const repository = resolveRepositoryProvenance(root, undefined, {
+      dataDir: this.config.dataDir,
+      persistCache: this.ctx.database.engine === "sqlite",
+    });
     if (diff && !input.workingTree) {
       repository.commitSha = diff.headSha;
       repository.checkoutSha = diff.headSha;
@@ -598,15 +593,7 @@ export class DiscoveryService {
         [`${endpoint.method} ${endpoint.path}`],
         [{ relativePath: endpoint.ref.path, contentHash: endpoint.ref.contentHash }],
       );
-    for (const component of summary.features.filter(
-      (value) => !selected || selected.has(value.ref.path),
-    ))
-      add(
-        `component:${component.ref.path}:${component.name}`,
-        [],
-        [],
-        [{ relativePath: component.ref.path, contentHash: component.ref.contentHash }],
-      );
+    // Components are not features: they have no route or endpoint and cannot be explored.
     for (const result of revisions)
       for (const chunk of result.chunks.filter(
         (value) => value.requirementLike || value.kind === "requirement",
@@ -684,75 +671,6 @@ export class DiscoveryService {
     );
     await Promise.resolve();
     return this.finish(admission.receipt.jobId);
-  }
-  private async summarizePinned(
-    root: string,
-    sha: string,
-    options: Parameters<typeof summarizeCode>[1],
-  ): Promise<CodeSummary> {
-    const env = Object.fromEntries(
-      Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")),
-    );
-    const git = async (args: string[], maxBuffer: number) =>
-      execFileAsync(
-        "git",
-        ["-C", root, "-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false", ...args],
-        { env, encoding: "buffer", maxBuffer, timeout: 30000 },
-      );
-    const tree = await git(["ls-tree", "-r", "-z", "-l", sha, "--"], 8 * 1024 * 1024);
-    const storage = join(this.config.dataDir, "discovery-snapshots");
-    await mkdir(storage, { recursive: true, mode: 0o700 });
-    const temporary = await mkdtemp(join(storage, "head-"));
-    await chmod(temporary, 0o755);
-    const skipped: { path: string; reason: string }[] = [];
-    let count = 0;
-    let total = 0;
-    try {
-      for (const entry of tree.stdout.toString("utf8").split("\0").filter(Boolean)) {
-        const tab = entry.indexOf("\t");
-        const path = entry.slice(tab + 1);
-        const metadata = entry.slice(0, tab).trim().split(/\s+/u);
-        if (
-          tab < 0 ||
-          path.startsWith("/") ||
-          path.includes("\\") ||
-          path.split("/").includes("..")
-        )
-          throw new ContractError("POLICY_DENIED", "Git tree contains an unconfined path");
-        if (!metadata[0]?.startsWith("100") || metadata[1] !== "blob") {
-          skipped.push({ path, reason: "git_link_or_nonregular" });
-          continue;
-        }
-        const size = Number(metadata[3]);
-        if (!Number.isSafeInteger(size) || size < 0)
-          throw new ContractError("PRECONDITION_FAILED", "Git tree has an invalid blob size");
-        if (++count > 20000 || total + size > 64 * 1024 * 1024)
-          throw new ContractError("PAYLOAD_TOO_LARGE", "Pinned Git tree exceeds analysis limits");
-        total += size;
-        if (size > 1024 * 1024) {
-          skipped.push({ path, reason: "file_size_limit" });
-          continue;
-        }
-        const blob = await git(["cat-file", "blob", metadata[2] as string], 1024 * 1024 + 1);
-        if (blob.stdout.byteLength !== size)
-          throw new ContractError("PRECONDITION_FAILED", "Git blob size changed");
-        await mkdir(dirname(join(temporary, path)), { recursive: true, mode: 0o755 });
-        await writeFile(join(temporary, path), blob.stdout, { mode: 0o644, flag: "wx" });
-      }
-      const summary = await summarizeCode(temporary, options);
-      summary.skippedFiles.push(...skipped);
-      summary.manifestHash = sha256(
-        canonicalJson({
-          detectorVersion: summary.detectorVersion,
-          files: summary.fileRefs,
-          excludes: options?.excludes ?? [],
-          skipped: summary.skippedFiles,
-        }),
-      );
-      return summary;
-    } finally {
-      await rm(temporary, { recursive: true, force: true });
-    }
   }
   private finish(id: string): DiscoveryDetail {
     this.ctx.database.withTx(() => {

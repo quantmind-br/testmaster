@@ -4,7 +4,8 @@ import { dirname, relative, resolve } from "node:path";
 import { promisify } from "node:util";
 import { ContractError } from "@testmaster/contracts";
 import { canonicalJson, sha256 } from "@testmaster/domain";
-import { readConfinedCodeFile } from "./summary.js";
+import { dataDirectoryPrefixes, insideDataDirectory } from "./data-directory.js";
+import { hashConfinedCodeFile } from "./summary.js";
 import type { CodeDiff, CodeRoute, CodeSummary } from "./types.js";
 
 const execFileAsync = promisify(execFile);
@@ -19,21 +20,30 @@ export interface DiffOptions {
   head?: string;
   workingTree?: boolean;
   summary?: CodeSummary;
+  /** Project data directory; never listed or read (see `dataDirectoryPrefixes`). */
+  dataDir?: string;
+  /**
+   * Analyzable repository files a diff-scoped `summary` deliberately did not read. They are listed
+   * as excluded files and the impact declares that coverage is limited to the closure.
+   */
+  unreadFiles?: readonly string[];
 }
-async function git(
+/** Everything about a diff that needs git and the working tree, but not the code summary. */
+export type DiffChanges = Omit<CodeDiff, "impact"> & { root: string };
+/** Command line and environment for git with credentials, hooks, filters and drivers neutralized. */
+export function gitInvocation(
   repoRoot: string,
   args: string[],
   filterOverrides: string[] = [],
-): Promise<string> {
+): { args: string[]; cwd: string; env: NodeJS.ProcessEnv } {
   // Repository reads need neither provider credentials nor operator Git configuration.
   const env = Object.fromEntries(
     Object.entries(process.env).filter(([key]) =>
       ["PATH", "LANG", "LC_ALL", "TZ", "TMPDIR", "SYSTEMROOT"].includes(key),
     ),
   );
-  const result = await execFileAsync(
-    "git",
-    [
+  return {
+    args: [
       "-c",
       "core.hooksPath=/dev/null",
       "-c",
@@ -55,24 +65,36 @@ async function git(
       ...filterOverrides,
       ...args,
     ],
-    {
-      cwd: repoRoot,
-      maxBuffer: 16 * 1024 * 1024,
-      timeout: 30_000,
-      env: {
-        ...env,
-        GIT_CONFIG_NOSYSTEM: "1",
-        GIT_CONFIG_GLOBAL: "/dev/null",
-        GIT_OPTIONAL_LOCKS: "0",
-        GIT_TERMINAL_PROMPT: "0",
-        GIT_NO_REPLACE_OBJECTS: "1",
-        GIT_ATTR_NOSYSTEM: "1",
-        GIT_PAGER: "cat",
-      },
+    cwd: repoRoot,
+    env: {
+      ...env,
+      GIT_CONFIG_NOSYSTEM: "1",
+      GIT_CONFIG_GLOBAL: "/dev/null",
+      GIT_OPTIONAL_LOCKS: "0",
+      GIT_TERMINAL_PROMPT: "0",
+      GIT_NO_REPLACE_OBJECTS: "1",
+      GIT_ATTR_NOSYSTEM: "1",
+      GIT_PAGER: "cat",
     },
-  );
+  };
+}
+/** Runs git read-only and returns stdout; a non-zero exit rejects with the exit code in `code`. */
+export async function readOnlyGit(
+  repoRoot: string,
+  args: string[],
+  filterOverrides: string[] = [],
+  maxBuffer = 16 * 1024 * 1024,
+): Promise<string> {
+  const invocation = gitInvocation(repoRoot, args, filterOverrides);
+  const result = await execFileAsync("git", invocation.args, {
+    cwd: invocation.cwd,
+    maxBuffer,
+    timeout: 30_000,
+    env: invocation.env,
+  });
   return result.stdout;
 }
+const git = readOnlyGit;
 function parseNameStatus(output: string): GitFile[] {
   const files: GitFile[] = [];
   const fields = output.split("\0");
@@ -89,7 +111,7 @@ function parseNameStatus(output: string): GitFile[] {
   }
   return files;
 }
-function authPath(path: string, summary: CodeSummary | undefined): boolean {
+function authPath(path: string, summary: Pick<CodeSummary, "authPatterns"> | undefined): boolean {
   if (
     /(?:^|\/)(?:auth|authentication|authorization|login|session|security|acl|permissions?)(?:\/|\.|$)/iu.test(
       path,
@@ -98,7 +120,67 @@ function authPath(path: string, summary: CodeSummary | undefined): boolean {
     return true;
   return summary?.authPatterns.some((ref) => ref.path === path) ?? false;
 }
-export async function analyzeDiff(options: DiffOptions): Promise<CodeDiff> {
+/** Whether the change set touches authentication or shared code (schema, migration, database). */
+export function touchesAuthOrShared(
+  changes: CodeDiff["changes"],
+  summary: Pick<CodeSummary, "authPatterns"> | undefined,
+): { authTouched: boolean; sharedTouched: boolean } {
+  return {
+    authTouched: changes.some(
+      (change) =>
+        authPath(change.path, summary) ||
+        (change.previousPath ? authPath(change.previousPath, summary) : false),
+    ),
+    sharedTouched: changes.some((change) =>
+      /(?:schema|migration|shared|database)/iu.test(change.path),
+    ),
+  };
+}
+/**
+ * Adds to `selected` every file that imports (relatively, transitively) a selected file and returns
+ * the paths it added. A specifier matches a file by its full path, its path without extension, or
+ * the directory of its `index.ts`/`index.js`; aliased specifiers are not resolved.
+ */
+export function expandReverseImports(
+  root: string,
+  selected: Set<string>,
+  imports: readonly { source: string; ref: { path: string } }[],
+): string[] {
+  const targets = new Set<string>();
+  const admit = (path: string) => {
+    targets.add(path);
+    targets.add(path.replace(/\.[cm]?[jt]sx?$/u, ""));
+    if (path.endsWith("/index.ts") || path.endsWith("/index.js"))
+      targets.add(path.slice(0, -"/index.ts".length));
+  };
+  for (const path of selected) admit(path);
+  const edges = imports
+    .filter((item) => item.source.startsWith("."))
+    .map((item) => ({
+      importer: item.ref.path,
+      target: relative(root, resolve(root, dirname(item.ref.path), item.source)).replaceAll(
+        "\\",
+        "/",
+      ),
+    }));
+  const added: string[] = [];
+  let expanded = true;
+  while (expanded) {
+    expanded = false;
+    for (const edge of edges) {
+      if (selected.has(edge.importer) || !targets.has(edge.target)) continue;
+      selected.add(edge.importer);
+      added.push(edge.importer);
+      admit(edge.importer);
+      expanded = true;
+    }
+  }
+  return added;
+}
+/** Resolves the compared commits and lists changed files plus the working-tree identity. */
+export async function collectDiffChanges(
+  options: Pick<DiffOptions, "repoRoot" | "base" | "head" | "workingTree" | "dataDir">,
+): Promise<DiffChanges> {
   if (!options.base && !options.workingTree)
     throw new ContractError(
       "PRECONDITION_FAILED",
@@ -128,19 +210,31 @@ export async function analyzeDiff(options: DiffOptions): Promise<CodeDiff> {
     "-c",
     `${key}=${key.endsWith(".required") ? "false" : ""}`,
   ]);
-  const resolveCommit = async (value: string) => {
+  const resolveCommit = async (value: string, role: "base" | "head") => {
     if (
       value.startsWith("-") ||
       !value ||
       [...value].some((character) => character.charCodeAt(0) <= 32)
     )
       throw new ContractError("INVALID_ARGUMENT", "Invalid git revision");
-    return (
-      await git(root, ["rev-parse", "--verify", "--end-of-options", `${value}^{commit}`])
-    ).trim();
+    try {
+      return (
+        await git(root, ["rev-parse", "--verify", "--end-of-options", `${value}^{commit}`])
+      ).trim();
+    } catch (error) {
+      // Git exits non-zero for an unknown revision. Spawn failures and timeouts carry a string
+      // code or none, so they are not misreported as a bad argument.
+      if (error && typeof error === "object" && "code" in error && typeof error.code === "number")
+        throw new ContractError(
+          "INVALID_ARGUMENT",
+          `Git ${role} revision "${value.slice(0, 200)}" does not resolve to a commit in this repository`,
+          { role },
+        );
+      throw error;
+    }
   };
-  const base = await resolveCommit(options.base ?? "HEAD");
-  const head = await resolveCommit(options.head ?? "HEAD");
+  const base = await resolveCommit(options.base ?? "HEAD", "base");
+  const head = await resolveCommit(options.head ?? "HEAD", "head");
   const mergeBase = (await git(root, ["merge-base", base, head])).trim();
   const changes = parseNameStatus(
     await git(root, [
@@ -157,24 +251,25 @@ export async function analyzeDiff(options: DiffOptions): Promise<CodeDiff> {
   );
   let dirtyHash: string | null = null;
   if (options.workingTree) {
+    // The project data directory holds the live SQLite database of the calling process; reading
+    // it here would close a descriptor on it and drop that process's POSIX locks.
+    const dataPrefixes = dataDirectoryPrefixes(root, options.dataDir);
     const dirty = parseNameStatus(
       await git(
         root,
         ["diff", "--no-ext-diff", "--no-textconv", "--name-status", "-z", "HEAD", "--"],
         filterOverrides,
       ),
-    );
+    ).filter((change) => !insideDataDirectory(change.path, dataPrefixes));
     const untracked = (await git(root, ["ls-files", "--others", "--exclude-standard", "-z"]))
       .split("\0")
-      .filter(Boolean);
+      .filter((path) => path && !insideDataDirectory(path, dataPrefixes));
     dirty.push(...untracked.map((path) => ({ status: "A", path })));
     const hashes: { path: string; contentHash: string | null }[] = [];
     for (const path of [...new Set(dirty.map((change) => change.path))].sort()) {
       try {
-        hashes.push({
-          path,
-          contentHash: sha256(await readConfinedCodeFile(root, path, 25 * 1024 * 1024)),
-        });
+        // Streamed, so a large untracked file (a database, an archive) has an identity too.
+        hashes.push({ path, contentHash: await hashConfinedCodeFile(root, path) });
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
         hashes.push({ path, contentHash: null });
@@ -184,44 +279,31 @@ export async function analyzeDiff(options: DiffOptions): Promise<CodeDiff> {
     for (const change of dirty)
       if (!changes.some((existing) => existing.path === change.path)) changes.push(change);
   }
-  const authTouched = changes.some(
-    (change) =>
-      authPath(change.path, options.summary) ||
-      (change.previousPath ? authPath(change.previousPath, options.summary) : false),
-  );
+  return {
+    root,
+    baseSha: base,
+    headSha: head,
+    mergeBase,
+    includeWorkingTree: options.workingTree ?? false,
+    dirtyHash,
+    changes,
+    fingerprint: sha256(canonicalJson({ base, head, mergeBase, dirtyHash, changes })),
+  };
+}
+/** Selects the impact of collected changes: changed files, their importers, auth/shared fan-out. */
+export function assessDiffImpact(
+  collected: DiffChanges,
+  options: Pick<DiffOptions, "summary" | "unreadFiles"> = {},
+): CodeDiff {
+  const { root, changes } = collected;
+  const { authTouched, sharedTouched } = touchesAuthOrShared(changes, options.summary);
   const selected = new Set(
     changes.flatMap((change) => [
       change.path,
       ...(change.previousPath ? [change.previousPath] : []),
     ]),
   );
-  let expanded = true;
-  while (expanded) {
-    expanded = false;
-    for (const item of options.summary?.imports ?? []) {
-      if (!item.source.startsWith(".")) continue;
-      const target = relative(root, resolve(root, dirname(item.ref.path), item.source)).replaceAll(
-        "\\",
-        "/",
-      );
-      if (
-        [...selected].some(
-          (path) =>
-            path === target ||
-            path.replace(/\.[cm]?[jt]sx?$/u, "") === target ||
-            path === `${target}/index.ts` ||
-            path === `${target}/index.js`,
-        ) &&
-        !selected.has(item.ref.path)
-      ) {
-        selected.add(item.ref.path);
-        expanded = true;
-      }
-    }
-  }
-  const sharedTouched = changes.some((change) =>
-    /(?:schema|migration|shared|database)/iu.test(change.path),
-  );
+  expandReverseImports(root, selected, options.summary?.imports ?? []);
   if (authTouched || sharedTouched)
     for (const ref of options.summary?.fileRefs ?? []) selected.add(ref.path);
   for (const test of options.summary?.existingTests ?? []) {
@@ -235,20 +317,29 @@ export async function analyzeDiff(options: DiffOptions): Promise<CodeDiff> {
   ].filter((route) => selected.has(route.ref.path));
   const components =
     options.summary?.features.filter((component) => selected.has(component.ref.path)) ?? [];
-  const excludedFiles = (options.summary?.fileRefs ?? [])
-    .filter((ref) => !selected.has(ref.path))
-    .map((ref) => ({
-      path: ref.path,
+  const excludedFiles = [
+    ...new Set([
+      ...(options.summary?.fileRefs ?? []).map((ref) => ref.path),
+      ...(options.unreadFiles ?? []),
+    ]),
+  ]
+    .filter((path) => !selected.has(path))
+    .map((path) => ({
+      path,
       reason: "outside_known_dependency_closure; uncertain dynamic dependencies require review",
     }));
   const gaps = ["Coverage is partial; route selection is not code coverage."];
+  if (options.unreadFiles)
+    gaps.push(
+      "Only changed files and the files that import them through relative specifiers were read; aliased imports, dynamic imports and other files outside that closure were not analyzed.",
+    );
   if (authTouched) gaps.push("Authentication-related change requires critical smoke coverage.");
   return {
-    baseSha: base,
-    headSha: head,
-    mergeBase,
-    includeWorkingTree: options.workingTree ?? false,
-    dirtyHash,
+    baseSha: collected.baseSha,
+    headSha: collected.headSha,
+    mergeBase: collected.mergeBase,
+    includeWorkingTree: collected.includeWorkingTree,
+    dirtyHash: collected.dirtyHash,
     changes,
     impact: {
       coverage: "partial",
@@ -260,6 +351,9 @@ export async function analyzeDiff(options: DiffOptions): Promise<CodeDiff> {
       components,
       gaps,
     },
-    fingerprint: sha256(canonicalJson({ base, head, mergeBase, dirtyHash, changes })),
+    fingerprint: collected.fingerprint,
   };
+}
+export async function analyzeDiff(options: DiffOptions): Promise<CodeDiff> {
+  return assessDiffImpact(await collectDiffChanges(options), options);
 }

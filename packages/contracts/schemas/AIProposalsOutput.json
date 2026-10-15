@@ -6,7 +6,6 @@
   ],
   "properties": {
     "proposals": {
-      "minItems": 1,
       "maxItems": 50,
       "type": "array",
       "items": {
@@ -3239,7 +3238,7 @@
                               "maxItems": 200,
                               "type": "array",
                               "items": {
-                                "$ref": "#/$defs/T2"
+                                "$ref": "#/$defs/T3"
                               }
                             }
                           }
@@ -4915,6 +4914,69 @@
                               "additionalProperties": false,
                               "type": "object",
                               "required": [
+                                "predicate"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "noLingeringProcesses",
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "fileExists",
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "fileAbsent",
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate",
+                                "values"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "exitCodeIn",
+                                  "type": "string"
+                                },
+                                "values": {
+                                  "minItems": 1,
+                                  "uniqueItems": true,
+                                  "type": "array",
+                                  "items": {
+                                    "minimum": 0,
+                                    "maximum": 255,
+                                    "type": "integer"
+                                  }
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
                                 "predicate",
                                 "value"
                               ],
@@ -5018,6 +5080,103 @@
                               "properties": {
                                 "predicate": {
                                   "const": "textContains",
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "anyOf": [
+                                    {
+                                      "additionalProperties": false,
+                                      "type": "object",
+                                      "required": [
+                                        "literal"
+                                      ],
+                                      "properties": {
+                                        "literal": {
+                                          "anyOf": [
+                                            {
+                                              "type": "null"
+                                            },
+                                            {
+                                              "type": "boolean"
+                                            },
+                                            {
+                                              "type": "number"
+                                            },
+                                            {
+                                              "type": "string"
+                                            },
+                                            {
+                                              "type": "array",
+                                              "items": {
+                                                "$ref": "#/$defs/T0"
+                                              }
+                                            },
+                                            {
+                                              "type": "object",
+                                              "patternProperties": {
+                                                "^(.*)$": {
+                                                  "$ref": "#/$defs/T0"
+                                                }
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "type": "object",
+                                      "required": [
+                                        "secretRef"
+                                      ],
+                                      "properties": {
+                                        "secretRef": {
+                                          "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                          "type": "string"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "type": "object",
+                                      "required": [
+                                        "variableRef"
+                                      ],
+                                      "properties": {
+                                        "variableRef": {
+                                          "minLength": 1,
+                                          "maxLength": 200,
+                                          "type": "string"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "type": "object",
+                                      "required": [
+                                        "artifactRef"
+                                      ],
+                                      "properties": {
+                                        "artifactRef": {
+                                          "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                          "type": "string"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate",
+                                "value"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "textNotContains",
                                   "type": "string"
                                 },
                                 "value": {
@@ -6848,6 +7007,69 @@
                           "additionalProperties": false,
                           "type": "object",
                           "required": [
+                            "predicate"
+                          ],
+                          "properties": {
+                            "predicate": {
+                              "const": "noLingeringProcesses",
+                              "type": "string"
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "predicate"
+                          ],
+                          "properties": {
+                            "predicate": {
+                              "const": "fileExists",
+                              "type": "string"
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "predicate"
+                          ],
+                          "properties": {
+                            "predicate": {
+                              "const": "fileAbsent",
+                              "type": "string"
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "predicate",
+                            "values"
+                          ],
+                          "properties": {
+                            "predicate": {
+                              "const": "exitCodeIn",
+                              "type": "string"
+                            },
+                            "values": {
+                              "minItems": 1,
+                              "uniqueItems": true,
+                              "type": "array",
+                              "items": {
+                                "minimum": 0,
+                                "maximum": 255,
+                                "type": "integer"
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
                             "predicate",
                             "value"
                           ],
@@ -6951,6 +7173,103 @@
                           "properties": {
                             "predicate": {
                               "const": "textContains",
+                              "type": "string"
+                            },
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "literal"
+                                  ],
+                                  "properties": {
+                                    "literal": {
+                                      "anyOf": [
+                                        {
+                                          "type": "null"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "$ref": "#/$defs/T0"
+                                          }
+                                        },
+                                        {
+                                          "type": "object",
+                                          "patternProperties": {
+                                            "^(.*)$": {
+                                              "$ref": "#/$defs/T0"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "secretRef"
+                                  ],
+                                  "properties": {
+                                    "secretRef": {
+                                      "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "variableRef"
+                                  ],
+                                  "properties": {
+                                    "variableRef": {
+                                      "minLength": 1,
+                                      "maxLength": 200,
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "artifactRef"
+                                  ],
+                                  "properties": {
+                                    "artifactRef": {
+                                      "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                                      "type": "string"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "predicate",
+                            "value"
+                          ],
+                          "properties": {
+                            "predicate": {
+                              "const": "textNotContains",
                               "type": "string"
                             },
                             "value": {
@@ -7639,10 +7958,33 @@
           }
         }
       }
+    },
+    "unsupported": {
+      "maxItems": 100,
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "requirementId",
+          "reason"
+        ],
+        "properties": {
+          "requirementId": {
+            "pattern": "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "reason": {
+            "minLength": 1,
+            "maxLength": 500,
+            "type": "string"
+          }
+        }
+      }
     }
   },
   "$defs": {
-    "T2": {
+    "T3": {
       "anyOf": [
         {
           "additionalProperties": false,
@@ -10797,7 +11139,7 @@
                   "maxItems": 200,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/T2"
+                    "$ref": "#/$defs/T3"
                   }
                 }
               }
@@ -12473,6 +12815,69 @@
                   "additionalProperties": false,
                   "type": "object",
                   "required": [
+                    "predicate"
+                  ],
+                  "properties": {
+                    "predicate": {
+                      "const": "noLingeringProcesses",
+                      "type": "string"
+                    }
+                  }
+                },
+                {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "predicate"
+                  ],
+                  "properties": {
+                    "predicate": {
+                      "const": "fileExists",
+                      "type": "string"
+                    }
+                  }
+                },
+                {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "predicate"
+                  ],
+                  "properties": {
+                    "predicate": {
+                      "const": "fileAbsent",
+                      "type": "string"
+                    }
+                  }
+                },
+                {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "predicate",
+                    "values"
+                  ],
+                  "properties": {
+                    "predicate": {
+                      "const": "exitCodeIn",
+                      "type": "string"
+                    },
+                    "values": {
+                      "minItems": 1,
+                      "uniqueItems": true,
+                      "type": "array",
+                      "items": {
+                        "minimum": 0,
+                        "maximum": 255,
+                        "type": "integer"
+                      }
+                    }
+                  }
+                },
+                {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
                     "predicate",
                     "value"
                   ],
@@ -12576,6 +12981,103 @@
                   "properties": {
                     "predicate": {
                       "const": "textContains",
+                      "type": "string"
+                    },
+                    "value": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "literal"
+                          ],
+                          "properties": {
+                            "literal": {
+                              "anyOf": [
+                                {
+                                  "type": "null"
+                                },
+                                {
+                                  "type": "boolean"
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "$ref": "#/$defs/T0"
+                                  }
+                                },
+                                {
+                                  "type": "object",
+                                  "patternProperties": {
+                                    "^(.*)$": {
+                                      "$ref": "#/$defs/T0"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "secretRef"
+                          ],
+                          "properties": {
+                            "secretRef": {
+                              "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                              "type": "string"
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "variableRef"
+                          ],
+                          "properties": {
+                            "variableRef": {
+                              "minLength": 1,
+                              "maxLength": 200,
+                              "type": "string"
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "artifactRef"
+                          ],
+                          "properties": {
+                            "artifactRef": {
+                              "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                              "type": "string"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "predicate",
+                    "value"
+                  ],
+                  "properties": {
+                    "predicate": {
+                      "const": "textNotContains",
                       "type": "string"
                     },
                     "value": {

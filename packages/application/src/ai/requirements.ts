@@ -5,7 +5,7 @@ import type { SourceEvidenceRef } from "@testmaster/planner";
 import { authoringTransaction } from "../authoring.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "../context.js";
 import type { ModelService } from "./model.js";
-import { normalizeSources } from "./normalization.js";
+import { type NormalizeProgress, normalizeSources } from "./normalization.js";
 import {
   appendRequirementLog,
   describeRequirement,
@@ -70,6 +70,8 @@ export class RequirementsService {
     provider?: string;
     model?: string;
     signal?: AbortSignal;
+    /** Synchronous; called with completed 0..total as model batches finish. */
+    onProgress?: (progress: NormalizeProgress) => void;
   }): Promise<RequirementSnapshot> {
     this.ctx.authorize("W", input.projectId);
     if (!input.sourceRevisionIds.length)
@@ -90,7 +92,13 @@ export class RequirementsService {
         ["code", "code-summary"].includes(this.sources.revisionRole(id)),
       ),
     );
-    const { normalized, modelCallIds } = await normalizeSources(this.model, input, sources);
+    const { onProgress, ...modelInput } = input;
+    const { normalized, modelCallIds } = await normalizeSources(
+      this.model,
+      modelInput,
+      sources,
+      onProgress,
+    );
     return authoringTransaction(this.ctx, () => {
       const current = this.snapshot(input.projectId);
       if (current.version !== before.version)

@@ -1,5 +1,5 @@
 import { constants } from "node:fs";
-import { open } from "node:fs/promises";
+import { type FileHandle, open } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { Application, authenticateBearer } from "@testmaster/application";
 import { ContractError } from "@testmaster/contracts";
@@ -31,10 +31,21 @@ export function mcpCommands(program: Command, runtime: Runtime): void {
           const path =
             string(options, "tokenFile") ??
             join(app.config.home, ".local", "share", "testmaster", "server.token");
-          const file = await open(
-            path,
-            constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
-          );
+          let file: FileHandle;
+          try {
+            file = await open(
+              path,
+              constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
+            );
+          } catch (error) {
+            if (!(error instanceof Error) || !("code" in error) || typeof error.code !== "string")
+              throw error;
+            throw new ContractError(
+              "UNAUTHENTICATED",
+              `Token file ${path} is missing or unreadable (${error.code}); create one with \`testmaster token issue --token-file ${path}\`, or set TESTMASTER_TOKEN`,
+              { tokenFile: path, errno: error.code },
+            );
+          }
           try {
             const stat = await file.stat();
             if (
@@ -63,10 +74,13 @@ export function mcpCommands(program: Command, runtime: Runtime): void {
               authenticateBearer(app, authenticatedToken);
             },
           });
+          // stdin ending means the client is gone: answer what is in flight, then close and exit 0.
+          const stdinEnded = new Promise<void>((ended) => process.stdin.once("end", ended));
           await mcp.confined(app.config.cwd);
           await mcp.connectStdio();
           await new Promise<void>((done) => {
             mcp.server.onclose = done;
+            void stdinEnded.then(() => mcp.drain()).then(done);
             runtime.controller.signal.addEventListener("abort", () => done(), { once: true });
           });
           await mcp.close();
@@ -83,8 +97,15 @@ export function mcpCommands(program: Command, runtime: Runtime): void {
           await server.close();
         } else throw new ContractError("INVALID_ARGUMENT", "Transport must be stdio or http");
       } catch (error) {
+        const listed =
+          error instanceof ContractError
+            ? (["approvedRoots", "clientRoots"] as const).flatMap((key) => {
+                const roots = error.details[key];
+                return Array.isArray(roots) ? [`${key}: ${roots.join(", ")}`] : [];
+              })
+            : [];
         runtime.stderr.write(
-          `${error instanceof ContractError ? error.code : "UNAUTHENTICATED"}: ${error instanceof ContractError ? error.message : "MCP transport startup failed"}\n`,
+          `${error instanceof ContractError ? error.code : "UNAUTHENTICATED"}: ${error instanceof ContractError ? error.message : "MCP transport startup failed"}${listed.length ? ` (${listed.join("; ")})` : ""}\n`,
         );
         process.exitCode = error instanceof ContractError && error.code === "FORBIDDEN" ? 9 : 2;
       } finally {

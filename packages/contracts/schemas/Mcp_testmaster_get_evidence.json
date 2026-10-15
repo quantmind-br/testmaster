@@ -7,24 +7,29 @@
   "properties": {
     "runId": {
       "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "description": "Run id"
     },
     "attemptId": {
       "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "description": "Attempt; defaults to the last one"
     },
     "failedOnly": {
-      "type": "boolean"
+      "type": "boolean",
+      "description": "Only entries of failed steps"
     },
     "maxBytes": {
       "minimum": 1,
       "maximum": 67108864,
-      "type": "integer"
+      "type": "integer",
+      "description": "Page size bound in bytes"
     },
     "cursor": {
       "minLength": 1,
       "maxLength": 4096,
-      "type": "string"
+      "type": "string",
+      "description": "nextCursor of the previous page"
     }
   },
   "$defs": {},

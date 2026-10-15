@@ -201,7 +201,9 @@ export class SelectionService {
         : input.runIds
           ? "runs"
           : "tests";
-    const provenance = resolveRunProvenance(this.ctx, this.runs.host.config.cwd, input.provenance);
+    const provenance = resolveRunProvenance(this.ctx, this.runs.host.config.cwd, input.provenance, {
+      dataDir: this.runs.host.config.dataDir,
+    });
     const preview: SelectionPreview = {
       selectionHash: "",
       mode,
@@ -298,7 +300,11 @@ export class SelectionService {
       target.reason = `Explicit revision ${revision.id}`;
     }
     if (input.diff) {
-      const diff = await analyzeDiff({ repoRoot: this.runs.host.config.cwd, ...input.diff });
+      const diff = await analyzeDiff({
+        repoRoot: this.runs.host.config.cwd,
+        dataDir: this.runs.host.config.dataDir,
+        ...input.diff,
+      });
       const changedPaths = [
         ...new Set(
           diff.changes.flatMap((change) => [

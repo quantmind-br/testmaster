@@ -1,0 +1,368 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "codeSnapshot",
+    "scannedFileCount",
+    "skippedFiles",
+    "warnings",
+    "featureRefs"
+  ],
+  "properties": {
+    "codeSnapshot": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "id",
+        "repoRef",
+        "baseSha",
+        "headSha",
+        "dirtyHash",
+        "manifestHash",
+        "excludes"
+      ],
+      "properties": {
+        "id": {
+          "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "workspaceId": {
+          "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "createdAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "repoRef": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "baseSha": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "headSha": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dirtyHash": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "manifestHash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "excludes": {
+          "type": "array",
+          "items": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          }
+        },
+        "skippedFiles": {
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "path",
+              "reason"
+            ],
+            "properties": {
+              "path": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "reason": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              }
+            }
+          }
+        },
+        "extensions": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-z][a-z0-9-]*:[A-Za-z0-9_-]+$": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/T0"
+                  }
+                },
+                {
+                  "type": "object",
+                  "patternProperties": {
+                    "^(.*)$": {
+                      "$ref": "#/$defs/T0"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "scannedFileCount": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "skippedFiles": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "path",
+          "reason"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "reason": {
+            "minLength": 1,
+            "type": "string"
+          }
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "path",
+          "code",
+          "message"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "code": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "featureRefs": {
+      "type": "array",
+      "items": {
+        "pattern": "^fea_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    },
+    "diff": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "baseSha",
+        "headSha",
+        "mergeBase",
+        "includeWorkingTree",
+        "dirtyHash",
+        "changes",
+        "impact",
+        "fingerprint"
+      ],
+      "properties": {
+        "baseSha": {
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        },
+        "headSha": {
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        },
+        "mergeBase": {
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        },
+        "includeWorkingTree": {
+          "type": "boolean"
+        },
+        "dirtyHash": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changes": {
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "status",
+              "path"
+            ],
+            "properties": {
+              "status": {
+                "minLength": 1,
+                "maxLength": 1,
+                "type": "string"
+              },
+              "path": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "previousPath": {
+                "minLength": 1,
+                "type": "string"
+              }
+            }
+          }
+        },
+        "impact": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "criticalSmoke",
+            "authTouched",
+            "selectedFiles",
+            "excludedFiles",
+            "gaps"
+          ],
+          "properties": {
+            "criticalSmoke": {
+              "type": "boolean"
+            },
+            "authTouched": {
+              "type": "boolean"
+            },
+            "selectedFiles": {
+              "type": "array",
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "excludedFiles": {
+              "type": "array",
+              "items": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "path",
+                  "reason"
+                ],
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "gaps": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "fingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "T0": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$id": "urn:testmaster:CodeAnalysisReceipt",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

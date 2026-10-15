@@ -112,9 +112,10 @@ it("MCP-001–004 built CLI initialize/list/run/evidence, reattach, and HTTP tok
         expect(count).toBe((await session.committed(text(runs[0]))).manifest.entries.length);
         expect(resource).toBeDefined();
         const page = await client.readResource({ uri: text(resource) });
-        const content = object(JSON.parse(String(page.contents[0]?.text)));
-        expect(content.encoding).toBe("base64");
-        expect(Buffer.from(text(content.data), "base64").length).toBeGreaterThan(0);
+        const content = object(page.contents[0]);
+        expect(content).not.toHaveProperty("text");
+        expect(Buffer.from(text(content.blob), "base64").length).toBeGreaterThan(0);
+        expect(typeof object(content._meta)["testmaster:sizeBytes"]).toBe("number");
         session.oracles.push({
           check: "mcpDurableResumeAndVerifiedEvidence",
           jobId,

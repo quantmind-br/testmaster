@@ -1,5 +1,6 @@
 import { type TSchema, Type } from "@sinclair/typebox";
-import { Description, Enum, id, Json, Name, Obj, Version } from "./primitives.js";
+import { ExecutionLimits } from "./operations.js";
+import { Description, Enum, id, Json, Mode, Name, Obj, Version } from "./primitives.js";
 import { errorRegistry, type Milestone } from "./registries.js";
 export const ErrorEnvelope = Obj({
   schemaVersion: Type.Literal("1.0.0"),
@@ -19,6 +20,34 @@ export const SuccessEnvelope = (data: TSchema) =>
     data,
     warnings: Type.Array(Description),
   });
+/**
+ * Shape of the success response of a route.
+ * - `item`: `data` is one entity of `schema`.
+ * - `page`: `data` is `{items, hasMore, nextCursor}` with each item of `schema`.
+ * - `items`: `data` is `{items}` (an unpaged list) with each item of `schema`.
+ * - `empty`: `data` is `{}`.
+ * - `stream`: no envelope; `text/event-stream` whose `data:` lines are JSON of `schema`.
+ * - `binary`: no envelope; raw bytes.
+ * - `text`: no envelope; plain text.
+ * - `unavailable`: no handler in this build; every call answers `CAPABILITY_UNAVAILABLE` (422).
+ */
+export type ResponseKind =
+  | "item"
+  | "page"
+  | "items"
+  | "empty"
+  | "stream"
+  | "binary"
+  | "text"
+  | "unavailable";
+export interface RouteResponse {
+  kind: ResponseKind;
+  schema: string;
+  /** Success status of the route. */
+  status: number;
+  /** Other statuses that carry the same body (a partial `206`, a not-ready `503`). */
+  alsoStatus: readonly number[];
+}
 export interface RouteDefinition {
   method: string;
   path: string;
@@ -27,12 +56,12 @@ export interface RouteDefinition {
   auth: "token" | "public" | "signature";
   milestone: Milestone;
   requestSchema: string;
-  responseSchema: string;
+  response: RouteResponse;
 }
 const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, string?, string?]> = [
-  ["GET", "/health/live", "public", "M1", "Empty", "Health"],
-  ["GET", "/health/ready", "ops:R", "M1", "Empty", "Health"],
-  ["GET", "/capabilities", "meta:R", "M1", "Empty", "CapabilityManifest"],
+  ["GET", "/health/live", "public", "M1", "Empty", "Liveness"],
+  ["GET", "/health/ready", "ops:R", "M1", "Empty", "ReadinessReport"],
+  ["GET", "/capabilities", "meta:R", "M1", "Empty", "CapabilityReport"],
   [
     "POST",
     "/contracts/validate",
@@ -56,9 +85,9 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
     "MembershipInput",
     "MemberView",
   ],
-  ["GET", "/tokens", "tokens:A", "M4", "Empty", "TokenMetadata"],
+  ["GET", "/tokens", "tokens:A", "M4", "Empty", "TokenRecord"],
   ["POST", "/tokens", "tokens:A", "M4", "TokenInput", "TokenCreated"],
-  ["DELETE", "/tokens/{id}", "tokens:A", "M4", "Empty", "TokenMetadata"],
+  ["DELETE", "/tokens/{id}", "tokens:A", "M4", "Empty", "TokenRecord"],
   ["GET,POST", "/projects", "projects:R/W", "M1", "ProjectInput", "Project"],
   ["GET,PATCH", "/projects/{id}", "projects:R/W", "M1", "ProjectInput", "Project"],
   ["POST", "/projects/{id}/archive", "projects:W", "M1", "Empty", "Project"],
@@ -90,12 +119,12 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ["POST", "/uploads", "sources:W", "M2", "UploadRequest", "UploadReceipt"],
   ["PUT", "/uploads/{id}/bytes", "upload token", "M2", "Binary", "UploadReceipt"],
   ["POST", "/uploads/{id}/complete", "sources:W", "M2", "Empty", "UploadReceipt"],
-  ["GET,POST", "/projects/{id}/sources", "sources:R/W", "M2", "SourceInput", "SourceRevision"],
-  ["GET,DELETE", "/sources/{id}", "sources:R/W", "M2", "Empty", "Source"],
-  ["POST", "/projects/{id}/discovery", "discovery:X", "M2", "DiscoveryRequest", "DiscoveryJob"],
-  ["GET", "/discovery/{id}", "discovery:R", "M2", "Empty", "DiscoveryResult"],
-  ["GET", "/discovery/{id}/events", "discovery:R", "M2", "Empty", "DiscoveryJob"],
-  ["POST", "/discovery/{id}/retry", "discovery:X", "M2", "DiscoveryRetryInput", "DiscoveryJob"],
+  ["GET,POST", "/projects/{id}/sources", "sources:R/W", "M2", "SourceInput", "SourceListItemView"],
+  ["GET,DELETE", "/sources/{id}", "sources:R/W", "M2", "Empty", "SourceDetail"],
+  ["POST", "/projects/{id}/discovery", "discovery:X", "M2", "DiscoveryRequest", "DiscoveryDetail"],
+  ["GET", "/discovery/{id}", "discovery:R", "M2", "Empty", "DiscoveryDetail"],
+  ["GET", "/discovery/{id}/events", "discovery:R", "M2", "Empty", "DiscoveryEvent"],
+  ["POST", "/discovery/{id}/retry", "discovery:X", "M2", "DiscoveryRetryInput", "DiscoveryDetail"],
   ["GET", "/projects/{id}/discovery", "discovery:R", "M4", "Empty", "DiscoverySummary"],
   [
     "GET,PUT",
@@ -133,17 +162,17 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ],
   ["POST", "/requirements/{id}/approve", "plans:W", "M4", "Empty", "Requirement"],
   ["GET", "/projects/{id}/feature-map", "plans:R", "M4", "Empty", "FeatureCoverageMap"],
-  ["POST", "/discovery/{id}/cancel", "discovery:X", "M2", "Empty", "DiscoveryJob"],
+  ["POST", "/discovery/{id}/cancel", "discovery:X", "M2", "Empty", "DiscoveryJobView"],
   [
     "GET,PATCH",
     "/projects/{id}/requirements",
     "plans:R/W",
     "M2",
     "RequirementsInput",
-    "Requirement",
+    "RequirementSnapshotView",
   ],
   ["POST", "/projects/{id}/proposal-batches", "plans:W", "M2", "GenerationInput", "ProposalBatch"],
-  ["GET", "/proposal-batches/{id}", "plans:R", "M2", "Empty", "ProposalBatch"],
+  ["GET", "/proposal-batches/{id}", "plans:R", "M2", "Empty", "ProposalBatchDetail"],
   ["GET", "/projects/{id}/proposal-batches", "plans:R", "M4", "Empty", "ProposalBatchSummary"],
   [
     "POST",
@@ -208,22 +237,22 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ],
   ["GET,POST", "/tests/{id}/revisions", "tests:R/W", "M1", "TestRevisionInput", "TestRevision"],
   ["POST", "/tests/{id}/promote", "tests:W", "M2", "PromoteInput", "TestCase"],
-  ["GET", "/revisions/{id}/code", "tests:R", "M2", "Empty", "CodeReference"],
-  ["POST", "/runs", "runs:X", "M1", "RunRequest", "RunReceipt"],
-  ["GET", "/runs", "runs:R", "M1", "Empty", "RunResult"],
-  ["GET", "/runs/{id}", "runs:R", "M1", "Empty", "RunResult"],
+  ["GET", "/revisions/{id}/code", "tests:R", "M2", "Empty", "TestCodeExport"],
+  ["POST", "/runs", "runs:X", "M1", "RunRequest", "OwnedRunReceipt"],
+  ["GET", "/runs", "runs:R", "M1", "Empty", "Run"],
+  ["GET", "/runs/{id}", "runs:R", "M1", "Empty", "Run"],
   ["POST", "/runs/{id}/cancel", "runs:X", "M1", "CancelInput", "CancelReceipt"],
-  ["POST", "/runs/{id}/rerun", "runs:X", "M1", "RerunInput", "RunReceipt"],
-  ["GET", "/runs/{id}/steps", "runs:R", "M1", "Empty", "StepResult"],
-  ["GET", "/runs/{id}/events", "runs:R", "M1", "Empty", "Event"],
-  ["GET", "/runs/{id}/bundle", "artifacts:R", "M1", "Empty", "ArtifactManifest"],
+  ["POST", "/runs/{id}/rerun", "runs:X", "M1", "RerunInput", "OwnedRunReceipt"],
+  ["GET", "/runs/{id}/steps", "runs:R", "M1", "Empty", "StepResultRecord"],
+  ["GET", "/runs/{id}/events", "runs:R", "M1", "Empty", "RunEventView"],
+  ["GET", "/runs/{id}/bundle", "artifacts:R", "M1", "Empty", "EvidenceBundleView"],
   ["GET", "/artifacts/{id}", "artifacts:R", "M1", "Empty", "Binary"],
   ["GET", "/artifacts/{id}/content", "signature", "M4", "Empty", "Binary"],
   ["POST", "/artifacts/{id}/links", "artifacts:R", "M4", "ArtifactLinkInput", "ArtifactLink"],
-  ["GET", "/runs/{id}/attempts", "runs:R", "M4", "Empty", "AttemptView"],
+  ["GET", "/runs/{id}/attempts", "runs:R", "M4", "Empty", "AttemptListItem"],
   ["GET", "/runs/{id}/healing-proposals", "healing:R", "M4", "Empty", "HealingProposal"],
   ["GET", "/projects/{id}/metrics", "runs:R", "M4", "Empty", "ProjectMetrics"],
-  ["GET", "/projects/{id}/quarantine", "tests:R", "M4", "Empty", "QuarantineRecord"],
+  ["GET", "/projects/{id}/quarantine", "tests:R", "M4", "Empty", "QuarantineListItem"],
   ["GET", "/runs/{id}/analysis", "runs:R", "M3", "Empty", "Analysis"],
   ["POST", "/runs/{id}/analysis", "analysis:X", "M3", "AnalysisInput", "Analysis"],
   ["POST", "/runs/{id}/healing-proposals", "healing:W", "M3", "HealingInput", "HealingProposal"],
@@ -250,9 +279,9 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ["POST", "/flake-studies", "runs:X", "M3", "FlakeStudyInput", "BatchReceipt"],
   ["GET", "/flake-studies/{id}", "runs:R", "M3", "Empty", "FlakeStudyReport"],
   ["POST", "/execution-previews", "runs:R", "M3", "SelectionInput", "SelectionPreview"],
-  ["POST", "/selective-runs", "runs:X", "M3", "SelectionInput", "BatchReceipt"],
+  ["POST", "/selective-runs", "runs:X", "M3", "SelectionInput", "SelectionReceipt"],
   ["POST", "/batches", "runs:X", "M1", "BatchRequest", "BatchReceipt"],
-  ["GET", "/batches/{id}", "runs:R", "M1", "Empty", "BatchReceipt"],
+  ["GET", "/batches/{id}", "runs:R", "M1", "Empty", "BatchView"],
   ["POST", "/batches/{id}/cancel", "runs:X", "M1", "CancelInput", "BatchCancelReceipt"],
   ["GET", "/suites", "suites:R", "M4", "Empty", "Suite"],
   ["POST", "/suites", "suites:W", "M4", "SuiteInput", "Suite"],
@@ -270,8 +299,8 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ["POST", "/schedules/{id}/resume", "schedules:W", "M4", "Empty", "Schedule"],
   ["GET", "/schedules/{id}/revisions", "schedules:R", "M4", "Empty", "ScheduleRevision"],
   ["GET", "/schedules/{id}/firings", "schedules:R", "M4", "Empty", "ScheduledFire"],
-  ["GET", "/resources", "runs:R", "M2", "Empty", "ResourceRecord"],
-  ["POST", "/resources/{id}/cleanup", "cleanup:X", "M2", "CleanupInput", "ResourceRecord"],
+  ["GET", "/resources", "runs:R", "M2", "Empty", "ResourceDetail"],
+  ["POST", "/resources/{id}/cleanup", "cleanup:X", "M2", "CleanupInput", "CleanupReceipt"],
   ["GET,POST", "/tunnels", "tunnel:X", "M5", "TunnelInput", "TunnelMetadata"],
   ["DELETE", "/tunnels/{id}", "tunnel:X", "M5", "Empty", "TunnelMetadata"],
   ["GET", "/workers", "workers:A", "M4", "Empty", "Worker"],
@@ -279,8 +308,8 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ["GET", "/workers/{id}", "workers:A", "M4", "Empty", "Worker"],
   // Authenticated by the route itself with the worker credential (tm_wrk_), never by a user session.
   ["POST", "/workers/{id}/heartbeat", "signature", "M4", "HeartbeatInput", "Worker"],
-  ["GET", "/usage", "usage:R", "M2", "Empty", "UsageEntry"],
-  ["POST", "/projects/{id}/budget", "usage:A", "M2", "TokenBudgetInput", "UsageEntry"],
+  ["GET", "/usage", "usage:R", "M2", "Empty", "UsageReport"],
+  ["POST", "/projects/{id}/budget", "usage:A", "M2", "TokenBudgetInput", "UsageReport"],
   ["GET", "/audit-events", "audit:A", "M4", "Empty", "AuditEntry"],
   [
     "POST",
@@ -357,7 +386,7 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ["POST", "/identity/logout", "identity:R", "M4", "Empty", "IdentityReceipt"],
   ["POST", "/identity/recovery", "public", "M4", "RecoveryInput", "IdentityReceipt"],
   ["GET", "/identity/sessions", "identity:R", "M4", "Empty", "SessionMetadata"],
-  ["DELETE", "/identity/sessions/{id}", "identity:R", "M4", "Empty", "SessionMetadata"],
+  ["DELETE", "/identity/sessions/{id}", "identity:R", "M4", "Empty", "Empty"],
   ["POST", "/identity/password", "identity:R", "M4", "PasswordChangeInput", "IdentityReceipt"],
   ["POST", "/identity/break-glass", "identity:A", "M6", "IdentityInput", "IdentityReceipt"],
   [
@@ -420,15 +449,7 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ["DELETE", "/artifacts/{id}", "artifacts:delete", "M3", "Empty", "DeletionOperation"],
   ["GET", "/deletion-operations", "deletion:R", "M4", "Empty", "DeletionOperation"],
   ["GET", "/deletion-operations/{id}", "deletion:R", "M3", "Empty", "DeletionOperation"],
-  ["GET", "/projects/{id}/model-consents", "models:R", "M4", "Empty", "ModelConsentSettings"],
-  [
-    "PUT,DELETE",
-    "/projects/{id}/model-consents/{provider}",
-    "models:A",
-    "M4",
-    "ModelConsentInput",
-    "ModelConsentSettings",
-  ],
+  ["GET", "/projects/{id}/model-providers", "models:R", "M4", "Empty", "ModelProviderSettings"],
   ["GET", "/environments/{id}/revisions", "env:R", "M4", "Empty", "EnvironmentRevisionView"],
   ...["drain", "revoke"].map(
     (path) => ["POST", `/workers/{id}/${path}`, "workers:A", "M4", "Empty", "Worker"] as const,
@@ -474,6 +495,130 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
     "VisualBaseline",
   ],
 ];
+type ResponseOverride = Partial<RouteResponse>;
+const keysWith = (
+  override: ResponseOverride,
+  keys: readonly string[],
+): Record<string, ResponseOverride> => Object.fromEntries(keys.map((key) => [key, override]));
+/**
+ * Response overrides keyed `METHOD /path`, each verified against the route handler
+ * (`apps/server/src/routes`). A route absent here answers `200` with one entity of its row's
+ * response schema. Every key must name a catalog route; a stale key fails at module load.
+ */
+const responseOverrides: Readonly<Record<string, ResponseOverride>> = {
+  // `context.page(...)`, `pageFrom(...)` or the audit trail's own cursor: `{items, hasMore, nextCursor}`.
+  ...keysWith({ kind: "page" }, [
+    "GET /projects",
+    "GET /projects/{id}/environments",
+    "GET /secrets",
+    "GET /secrets/{id}/history",
+    "GET /projects/{id}/tests",
+    "GET /tests/{id}/revisions",
+    "GET /tests/{id}/history",
+    "GET /projects/{id}/proposal-batches",
+    "GET /projects/{id}/sources",
+    "GET /projects/{id}/discovery",
+    "GET /projects/{id}/quarantine",
+    "GET /environments/{id}/revisions",
+    "GET /runs",
+    "GET /runs/{id}/steps",
+    "GET /runs/{id}/attempts",
+    "GET /runs/{id}/healing-proposals",
+    "GET /resources",
+    "GET /approvals",
+    "GET /workspaces/{id}/members",
+    "GET /tokens",
+    "GET /deletion-operations",
+    "GET /audit-events",
+    "GET /auth-profiles",
+    "GET /auth-checkpoints",
+    "GET /deliveries",
+    "GET /workers",
+    "GET /integrations",
+    "GET /integrations/{id}/github/installations",
+    "GET /integrations/{id}/github/pulls",
+    "GET /integrations/{id}/github/checks",
+    "GET /operations",
+    "GET /operations/dlq",
+    "GET /alerts",
+    "GET /alert-rules",
+    "GET /incidents",
+    "GET /schedules",
+    "GET /schedules/{id}/revisions",
+    "GET /schedules/{id}/firings",
+    "GET /suites",
+  ]),
+  // Lists that the service bounds itself: `{items}` without a cursor.
+  ...keysWith({ kind: "items" }, ["GET /workspaces", "GET /identity/sessions"]),
+  // Handlers that return `{}` after a void service call.
+  ...keysWith({ kind: "empty" }, [
+    "DELETE /identity/sessions/{id}",
+    "DELETE /workspaces/{id}/members/{memberId}",
+  ]),
+  ...keysWith({ status: 201 }, [
+    "POST /projects",
+    "POST /projects/{id}/environments",
+    "POST /projects/{id}/tests",
+    "POST /tests/{id}/revisions",
+    "POST /uploads",
+    "POST /proposals/{id}/refinements",
+    "POST /tests/{id}/refinements",
+    "POST /auth-profiles",
+    "POST /auth-checkpoints",
+    "POST /integrations",
+    "POST /integrations/github/manifests",
+    "POST /workspaces",
+    "POST /workspaces/{id}/members",
+    "POST /tokens",
+    "POST /incidents",
+    "POST /schedules",
+    "POST /suites",
+    "POST /workers",
+  ]),
+  ...keysWith({ status: 202 }, [
+    "POST /runs",
+    "POST /batches",
+    "POST /projects/{id}/discovery",
+    "POST /projects/{id}/proposal-batches",
+    "POST /suites/{id}/runs",
+    "POST /operations/backups",
+    "POST /operations/restores",
+  ]),
+  // The row names the schema of the GET (or the first method); these methods differ.
+  "POST /projects/{id}/sources": { schema: "SourceDetail" },
+  "DELETE /sources/{id}": { schema: "Source" },
+  // Not ready answers 503 with the same envelope.
+  "GET /health/ready": { alsoStatus: [503] },
+  // Raw bodies: a single `Range` answers 206.
+  "GET /artifacts/{id}": { kind: "binary", alsoStatus: [206] },
+  "GET /artifacts/{id}/content": { kind: "binary", alsoStatus: [206] },
+  "GET /metrics": { kind: "text" },
+  "GET /runs/{id}/events": { kind: "stream" },
+  "GET /discovery/{id}/events": { kind: "stream" },
+  // Reserved for M5/M6: no handler is registered, every call answers CAPABILITY_UNAVAILABLE.
+  ...keysWith({ kind: "unavailable" }, [
+    "GET /tunnels",
+    "POST /tunnels",
+    "DELETE /tunnels/{id}",
+    "GET /projects/{id}/memory",
+    "POST /projects/{id}/memory",
+    "PATCH /memory/{id}",
+    "DELETE /memory/{id}",
+    "GET /visual-baselines",
+    "POST /visual-baselines",
+    "POST /visual-baselines/{id}/approve",
+    "POST /exports",
+    "POST /imports",
+    "POST /identity/break-glass",
+  ]),
+};
+const responseFor = (key: string, rowSchema: string): RouteResponse => ({
+  kind: "item",
+  schema: rowSchema,
+  status: 200,
+  alsoStatus: [],
+  ...responseOverrides[key],
+});
 export const routeCatalog: readonly RouteDefinition[] = routeRows.flatMap(
   ([methods, path, scope, milestone, requestSchema = "Empty", responseSchema = "Empty"]) =>
     methods.split(",").map((method, index) => {
@@ -500,172 +645,334 @@ export const routeCatalog: readonly RouteDefinition[] = routeRows.flatMap(
                 : method === "POST" && path === "/approvals"
                   ? "ApprovalInput"
                   : requestSchema,
-        responseSchema,
+        response: responseFor(`${method} ${path}`, responseSchema),
       };
     }),
 );
+{
+  const known = new Set(routeCatalog.map((route) => `${route.method} ${route.path}`));
+  for (const key of Object.keys(responseOverrides))
+    if (!known.has(key)) throw new Error(`Response override ${key} is not a catalog route`);
+}
+/** Adds the agent-facing description of an input property without changing its validation. */
+const d = <T extends TSchema>(schema: T, description: string): T =>
+  ({ ...schema, description }) as T;
+const deadlineBudget = (description: string) =>
+  Type.Optional(
+    Obj(
+      {
+        deadlineMs: Type.Optional(
+          d(Type.Integer({ minimum: 1, maximum: 600000 }), "Time budget in milliseconds"),
+        ),
+      },
+      { description },
+    ),
+  );
+const runId = (description = "Run id") => d(id("run"), description);
 export const mcpTools = {
   testmaster_capabilities: { milestone: "M1", input: Obj({}), output: "CapabilityManifest" },
   testmaster_validate_document: {
     milestone: "M0",
-    input: Obj({ schema: Enum(["ExecutablePlan", "ProjectConfig", "RunRequest"]), document: Json }),
+    input: Obj({
+      schema: d(
+        Enum(["ExecutablePlan", "ProjectConfig", "RunRequest"]),
+        "Contract to validate against",
+      ),
+      document: d(Json, "The document to validate; it is neither stored nor run"),
+    }),
     output: "DocumentValidationResult",
   },
   testmaster_bootstrap: {
     milestone: "M2",
-    input: Obj({ projectRoot: Name, target: Name, scope: Type.Array(Name), mode: Name }),
+    input: Obj({
+      projectRoot: d(Name, "Project root directory; must be inside an approved root"),
+      target: d(
+        Type.String({ pattern: "^https?://[^\\s]+$", maxLength: 2048 }),
+        "http(s) URL of the application under test, without credentials; it is never probed",
+      ),
+      scope: d(
+        Type.Array(Enum(["codebase", "diff"]), { minItems: 1, uniqueItems: true }),
+        "What the project will analyze: codebase and/or diff",
+      ),
+      mode: d(Mode, "Execution mode of the proposed config: replay (deterministic) or agent"),
+    }),
     output: "BootstrapReceipt",
   },
   testmaster_analyze_code: {
     milestone: "M2",
     input: Obj({
-      projectId: id("prj"),
-      root: Name,
-      base: Type.Optional(Name),
-      head: Type.Optional(Name),
-      dirty: Type.Optional(Type.Boolean()),
+      projectId: d(id("prj"), "Project id"),
+      root: d(Name, "Directory to analyze; must be inside an approved root"),
+      base: Type.Optional(
+        d(
+          Name,
+          "Base git ref of a diff analysis (needs head or dirty); omit for the whole codebase",
+        ),
+      ),
+      head: Type.Optional(
+        d(Name, "Head git ref of a diff analysis; required with base unless dirty is true"),
+      ),
+      dirty: Type.Optional(
+        d(
+          Type.Boolean(),
+          "Diff base against the working tree instead of a head ref; requires base",
+        ),
+      ),
     }),
-    output: "CodeSnapshot",
+    output: "CodeAnalysisReceipt",
   },
   testmaster_normalize_requirements: {
     milestone: "M2",
-    input: Obj({ projectId: id("prj"), sourceRevisionIds: Type.Array(id("svr")) }),
-    output: "RequirementSnapshot",
+    input: Obj({
+      projectId: d(id("prj"), "Project id"),
+      sourceRevisionIds: d(Type.Array(id("svr")), "Source revisions to normalize"),
+      model: Type.Optional(
+        d(Name, "Model id from the project's profiles; defaults to the first capable one"),
+      ),
+    }),
+    output: "NormalizedRequirements",
   },
   testmaster_explore: {
     milestone: "M2",
     input: Obj({
-      projectId: id("prj"),
-      envId: id("env"),
-      featureIds: Type.Array(id("fea")),
-      budget: Json,
-      jobId: Type.Optional(id("dsc")),
-      wait: Type.Optional(Type.Boolean()),
+      projectId: d(id("prj"), "Project id"),
+      envId: d(id("env"), "Environment to explore"),
+      featureIds: d(
+        Type.Array(id("fea")),
+        "Features to explore; empty with jobId resumes that job",
+      ),
+      budget: Obj(
+        {
+          steps: d(Type.Integer({ minimum: 1, maximum: 100 }), "Browser steps, 1..100"),
+          modelCalls: d(Type.Integer({ minimum: 1, maximum: 100 }), "Model calls, 1..steps"),
+          timeMs: d(
+            Type.Integer({ minimum: 1000, maximum: 300000 }),
+            "Time budget in ms, 1000..300000",
+          ),
+        },
+        { description: "Exploration budget; modelCalls must not exceed steps" },
+      ),
+      provider: Type.Optional(
+        d(Name, "Model provider id for action resolution; absent: first allowed provider"),
+      ),
+      model: Type.Optional(
+        d(Name, "Model id for action resolution; absent: the provider's first capable model"),
+      ),
+      jobId: Type.Optional(d(id("dsc"), "Existing exploration job to resume or retry")),
+      wait: Type.Optional(
+        d(Type.Boolean(), "Block until the job ends instead of returning its id"),
+      ),
     }),
     output: "DiscoveryJob",
   },
   testmaster_generate_plan: {
     milestone: "M2",
     input: Obj({
-      projectId: id("prj"),
-      sourceSnapshotId: Name,
-      type: Enum(["frontend", "backend", "auto", "integration"]),
-      budget: Json,
+      projectId: d(id("prj"), "Project id"),
+      sourceSnapshotId: d(
+        Name,
+        "Fingerprint of the human-approved requirement snapshot (testmaster://requirements/{projectId})",
+      ),
+      type: d(
+        Enum(["frontend", "backend", "auto", "integration"]),
+        "Kind of tests to propose; auto lets the model choose per requirement",
+      ),
+      requirementIds: Type.Optional(
+        d(
+          Type.Array(id("req"), { minItems: 1, maxItems: 100 }),
+          "Restrict the plan to these requirements",
+        ),
+      ),
+      model: Type.Optional(d(Name, "Model id from the project's profiles")),
+      budget: deadlineBudget("Optional time budget"),
+      partialGeneration: Type.Optional(
+        d(
+          Type.Boolean(),
+          "After the repairs, store the proposals that pass the checks and list the refused ones in extensions['testmaster:refusedProposals']; default false: one refused proposal refuses the whole batch",
+        ),
+      ),
     }),
     output: "ProposalBatch",
   },
   testmaster_review_plan: {
     milestone: "M2",
     input: Obj({
-      batchId: id("pbt"),
-      expectedVersion: Version,
-      acceptIds: Type.Array(id("pro")),
-      rejectIds: Type.Array(id("pro")),
+      batchId: d(id("pbt"), "Proposal batch id"),
+      expectedVersion: d(Version, "Batch version being reviewed, for optimistic concurrency"),
+      acceptIds: d(Type.Array(id("pro")), "Proposals to accept"),
+      rejectIds: d(Type.Array(id("pro")), "Proposals to reject"),
     }),
     output: "ProposalDecisionReceipt",
   },
   testmaster_generate_tests: {
     milestone: "M2",
-    input: Obj({
-      proposalIds: Type.Optional(Type.Array(id("pro"))),
-      revisionIds: Type.Optional(Type.Array(id("rev"))),
-      budget: Json,
-    }),
+    input: Obj(
+      {
+        proposalIds: Type.Optional(d(Type.Array(id("pro"), { minItems: 1 }), "Accepted proposals")),
+        revisionIds: Type.Optional(d(Type.Array(id("rev"), { minItems: 1 }), "Existing revisions")),
+        budget: Type.Optional(
+          Obj(
+            {
+              modelCalls: Type.Optional(
+                d(Type.Integer({ minimum: 1, maximum: 20 }), "Model calls, 1..20; default 10"),
+              ),
+            },
+            { description: "Optional model-call budget" },
+          ),
+        ),
+        provider: Type.Optional(
+          d(Name, "Model provider id for code generation; absent: first allowed provider"),
+        ),
+        model: Type.Optional(
+          d(
+            Name,
+            "Model id for code generation, validated before any call; absent: the provider's first structured-output model",
+          ),
+        ),
+      },
+      {
+        description:
+          "Provide proposalIds or revisionIds (at least one); all must belong to one project",
+        // Strict Ajv needs each branch's required property defined beside it.
+        anyOf: [
+          { type: "object", properties: { proposalIds: true }, required: ["proposalIds"] },
+          { type: "object", properties: { revisionIds: true }, required: ["revisionIds"] },
+        ],
+      },
+    ),
     output: "GeneratedTestsReceipt",
   },
   testmaster_run_tests: {
     milestone: "M1",
     input: Obj({
-      testIds: Type.Optional(Type.Array(id("tst"))),
-      suiteId: Type.Optional(id("sui")),
+      testIds: Type.Optional(d(Type.Array(id("tst")), "Tests to run; needs environmentId")),
+      suiteId: Type.Optional(d(id("sui"), "List to run (replay only) instead of testIds")),
       /** Required with testIds; a list (suiteId) carries an explicit environment per project. */
-      environmentId: Type.Optional(id("env")),
-      mode: Name,
+      environmentId: Type.Optional(d(id("env"), "Environment for testIds; lists carry their own")),
+      mode: d(Mode, "replay (deterministic) or agent; lists run in replay only"),
       /** Lists only: exclusion keys the caller accepts so the dispatchable subset runs. */
-      confirmedExclusions: Type.Optional(Type.Array(Name, { maxItems: 600 })),
-      limits: Type.Optional(Json),
-      jobId: Type.Optional(id("bat")),
-      idempotencyKey: Type.Optional(Type.String({ minLength: 16, maxLength: 128 })),
-      wait: Type.Optional(Type.Boolean()),
-      timeoutMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 6000000 })),
+      confirmedExclusions: Type.Optional(
+        d(
+          Type.Array(Name, { maxItems: 600 }),
+          "Lists only: exclusion keys accepted so the rest runs",
+        ),
+      ),
+      limits: Type.Optional(d(ExecutionLimits, "Per-run execution limits")),
+      jobId: Type.Optional(
+        d(id("bat"), "Existing batch to re-read or wait on instead of admitting"),
+      ),
+      idempotencyKey: Type.Optional(
+        d(
+          Type.String({ minLength: 16, maxLength: 128 }),
+          "Makes a retried admission return the same batch",
+        ),
+      ),
+      wait: Type.Optional(d(Type.Boolean(), "Block until every run completes")),
+      timeoutMs: Type.Optional(
+        d(
+          Type.Integer({ minimum: 1, maximum: 6000000 }),
+          "Wait deadline in ms; runs continue after it",
+        ),
+      ),
     }),
-    output: "BatchReceipt",
+    output: "McpBatchReceipt",
   },
   testmaster_get_run: {
     milestone: "M1",
     input: Obj({
-      runId: id("run"),
-      wait: Type.Optional(Type.Boolean()),
-      timeoutMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 6000000 })),
+      runId: runId(),
+      wait: Type.Optional(d(Type.Boolean(), "Block until the run completes")),
+      timeoutMs: Type.Optional(
+        d(
+          Type.Integer({ minimum: 1, maximum: 6000000 }),
+          "Wait deadline in ms; the run continues after it",
+        ),
+      ),
     }),
     output: "RunResult",
   },
   testmaster_get_analysis: {
     milestone: "M3",
-    input: Obj({ runId: id("run") }),
+    input: Obj({ runId: runId() }),
     output: "Analysis",
   },
   testmaster_analyze_run: {
     milestone: "M3",
     input: Obj({
-      runId: id("run"),
-      model: Type.Optional(Type.Boolean()),
-      discoveryId: Type.Optional(id("dsc")),
-      budget: Type.Optional(
-        Obj({ deadlineMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 600000 })) }),
+      runId: runId("Failed run to diagnose"),
+      model: Type.Optional(d(Type.Boolean(), "Also ask a model to read the recorded evidence")),
+      provider: Type.Optional(
+        d(Name, "Model provider id for the model reading; requires model=true"),
       ),
+      modelId: Type.Optional(
+        d(Name, "Model id for the model reading; requires model=true. Absent: first capable model"),
+      ),
+      discoveryId: Type.Optional(d(id("dsc"), "Discovery job to cross-reference")),
+      budget: deadlineBudget("Optional time budget"),
     }),
     output: "Analysis",
   },
   testmaster_get_evidence: {
     milestone: "M1",
     input: Obj({
-      runId: id("run"),
-      attemptId: Type.Optional(id("att")),
-      failedOnly: Type.Optional(Type.Boolean()),
-      maxBytes: Type.Optional(Type.Integer({ minimum: 1, maximum: 67108864 })),
-      cursor: Type.Optional(Type.String({ minLength: 1, maxLength: 4096 })),
+      runId: runId(),
+      attemptId: Type.Optional(d(id("att"), "Attempt; defaults to the last one")),
+      failedOnly: Type.Optional(d(Type.Boolean(), "Only entries of failed steps")),
+      maxBytes: Type.Optional(
+        d(Type.Integer({ minimum: 1, maximum: 67108864 }), "Page size bound in bytes"),
+      ),
+      cursor: Type.Optional(
+        d(Type.String({ minLength: 1, maxLength: 4096 }), "nextCursor of the previous page"),
+      ),
     }),
     output: "EvidenceSummary",
   },
   testmaster_cancel_run: {
     milestone: "M1",
-    input: Obj({ runId: id("run"), reason: Description }),
+    input: Obj({
+      runId: runId("Run to cancel"),
+      reason: d(Description, "Why the run is cancelled"),
+    }),
     output: "CancelReceipt",
   },
   testmaster_compare_runs: {
     milestone: "M3",
     input: Obj({
-      left: id("run"),
-      right: id("run"),
-      cursor: Type.Optional(Type.String({ minLength: 1, maxLength: 4096 })),
-      limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
+      left: runId("Baseline run"),
+      right: runId("Run to compare against the baseline"),
+      cursor: Type.Optional(
+        d(Type.String({ minLength: 1, maxLength: 4096 }), "nextCursor of the previous page"),
+      ),
+      limit: Type.Optional(d(Type.Integer({ minimum: 1, maximum: 100 }), "Page size, 1..100")),
     }),
     output: "ComparisonResult",
   },
   testmaster_propose_healing: {
     milestone: "M3",
     input: Obj({
-      failedRunId: id("run"),
-      budget: Type.Optional(
-        Obj({ deadlineMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 600000 })) }),
-      ),
+      failedRunId: runId("Failed run to heal"),
+      provider: Type.Optional(d(Name, "Model provider id")),
+      model: Type.Optional(d(Name, "Model id")),
+      budget: deadlineBudget("Optional time budget"),
     }),
     output: "HealingProposal",
   },
   testmaster_review_healing: {
     milestone: "M3",
-    input: Obj({ proposalId: id("hea") }),
+    input: Obj({ proposalId: d(id("hea"), "Healing proposal id") }),
     output: "HealingReview",
   },
   testmaster_approve_healing: {
     milestone: "M3",
-    input: Obj({ proposalId: id("hea"), expectedVersion: Version }),
+    input: Obj({
+      proposalId: d(id("hea"), "Healing proposal id"),
+      expectedVersion: d(Version, "approval.expectedVersion from testmaster_review_healing"),
+    }),
     output: "HealingProposal",
   },
   testmaster_open_report: {
     milestone: "M1",
-    input: Obj({ runId: id("run") }),
+    input: Obj({ runId: runId() }),
     output: "ReportLocation",
   },
 } as const;

@@ -7,16 +7,31 @@
   "properties": {
     "failedRunId": {
       "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-      "type": "string"
+      "type": "string",
+      "description": "Failed run to heal"
+    },
+    "provider": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string",
+      "description": "Model provider id"
+    },
+    "model": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string",
+      "description": "Model id"
     },
     "budget": {
       "additionalProperties": false,
+      "description": "Optional time budget",
       "type": "object",
       "properties": {
         "deadlineMs": {
           "minimum": 1,
           "maximum": 600000,
-          "type": "integer"
+          "type": "integer",
+          "description": "Time budget in milliseconds"
         }
       }
     }

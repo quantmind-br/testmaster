@@ -1,8 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { ContractError } from "@testmaster/contracts";
-import { canonicalJson, sha256 } from "@testmaster/domain";
+import { canonicalJson } from "@testmaster/domain";
 import type { PersistenceDatabase } from "./database.js";
-import { AuditRepository } from "./repositories.js";
 
 export interface Money {
   amount: string;
@@ -33,19 +32,11 @@ export interface BudgetLedger {
   settle(reservationId: string, usage: TokenUsage, cost: Money | "unknown"): Promise<void>;
   release(reservationId: string, reason: string): Promise<void>;
 }
-export interface ConsentQuery {
-  workspaceId: string;
-  projectId: string;
-  providerId: string;
-}
-export interface ConsentRecord {
-  dataClasses: string[];
-  allowUnknownCost: boolean;
-  grantedAt: string;
-  revokedAt: string | null;
-}
-export interface ConsentStore {
-  find(request: ConsentQuery): Promise<ConsentRecord | null>;
+export interface ValidationFailureSummary {
+  code: string;
+  message: string;
+  issues: { path: string; rule: string; message: string }[];
+  omittedIssues: number;
 }
 export interface ModelCallRecord {
   id: string;
@@ -73,6 +64,7 @@ export interface ModelCallRecord {
   responseHash: string | null;
   finishReason: string | null;
   failureReason?: "output_truncated" | "content_filtered";
+  validationFailure?: ValidationFailureSummary;
   rawPrompt?: string;
 }
 export interface ModelCallRecorder {
@@ -305,86 +297,6 @@ export class SqliteBudgetLedger implements BudgetLedger {
         reason,
         reservationId,
       );
-    });
-  }
-}
-export class SqliteConsentStore implements ConsentStore {
-  constructor(readonly database: PersistenceDatabase) {}
-  /** HTTP mutations run inside an idempotency receipt transaction, which cannot nest. */
-  private atomic(action: () => void): void {
-    if (this.database.inTransaction) action();
-    else this.database.withTx(action);
-  }
-  async find(request: ConsentQuery): Promise<ConsentRecord | null> {
-    const row = this.database.get<{
-      data_classes_json: string;
-      granted_at: string;
-      revoked_at: string | null;
-      allow_unknown_cost: number;
-    }>(
-      "SELECT data_classes_json,granted_at,revoked_at,allow_unknown_cost FROM consents WHERE workspace_id=? AND project_id=? AND provider_id=?",
-      request.workspaceId,
-      request.projectId,
-      request.providerId,
-    );
-    return row
-      ? {
-          dataClasses: JSON.parse(row.data_classes_json) as string[],
-          grantedAt: row.granted_at,
-          revokedAt: row.revoked_at,
-          allowUnknownCost: row.allow_unknown_cost === 1,
-        }
-      : null;
-  }
-  grant(query: ConsentQuery, dataClasses: string[], actor: string, allowUnknownCost = false): void {
-    this.atomic(() => {
-      const now = new Date().toISOString();
-      this.database.run(
-        "INSERT INTO consents(workspace_id,id,created_at,project_id,provider_id,data_classes_json,granted_at,revoked_at,allow_unknown_cost,data_json) VALUES(?,?,?,?,?,?,?,NULL,?,?) ON CONFLICT(workspace_id,project_id,provider_id) DO UPDATE SET data_classes_json=excluded.data_classes_json,granted_at=excluded.granted_at,revoked_at=NULL,allow_unknown_cost=excluded.allow_unknown_cost,data_json=excluded.data_json",
-        query.workspaceId,
-        randomUUID(),
-        now,
-        query.projectId,
-        query.providerId,
-        canonicalJson(dataClasses),
-        now,
-        Number(allowUnknownCost),
-        canonicalJson({ grantedBy: actor }),
-      );
-      new AuditRepository(this.database).append({
-        workspaceId: query.workspaceId,
-        actor,
-        action: "consent.granted",
-        resourceId: query.projectId,
-        requestId: randomUUID(),
-        beforeHash: null,
-        afterHash: sha256(
-          canonicalJson({ providerId: query.providerId, dataClasses, allowUnknownCost }),
-        ),
-        timestamp: now,
-      });
-    });
-  }
-  revoke(query: ConsentQuery, actor: string): void {
-    this.atomic(() => {
-      const now = new Date().toISOString();
-      this.database.run(
-        "UPDATE consents SET revoked_at=? WHERE workspace_id=? AND project_id=? AND provider_id=?",
-        now,
-        query.workspaceId,
-        query.projectId,
-        query.providerId,
-      );
-      new AuditRepository(this.database).append({
-        workspaceId: query.workspaceId,
-        actor,
-        action: "consent.revoked",
-        resourceId: query.projectId,
-        requestId: randomUUID(),
-        beforeHash: null,
-        afterHash: null,
-        timestamp: now,
-      });
     });
   }
 }

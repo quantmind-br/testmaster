@@ -44,9 +44,13 @@ export function string(options: Options, key: string): string | undefined {
   const value = options[key];
   return typeof value === "string" ? value : undefined;
 }
+/** Commander stores `--token-file` as `tokenFile`; messages name the flag the user typed. */
 export function required(options: Options, key: string): string {
   const value = string(options, key);
-  if (!value) throw new ContractError("INVALID_ARGUMENT", `--${key} is required`);
+  if (!value) {
+    const flag = key.replace(/[A-Z]/gu, (letter) => `-${letter.toLowerCase()}`);
+    throw new ContractError("INVALID_ARGUMENT", `--${flag} is required`);
+  }
   return value;
 }
 export function integer(value: string): number {
@@ -116,6 +120,8 @@ export class Runtime {
   output: "json" | "text" = "text";
   options: Options = {};
   emitted = false;
+  private receipted = false;
+  private failed = false;
   pending: Result | undefined;
   readonly stdout: NodeJS.WritableStream;
   readonly stderr: NodeJS.WritableStream;
@@ -280,6 +286,7 @@ export class Runtime {
   emit(result: Result): void {
     if (this.emitted) return;
     this.emitted = true;
+    this.receipted = true;
     const warnings = result.warnings ?? [];
     if (this.output === "json")
       this.stdout.write(
@@ -292,8 +299,13 @@ export class Runtime {
     process.exitCode = result.exit ?? 0;
   }
   fail(error: unknown): void {
-    if (this.emitted) return;
+    // A long-running command (`server start`, the backup agent) emits its receipt while it keeps
+    // running. A failure after that must still be reported and set the exit code; only the
+    // operator's own interruption stays silent, because that is the command's normal stop.
+    const afterReceipt = this.receipted && !this.failed && !this.signal;
+    if (this.emitted && !afterReceipt) return;
     this.emitted = true;
+    this.failed = true;
     const actual = this.signal ? this.interrupted() : error;
     const data = errorData(actual);
     const code = data.code;

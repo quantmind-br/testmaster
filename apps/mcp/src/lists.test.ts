@@ -152,3 +152,38 @@ it("REQ-034 UX-042 testmaster_run_tests refuses a partial list until the dropped
   expect(JSON.stringify(confirmed.body)).toContain(`project:${second.id}`);
   expect(f.app.database.all("SELECT id FROM runs")).toHaveLength(2);
 });
+
+it("run_tests wait deadline is UPSTREAM_TIMEOUT with resume details and the receipt is read live", async () => {
+  const f = await fixture();
+  const client = await f.connect(["R", "W", "X"]);
+  const args = { environmentId: f.init.environmentId, mode: "replay" };
+  const timed = await f.call(client, {
+    ...args,
+    testIds: [f.first.id],
+    wait: true,
+    timeoutMs: 1,
+  });
+  expect(timed.isError).toBe(true);
+  const error = timed.body.error as { code: string; details: Record<string, unknown> };
+  expect(error.code).toBe("UPSTREAM_TIMEOUT");
+  expect(error.details).toMatchObject({ waitTimeout: true, runsContinue: true });
+  const runIds = error.details.runIds as string[];
+  expect(runIds).toHaveLength(1);
+  const jobId = String(error.details.jobId);
+
+  type Member = { status: string; queue?: unknown; resources: Record<string, string> };
+  const receipt = async () => {
+    const read = await f.call(client, { ...args, jobId });
+    expect(read.isError).toBe(false);
+    return (read.body.memberRuns as Member[])[0] as Member;
+  };
+  // Control: while the run still waits, the receipt says so.
+  expect((await receipt()).status).toBe("queued");
+  f.app.runs.cancel(String(runIds[0]));
+  // The admission-time receipt said queued; the live one follows the run and drops the stale queue.
+  const after = await receipt();
+  expect(after.status).toBe("cancelled");
+  expect(after).not.toHaveProperty("queue");
+  expect(after.resources.result).toBe(`testmaster://runs/${runIds[0]}/result`);
+  expect(after.resources.report).toBe(`testmaster://runs/${runIds[0]}/report`);
+});

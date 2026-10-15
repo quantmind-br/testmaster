@@ -11,8 +11,22 @@ export interface GeneratedProposal {
 export interface GeneratedProposals {
   proposals: GeneratedProposal[];
 }
+/** A requirement the model declined because no HTTP or browser plan can observe it. */
+export interface UnsupportedRequirement {
+  requirementId: string;
+  reason: string;
+}
+export interface ResolvedProposals extends GeneratedProposals {
+  unsupported: UnsupportedRequirement[];
+}
 export function validateProposalPlan(input: unknown): ExecutablePlan {
   const plan = validate<ExecutablePlan>("ExecutablePlan", input);
+  if (plan.runner === "terminal")
+    throw new ContractError(
+      "CAPABILITY_UNAVAILABLE",
+      "Terminal plans cannot be generated, edited or refined as proposals; author them as executable plans",
+      { runner: "terminal" },
+    );
   const assertions = plan.steps.filter(
     (step) => step.kind === "assertion" && step.required !== false,
   );
@@ -39,25 +53,138 @@ export function validateProposalPlan(input: unknown): ExecutablePlan {
     );
   return plan;
 }
-/** Validates model proposal output and resolves evidence handles to supplied refs. */
+/** A proposal refused on its own merits, located by its position in the model output. */
+export interface ProposalRefusal {
+  index: number;
+  requirementIds: string[];
+  /** Stable machine-readable cause; the error carries the human message. */
+  reasonCode: string;
+  error: ContractError;
+}
+export interface InspectedProposals {
+  /** Proposals that passed every check, duplicates dropped, with their output position. */
+  accepted: { index: number; proposal: GeneratedProposal }[];
+  refused: ProposalRefusal[];
+  unsupported: UnsupportedRequirement[];
+}
+function proposalRefusal(
+  proposal: GeneratedProposal,
+  allowedRequirements: Set<string>,
+  allowedEvidence: Set<string>,
+): { reasonCode: string; error: ContractError } | undefined {
+  try {
+    validateProposalPlan(proposal.plan);
+  } catch (error) {
+    if (error instanceof ContractError) return { reasonCode: "plan_invalid", error };
+    throw error;
+  }
+  if (
+    proposal.requirementRefs.some((id) => !allowedRequirements.has(id)) ||
+    (proposal.plan.requirementRefs ?? []).some((id) => !allowedRequirements.has(id))
+  )
+    return {
+      reasonCode: "requirement_not_selected",
+      error: new ContractError("INVALID_ARGUMENT", "Proposal references an unapproved requirement"),
+    };
+  if (
+    !proposal.evidenceRefs.length ||
+    proposal.evidenceRefs.some((ref) => !allowedEvidence.has(canonicalJson(ref)))
+  )
+    return {
+      reasonCode: "evidence_not_grounded",
+      error: new ContractError("INVALID_ARGUMENT", "Proposal evidence is not grounded"),
+    };
+  return undefined;
+}
+/**
+ * Validates model proposal output and resolves evidence handles to supplied refs, collecting
+ * every proposal that fails on its own instead of stopping at the first. Output-wide defects (a
+ * declined requirement that is not selected, declined twice or also proposed, an empty answer)
+ * still throw: no proposal can be trusted when they occur.
+ */
+export function inspectGeneratedProposals(
+  input: unknown,
+  requirementIds: string[],
+  catalog: EvidenceCatalog,
+): InspectedProposals {
+  const output = validate<{
+    proposals: (Omit<GeneratedProposal, "evidenceRefs"> & { evidenceIds: string[] })[];
+    unsupported?: UnsupportedRequirement[];
+  }>("AIProposalsOutput", input);
+  const unsupported = output.unsupported ?? [];
+  if (!output.proposals.length && !unsupported.length)
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      "The model returned neither proposals nor declined requirements",
+    );
+  const declined = new Set<string>();
+  for (const { requirementId } of unsupported) {
+    if (!requirementIds.includes(requirementId))
+      throw new ContractError("INVALID_ARGUMENT", "A declined requirement is not a selected one", {
+        requirementId,
+      });
+    if (declined.has(requirementId))
+      throw new ContractError("INVALID_ARGUMENT", "A requirement is declined more than once", {
+        requirementId,
+      });
+    declined.add(requirementId);
+  }
+  const proposed = output.proposals.flatMap((proposal) => proposal.requirementRefs);
+  const both = proposed.find((id) => declined.has(id));
+  if (both)
+    throw new ContractError("INVALID_ARGUMENT", "A requirement is both proposed and declined", {
+      requirementId: both,
+    });
+  const allowedRequirements = new Set(requirementIds);
+  const allowedEvidence = new Set(catalog.refs.map((ref) => canonicalJson(ref)));
+  const hashes = new Set<string>();
+  const accepted: InspectedProposals["accepted"] = [];
+  const refused: ProposalRefusal[] = [];
+  output.proposals.forEach(({ evidenceIds, ...rest }, index) => {
+    const requirementRefs = rest.requirementRefs;
+    let evidenceRefs: SourceEvidenceRef[];
+    try {
+      evidenceRefs = catalog.resolve(evidenceIds, "Proposal evidence is not grounded");
+    } catch (error) {
+      if (!(error instanceof ContractError)) throw error;
+      refused.push({
+        index,
+        requirementIds: requirementRefs,
+        reasonCode: "evidence_not_grounded",
+        error,
+      });
+      return;
+    }
+    const proposal: GeneratedProposal = { ...rest, evidenceRefs };
+    const refusal = proposalRefusal(proposal, allowedRequirements, allowedEvidence);
+    if (refusal) {
+      refused.push({ index, requirementIds: requirementRefs, ...refusal });
+      return;
+    }
+    const hash = semanticHash(proposal.plan, "plan");
+    if (hashes.has(hash)) return;
+    hashes.add(hash);
+    accepted.push({ index, proposal });
+  });
+  return { accepted, refused, unsupported };
+}
+/**
+ * Validates model proposal output and resolves evidence handles to supplied refs. A declined
+ * requirement must be a selected one, be declined once and not also be proposed. The first
+ * proposal that fails rejects the output.
+ */
 export function resolveGeneratedProposals(
   input: unknown,
   requirementIds: string[],
   catalog: EvidenceCatalog,
-): GeneratedProposals {
-  const output = validate<{
-    proposals: (Omit<GeneratedProposal, "evidenceRefs"> & { evidenceIds: string[] })[];
-  }>("AIProposalsOutput", input);
-  return validateGeneratedProposals(
-    {
-      proposals: output.proposals.map(({ evidenceIds, ...proposal }) => ({
-        ...proposal,
-        evidenceRefs: catalog.resolve(evidenceIds, "Proposal evidence is not grounded"),
-      })),
-    },
-    requirementIds,
-    catalog.refs,
-  );
+): ResolvedProposals {
+  const inspected = inspectGeneratedProposals(input, requirementIds, catalog);
+  const [first] = inspected.refused;
+  if (first) throw first.error;
+  return {
+    proposals: inspected.accepted.map(({ proposal }) => proposal),
+    unsupported: inspected.unsupported,
+  };
 }
 /** Semantic checks over resolved proposals; duplicate plans are dropped. */
 export function validateGeneratedProposals(
@@ -69,17 +196,8 @@ export function validateGeneratedProposals(
   const allowedEvidence = new Set(evidence.map((ref) => canonicalJson(ref)));
   const hashes = new Set<string>();
   const proposals = result.proposals.filter((proposal) => {
-    validateProposalPlan(proposal.plan);
-    if (
-      proposal.requirementRefs.some((id) => !allowedRequirements.has(id)) ||
-      (proposal.plan.requirementRefs ?? []).some((id) => !allowedRequirements.has(id))
-    )
-      throw new ContractError("INVALID_ARGUMENT", "Proposal references an unapproved requirement");
-    if (
-      !proposal.evidenceRefs.length ||
-      proposal.evidenceRefs.some((ref) => !allowedEvidence.has(canonicalJson(ref)))
-    )
-      throw new ContractError("INVALID_ARGUMENT", "Proposal evidence is not grounded");
+    const refusal = proposalRefusal(proposal, allowedRequirements, allowedEvidence);
+    if (refusal) throw refusal.error;
     const hash = semanticHash(proposal.plan, "plan");
     if (hashes.has(hash)) return false;
     hashes.add(hash);

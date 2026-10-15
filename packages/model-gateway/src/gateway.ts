@@ -19,9 +19,11 @@ import type {
   ModelToolCall,
   ProviderConfig,
   TokenUsage,
+  ValidationFailureSummary,
 } from "./types.js";
 
 const maxRepairIssues = 20;
+const maxSummaryIssues = 5;
 const INVENTORY_LISTINGS = 4;
 const INVENTORY_BACKOFF_MS = 250;
 function inventoryBackoff(ms: number, signal: AbortSignal): Promise<void> {
@@ -34,6 +36,35 @@ function inventoryBackoff(ms: number, signal: AbortSignal): Promise<void> {
       resolve();
     }
   });
+}
+/**
+ * Bounded summary of a failed local validation for persistence and error details. It carries
+ * validator paths, rules and messages only (never model output text) and is scrubbed with the
+ * request's secrets.
+ */
+function summarizeValidationFailure(
+  error: unknown,
+  secrets: readonly string[],
+): ValidationFailureSummary {
+  const clip = (text: string, max: number): string => scrubText(text, secrets).text.slice(0, max);
+  if (!(error instanceof ContractError))
+    return {
+      code: "INTERNAL",
+      message: "Response could not be parsed or validated",
+      issues: [],
+      omittedIssues: 0,
+    };
+  const issues = error.issues ?? [];
+  return {
+    code: error.code,
+    message: clip(error.message, 300),
+    issues: issues.slice(0, maxSummaryIssues).map((issue) => ({
+      path: clip(issue.path, 200),
+      rule: clip(issue.rule, 60),
+      message: clip(issue.message, 200),
+    })),
+    omittedIssues: Math.max(0, issues.length - maxSummaryIssues),
+  };
 }
 const forbiddenDataClasses: Record<string, true> = {
   credentials: true,
@@ -87,14 +118,17 @@ export class ModelGateway {
     if (!provider)
       throw new ContractError("CAPABILITY_UNAVAILABLE", "Provider is unavailable", {
         capability: input.provider,
-        milestone: "M2",
+        reasonCode: "provider_unavailable",
+        availableProviders: Object.keys(this.providers),
       });
-    await this.authorize(input, provider, signal);
+    this.authorize(input, provider, signal);
     const declared = provider.models.find((model) => model.id === input.model);
     if (!declared)
       throw new ContractError("CAPABILITY_UNAVAILABLE", "Model is unavailable", {
         capability: input.model,
-        milestone: "M2",
+        provider: input.provider,
+        reasonCode: "model_not_declared",
+        declaredModels: provider.models.map((model) => model.id),
       });
     const reasoningEffort = input.reasoningEffort ?? declared.reasoningEffort;
     if (reasoningEffort !== undefined && !reasoningEfforts.includes(reasoningEffort))
@@ -107,12 +141,17 @@ export class ModelGateway {
         throw new ContractError(
           "CAPABILITY_UNAVAILABLE",
           "Required model capability is unavailable",
-          { capability, milestone: "M2" },
+          {
+            capability,
+            provider: input.provider,
+            model: input.model,
+            reasonCode: "model_capability_missing",
+          },
         );
     }
     const price = provider.prices?.[input.model];
-    if (!price && !input.dataPolicy.allowUnknownCost)
-      throw new ContractError("POLICY_DENIED", "Unknown model cost requires explicit consent");
+    // A model without a price table entry is priced "unknown": the budget ledger refuses it only
+    // while the project has a monetary budget limit, and token quotas apply either way.
     if (
       price &&
       (!/^[A-Z]{3}$/u.test(price.currency) ||
@@ -174,7 +213,7 @@ export class ModelGateway {
     );
     if (input.cache !== false) {
       const cached = await this.cache.get(cacheKey);
-      if (cached) {
+      if (cached && (await this.cachedOutputPasses(input, cached.output))) {
         if (cached.resolvedModel !== input.model)
           throw new ContractError("PRECONDITION_FAILED", "Cache model mismatch");
         if (input.responseSchema) validate(input.responseSchema, cached.output);
@@ -194,6 +233,22 @@ export class ModelGateway {
     const transport = new OpenAICompatibleProvider(provider.baseUrl, this.options.maxResponseBytes);
     let inventoryChecked = false;
     const invocationId = uuidV7IdGenerator.next("mdl");
+    // The last invalid attempt, so a later deadline or cancellation still reports why the
+    // candidate was never accepted.
+    let lastInvalid: ValidationFailureSummary | undefined;
+    // The check's own error when the last invalid attempt failed the semantic check, not the schema.
+    let lastCheckRefusal: ContractError | undefined;
+    let lastInvalidCallId: string | undefined;
+    let invalidAttempts = 0;
+    const invalidDetails = (): Record<string, unknown> =>
+      lastInvalid
+        ? {
+            candidateStatus: "invalid",
+            invalidAttempts,
+            validationFailure: lastInvalid,
+            ...(lastInvalidCallId ? { modelCallId: lastInvalidCallId } : {}),
+          }
+        : {};
     for (let repairAttempt = 0; repairAttempt <= 2; repairAttempt += 1) {
       let validationFailure = "The last response was truncated or failed validation.";
       const payload: Record<string, unknown> = {
@@ -219,21 +274,32 @@ export class ModelGateway {
           "Model context exceeds admitted byte/token limits",
         );
       if (!inventoryChecked) {
-        await this.authorize(input, provider, signal);
+        this.authorize(input, provider, signal);
         try {
           // Gateways in front of several upstream pools can list a model intermittently;
           // absence is reported only after a bounded number of listings.
           let listed = false;
+          let inventory: string[] = [];
           for (let listing = 0; !listed && listing < INVENTORY_LISTINGS; listing += 1) {
             if (listing > 0) await inventoryBackoff(INVENTORY_BACKOFF_MS * listing, signal);
-            listed = (await transport.models(key, signal)).includes(input.model);
+            inventory = await transport.models(key, signal);
+            listed = inventory.includes(input.model);
           }
-          if (!listed)
+          if (!listed) {
+            const declaredModels = provider.models.map((model) => model.id);
             throw new ContractError(
               "CAPABILITY_UNAVAILABLE",
               "Declared model is absent from provider inventory",
-              { capability: input.model, milestone: "M2" },
+              {
+                capability: input.model,
+                provider: input.provider,
+                reasonCode: "model_not_in_inventory",
+                inventoryListings: INVENTORY_LISTINGS,
+                declaredModelsPresent: declaredModels.filter((id) => inventory.includes(id)),
+                declaredModelsAbsent: declaredModels.filter((id) => !inventory.includes(id)),
+              },
             );
+          }
         } catch (error) {
           if (signal.aborted)
             throw new ContractError(
@@ -248,7 +314,7 @@ export class ModelGateway {
       let raw: Record<string, unknown> | undefined;
       let lastResult: ModelResult<T> | undefined;
       for (let transportAttempt = 0; transportAttempt <= 1; transportAttempt += 1) {
-        await this.authorize(input, provider, signal);
+        this.authorize(input, provider, signal, invalidDetails());
         // Reserve locally for provider-controlled generation; never send a token ceiling.
         const outputReservation =
           declared.capabilities.maxOutputTokens ??
@@ -278,6 +344,7 @@ export class ModelGateway {
           throw new ContractError(
             input.signal?.aborted ? "PRECONDITION_FAILED" : "UPSTREAM_TIMEOUT",
             "Model request cancelled before send",
+            invalidDetails(),
           );
         }
         const callStarted = performance.now();
@@ -330,6 +397,7 @@ export class ModelGateway {
             throw new ContractError(
               input.signal?.aborted ? "PRECONDITION_FAILED" : "UPSTREAM_TIMEOUT",
               input.signal?.aborted ? "Model request cancelled" : "Model request deadline exceeded",
+              invalidDetails(),
             );
           throw transportError;
         }
@@ -358,12 +426,21 @@ export class ModelGateway {
               : [],
         };
         let invalid = false;
+        // A non-ContractError thrown by `check` is a defect in the caller, never model feedback.
+        let checkDefect: { error: unknown } | undefined;
+        let checkRefusal: ContractError | undefined;
         try {
           if (result.resolvedModel !== input.model)
             throw new ContractError(
               "CAPABILITY_UNAVAILABLE",
               "Provider substituted a different model",
-              { capability: input.model, milestone: "M2" },
+              {
+                capability: input.model,
+                provider: input.provider,
+                reasonCode: "model_substituted",
+                requestedModel: input.model,
+                resolvedModel: scrubText(result.resolvedModel, secrets).text.slice(0, 200),
+              },
             );
           const choices = raw.choices;
           if (!Array.isArray(choices) || !choices.length)
@@ -397,6 +474,15 @@ export class ModelGateway {
                 ? validate<T>(input.responseSchema, parseStrictJson(content))
                 : content
             ) as T;
+            if (input.check) {
+              try {
+                await input.check(result.output);
+              } catch (error) {
+                if (error instanceof ContractError) checkRefusal = error;
+                else checkDefect = { error };
+                throw error;
+              }
+            }
           } else if (input.responseSchema)
             throw new ContractError("INVALID_ARGUMENT", "Structured completion content is missing");
           // OpenAI-compatible providers may send `tool_calls: null` for a plain content reply.
@@ -431,6 +517,10 @@ export class ModelGateway {
               "Completion has neither content nor tool calls",
             );
         } catch (error) {
+          const unfinished =
+            result.finishReason === "length" || result.finishReason === "content_filter";
+          const failure =
+            unfinished || checkDefect ? undefined : summarizeValidationFailure(error, secrets);
           await this.record(
             input,
             result,
@@ -438,16 +528,20 @@ export class ModelGateway {
             repairAttempt,
             transportAttempt,
             reservation.reservationId,
-            result.finishReason === "length" || result.finishReason === "content_filter"
-              ? "failed"
-              : "invalid",
+            unfinished || checkDefect ? "failed" : "invalid",
             input.dataPolicy.recordRawPrompt ? promptText : undefined,
+            failure,
           );
+          if (checkDefect) throw checkDefect.error;
           if (error instanceof ContractError && error.code === "CAPABILITY_UNAVAILABLE")
             throw error;
           if (result.finishReason === "length" || result.finishReason === "content_filter")
             throw error;
           invalid = true;
+          lastInvalid = failure;
+          lastCheckRefusal = checkRefusal;
+          lastInvalidCallId = result.modelCallId;
+          invalidAttempts += 1;
           if (error instanceof ContractError) {
             // Union-heavy schemas report every failed alternative; unbounded feedback grew repair
             // prompts past admitted input limits, so repairs carry a bounded issue sample.
@@ -481,12 +575,27 @@ export class ModelGateway {
         if (input.cache !== false) await this.cache.set(cacheKey, lastResult);
         return lastResult;
       }
-      if (repairAttempt === 2)
+      if (repairAttempt === 2) {
+        // A final failure caused by the caller's semantic check surfaces that check's own error
+        // (its message, code and details) plus the repair account, so callers see the cause.
+        if (lastCheckRefusal)
+          throw new ContractError(
+            lastCheckRefusal.code,
+            lastCheckRefusal.message,
+            {
+              ...lastCheckRefusal.details,
+              repairs: 2,
+              candidateStatus: "invalid",
+              ...invalidDetails(),
+            },
+            lastCheckRefusal.issues,
+          );
         throw new ContractError(
           "INVALID_ARGUMENT",
           "Provider returned invalid output after two repairs",
-          { repairs: 2, candidateStatus: "invalid" },
+          { repairs: 2, candidateStatus: "invalid", ...invalidDetails() },
         );
+      }
       messages = [
         ...messages,
         {
@@ -498,15 +607,33 @@ export class ModelGateway {
     throw new ContractError("INTERNAL", "Unreachable repair state");
   }
 
-  private async authorize(
+  /**
+   * A cached output is reused only when it still passes the caller's semantic check; one that
+   * no longer does is a miss, so the paid path validates (and repairs) it. A defect in the check
+   * itself is never swallowed.
+   */
+  private async cachedOutputPasses(input: ModelRequest, output: unknown): Promise<boolean> {
+    if (!input.check) return true;
+    try {
+      await input.check(output);
+      return true;
+    } catch (error) {
+      if (error instanceof ContractError) return false;
+      throw error;
+    }
+  }
+
+  private authorize(
     input: ModelRequest,
     provider: ProviderConfig,
     signal: AbortSignal,
-  ): Promise<void> {
+    details: Record<string, unknown> = {},
+  ): void {
     if (signal.aborted)
       throw new ContractError(
         input.signal?.aborted ? "PRECONDITION_FAILED" : "UPSTREAM_TIMEOUT",
         "Model request cancelled or timed out",
+        details,
       );
     const endpoint = new URL(provider.baseUrl);
     if (
@@ -523,33 +650,18 @@ export class ModelGateway {
       )
     )
       throw new ContractError("POLICY_DENIED", "Provider endpoint is outside the allowlist");
-    const consent = await this.options.consentStore.find({
-      workspaceId: input.workspaceId,
-      projectId: input.projectId,
-      providerId: input.provider,
-    });
-    if (
-      !consent ||
-      consent.revokedAt !== null ||
-      input.dataPolicy.dataClasses.some(
-        (dataClass) =>
-          Object.hasOwn(forbiddenDataClasses, dataClass) ||
-          !consent.dataClasses.includes(dataClass),
-      )
-    )
-      throw new ContractError("POLICY_DENIED", "Model data-class consent is absent or revoked");
-    if (
-      !provider.prices?.[input.model] &&
-      (!input.dataPolicy.allowUnknownCost || consent.allowUnknownCost !== true)
-    )
-      throw new ContractError(
-        "POLICY_DENIED",
-        "Unknown model cost requires recorded explicit consent",
-      );
+    const forbidden = input.dataPolicy.dataClasses.find((dataClass) =>
+      Object.hasOwn(forbiddenDataClasses, dataClass),
+    );
+    if (forbidden !== undefined)
+      throw new ContractError("POLICY_DENIED", "Model data class is never sent to a provider", {
+        dataClass: forbidden,
+      });
     if (signal.aborted)
       throw new ContractError(
         input.signal?.aborted ? "PRECONDITION_FAILED" : "UPSTREAM_TIMEOUT",
         "Model request cancelled or timed out",
+        details,
       );
   }
 
@@ -562,6 +674,7 @@ export class ModelGateway {
     reservationId: string | null,
     outcome: ModelCallRecord["outcome"],
     rawPrompt?: string,
+    validationFailure?: ValidationFailureSummary,
   ): Promise<void> {
     await this.options.recorder.record({
       id: result.modelCallId,
@@ -597,6 +710,7 @@ export class ModelGateway {
         : result.finishReason === "content_filter"
           ? { failureReason: "content_filtered" as const }
           : {}),
+      ...(validationFailure === undefined ? {} : { validationFailure }),
       ...(rawPrompt === undefined ? {} : { rawPrompt }),
     });
   }

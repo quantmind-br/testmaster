@@ -394,7 +394,7 @@ describe("discovery", () => {
     expect(counts).toContain(String(detail.summary.skippedFiles.length));
     const skipped = (await page.getByTestId("skipped-files").innerText()).replace(/\s+/g, " ");
     expect(skipped).toContain("notes.txt");
-    expect(skipped).toContain("unsupported_or_binary");
+    expect(skipped).toContain("unsupported_type");
     expect(skipped).toContain(".env");
     expect(skipped).toContain("default_exclude");
     // The excluded file was never read: its content is nowhere in the preview.

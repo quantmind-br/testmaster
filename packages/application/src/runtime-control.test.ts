@@ -38,13 +38,20 @@ it("reserves headroom and isolated pool slots instead of oversubscribing browser
     memoryBytes: 4 * 1024 ** 3,
     pids: 1024,
     diskBytes: 8 * 1024 ** 3,
-    pools: { browser: 1, http: 2, python: 1 },
+    pools: { browser: 1, http: 2, python: 1, terminal: 1 },
   };
   expect(fitsCapacity(capacity, [], "browser")).toBe(true);
   expect(fitsCapacity(capacity, ["browser"], "browser")).toBe(false);
   expect(fitsCapacity(capacity, ["http", "http"], "browser")).toBe(true);
   expect(fitsCapacity(capacity, ["http", "http"], "http")).toBe(false);
   expect(fitsCapacity({ ...capacity, cpu: 2 }, [], "browser")).toBe(false);
+  // Terminal sessions have a 1 GiB envelope and their own slot pool.
+  expect(fitsCapacity(capacity, [], "terminal")).toBe(true);
+  expect(fitsCapacity(capacity, ["terminal"], "terminal")).toBe(false);
+  expect(
+    fitsCapacity({ ...capacity, pools: { ...capacity.pools, terminal: 0 } }, [], "terminal"),
+  ).toBe(false);
+  expect(fitsCapacity({ ...capacity, memoryBytes: 1024 ** 3 }, [], "terminal")).toBe(false);
 });
 it("repeated queued cancellation removes the lease atomically and terminal cancellation is a no-op", async () => {
   const { app, request, init } = await fixture();
@@ -94,6 +101,42 @@ it("missing enforcement produces a durable typed blocked Run without a job or fa
   ).toMatchObject({ reasonCode: "security_precondition_failed", control: "docker" });
   expect(app.database.all("SELECT * FROM job_leases")).toHaveLength(0);
   expect(app.database.all("SELECT * FROM attempts")).toHaveLength(0);
+});
+it("a runner-image refusal records why and the rules analysis points at the image, not the test", async () => {
+  const { app, request } = await fixture();
+  const imageId = `sha256:${"e".repeat(64)}`;
+  vi.mocked(app.preflight).mockRejectedValue(
+    new ContractError(
+      "POLICY_DENIED",
+      `Pinned runner image ${imageId} is not in the local Docker image store`,
+      {
+        reasonCode: "security_precondition_failed",
+        control: "runner_images",
+        diagnostic: "image_unavailable",
+        imageId,
+      },
+    ),
+  );
+  const receipt = await app.runs.admit(request, {
+    wait: true,
+    idempotencyKey: "image-refusal-key",
+  });
+  expect(receipt.status).toBe("blocked");
+  expect(
+    app.runs.events(receipt.runId).find((event) => event.type === "run.completed")?.payload,
+  ).toMatchObject({
+    reasonCode: "security_precondition_failed",
+    control: "runner_images",
+    diagnostic: "image_unavailable",
+    message: expect.stringContaining(imageId),
+  });
+  const analysis = await app.analysis.analyze(receipt.runId, { model: false });
+  expect(analysis.facts.map((fact) => fact.text)).toContain(
+    "Persisted run.completed observation: security_precondition_failed (control runner_images: image_unavailable).",
+  );
+  const steps = analysis.diagnosis?.nextSteps.map((step) => step.text) ?? [];
+  expect(steps.join("\n")).toContain("runner images");
+  expect(steps.join("\n")).not.toContain("Review the refused security precondition");
 });
 it("expired dedup admits a new Run while retaining the historical receipt and Run", async () => {
   const { app, request } = await fixture();

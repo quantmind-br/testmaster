@@ -5,6 +5,7 @@ import {
   type BatchRequest,
   ContractError,
   type DependencyBinding,
+  type EffectiveConfig,
   type ExecutablePlan,
   type PlanStep,
   type Run,
@@ -51,6 +52,8 @@ export interface BatchProvenance {
 }
 export interface AdmissionOptions {
   wait?: boolean;
+  /** Name of the caller's flag that admits without a live worker; quoted in the refusal guidance. */
+  waitFlag?: string;
   idempotencyKey?: string;
   unsafeLocal?: boolean;
   selection?: {
@@ -62,6 +65,42 @@ export interface AdmissionOptions {
   };
   /** Provenance of a list or schedule request; the snapshot is frozen on the BatchRun (UX-041, OPS-016). */
   provenance?: BatchProvenance;
+}
+/** A healing approval that commits in the same transaction as the verification admission. */
+export interface HealingApprovalWrite {
+  mode: "manual" | "policy";
+  write(): void;
+}
+function configurationLeaves(value: unknown, prefix = "", out = new Map<string, unknown>()) {
+  if (value && typeof value === "object" && !Array.isArray(value))
+    for (const [key, child] of Object.entries(value))
+      configurationLeaves(child, prefix ? `${prefix}.${key}` : key, out);
+  else out.set(prefix, value);
+  return out;
+}
+/** Keys whose value or origin differs between two effective configurations; never their values. */
+function configurationChanges(frozen: EffectiveConfig, current: EffectiveConfig) {
+  const before = configurationLeaves(frozen.config);
+  const after = configurationLeaves(current.config);
+  const keys = new Set([
+    ...before.keys(),
+    ...after.keys(),
+    ...Object.keys(frozen.origins),
+    ...Object.keys(current.origins),
+  ]);
+  const changed: { key: string; frozenOrigin: string | null; currentOrigin: string | null }[] = [];
+  for (const key of [...keys].sort()) {
+    const frozenOrigin = frozen.origins[key] ?? null;
+    const currentOrigin = current.origins[key] ?? null;
+    if (
+      frozenOrigin !== currentOrigin ||
+      semanticHash(before.get(key) ?? null) !== semanticHash(after.get(key) ?? null)
+    )
+      changed.push({ key, frozenOrigin, currentOrigin });
+  }
+  if (frozen.policyHash !== current.policyHash)
+    changed.push({ key: "policyHash", frozenOrigin: null, currentOrigin: null });
+  return changed;
 }
 export interface RunHost {
   config: ResolvedConfig;
@@ -665,6 +704,9 @@ export class RunsService {
           outcome: "blocked",
           reasonCode: "security_precondition_failed",
           control: securityFailure.details.control ?? "enforcement",
+          ...(typeof securityFailure.details.diagnostic === "string"
+            ? { diagnostic: securityFailure.details.diagnostic, message: securityFailure.message }
+            : {}),
         },
       );
     const receipt: OwnedReceipt = {
@@ -692,65 +734,131 @@ export class RunsService {
     );
     return receipt;
   }
-  /** Only the approved proposal can supply the revision and frozen execution identity. */
-  async admitHealingVerification(proposalId: string): Promise<OwnedReceipt> {
-    const proposal = requireEntity(this.ctx, "HealingProposal", proposalId);
+  private authorizeVerification(
+    mode: unknown,
+    failed: Run & EntityDocument,
+    test: EntityDocument,
+  ): void {
+    const cell = failed.matrixCell as Record<string, unknown>;
+    if (mode === "policy") {
+      const env = requireEntity(this.ctx, "EnvironmentRevision", failed.environmentRevisionId);
+      const frozen = cell.effectiveConfig as ResolvedConfig["effectiveConfig"];
+      const project = requireEntity(this.ctx, "Project", String(test.projectId));
+      const projectExtensions = project.extensions as Record<string, unknown> | undefined;
+      if (projectExtensions?.["testmaster:healingPolicy"] !== "apply")
+        throw new ContractError(
+          "POLICY_DENIED",
+          "Project policy no longer authorizes automatic healing",
+        );
+      if (
+        env.production ||
+        cell.healingPolicy !== "apply" ||
+        frozen.config.healing?.mode !== "apply" ||
+        this.host.config.effectiveConfig.config.healing?.mode !== "apply"
+      )
+        throw new ContractError("POLICY_DENIED", "Policy healing verification is not authorized");
+      this.ctx.authorize("X", String(test.projectId));
+    } else
+      this.ctx.authorizeNamed(
+        "approve",
+        "HealingProposal",
+        String(test.projectId),
+        String(cell.environmentId),
+      );
+  }
+  /**
+   * Pure reads: refuses exactly what admission refuses, so an approval can be checked before it
+   * is written. `approving` names the mode of an approval that is not stored yet (the proposal is
+   * still reviewable and carries no actor, policy hash or Run).
+   */
+  assertVerificationAdmissible(proposal: EntityDocument, approving?: "manual" | "policy"): void {
     const failed = this.get(String(proposal.failedRunId));
     const test = requireEntity(this.ctx, "TestCase", failed.testId);
     const cell = failed.matrixCell as Record<string, unknown>;
     const environmentId = String(cell.environmentId);
     const approvalExtensions = proposal.extensions as Record<string, unknown> | undefined;
-    if (approvalExtensions?.["testmaster:approvalActorId"] !== this.ctx.principalId)
+    if (!approving && approvalExtensions?.["testmaster:approvalActorId"] !== this.ctx.principalId)
       throw new ContractError(
         "FORBIDDEN",
         "Verification dispatch requires its authenticated approval actor",
       );
-    const authorizeVerification = () => {
-      if (proposal.approvalMode === "policy") {
-        const env = requireEntity(this.ctx, "EnvironmentRevision", failed.environmentRevisionId);
-        const frozen = cell.effectiveConfig as ResolvedConfig["effectiveConfig"];
-        const project = requireEntity(this.ctx, "Project", String(test.projectId));
-        const projectExtensions = project.extensions as Record<string, unknown> | undefined;
-        if (projectExtensions?.["testmaster:healingPolicy"] !== "apply")
-          throw new ContractError(
-            "POLICY_DENIED",
-            "Project policy no longer authorizes automatic healing",
-          );
-        if (
-          env.production ||
-          cell.healingPolicy !== "apply" ||
-          frozen.config.healing?.mode !== "apply" ||
-          this.host.config.effectiveConfig.config.healing?.mode !== "apply"
-        )
-          throw new ContractError("POLICY_DENIED", "Policy healing verification is not authorized");
-        this.ctx.authorize("X", String(test.projectId));
-      } else
-        this.ctx.authorizeNamed(
-          "approve",
-          "HealingProposal",
-          String(test.projectId),
-          environmentId,
-        );
-    };
-    authorizeVerification();
-    if (proposal.status !== "approved")
-      throw new ContractError("PRECONDITION_FAILED", "Healing proposal is not approved");
-    if (proposal.verificationRunId)
-      throw new ContractError("PRECONDITION_FAILED", "Healing verification is already admitted");
-    if (proposal.policyHash !== this.host.config.effectiveConfig.policyHash)
-      throw new ContractError("REVISION_CONFLICT", "Healing policy changed");
+    this.authorizeVerification(approving ?? proposal.approvalMode, failed, test);
+    if (!approving) {
+      if (proposal.status !== "approved")
+        throw new ContractError("PRECONDITION_FAILED", "Healing proposal is not approved");
+      if (proposal.verificationRunId)
+        throw new ContractError("PRECONDITION_FAILED", "Healing verification is already admitted");
+      if (proposal.policyHash !== this.host.config.effectiveConfig.policyHash)
+        throw new ContractError("REVISION_CONFLICT", "Healing policy changed");
+    }
     const environment = requireEntity(this.ctx, "Environment", environmentId);
     if (environment.activeRevisionId !== failed.environmentRevisionId)
       throw new ContractError("REVISION_CONFLICT", "Frozen healing environment changed");
-    if (semanticHash(cell.effectiveConfig) !== semanticHash(this.host.config.effectiveConfig))
+    const frozen = cell.effectiveConfig as EffectiveConfig;
+    const current = this.host.config.effectiveConfig;
+    if (semanticHash(frozen) !== semanticHash(current)) {
+      const overrides = this.host.config.overrides ?? [];
+      // Process-level overrides lead, so the cause is never lost behind the key cap.
+      const changed = configurationChanges(frozen, current).sort(
+        (a, b) =>
+          Number(overrides.some((item) => item.key === b.key)) -
+          Number(overrides.some((item) => item.key === a.key)),
+      );
+      const named = changed.slice(0, 5).map((entry) => {
+        const override = overrides.find((item) => item.key === entry.key);
+        const origins = entry.frozenOrigin
+          ? `frozen origin ${entry.frozenOrigin}, current origin ${entry.currentOrigin ?? "none"}`
+          : "changed";
+        return `${entry.key} (${origins}${override ? `, ${override.source}=true` : ""})`;
+      });
       throw new ContractError(
         "REVISION_CONFLICT",
-        "Frozen healing execution configuration changed",
+        `Frozen healing execution configuration changed${
+          named.length
+            ? `: ${named.join("; ")}${changed.length > named.length ? `; and ${changed.length - named.length} more` : ""}`
+            : ""
+        }`,
+        {
+          reasonCode: "execution_configuration_changed",
+          failedRunId: String(proposal.failedRunId),
+          changed: changed.slice(0, 20),
+          overrides,
+          nextActions: [
+            overrides.length
+              ? "Approve from a shell without CI=true, the configuration that admitted the failed Run"
+              : "Approve with the configuration (project file, environment variables, flags) that admitted the failed Run",
+            ...(overrides.some((item) => item.source === "CI")
+              ? [
+                  "CI healing is allowed only when the operator's approved policy sets allowCiHealing",
+                ]
+              : []),
+          ],
+        },
       );
+    }
+  }
+  /**
+   * Only the approved proposal can supply the revision and frozen execution identity. With
+   * `approval`, the approval write and the admission commit in one transaction after every
+   * refusal was checked, so a refused admission leaves the proposal untouched.
+   */
+  async admitHealingVerification(
+    proposalId: string,
+    approval?: HealingApprovalWrite,
+  ): Promise<OwnedReceipt> {
+    const proposal = requireEntity(this.ctx, "HealingProposal", proposalId);
+    this.assertVerificationAdmissible(proposal, approval?.mode);
+    const failed = this.get(String(proposal.failedRunId));
+    const test = requireEntity(this.ctx, "TestCase", failed.testId);
+    const cell = failed.matrixCell as Record<string, unknown>;
+    const environmentId = String(cell.environmentId);
+    const mode = approval?.mode ?? proposal.approvalMode;
+    const authorizeVerification = () => this.authorizeVerification(mode, failed, test);
     await this.host.preflight(false, String(cell.executor ?? "docker"));
     return this.ctx.database.withTx(() => {
+      approval?.write();
       const current = requireEntity(this.ctx, "HealingProposal", proposalId);
-      if (current.version !== proposal.version || current.verificationRunId)
+      if (current.verificationRunId || (!approval && current.version !== proposal.version))
         throw new ContractError("REVISION_CONFLICT", "Healing proposal changed during admission");
       const request: RunRequest = {
         testId: failed.testId,
@@ -1188,10 +1296,16 @@ export class BatchesService {
     this.ctx.authorize("X");
     if (!request.selection.length && !request.allowEmpty)
       throw new ContractError("INVALID_ARGUMENT", "Empty selection");
-    if (!options.wait && !this.runs.host.liveWorker())
-      throw new ContractError("PRECONDITION_FAILED", "No live worker; use --wait", {
-        nextActions: ["worker start", "--wait"],
-      });
+    if (!options.wait && !this.runs.host.liveWorker()) {
+      const flag = options.waitFlag ?? "--wait";
+      throw new ContractError(
+        "PRECONDITION_FAILED",
+        `No live worker; start a worker or use ${flag}`,
+        {
+          nextActions: ["worker start", flag],
+        },
+      );
+    }
     let securityFailure: ContractError | undefined;
     for (const member of request.selection) {
       try {
