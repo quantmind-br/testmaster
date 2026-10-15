@@ -440,8 +440,19 @@ export class WorkerService {
       this.ctx.workspaceId,
       run.id,
     )?.started_at;
+    // Time an earlier attempt spent waiting for a model answer is not execution time: a model
+    // call is never cut, and its wait must not shorten a later attempt's deadline either.
+    const modelWaitMs = this.host.runs
+      .events(run.id)
+      .filter((event) => event.type === "attempt.model_wait")
+      .reduce(
+        (total, event) => total + Number((event.payload as { waitMs?: number }).waitMs ?? 0),
+        0,
+      );
     const elapsedMs =
-      typeof firstStartedAt === "string" ? Math.max(0, Date.now() - Date.parse(firstStartedAt)) : 0;
+      typeof firstStartedAt === "string"
+        ? Math.max(0, Date.now() - Date.parse(firstStartedAt) - modelWaitMs)
+        : 0;
     const executionRemainingMs = Math.max(0, (limits.executionTimeoutMs ?? 1800000) - elapsedMs);
     const attemptDeadlineMs = Math.min(limits.attemptTimeoutMs ?? 300000, executionRemainingMs);
     const effective = validate<EffectiveConfig>("EffectiveConfig", cell.effectiveConfig);
@@ -552,7 +563,9 @@ export class WorkerService {
               reasonCode: "execution_deadline",
               origin: "run",
               deadline: new Date(
-                Date.parse(String(firstStartedAt)) + (limits.executionTimeoutMs ?? 1800000),
+                Date.parse(String(firstStartedAt)) +
+                  modelWaitMs +
+                  (limits.executionTimeoutMs ?? 1800000),
               ).toISOString(),
             },
           ),
@@ -732,7 +745,30 @@ export class WorkerService {
             `sha256:${"0".repeat(64)}`,
           inputDir,
           ...(plan ? { plan } : {}),
-          ...(agent ? { resolveAction: agent.resolveAction } : {}),
+          ...(agent
+            ? {
+                resolveAction: async (stepId: string, observation: unknown) => {
+                  const started = performance.now();
+                  const answer = await agent.resolveAction(stepId, observation).then(
+                    (action) => ({ action }),
+                    (error: unknown) => ({ error }),
+                  );
+                  const waitMs = Math.round(performance.now() - started);
+                  await retryWriterContention(() =>
+                    database.withTx(() =>
+                      new OutboxRepository(database).append(
+                        this.ctx.workspaceId,
+                        run.id,
+                        "attempt.model_wait",
+                        { attemptId: fence.attemptId, stepId, waitMs },
+                      ),
+                    ),
+                  );
+                  if ("error" in answer) throw answer.error;
+                  return answer.action;
+                },
+              }
+            : {}),
           networkPolicy: {
             allowedOrigins: [...origins, ...additionalOrigins],
             ...(additionalOrigins.length ? { additionalOrigins } : {}),

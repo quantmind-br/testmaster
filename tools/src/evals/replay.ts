@@ -10,7 +10,8 @@ import {
   rm,
   writeFile,
 } from "node:fs/promises";
-import { createServer } from "node:http";
+import { createServer, request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { Application } from "@testmaster/application";
@@ -111,9 +112,33 @@ export function smokeFetch(
     }
   };
 }
+/**
+ * A fetch without undici's 300 s header and body timeouts: the forwarder carries model calls,
+ * and a model call runs until the provider answers.
+ */
+function unboundedFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+  const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
+  const transport = url.protocol === "https:" ? httpsRequest : httpRequest;
+  const { promise, resolve: accept, reject } = Promise.withResolvers<Response>();
+  const outgoing = transport(
+    url,
+    { method: init?.method ?? "GET", headers: init?.headers as Record<string, string> },
+    (incoming) => {
+      const chunks: Buffer[] = [];
+      incoming.on("data", (chunk: Buffer) => chunks.push(chunk));
+      incoming.on("error", reject);
+      incoming.on("end", () =>
+        accept(new Response(Buffer.concat(chunks), { status: incoming.statusCode ?? 502 })),
+      );
+    },
+  );
+  outgoing.on("error", reject);
+  outgoing.end(typeof init?.body === "string" ? init.body : undefined);
+  return promise;
+}
 /** The gateway uses undici, so an isolated profile routes it through this admission boundary. */
 export async function startSmokeForwarder(providerUrl: string, state: SmokeState) {
-  const guarded = smokeFetch(globalThis.fetch, state, providerUrl);
+  const guarded = smokeFetch(unboundedFetch as typeof fetch, state, providerUrl);
   const server = createServer(async (request, response) => {
     try {
       const chunks: Buffer[] = [];
@@ -140,7 +165,6 @@ export async function startSmokeForwarder(providerUrl: string, state: SmokeState
         },
         ...(suffix === "models" ? {} : { body }),
         redirect: "error",
-        signal: AbortSignal.timeout(180000),
       });
       const result = await upstream.text();
       if (upstream.ok) {
