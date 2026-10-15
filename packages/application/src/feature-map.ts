@@ -11,7 +11,7 @@ const MAX_EVIDENCE = 20;
 const OPERATION_POINTER = /^\/paths\/(.+)\/(get|put|post|delete|options|head|patch|trace)$/u;
 const LIMITATIONS = [
   "Links are structural: a test is linked through a requirement it cites or an endpoint or page it exercises, not through proof that it verifies the behavior.",
-  "Code discovery is static and partial; routes, endpoints and components it did not find are not listed.",
+  "Code discovery is static and partial; routes and endpoints it did not find are not listed.",
   "Only a Run that reached a verdict (passed or failed) on the test's current revision counts as evidence.",
 ] as const;
 
@@ -149,8 +149,7 @@ export class FeatureMapService {
 
     for (const feature of detail?.featureMap.features ?? []) {
       const [kind, ...rest] = feature.stableKey.split(":");
-      if (kind !== "route" && kind !== "endpoint" && kind !== "component" && kind !== "desired")
-        continue;
+      if (kind !== "route" && kind !== "endpoint" && kind !== "desired") continue;
       if (kind === "desired" && hashesWithRequirement.has(rest.join(":"))) continue;
       const method = kind === "route" || kind === "endpoint" ? (rest[0] ?? "") : "";
       const path = kind === "route" || kind === "endpoint" ? rest.slice(1).join(":") : "";
@@ -177,11 +176,7 @@ export class FeatureMapService {
           link(linked, entry, "navigation");
       }
       const title =
-        kind === "component"
-          ? rest.slice(1).join(":") || feature.stableKey
-          : kind === "desired"
-            ? `Desired statement ${rest.join(":").slice(0, 8)}`
-            : declared;
+        kind === "desired" ? `Desired statement ${rest.join(":").slice(0, 8)}` : declared;
       rows.push(
         finish(
           {
@@ -192,7 +187,7 @@ export class FeatureMapService {
             sources: [],
             endpoints: feature.endpointRefs as string[],
             routes: feature.routeRefs as string[],
-            files: kind === "component" ? [rest[0] ?? ""] : [...new Set(files)],
+            files: [...new Set(files)],
           },
           linked,
         ),

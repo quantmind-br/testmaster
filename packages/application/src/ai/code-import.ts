@@ -273,13 +273,14 @@ export class CodeImportService {
       request,
     );
   }
-  async createGeneratedRevision(
-    testId: string,
-    input: { code: string; format: CodeImportFormat; parentId?: string },
-  ): Promise<Stored<TestRevision>> {
-    this.ctx.authorize("W");
-    const target = requireEntity(this.ctx, "TestCase", testId) as Stored<TestCase>;
-    this.ctx.authorize("W", target.projectId);
+  /**
+   * The importer's verdict on a generated candidate, without storing anything. The generation
+   * loop runs it as the model response check, so a refusal reaches the model as repair feedback.
+   */
+  async checkGeneratedCode(input: {
+    code: string;
+    format: CodeImportFormat;
+  }): Promise<ImportedCodeBundle> {
     if (
       typeof input.code !== "string" ||
       Buffer.byteLength(input.code) > 1024 * 1024 ||
@@ -287,7 +288,7 @@ export class CodeImportService {
     )
       throw new ContractError("INVALID_ARGUMENT", "Invalid generated code candidate");
     const entrypoint = input.format === "pytest" ? "test_generated.py" : "generated.spec.ts";
-    const bundle = await this.checkStoredCode({
+    return this.checkStoredCode({
       schemaVersion: "1.0.0",
       validatorVersion: "1.0.0",
       format: input.format,
@@ -297,6 +298,17 @@ export class CodeImportService {
       tests: [],
       limitations: [],
     });
+  }
+  /** `checked` is the bundle `checkGeneratedCode` already accepted for this same candidate. */
+  async createGeneratedRevision(
+    testId: string,
+    input: { code: string; format: CodeImportFormat; parentId?: string },
+    checked?: ImportedCodeBundle,
+  ): Promise<Stored<TestRevision>> {
+    this.ctx.authorize("W");
+    const target = requireEntity(this.ctx, "TestCase", testId) as Stored<TestCase>;
+    this.ctx.authorize("W", target.projectId);
+    const bundle = checked ?? (await this.checkGeneratedCode(input));
     const image = input.format === "pytest" ? "testmaster-runner-python" : "testmaster-runner";
     const images = JSON.parse(
       (

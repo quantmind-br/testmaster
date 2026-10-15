@@ -975,7 +975,13 @@ export class ExecutionRepository {
     if (this.database.inTransaction) publish();
     else this.database.withTx(publish);
   }
-  finalize(fence: Fence, next: EntityDocument): boolean {
+  /**
+   * Completes the Run under the lease fence. The `run.completed` outbox payload is the Run
+   * document plus the Run's final `reasonCode` when the caller knows it (the Run document itself
+   * has no such field), so alerts, telemetry, notifications and exit codes read the same reason
+   * that admission-time refusals already publish.
+   */
+  finalize(fence: Fence, next: EntityDocument, reasonCode?: string): boolean {
     return this.database.withTx(() => {
       this.leases.assertCurrent(fence);
       validate("Run", next);
@@ -1014,7 +1020,12 @@ export class ExecutionRepository {
         fence.workspaceId,
         fence.jobId,
       );
-      this.outbox.append(fence.workspaceId, next.id, "run.completed", next);
+      this.outbox.append(
+        fence.workspaceId,
+        next.id,
+        "run.completed",
+        reasonCode ? { ...next, reasonCode } : next,
+      );
       return true;
     });
   }

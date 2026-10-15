@@ -1407,6 +1407,91 @@
           "type": "string"
         },
         "type": {
+          "const": "egress.denied",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "stepId",
+            "origin",
+            "method",
+            "resourceType",
+            "disposition",
+            "count"
+          ],
+          "properties": {
+            "stepId": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "origin": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "method": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "resourceType": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "disposition": {
+              "anyOf": [
+                {
+                  "const": "aborted",
+                  "type": "string"
+                },
+                {
+                  "const": "fatal",
+                  "type": "string"
+                }
+              ]
+            },
+            "count": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "protocolVersion",
+        "seq",
+        "attemptId",
+        "occurredAt",
+        "type",
+        "payload"
+      ],
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0.0",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "attemptId": {
+          "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "occurredAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "type": {
           "const": "runner.finished",
           "type": "string"
         },

@@ -32,6 +32,15 @@
         }
       ]
     },
+    "additionalOrigins": {
+      "maxItems": 32,
+      "description": "Exact extra origins (scheme, host, port; no path, query, credentials or wildcard) page subrequests may reach. Replaces the previous list; [] clears it. They never receive credentials and are not target origins.",
+      "type": "array",
+      "items": {
+        "format": "uri",
+        "type": "string"
+      }
+    },
     "authRefs": {
       "type": "array",
       "items": {

@@ -173,6 +173,17 @@ it("CI disables healing and offline disables model and upload grants", async () 
   expect(result.profilePolicy.allowUpload).toBe(false);
 });
 
+it("CI records the healing override outside the hashed configuration and a non-CI resolution has none", async () => {
+  const paths = await fixture();
+  const ci = await resolveConfig({ ...paths, env: { CI: "true" } });
+  const local = await resolveConfig({ ...paths, env: {} });
+  expect(ci.overrides).toEqual([{ key: "healing.mode", source: "CI" }]);
+  expect(ci.effectiveConfig.origins["healing.mode"]).toBe("environment");
+  expect(local.overrides).toBeUndefined();
+  expect(local.effectiveConfig.origins["healing.mode"]).not.toBe("environment");
+  expect(ci.effectiveConfig.policyHash).toBe(local.effectiveConfig.policyHash);
+});
+
 it("exports the normative local defaults and labels future operational controls unavailable", async () => {
   const paths = await fixture();
   const result = exportEffectiveConfig(await resolveConfig({ ...paths, env: {} }), {});

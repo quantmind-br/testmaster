@@ -11,6 +11,7 @@ import {
   Nonnegative,
   Obj,
   Outcome,
+  Positive,
   RelativePath,
   StepStatus,
   Timestamp,
@@ -93,6 +94,23 @@ export const RunnerEvent = Type.Union([
     Obj({
       level: Enum(["debug", "info", "warn", "error"]),
       message: Type.String({ maxLength: 16384 }),
+    }),
+  ),
+  /**
+   * A browser request the route handler refused because its origin is outside the network policy,
+   * deduplicated per origin and resource type with a count. `aborted` means a passive subresource
+   * that was dropped without failing the attempt; `fatal` means the attempt was blocked.
+   * The origin never carries path, query or credentials.
+   */
+  event(
+    "egress.denied",
+    Obj({
+      stepId: Name,
+      origin: Name,
+      method: Name,
+      resourceType: Name,
+      disposition: Enum(["aborted", "fatal"]),
+      count: Positive,
     }),
   ),
   event(

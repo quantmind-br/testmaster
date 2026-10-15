@@ -55,10 +55,41 @@ it.each([
   "test('empty', async () => {expect(true).toBe(true);});",
   "test('empty', async () => {const a=true; expect(a).toBe(true);});",
   "test('empty', async ({page}) => {expect(page.url()).toBe(page.url());});",
+  "this['require']('node:child_process');",
+  "module['require']('node:child_process').execSync('id');",
+  "const host = self; host['process'].exit(1);",
+  "const sink = {} as Record<string, unknown>; sink[`eval`]('1');",
+  "const make = async () => {}; make?.constructor('return 1')();",
 ])("refuses unsafe or empty TypeScript: %s", async (body) => {
   const prefix = "import { test, expect } from '@playwright/test';\n";
   const options = await source(prefix + body);
   await expect(importCode(options)).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+});
+it("names the forbidden identifier and the line, never the code around it", async () => {
+  const prefix = "import { test, expect } from '@playwright/test';\n";
+  const refusal = async (body: string) =>
+    importCode(await source(prefix + body)).catch((error: unknown) => error);
+  expect(await refusal("const base = process.env.BASE_URL;")).toMatchObject({
+    code: "INVALID_ARGUMENT",
+    message: 'Runtime code, shell and host access are forbidden: "process" at line 2',
+  });
+  // The same names are refused as string keys, where no Identifier node names them.
+  expect(await refusal("\n\nthis['require']('node:fs');")).toMatchObject({
+    message: 'Runtime code, shell and host access are forbidden: "require" at line 4',
+  });
+  expect(await refusal("const host = self; host[`process`].exit(1);")).toMatchObject({
+    message: 'Runtime code, shell and host access are forbidden: "process" at line 2',
+  });
+  const error = await refusal("const secret = process.env.CANARY_VALUE;");
+  expect(String((error as Error).message)).not.toContain("CANARY_VALUE");
+});
+it("keeps accepting property reads and string keys that name no host access", async () => {
+  const options = await source(
+    "import { test, expect } from '@playwright/test';\ntest('health', async ({ request }) => { const response = await request.get('/health'); expect(response.statusText()).toBe('OK'); expect(response.headers()['content-type']).toContain('json'); });\n",
+  );
+  const bundle = await importCode(options);
+  expect(bundle.tests).toEqual(["health"]);
+  expect(bundle.files["health.spec.ts"]).toContain("statusText");
 });
 it.each([
   "import subprocess\ndef test_bad():\n    subprocess.run(['pip','install','evil'])\n    assert True\n",

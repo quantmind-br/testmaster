@@ -33,6 +33,8 @@ export interface ResolvedConfig {
   profilePolicy: ProfilePolicy;
   modelProviders: ProviderConfig[];
   logRetentionDays?: number;
+  /** Process-level overrides applied outside effectiveConfig, so they never change its hash. */
+  overrides?: { key: string; source: "CI" }[];
 }
 export function exportEffectiveConfig(
   resolved: ResolvedConfig,
@@ -487,9 +489,11 @@ export async function resolveConfig(options: ResolveConfigOptions = {}): Promise
       "POLICY_DENIED",
       "Process execution requires operator user-policy authorization",
     );
+  const overrides: NonNullable<ResolvedConfig["overrides"]> = [];
   if (booleanEnv(env.CI, "CI") === true && !profilePolicy.allowCiHealing) {
     effective = { ...effective, healing: { mode: "off" } };
     origins["healing.mode"] = "environment";
+    overrides.push({ key: "healing.mode", source: "CI" });
   }
   if (profilePolicy.offline) {
     profilePolicy.allowedModelProviders = [];
@@ -504,5 +508,6 @@ export async function resolveConfig(options: ResolveConfigOptions = {}): Promise
     effectiveConfig: { config: effective, origins, policyHash: semanticHash(profilePolicy) },
     modelProviders: structuredClone(selected.modelProviders ?? []),
     profilePolicy,
+    ...(overrides.length ? { overrides } : {}),
   };
 }

@@ -269,7 +269,7 @@ export const sourceInsightContracts = {
     rows: Type.Array(
       Obj({
         key: Name,
-        kind: Enum(["requirement", "endpoint", "route", "component", "desired"]),
+        kind: Enum(["requirement", "endpoint", "route", "desired"]),
         title: Description,
         requirementIds: Type.Array(id("req")),
         sources: Type.Array(

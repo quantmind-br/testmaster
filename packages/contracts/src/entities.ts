@@ -97,6 +97,8 @@ export const entities = {
   }),
   EnvironmentRevision: entity("evr", {
     targetOrigins: names,
+    /** Exact extra origins page subrequests may reach. Never a credential or approval target; absent on older revisions. */
+    additionalOrigins: Type.Optional(names),
     networkProfile: Enum(["public", "private", "local-loopback"]),
     authProfileRefs: Type.Array(id("aup")),
     locale: Name,
@@ -209,7 +211,7 @@ export const entities = {
     plan: nullable(ExecutablePlan),
     codeArtifactId: nullable(id("art")),
     codeRef: Type.Optional(CodeReference),
-    runnerKind: Enum(["playwright", "http", "python"]),
+    runnerKind: Enum(["playwright", "http", "python", "terminal"]),
     author: Name,
     parentId: nullable(id("rev")),
     origin: Enum(["manual", "generated", "healed", "imported"]),

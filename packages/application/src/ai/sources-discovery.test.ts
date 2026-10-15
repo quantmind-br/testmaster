@@ -379,6 +379,97 @@ describe("durable discovery", () => {
     expect(working.job.inputsFingerprint).not.toBe(pinned.job.inputsFingerprint);
     expect(ctx.entities.get("ProposalBatch", ctx.workspaceId, batch.id)?.state).toBe("stale");
   });
+  it("creates no component features and maps route handlers to endpoint features", async () => {
+    const { cwd, projectId, discovery } = await fixture();
+    await mkdir(join(cwd, "components"));
+    await mkdir(join(cwd, "app", "api", "items", "[id]"), { recursive: true });
+    await writeFile(
+      join(cwd, "components", "Card.tsx"),
+      "export function Card() { return <div />; }\n",
+    );
+    await writeFile(
+      join(cwd, "app", "api", "items", "route.ts"),
+      "export async function GET() { return Response.json([]); }\nexport const POST = async () => new Response();\n",
+    );
+    await writeFile(
+      join(cwd, "app", "api", "items", "[id]", "route.ts"),
+      "export const DELETE = async () => new Response();\n",
+    );
+    const result = await discovery.discover({ projectId });
+    const keys = result.featureMap.features.map((feature) => feature.stableKey).sort();
+    expect(keys).toEqual([
+      "endpoint:DELETE:/api/items/{id}",
+      "endpoint:GET:/api/items",
+      "endpoint:POST:/api/items",
+    ]);
+    expect(keys.some((key) => key.startsWith("component:") || key.includes("UNKNOWN"))).toBe(false);
+    expect(
+      result.featureMap.features.find((feature) => feature.stableKey === "endpoint:GET:/api/items")
+        ?.endpointRefs,
+    ).toEqual(["GET /api/items"]);
+    // The component is still a summary fact, just not a feature entity.
+    expect(result.summary.features.map((feature) => feature.name)).toEqual(["Card"]);
+    expect(result.summary.routes).toEqual([]);
+  });
+  it("bounds stored symbols and declares the truncation instead of failing the job", async () => {
+    const { cwd, projectId, discovery } = await fixture();
+    await writeFile(
+      join(cwd, "many.ts"),
+      `${Array.from({ length: 500 }, (_, index) => `export const value${index} = ${index};`).join("\n")}\n`,
+    );
+    const result = await discovery.discover({ projectId });
+    expect(result.summary.symbols).toHaveLength(200);
+    expect(result.warnings.some((warning) => warning.includes(": symbols_truncated: "))).toBe(true);
+    expect(result.summary.fileRefs.map((ref) => ref.path)).toEqual(["many.ts"]);
+  });
+  it("analyzes only the changed files and their importers in a diff and lists the rest", async () => {
+    const { cwd, projectId, discovery } = await fixture();
+    const git = promisify(execFile);
+    const run = (args: string[]) =>
+      git("git", ["-C", cwd, "-c", "core.hooksPath=/dev/null", ...args]);
+    const identity = ["-c", "user.name=Test", "-c", "user.email=test@example.invalid"];
+    await run(["init"]);
+    await writeFile(join(cwd, "util.ts"), "export const util = 1;\n");
+    await writeFile(
+      join(cwd, "page.ts"),
+      "import { util } from './util';\nconst app = {}; app.get('/page', () => util);\n",
+    );
+    await writeFile(join(cwd, "other.ts"), "const app = {}; app.get('/other', () => 1);\n");
+    await mkdir(join(cwd, "assets"));
+    await writeFile(join(cwd, "assets", "blob.bin"), Buffer.alloc(70 * 1024 * 1024));
+    await run(["add", "."]);
+    await run([...identity, "commit", "-m", "base"]);
+    const base = (await run(["rev-parse", "HEAD"])).stdout.trim();
+    await writeFile(join(cwd, "util.ts"), "export const util = 2;\n");
+    await run(["add", "."]);
+    await run([...identity, "commit", "-m", "head"]);
+    const head = (await run(["rev-parse", "HEAD"])).stdout.trim();
+    // A pinned head whose blobs total far above the old 64 MiB budget is analyzed.
+    const pinned = await discovery.discover({ projectId, scope: "diff", base, head });
+    expect(pinned.summary.scannedFiles).toEqual(["page.ts", "util.ts"]);
+    expect(pinned.diff?.impact.selectedFiles).toEqual(["page.ts", "util.ts"]);
+    expect(pinned.diff?.impact.excludedFiles.map((file) => file.path)).toEqual(["other.ts"]);
+    expect(pinned.summary.endpoints.map((value) => value.path)).toEqual(["/page"]);
+    expect(pinned.diff?.impact.gaps.join(" ")).toContain("relative specifiers");
+    // The same closure is read from the working tree.
+    const working = await discovery.discover({ projectId, scope: "diff", base, workingTree: true });
+    expect(working.summary.scannedFiles).toEqual(["page.ts", "util.ts"]);
+  });
+  it("reports the key, size and limit when AI state exceeds the storage bound", async () => {
+    const limit = 32 * 1024 * 1024;
+    const { ctx } = await fixture();
+    let thrown: unknown;
+    try {
+      saveAiState(ctx, "oversized-key", "x".repeat(limit));
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(ContractError);
+    expect(thrown).toMatchObject({
+      code: "PAYLOAD_TOO_LARGE",
+      details: { key: "oversized-key", bytes: limit + 2, limitBytes: limit },
+    });
+  });
   it("reports unavailable Python honestly and never imports submitted code", async () => {
     const { cwd, projectId, discovery } = await fixture();
     await writeFile(join(cwd, "app.py"), "raise RuntimeError('must never execute')\n");

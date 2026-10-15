@@ -1,14 +1,24 @@
 import { ContractError } from "@testmaster/contracts";
 import type { EntityDocument } from "@testmaster/persistence";
+import { CODE_IMPORT_RULES, type ImportedCodeBundle } from "@testmaster/planner";
 import type { ResolvedConfig } from "../config.js";
 import { requireEntity, type ServiceContext } from "../context.js";
 import { CodeImportService } from "./code-import.js";
 import { ModelService } from "./model.js";
+
+/** What the model must obey; the importer enforces the same constants (planner `CODE_IMPORT_RULES`). */
+const generationInstructions = `Return standalone Playwright test code importing only @playwright/test. Preserve every deterministic plan assertion and action. Use page.goto relative URLs and runner-configured baseURL. No shell, dependency installs, eval, filesystem or empty assertions. Do not use TestMaster APIs. The code is machine-checked before it is accepted and any violation is refused, so obey every rule: ${CODE_IMPORT_RULES.join(" ")}`;
+// A refused candidate is a per-revision result; any other failure (deadline, budget, provider) is not.
+const refusalCodes: readonly string[] = ["INVALID_ARGUMENT", "POLICY_DENIED", "PAYLOAD_TOO_LARGE"];
 export interface CodeGenerationInput {
   projectId: string;
   proposalIds?: string[];
   revisionIds?: string[];
   budget?: { modelCalls?: number };
+  /** Model provider; absent: the first allowed provider. Validated before any model call. */
+  provider?: string;
+  /** Model id; absent: the provider's first structured-output model. Validated before any call. */
+  model?: string;
 }
 export class CodeGenerationService {
   constructor(
@@ -47,8 +57,19 @@ export class CodeGenerationService {
         "INVALID_ARGUMENT",
         "Code generation selection exceeds the model-call budget",
       );
+    // An explicit model is refused here, before any revision is read for a paid call.
+    const models = new ModelService(this.ctx, this.config);
+    const choice = models.select(
+      {
+        ...(input.provider !== undefined ? { provider: input.provider } : {}),
+        ...(input.model !== undefined ? { model: input.model } : {}),
+      },
+      "Code generation",
+    );
+    const importer = new CodeImportService(this.ctx, this.config);
     const candidates: EntityDocument[] = [];
     const validationErrors: { path: string; message: string }[] = [];
+    const modelCallIds: string[] = [];
     for (const id of revisions) {
       const revision = requireEntity(this.ctx, "TestRevision", id);
       const test = requireEntity(this.ctx, "TestCase", String(revision.testId));
@@ -57,31 +78,59 @@ export class CodeGenerationService {
           "POLICY_DENIED",
           "Revision is outside the project or has no grounded plan",
         );
-      const result = await new ModelService(this.ctx, this.config).complete<{
-        code: string;
-        format: "playwright" | "pytest";
-      }>({
-        projectId: input.projectId,
-        purpose: "generate_code",
-        responseSchema: "AIGeneratedCodeOutput",
-        data: { plan: revision.plan, format: "playwright" },
-        dataClasses: ["plans"],
-        instructions:
-          "Return standalone Playwright test code importing only @playwright/test. Preserve every deterministic plan assertion and action. Use page.goto relative URLs and runner-configured baseURL. No shell, dependency installs, eval, filesystem or empty assertions. Do not use TestMaster APIs.",
-        ...(signal ? { signal } : {}),
-      });
+      // The importer is the response check: its refusal is repair feedback to the model, and the
+      // bundle it accepted is the one stored, so the code is not imported twice.
+      const accepted: { bundle?: ImportedCodeBundle } = {};
       try {
+        const result = await models.complete<{
+          code: string;
+          format: "playwright" | "pytest";
+        }>({
+          projectId: input.projectId,
+          purpose: "generate_code",
+          responseSchema: "AIGeneratedCodeOutput",
+          data: { plan: revision.plan, format: "playwright" },
+          dataClasses: ["plans"],
+          instructions: generationInstructions,
+          ...(choice.providerId !== undefined && choice.explicit
+            ? { provider: choice.providerId }
+            : {}),
+          ...(choice.modelId !== undefined && choice.explicit ? { model: choice.modelId } : {}),
+          ...(signal ? { signal } : {}),
+          check: async (raw) => {
+            const output = raw as { code: string; format: "playwright" | "pytest" };
+            accepted.bundle = await importer.checkGeneratedCode(output);
+          },
+        });
+        modelCallIds.push(result.modelCallId);
         candidates.push(
-          await new CodeImportService(this.ctx, this.config).createGeneratedRevision(test.id, {
-            ...result.output,
-            parentId: revision.id,
-          }),
+          await importer.createGeneratedRevision(
+            test.id,
+            { ...result.output, parentId: revision.id },
+            accepted.bundle,
+          ),
         );
       } catch (error) {
         if (!(error instanceof ContractError)) throw error;
+        // Only a candidate the checks refused after every repair is a per-revision result.
+        if (!refusalCodes.includes(error.code) || error.details.candidateStatus !== "invalid")
+          throw error;
+        const callId = error.details.modelCallId;
+        if (typeof callId === "string" && !modelCallIds.includes(callId)) modelCallIds.push(callId);
         validationErrors.push({ path: id, message: error.message });
       }
     }
-    return { candidates, validationErrors };
+    if (!candidates.length)
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        "No generated candidate passed the import checks",
+        {
+          reasonCode: "generated_code_refused",
+          requested: revisions.length,
+          validationErrors,
+          modelCallIds,
+        },
+      );
+    return { requested: revisions.length, candidates, validationErrors };
   }
 }

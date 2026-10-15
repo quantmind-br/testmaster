@@ -1,12 +1,65 @@
 import { ContractError, type ExecutablePlan, type PlanStep, validate } from "@testmaster/contracts";
 import { semanticHash } from "@testmaster/domain";
 
+/** A form control as observed. Descriptive only: a value, checked state or typed text never travels. */
+export interface ObservedControl {
+  tag: string;
+  type: string | null;
+  role: string | null;
+  name: string | null;
+  placeholder: string | null;
+  testId: string | null;
+  visible: boolean;
+}
 export interface BrowserObservation {
   url: string;
   title: string;
   text: string;
   actions: PlanStep[];
+  /** False when the page was still changing when the settle wait ended. */
+  settled?: boolean;
+  controls?: ObservedControl[];
+  hasPasswordField?: boolean;
 }
+const controlKeys = ["tag", "type", "role", "name", "placeholder", "testId", "visible"];
+const boundedText = (value: unknown): value is string | null =>
+  value === null || (typeof value === "string" && value.length <= 200);
+function validateControl(value: unknown): ObservedControl {
+  const control = value as Record<string, unknown> | null;
+  if (
+    !control ||
+    typeof control !== "object" ||
+    Array.isArray(control) ||
+    Object.keys(control).some((key) => !controlKeys.includes(key)) ||
+    typeof control.tag !== "string" ||
+    control.tag.length > 50 ||
+    typeof control.visible !== "boolean" ||
+    !boundedText(control.type) ||
+    !boundedText(control.role) ||
+    !boundedText(control.name) ||
+    !boundedText(control.placeholder) ||
+    !boundedText(control.testId)
+  )
+    throw new ContractError("INVALID_ARGUMENT", "Invalid browser observation");
+  return {
+    tag: control.tag,
+    type: control.type,
+    role: control.role,
+    name: control.name,
+    placeholder: control.placeholder,
+    testId: control.testId,
+    visible: control.visible,
+  };
+}
+const observationKeys = [
+  "url",
+  "title",
+  "text",
+  "actions",
+  "settled",
+  "controls",
+  "hasPasswordField",
+];
 export function validateObservation(
   value: unknown,
   origins: readonly string[],
@@ -15,17 +68,22 @@ export function validateObservation(
     throw new ContractError("INVALID_ARGUMENT", "Invalid browser observation");
   const input = value as Record<string, unknown>;
   if (
-    Object.keys(input).some((key) => !["url", "title", "text", "actions"].includes(key)) ||
+    Object.keys(input).some((key) => !observationKeys.includes(key)) ||
     typeof input.url !== "string" ||
     typeof input.title !== "string" ||
     typeof input.text !== "string" ||
     !Array.isArray(input.actions) ||
     input.actions.length > 100 ||
+    (input.settled !== undefined && typeof input.settled !== "boolean") ||
+    (input.hasPasswordField !== undefined && typeof input.hasPasswordField !== "boolean") ||
+    (input.controls !== undefined &&
+      (!Array.isArray(input.controls) || input.controls.length > 40)) ||
     Buffer.byteLength(JSON.stringify(input)) > 65536
   )
     throw new ContractError("INVALID_ARGUMENT", "Invalid browser observation");
   if (!origins.includes(new URL(input.url).origin))
     throw new ContractError("POLICY_DENIED", "Observation origin is not admitted");
+  const controls = (input.controls as unknown[] | undefined)?.map(validateControl);
   const actions = input.actions.map((action) => validate<PlanStep>("Step", action));
   for (const action of actions) {
     if (
@@ -49,7 +107,15 @@ export function validateObservation(
     )
       throw new ContractError("POLICY_DENIED", "Agent navigation origin is not admitted");
   }
-  return { url: input.url, title: input.title, text: input.text, actions };
+  return {
+    url: input.url,
+    title: input.title,
+    text: input.text,
+    actions,
+    ...(input.settled === undefined ? {} : { settled: input.settled }),
+    ...(controls === undefined ? {} : { controls }),
+    ...(input.hasPasswordField === undefined ? {} : { hasPasswordField: input.hasPasswordField }),
+  };
 }
 export function selectAction(
   selection: unknown,

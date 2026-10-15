@@ -5,6 +5,7 @@
     "id",
     "createdAt",
     "targetOrigins",
+    "additionalOrigins",
     "networkProfile",
     "authProfileRefs",
     "locale",
@@ -22,6 +23,14 @@
       "type": "string"
     },
     "targetOrigins": {
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
+    "additionalOrigins": {
       "type": "array",
       "items": {
         "minLength": 1,

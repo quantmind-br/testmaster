@@ -5,7 +5,9 @@ import {
   type Attempt,
   type BundleMeta,
   ContractError,
+  type ExecutablePlan,
   type ExecutionMetrics,
+  type PlanStep,
   type RunResult,
   type RuntimeTiming,
   type StepResult,
@@ -43,6 +45,23 @@ import {
 } from "./input-fixtures.js";
 import type { RunsService } from "./runs.js";
 import { sumTimings } from "./timing.js";
+
+function responseStepIdOf(plan: ExecutablePlan | null | undefined, planStepId: unknown) {
+  const visit = (steps: readonly PlanStep[]): string | undefined => {
+    for (const step of steps) {
+      if (step.id === planStepId) {
+        const input = step.input as Record<string, unknown> | undefined;
+        return typeof input?.responseStepId === "string" ? input.responseStepId : undefined;
+      }
+      if (step.operation === "frame") {
+        const nested = visit(step.input.childSteps);
+        if (nested) return nested;
+      }
+    }
+    return undefined;
+  };
+  return plan ? visit(plan.steps) : undefined;
+}
 export class EvidenceUnavailableError extends ContractError {
   constructor(
     readonly reason: "missing" | "expired",
@@ -198,13 +217,44 @@ export class ArtifactsService {
     });
     let manifest = bundle.manifest;
     if (options.failedOnly) {
-      const failed = this.runs.steps(runId, attemptId).filter((s) => s.status !== "passed");
-      const paths = failed.flatMap((s) =>
-        (s.evidenceRefs as { relativePath?: string }[])
+      const steps = this.runs.steps(runId, attemptId);
+      const refsOf = (step: EntityDocument) =>
+        (step.evidenceRefs as { relativePath?: string }[])
           .map((ref) => ref.relativePath)
-          .filter((path): path is string => Boolean(path)),
-      );
-      manifest = deriveFailedOnly(manifest, paths);
+          .filter((path): path is string => Boolean(path));
+      const failed = steps.filter((s) => s.status !== "passed");
+      let paths = failed.flatMap(refsOf);
+      // The failing step can carry no evidence of its own (an assertion that read a response):
+      // fall back to the response it read, then to the attempt diagnostics. Only entries the
+      // manifest already holds are selected (failed-only never invents a bundle).
+      if (!paths.length && run.outcome && run.outcome !== "passed") {
+        const plan = requireEntity(this.ctx, "TestRevision", run.revisionId).plan as
+          | ExecutablePlan
+          | null
+          | undefined;
+        for (const step of failed) {
+          const responseId = responseStepIdOf(plan, step.planStepId);
+          const index = steps.indexOf(step);
+          const source = responseId
+            ? steps.find((candidate) => candidate.planStepId === responseId)
+            : steps
+                .slice(0, Math.max(index, 0))
+                .reverse()
+                .find((candidate) => refsOf(candidate).length);
+          if (source) paths.push(...refsOf(source));
+        }
+        paths = paths.filter((path) =>
+          manifest.entries.some((entry) => entry.relativePath === path),
+        );
+        if (!paths.length)
+          paths = manifest.entries
+            .filter(
+              (entry) =>
+                entry.state === "available" && ["log", "network", "console"].includes(entry.kind),
+            )
+            .map((entry) => entry.relativePath);
+      }
+      manifest = deriveFailedOnly(manifest, [...new Set(paths)]);
     }
     if (options.out) {
       const out = resolve(this.config.cwd, options.out);

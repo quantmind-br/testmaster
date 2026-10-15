@@ -47,8 +47,13 @@ export function readAiState<T>(ctx: ServiceContext, key: string): T | null {
 }
 export function saveAiState(ctx: ServiceContext, key: string, value: unknown): void {
   const bytes = canonicalJson(value);
-  if (Buffer.byteLength(bytes) > MAX_STATE_BYTES)
-    throw new ContractError("PAYLOAD_TOO_LARGE", "AI state exceeds bounded storage limit");
+  const size = Buffer.byteLength(bytes);
+  if (size > MAX_STATE_BYTES)
+    throw new ContractError("PAYLOAD_TOO_LARGE", "AI state exceeds bounded storage limit", {
+      key,
+      bytes: size,
+      limitBytes: MAX_STATE_BYTES,
+    });
   ctx.database.run(
     "INSERT INTO operational_state(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
     `ai:${ctx.workspaceId}:${key}`,

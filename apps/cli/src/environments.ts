@@ -18,13 +18,24 @@ function environmentPatch(opts: Options) {
   const locale = string(opts, "locale");
   const timezone = string(opts, "timezone");
   const authRefs = strings(opts, "authRef");
+  const additionalOrigins = strings(opts, "additionalOrigin");
   if (profile && !["public", "private", "local-loopback"].includes(profile))
     throw new ContractError("INVALID_ARGUMENT", "Invalid network profile");
+  if (opts.clearAdditionalOrigins === true && additionalOrigins.length)
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      "--clear-additional-origins cannot be combined with --additional-origin",
+    );
   return {
     ...(name ? { name } : {}),
     ...(baseUrl ? { baseUrl } : {}),
     ...(profile ? { networkProfile: profile as "public" | "private" | "local-loopback" } : {}),
     ...(authRefs.length ? { authRefs } : {}),
+    ...(additionalOrigins.length
+      ? { additionalOrigins }
+      : opts.clearAdditionalOrigins === true
+        ? { additionalOrigins: [] }
+        : {}),
     ...(locale ? { locale } : {}),
     ...(timezone ? { timezone } : {}),
     ...(typeof opts.production === "boolean" ? { production: opts.production } : {}),
@@ -38,6 +49,13 @@ function environmentOptions(command: Command): Command {
     .option("--locale <locale>")
     .option("--timezone <timezone>")
     .option("--auth-ref <id>", "Auth profile bound to this environment (repeatable)", collect, [])
+    .option(
+      "--additional-origin <origin>",
+      "Exact extra origin page subrequests (images, fonts, styles, media, scripts, requests) may reach; replaces the current list (repeatable)",
+      collect,
+      [],
+    )
+    .option("--clear-additional-origins", "Remove every additional origin")
     .option("--production");
 }
 export function environmentCommands(program: Command, runtime: Runtime): void {
@@ -55,6 +73,9 @@ export function environmentCommands(program: Command, runtime: Runtime): void {
   }));
   runtime.bind(group.command("get <id-or-name>"), async (rt, args, opts) => ({
     data: await (await rt.app()).environments.get(String(args[0]), await rt.project(opts)),
+  }));
+  runtime.bind(group.command("revisions <id-or-name>"), async (rt, args) => ({
+    data: (await rt.app()).environments.revisions(String(args[0])),
   }));
   runtime.bind(
     environmentOptions(group.command("update <id>")).requiredOption(

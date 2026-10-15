@@ -66,6 +66,15 @@ export interface CodeSummaryOptions {
   maxFileBytes?: number;
   maxTotalBytes?: number;
   maxFiles?: number;
+  /** Symbols kept per file (default 200); the rest are dropped and declared by `symbols_truncated`. */
+  maxSymbolsPerFile?: number;
+  /** Symbols kept per run (default 20000); the rest are dropped and declared by `symbols_truncated`. */
+  maxSymbols?: number;
+  /**
+   * Repository-relative files to read. Other files are neither read nor listed; directories that
+   * contain none of them are not entered. Exclusion, type and size rules still apply to each.
+   */
+  only?: readonly string[];
   pythonRunner?: PythonSummaryRunner;
 }
 export interface CodeDiff {

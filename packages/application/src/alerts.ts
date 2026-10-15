@@ -317,7 +317,7 @@ export const alertRuleCatalog: Record<string, RuleDefinition> = {
     find(environment) {
       const denied = count(
         environment,
-        "SELECT COUNT(*) AS n FROM outbox WHERE workspace_id=? AND type IN ('run.completed','run.execution_error') AND created_at>=? AND json_extract(data_json,'$.reasonCode')='egress_denied'",
+        "SELECT COUNT(DISTINCT aggregate_id) AS n FROM outbox WHERE workspace_id=? AND type IN ('run.completed','run.execution_error') AND created_at>=? AND json_extract(data_json,'$.reasonCode')='egress_denied'",
         sinceIso(environment, 15),
       );
       return denied

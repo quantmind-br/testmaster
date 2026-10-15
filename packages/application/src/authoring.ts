@@ -1,3 +1,4 @@
+import { isIP } from "node:net";
 import {
   ContractError,
   type Environment,
@@ -12,6 +13,7 @@ import {
 } from "@testmaster/contracts";
 import { materializePlanDefaults, semanticHash } from "@testmaster/domain";
 import { AuditRepository, type EntityDocument } from "@testmaster/persistence";
+import { type CanonicalTarget, canonicalUrl, classifyIp, PolicyDenied } from "@testmaster/sandbox";
 import { allEntities, entity, requireEntity, type ServiceContext } from "./context.js";
 
 type Stored<T> = T & EntityDocument;
@@ -48,6 +50,7 @@ export interface EnvironmentInput {
   locale?: string;
   timezone?: string;
   production?: boolean;
+  additionalOrigins?: string[];
   authRefs?: string[];
 }
 export type EnvironmentPatch = Partial<Omit<EnvironmentInput, "projectId">>;
@@ -89,12 +92,12 @@ function visible(ctx: ServiceContext, projectId: string): boolean {
     throw error;
   }
 }
-function origin(baseUrl: string): string {
+function origin(baseUrl: string, label = "Environment baseUrl"): string {
   let url: URL;
   try {
     url = new URL(baseUrl);
   } catch {
-    throw new ContractError("INVALID_ARGUMENT", "Environment baseUrl must be an absolute HTTP URL");
+    throw new ContractError("INVALID_ARGUMENT", `${label} must be an absolute HTTP URL`);
   }
   if (
     !["http:", "https:"].includes(url.protocol) ||
@@ -106,7 +109,7 @@ function origin(baseUrl: string): string {
   )
     throw new ContractError(
       "INVALID_ARGUMENT",
-      "Environment baseUrl must be an HTTP origin without credentials, path, query or fragment",
+      `${label} must be an HTTP origin without credentials, path, query or fragment`,
     );
   return url.origin;
 }
@@ -117,11 +120,87 @@ function networkProfile(baseUrl: string): EnvironmentRevision["networkProfile"] 
     : "public";
 }
 
+const MAX_ADDITIONAL_ORIGINS = 32;
+const PROFILE_ADDRESSES: Record<EnvironmentRevision["networkProfile"], readonly string[]> = {
+  public: ["public"],
+  private: ["private"],
+  "local-loopback": ["loopback"],
+};
+/**
+ * Exact extra origins page subrequests may reach. Each one is a bare http(s) origin like the
+ * base URL (no path, query, credentials or wildcard), unique, different from every target
+ * origin, and a literal address must be one the network profile permits. Host names are
+ * resolved and classified by the egress proxy at connection time.
+ */
+function additionalOrigins(
+  value: unknown,
+  targets: readonly string[],
+  profile: EnvironmentRevision["networkProfile"],
+): string[] {
+  if (!Array.isArray(value) || value.length > MAX_ADDITIONAL_ORIGINS)
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      `additionalOrigins must be an array of at most ${MAX_ADDITIONAL_ORIGINS} origins`,
+      { field: "additionalOrigins" },
+    );
+  const seen = new Set(targets.map((target) => canonicalUrl(target).origin));
+  const result: string[] = [];
+  for (const item of value) {
+    const invalid = (message: string, reason: string): ContractError =>
+      new ContractError("INVALID_ARGUMENT", message, { field: "additionalOrigins", reason });
+    if (typeof item !== "string") throw invalid("Each additional origin must be a string", "type");
+    if (item.includes("*"))
+      throw invalid("Additional origins cannot contain wildcards", "wildcard");
+    const normalized = origin(item, "Additional origin");
+    let canonical: CanonicalTarget;
+    try {
+      canonical = canonicalUrl(normalized);
+    } catch (error) {
+      if (error instanceof PolicyDenied)
+        throw invalid(
+          `Additional origin is refused by the network policy (${error.reason})`,
+          error.reason,
+        );
+      throw error;
+    }
+    if (seen.has(canonical.origin))
+      throw invalid("Additional origin is duplicated or equals a target origin", "duplicate");
+    seen.add(canonical.origin);
+    const literal =
+      canonical.hostname === "localhost" || canonical.hostname.endsWith(".localhost")
+        ? "loopback"
+        : isIP(canonical.hostname)
+          ? classifyIp(canonical.hostname)
+          : undefined;
+    if (literal && !(PROFILE_ADDRESSES[profile] ?? []).includes(literal))
+      throw new ContractError(
+        "POLICY_DENIED",
+        `Network profile "${profile}" does not permit a ${literal} additional origin`,
+        { field: "additionalOrigins", origin: normalized, reasonCode: "egress_denied" },
+      );
+    result.push(normalized);
+  }
+  return result;
+}
+/**
+ * Extra subrequest origins to merge into an attempt's network policy. They widen only the egress
+ * policy: they are neither target origins (secret and profile bindings, approvals) nor admitted
+ * when the profile is offline, which allows authorized local targets only.
+ */
+export function attemptAdditionalOrigins(
+  revision: { additionalOrigins?: readonly string[] | undefined },
+  targetOrigins: readonly string[],
+  offline: boolean,
+): string[] {
+  if (offline) return [];
+  return (revision.additionalOrigins ?? []).filter((extra) => !targetOrigins.includes(extra));
+}
+
 /** Strict, bounded parsing and shared structural/semantic validation; no effects. */
 export function lintPlan(bytes: Uint8Array | string): ExecutablePlan {
   return materializePlanDefaults(parseAndValidate<ExecutablePlan>("ExecutablePlan", bytes));
 }
-export function scaffoldPlan(type: "frontend" | "backend"): ExecutablePlan {
+export function scaffoldPlan(type: "frontend" | "backend" | "cli"): ExecutablePlan {
   if (type === "frontend")
     return lintPlan(
       JSON.stringify({
@@ -199,7 +278,49 @@ export function scaffoldPlan(type: "frontend" | "backend"): ExecutablePlan {
         ],
       }),
     );
-  throw new ContractError("INVALID_ARGUMENT", "Scaffold type must be frontend or backend");
+  if (type === "cli")
+    return lintPlan(
+      JSON.stringify({
+        schemaVersion: "1.0.0",
+        kind: "executable",
+        name: "Print a greeting and exit cleanly",
+        type: "cli",
+        runner: "terminal",
+        requirementRefs: [],
+        steps: [
+          {
+            id: "print-greeting",
+            kind: "action",
+            operation: "run",
+            description: "Run an image program without a shell",
+            required: true,
+            input: {
+              program: { path: "/usr/bin/printf" },
+              args: [{ literal: "%s" }, { literal: "hello" }],
+            },
+          },
+          {
+            id: "check-exit",
+            kind: "assertion",
+            operation: "assert",
+            description: "Require a zero exit code",
+            required: true,
+            input: { processStepId: "print-greeting" },
+            expectation: { predicate: "exitCodeIn", values: [0] },
+          },
+          {
+            id: "check-output",
+            kind: "assertion",
+            operation: "assert",
+            description: "Require the greeting on standard output",
+            required: true,
+            input: { processStepId: "print-greeting", stream: "stdout" },
+            expectation: { predicate: "textEquals", value: { literal: "hello" } },
+          },
+        ],
+      }),
+    );
+  throw new ContractError("INVALID_ARGUMENT", "Scaffold type must be frontend, backend or cli");
 }
 export function dryRunPlan(bytes: Uint8Array | string) {
   const plan = lintPlan(bytes);
@@ -307,6 +428,7 @@ export class EnvironmentsService {
       "locale",
       "timezone",
       "production",
+      "additionalOrigins",
       "authRefs",
     ]);
     return authoringTransaction(this.ctx, () => {
@@ -314,9 +436,11 @@ export class EnvironmentsService {
       active(owner);
       this.uniqueName(input.projectId, input.name);
       const target = origin(input.baseUrl);
+      const profile = input.networkProfile ?? networkProfile(target);
       const revision = entity(this.ctx, "evr", {
         targetOrigins: [target],
-        networkProfile: input.networkProfile ?? networkProfile(target),
+        additionalOrigins: additionalOrigins(input.additionalOrigins ?? [], [target], profile),
+        networkProfile: profile,
         authProfileRefs: this.authProfileRefs(input.projectId, input.authRefs ?? [], [target]),
         locale: input.locale ?? "en-US",
         timezone: input.timezone ?? "UTC",
@@ -421,6 +545,7 @@ export class EnvironmentsService {
           id: revision.id,
           createdAt: revision.createdAt,
           targetOrigins: revision.targetOrigins,
+          additionalOrigins: revision.additionalOrigins ?? [],
           networkProfile: revision.networkProfile,
           authProfileRefs: revision.authProfileRefs,
           locale: revision.locale,
@@ -438,6 +563,7 @@ export class EnvironmentsService {
       "locale",
       "timezone",
       "production",
+      "additionalOrigins",
       "authRefs",
     ]);
     return authoringTransaction(this.ctx, () => {
@@ -459,9 +585,15 @@ export class EnvironmentsService {
         patch.authRefs ?? previous.authProfileRefs,
         targetOrigins,
       );
+      const profile = patch.networkProfile ?? previous.networkProfile;
       const revision = entity(this.ctx, "evr", {
         targetOrigins,
-        networkProfile: patch.networkProfile ?? previous.networkProfile,
+        additionalOrigins: additionalOrigins(
+          patch.additionalOrigins ?? previous.additionalOrigins ?? [],
+          targetOrigins,
+          profile,
+        ),
+        networkProfile: profile,
         authProfileRefs: refs,
         locale: patch.locale ?? previous.locale,
         timezone: patch.timezone ?? previous.timezone,

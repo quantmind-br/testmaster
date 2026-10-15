@@ -36,7 +36,11 @@ export function planCommands(program: Command, runtime: Runtime): void {
       )
       .option("--requirement <id>", "Requirement (repeatable)", collect)
       .option("--provider <id>")
-      .option("--model <id>"),
+      .option("--model <id>")
+      .option(
+        "--partial",
+        "Store the proposals that pass the checks and list the refused ones in the batch extension testmaster:refusedProposals (default: one refused proposal refuses the whole batch)",
+      ),
     async (rt, _args, options) => ({
       data: await (await rt.app()).proposals.generate({
         projectId: await rt.project(options),
@@ -51,6 +55,7 @@ export function planCommands(program: Command, runtime: Runtime): void {
           : {}),
         ...(string(options, "provider") ? { provider: required(options, "provider") } : {}),
         ...(string(options, "model") ? { model: required(options, "model") } : {}),
+        ...(options.partial === true ? { partialGeneration: true } : {}),
         signal: rt.controller.signal,
       }),
     }),

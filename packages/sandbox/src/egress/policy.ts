@@ -126,8 +126,12 @@ export type Resolver = (hostname: string) => Promise<readonly string[]>;
 export class EgressPolicy {
   private readonly origins: ReadonlyMap<string, CanonicalTarget>;
   private readonly privateTargets: readonly PrivateTarget[];
-  private readonly local: (LocalLoopback & { origin: string }) | undefined;
-  constructor(policy: NetworkPolicy, local?: LocalLoopback) {
+  private readonly locals: ReadonlyMap<string, LocalLoopback & { origin: string }>;
+  /**
+   * `local` pins each listed loopback origin (the base URL, plus any approved additional origin
+   * that names the host's loopback) to the host loopback address and its exact port, with no DNS.
+   */
+  constructor(policy: NetworkPolicy, local?: LocalLoopback | readonly LocalLoopback[]) {
     if (policy.defaultAction !== "deny" || policy.allowInsecureTls)
       throw new PolicyDenied("unsafe_network_policy");
     this.origins = new Map(
@@ -153,19 +157,22 @@ export class EgressPolicy {
         ).hostname,
       };
     });
-    if (local) {
+    const locals = new Map<string, LocalLoopback & { origin: string }>();
+    const pinned: readonly LocalLoopback[] = !local ? [] : "baseUrl" in local ? [local] : local;
+    for (const entry of pinned) {
       if (
-        local.networkProfile !== "local-loopback" ||
-        classifyIp(local.host) !== "loopback" ||
-        !Number.isInteger(local.port) ||
-        local.port < 1 ||
-        local.port > 65535
+        entry.networkProfile !== "local-loopback" ||
+        classifyIp(entry.host) !== "loopback" ||
+        !Number.isInteger(entry.port) ||
+        entry.port < 1 ||
+        entry.port > 65535
       )
         throw new PolicyDenied("invalid_local_target");
-      const origin = canonicalUrl(local.baseUrl).origin;
+      const origin = canonicalUrl(entry.baseUrl).origin;
       if (!this.origins.has(origin)) throw new PolicyDenied("origin_denied");
-      this.local = { ...local, origin };
+      locals.set(origin, { ...entry, origin });
     }
+    this.locals = locals;
   }
   connectTarget(authority: string): CanonicalTarget {
     if (/[/?#@%\\\s]/u.test(authority) || !/^(?:\[[^\]]+\]|[^:]+):[0-9]+$/u.test(authority))
@@ -180,8 +187,8 @@ export class EgressPolicy {
   async authorize(input: string, resolver: Resolver): Promise<AuthorizedTarget> {
     const target = canonicalUrl(input);
     if (!this.origins.has(target.origin)) throw new PolicyDenied("origin_denied");
-    if (this.local?.origin === target.origin)
-      return { ...target, pinnedIp: this.local.host, port: this.local.port };
+    const local = this.locals.get(target.origin);
+    if (local) return { ...target, pinnedIp: local.host, port: local.port };
     const addresses = ipaddr.isValid(target.hostname)
       ? [target.hostname]
       : await resolver(target.hostname);

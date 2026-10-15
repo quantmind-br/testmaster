@@ -43,7 +43,6 @@ const kindLabels: Record<Row["kind"], string> = {
   requirement: "Requirement",
   endpoint: "Endpoint",
   route: "Page route",
-  component: "Component",
   desired: "Desired behaviour",
 };
 

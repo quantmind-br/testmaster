@@ -2,10 +2,15 @@
   "additionalProperties": false,
   "type": "object",
   "required": [
+    "requested",
     "candidates",
     "validationErrors"
   ],
   "properties": {
+    "requested": {
+      "minimum": 0,
+      "type": "integer"
+    },
     "candidates": {
       "type": "array",
       "items": {

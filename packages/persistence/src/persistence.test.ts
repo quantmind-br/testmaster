@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -24,7 +24,7 @@ import {
 } from "./repositories.js";
 import { postgresParity } from "./testing/postgres.js";
 import { seedQueuedRun } from "./testing/seed.js";
-import { SqliteBudgetLedger, SqliteConsentStore, SqliteModelCallRecorder } from "./usage.js";
+import { SqliteBudgetLedger, SqliteModelCallRecorder } from "./usage.js";
 
 const directories: string[] = [];
 const connections: PersistenceDatabase[] = [];
@@ -263,6 +263,52 @@ describe("SQLite persistence", () => {
     ).toBe(true);
     expect(db.get("SELECT outcome FROM runs WHERE id=?", run)?.outcome).toBe("passed");
   });
+  it("finalization publishes the final reason on run.completed without adding it to the Run document", async () => {
+    const { db, ws, run } = await createSeeded();
+    const fence = new LeaseRepository(db).claim({ workspaceId: ws, owner: "A", queue: "http" });
+    if (!fence) throw new Error("no claim");
+    const previous = new EntityRepository(db).get("Run", ws, run);
+    if (!previous) throw new Error("missing run");
+    expect(
+      new ExecutionRepository(db).finalize(
+        fence,
+        { ...previous, phase: "completed", outcome: "blocked", status: "blocked", gate: "failed" },
+        "egress_denied",
+      ),
+    ).toBe(true);
+    const completed = db.all(
+      "SELECT data_json FROM outbox WHERE aggregate_id=? AND type='run.completed'",
+      run,
+    );
+    expect(completed).toHaveLength(1);
+    expect(JSON.parse(String(completed[0]?.data_json))).toMatchObject({
+      id: run,
+      outcome: "blocked",
+      reasonCode: "egress_denied",
+    });
+    expect(
+      JSON.parse(String(db.get("SELECT data_json FROM runs WHERE id=?", run)?.data_json)),
+    ).not.toHaveProperty("reasonCode");
+  });
+  it("finalization without a reason keeps the plain Run document as the run.completed payload", async () => {
+    const { db, ws, run } = await createSeeded();
+    const fence = new LeaseRepository(db).claim({ workspaceId: ws, owner: "A", queue: "http" });
+    if (!fence) throw new Error("no claim");
+    const previous = new EntityRepository(db).get("Run", ws, run);
+    if (!previous) throw new Error("missing run");
+    new ExecutionRepository(db).finalize(fence, {
+      ...previous,
+      phase: "completed",
+      outcome: "passed",
+      status: "passed",
+      gate: "passed",
+    });
+    const row = db.get(
+      "SELECT data_json FROM outbox WHERE aggregate_id=? AND type='run.completed'",
+      run,
+    );
+    expect(JSON.parse(String(row?.data_json))).not.toHaveProperty("reasonCode");
+  });
   // Not run on PostgreSQL: Claims through two OS processes that open the SQLite file by path; database.pg.test.ts proves the PostgreSQL writer lock across processes.
   it.skipIf(postgresParity)("allows exactly one of two OS processes to claim", async () => {
     const { db, ws } = await createSeeded();
@@ -478,21 +524,40 @@ describe("SQLite persistence", () => {
     ledger.setTokenLimit(ws, project, 6_000_000);
     expect((await ledger.reserve({ ...request, idempotencyKey: "B" })).ok).toBe(false);
   });
-  it("stores consent with audit and complete model usage without converting null to zero", async () => {
+  it("refuses an unpriced reservation only while a monetary budget limit exists", async () => {
     const { db, ws, project } = await createSeeded();
-    const store = new SqliteConsentStore(db);
-    store.grant(
-      { workspaceId: ws, projectId: project, providerId: "p" },
-      ["requirements"],
-      "local",
-    );
-    expect(
-      (await store.find({ workspaceId: ws, projectId: project, providerId: "p" }))?.dataClasses,
-    ).toEqual(["requirements"]);
-    store.revoke({ workspaceId: ws, projectId: project, providerId: "p" }, "local");
-    expect(
-      (await store.find({ workspaceId: ws, projectId: project, providerId: "p" }))?.revokedAt,
-    ).not.toBeNull();
+    const ledger = new SqliteBudgetLedger(db);
+    const request = {
+      workspaceId: ws,
+      projectId: project,
+      purpose: "plan",
+      provider: "p",
+      model: "unpriced",
+      estimate: "unknown" as const,
+      reservedTokens: 10,
+    };
+    const open = await ledger.reserve({ ...request, idempotencyKey: "open-1" });
+    expect(open.ok).toBe(true);
+    if (open.ok) await ledger.release(open.reservationId, "test");
+    ledger.setLimit(ws, project, { amount: "1000", currency: "USD", scale: 6 });
+    expect(await ledger.reserve({ ...request, idempotencyKey: "limited-1" })).toEqual({
+      ok: false,
+      reasonCode: "budget_exhausted",
+      remaining: "unknown",
+    });
+    const priced = await ledger.reserve({
+      ...request,
+      estimate: { amount: "10", currency: "USD", scale: 6 },
+      idempotencyKey: "priced-1",
+    });
+    expect(priced.ok).toBe(true);
+  });
+  it("has no consent ledger: the model-consent table is removed by migration", async () => {
+    const { db } = await createSeeded();
+    expect(() => db.get("SELECT 1 FROM consents")).toThrow();
+  });
+  it("records complete model usage without converting null to zero", async () => {
+    const { db, ws, project } = await createSeeded();
     const recorder = new SqliteModelCallRecorder(db);
     await recorder.record({
       id: uuidV7IdGenerator.next("mdl"),
@@ -551,14 +616,97 @@ describe("SQLite persistence", () => {
       await writeFile(join(backupDir, "testmaster.db"), raw);
       await expect(
         PersistenceDatabase.restore(backupDir, join(root, "tampered-restore")),
-      ).rejects.toThrow("integrity");
+      ).rejects.toMatchObject({
+        code: "PRECONDITION_FAILED",
+        message: "Backup integrity failure: testmaster.db",
+        details: { reasonCode: "backup_integrity" },
+      });
     },
   );
   // Not run on PostgreSQL: Restores a SQLite backup; PostgreSQL backups are pg_dump based (M4-02).
+  describe.skipIf(postgresParity)("restore refusals of a backup whose hashes still match", () => {
+    /** Rewrites one backup file and re-seals the manifest, so only the content is wrong. */
+    async function backedUp(name: string) {
+      const { db } = await createSeeded();
+      const root = directories[0] ?? "";
+      const backupDir = join(root, `backup-${name}`);
+      await db.backup(backupDir);
+      return { root, backupDir };
+    }
+    async function reseal(
+      backupDir: string,
+      replace?: { name: string; content: Buffer | string },
+      databaseVersion?: number,
+    ) {
+      const manifestPath = join(backupDir, "manifest.json");
+      const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {
+        databaseVersion: number;
+        files: { relativePath: string; sizeBytes: number; sha256: string }[];
+      };
+      if (replace) {
+        await writeFile(join(backupDir, replace.name), replace.content);
+        const entry = manifest.files.find((file) => file.relativePath === replace.name);
+        if (!entry) throw new Error(`missing manifest entry ${replace.name}`);
+        entry.sizeBytes = Buffer.byteLength(replace.content);
+        entry.sha256 = await fileSha256(join(backupDir, replace.name));
+      }
+      if (databaseVersion !== undefined) manifest.databaseVersion = databaseVersion;
+      await writeFile(manifestPath, JSON.stringify(manifest));
+    }
+    const removed = (path: string) => expect(stat(path)).rejects.toMatchObject({ code: "ENOENT" });
+
+    it("refuses a malformed evidence index with a typed integrity failure before creating a destination", async () => {
+      const { root, backupDir } = await backedUp("evidence-index.json");
+      await reseal(backupDir, { name: "evidence-index.json", content: "{not json" });
+      const destination = join(root, "restore-bad-index");
+      await expect(PersistenceDatabase.restore(backupDir, destination)).rejects.toMatchObject({
+        code: "PRECONDITION_FAILED",
+        details: { reasonCode: "backup_integrity", relativePath: "evidence-index.json" },
+      });
+      await removed(destination);
+    });
+
+    it("an unreadable SQLite file with a matching hash is refused and the created destination is removed", async () => {
+      const { root, backupDir } = await backedUp("testmaster.db");
+      await reseal(backupDir, { name: "testmaster.db", content: Buffer.alloc(8192, 7) });
+      const destination = join(root, "restore-corrupt-db");
+      await expect(PersistenceDatabase.restore(backupDir, destination)).rejects.toMatchObject({
+        code: "PRECONDITION_FAILED",
+        details: { reasonCode: "backup_integrity", relativePath: "testmaster.db" },
+      });
+      await removed(destination);
+    });
+
+    it("a backup from a newer schema is refused as backup_version_unsupported", async () => {
+      const { root, backupDir } = await backedUp("newer");
+      await reseal(backupDir, undefined, 10_000);
+      const destination = join(root, "restore-newer");
+      await expect(PersistenceDatabase.restore(backupDir, destination)).rejects.toMatchObject({
+        code: "PRECONDITION_FAILED",
+        details: { reasonCode: "backup_version_unsupported", databaseVersion: 10_000 },
+      });
+      await removed(destination);
+    });
+
+    it("an existing destination is refused untouched: only a directory this call created is removed", async () => {
+      const { db } = await createSeeded();
+      const root = directories[0] ?? "";
+      const backupDir = join(root, "backup-existing");
+      await db.backup(backupDir);
+      const destination = join(root, "restore-existing");
+      await mkdir(destination);
+      await writeFile(join(destination, "keep.txt"), "operator data");
+      await expect(PersistenceDatabase.restore(backupDir, destination)).rejects.toMatchObject({
+        code: "EEXIST",
+      });
+      expect(await readFile(join(destination, "keep.txt"), "utf8")).toBe("operator data");
+    });
+  });
+  // Not run on PostgreSQL: Restores a SQLite backup; PostgreSQL backups are pg_dump based (M4-02).
   it.skipIf(postgresParity)(
-    "OPS-025 replays post-backup consent and approval revocations and invalidates server tokens",
+    "OPS-025 replays post-backup approval revocations and invalidates server tokens",
     async () => {
-      const { db, ws, project, environmentRevision } = await createSeeded();
+      const { db, ws, environmentRevision } = await createSeeded();
       const entities = new EntityRepository(db);
       const principal = uuidV7IdGenerator.next("usr");
       const kept = uuidV7IdGenerator.next("apr");
@@ -597,17 +745,10 @@ describe("SQLite persistence", () => {
           "d".repeat(64),
         );
       });
-      new SqliteConsentStore(db).grant(
-        { workspaceId: ws, projectId: project, providerId: "fake" },
-        ["documents"],
-        principal,
-      );
-      const consentId = String(db.get("SELECT id FROM consents WHERE project_id=?", project)?.id);
       const root = directories[0] ?? "";
       const backupDir = join(root, "backup-ledger");
       await db.backup(backupDir);
       const revokedAt = new Date().toISOString();
-      db.run("UPDATE consents SET revoked_at=? WHERE id=?", revokedAt, consentId);
       db.withTx(() =>
         entities.update("Approval", ws, revoked, 1, {
           ...approval(revoked),
@@ -616,18 +757,12 @@ describe("SQLite persistence", () => {
         }),
       );
       const restored = await PersistenceDatabase.restore(backupDir, join(root, "restore-ledger"), {
-        consentRevocations: db.all(
-          "SELECT workspace_id,id,revoked_at FROM consents WHERE revoked_at IS NOT NULL",
-        ),
         approvalRevocations: db.all(
           "SELECT workspace_id,id,revoked_at FROM approvals WHERE revoked_at IS NOT NULL",
         ),
       });
       connections.push(restored.database);
       const target = restored.database;
-      expect(target.get("SELECT revoked_at FROM consents WHERE id=?", consentId)?.revoked_at).toBe(
-        revokedAt,
-      );
       expect(target.get("SELECT revoked_at FROM approvals WHERE id=?", revoked)?.revoked_at).toBe(
         revokedAt,
       );
@@ -642,37 +777,6 @@ describe("SQLite persistence", () => {
       expect(target.get("SELECT COUNT(*) AS n FROM server_tokens")?.n).toBe(0);
       expect(db.get("SELECT COUNT(*) AS n FROM server_tokens")?.n).toBe(1);
       expect(restored).toMatchObject({ postBackupLedger: "replayed", exclusionsGuaranteed: true });
-    },
-  );
-  // Not run on PostgreSQL: Restores a SQLite backup; PostgreSQL backups are pg_dump based (M4-02).
-  it.skipIf(postgresParity)(
-    "OPS-025 keeps a consent revoked in the backup even when the live ledger regranted it",
-    async () => {
-      const { db, ws, project } = await createSeeded();
-      new SqliteConsentStore(db).grant(
-        { workspaceId: ws, projectId: project, providerId: "fake" },
-        ["documents"],
-        "owner",
-      );
-      const consentId = String(db.get("SELECT id FROM consents WHERE project_id=?", project)?.id);
-      const revokedAt = "2026-01-01T00:00:00.000Z";
-      db.run("UPDATE consents SET revoked_at=? WHERE id=?", revokedAt, consentId);
-      const root = directories[0] ?? "";
-      await db.backup(join(root, "backup-prior"));
-      db.run("UPDATE consents SET revoked_at=NULL WHERE id=?", consentId);
-      const restored = await PersistenceDatabase.restore(
-        join(root, "backup-prior"),
-        join(root, "restore-prior"),
-        {
-          consentRevocations: db.all(
-            "SELECT workspace_id,id,revoked_at FROM consents WHERE revoked_at IS NOT NULL",
-          ),
-        },
-      );
-      connections.push(restored.database);
-      expect(
-        restored.database.get("SELECT revoked_at FROM consents WHERE id=?", consentId)?.revoked_at,
-      ).toBe(revokedAt);
     },
   );
   // Not run on PostgreSQL: Restores a SQLite backup; PostgreSQL backups are pg_dump based (M4-02).

@@ -238,18 +238,19 @@ it("J10 M4-03 SEC-024 a failing assertion stays failed while rejected credential
         site.expireSessions();
         const good = await session.createTest(whoAmI(token), "good-user.json");
         // The target now rejects the stored token: inconclusive on authentication, not a failed assertion.
-        const stale = await run(session, text(good.id), 1);
+        // Exit 6: the Run's final reason `manual_auth_required` maps to exit 6 in the reason registry.
+        const stale = await run(session, text(good.id), 6);
         expect(stale.run.outcome).toBe("inconclusive");
         expect(stale.reasonCode).toBe("manual_auth_required");
         // The rejected credential is not replayed: the next Run signs in again, and the wrong password blocks it.
         const apiCallsBefore = site.counters.apiCalls;
-        const blocked = await run(session, text(good.id), 9);
+        const blocked = await run(session, text(good.id), 6);
         expect(blocked.run.outcome).toBe("blocked");
         expect(blocked.authFailure).toBe("login_rejected");
         expect(site.counters.apiCalls).toBe(apiCallsBefore);
         expect(site.counters.loginFailures).toBe(1);
         // The bounded cooldown means the next Run does not hammer the identity provider.
-        const again = await run(session, text(good.id), 9);
+        const again = await run(session, text(good.id), 6);
         expect(again.run.outcome).toBe("blocked");
         expect(site.counters.loginFailures).toBe(1);
         // Restoring the secret and testing explicitly recovers the profile.
@@ -300,7 +301,7 @@ it("J10 M4-03 SEC-023 an expired target session is re-established once and a rev
         expect(site.counters.logins).toBe(1);
         // The target expires the session: that Run is inconclusive, never a silent pass or a failed assertion.
         site.expireSessions();
-        const stale = await run(session, text(test.id), 1);
+        const stale = await run(session, text(test.id), 6);
         expect(stale.run.outcome).toBe("inconclusive");
         expect(stale.reasonCode).toBe("manual_auth_required");
         // The next Run signs in exactly once more and passes.
@@ -461,7 +462,7 @@ it("J10 M4-03 SEC-022 SEC-024 a browser login is captured as a storage state, re
           "--auth-ref",
           text(captchaProfile.id),
         ]);
-        const blocked = await run(session, text(test.id), 9, "captcha");
+        const blocked = await run(session, text(test.id), 6, "captcha");
         expect(blocked.run.outcome).toBe("blocked");
         expect(blocked.reasonCode).toBe("manual_auth_required");
         const pending = items(

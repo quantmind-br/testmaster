@@ -8,6 +8,46 @@ import { readConfinedCodeFile } from "../code/summary.js";
 
 export const CODE_IMPORT_VERSION = "1.0.0";
 export const CODE_IMPORT_MAX_BYTES = 1024 * 1024;
+/**
+ * Names a TypeScript candidate may not reference: not as a variable, a property name or a string
+ * key (`x['require']`). They reach the host (environment, shell, module loader, global scope).
+ */
+export const CODE_IMPORT_FORBIDDEN_NAMES = [
+  "process",
+  "globalThis",
+  "global",
+  "Function",
+  "eval",
+  "require",
+  "module",
+] as const;
+/** Object keys whose value must be a positive numeric literal. */
+export const CODE_IMPORT_TIMEOUT_KEYS = [
+  "timeout",
+  "timeoutMs",
+  "actionTimeout",
+  "navigationTimeout",
+] as const;
+/** Method names that run a shell command or install a dependency. */
+const SHELL_METHODS = ["exec", "execSync", "spawn", "spawnSync", "system", "install"] as const;
+const SHELL_CALL = new RegExp(`\\.(?:${SHELL_METHODS.join("|")})$`, "u");
+const SET_TIMEOUT_CALL = /\.(?:setTimeout|setDefaultTimeout|setDefaultNavigationTimeout)$/u;
+const HOST_ACCESS_REFUSAL = "Runtime code, shell and host access are forbidden";
+/**
+ * The rules a generated Playwright candidate must obey, in the words the generation prompt gives
+ * the model. The importer enforces them (the lists above are the same constants), so the prompt
+ * and the check cannot drift apart.
+ */
+export const CODE_IMPORT_RULES: readonly string[] = [
+  `Import only from "@playwright/test", with literal import sources and no helper files; never use dynamic import(), new Function or eval.`,
+  `Never reference ${CODE_IMPORT_FORBIDDEN_NAMES.join(", ")}: not as variables, not as property names (response.global is refused) and not as string keys (x['require'] is refused). In particular never use process.env; use page.goto or request calls with relative URLs, because the runner configures baseURL.`,
+  `Never access .constructor or .__proto__.`,
+  `Never call ${SHELL_METHODS.map((method) => `.${method}()`).join(", ")}.`,
+  `Every ${CODE_IMPORT_TIMEOUT_KEYS.join("/")} option and every setTimeout/setDefaultTimeout/setDefaultNavigationTimeout call takes a positive numeric literal.`,
+  `Declare tests as test("literal name", async (...) => { ... }) with a non-empty body; never test.only, test.skip or test.fixme.`,
+  `Every expect(...) takes a real observation (a response status, locator, text or url), never a literal or a constant bound to a literal; never compare a value with itself.`,
+  `Include at least one named test and at least one matcher assertion such as toBe, toEqual, toContain or toBeVisible.`,
+];
 export type CodeImportFormat = "playwright" | "pytest";
 export interface ImportedCodeBundle {
   schemaVersion: "1.0.0";
@@ -86,8 +126,32 @@ function same(left: unknown, right: unknown): boolean {
   };
   return JSON.stringify(clean(left)) === JSON.stringify(clean(right));
 }
-function refuse(message: string): never {
-  throw new ContractError("INVALID_ARGUMENT", message);
+/** The line of a Babel `loc` (a node's `{start: {line}}` or a syntax error's `{line}`). */
+function lineOf(loc: unknown): number | undefined {
+  if (!loc || typeof loc !== "object") return undefined;
+  if ("line" in loc && typeof loc.line === "number") return loc.line;
+  return "start" in loc ? lineOf(loc.start) : undefined;
+}
+/** Refuses with a fixed message; the line of the offending node is added, never its source text. */
+function refuse(message: string, at?: Node): never {
+  const line = lineOf(at?.loc);
+  throw new ContractError(
+    "INVALID_ARGUMENT",
+    line === undefined ? message : `${message} at line ${line}`,
+  );
+}
+/** The text of a string key (`'require'` or a template without expressions), if it is one. */
+function literalKey(value: unknown): string | undefined {
+  if (!node(value)) return undefined;
+  if (value.type === "StringLiteral") return String(value.value);
+  if (value.type !== "TemplateLiteral") return undefined;
+  const { expressions, quasis } = value;
+  if (!Array.isArray(expressions) || expressions.length || !Array.isArray(quasis)) return undefined;
+  const quasi: unknown = quasis[0];
+  if (!quasi || typeof quasi !== "object" || !("value" in quasi)) return undefined;
+  const text = quasi.value;
+  if (!text || typeof text !== "object" || !("cooked" in text)) return undefined;
+  return typeof text.cooked === "string" ? text.cooked : undefined;
 }
 interface Inspection {
   imports: string[];
@@ -98,8 +162,14 @@ function inspectTypescript(text: string): Inspection {
   let ast: unknown;
   try {
     ast = parse(text, { sourceType: "module", plugins: ["typescript"], errorRecovery: false });
-  } catch {
-    return refuse("Imported TypeScript has invalid syntax");
+  } catch (error) {
+    const line =
+      error && typeof error === "object" && "loc" in error ? lineOf(error.loc) : undefined;
+    return refuse(
+      line === undefined
+        ? "Imported TypeScript has invalid syntax"
+        : `Imported TypeScript has invalid syntax at line ${line}`,
+    );
   }
   const result: Inspection = { imports: [], tests: [], assertions: 0 };
   const testNames = new Set<string>();
@@ -115,7 +185,7 @@ function inspectTypescript(text: string): Inspection {
       constants.add(name(item.id) as string);
     if (item.type === "ImportDeclaration") {
       const source = name(item.source);
-      if (!source) refuse("Import source must be literal");
+      if (!source) refuse("Import source must be literal", item);
       result.imports.push(source);
       if (source === "@playwright/test")
         for (const specifier of item.specifiers as Node[]) {
@@ -130,52 +200,57 @@ function inspectTypescript(text: string): Inspection {
       ["ImportExpression", "NewExpression"].includes(item.type) &&
       (item.type === "ImportExpression" || name(item.callee) === "Function")
     )
-      refuse("Dynamic code loading is forbidden");
+      refuse("Dynamic code loading is forbidden", item);
     if (
       item.type === "Identifier" &&
-      ["process", "globalThis", "global", "Function", "eval", "require"].includes(String(item.name))
+      (CODE_IMPORT_FORBIDDEN_NAMES as readonly string[]).includes(String(item.name))
     )
-      refuse("Runtime code, shell and host access are forbidden");
+      refuse(`${HOST_ACCESS_REFUSAL}: "${String(item.name)}"`, item);
+    // `module['require'](...)` reaches the same names without an Identifier node.
+    if (item.type === "MemberExpression" || item.type === "OptionalMemberExpression") {
+      const key = item.computed ? literalKey(item.property) : undefined;
+      if (key !== undefined && (CODE_IMPORT_FORBIDDEN_NAMES as readonly string[]).includes(key))
+        refuse(`${HOST_ACCESS_REFUSAL}: "${key}"`, item);
+    }
     if (
-      item.type === "MemberExpression" &&
-      ["constructor", "__proto__"].includes(name(item.property) ?? "")
+      (item.type === "MemberExpression" || item.type === "OptionalMemberExpression") &&
+      ["constructor", "__proto__"].includes(name(item.property) ?? literalKey(item.property) ?? "")
     )
-      refuse("Runtime constructor access is forbidden");
+      refuse("Runtime constructor access is forbidden", item);
     if (
       item.type === "BinaryExpression" &&
       same(item.left, item.right) &&
       ["===", "==", ">=", "<="].includes(String(item.operator))
     )
-      refuse("Self-comparison assertions are forbidden");
+      refuse("Self-comparison assertions are forbidden", item);
     if (item.type === "ExportNamedDeclaration" && item.source)
       result.imports.push(name(item.source) ?? "");
     if (item.type === "ExportAllDeclaration") result.imports.push(name(item.source) ?? "");
     if (
       item.type === "ObjectProperty" &&
-      ["timeout", "timeoutMs", "actionTimeout", "navigationTimeout"].includes(
-        name(item.key) ?? "",
-      ) &&
+      (CODE_IMPORT_TIMEOUT_KEYS as readonly string[]).includes(name(item.key) ?? "") &&
       (!node(item.value) || item.value.type !== "NumericLiteral" || Number(item.value.value) <= 0)
     )
-      refuse("Timeouts must be positive numeric literals");
+      refuse("Timeouts must be positive numeric literals", item);
     if (item.type !== "CallExpression") return;
     const callee = name(item.callee) ?? "";
     const args = item.arguments as unknown[];
-    if (node(item.callee) && item.callee.type === "Import") refuse("Dynamic imports are forbidden");
+    if (node(item.callee) && item.callee.type === "Import")
+      refuse("Dynamic imports are forbidden", item);
     if (
-      /\.(?:setTimeout|setDefaultTimeout|setDefaultNavigationTimeout)$/u.test(callee) &&
+      SET_TIMEOUT_CALL.test(callee) &&
       (!node(args[0]) || args[0].type !== "NumericLiteral" || Number(args[0].value) <= 0)
     )
-      refuse("Timeouts must be positive numeric literals");
-    if (/\.(?:exec|execSync|spawn|spawnSync|system|install)$/u.test(callee))
-      refuse("Runtime installs and shell calls are forbidden");
+      refuse("Timeouts must be positive numeric literals", item);
+    if (SHELL_CALL.test(callee)) refuse("Runtime installs and shell calls are forbidden", item);
     const root = callee.split(".")[0] ?? "";
     if (
       testNames.has(root) &&
       [root, `${root}.only`, `${root}.skip`, `${root}.fixme`].includes(callee)
     ) {
-      if (callee !== root) refuse("Skipped or exclusive tests are forbidden");
-      if (!node(args[0]) || args[0].type !== "StringLiteral") refuse("Tests require literal names");
+      if (callee !== root) refuse("Skipped or exclusive tests are forbidden", item);
+      if (!node(args[0]) || args[0].type !== "StringLiteral")
+        refuse("Tests require literal names", item);
       if (
         node(args[1]) &&
         ["ArrowFunctionExpression", "FunctionExpression"].includes(args[1].type) &&
@@ -184,7 +259,7 @@ function inspectTypescript(text: string): Inspection {
         Array.isArray(args[1].body.body) &&
         !args[1].body.body.length
       )
-        refuse("Empty tests are forbidden");
+        refuse("Empty tests are forbidden", item);
       result.tests.push(String(args[0].value));
     }
     if (expectNames.has(root) && [root, `${root}.soft`, `${root}.poll`].includes(callee)) {
@@ -194,7 +269,7 @@ function inspectTypescript(text: string): Inspection {
           (CONSTANT_NODES[args[0].type] ||
             (args[0].type === "Identifier" && constants.has(String(args[0].name)))))
       )
-        refuse("Assertions need a nonconstant observation");
+        refuse("Assertions need a nonconstant observation", item);
     }
     if (node(item.callee) && item.callee.type === "MemberExpression") {
       let chain: unknown = item.callee.object;
@@ -206,7 +281,7 @@ function inspectTypescript(text: string): Inspection {
       ) {
         const actual = (chain.arguments as unknown[])[0];
         if (args.length && same(actual, args[0]))
-          refuse("Self-comparison assertions are forbidden");
+          refuse("Self-comparison assertions are forbidden", item);
         const matcher = name(item.callee.property) ?? "";
         if (matcher.startsWith("to")) result.assertions++;
       }

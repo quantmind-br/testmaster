@@ -106,7 +106,7 @@ function failureExcerpt(runtime: Runtime, response: HttpResponse): string | null
 function deny(message: string): never {
   throw new RuntimeError("security_precondition_failed", message);
 }
-function canonicalUrl(input: string, base?: string): URL {
+export function canonicalUrl(input: string, base?: string): URL {
   // Reject ambiguities before WHATWG URL normalization erases them.
   // biome-ignore lint/suspicious/noControlCharactersInRegex: URL policy must reject ASCII controls before URL normalization.
   if (input.length > 8192 || /[\u0000-\u0020\u007f\\]/u.test(input)) deny("Ambiguous URL");
