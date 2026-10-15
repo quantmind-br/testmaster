@@ -656,7 +656,6 @@ export class TestMasterMcp {
         return analysis;
       }
       case "testmaster_analyze_run": {
-        const budget = object(args.budget ?? {});
         // `model` is the switch (true) or the model id of the reading; provider only refines it.
         const model = args.model;
         const requested = model === true || typeof model === "string";
@@ -670,9 +669,6 @@ export class TestMasterMcp {
           ...(typeof args.provider === "string" ? { provider: args.provider } : {}),
           ...(typeof model === "string" ? { modelId: model } : {}),
           ...(typeof args.discoveryId === "string" ? { discoveryId: args.discoveryId } : {}),
-          ...(typeof budget.deadlineMs === "number"
-            ? { budget: { deadlineMs: budget.deadlineMs } }
-            : {}),
         });
         // A reading that was asked for always reports its fate; rules-only calls carry no status.
         return requested
@@ -829,7 +825,6 @@ export class TestMasterMcp {
             ? { requirementIds: args.requirementIds as string[] }
             : {}),
           ...(typeof args.model === "string" ? { model: args.model } : {}),
-          ...(args.budget ? { budget: args.budget as { deadlineMs?: number } } : {}),
           ...(args.partialGeneration === true ? { partialGeneration: true } : {}),
           signal,
         });
@@ -863,9 +858,7 @@ export class TestMasterMcp {
             projectId: [...projects][0] as string,
             ...(revisions ? { revisionIds: revisions } : {}),
             ...(proposals ? { proposalIds: proposals } : {}),
-            ...(args.budget
-              ? { budget: args.budget as { modelCalls?: number; deadlineMs?: number } }
-              : {}),
+            ...(args.budget ? { budget: args.budget as { modelCalls?: number } } : {}),
             ...(typeof args.provider === "string" ? { provider: args.provider } : {}),
             ...(typeof args.model === "string" ? { model: args.model } : {}),
           },
@@ -942,16 +935,11 @@ export class TestMasterMcp {
           ...(typeof args.cursor === "string" ? { cursor: args.cursor } : {}),
           ...(typeof args.limit === "number" ? { limit: args.limit } : {}),
         });
-      case "testmaster_propose_healing": {
-        const budget = object(args.budget ?? {});
+      case "testmaster_propose_healing":
         return app.healing.propose(String(args.runId), {
           ...(typeof args.provider === "string" ? { provider: args.provider } : {}),
           ...(typeof args.model === "string" ? { model: args.model } : {}),
-          ...(typeof budget.deadlineMs === "number"
-            ? { budget: { deadlineMs: budget.deadlineMs } }
-            : {}),
         });
-      }
       case "testmaster_review_healing":
         return app.healing.review(String(args.proposalId));
       case "testmaster_approve_healing":

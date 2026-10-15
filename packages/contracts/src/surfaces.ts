@@ -657,17 +657,6 @@ export const routeCatalog: readonly RouteDefinition[] = routeRows.flatMap(
 /** Adds the agent-facing description of an input property without changing its validation. */
 const d = <T extends TSchema>(schema: T, description: string): T =>
   ({ ...schema, description }) as T;
-const deadlineBudget = (description: string) =>
-  Type.Optional(
-    Obj(
-      {
-        deadlineMs: Type.Optional(
-          d(Type.Integer({ minimum: 1, maximum: 600000 }), "Time budget in milliseconds"),
-        ),
-      },
-      { description },
-    ),
-  );
 const runId = (description = "Run id") => d(id("run"), description);
 export const mcpTools = {
   testmaster_capabilities: { milestone: "M1", input: Obj({}), output: "CapabilityManifest" },
@@ -792,7 +781,6 @@ export const mcpTools = {
         ),
       ),
       model: Type.Optional(d(Name, "Model id from the project's profiles")),
-      budget: deadlineBudget("Optional time budget"),
       partialGeneration: Type.Optional(
         d(
           Type.Boolean(),
@@ -823,12 +811,6 @@ export const mcpTools = {
             {
               modelCalls: Type.Optional(
                 d(Type.Integer({ minimum: 1, maximum: 20 }), "Model calls, 1..20; default 10"),
-              ),
-              deadlineMs: Type.Optional(
-                d(
-                  Type.Integer({ minimum: 1, maximum: 600000 }),
-                  "Deadline in milliseconds of each revision's model call, repairs included, 1..600000; default 300000. A revision that reaches it is listed in validationErrors and the next one is still tried",
-                ),
               ),
             },
             { description: "Optional model-call budget" },
@@ -924,7 +906,6 @@ export const mcpTools = {
         d(Name, "Model provider id for the model reading; requires model (true or a model id)"),
       ),
       discoveryId: Type.Optional(d(id("dsc"), "Discovery job to cross-reference")),
-      budget: deadlineBudget("Optional time budget"),
     }),
     output: "McpAnalysis",
   },
@@ -969,7 +950,6 @@ export const mcpTools = {
       runId: runId("Failed run to heal"),
       provider: Type.Optional(d(Name, "Model provider id")),
       model: Type.Optional(d(Name, "Model id")),
-      budget: deadlineBudget("Optional time budget"),
     }),
     output: "HealingProposal",
   },

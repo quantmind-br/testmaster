@@ -557,7 +557,7 @@ it("healing and agent mode refuse terminal tests explicitly, while factual analy
 });
 
 it.each([
-  ["UPSTREAM_TIMEOUT", "deadline"],
+  ["PRECONDITION_FAILED", "cancelled"],
   ["INVALID_ARGUMENT", "schema_invalid"],
 ] as const)("model %s failures expose bounded code-owned %s details", async (code, detail) => {
   const f = await generationFixture(null);

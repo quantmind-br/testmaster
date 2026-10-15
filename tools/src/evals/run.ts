@@ -307,17 +307,20 @@ export async function runEvaluation(
         { cwd, env: environment, stdio: ["ignore", "pipe", "pipe"] },
       );
       let deadlineReached = false;
-      const timer = setTimeout(
-        () => {
-          deadlineReached = true;
-          child.kill("SIGTERM");
-        },
-        Math.max(1, Math.min(finalizing ? 30000 : remaining, 600000)),
-      );
-      const hardTimer = setTimeout(
-        () => child.kill("SIGKILL"),
-        Math.max(1, Math.min(finalizing ? 30000 : remaining, 600000)) + 15000,
-      );
+      // A model command is never cut: it runs until the model answers. The trial wall time only
+      // stops the commands that do no model work and keeps later commands from starting.
+      const limitMs = modelCommand
+        ? null
+        : Math.max(1, Math.min(finalizing ? 30000 : remaining, 600000));
+      const timer =
+        limitMs === null
+          ? undefined
+          : setTimeout(() => {
+              deadlineReached = true;
+              child.kill("SIGTERM");
+            }, limitMs);
+      const hardTimer =
+        limitMs === null ? undefined : setTimeout(() => child.kill("SIGKILL"), limitMs + 15000);
       child.stdout.on("data", (chunk: Buffer) => {
         record.stdout += redact(chunk.toString());
       });
@@ -362,18 +365,16 @@ export async function runEvaluation(
         const details = object(error.details);
         const reason = String(details.reasonCode ?? "");
         const exclusion =
-          modelCommand && error.code === "UPSTREAM_TIMEOUT"
-            ? "provider_timeout"
-            : modelCommand &&
-                ["UNAVAILABLE", "RATE_LIMITED"].includes(String(error.code)) &&
-                (object(error.details).status === undefined ||
-                  Number(object(error.details).status) >= 429)
-              ? "provider_transport"
-              : reason === "sandbox_unavailable"
-                ? "sandbox_unavailable"
-                : reason === "worker_lost"
-                  ? "worker_lost"
-                  : null;
+          modelCommand &&
+          ["UNAVAILABLE", "RATE_LIMITED"].includes(String(error.code)) &&
+          (object(error.details).status === undefined ||
+            Number(object(error.details).status) >= 429)
+            ? "provider_transport"
+            : reason === "sandbox_unavailable"
+              ? "sandbox_unavailable"
+              : reason === "worker_lost"
+                ? "worker_lost"
+                : null;
         throw new EvaluationFailure(
           exclusion ?? String(error.code ?? "pipeline_error"),
           String(error.message ?? "CLI command failed"),

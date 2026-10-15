@@ -1,5 +1,5 @@
 import type { ExecutablePlan, NetworkPolicy, PlanStep } from "@testmaster/contracts";
-import { scrubEvidenceText, scrubText } from "@testmaster/domain";
+import { AttemptClock, scrubEvidenceText, scrubText } from "@testmaster/domain";
 import type { ProtocolClient } from "./protocol.js";
 
 export interface RunnerInput {
@@ -98,6 +98,8 @@ export function abortVerdict(signal: AbortSignal): RunnerResult | undefined {
 }
 export class Runtime {
   readonly secrets = new Set<string>();
+  /** Attempt time: stops while the host resolves a model request, so a slow model never costs deadline. */
+  readonly clock = new AttemptClock();
   readonly variables: Map<string, { value: unknown; sensitive: boolean }>;
   private index = 0;
   private readonly evidence = new Map<string, string[]>();
@@ -114,6 +116,10 @@ export class Runtime {
   }
   emit(type: string, payload: unknown): Promise<void> {
     return this.protocol.emit(type, payload);
+  }
+  /** Asks the host for the next action; the wait for its model answer is outside the attempt deadline. */
+  agent(stepId: string, observation: unknown): Promise<PlanStep | null> {
+    return this.clock.during(() => this.protocol.agent(stepId, observation));
   }
   artifact(path: string, kind: string, mimeType: string, bytes: Uint8Array): Promise<void> {
     this.reference([path]);

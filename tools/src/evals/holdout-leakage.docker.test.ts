@@ -216,13 +216,9 @@ async function exercise(
       const bodies = upstreamBodies.length;
       const leaks = guard.state.leaks.length;
       await app.analysis.analyze(failed.id, { model: false });
-      await app.analysis
-        .analyze(failed.id, { model: true, budget: { deadlineMs: 120000 } })
-        .catch(() => undefined);
+      await app.analysis.analyze(failed.id, { model: true }).catch(() => undefined);
       // A refusal or abstention is a legitimate outcome here; only the outbound prompt matters.
-      await app.healing
-        .propose(failed.id, { budget: { deadlineMs: 120000 } })
-        .catch(() => undefined);
+      await app.healing.propose(failed.id, {}).catch(() => undefined);
       const control = async (): Promise<NegativeControl> => {
         const before = { requests: upstreamRequests, blocked: guard.state.blocked };
         const failure = await app.model

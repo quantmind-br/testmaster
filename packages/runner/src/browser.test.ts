@@ -333,6 +333,31 @@ it("preserves cancellation and attempt deadline precedence during attachment obs
     expect(target.click).not.toHaveBeenCalled();
   }
 });
+it("does not charge the wait for a host model answer to the attempt deadline", async () => {
+  let now = 0;
+  vi.spyOn(performance, "now").mockImplementation(() => now);
+  pageReads(observedPage());
+  // The model answers long after the nominal 50 ms attempt deadline.
+  const slowModel = exploring({ requireActionable: false });
+  slowModel.input.timeoutMs = 50;
+  vi.spyOn(slowModel.protocol, "agent").mockImplementation(async () => {
+    now += 10_000;
+    return null;
+  });
+  expect(await runBrowser(slowModel)).toMatchObject({ outcome: "passed" });
+
+  // Control: the same time spent on the page itself still expires the attempt deadline.
+  events.length = 0;
+  const slowPage = exploring({ requireActionable: false });
+  slowPage.input.timeoutMs = 50;
+  vi.spyOn(slowPage.protocol, "agent").mockResolvedValue(null);
+  vi.spyOn(context.page, "evaluate").mockImplementation((async (fn: unknown) => {
+    if (fn !== observePage) return "<html>canary</html>";
+    now += 10_000;
+    return observedPage();
+  }) as never);
+  expect(await runBrowser(slowPage)).toMatchObject({ reasonCode: "execution_deadline" });
+});
 it("fails ambiguous actions and skips the remaining required oracle", async () => {
   context.page.locator("submit").countValue = 2;
   expect(await runBrowser(runtime([click, assertion]))).toMatchObject({

@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { chmod, mkdir, realpath } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
+import { AttemptClock } from "@testmaster/domain";
 import { PolicyDenied } from "../egress/policy.js";
 
 export class ContainerCleanupError extends Error {
@@ -46,6 +47,12 @@ export interface DockerAttempt {
   user?: string;
   attemptTimeoutMs?: number;
   cancellationGraceMs?: number;
+  /**
+   * The attempt clock `attemptTimeoutMs` is counted on. The caller pauses it while the host
+   * resolves a model request for the container, so waiting for a model answer never costs
+   * deadline; without one the deadline is plain wall time.
+   */
+  clock?: AttemptClock;
 }
 export interface InspectFacts {
   imageId: string;
@@ -71,8 +78,16 @@ export interface CommandResult {
   stderr: Buffer;
   droppedBytes: number;
 }
-export type DockerCommand = (args: readonly string[], timeoutMs?: number) => Promise<CommandResult>;
-export const dockerCommand: DockerCommand = async (args, timeoutMs = 120000) => {
+/**
+ * `timeoutMs` is counted on `clock` (wall time when omitted) and kills the docker CLI process
+ * once it elapses.
+ */
+export type DockerCommand = (
+  args: readonly string[],
+  timeoutMs?: number,
+  clock?: AttemptClock,
+) => Promise<CommandResult>;
+export const dockerCommand: DockerCommand = async (args, timeoutMs = 120000, clock) => {
   const child = spawn("docker", [...args], { stdio: ["ignore", "pipe", "pipe"] });
   const chunks: { stream: "stdout" | "stderr"; data: Buffer }[] = [];
   let bytes = 0;
@@ -93,8 +108,7 @@ export const dockerCommand: DockerCommand = async (args, timeoutMs = 120000) => 
   };
   child.stdout.on("data", (chunk: Buffer) => collect("stdout", chunk));
   child.stderr.on("data", (chunk: Buffer) => collect("stderr", chunk));
-  const timer = setTimeout(() => child.kill("SIGKILL"), timeoutMs);
-  timer.unref();
+  const stopTimer = (clock ?? new AttemptClock()).deadline(timeoutMs, () => child.kill("SIGKILL"));
   try {
     const code = await new Promise<number>((resolve, reject) => {
       child.once("error", reject);
@@ -107,7 +121,7 @@ export const dockerCommand: DockerCommand = async (args, timeoutMs = 120000) => 
       droppedBytes,
     };
   } finally {
-    clearTimeout(timer);
+    stopTimer();
   }
 };
 function identifier(value: string): void {
@@ -277,6 +291,7 @@ export class DockerExecutor {
     signal?: AbortSignal,
   ): Promise<CommandResult & { facts: InspectFacts; cancelled: boolean }> {
     const name = `tm-att-${options.attemptId}`;
+    const clock = options.clock ?? new AttemptClock();
     let created = false;
     let cancelled = false;
     let graceTimer: NodeJS.Timeout | undefined;
@@ -291,7 +306,7 @@ export class DockerExecutor {
       }, options.cancellationGraceMs ?? 10000);
       graceTimer.unref();
     };
-    let deadline: NodeJS.Timeout | undefined;
+    let stopDeadline: (() => void) | undefined;
     let executionResult: (CommandResult & { facts: InspectFacts; cancelled: boolean }) | undefined;
     let executionError: unknown;
     try {
@@ -306,8 +321,7 @@ export class DockerExecutor {
       created = true;
       signal?.addEventListener("abort", cancel, { once: true });
       if (signal?.aborted) cancel();
-      deadline = setTimeout(cancel, options.attemptTimeoutMs ?? 300000);
-      deadline.unref();
+      stopDeadline = clock.deadline(options.attemptTimeoutMs ?? 300000, cancel);
       const initialFacts = await this.inspect(name);
       if (
         initialFacts.user !== (options.user ?? "1000:1000") ||
@@ -325,6 +339,7 @@ export class DockerExecutor {
       const result = await this.command(
         ["start", "-a", name],
         (options.attemptTimeoutMs ?? 300000) + (options.cancellationGraceMs ?? 10000) + 60000,
+        clock,
       );
       const facts = await this.inspect(name);
       if (facts.runtimeError || facts.startedAt.startsWith("0001-"))
@@ -333,7 +348,7 @@ export class DockerExecutor {
     } catch (error) {
       executionError = error;
     } finally {
-      clearTimeout(deadline);
+      stopDeadline?.();
       clearTimeout(graceTimer);
       signal?.removeEventListener("abort", cancel);
     }

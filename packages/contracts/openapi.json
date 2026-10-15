@@ -32293,17 +32293,6 @@
           "discoveryId": {
             "pattern": "^dsc_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
             "type": "string"
-          },
-          "budget": {
-            "additionalProperties": false,
-            "type": "object",
-            "properties": {
-              "deadlineMs": {
-                "minimum": 1,
-                "maximum": 600000,
-                "type": "integer"
-              }
-            }
           }
         },
         "$defs": {}
@@ -85203,15 +85192,6 @@
                 "message": {
                   "maxLength": 8000,
                   "type": "string"
-                },
-                "reasonCode": {
-                  "minLength": 1,
-                  "maxLength": 200,
-                  "type": "string"
-                },
-                "modelCallId": {
-                  "pattern": "^mdl_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-                  "type": "string"
                 }
               }
             }
@@ -85224,8 +85204,7 @@
         "type": "object",
         "required": [
           "inputRefs",
-          "scope",
-          "budget"
+          "scope"
         ],
         "properties": {
           "inputRefs": {
@@ -85319,70 +85298,9 @@
               "maxLength": 200,
               "type": "string"
             }
-          },
-          "budget": {
-            "anyOf": [
-              {
-                "type": "null"
-              },
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "number"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/GenerationInput/$defs/T0"
-                }
-              },
-              {
-                "type": "object",
-                "patternProperties": {
-                  "^(.*)$": {
-                    "$ref": "#/components/schemas/GenerationInput/$defs/T0"
-                  }
-                }
-              }
-            ]
           }
         },
-        "$defs": {
-          "T0": {
-            "anyOf": [
-              {
-                "type": "null"
-              },
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "number"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/GenerationInput/$defs/T0"
-                }
-              },
-              {
-                "type": "object",
-                "patternProperties": {
-                  "^(.*)$": {
-                    "$ref": "#/components/schemas/GenerationInput/$defs/T0"
-                  }
-                }
-              }
-            ]
-          }
-        }
+        "$defs": {}
       },
       "GithubCheck": {
         "additionalProperties": false,
@@ -86751,17 +86669,6 @@
             "minLength": 1,
             "maxLength": 200,
             "type": "string"
-          },
-          "budget": {
-            "additionalProperties": false,
-            "type": "object",
-            "properties": {
-              "deadlineMs": {
-                "minimum": 1,
-                "maximum": 600000,
-                "type": "integer"
-              }
-            }
           }
         },
         "$defs": {}
@@ -93402,19 +93309,6 @@
             "pattern": "^dsc_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
             "type": "string",
             "description": "Discovery job to cross-reference"
-          },
-          "budget": {
-            "additionalProperties": false,
-            "description": "Optional time budget",
-            "type": "object",
-            "properties": {
-              "deadlineMs": {
-                "minimum": 1,
-                "maximum": 600000,
-                "type": "integer",
-                "description": "Time budget in milliseconds"
-              }
-            }
           }
         },
         "$defs": {}
@@ -93705,19 +93599,6 @@
             "type": "string",
             "description": "Model id from the project's profiles"
           },
-          "budget": {
-            "additionalProperties": false,
-            "description": "Optional time budget",
-            "type": "object",
-            "properties": {
-              "deadlineMs": {
-                "minimum": 1,
-                "maximum": 600000,
-                "type": "integer",
-                "description": "Time budget in milliseconds"
-              }
-            }
-          },
           "partialGeneration": {
             "type": "boolean",
             "description": "After the repairs, store the proposals that pass the checks and list the refused ones in extensions['testmaster:refusedProposals']; default false: one refused proposal refuses the whole batch"
@@ -93778,12 +93659,6 @@
                 "maximum": 20,
                 "type": "integer",
                 "description": "Model calls, 1..20; default 10"
-              },
-              "deadlineMs": {
-                "minimum": 1,
-                "maximum": 600000,
-                "type": "integer",
-                "description": "Deadline in milliseconds of each revision's model call, repairs included, 1..600000; default 300000. A revision that reaches it is listed in validationErrors and the next one is still tried"
               }
             }
           },
@@ -93946,19 +93821,6 @@
             "maxLength": 200,
             "type": "string",
             "description": "Model id"
-          },
-          "budget": {
-            "additionalProperties": false,
-            "description": "Optional time budget",
-            "type": "object",
-            "properties": {
-              "deadlineMs": {
-                "minimum": 1,
-                "maximum": 600000,
-                "type": "integer",
-                "description": "Time budget in milliseconds"
-              }
-            }
           }
         },
         "$defs": {}

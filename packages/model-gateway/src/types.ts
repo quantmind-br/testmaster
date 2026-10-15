@@ -137,12 +137,10 @@ export interface ModelRequest {
   responseSchema?: string;
   tools?: ModelTool[];
   requiredCapabilities?: (keyof ModelCapabilities)[];
-  deadlineMs: number;
   /**
    * Semantic validation of the schema-valid output (grounding, policy, importability). It throws
    * a ContractError, whose `issues` become repair feedback and a bounded recorded validation
    * failure, exactly like a schema violation. Any other error is a defect and is not repaired.
-   * The deadline spans every attempt, so a slow check also consumes the repair budget.
    */
   check?: (output: unknown) => Promise<void> | void;
   reasoningEffort?: ReasoningEffort;
@@ -153,6 +151,7 @@ export interface ModelRequest {
     recordRawPrompt?: boolean;
     secrets?: string[];
   };
+  /** Caller cancellation; a model request has no deadline and is never cut by elapsed time. */
   signal?: AbortSignal;
   cache?: boolean;
 }

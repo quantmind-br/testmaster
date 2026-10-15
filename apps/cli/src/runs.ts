@@ -83,17 +83,13 @@ export function runCommands(program: Command, runtime: Runtime): void {
       .option("--model", "Enrich factual diagnosis using the authorized model")
       .option("--provider <id>", "Model provider of the enrichment (requires --model)")
       .option("--model-id <id>", "Model id of the enrichment (requires --model)")
-      .option("--discovery <id>", "Bind source targets to an authorized frozen discovery")
-      .option("--deadline-ms <milliseconds>", "Model deadline", integer),
+      .option("--discovery <id>", "Bind source targets to an authorized frozen discovery"),
     async (rt, args, options) => {
       const analysis = await (await rt.app()).analysis.analyze(String(args[0]), {
         model: options.model === true,
         ...(typeof options.provider === "string" ? { provider: options.provider } : {}),
         ...(typeof options.modelId === "string" ? { modelId: options.modelId } : {}),
         ...(typeof options.discovery === "string" ? { discoveryId: options.discovery } : {}),
-        ...(typeof options.deadlineMs === "number"
-          ? { budget: { deadlineMs: options.deadlineMs } }
-          : {}),
       });
       return { data: analysis, text: formatDiagnosisSummary(analysis), exit: 0 };
     },

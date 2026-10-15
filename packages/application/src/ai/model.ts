@@ -38,8 +38,8 @@ export interface ModelInput {
   dataClasses?: string[];
   provider?: string;
   model?: string;
+  /** Caller cancellation only: a model call has no deadline. */
   signal?: AbortSignal;
-  deadlineMs?: number;
   reasoningEffort?: ModelRequest["reasoningEffort"];
   /** Semantic validation of the schema-valid output; see ModelRequest.check. */
   check?: ModelRequest["check"];
@@ -157,14 +157,6 @@ export class ModelService {
         model: input.model ?? null,
         availableModels: provider?.models.map((value) => value.id) ?? [],
       });
-    if (
-      input.deadlineMs !== undefined &&
-      (!Number.isSafeInteger(input.deadlineMs) || input.deadlineMs < 1 || input.deadlineMs > 600000)
-    )
-      throw new ContractError(
-        "INVALID_ARGUMENT",
-        "Model deadline may only narrow the configured ceiling",
-      );
     const reasoningEffort = input.reasoningEffort ?? model.reasoningEffort;
     // Static loading would import the gateway on deterministic replay paths (ARCH-002).
     const { ModelGateway } = await import("@testmaster/model-gateway");
@@ -206,7 +198,6 @@ export class ModelService {
       inputRefs: input.inputRefs ?? [],
       locale: this.config.effectiveConfig.config.environment?.locale ?? "en-US",
       policyHash: this.config.effectiveConfig.policyHash,
-      deadlineMs: input.deadlineMs ?? 180000,
       ...(reasoningEffort !== undefined ? { reasoningEffort } : {}),
       dataPolicy: {
         dataClasses: input.dataClasses ?? ["documents"],

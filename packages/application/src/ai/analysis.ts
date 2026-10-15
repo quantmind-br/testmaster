@@ -28,6 +28,7 @@ import { type ArtifactsService, isEvidenceUnavailable } from "../artifacts.js";
 import { entity, requireEntity, type ServiceContext } from "../context.js";
 import type { AdmissionSnapshot } from "../provenance.js";
 import type { DiscoveryDetail, DiscoveryService } from "./discovery.js";
+import { AUXILIARY_LEASE_MS, keepLeaseAlive } from "./job-lease.js";
 import type { ModelService } from "./model.js";
 import { promptVersions } from "./model.js";
 
@@ -37,7 +38,6 @@ export interface AnalysisInput {
   provider?: string;
   modelId?: string;
   discoveryId?: string;
-  budget?: { deadlineMs?: number };
 }
 /** What became of a requested model reading; `used` only when a model call produced the analysis. */
 export interface AnalysisModelStatus {
@@ -2019,7 +2019,6 @@ export class AnalysisService {
       responseSchema: "AIAnalysisOutput",
       ...(input.provider !== undefined ? { provider: input.provider } : {}),
       ...(input.modelId !== undefined ? { model: input.modelId } : {}),
-      ...(input.budget?.deadlineMs !== undefined ? { deadlineMs: input.budget.deadlineMs } : {}),
       dataClasses: source ? ["execution_evidence", "code_summary"] : ["execution_evidence"],
       inputRefs: refs.map((ref) => semanticHash(ref)),
       data,
@@ -2238,11 +2237,12 @@ export class AnalysisService {
       owner: `analysis-${randomUUID()}`,
       queue: "analysis",
       jobId: job.jobId,
-      leaseMs: Math.max(240000, (input.budget?.deadlineMs ?? 180000) + 60000),
+      leaseMs: AUXILIARY_LEASE_MS,
     });
     if (!fence) {
-      const deadline = Date.now() + (input.budget?.deadlineMs ?? 180000);
-      while (Date.now() < deadline) {
+      // Another holder runs this job. A model call has no deadline, so wait until the job settles;
+      // a holder that stopped stops renewing its lease, and expiry then hands the job back.
+      for (;;) {
         this.jobs.expire();
         const current = this.jobs.get(this.ctx.workspaceId, job.jobId)!;
         const stored = this.receipt(current);
@@ -2255,12 +2255,10 @@ export class AnalysisService {
         if (current.state === "queued") return this.drive(current, run);
         await delay(50);
       }
-      throw new ContractError("PRECONDITION_FAILED", "Analysis job is still pending", {
-        jobId: job.jobId,
-      });
     }
     const factualRow = this.factualRow(run.id);
     let analysis: Analysis;
+    const lease = keepLeaseAlive(this.jobs, fence);
     try {
       if (input.model) {
         const factual = factualRow ? (JSON.parse(String(factualRow.data_json)) as Analysis) : null;
@@ -2297,6 +2295,8 @@ export class AnalysisService {
         });
       else this.jobs.release(fence, new Date().toISOString());
       throw error;
+    } finally {
+      lease.stop();
     }
   }
   async analyze(runId: string, input: AnalysisInput = {}): Promise<Analysis> {
@@ -2354,7 +2354,6 @@ export class AnalysisService {
       providers: this.model.config.modelProviders,
       policy: this.model.config.effectiveConfig.policyHash,
       prompt: promptVersions.analyze,
-      deadlineMs: input.budget?.deadlineMs ?? 180000,
       provider: input.provider ?? null,
       modelId: input.modelId ?? null,
       discovery: source

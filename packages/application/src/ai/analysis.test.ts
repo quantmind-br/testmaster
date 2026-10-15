@@ -1089,7 +1089,6 @@ it("a requested reading reports its status: used, abstained by a rule, or unavai
     model: true,
     provider: "fake",
     modelId: "fake-model",
-    budget: { deadlineMs: 170000 },
   });
   expect(unavailable).toMatchObject({ source: "rules", modelCallId: null });
   expect(f.service.modelStatus(unavailable)).toMatchObject({
@@ -1097,7 +1096,8 @@ it("a requested reading reports its status: used, abstained by a rule, or unavai
     reasonCode: "model_not_in_inventory",
     message: "Declared model is absent from provider inventory",
   });
-  // Control: a real model call is `used` and carries its call id.
+  // Control: a real model call is `used` and carries its call id. A reading is stored per
+  // configuration, so the control names the provider alone (its first model).
   f.complete.mockImplementationOnce(async () => ({
     modelCallId: f.modelCallId,
     output: {
@@ -1110,17 +1110,40 @@ it("a requested reading reports its status: used, abstained by a rule, or unavai
       evidenceGaps: [],
     },
   }));
-  const used = await f.service.analyze(f.run.id, {
-    model: true,
-    provider: "fake",
-    modelId: "fake-model",
-  });
+  const used = await f.service.analyze(f.run.id, { model: true, provider: "fake" });
   expect(f.service.modelStatus(used)).toEqual({
     state: "used",
     reasonCode: null,
     message: expect.any(String),
     modelCallId: f.modelCallId,
   });
+});
+it("a model reading that outlasts the job lease keeps its lease and is stored", async () => {
+  const f = await fixture();
+  vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
+  try {
+    f.complete.mockImplementationOnce(async () => {
+      // The call has no deadline: five minutes is several lease lengths.
+      await vi.advanceTimersByTimeAsync(5 * 60_000);
+      return {
+        modelCallId: f.modelCallId,
+        output: {
+          failureKind: "unknown",
+          hypotheses: [],
+          recommendedAction: "collect_more_evidence",
+          fixTargetHandle: null,
+          limitations: [],
+          nextSteps: [],
+          evidenceGaps: [],
+        },
+      };
+    });
+    const slow = await f.service.analyze(f.run.id, { model: true });
+    expect(slow).toMatchObject({ source: "model", modelCallId: f.modelCallId });
+    expect(f.service.modelStatus(slow)).toMatchObject({ state: "used" });
+  } finally {
+    vi.useRealTimers();
+  }
 });
 it("an invalid explicit model choice is refused before any job or provider call", async () => {
   const f = await fixture();

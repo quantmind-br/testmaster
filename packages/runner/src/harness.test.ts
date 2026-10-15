@@ -3,8 +3,10 @@ import { createServer, type Socket } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ExecutablePlan, PlanStep } from "@testmaster/contracts";
-import { afterAll, beforeAll, expect, it, vi } from "vitest";
-import { runHarness } from "./harness.js";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { armAttemptDeadline, runHarness } from "./harness.js";
+import type { ProtocolClient } from "./protocol.js";
+import { type RunnerInput, Runtime } from "./runtime.js";
 
 const ATTEMPT = "att_01900000-0000-7000-8000-000000000003";
 const NODE = process.execPath;
@@ -169,3 +171,69 @@ it("keeps a failure proven before the cancel request as failed", async () => {
   expect(result).toEqual({ outcome: "failed", reasonCode: "assertion_mismatch" });
   expect(finished).toEqual([{ outcome: "failed", reasonCode: "assertion_mismatch" }]);
 }, 30000);
+
+describe("attempt deadline while the host resolves a model request", () => {
+  // `process.exit` is mocked for the file in beforeAll, which runs after this body is collected.
+  const exit = () => vi.mocked(process.exit);
+  beforeEach(() => {
+    exit().mockClear();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+  function attemptRuntime() {
+    const controller = new AbortController();
+    const answer = Promise.withResolvers<PlanStep | null>();
+    const protocol = {
+      controller,
+      agent: vi.fn(() => answer.promise),
+    } as unknown as ProtocolClient;
+    const runtime = new Runtime({ attemptId: ATTEMPT } as RunnerInput, protocol);
+    return { controller, answer, runtime };
+  }
+  it("aborts at the attempt deadline and exits ten seconds later when no model answer is pending", async () => {
+    const { controller, runtime } = attemptRuntime();
+    const disarm = armAttemptDeadline(runtime, 1000);
+    await vi.advanceTimersByTimeAsync(999);
+    expect(controller.signal.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(controller.signal.aborted).toBe(true);
+    expect((controller.signal.reason as Error).message).toBe("attempt_timeout");
+    expect(exit()).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(exit()).toHaveBeenCalledWith(1);
+    disarm();
+  });
+  it("does not abort or exit while a model answer is pending and aborts after the remaining time", async () => {
+    const { controller, answer, runtime } = attemptRuntime();
+    const disarm = armAttemptDeadline(runtime, 1000);
+    await vi.advanceTimersByTimeAsync(400);
+    const pending = runtime.agent("explore-1", {});
+    await vi.advanceTimersByTimeAsync(600_000);
+    expect(controller.signal.aborted).toBe(false);
+    expect(exit()).not.toHaveBeenCalled();
+    answer.resolve(null);
+    expect(await pending).toBeNull();
+    await vi.advanceTimersByTimeAsync(599);
+    expect(controller.signal.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(controller.signal.aborted).toBe(true);
+    expect((controller.signal.reason as Error).message).toBe("attempt_timeout");
+    await vi.advanceTimersByTimeAsync(9_999);
+    expect(exit()).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(exit()).toHaveBeenCalledWith(1);
+    disarm();
+  });
+  it("releases the clock when the host answer fails", async () => {
+    const { controller, answer, runtime } = attemptRuntime();
+    const disarm = armAttemptDeadline(runtime, 1000);
+    const pending = runtime.agent("explore-1", {});
+    answer.reject(new Error("protocol_socket_closed"));
+    await expect(pending).rejects.toThrow("protocol_socket_closed");
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(controller.signal.aborted).toBe(true);
+    disarm();
+  });
+});

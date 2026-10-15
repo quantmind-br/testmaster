@@ -10,20 +10,9 @@ import { ModelService } from "./model.js";
 const generationInstructions = `Return standalone Playwright test code importing only @playwright/test. Preserve every deterministic plan assertion and action. Use page.goto relative URLs and runner-configured baseURL. No shell, dependency installs, eval, filesystem or empty assertions. Do not use TestMaster APIs. The code is machine-checked before it is accepted and any violation is refused, so obey every rule: ${CODE_IMPORT_RULES.join(" ")}`;
 // A refused candidate is a per-revision result; any other failure (budget, provider) is not.
 const refusalCodes: readonly string[] = ["INVALID_ARGUMENT", "POLICY_DENIED", "PAYLOAD_TOO_LARGE"];
-/**
- * Deadline of each revision's model call (first attempt and repairs). Generated code is long
- * output, and a refused first answer is followed by repairs, so the 180 s default of the other
- * purposes cut a call that was still making progress.
- */
-export const CODE_GENERATION_DEADLINE_MS = 300000;
-/** `reasonCode` of a `validationErrors` entry whose revision reached the model deadline. */
-export const CODE_GENERATION_DEADLINE_REASON = "model_deadline_exceeded";
-const maximumDeadlineMs = 600000;
 interface GenerationFailure {
   path: string;
   message: string;
-  reasonCode?: string;
-  modelCallId?: string;
 }
 export interface CodeGenerationInput {
   projectId: string;
@@ -31,8 +20,6 @@ export interface CodeGenerationInput {
   revisionIds?: string[];
   budget?: {
     modelCalls?: number;
-    /** Deadline of each revision's model call, repairs included; default {@link CODE_GENERATION_DEADLINE_MS}. */
-    deadlineMs?: number;
   };
   /** Model provider; absent: the first allowed provider. Validated before any model call. */
   provider?: string;
@@ -76,12 +63,6 @@ export class CodeGenerationService {
         "INVALID_ARGUMENT",
         "Code generation selection exceeds the model-call budget",
       );
-    const deadlineMs = input.budget?.deadlineMs ?? CODE_GENERATION_DEADLINE_MS;
-    if (!Number.isSafeInteger(deadlineMs) || deadlineMs < 1 || deadlineMs > maximumDeadlineMs)
-      throw new ContractError(
-        "INVALID_ARGUMENT",
-        `Code generation deadlineMs must be an integer from 1 to ${maximumDeadlineMs}`,
-      );
     // An explicit model is refused here, before any revision is read for a paid call.
     const models = new ModelService(this.ctx, this.config);
     const choice = models.select(
@@ -118,7 +99,6 @@ export class CodeGenerationService {
             data: { plan: revision.plan, format: "playwright" },
             dataClasses: ["plans"],
             instructions: generationInstructions,
-            deadlineMs,
             ...(choice.providerId !== undefined && choice.explicit
               ? { provider: choice.providerId }
               : {}),
@@ -138,37 +118,16 @@ export class CodeGenerationService {
             ),
           );
         } catch (error) {
-          if (!(error instanceof ContractError)) throw error;
-          const callId = error.details.modelCallId;
-          const known = typeof callId === "string" ? callId : undefined;
-          // A deadline also names the recorded request it cut, which may have been billed.
-          const lastCallId = error.details.lastModelCallId;
-          const last = typeof lastCallId === "string" ? lastCallId : known;
-          // The revision's own deadline is a per-revision result, but a caller cancellation (the
-          // gateway reports it as another code) or an aborted signal stays fatal.
-          if (error.code === "UPSTREAM_TIMEOUT" && !signal?.aborted) {
-            for (const recorded of [known, last])
-              if (recorded && !modelCallIds.includes(recorded)) modelCallIds.push(recorded);
-            const refusal = (error.details.validationFailure as { message?: unknown } | undefined)
-              ?.message;
-            const reason =
-              typeof refusal === "string" ? `; the last response was refused: ${refusal}` : "";
-            validationErrors.push({
-              path: id,
-              message:
-                `Model call reached its ${deadlineMs} ms deadline, repairs included${reason}`.slice(
-                  0,
-                  8000,
-                ),
-              reasonCode: CODE_GENERATION_DEADLINE_REASON,
-              ...(last ? { modelCallId: last } : {}),
-            });
-            continue;
-          }
           // Only a candidate the checks refused after every repair is a per-revision result.
-          if (!refusalCodes.includes(error.code) || error.details.candidateStatus !== "invalid")
+          if (
+            !(error instanceof ContractError) ||
+            !refusalCodes.includes(error.code) ||
+            error.details.candidateStatus !== "invalid"
+          )
             throw error;
-          if (known && !modelCallIds.includes(known)) modelCallIds.push(known);
+          const callId = error.details.modelCallId;
+          if (typeof callId === "string" && !modelCallIds.includes(callId))
+            modelCallIds.push(callId);
           validationErrors.push({ path: id, message: error.message });
         }
       }
@@ -176,6 +135,7 @@ export class CodeGenerationService {
       // A fatal failure after paid calls must not hide what was already created.
       if (!(error instanceof ContractError) || (!candidates.length && !modelCallIds.length))
         throw error;
+      // A cancelled request is recorded and may be billed, so it is listed beside the others.
       for (const callId of [error.details.modelCallId, error.details.lastModelCallId])
         if (typeof callId === "string" && !modelCallIds.includes(callId)) modelCallIds.push(callId);
       throw new ContractError(
@@ -191,20 +151,7 @@ export class CodeGenerationService {
         error.issues,
       );
     }
-    if (!candidates.length) {
-      // Every revision reaching its deadline is a timeout of the call, not a refusal of the code.
-      if (validationErrors.every((entry) => entry.reasonCode === CODE_GENERATION_DEADLINE_REASON))
-        throw new ContractError(
-          "UPSTREAM_TIMEOUT",
-          "No generated candidate finished before the model deadline",
-          {
-            reasonCode: CODE_GENERATION_DEADLINE_REASON,
-            requested: revisions.length,
-            deadlineMs,
-            validationErrors,
-            modelCallIds,
-          },
-        );
+    if (!candidates.length)
       throw new ContractError(
         "INVALID_ARGUMENT",
         "No generated candidate passed the import checks",
@@ -215,7 +162,6 @@ export class CodeGenerationService {
           modelCallIds,
         },
       );
-    }
     return { requested: revisions.length, candidates, validationErrors };
   }
 }

@@ -35,6 +35,7 @@ import {
   type HealingReplacement,
   healingReplacements,
 } from "./healing-patch.js";
+import { AUXILIARY_LEASE_MS, keepLeaseAlive } from "./job-lease.js";
 import type { ModelService } from "./model.js";
 
 export interface HealingInput {
@@ -42,7 +43,6 @@ export interface HealingInput {
   provider?: string;
   /** Model id of that provider; its first structured-output model when absent. */
   model?: string;
-  budget?: { deadlineMs?: number };
 }
 type Stored = HealingProposal & EntityDocument;
 type AIHealingOutput =
@@ -449,7 +449,7 @@ export class HealingService {
       queue: "healing",
       jobId: job.jobId,
       owner: `healing:${randomUUID()}`,
-      leaseMs: Math.max(240000, (input.budget?.deadlineMs ?? 180000) + 60000),
+      leaseMs: AUXILIARY_LEASE_MS,
     });
     if (!fence)
       throw new ContractError("PRECONDITION_FAILED", "Healing request is already running", {
@@ -473,6 +473,8 @@ export class HealingService {
     let modelCallId: string | null = null;
     let evidenceHashes: string[] = [];
     const callStartedAt = new Date().toISOString();
+    // The model call has no deadline; the lease is renewed for as long as it runs.
+    const lease = keepLeaseAlive(jobs, fence);
     try {
       const refs = facts.facts.flatMap((fact) => fact.evidenceRefs);
       const evidence: { evidenceId: string; ref: (typeof refs)[number] }[] = [];
@@ -566,7 +568,6 @@ export class HealingService {
         ...(selection.explicit
           ? { provider: selection.providerId!, model: selection.modelId! }
           : {}),
-        ...input.budget,
       });
       modelCallId = result.modelCallId;
       const output = validate<AIHealingOutput>("AIHealingOutput", result.output);
@@ -699,8 +700,10 @@ export class HealingService {
       const detail =
         phase === "semantic"
           ? "semantic_invalid"
-          : error instanceof ContractError && error.code === "UPSTREAM_TIMEOUT"
-            ? "deadline"
+          : phase === "model" &&
+              error instanceof ContractError &&
+              error.code === "PRECONDITION_FAILED"
+            ? "cancelled"
             : error instanceof ContractError && error.code === "INVALID_ARGUMENT"
               ? "schema_invalid"
               : phase === "model"
@@ -765,6 +768,8 @@ export class HealingService {
             : {}),
         },
       );
+    } finally {
+      lease.stop();
     }
   }
   private checkSecrets(

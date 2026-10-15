@@ -193,7 +193,6 @@ export class ProposalsService {
     model?: string;
     signal?: AbortSignal;
     idempotencyKey?: string;
-    budget?: { deadlineMs?: number };
     /**
      * After the repairs, store the proposals that pass and list the refused ones in
      * `testmaster:refusedProposals`; absent, one refused proposal refuses the whole batch.
@@ -201,8 +200,6 @@ export class ProposalsService {
     partialGeneration?: boolean;
   }): Promise<StoredBatch> {
     this.ctx.authorize("W", input.projectId);
-    if (input.budget && Object.keys(input.budget).some((key) => key !== "deadlineMs"))
-      throw new ContractError("INVALID_ARGUMENT", "Unsupported generation budget key");
     if (input.idempotencyKey) {
       const { signal: _signal, idempotencyKey: _key, ...body } = input;
       const actorScope = `${this.ctx.principalId}:${input.projectId}`;
@@ -382,7 +379,6 @@ export class ProposalsService {
         instructions: `Return exactly one independent executable proposal per supplied requirement that an HTTP or browser plan can observe, not an intent. ${declineInstruction} ${typeInstruction} Copy requirement IDs exactly and cite only the evidenceId values supplied with that requirement. Use deterministic business assertions deriving expected values only from approved requirements. Include an assertion that would fail if the required feature were broken; body/html visibility and broad all-status checks are trivial and rejected, and an HTTP 200 status check alone is trivial too: add a body, schema or header assertion. HTTP paths are relative pathSegments of literal values, written as the source document's paths (a declared server path prefix such as /v1 is added to the request automatically). A jsonSchema assertion's pointer must be a non-empty JSON pointer into the cited source document that reaches the response schema, for example /paths/~1items/get/responses/200/content/application~1json/schema; an empty pointer is rejected. When a secrets entry fits the target API, send its credential as a header whose value is {"secretRef": <entry id>} (for example authorization) on every request unless the source explicitly declares the operation public (security: []): specifications often omit security, and a request without a needed credential only proves the 401. Use only secretRef ids from the supplied secrets and never invent secret values. Frontend locators use testId/role/label. Do not invent absolute destinations or secret values.`,
         sourceRevisionIds: [...new Set(catalog.refs.map((ref) => ref.sourceRevisionId))],
         dataClasses: ["requirements"],
-        ...input.budget,
         ...(input.provider ? { provider: input.provider } : {}),
         ...(input.model ? { model: input.model } : {}),
         ...(input.signal ? { signal: input.signal } : {}),

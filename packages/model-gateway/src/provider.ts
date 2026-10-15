@@ -54,6 +54,10 @@ export class OpenAICompatibleProvider {
           ...(body === undefined ? {} : { "content-type": "application/json" }),
         },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        // undici cuts a response after 300 s without headers or between body chunks by default;
+        // a long generation must run to completion, so only the caller's signal ends it.
+        headersTimeout: 0,
+        bodyTimeout: 0,
         signal,
       });
       receivedHeaders = true;

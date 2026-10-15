@@ -360,9 +360,10 @@ describe("policy-controlled model requests", () => {
     expect(cached.counts().completions).toBe(2);
   });
 
-  it("reports the last validation failure when the deadline hits during a repair", async () => {
+  it("reports the last validation failure and the cut request when the caller cancels a repair", async () => {
+    const controller = new AbortController();
     const f = await fixture((_req, res, _body, n) => {
-      // The first response is invalid; the repair request is never answered.
+      // The first response is invalid; the caller cancels while the repair is unanswered.
       if (n === 1)
         res.end(
           JSON.stringify({
@@ -370,23 +371,31 @@ describe("policy-controlled model requests", () => {
             choices: [{ message: { content: '{"amount":"bad"}' }, finish_reason: "stop" }],
           }),
         );
+      else controller.abort();
     });
-    await expect(f.gateway.complete({ ...testRequest, deadlineMs: 500 })).rejects.toMatchObject({
-      code: "UPSTREAM_TIMEOUT",
+    const error = await f.gateway
+      .complete({ ...testRequest, signal: controller.signal })
+      .catch((caught: unknown) => caught);
+    expect(error).toMatchObject({
+      code: "PRECONDITION_FAILED",
+      message: "Model request cancelled",
       details: {
         candidateStatus: "invalid",
         invalidAttempts: 1,
         validationFailure: { code: "INVALID_ARGUMENT" },
+        lastModelCallId: expect.stringMatching(/^mdl_/u),
       },
     });
     expect(f.records.map((record) => record.outcome)).toEqual(["invalid", "cancelled"]);
-    // Control: a deadline with no invalid attempt carries no validation summary.
-    const silent = await fixture(() => {});
-    const timeout = await silent.gateway
-      .complete({ ...testRequest, deadlineMs: 150 })
-      .catch((error: unknown) => error);
-    expect(timeout).toMatchObject({ code: "UPSTREAM_TIMEOUT", details: {} });
-    expect(timeout).not.toHaveProperty("details.validationFailure");
+    expect((error as ContractError).details.lastModelCallId).toBe(f.records[1]?.id);
+    // Control: a cancellation with no invalid attempt carries no validation summary.
+    const silentController = new AbortController();
+    const silent = await fixture(() => silentController.abort());
+    const cancelled = await silent.gateway
+      .complete({ ...testRequest, signal: silentController.signal })
+      .catch((caught: unknown) => caught);
+    expect(cancelled).toMatchObject({ code: "PRECONDITION_FAILED" });
+    expect(cancelled).not.toHaveProperty("details.validationFailure");
   });
 
   it("bounds and scrubs the persisted validation summary without model output values", async () => {
@@ -599,19 +608,14 @@ describe("policy-controlled model requests", () => {
     expect(malformed.counts().completions).toBe(1);
   });
 
-  it("stops timed-out and cancelled requests without retries and keeps unknown charges", async () => {
-    const f = await fixture(() => {});
-    await expect(f.gateway.complete({ ...testRequest, deadlineMs: 150 })).rejects.toMatchObject({
-      code: "UPSTREAM_TIMEOUT",
-    });
-    expect(f.counts().completions).toBe(1);
-    expect(f.records[0]?.outcome).toBe("cancelled");
+  it("stops a cancelled request without retries and keeps its unknown charge", async () => {
     const controller = new AbortController();
     const cancelled = await fixture(() => controller.abort());
     await expect(
       cancelled.gateway.complete({ ...testRequest, signal: controller.signal }),
     ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
     expect(cancelled.counts().completions).toBe(1);
+    expect(cancelled.records.map((record) => record.outcome)).toEqual(["cancelled"]);
     expect(cancelled.ledger.settlements.every((entry) => entry.cost === "unknown")).toBe(true);
   });
 

@@ -4,6 +4,7 @@ import type {
   OnboardingStateInput,
   PrerequisiteInput,
 } from "@testmaster/contracts";
+import { holdConnectionOpen } from "./authoring.js";
 import type { RouteContext, RouteModule } from "./types.js";
 
 const id = (context: RouteContext): string => context.params.id as string;
@@ -34,6 +35,7 @@ export const onboardingRoutes: RouteModule = {
     "GET /projects/{id}/requirements/review": (context) =>
       context.service.requirements.review(id(context)),
     "POST /projects/{id}/requirements/normalizations": async (context) => {
+      holdConnectionOpen(context.reply);
       const input = context.body as NormalizationInput;
       await context.service.requirements.normalize({ projectId: id(context), ...input });
       return context.service.requirements.review(id(context));

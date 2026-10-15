@@ -44,6 +44,21 @@ function resultFromError(error: unknown, signal: AbortSignal): RunnerResult {
     return { outcome: "cancelled", reasonCode: "user_cancelled" };
   return { outcome: "inconclusive", reasonCode: "insufficient_evidence" };
 }
+/**
+ * Arms the attempt deadline on the runtime's attempt clock, which stops while the host resolves
+ * a model request: the attempt aborts after `timeoutMs` of browser, HTTP or terminal work, and
+ * the process exits unconditionally ten seconds after that.
+ */
+export function armAttemptDeadline(runtime: Runtime, timeoutMs = 300000): () => void {
+  const stopHard = runtime.clock.deadline(timeoutMs + 10000, () => process.exit(1));
+  const stopSoft = runtime.clock.deadline(timeoutMs, () =>
+    runtime.protocol.controller.abort(new Error("attempt_timeout")),
+  );
+  return () => {
+    stopSoft();
+    stopHard();
+  };
+}
 export async function runHarness(): Promise<RunnerResult> {
   const input = await readInput();
   const forwarder = await startForwarder(
@@ -61,18 +76,12 @@ export async function runHarness(): Promise<RunnerResult> {
     process.env.TESTMASTER_PROTOCOL_SOCKET ?? "/run/testmaster/sockets/protocol.sock",
   );
   const runtime = new Runtime(input, protocol);
-  const hardDeadline = setTimeout(() => process.exit(1), (input.timeoutMs ?? 300000) + 10000);
-  hardDeadline.unref();
+  const disarmDeadline = armAttemptDeadline(runtime, input.timeoutMs);
   protocol.controller.signal.addEventListener(
     "abort",
     () => setTimeout(() => process.exit(1), 10000).unref(),
     { once: true },
   );
-  const timeout = setTimeout(
-    () => runtime.protocol.controller.abort(new Error("attempt_timeout")),
-    input.timeoutMs ?? 300000,
-  );
-  timeout.unref();
   let result: RunnerResult;
   try {
     if (input.imported) {
@@ -121,8 +130,7 @@ export async function runHarness(): Promise<RunnerResult> {
     }
     return result;
   } finally {
-    clearTimeout(timeout);
-    clearTimeout(hardDeadline);
+    disarmDeadline();
     await protocol.close().catch(() => {});
     await forwarder.close().catch(() => {});
   }

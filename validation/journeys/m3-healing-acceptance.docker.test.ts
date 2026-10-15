@@ -621,7 +621,11 @@ it("OPS-014 deterministic analysis timeout preserves terminal execution and sour
       let raw = "";
       for await (const chunk of request) raw += String(chunk);
       requests++;
-      if (hold) return;
+      // A model call has no deadline; the failing reading is a provider that drops the connection.
+      if (hold) {
+        request.socket.destroy();
+        return;
+      }
       const data = untrustedData(raw);
       const measurements = data.measurements as { kind: string; evidenceId: string }[];
       const source = measurements.find((item) => item.kind === "source");
@@ -734,27 +738,13 @@ it("OPS-014 deterministic analysis timeout preserves terminal execution and sour
       expect(app.database.inTransaction).toBe(false);
       app.close();
       app = await Application.open({ cwd: session.cwd, home: session.home, env: session.env });
-      const partial = await session.command([
-        "run",
-        "analyze",
-        run.id,
-        "--model",
-        "--deadline-ms",
-        "100",
-      ]);
-      // A reading cut by its deadline abstains: the stored analysis is the rules one plus the limit.
+      const partial = await session.command(["run", "analyze", run.id, "--model"]);
+      // A failed reading abstains: the stored analysis is the rules one plus the limitation.
       expect(partial.source).toBe("rules");
       expect(partial.limitations).not.toHaveLength(0);
       const afterFirst = requests;
       expect(afterFirst).toBeGreaterThan(0);
-      const repeated = await session.command([
-        "run",
-        "analyze",
-        run.id,
-        "--model",
-        "--deadline-ms",
-        "100",
-      ]);
+      const repeated = await session.command(["run", "analyze", run.id, "--model"]);
       expect(repeated.id).toBe(partial.id);
       expect(requests).toBe(afterFirst);
       expect(failureRows(app, run.id)).toEqual(rows);

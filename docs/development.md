@@ -450,8 +450,8 @@ conflict. J02/J03 live journeys record their exercised evidence in `validation/r
 M3–M6 groups report their milestone rather than returning successful placeholders.
 
 M3 diagnosis is separate from terminal execution: `run analyze RUN` retains an immutable
-factual predecessor; `run analyze RUN --model --deadline-ms N` requests optional enrichment.
-A timeout, unavailable capture, or rejected enrichment returns a partial diagnosis and cannot
+factual predecessor; `run analyze RUN --model` requests optional enrichment, which has no deadline.
+An unavailable capture, an unavailable or cancelled model, or a rejected enrichment returns a partial diagnosis and cannot
 rewrite the Run outcome, gate, Attempts, or artifacts. Identical requests reuse their retained
 receipt rather than issuing another model call; unknown usage keeps its conservative charge.
 `--provider ID --model-id ID` (REST `provider`, `modelId`) choose the model of the reading and
@@ -478,11 +478,10 @@ dirty identity frozen at Run admission. Only manifest-verified summary paths/sym
 no working-tree source bytes or private absolute paths are transmitted. `fixTarget` binds the exact
 CodeSnapshot/path/hash as a proposed inspection location, not source causality or edit permission.
 Unbound Runs disclose the missing source binding. The controlled-provider OPS-014 Docker journey
-tests timeout/idempotency/accounting and positive/negative source bindings; it is deterministic
+tests an unavailable model/idempotency/accounting and positive/negative source bindings; it is deterministic
 acceptance, not evidence of live-model diagnostic quality.
 
-M3 healing is an explicit separate workflow: `heal propose RUN [--provider ID] [--model ID]
-[--deadline-ms N]`,
+M3 healing is an explicit separate workflow: `heal propose RUN [--provider ID] [--model ID]`,
 `heal get PROPOSAL`, `heal approve PROPOSAL --expected-version N [--wait]`, and
 `heal reject PROPOSAL --reason TEXT`. Proposals require a terminal failed declarative Run,
 an allowed structured-output provider. Without `--provider`/`--model`
@@ -783,7 +782,8 @@ uses the provider default. Invalid values are rejected before network access. Th
 effort participates in the model configuration hash, prompt hash and gateway cache key and
 is preserved during repairs. Provider rejection remains an error, never a silent fallback.
 TestMaster does not send max_tokens, max_completion_tokens, temperature, top_p, seed,
-penalties or enable_thinking. Proposal budgets accept only deadlineMs. Provider allowlist, input
+penalties or enable_thinking. Proposal budgets accept no deadline: a model call has no deadline
+and only the caller's cancellation ends it. Provider allowlist, input
 admission, cancellation, response validation and accounting
 remain local. Output capability metadata is used only for conservative budget reservations,
 falling back to declared context capacity or the admitted input allowance; no token limit is
@@ -808,7 +808,7 @@ Model refusals carry `details.reasonCode` (no milestone label): `provider_unavai
 (with the requested provider/model and the available model ids). There is never a silent
 fallback to another model. A response that fails local validation is persisted on its
 `model_calls` record, returned by the usage report and repeated in the final error and in a
-deadline/cancellation error that follows an invalid attempt as
+cancellation error that follows an invalid attempt as
 `validationFailure {code, message, issues, omittedIssues}`: at most 5 issues of validator path,
 rule and message, clipped (message 300, path 200, rule 60, issue message 200 characters) and
 scrubbed with the request's secrets. Model output text is never included.
@@ -825,8 +825,8 @@ validated on the paid path). It throws a `ContractError` whose `issues` become t
 (at most 20) and a bounded `validationFailure` on the invalid `model_calls` record; a non-`ContractError`
 is a defect, recorded `failed` and never repaired. After two repairs the gateway rethrows the check's own
 error (message, code, details) plus `repairs`, `candidateStatus`, `invalidAttempts`, `validationFailure`
-and `modelCallId` (the last invalid call). `deadlineMs` is one deadline for the whole call: the abort
-signal is created once, so repairs and checks share it (a slow check shortens the repair budget);
+and `modelCallId` (the last invalid call). There is no deadline for the whole call: the abort
+signal is created once from the caller's cancellation, so repairs and checks share it;
 each attempt reserves budget separately. `generate_plan` runs every per-proposal check in
 that hook (evidence, requirement refs, plan validity, offered secrets, schema pointers, HTTP
 status-only plans, type/runner, integration workflow) and collects all refused proposals, not the
@@ -847,15 +847,21 @@ refused after the repairs is listed in `validationErrors`; when every candidate 
 fails `INVALID_ARGUMENT` (`reasonCode generated_code_refused`, `requested`, `validationErrors`,
 `modelCallIds`). The receipt carries `requested`.
 
-Each revision's model call (first attempt and every repair) shares one deadline: `budget.deadlineMs`,
-default `CODE_GENERATION_DEADLINE_MS` (300000; `ModelService` keeps 180000 for the other purposes,
-and 1..600000 is accepted). Generated code is long output and a refused first answer is followed by
-repairs, so 180 s cut calls that were still progressing and lost the whole batch. A revision whose
-call ends `UPSTREAM_TIMEOUT` while the caller's signal is not aborted is a per-revision result
-(`validationErrors` entry with `reasonCode model_deadline_exceeded`) and the loop continues; all
-revisions timing out is `UPSTREAM_TIMEOUT`, any other failure with no candidate is
-`generated_code_refused`. A fatal error after calls were made carries `candidateRevisionIds`,
-`modelCallIds`, `validationErrors` and `requested`, so created candidates are never orphaned.
+A model call has no deadline anywhere: code generation, like every other purpose, runs until the
+provider answers, and only the caller's cancellation (an aborted signal) ends it. Generated code
+is long output and a refused first answer is followed by repairs, so a timer used to cut calls
+that were still progressing and lose the whole batch. A caller cancellation is never turned into a
+per-revision result; a revision the importer still refuses after the repairs is a `validationErrors`
+entry and the loop continues, and any failure with no candidate is `generated_code_refused`. A fatal
+error after calls were made carries `candidateRevisionIds`, `modelCallIds`, `validationErrors` and
+`requested`, so created candidates are never orphaned.
+
+The REST server's socket idle timeout (`connectionTimeout`, 30 s) would destroy the connection of a
+handler that has written nothing yet, so the routes that run a model call switch it off for their
+own socket (`holdConnectionOpen`, `apps/server/src/routes/authoring.ts`): proposal batches, proposal
+and test refinements, requirement normalizations, run analysis, healing proposals and `POST /mcp`.
+Every other route keeps the timeout, and `abortOnDisconnect` still lets a client that closes its
+connection cancel the call. `ServerOptions.connectionTimeoutMs` shortens the timeout in tests.
 
 Round 4 (`116f682e197727e867f2b4937caacbbb0be37fc8`) observed all eight planned trials:
 all full-source normalizations failed semantic grounding validation; no generated proposals,

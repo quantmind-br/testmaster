@@ -11,7 +11,7 @@ import {
   SourceSchemaError,
   validateAgainstSchema,
 } from "@testmaster/contracts";
-import { uuidV7IdGenerator } from "@testmaster/domain";
+import { type Stopwatch, uuidV7IdGenerator } from "@testmaster/domain";
 import { type Dispatcher, ProxyAgent, request } from "undici";
 import { type RunnerResult, type Runtime, RuntimeError, storageStateRefusal } from "./runtime.js";
 
@@ -545,11 +545,12 @@ export class HttpEngine {
   private readonly resources: OwnedResource[] = [];
   private dispatcher: Dispatcher | undefined;
   private readonly ownsDispatcher: boolean;
-  private readonly startedAt = performance.now();
+  private readonly attemptTime: Stopwatch;
   constructor(
     readonly runtime: Runtime,
     options: HttpEngineOptions = {},
   ) {
+    this.attemptTime = runtime.clock.stopwatch();
     this.dispatcher = options.dispatcher;
     this.ownsDispatcher = options.dispatcher === undefined;
   }
@@ -697,7 +698,7 @@ export class HttpEngine {
   ): Promise<HttpResponse> {
     const runtime = this.runtime;
     const remaining = track
-      ? (runtime.input.timeoutMs ?? 300000) - (performance.now() - this.startedAt)
+      ? (runtime.input.timeoutMs ?? 300000) - this.attemptTime.elapsed()
       : timeoutMs;
     if (remaining <= 0)
       throw new RuntimeError("execution_deadline", "Attempt deadline expired", "inconclusive");

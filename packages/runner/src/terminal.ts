@@ -17,6 +17,7 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve, sep } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import type { Expectation, PlanStep } from "@testmaster/contracts";
+import type { Stopwatch } from "@testmaster/domain";
 import { jsonPointerValue } from "./http.js";
 import { type RunnerResult, type Runtime, RuntimeError } from "./runtime.js";
 import {
@@ -123,7 +124,7 @@ function excerpt(value: unknown, limit = 1500): string {
 }
 
 class TerminalEngine {
-  private readonly startedAt = performance.now();
+  private readonly attemptTime: Stopwatch;
   private readonly mark = randomBytes(12).toString("hex");
   private readonly owned = new Set<number>();
   private readonly records = new Map<string, ProcessRecord>();
@@ -137,6 +138,7 @@ class TerminalEngine {
     private readonly runtime: Runtime,
     options: TerminalOptions,
   ) {
+    this.attemptTime = runtime.clock.stopwatch();
     this.sweepMode = options.sweep ?? (existsSync("/.dockerenv") ? "container" : "marked");
     runtime.signal.addEventListener("abort", () => void this.killEverything(), { once: true });
   }
@@ -154,8 +156,7 @@ class TerminalEngine {
 
   // ---- budgets and scope -------------------------------------------------------------------
   private budget(requested: number): { ms: number; attemptLimited: boolean } {
-    const remaining =
-      (this.runtime.input.timeoutMs ?? 300000) - (performance.now() - this.startedAt);
+    const remaining = (this.runtime.input.timeoutMs ?? 300000) - this.attemptTime.elapsed();
     if (remaining <= 0)
       throw new RuntimeError("execution_deadline", "Attempt deadline expired", "inconclusive");
     return {

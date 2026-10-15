@@ -103,17 +103,9 @@ export class ModelGateway {
 
   async complete<T = unknown>(input: ModelRequest): Promise<ModelResult<T>> {
     const started = performance.now();
-    if (
-      !Number.isSafeInteger(input.deadlineMs) ||
-      input.deadlineMs <= 0 ||
-      input.deadlineMs > 2_147_483_647
-    ) {
-      throw new ContractError("INVALID_ARGUMENT", "A positive deadline is required");
-    }
-    const signal = AbortSignal.any([
-      AbortSignal.timeout(input.deadlineMs),
-      ...(input.signal ? [input.signal] : []),
-    ]);
+    // No deadline: a model request runs until the provider answers. Only the caller's own
+    // cancellation stops it, because a cut request loses the tokens it already generated.
+    const signal = input.signal ?? new AbortController().signal;
     const provider = this.providers[input.provider];
     if (!provider)
       throw new ContractError("CAPABILITY_UNAVAILABLE", "Provider is unavailable", {
@@ -233,8 +225,8 @@ export class ModelGateway {
     const transport = new OpenAICompatibleProvider(provider.baseUrl, this.options.maxResponseBytes);
     let inventoryChecked = false;
     const invocationId = uuidV7IdGenerator.next("mdl");
-    // The last invalid attempt, so a later deadline or cancellation still reports why the
-    // candidate was never accepted.
+    // The last invalid attempt, so a later cancellation still reports why the candidate was never
+    // accepted.
     let lastInvalid: ValidationFailureSummary | undefined;
     // The check's own error when the last invalid attempt failed the semantic check, not the schema.
     let lastCheckRefusal: ContractError | undefined;
@@ -302,10 +294,7 @@ export class ModelGateway {
           }
         } catch (error) {
           if (signal.aborted)
-            throw new ContractError(
-              input.signal?.aborted ? "PRECONDITION_FAILED" : "UPSTREAM_TIMEOUT",
-              "Model inventory request cancelled or timed out",
-            );
+            throw new ContractError("PRECONDITION_FAILED", "Model inventory request cancelled");
           throw error;
         }
         inventoryChecked = true;
@@ -342,7 +331,7 @@ export class ModelGateway {
             "cancelled_before_send",
           );
           throw new ContractError(
-            input.signal?.aborted ? "PRECONDITION_FAILED" : "UPSTREAM_TIMEOUT",
+            "PRECONDITION_FAILED",
             "Model request cancelled before send",
             invalidDetails(),
           );
@@ -395,8 +384,8 @@ export class ModelGateway {
             continue;
           if (signal.aborted)
             throw new ContractError(
-              input.signal?.aborted ? "PRECONDITION_FAILED" : "UPSTREAM_TIMEOUT",
-              input.signal?.aborted ? "Model request cancelled" : "Model request deadline exceeded",
+              "PRECONDITION_FAILED",
+              "Model request cancelled",
               // The cancelled request is recorded and may be billed: name it beside any invalid one.
               { ...invalidDetails(), lastModelCallId: failed.modelCallId },
             );
@@ -631,11 +620,7 @@ export class ModelGateway {
     details: Record<string, unknown> = {},
   ): void {
     if (signal.aborted)
-      throw new ContractError(
-        input.signal?.aborted ? "PRECONDITION_FAILED" : "UPSTREAM_TIMEOUT",
-        "Model request cancelled or timed out",
-        details,
-      );
+      throw new ContractError("PRECONDITION_FAILED", "Model request cancelled", details);
     const endpoint = new URL(provider.baseUrl);
     if (
       provider.kind !== "openai-compatible" ||
@@ -659,11 +644,7 @@ export class ModelGateway {
         dataClass: forbidden,
       });
     if (signal.aborted)
-      throw new ContractError(
-        input.signal?.aborted ? "PRECONDITION_FAILED" : "UPSTREAM_TIMEOUT",
-        "Model request cancelled or timed out",
-        details,
-      );
+      throw new ContractError("PRECONDITION_FAILED", "Model request cancelled", details);
   }
 
   private async record(

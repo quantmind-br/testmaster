@@ -11,7 +11,7 @@ import {
   type SupervisorEvent,
   validate,
 } from "@testmaster/contracts";
-import { scrubEvidenceText } from "@testmaster/domain";
+import { AttemptClock, scrubEvidenceText } from "@testmaster/domain";
 import type { ArtifactWriter, EvidenceStore } from "@testmaster/evidence";
 import {
   type CommandResult,
@@ -154,6 +154,8 @@ export class AttemptExecutor {
     let connection = false;
     let sequence = 0;
     const controller = new AbortController();
+    // Counts the attempt deadline; stopped while a model answer for the runner is pending.
+    const clock = new AttemptClock();
     let queue = Promise.resolve();
     const send = async (type: SupervisorEvent["type"], payload: unknown) => {
       const event = validate<SupervisorEvent>("SupervisorEvent", {
@@ -226,8 +228,10 @@ export class AttemptExecutor {
         await send("secret.value", { ...event.payload, value });
       } else if (event.type === "agent.request") {
         if (!input.resolveAction) throw new Error("agent_resolution_not_authorized");
-        const action = await input.resolveAction(event.payload.stepId, event.payload.observation);
-        await send("agent.action", { stepId: event.payload.stepId, action });
+        const { resolveAction } = input;
+        const { stepId, observation } = event.payload;
+        const action = await clock.during(() => resolveAction(stepId, observation));
+        await send("agent.action", { stepId, action });
       } else if (event.type === "artifact.begin") {
         if (writers.has(event.payload.artifactId)) throw new Error("duplicate_artifact");
         try {
@@ -390,6 +394,7 @@ export class AttemptExecutor {
               ? { command: input.imageCommand }
               : {}),
           attemptTimeoutMs: input.attemptTimeoutMs ?? 300000,
+          clock,
           cancellationGraceMs: input.cancellationGraceMs ?? 10000,
         },
         controller.signal,

@@ -73,6 +73,10 @@ export interface M3Registration {
   budget: {
     maxTokens: number;
     maxWallTimeMs: number;
+    /**
+     * Frozen preregistrations carry this field, so it stays parseable and checked. It no longer
+     * bounds a model call: a model request has no deadline and only cancellation stops it.
+     */
     commandDeadlineMs: number;
     maxLogicalCommands: number;
     maxTransportAttempts: number;
@@ -1042,9 +1046,7 @@ export async function policyProbesM3(root: string, path: string, outDir: string)
         answer = controlledHealingOutput(base, fixture.authoredCandidate(item, base));
         await app.analysis.analyze(failed.id, { model: false });
         try {
-          e.proposal = await app.healing.propose(failed.id, {
-            budget: { deadlineMs: r.budget.commandDeadlineMs },
-          });
+          e.proposal = await app.healing.propose(failed.id, {});
         } catch (error) {
           const refusal = healingRefusal(error, []);
           e.refusal = refusal.record;
@@ -2138,7 +2140,6 @@ async function executeRound(
             projectId: setupResult.projectId,
             type: "integration",
             requirementIds: [requirement.id],
-            budget: { deadlineMs: Math.min(r.budget.commandDeadlineMs, remaining()) },
           }),
         );
         const proposals = app.proposals
@@ -2280,12 +2281,7 @@ async function executeRound(
       phase = "model-diagnosis";
       let diagnosis = rules;
       try {
-        diagnosis = await paid(() =>
-          app!.analysis.analyze(transformed.id, {
-            model: true,
-            budget: { deadlineMs: Math.min(r.budget.commandDeadlineMs, remaining()) },
-          }),
-        );
+        diagnosis = await paid(() => app!.analysis.analyze(transformed.id, { model: true }));
         ledger.stages.modelDiagnosis =
           diagnosis.source === "model" && diagnosis.modelCallId !== null;
         if (diagnosis.source === "model" && diagnosis.modelCallId === null)
@@ -2313,11 +2309,7 @@ async function executeRound(
       ledger.healing.offered = true;
       let proposal: HealingProposal | null = null;
       try {
-        proposal = await paid(() =>
-          app!.healing.propose(transformed.id, {
-            budget: { deadlineMs: Math.min(r.budget.commandDeadlineMs, remaining()) },
-          }),
-        );
+        proposal = await paid(() => app!.healing.propose(transformed.id, {}));
       } catch (error) {
         if (!(error instanceof Error) || !("code" in error) || error.code !== "PRECONDITION_FAILED")
           throw error;

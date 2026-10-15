@@ -177,7 +177,7 @@ const supplemental = {
     inputsFingerprint: Type.Optional(P.ContentDigest),
   }),
   RequirementsInput: P.Obj({ requirements: Type.Array(Entities.entities.Requirement) }),
-  GenerationInput: P.Obj({ inputRefs: Type.Array(P.EvidenceRef), scope: names, budget: P.Json }),
+  GenerationInput: P.Obj({ inputRefs: Type.Array(P.EvidenceRef), scope: names }),
   ProposalDecisionInput: P.Obj({
     proposalIds: Type.Array(P.id("pro")),
     expectedVersion: P.Version,
@@ -289,9 +289,6 @@ const supplemental = {
     modelId: Type.Optional(P.Name),
     /** Authorized code discovery whose snapshot grounds optional source fix targets. */
     discoveryId: Type.Optional(P.id("dsc")),
-    budget: Type.Optional(
-      P.Obj({ deadlineMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 600000 })) }),
-    ),
   }),
   AIAnalysisOutput: P.Obj({
     failureKind: P.FailureKind,
@@ -323,9 +320,6 @@ const supplemental = {
     /** Explicit provider/model for the healing call; the first allowed structured model when absent. */
     provider: Type.Optional(P.Name),
     model: Type.Optional(P.Name),
-    budget: Type.Optional(
-      P.Obj({ deadlineMs: Type.Optional(Type.Integer({ minimum: 1, maximum: 600000 })) }),
-    ),
   }),
   HealingRejectInput: P.Obj({ reason: Type.String({ minLength: 1, maxLength: 8000 }) }),
   HealingPatch,
@@ -648,19 +642,8 @@ const supplemental = {
     /** Revisions the call tried to generate code for; `candidates` plus failures show partial success. */
     requested: P.Nonnegative,
     candidates: Type.Array(P.id("rev")),
-    /**
-     * One entry per revision without a candidate. A refused candidate carries path and message; a
-     * revision whose model call reached its deadline also carries `reasonCode` and, when known, the
-     * recorded `modelCallId`.
-     */
-    validationErrors: Type.Array(
-      P.Obj({
-        path: P.Name,
-        message: P.Description,
-        reasonCode: Type.Optional(P.Name),
-        modelCallId: Type.Optional(P.id("mdl")),
-      }),
-    ),
+    /** One entry per revision whose candidate the checks refused after every repair. */
+    validationErrors: Type.Array(P.Obj({ path: P.Name, message: P.Description })),
   }),
   EvidenceSummary: P.Obj({
     manifest: Ops.ArtifactManifest,

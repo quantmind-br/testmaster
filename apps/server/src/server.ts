@@ -29,6 +29,7 @@ import fastify, {
   type HTTPMethods,
 } from "fastify";
 import { isPortalRequest, loadPortal, type PortalOptions, registerPortal } from "./portal.js";
+import { holdConnectionOpen } from "./routes/authoring.js";
 import { buildRouteTable, type RouteContext } from "./routes/index.js";
 import { cookieValue, csrfHeader, sessionCookieName, transportResolver } from "./transport.js";
 
@@ -47,6 +48,8 @@ export interface ServerOptions {
   portal?: false | PortalOptions;
   /** Mutation budgets (token buckets); the defaults suit a single team, tests tighten them. */
   rateLimits?: { actor?: RateBudget; tenant?: RateBudget };
+  /** Idle socket timeout of ordinary routes (default 30000); model routes switch it off. */
+  connectionTimeoutMs?: number;
 }
 /** `burst` tokens, refilled at `perSecond`; each mutating request costs one. */
 export interface RateBudget {
@@ -92,6 +95,8 @@ export function registerMcpHttp(app: FastifyInstance, handler: McpHttpHandler): 
     handler: async (request, reply) => {
       const identity = ctx.identities.get(request);
       if (!identity) throw new ContractError("UNAUTHENTICATED", "Capability token required");
+      // A tool call may run a model call, which has no deadline; see `holdConnectionOpen`.
+      if (request.method === "POST") holdConnectionOpen(reply);
       await handler({
         request,
         reply,
@@ -114,7 +119,7 @@ export function createServer(options: ServerOptions): FastifyInstance {
     logger: false,
     bodyLimit: 10 * 1024 * 1024,
     requestTimeout: 30000,
-    connectionTimeout: 30000,
+    connectionTimeout: options.connectionTimeoutMs ?? 30000,
     keepAliveTimeout: 5000,
   });
   const identities = new WeakMap<FastifyRequest, AuthenticatedIdentity>();

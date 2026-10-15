@@ -8,7 +8,8 @@ route catalog. Text from sources, models, plans, DOM and reports is always rende
 
 - **Proposals** (`/projects/:projectId/proposals`) shows the approved requirements, the project's token
   budget (or "No limit set"), the number of model calls so far and the batches of the project.
-- **Generate proposals** needs approved requirements and a model provider the operator policy allows. Cancelling closes the request; the
+- **Generate proposals** needs approved requirements and a model provider the operator policy allows. Generation has no time limit and the
+  portal sends none: it runs until the provider answers. Cancelling closes the request; the
   server cancels the model call when the connection drops, and nothing is stored. Sources and requirements
   prepared earlier stay as they were. **Resume generation** repeats the request with the same idempotency
   key, so a generation that finished before the cancel arrived is returned instead of billed twice.

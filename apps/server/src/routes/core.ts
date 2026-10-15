@@ -7,7 +7,7 @@ import {
   type TestRevisionInput,
   validateDocument,
 } from "@testmaster/contracts";
-import { abortOnDisconnect } from "./authoring.js";
+import { abortOnDisconnect, holdConnectionOpen } from "./authoring.js";
 import type { RouteContext, RouteHandler, RouteModule } from "./types.js";
 
 interface Call extends Omit<RouteContext, "body" | "query"> {
@@ -306,7 +306,6 @@ const handlers: Record<string, RouteHandler> = {
       projectId: id,
       idempotencyKey: key,
       signal: abortOnDisconnect(reply),
-      budget: body.budget as { deadlineMs?: number },
       ...(type ? { type } : {}),
       ...(requirementIds ? { requirementIds } : {}),
     });
@@ -388,12 +387,14 @@ const handlers: Record<string, RouteHandler> = {
     if (!analysis) throw new ContractError("NOT_FOUND", "Analysis does not exist", { runId: id });
     return analysis;
   }),
-  "POST /runs/{id}/analysis": h(({ app, id, body }) =>
-    app.analysis.analyze(id, body as Parameters<typeof app.analysis.analyze>[1]),
-  ),
-  "POST /runs/{id}/healing-proposals": h(({ app, id, body }) =>
-    app.healing.propose(id, body as Parameters<typeof app.healing.propose>[1]),
-  ),
+  "POST /runs/{id}/analysis": h(({ app, id, body, reply }) => {
+    holdConnectionOpen(reply);
+    return app.analysis.analyze(id, body as Parameters<typeof app.analysis.analyze>[1]);
+  }),
+  "POST /runs/{id}/healing-proposals": h(({ app, id, body, reply }) => {
+    holdConnectionOpen(reply);
+    return app.healing.propose(id, body as Parameters<typeof app.healing.propose>[1]);
+  }),
   "GET /healing-proposals/{id}": h(({ app, id }) => app.healing.get(id)),
   "GET /healing-proposals/{id}/review": h(({ app, id }) => app.healing.review(id)),
   "POST /healing-proposals/{id}/approve": h(({ app, id, body }) =>

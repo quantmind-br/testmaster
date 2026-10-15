@@ -104,7 +104,6 @@ it("exports real aborted, repaired and cached calls without double billing and p
       locale: "en-US",
       policyHash: app.config.effectiveConfig.policyHash,
       responseSchema: "Money",
-      deadlineMs: 5000,
       dataPolicy: {
         dataClasses: ["documents"],
         maxInputBytes: 32768,

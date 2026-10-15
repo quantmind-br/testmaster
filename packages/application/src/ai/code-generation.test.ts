@@ -9,7 +9,6 @@ import { afterEach, expect, it, vi } from "vitest";
 import { completion, testProvider } from "../../../model-gateway/src/test-support.js";
 import { Application } from "../application.js";
 import { scaffoldPlan } from "../authoring.js";
-import { CODE_GENERATION_DEADLINE_MS, CODE_GENERATION_DEADLINE_REASON } from "./code-generation.js";
 import { ModelService } from "./model.js";
 
 const roots: string[] = [];
@@ -217,76 +216,6 @@ it("an unknown provider or model is refused before any model call, and an explic
   });
   expect(receipt.candidates).toHaveLength(1);
   expect(f.payloads[0]).toMatchObject({ model: "model" });
-});
-
-it("each revision's model call gets budget.deadlineMs, default 300000, and an out-of-range deadline is refused before any call", async () => {
-  const f = await fixture();
-  const request = { projectId: f.projectId, revisionIds: [f.revisionOf()] };
-  const complete = vi.spyOn(ModelService.prototype, "complete");
-  try {
-    await f.app.codeGeneration.generate(request);
-    expect(complete.mock.calls[0]?.[0].deadlineMs).toBe(CODE_GENERATION_DEADLINE_MS);
-    expect(CODE_GENERATION_DEADLINE_MS).toBe(300000);
-    await f.app.codeGeneration.generate({ ...request, budget: { deadlineMs: 600000 } });
-    expect(complete.mock.calls[1]?.[0].deadlineMs).toBe(600000);
-    const calls = complete.mock.calls.length;
-    for (const deadlineMs of [0, 600001, 1.5, -1])
-      await expect(
-        f.app.codeGeneration.generate({ ...request, budget: { deadlineMs } }),
-      ).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
-    expect(complete.mock.calls).toHaveLength(calls);
-    expect(f.counts().completions).toBe(2);
-  } finally {
-    complete.mockRestore();
-  }
-});
-
-it("a revision whose model call reaches the deadline is listed and the next revision still produces a candidate", async () => {
-  const f = await fixture();
-  const slow = f.revisionOf();
-  const next = f.revisionOf();
-  f.hangCompletions([true, false]);
-  const receipt = await f.app.codeGeneration.generate({
-    projectId: f.projectId,
-    revisionIds: [slow, next],
-    budget: { deadlineMs: 1000 },
-  });
-  expect(receipt.requested).toBe(2);
-  expect(receipt.candidates).toHaveLength(1);
-  expect(receipt.validationErrors).toEqual([
-    {
-      path: slow,
-      message: "Model call reached its 1000 ms deadline, repairs included",
-      reasonCode: CODE_GENERATION_DEADLINE_REASON,
-      // The cut request is recorded and may be billed, so it is named.
-      modelCallId: expect.stringMatching(/^mdl_/u),
-    },
-  ]);
-  expect(f.counts().completions).toBe(2);
-});
-
-it("every revision reaching the deadline is UPSTREAM_TIMEOUT listing each revision", async () => {
-  const f = await fixture();
-  const only = f.revisionOf();
-  const before = f.revisionCount();
-  f.hangCompletions([true]);
-  await expect(
-    f.app.codeGeneration.generate({
-      projectId: f.projectId,
-      revisionIds: [only],
-      budget: { deadlineMs: 1000 },
-    }),
-  ).rejects.toMatchObject({
-    code: "UPSTREAM_TIMEOUT",
-    details: {
-      reasonCode: CODE_GENERATION_DEADLINE_REASON,
-      requested: 1,
-      deadlineMs: 1000,
-      validationErrors: [{ path: only, reasonCode: CODE_GENERATION_DEADLINE_REASON }],
-      modelCallIds: [expect.stringMatching(/^mdl_/u)],
-    },
-  });
-  expect(f.revisionCount()).toBe(before);
 });
 
 it("a cancellation stays fatal and its details list the candidates created before it", async () => {

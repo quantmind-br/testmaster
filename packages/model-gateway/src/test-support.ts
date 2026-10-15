@@ -66,7 +66,6 @@ export const testRequest: ModelRequest = {
   locale: "en",
   policyHash: "policy",
   responseSchema: "Money",
-  deadlineMs: 5000,
   dataPolicy: {
     dataClasses: ["source"],
     maxInputBytes: 32_768,

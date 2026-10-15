@@ -123,8 +123,9 @@ are disclosed with a null snapshot rather than manufactured evidence. A successf
 command exits 0 even when the analyzed Run failed.
 
 Optional enrichment is explicit: use
-`testmaster run analyze "$RUN_ID" --model --deadline-ms 180000` with a provider the operator policy
-allows. Only sanitized execution summaries and bounded measurements cross that boundary, not raw
+`testmaster run analyze "$RUN_ID" --model` with a provider the operator policy
+allows; a model reading has no deadline and runs until the provider answers. Only sanitized execution
+summaries and bounded measurements cross that boundary, not raw
 trace/video or sensitive captures. Choose the model with `--provider ID --model-id ID`; an unknown
 choice is refused before any work. Model refusal/failure retains the factual predecessor and records a
 limitation in a separate immutable analysis that stays `source: "rules"` (it never claims to be model

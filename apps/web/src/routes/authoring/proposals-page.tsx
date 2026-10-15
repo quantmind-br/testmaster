@@ -104,7 +104,6 @@ function GeneratePanel({
   const navigate = useNavigate();
   const announce = useAnnounce();
   const [scope, setScope] = useState<ScopeKey>("backend");
-  const [deadline, setDeadline] = useState("300");
   const action = useAction();
   const controller = useRef<AbortController | null>(null);
   // Kept across a cancel or failure: generating again with it resumes instead of duplicating.
@@ -117,14 +116,7 @@ function GeneratePanel({
   const requirementList = requirements.data?.requirements ?? [];
   const [phase, setPhase] = useState<"idle" | "running" | "cancelled" | "failed">("idle");
   const approved = requirementList.filter((item) => item.approval !== null).length;
-  const seconds = Number(deadline);
-  const deadlineError =
-    Number.isInteger(seconds) && seconds >= 1 && seconds <= 3600
-      ? null
-      : "Enter a whole number of seconds between 1 and 3600.";
-
   async function generate(): Promise<void> {
-    if (deadlineError) return;
     key.current ??= crypto.randomUUID();
     controller.current = new AbortController();
     setPhase("running");
@@ -134,11 +126,7 @@ function GeneratePanel({
           "POST",
           `/projects/${enc(projectId)}/proposal-batches`,
           {
-            body: {
-              inputRefs: [],
-              scope: scopes[scope].scope,
-              budget: { deadlineMs: seconds * 1000 },
-            },
+            body: { inputRefs: [], scope: scopes[scope].scope },
             idempotencyKey: key.current ?? crypto.randomUUID(),
             signal: (controller.current ?? new AbortController()).signal,
           },
@@ -212,26 +200,11 @@ function GeneratePanel({
           </select>
         )}
       </FormField>
-      <FormField
-        label="Time limit (seconds)"
-        hint="Generation stops when it passes this limit."
-        error={deadlineError}
-      >
-        {(control) => (
-          <input
-            {...control}
-            inputMode="numeric"
-            value={deadline}
-            disabled={phase === "running"}
-            onChange={(event) => setDeadline(event.target.value)}
-          />
-        )}
-      </FormField>
       <div className="authoring-actions">
         <button
           type="button"
           className="button"
-          disabled={phase === "running" || deadlineError !== null}
+          disabled={phase === "running"}
           onClick={() => void generate()}
         >
           {phase === "running"

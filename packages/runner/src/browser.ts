@@ -181,7 +181,7 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
   let popupIndex = 0;
   let expectedDownloadPage: Page | undefined;
   let result: RunnerResult = { outcome: "inconclusive", reasonCode: "insufficient_evidence" };
-  const started = performance.now();
+  const attemptTime = runtime.clock.stopwatch();
   let agentRequests = 0;
   let activeAgentStep: string | undefined;
   let activeMutationAllowed = false;
@@ -219,7 +219,7 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
     void context?.close().catch(() => undefined);
   }
   function deadline(step: PlanStep, override?: number): number {
-    const remaining = (runtime.input.timeoutMs ?? 300_000) - (performance.now() - started);
+    const remaining = (runtime.input.timeoutMs ?? 300_000) - attemptTime.elapsed();
     if (remaining <= 0)
       throw new RuntimeError("execution_deadline", "Attempt deadline expired", "inconclusive");
     return Math.max(
@@ -1231,7 +1231,7 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       "application/json",
       Buffer.from(JSON.stringify(observation)),
     );
-    const selected = await runtime.protocol.agent(step.id, observation);
+    const selected = await runtime.agent(step.id, observation);
     if (selected === null) {
       explorationStopped = true;
       if (agent.exploration && agent.requireActionable && first && actions.length === 0) {

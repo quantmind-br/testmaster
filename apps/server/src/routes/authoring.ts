@@ -2,8 +2,22 @@ import type { ExecutablePlan } from "@testmaster/contracts";
 import type { FastifyReply } from "fastify";
 import type { RouteContext, RouteModule } from "./types.js";
 
-/** Aborts the model call when the client drops the connection before the answer was sent (UX-018 cancel). */
+/**
+ * A model call lasts as long as the provider takes and has no deadline. The server's idle socket
+ * timeout (`connectionTimeout`) would destroy the connection of a handler that has not written
+ * yet, so model routes switch it off for their own socket; ordinary routes keep it. The optional
+ * chain covers `inject`, whose mock socket has no timers.
+ */
+export function holdConnectionOpen(reply: FastifyReply): void {
+  reply.raw.socket?.setTimeout?.(0);
+}
+
+/**
+ * Aborts the model call when the client drops the connection before the answer was sent (UX-018
+ * cancel). The call is a model call, so it also keeps the connection open while it runs.
+ */
 export function abortOnDisconnect(reply: FastifyReply): AbortSignal {
+  holdConnectionOpen(reply);
   const abort = new AbortController();
   reply.raw.once("close", () => {
     if (!reply.raw.writableFinished) abort.abort();

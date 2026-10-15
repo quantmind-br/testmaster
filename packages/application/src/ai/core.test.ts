@@ -37,6 +37,9 @@ async function fixture(reasoningEffort?: "low" | "medium" | "high" | "xhigh") {
   let redirect: string | null = null;
   // One-shot outputs served before `output`, to script a repair sequence.
   const queued: unknown[] = [];
+  // Completions wait here while a test holds the provider, to play a slow model.
+  let gate: Promise<void> | undefined;
+  let arrival = Promise.withResolvers<void>();
   const server = createServer(async (request, response) => {
     requests++;
     if (request.url === "/v1/models") {
@@ -48,6 +51,8 @@ async function fixture(reasoningEffort?: "low" | "medium" | "high" | "xhigh") {
     for await (const chunk of request) chunks.push(Buffer.from(chunk));
     const payload = JSON.parse(Buffer.concat(chunks).toString());
     payloads.push(payload);
+    arrival.resolve();
+    await gate;
     const reconciliation = (payload.messages as { content: string }[]).some((message) =>
       message.content.includes("Compare the normalized statements"),
     );
@@ -115,6 +120,19 @@ async function fixture(reasoningEffort?: "low" | "medium" | "high" | "xhigh") {
     },
     setRedirect(value: string) {
       redirect = value;
+    },
+    /** Holds every completion until `release()`; `arrived` settles when one reaches the provider. */
+    holdCompletions() {
+      const held = Promise.withResolvers<void>();
+      gate = held.promise;
+      arrival = Promise.withResolvers<void>();
+      return {
+        arrived: arrival.promise,
+        release() {
+          gate = undefined;
+          held.resolve();
+        },
+      };
     },
     counts() {
       return { requests, completions };
@@ -1580,6 +1598,178 @@ it("a feature-seeded exploration asks the model over the links that belong to th
   const [result] = followed.perFeatureResults as { evidenceRefs: unknown[] }[];
   expect(followed.perFeatureResults).toHaveLength(1);
   expect(result?.evidenceRefs).toHaveLength(2);
+});
+/** An exploration world whose sandbox only relays what the (faked) browser observed. */
+async function explorationWorld() {
+  const f = await fixture();
+  f.setOutput({ index: 0 });
+  const environment = f.app.environments.list(f.projectId)[0];
+  if (!environment) throw new Error("Missing initialized environment");
+  const revision = f.app.context.entities.get(
+    "EnvironmentRevision",
+    f.app.context.workspaceId,
+    String(environment.activeRevisionId),
+  );
+  if (!revision) throw new Error("Missing initialized environment revision");
+  const url = String((revision.targetOrigins as string[])[0]);
+  const featureAt = (stableKey: string) => {
+    const feature = entity(f.app.context, "fea", {
+      projectId: f.projectId,
+      stableKey,
+      routeRefs: [stableKey],
+      endpointRefs: [],
+      requirementRefs: [],
+    });
+    f.app.context.entities.insert("Feature", feature);
+    return feature;
+  };
+  const link = (path: string) => ({
+    id: "explore-0",
+    kind: "action",
+    operation: "navigate",
+    description: `Observed link ${path}`,
+    input: { path: new URL(path, url).href },
+  });
+  const page = (path: string, actions: unknown[]) => ({
+    url: new URL(path, url).href,
+    title: "Page",
+    text: "Page",
+    settled: true,
+    hasPasswordField: false,
+    controls: [],
+    actions,
+  });
+  const resolved: unknown[] = [];
+  /** `browse` is the browser's work; a signal that fired by the time it ends makes the run cancelled. */
+  const sandbox = (
+    browse: (
+      input: { resolveAction?: (stepId: string, value: unknown) => Promise<unknown> },
+      signal: AbortSignal | undefined,
+    ) => Promise<void>,
+  ) =>
+    vi.spyOn(AttemptExecutor.prototype, "execute").mockImplementation((async (
+      input: { resolveAction?: (stepId: string, value: unknown) => Promise<unknown> },
+      signal?: AbortSignal,
+    ) => {
+      await browse(input, signal);
+      return signal?.aborted
+        ? { outcome: "cancelled", reasonCode: "user_cancelled" }
+        : { outcome: "passed", reasonCode: "assertions_satisfied" };
+    }) as never);
+  return { f, url, featureAt, link, page, resolved, sandbox };
+}
+it("an exploration does not count a slow model answer against its time budget and still uses the answer", async () => {
+  const { f, url, link, page, resolved, sandbox } = await explorationWorld();
+  const request = {
+    projectId: f.projectId,
+    url,
+    budget: { steps: 5, modelCalls: 5, timeMs: 1000 },
+  };
+  sandbox(async (input) => {
+    resolved.push(await input.resolveAction?.("explore-0", page("/", [link("/orders")])));
+  });
+  const held = f.holdCompletions();
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
+  try {
+    const running = f.app.explore.start(request);
+    await held.arrived;
+    // The provider answers ten budgets late.
+    await vi.advanceTimersByTimeAsync(10_000);
+    held.release();
+    const job = await running;
+    expect(resolved).toEqual([
+      expect.objectContaining({ input: { path: link("/orders").input.path } }),
+    ]);
+    expect(job.phase).toBe("completed");
+    expect(job.usage).toMatchObject({ modelCalls: 1 });
+
+    // Control: the browser working through the whole budget still ends the exploration.
+    sandbox(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+    expect((await f.app.explore.start(request)).phase).toBe("cancelled");
+  } finally {
+    vi.useRealTimers();
+  }
+});
+it("an exploration of several features pauses its whole time budget while any model call is pending", async () => {
+  const { f, url, featureAt, link, page, resolved, sandbox } = await explorationWorld();
+  const login = featureAt("/login");
+  const orders = featureAt("/orders");
+  const request = {
+    projectId: f.projectId,
+    url,
+    featureIds: [login.id, orders.id],
+    budget: { steps: 10, modelCalls: 10, timeMs: 2000 },
+  };
+  const pages = [page("/login", [link("/login/forgot")]), page("/orders", [link("/orders/new")])];
+  let next = 0;
+  sandbox(async (input) => {
+    resolved.push(await input.resolveAction?.("explore-0", pages[next++]));
+  });
+  const held = f.holdCompletions();
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
+  try {
+    const running = f.app.explore.start(request);
+    await held.arrived;
+    await vi.advanceTimersByTimeAsync(60_000);
+    held.release();
+    const job = await running;
+    expect(resolved).toHaveLength(2);
+    expect(resolved).not.toContain(undefined);
+    expect(job.phase).toBe("completed");
+    expect(job.usage).toMatchObject({ modelCalls: 2 });
+
+    // Control: browser time beyond the whole budget stops the exploration after the first feature.
+    next = 0;
+    sandbox(async () => {
+      await vi.advanceTimersByTimeAsync(2500);
+    });
+    const cut = await f.app.explore.start(request);
+    expect(cut.phase).toBe("cancelled");
+    expect((cut.extensions as Record<string, unknown>)["testmaster:children"]).toHaveLength(1);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+it("only the caller's cancellation cuts an exploration's model call", async () => {
+  const { f, url, link, page, resolved, sandbox } = await explorationWorld();
+  const request = {
+    projectId: f.projectId,
+    url,
+    budget: { steps: 5, modelCalls: 5, timeMs: 1000 },
+  };
+  sandbox(async (input) => {
+    resolved.push(
+      await input
+        .resolveAction?.("explore-0", page("/", [link("/orders")]))
+        .catch((error) => error),
+    );
+  });
+  const cancelled = (value: unknown) =>
+    expect(value).toMatchObject({
+      code: "PRECONDITION_FAILED",
+      message: "Model request cancelled",
+    });
+
+  // The caller's signal aborts the pending call without the provider ever answering.
+  const held = f.holdCompletions();
+  const controller = new AbortController();
+  const bySignal = f.app.explore.start(request, controller.signal);
+  await held.arrived;
+  controller.abort();
+  expect((await bySignal).phase).toBe("cancelled");
+  cancelled(resolved[0]);
+
+  // So does the explicit cancel of the exploration job.
+  const second = f.holdCompletions();
+  const { job, completion } = f.app.explore.begin(request);
+  await second.arrived;
+  f.app.explore.cancel(job.id);
+  expect((await completion).phase).toBe("cancelled");
+  cancelled(resolved[1]);
+  second.release();
+  held.release();
 });
 it("an approved mutation that matches a control on a feature-seeded form page leads to a model call, and invalid approvals are refused before the job", async () => {
   const f = await fixture();

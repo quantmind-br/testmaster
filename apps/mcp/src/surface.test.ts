@@ -494,34 +494,6 @@ it("generate_tests forwards the chosen provider and model and refuses an unknown
   expect(f.app.database.get("SELECT COUNT(*) AS n FROM model_calls")?.n ?? 0).toBe(0);
 });
 
-it("generate_tests forwards budget.deadlineMs and refuses an out-of-range deadline at validation", async () => {
-  const f = await fixture();
-  const test = f.app.tests.create({ projectId: f.init.projectId, plan: scaffoldPlan("backend") });
-  const revisionIds = [String(test.activeRevisionId)];
-  const generate = vi
-    .spyOn(Object.getPrototypeOf(f.app.codeGeneration), "generate")
-    .mockResolvedValue({ requested: 1, candidates: [], validationErrors: [] });
-  const forwarded = await f.call("testmaster_generate_tests", {
-    revisionIds,
-    budget: { modelCalls: 3, deadlineMs: 450000 },
-  });
-  expect(forwarded.isError).toBe(false);
-  expect(generate.mock.calls[0]?.[0]).toMatchObject({
-    budget: { modelCalls: 3, deadlineMs: 450000 },
-  });
-  for (const deadlineMs of [0, 600001]) {
-    const refused = await f.call("testmaster_generate_tests", {
-      revisionIds,
-      budget: { deadlineMs },
-    });
-    expect(refused.error?.code).toBe("INVALID_ARGUMENT");
-    expect(JSON.stringify(refused.error?.details.issues)).toContain("deadlineMs");
-  }
-  // Only the accepted call reached the service.
-  expect(generate).toHaveBeenCalledTimes(1);
-  generate.mockRestore();
-});
-
 it("normalize returns the snapshot fingerprint, announces progress with a total and links a large snapshot", async () => {
   const f = await fixture();
   let count = 2;

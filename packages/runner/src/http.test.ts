@@ -727,6 +727,28 @@ it("bounds response bodies and deadlines without converting transport absence in
   ).rejects.toMatchObject({ outcome: "inconclusive" });
 });
 
+it("does not charge the wait for a host model answer to the attempt deadline", async () => {
+  vi.useFakeTimers({ toFake: ["performance"] });
+  try {
+    const base = await serve((_req, res) => res.end("ok"));
+    // Control: a minute of attempt time against a 100 ms deadline is expired.
+    const expired = fixture(base, { timeoutMs: 100 });
+    vi.advanceTimersByTime(60_000);
+    await expect(expired.engine.perform(requestStep("late", []))).rejects.toMatchObject({
+      reasonCode: "execution_deadline",
+    });
+    // The same minute spent waiting for the host's model answer is not attempt time.
+    const waiting = fixture(base, { timeoutMs: 100 });
+    const resume = waiting.runtime.clock.pause();
+    vi.advanceTimersByTime(60_000);
+    resume();
+    await waiting.engine.perform(requestStep("on-time", []));
+    expect(responseOf(waiting.engine, "on-time").status).toBe(200);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
 it("requires a proxy in runHttp and can use a real local CONNECT proxy", async () => {
   const target = await serve((_req, res) => res.end('{"healthy":true}'));
   const steps: PlanStep[] = [

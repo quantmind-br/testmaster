@@ -1,7 +1,8 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { expect, it } from "vitest";
+import { AttemptClock } from "@testmaster/domain";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   type DockerAttempt,
   type DockerCommand,
@@ -221,4 +222,116 @@ it("OPS-001 stops an attempt whose container lost a resource limit and removes i
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
+});
+describe("attempt deadline while the host awaits a model answer", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+  /** Starts an attempt of 1000 ms whose `docker start` stays attached until `finish`. */
+  async function launch(directory: string, clock: AttemptClock) {
+    const calls: string[][] = [];
+    const started = Promise.withResolvers<void>();
+    const finish = Promise.withResolvers<void>();
+    const command: DockerCommand = async (args) => {
+      calls.push([...args]);
+      if (args[0] === "start") {
+        started.resolve();
+        await finish.promise;
+      }
+      const stdout =
+        args[0] === "inspect"
+          ? JSON.stringify([
+              {
+                Image: attempt.imageId,
+                Config: { User: "1000:1000", Labels: {} },
+                HostConfig: {
+                  NetworkMode: "none",
+                  ReadonlyRootfs: true,
+                  CapDrop: ["ALL"],
+                  CapAdd: [],
+                  SecurityOpt: ["seccomp=profile", "no-new-privileges"],
+                  Memory: 512 * 1024 ** 2,
+                  MemorySwap: 512 * 1024 ** 2,
+                  PidsLimit: 128,
+                  NanoCpus: 1e9,
+                },
+                Mounts: [],
+                State: {
+                  OOMKilled: false,
+                  ExitCode: 0,
+                  StartedAt: "2026-01-01T00:00:00Z",
+                  Error: "",
+                },
+              },
+            ])
+          : "";
+      return { code: 0, stdout: Buffer.from(stdout), stderr: Buffer.alloc(0), droppedBytes: 0 };
+    };
+    const result = new DockerExecutor(command).execute({
+      ...attempt,
+      kind: "http",
+      inputDir: join(directory, "input"),
+      socketsDir: join(directory, "sockets"),
+      seccompPath: join(directory, "seccomp.json"),
+      attemptTimeoutMs: 1000,
+      cancellationGraceMs: 0,
+      clock,
+    });
+    await started.promise;
+    return { finish, result, killed: () => calls.some((call) => call[0] === "kill") };
+  }
+  async function withDirectory(body: (directory: string) => Promise<void>) {
+    const directory = await mkdtemp(join(tmpdir(), "tm-deadline-"));
+    try {
+      await Promise.all(["input", "sockets"].map((name) => mkdir(join(directory, name))));
+      await writeFile(join(directory, "seccomp.json"), "{}");
+      await body(directory);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  }
+  it("still stops an attempt at its deadline when no model answer is pending", async () => {
+    await withDirectory(async (directory) => {
+      const run = await launch(directory, new AttemptClock());
+      await vi.advanceTimersByTimeAsync(999);
+      expect(run.killed()).toBe(false);
+      // The deadline, then the zero grace: a 0 ms timer armed while a timer fires runs 1 ms later.
+      await vi.advanceTimersByTimeAsync(2);
+      expect(run.killed()).toBe(true);
+      run.finish.resolve();
+      expect(await run.result).toMatchObject({ cancelled: true });
+    });
+  });
+  it("does not stop an attempt while a model answer is pending and stops it after the remaining time", async () => {
+    await withDirectory(async (directory) => {
+      const clock = new AttemptClock();
+      const run = await launch(directory, clock);
+      await vi.advanceTimersByTimeAsync(400);
+      const resume = clock.pause();
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(run.killed()).toBe(false);
+      resume();
+      await vi.advanceTimersByTimeAsync(599);
+      expect(run.killed()).toBe(false);
+      await vi.advanceTimersByTimeAsync(2);
+      expect(run.killed()).toBe(true);
+      run.finish.resolve();
+      expect(await run.result).toMatchObject({ cancelled: true });
+    });
+  });
+  it("lets an attempt finish after a model answer that arrives past the nominal deadline", async () => {
+    await withDirectory(async (directory) => {
+      const clock = new AttemptClock();
+      const run = await launch(directory, clock);
+      const resume = clock.pause();
+      await vi.advanceTimersByTimeAsync(60_000);
+      resume();
+      run.finish.resolve();
+      expect(await run.result).toMatchObject({ code: 0, cancelled: false });
+      expect(run.killed()).toBe(false);
+    });
+  });
 });
