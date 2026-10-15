@@ -4,9 +4,11 @@ import { open } from "node:fs/promises";
 import { isIP } from "node:net";
 import { isDeepStrictEqual } from "node:util";
 import {
+  ContractError,
   type Expectation,
   type PlanStep,
   parseStrictJson,
+  SourceSchemaError,
   validateAgainstSchema,
 } from "@testmaster/contracts";
 import { uuidV7IdGenerator } from "@testmaster/domain";
@@ -101,6 +103,114 @@ function failureExcerpt(runtime: Runtime, response: HttpResponse): string | null
   } catch {
     return null;
   }
+}
+/** Largest comparison value the runtime retains whole; bigger failures keep a bounded excerpt. */
+const COMPARISON_BYTES = 8192;
+const EXCERPT_STRING_CHARS = 64;
+const EXCERPT_KEYS = 12;
+const EXCERPT_ITEMS = 3;
+const EXCERPT_DEPTH = 3;
+const SCHEMA_VIOLATIONS = 20;
+/** Deterministic, size-bounded structural excerpt of a response value for failure diagnosis. */
+function valueExcerpt(value: unknown, depth = 0): unknown {
+  if (value === null || typeof value === "boolean" || typeof value === "number") return value;
+  if (typeof value === "string")
+    return value.length > EXCERPT_STRING_CHARS
+      ? `${value.slice(0, EXCERPT_STRING_CHARS)}...(${value.length} chars)`
+      : value;
+  if (Array.isArray(value)) {
+    if (depth >= EXCERPT_DEPTH) return `[array of ${value.length}]`;
+    const items = value.slice(0, EXCERPT_ITEMS).map((item) => valueExcerpt(item, depth + 1));
+    return value.length > EXCERPT_ITEMS
+      ? [...items, `...(${value.length - EXCERPT_ITEMS} more items)`]
+      : items;
+  }
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value);
+    if (depth >= EXCERPT_DEPTH) return `[object with ${entries.length} keys]`;
+    return Object.fromEntries([
+      ...entries
+        .slice(0, EXCERPT_KEYS)
+        .map(([key, item]) => [key.slice(0, EXCERPT_STRING_CHARS), valueExcerpt(item, depth + 1)]),
+      ...(entries.length > EXCERPT_KEYS
+        ? [["(omitted)", `${entries.length - EXCERPT_KEYS} more keys`]]
+        : []),
+    ]);
+  }
+  return "[unavailable]";
+}
+/**
+ * Records the comparison of a failed assertion. A value the runtime would drop for its size is
+ * reduced to a bounded excerpt instead, so the failure always carries what was observed.
+ */
+function recordFailedComparison(runtime: Runtime, observed: unknown, expected: unknown): void {
+  const bounded = (value: unknown): unknown => {
+    const json = JSON.stringify(value);
+    if (json === undefined || Buffer.byteLength(json) <= COMPARISON_BYTES) return value;
+    return { truncated: true, sizeBytes: Buffer.byteLength(json), excerpt: valueExcerpt(value) };
+  };
+  runtime.recordComparison(bounded(observed), bounded(expected));
+}
+interface SchemaViolation {
+  path: string;
+  keyword: string;
+  message: string;
+  property?: string;
+}
+/** Validator issues as bounded value-free records (paths, keywords and messages only). */
+function schemaViolations(error: ContractError): { items: SchemaViolation[]; total: number } {
+  const raw: unknown[] = Array.isArray(error.details.issues)
+    ? error.details.issues
+    : error.issues.map((issue) => ({
+        instancePath: issue.path,
+        keyword: issue.rule,
+        message: issue.message,
+      }));
+  const items = raw.slice(0, SCHEMA_VIOLATIONS).map((issue): SchemaViolation => {
+    const record = (issue && typeof issue === "object" ? issue : {}) as Record<string, unknown>;
+    const params = (
+      record.params && typeof record.params === "object" ? record.params : {}
+    ) as Record<string, unknown>;
+    const property =
+      typeof params.missingProperty === "string"
+        ? params.missingProperty
+        : typeof params.additionalProperty === "string"
+          ? params.additionalProperty
+          : undefined;
+    return {
+      path: String(record.instancePath ?? "").slice(0, 200),
+      keyword: String(record.keyword ?? "").slice(0, 40),
+      message: String(record.message ?? "").slice(0, 160),
+      ...(property === undefined ? {} : { property: property.slice(0, 64) }),
+    };
+  });
+  return { items, total: raw.length };
+}
+/**
+ * What a schema rejection retained: the violations plus an excerpt of the rejected value, degraded
+ * step by step (no excerpt, then counts only) when the full record is too large or carries a
+ * secret, so a failure never keeps less than it can safely say.
+ */
+function schemaObservation(
+  runtime: Runtime,
+  violations: { items: SchemaViolation[]; total: number },
+  value: unknown,
+): unknown {
+  const base = {
+    violations: violations.items,
+    omittedViolations: Math.max(0, violations.total - violations.items.length),
+  };
+  const clean = (candidate: unknown): boolean => {
+    const json = JSON.stringify(candidate);
+    return Buffer.byteLength(json) <= COMPARISON_BYTES && runtime.scrub(json) === json;
+  };
+  const withExcerpt = { ...base, excerpt: valueExcerpt(value) };
+  if (clean(withExcerpt)) return withExcerpt;
+  if (clean(base)) return base;
+  return {
+    violationCount: violations.total,
+    keywords: [...new Set(violations.items.map((item) => item.keyword))].slice(0, 10),
+  };
 }
 
 function deny(message: string): never {
@@ -272,18 +382,46 @@ export async function assertResponse(
       if (!schema || typeof schema !== "object" || Array.isArray(schema))
         deny("Invalid source schema");
       const target = assertedJsonValue(runtime, response, pointer);
+      // The schema document can be far larger than a step record; the failure names it instead.
+      expected = { sourceRevisionId: expectation.sourceRevisionId, pointer: expectation.pointer };
+      if (!target.present) {
+        runtime.recordComparison(null, expected);
+        throw new RuntimeError(
+          "assertion_mismatch",
+          `Response does not match source schema${target.diagnostic ? `; missing JSON pointer: ${target.diagnostic}` : ""}`,
+          "failed",
+        );
+      }
       observed = target.value;
-      expected = schema;
       try {
-        if (!target.present) throw new Error("Asserted JSON target is absent");
         validateAgainstSchema(schema as Record<string, unknown>, target.value);
         matches = true;
       } catch (error) {
         if (error instanceof RuntimeError) throw error;
-        runtime.recordComparison(observed, expected);
+        // A schema that cannot be compiled says nothing about the response: the check could not be
+        // evaluated, which is not an assertion failure.
+        if (error instanceof SourceSchemaError)
+          throw new RuntimeError(
+            "oracle_uncertain",
+            `Source schema ${key} cannot be used for validation: ${error.problem}`,
+            "inconclusive",
+          );
+        if (!(error instanceof ContractError))
+          throw new RuntimeError(
+            "oracle_uncertain",
+            `Source schema ${key} could not be evaluated: ${error instanceof Error ? error.message.slice(0, 256) : "unknown error"}`,
+            "inconclusive",
+          );
+        const violations = schemaViolations(error);
+        runtime.recordComparison(schemaObservation(runtime, violations, target.value), expected);
+        const first = violations.items[0];
         throw new RuntimeError(
           "assertion_mismatch",
-          `Response does not match source schema${target.diagnostic ? `; missing JSON pointer: ${target.diagnostic}` : ""}`,
+          `Response does not match source schema${
+            first
+              ? `: ${violations.total} violation${violations.total === 1 ? "" : "s"}; first at ${first.path || "/"}${first.property ? ` (${first.property})` : ""}: ${first.message}`
+              : ""
+          }`,
           "failed",
         );
       }
@@ -295,7 +433,8 @@ export async function assertResponse(
         `HTTP predicate ${expectation.predicate} is unsupported`,
       );
   }
-  runtime.recordComparison(observed, expected);
+  if (matches) runtime.recordComparison(observed, expected);
+  else recordFailedComparison(runtime, observed, expected);
   if (!matches && response.status === 401 && response.authenticated)
     throw new RuntimeError(
       "manual_auth_required",

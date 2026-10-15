@@ -106,3 +106,67 @@ it("heal review JSON preserves the structured response without presentation fiel
     process.exitCode = exit;
   }
 });
+
+async function approve(ownership: "ephemeral" | "worker", extra: string[] = []) {
+  let stdout = "";
+  const output = new Writable({
+    write(chunk, _encoding, done) {
+      stdout += String(chunk);
+      done();
+    },
+  });
+  const runtime = new Runtime(output, output);
+  const runId = "run_00000000-0000-4000-8000-000000000002";
+  let executed = false;
+  const run = () => ({
+    id: runId,
+    phase: executed ? "completed" : "queued",
+    outcome: executed ? "passed" : null,
+    gate: executed ? "passed" : "pending",
+    matrixCell: { ownership },
+  });
+  const workerRun = vi.fn(async () => {
+    executed = true;
+  });
+  runtime.app = async () =>
+    ({
+      healing: {
+        approve: async () => ({ id: "hea_1", status: "approved", verificationRunId: runId }),
+        reconcile: async () => ({ id: "hea_1", status: "verified", verificationRunId: runId }),
+      },
+      runs: { get: run, wait: async () => run() },
+      worker: { run: workerRun, live: () => ownership === "worker" },
+    }) as unknown as Application;
+  const exit = process.exitCode;
+  try {
+    await runCli(
+      ["--output", "json", "heal", "approve", "hea_1", "--expected-version", "3", ...extra],
+      runtime,
+    );
+    return { data: JSON.parse(stdout).data, workerRun };
+  } finally {
+    process.exitCode = exit;
+  }
+}
+
+it("heal approve without --wait executes an ephemeral verification run in-process", async () => {
+  const { data, workerRun } = await approve("ephemeral");
+  expect(workerRun).toHaveBeenCalledWith(
+    expect.objectContaining({
+      ephemeral: true,
+      runIds: ["run_00000000-0000-4000-8000-000000000002"],
+    }),
+  );
+  expect(data.proposal.status).toBe("verified");
+  expect(data.verification).toMatchObject({ phase: "completed", outcome: "passed" });
+});
+
+it("heal approve without --wait leaves a worker-owned verification run to the live worker", async () => {
+  const { data, workerRun } = await approve("worker");
+  expect(workerRun).not.toHaveBeenCalled();
+  expect(data.verification).toEqual({
+    runId: "run_00000000-0000-4000-8000-000000000002",
+    ownership: "worker",
+  });
+  expect(data.proposal.status).toBe("approved");
+});

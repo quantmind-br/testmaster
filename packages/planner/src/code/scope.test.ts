@@ -250,4 +250,79 @@ describe("diff-scoped code analysis", () => {
       await rm(staging, { recursive: true, force: true });
     }
   });
+
+  it("does not widen the impact for TestMaster artifacts or untracked tool caches, and does for real schema code", async () => {
+    const root = await repo();
+    const staging = await mkdtemp(join(tmpdir(), "testmaster-scope-staging-"));
+    try {
+      await put(root, {
+        ...TREE,
+        "src/schemaless.ts": "export const schemaless = 1;\n",
+        "src/db/schema.ts": "export const users = 1;\n",
+      });
+      const base = commit(root, "base");
+      await put(root, {
+        "testmaster.config.json": '{"version":1}\n',
+        ".testmaster/state.json": "{}\n",
+        ".reversa/cache/schema-summary.json": "{}\n",
+        ".atl/state/migration-index.json": "{}\n",
+        "src/util.ts": "export const util = 2;\n",
+        "src/schemaless.ts": "export const schemaless = 2;\n",
+      });
+      for (const scoped of [true, false]) {
+        const impact = scoped
+          ? (
+              await summarizeDiffScope({
+                repoRoot: root,
+                base,
+                workingTree: true,
+                summary: {},
+                stagingDir: staging,
+              })
+            ).diff
+          : await analyzeDiff({
+              repoRoot: root,
+              base,
+              workingTree: true,
+              summary: await summarizeCode(root),
+            });
+        const changed = impact.changes.map((change) => change.path);
+        // TestMaster's own artifacts are never a change of the code under test.
+        expect(changed).not.toContain("testmaster.config.json");
+        expect(changed.some((path) => path.startsWith(".testmaster/"))).toBe(false);
+        expect(changed).toEqual(
+          expect.arrayContaining([
+            ".reversa/cache/schema-summary.json",
+            ".atl/state/migration-index.json",
+            "src/util.ts",
+          ]),
+        );
+        // Tool caches and a look-alike name (schemaless.ts) do not select the whole repository.
+        expect(impact.impact.criticalSmoke).toBe(false);
+        expect(impact.impact.authTouched).toBe(false);
+        expect(impact.impact.selectedFiles).not.toContain("src/unrelated.ts");
+        expect(impact.impact.selectedFiles).toEqual(
+          expect.arrayContaining(["src/util.ts", "src/a.ts", "src/b.ts", "src/schemaless.ts"]),
+        );
+        expect(impact.impact.selectedFiles.some((path) => path.startsWith("."))).toBe(false);
+      }
+      // Positive control: a change to real schema code still widens to every analyzable file.
+      await put(root, { "src/db/schema.ts": "export const users = 2;\n" });
+      const widened = await summarizeDiffScope({
+        repoRoot: root,
+        base,
+        workingTree: true,
+        summary: {},
+        stagingDir: staging,
+      });
+      expect(widened.diff.impact.criticalSmoke).toBe(true);
+      expect(widened.diff.impact.selectedFiles).toEqual(
+        expect.arrayContaining(["src/unrelated.ts", "src/d.ts", "src/db/schema.ts"]),
+      );
+      expect(widened.diff.impact.selectedFiles.every((path) => !path.startsWith("."))).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+      await rm(staging, { recursive: true, force: true });
+    }
+  });
 });

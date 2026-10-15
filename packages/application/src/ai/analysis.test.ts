@@ -1066,6 +1066,62 @@ it("an abstained enrichment is not labeled as model output and a later explicit 
     false,
   );
 });
+it("a requested reading reports its status: used, abstained by a rule, or unavailable", async () => {
+  const f = await fixture();
+  // The default mock refuses with a quota error: a refusal that is not about the model's availability.
+  const abstained = await f.service.analyze(f.run.id, { model: true });
+  expect(f.service.modelStatus(abstained)).toMatchObject({
+    state: "abstained",
+    reasonCode: "QUOTA_EXCEEDED",
+    modelCallId: null,
+  });
+  // A model absent from the provider inventory cannot be used at all.
+  f.complete.mockRejectedValueOnce(
+    new ContractError(
+      "CAPABILITY_UNAVAILABLE",
+      "Declared model is absent from provider inventory",
+      {
+        reasonCode: "model_not_in_inventory",
+      },
+    ),
+  );
+  const unavailable = await f.service.analyze(f.run.id, {
+    model: true,
+    provider: "fake",
+    modelId: "fake-model",
+    budget: { deadlineMs: 170000 },
+  });
+  expect(unavailable).toMatchObject({ source: "rules", modelCallId: null });
+  expect(f.service.modelStatus(unavailable)).toMatchObject({
+    state: "unavailable",
+    reasonCode: "model_not_in_inventory",
+    message: "Declared model is absent from provider inventory",
+  });
+  // Control: a real model call is `used` and carries its call id.
+  f.complete.mockImplementationOnce(async () => ({
+    modelCallId: f.modelCallId,
+    output: {
+      failureKind: "unknown",
+      hypotheses: [],
+      recommendedAction: "collect_more_evidence",
+      fixTargetHandle: null,
+      limitations: [],
+      nextSteps: [],
+      evidenceGaps: [],
+    },
+  }));
+  const used = await f.service.analyze(f.run.id, {
+    model: true,
+    provider: "fake",
+    modelId: "fake-model",
+  });
+  expect(f.service.modelStatus(used)).toEqual({
+    state: "used",
+    reasonCode: null,
+    message: expect.any(String),
+    modelCallId: f.modelCallId,
+  });
+});
 it("an invalid explicit model choice is refused before any job or provider call", async () => {
   const f = await fixture();
   await expect(
@@ -1820,6 +1876,10 @@ it("layered observations remain bounded and scrubbed while retaining immutable e
 async function attachTerminalProcess(
   f: Awaited<ReturnType<typeof fixture>>,
   metadata: Record<string, unknown>,
+  shape: { relativePath: string; kind: string } = {
+    relativePath: "terminal/go.json",
+    kind: "terminal.process",
+  },
 ) {
   const fixtures = relationalFixtures(f.db);
   const snapshot = fixtures.find((item) => item.kind === "Snapshot")!;
@@ -1837,8 +1897,8 @@ async function attachTerminalProcess(
   const entries = [
     {
       artifactId: artifact.dto.id,
-      relativePath: "terminal/go.json",
-      kind: "terminal.process",
+      relativePath: shape.relativePath,
+      kind: shape.kind,
       sizeBytes: 300,
       state: "available",
       redactionStatus: "sanitized",
@@ -2007,4 +2067,141 @@ it("artifact availability facts aggregate per kind and cite every artifact of th
     "logs/runner.log",
   ]);
   expect(analysis.facts.some((fact) => fact.text.endsWith("is available."))).toBe(false);
+});
+
+const SCHEMA_SOURCE = "svr_00000000-0000-4000-8000-000000000001";
+it("a failed jsonSchema step names the schema violations and hands them to the model", async () => {
+  const f = await fixture({
+    schema: true,
+    step: {
+      expected: { sourceRevisionId: SCHEMA_SOURCE, pointer: "" },
+      observed: {
+        violations: [
+          { path: "/data/0/id", keyword: "type", message: "must be string" },
+          { path: "/data/1", keyword: "required", message: "must have required property 'id'" },
+        ],
+        omittedViolations: 3,
+        // Deeper than the model evidence bounds: kept structured, it would make the reading abstain.
+        excerpt: { data: [{ id: 7, caps: { io: { in: ["text"] } } }, {}] },
+      },
+      error: {
+        code: "Error",
+        message:
+          "Response does not match source schema: 5 violations; first at /data/0/id: must be string",
+      },
+    },
+  });
+  const analysis = await f.service.analyze(f.run.id, { model: true });
+  expect(analysis.failureKind).toBe("contract_violation");
+  expect(analysis.facts.map((fact) => fact.text)).toContain(
+    `Step price (jsonSchema) rejected the response against ${SCHEMA_SOURCE}: 5 schema violations; first: /data/0/id type: must be string; /data/1 required: must have required property 'id'.`,
+  );
+  expect(analysis.diagnosis?.observation?.observed).toContain("must be string");
+  expect(analysis.diagnosis?.observation?.expected).toContain(SCHEMA_SOURCE);
+  // The reading is dispatched: a deep excerpt no longer makes the evidence catalog abstain.
+  expect(f.complete).toHaveBeenCalledOnce();
+  const request = f.complete.mock.calls[0]![0] as {
+    data: { measurements: Record<string, unknown>[] };
+  };
+  const step = request.data.measurements.find((item) => item.stepId === "price")!;
+  expect(step).toMatchObject({
+    predicate: "jsonSchema",
+    observed: {
+      violations: [{ path: "/data/0/id", keyword: "type", message: "must be string" }, {}],
+      omittedViolations: 3,
+      excerpt: '{"data":[{"caps":{"io":{"in":["text"]}},"id":7},{}]}',
+      excerptTruncated: false,
+    },
+  });
+});
+it("a jsonSchema check that could not be evaluated is reported as such, not as a contract violation", async () => {
+  const f = await fixture({
+    schema: true,
+    step: {
+      status: "inconclusive",
+      reasonCode: "oracle_uncertain",
+      expected: null,
+      observed: null,
+      error: {
+        code: "Error",
+        message: `Source schema ${SCHEMA_SOURCE} cannot be used for validation: strict mode: unknown keyword: "bogus"`,
+      },
+    },
+  });
+  const analysis = await f.service.analyze(f.run.id, {});
+  expect(analysis.failureKind).toBe("unknown");
+  expect(analysis.facts.map((fact) => fact.text)).toContain(
+    `Step price (jsonSchema) could not evaluate the response: Source schema ${SCHEMA_SOURCE} cannot be used for validation: strict mode: unknown keyword: "bogus"`,
+  );
+});
+it("a failed urlEquals step reports the observed and expected URLs instead of an unknown cause", async () => {
+  const f = await fixture({
+    plan: {
+      schemaVersion: "1.0.0",
+      kind: "executable",
+      name: "Login redirect",
+      type: "frontend",
+      runner: "playwright",
+      requirementRefs: ["req_00000000-0000-4000-8000-000000000003"],
+      steps: [
+        {
+          id: "landed",
+          kind: "assertion",
+          operation: "assert",
+          required: true,
+          description: "Lands on the dashboard",
+          input: { pageAlias: "main" },
+          expectation: { predicate: "urlEquals", value: { literal: "/dashboard" } },
+        },
+      ],
+    },
+    step: {
+      planStepId: "landed",
+      expected: "http://app.test/dashboard",
+      observed: "http://app.test/login?error=1",
+      error: {
+        code: "Error",
+        message:
+          "Page URL http://app.test/login?error=1 differs from expected URL http://app.test/dashboard",
+      },
+    },
+  });
+  const analysis = await f.service.analyze(f.run.id, {});
+  expect(analysis.failureKind).toBe("product_bug");
+  expect(analysis.facts.map((fact) => fact.text)).toContain(
+    'Step landed (urlEquals) observed the page URL "http://app.test/login?error=1" while expecting "http://app.test/dashboard".',
+  );
+  expect(analysis.diagnosis?.observation).toMatchObject({
+    expected: expect.stringContaining("http://app.test/dashboard"),
+    observed: expect.stringContaining("http://app.test/login?error=1"),
+  });
+});
+it("the error fields a failing endpoint returned become a fact and reach the model data", async () => {
+  const f = await fixture({ status: true });
+  await attachTerminalProcess(
+    f,
+    { response: { status: 503, failureExcerpt: '{"error":"database unavailable"}' } },
+    { relativePath: "http/request.json", kind: "http" },
+  );
+  const analysis = await f.service.analyze(f.run.id, { model: true });
+  expect(analysis.facts.map((fact) => fact.text)).toContain(
+    'HTTP step request responded 503 with recorded error fields: {"error":"database unavailable"}',
+  );
+  const request = f.complete.mock.calls[0]![0] as {
+    data: { measurements: Record<string, unknown>[] };
+  };
+  expect(request.data.measurements.find((item) => item.kind === "http")).toMatchObject({
+    stepId: "request",
+    status: 503,
+    failureExcerpt: '{"error":"database unavailable"}',
+  });
+  // A passing Run lists no such fact even when the endpoint returned an error that was expected.
+  const passed = await fixture({ passed: true });
+  await attachTerminalProcess(
+    passed,
+    { response: { status: 401, failureExcerpt: '{"error":"unauthorized"}' } },
+    { relativePath: "http/request.json", kind: "http" },
+  );
+  const clean = await passed.service.analyze(passed.run.id, {});
+  expect(clean.facts.map((fact) => fact.text).join("\n")).not.toContain("recorded error fields");
 });

@@ -25,8 +25,8 @@ export function healingReviewText(review: HealingReview): string {
       "",
       `Identity: ${identity.stepId}`,
       `Previous: ${cell(identity.previous)}`,
-      "Role | Name | Tag | Type | Label | Form | Matched | Visible",
-      "--- | --- | --- | --- | --- | --- | --- | ---",
+      "Role | Name | Tag | Type | Label | Form | Matched | Visible | Placeholder | Test id",
+      "--- | --- | --- | --- | --- | --- | --- | --- | --- | ---",
     );
     if (!identity.candidates.length) lines.push("No recorded candidates available.");
     for (const candidate of identity.candidates)
@@ -40,9 +40,15 @@ export function healingReviewText(review: HealingReview): string {
           candidate.form,
           candidate.matched,
           candidate.visible,
+          candidate.placeholder ?? null,
+          candidate.testId ?? null,
         ]
           .map(cell)
           .join(" | "),
+      );
+    if (identity.omittedCandidates)
+      lines.push(
+        `${identity.omittedCandidates} recorded elements not listed (document metadata or cap)`,
       );
     lines.push(
       identity.equivalence
@@ -102,20 +108,28 @@ export function healingCommands(program: Command, runtime: Runtime): void {
     heal
       .command("approve <proposalId>")
       .requiredOption("--expected-version <version>", "CAS version", integer)
-      .option("--wait"),
+      .option(
+        "--wait",
+        "Wait for the verification run (it always runs in-process when no worker is live)",
+      ),
     async (rt, args, options) => {
       const app = await rt.app();
       const proposal = await app.healing.approve(String(args[0]), version(options));
       if (!proposal.verificationRunId)
         throw new ContractError("PRECONDITION_FAILED", "Approval did not admit verification");
       const run = app.runs.get(proposal.verificationRunId);
-      const receipt = {
-        runId: run.id,
-        ownership: app.worker.live() ? ("worker" as const) : ("ephemeral" as const),
-      };
+      // The admitted run records who executes it: "worker" when a fresh worker heartbeat exists,
+      // "ephemeral" otherwise. An ephemeral run has no other executor, so it runs in-process here
+      // (with or without --wait) instead of staying queued forever.
+      const ownership =
+        (run.matrixCell as Record<string, unknown>).ownership === "ephemeral"
+          ? ("ephemeral" as const)
+          : ("worker" as const);
+      const receipt = { runId: run.id, ownership };
       rt.receipts.push(receipt);
-      if (options.wait !== true) return { data: { proposal, verification: receipt } };
-      const verification = await waitForRun(rt, app, run.id, options, receipt.ownership);
+      if (options.wait !== true && ownership === "worker")
+        return { data: { proposal, verification: receipt } };
+      const verification = await waitForRun(rt, app, run.id, options, ownership);
       return {
         data: { proposal: await app.healing.reconcile(run.id), verification },
         exit: exitCodeForRun({ outcome: verification.outcome, gate: verification.gate }),

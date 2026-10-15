@@ -1,0 +1,1381 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "runId",
+    "snapshotId",
+    "parentId",
+    "source",
+    "affectedRequirementIds",
+    "facts",
+    "hypotheses",
+    "failureKind",
+    "confidence",
+    "modelCallId",
+    "limitations",
+    "recommendedAction"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^ana_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "workspaceId": {
+      "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "version": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "runId": {
+      "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "snapshotId": {
+      "anyOf": [
+        {
+          "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "parentId": {
+      "anyOf": [
+        {
+          "pattern": "^ana_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "source": {
+      "anyOf": [
+        {
+          "const": "rules",
+          "type": "string"
+        },
+        {
+          "const": "model",
+          "type": "string"
+        }
+      ]
+    },
+    "affectedRequirementIds": {
+      "type": "array",
+      "items": {
+        "pattern": "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    },
+    "facts": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text",
+          "evidenceRefs"
+        ],
+        "properties": {
+          "text": {
+            "maxLength": 8000,
+            "type": "string"
+          },
+          "evidenceRefs": {
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "minProperties": 1,
+              "dependentRequired": {
+                "attemptId": [
+                  "runId"
+                ],
+                "stepId": [
+                  "runId",
+                  "attemptId"
+                ],
+                "observationSeq": [
+                  "runId"
+                ],
+                "codeSnapshotId": [
+                  "relativePath",
+                  "contentHash"
+                ]
+              },
+              "type": "object",
+              "properties": {
+                "artifactId": {
+                  "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "sourceRevisionId": {
+                  "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "snapshotId": {
+                  "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "relativePath": {
+                  "minLength": 1,
+                  "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+                  "type": "string"
+                },
+                "offset": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "length": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "page": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "jsonPointer": {
+                  "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                  "type": "string"
+                },
+                "contentHash": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                },
+                "runId": {
+                  "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "attemptId": {
+                  "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "stepId": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "observationSeq": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "codeSnapshotId": {
+                  "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "hypotheses": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text",
+          "supports",
+          "contradicts",
+          "confidence",
+          "calibrated"
+        ],
+        "properties": {
+          "text": {
+            "maxLength": 8000,
+            "type": "string"
+          },
+          "supports": {
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "minProperties": 1,
+              "dependentRequired": {
+                "attemptId": [
+                  "runId"
+                ],
+                "stepId": [
+                  "runId",
+                  "attemptId"
+                ],
+                "observationSeq": [
+                  "runId"
+                ],
+                "codeSnapshotId": [
+                  "relativePath",
+                  "contentHash"
+                ]
+              },
+              "type": "object",
+              "properties": {
+                "artifactId": {
+                  "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "sourceRevisionId": {
+                  "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "snapshotId": {
+                  "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "relativePath": {
+                  "minLength": 1,
+                  "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+                  "type": "string"
+                },
+                "offset": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "length": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "page": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "jsonPointer": {
+                  "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                  "type": "string"
+                },
+                "contentHash": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                },
+                "runId": {
+                  "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "attemptId": {
+                  "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "stepId": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "observationSeq": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "codeSnapshotId": {
+                  "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "contradicts": {
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "minProperties": 1,
+              "dependentRequired": {
+                "attemptId": [
+                  "runId"
+                ],
+                "stepId": [
+                  "runId",
+                  "attemptId"
+                ],
+                "observationSeq": [
+                  "runId"
+                ],
+                "codeSnapshotId": [
+                  "relativePath",
+                  "contentHash"
+                ]
+              },
+              "type": "object",
+              "properties": {
+                "artifactId": {
+                  "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "sourceRevisionId": {
+                  "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "snapshotId": {
+                  "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "relativePath": {
+                  "minLength": 1,
+                  "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+                  "type": "string"
+                },
+                "offset": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "length": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "page": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "jsonPointer": {
+                  "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                  "type": "string"
+                },
+                "contentHash": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                },
+                "runId": {
+                  "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "attemptId": {
+                  "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "stepId": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "observationSeq": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "codeSnapshotId": {
+                  "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "confidence": {
+            "minimum": 0,
+            "maximum": 1,
+            "type": "number"
+          },
+          "calibrated": {
+            "type": "boolean"
+          },
+          "support": {
+            "anyOf": [
+              {
+                "const": "supported",
+                "type": "string"
+              },
+              {
+                "const": "partially_supported",
+                "type": "string"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "failureKind": {
+      "anyOf": [
+        {
+          "const": "product_bug",
+          "type": "string"
+        },
+        {
+          "const": "test_fragility",
+          "type": "string"
+        },
+        {
+          "const": "environment",
+          "type": "string"
+        },
+        {
+          "const": "contract_violation",
+          "type": "string"
+        },
+        {
+          "const": "security_policy",
+          "type": "string"
+        },
+        {
+          "const": "unknown",
+          "type": "string"
+        }
+      ]
+    },
+    "confidence": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "maximum": 1,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "modelCallId": {
+      "anyOf": [
+        {
+          "pattern": "^mdl_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
+    "recommendedAction": {
+      "anyOf": [
+        {
+          "const": "fix_product",
+          "type": "string"
+        },
+        {
+          "const": "fix_test",
+          "type": "string"
+        },
+        {
+          "const": "fix_environment",
+          "type": "string"
+        },
+        {
+          "const": "review_contract",
+          "type": "string"
+        },
+        {
+          "const": "collect_more_evidence",
+          "type": "string"
+        }
+      ]
+    },
+    "fixTarget": {
+      "additionalProperties": false,
+      "minProperties": 1,
+      "dependentRequired": {
+        "attemptId": [
+          "runId"
+        ],
+        "stepId": [
+          "runId",
+          "attemptId"
+        ],
+        "observationSeq": [
+          "runId"
+        ],
+        "codeSnapshotId": [
+          "relativePath",
+          "contentHash"
+        ]
+      },
+      "type": "object",
+      "properties": {
+        "artifactId": {
+          "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "sourceRevisionId": {
+          "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "snapshotId": {
+          "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "relativePath": {
+          "minLength": 1,
+          "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+          "type": "string"
+        },
+        "offset": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "length": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "page": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "jsonPointer": {
+          "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+          "type": "string"
+        },
+        "contentHash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "runId": {
+          "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "attemptId": {
+          "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "stepId": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "observationSeq": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "codeSnapshotId": {
+          "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        }
+      }
+    },
+    "diagnosis": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "observation",
+        "chain",
+        "alternatives",
+        "conclusion",
+        "nextSteps",
+        "evidenceGaps",
+        "healing"
+      ],
+      "properties": {
+        "observation": {
+          "anyOf": [
+            {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "stepId",
+                "operation",
+                "summary",
+                "expected",
+                "observed",
+                "absence",
+                "evidenceRefs"
+              ],
+              "properties": {
+                "stepId": {
+                  "anyOf": [
+                    {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "operation": {
+                  "anyOf": [
+                    {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "summary": {
+                  "maxLength": 8000,
+                  "type": "string"
+                },
+                "expected": {
+                  "anyOf": [
+                    {
+                      "maxLength": 8000,
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "observed": {
+                  "anyOf": [
+                    {
+                      "maxLength": 8000,
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "absence": {
+                  "anyOf": [
+                    {
+                      "anyOf": [
+                        {
+                          "const": "missing_field",
+                          "type": "string"
+                        },
+                        {
+                          "const": "null_value",
+                          "type": "string"
+                        },
+                        {
+                          "const": "empty_collection",
+                          "type": "string"
+                        },
+                        {
+                          "const": "evidence_unavailable",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "evidenceRefs": {
+                  "type": "array",
+                  "items": {
+                    "additionalProperties": false,
+                    "minProperties": 1,
+                    "dependentRequired": {
+                      "attemptId": [
+                        "runId"
+                      ],
+                      "stepId": [
+                        "runId",
+                        "attemptId"
+                      ],
+                      "observationSeq": [
+                        "runId"
+                      ],
+                      "codeSnapshotId": [
+                        "relativePath",
+                        "contentHash"
+                      ]
+                    },
+                    "type": "object",
+                    "properties": {
+                      "artifactId": {
+                        "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
+                      },
+                      "sourceRevisionId": {
+                        "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
+                      },
+                      "snapshotId": {
+                        "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
+                      },
+                      "relativePath": {
+                        "minLength": 1,
+                        "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+                        "type": "string"
+                      },
+                      "offset": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "length": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "page": {
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "jsonPointer": {
+                        "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                        "type": "string"
+                      },
+                      "contentHash": {
+                        "pattern": "^[0-9a-f]{64}$",
+                        "type": "string"
+                      },
+                      "runId": {
+                        "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
+                      },
+                      "attemptId": {
+                        "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
+                      },
+                      "stepId": {
+                        "minLength": 1,
+                        "maxLength": 200,
+                        "type": "string"
+                      },
+                      "observationSeq": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "codeSnapshotId": {
+                        "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "chain": {
+          "maxItems": 64,
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "stepId",
+              "operation",
+              "status",
+              "summary",
+              "verifies",
+              "baseline",
+              "evidenceRefs"
+            ],
+            "properties": {
+              "stepId": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "operation": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "status": {
+                "anyOf": [
+                  {
+                    "const": "pending",
+                    "type": "string"
+                  },
+                  {
+                    "const": "running",
+                    "type": "string"
+                  },
+                  {
+                    "const": "passed",
+                    "type": "string"
+                  },
+                  {
+                    "const": "failed",
+                    "type": "string"
+                  },
+                  {
+                    "const": "blocked",
+                    "type": "string"
+                  },
+                  {
+                    "const": "cancelled",
+                    "type": "string"
+                  },
+                  {
+                    "const": "skipped",
+                    "type": "string"
+                  },
+                  {
+                    "const": "not_run",
+                    "type": "string"
+                  },
+                  {
+                    "const": "inconclusive",
+                    "type": "string"
+                  }
+                ]
+              },
+              "summary": {
+                "maxLength": 8000,
+                "type": "string"
+              },
+              "verifies": {
+                "anyOf": [
+                  {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "baseline": {
+                "anyOf": [
+                  {
+                    "const": "same",
+                    "type": "string"
+                  },
+                  {
+                    "const": "different",
+                    "type": "string"
+                  },
+                  {
+                    "const": "unavailable",
+                    "type": "string"
+                  }
+                ]
+              },
+              "evidenceRefs": {
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "minProperties": 1,
+                  "dependentRequired": {
+                    "attemptId": [
+                      "runId"
+                    ],
+                    "stepId": [
+                      "runId",
+                      "attemptId"
+                    ],
+                    "observationSeq": [
+                      "runId"
+                    ],
+                    "codeSnapshotId": [
+                      "relativePath",
+                      "contentHash"
+                    ]
+                  },
+                  "type": "object",
+                  "properties": {
+                    "artifactId": {
+                      "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "sourceRevisionId": {
+                      "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "snapshotId": {
+                      "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "relativePath": {
+                      "minLength": 1,
+                      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+                      "type": "string"
+                    },
+                    "offset": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "length": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "page": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "jsonPointer": {
+                      "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                      "type": "string"
+                    },
+                    "contentHash": {
+                      "pattern": "^[0-9a-f]{64}$",
+                      "type": "string"
+                    },
+                    "runId": {
+                      "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "attemptId": {
+                      "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "stepId": {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    "observationSeq": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "codeSnapshotId": {
+                      "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "alternatives": {
+          "maxItems": 10,
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "text",
+              "failureKind",
+              "evidenceRefs"
+            ],
+            "properties": {
+              "text": {
+                "maxLength": 8000,
+                "type": "string"
+              },
+              "failureKind": {
+                "anyOf": [
+                  {
+                    "const": "product_bug",
+                    "type": "string"
+                  },
+                  {
+                    "const": "test_fragility",
+                    "type": "string"
+                  },
+                  {
+                    "const": "environment",
+                    "type": "string"
+                  },
+                  {
+                    "const": "contract_violation",
+                    "type": "string"
+                  },
+                  {
+                    "const": "security_policy",
+                    "type": "string"
+                  },
+                  {
+                    "const": "unknown",
+                    "type": "string"
+                  }
+                ]
+              },
+              "evidenceRefs": {
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "minProperties": 1,
+                  "dependentRequired": {
+                    "attemptId": [
+                      "runId"
+                    ],
+                    "stepId": [
+                      "runId",
+                      "attemptId"
+                    ],
+                    "observationSeq": [
+                      "runId"
+                    ],
+                    "codeSnapshotId": [
+                      "relativePath",
+                      "contentHash"
+                    ]
+                  },
+                  "type": "object",
+                  "properties": {
+                    "artifactId": {
+                      "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "sourceRevisionId": {
+                      "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "snapshotId": {
+                      "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "relativePath": {
+                      "minLength": 1,
+                      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+                      "type": "string"
+                    },
+                    "offset": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "length": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "page": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "jsonPointer": {
+                      "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                      "type": "string"
+                    },
+                    "contentHash": {
+                      "pattern": "^[0-9a-f]{64}$",
+                      "type": "string"
+                    },
+                    "runId": {
+                      "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "attemptId": {
+                      "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "stepId": {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    "observationSeq": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "codeSnapshotId": {
+                      "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "conclusion": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "status",
+            "text"
+          ],
+          "properties": {
+            "status": {
+              "anyOf": [
+                {
+                  "const": "no_failure",
+                  "type": "string"
+                },
+                {
+                  "const": "cause_supported",
+                  "type": "string"
+                },
+                {
+                  "const": "cause_partially_supported",
+                  "type": "string"
+                },
+                {
+                  "const": "cause_unknown",
+                  "type": "string"
+                }
+              ]
+            },
+            "text": {
+              "maxLength": 8000,
+              "type": "string"
+            }
+          }
+        },
+        "nextSteps": {
+          "maxItems": 10,
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "text",
+              "source",
+              "evidenceRefs"
+            ],
+            "properties": {
+              "text": {
+                "maxLength": 8000,
+                "type": "string"
+              },
+              "source": {
+                "anyOf": [
+                  {
+                    "const": "rules",
+                    "type": "string"
+                  },
+                  {
+                    "const": "model",
+                    "type": "string"
+                  }
+                ]
+              },
+              "evidenceRefs": {
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "minProperties": 1,
+                  "dependentRequired": {
+                    "attemptId": [
+                      "runId"
+                    ],
+                    "stepId": [
+                      "runId",
+                      "attemptId"
+                    ],
+                    "observationSeq": [
+                      "runId"
+                    ],
+                    "codeSnapshotId": [
+                      "relativePath",
+                      "contentHash"
+                    ]
+                  },
+                  "type": "object",
+                  "properties": {
+                    "artifactId": {
+                      "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "sourceRevisionId": {
+                      "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "snapshotId": {
+                      "pattern": "^snp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "relativePath": {
+                      "minLength": 1,
+                      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+                      "type": "string"
+                    },
+                    "offset": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "length": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "page": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "jsonPointer": {
+                      "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                      "type": "string"
+                    },
+                    "contentHash": {
+                      "pattern": "^[0-9a-f]{64}$",
+                      "type": "string"
+                    },
+                    "runId": {
+                      "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "attemptId": {
+                      "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "stepId": {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    "observationSeq": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "codeSnapshotId": {
+                      "pattern": "^csp_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "evidenceGaps": {
+          "maxItems": 20,
+          "type": "array",
+          "items": {
+            "maxLength": 8000,
+            "type": "string"
+          }
+        },
+        "healing": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "advice",
+            "reason"
+          ],
+          "properties": {
+            "advice": {
+              "anyOf": [
+                {
+                  "const": "not_indicated",
+                  "type": "string"
+                },
+                {
+                  "const": "proposal_possible",
+                  "type": "string"
+                },
+                {
+                  "const": "manual_review_only",
+                  "type": "string"
+                }
+              ]
+            },
+            "reason": {
+              "maxLength": 8000,
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*:[A-Za-z0-9_-]+$": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/T0"
+              }
+            },
+            {
+              "type": "object",
+              "patternProperties": {
+                "^(.*)$": {
+                  "$ref": "#/$defs/T0"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "modelStatus": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "state",
+        "reasonCode",
+        "message",
+        "modelCallId"
+      ],
+      "properties": {
+        "state": {
+          "anyOf": [
+            {
+              "const": "used",
+              "type": "string"
+            },
+            {
+              "const": "abstained",
+              "type": "string"
+            },
+            {
+              "const": "unavailable",
+              "type": "string"
+            }
+          ]
+        },
+        "reasonCode": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "message": {
+          "maxLength": 8000,
+          "type": "string"
+        },
+        "modelCallId": {
+          "anyOf": [
+            {
+              "pattern": "^mdl_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "$defs": {
+    "T0": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$id": "urn:testmaster:McpAnalysis",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

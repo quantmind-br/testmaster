@@ -5,7 +5,7 @@ import { promisify } from "node:util";
 import { ContractError } from "@testmaster/contracts";
 import { canonicalJson, sha256 } from "@testmaster/domain";
 import { dataDirectoryPrefixes, insideDataDirectory } from "./data-directory.js";
-import { hashConfinedCodeFile } from "./summary.js";
+import { analyzableCodeType, hashConfinedCodeFile } from "./summary.js";
 import type { CodeDiff, CodeRoute, CodeSummary } from "./types.js";
 
 const execFileAsync = promisify(execFile);
@@ -111,6 +111,28 @@ function parseNameStatus(output: string): GitFile[] {
   }
   return files;
 }
+/** A path inside a hidden directory (`.reversa/`, `.atl/`, `.cache/`): tool state, never repository code. */
+const HIDDEN_DIRECTORY = /(?:^|\/)\.[^/]+\//u;
+/** Schema-like sources that are not code files but still define shared structure. */
+const SHARED_DATA_FILE = /\.(?:sql|prisma|graphql|gql|proto)$/iu;
+/** TestMaster's own artifacts: the project configuration and the data directory. */
+const TESTMASTER_ARTIFACT = /(?:^|\/)(?:testmaster\.config\.json$|\.testmaster(?:\/|$))/u;
+/**
+ * Shared code by path segment, not by substring: a directory named `schema(s)`, `migration(s)`,
+ * `shared` or `database`, or a file whose stem ends in one of those words (`schema.ts`,
+ * `user.schema.ts`, `prisma/schema.prisma`). `schema-summary.json` and `unshared.ts` do not match.
+ */
+const SHARED_DIRECTORY = /(?:^|\/)(?:schemas?|migrations?|shared|database)\//iu;
+const SHARED_FILE = /(?:^|\/)(?:[^/]*[._-])?(?:schemas?|migrations?|shared|database)\.[^/]+$/iu;
+/**
+ * Whether a change to this path can widen the impact (authentication or shared code): it is code or
+ * a schema-like source, outside hidden tool directories, and `eligible` (when given) admits it.
+ */
+function mayWiden(path: string, eligible: ((path: string) => boolean) | undefined): boolean {
+  if (HIDDEN_DIRECTORY.test(path)) return false;
+  if (!analyzableCodeType(path) && !SHARED_DATA_FILE.test(path)) return false;
+  return eligible ? eligible(path) : true;
+}
 function authPath(path: string, summary: Pick<CodeSummary, "authPatterns"> | undefined): boolean {
   if (
     /(?:^|\/)(?:auth|authentication|authorization|login|session|security|acl|permissions?)(?:\/|\.|$)/iu.test(
@@ -120,19 +142,24 @@ function authPath(path: string, summary: Pick<CodeSummary, "authPatterns"> | und
     return true;
   return summary?.authPatterns.some((ref) => ref.path === path) ?? false;
 }
-/** Whether the change set touches authentication or shared code (schema, migration, database). */
+/**
+ * Whether the change set touches authentication or shared code (schema, migration, database).
+ * Changes to paths outside the analyzable code set (tool caches in hidden directories, binaries,
+ * unsupported types, and paths `eligible` refuses, such as excluded ones) never count.
+ */
 export function touchesAuthOrShared(
   changes: CodeDiff["changes"],
   summary: Pick<CodeSummary, "authPatterns"> | undefined,
+  eligible?: (path: string) => boolean,
 ): { authTouched: boolean; sharedTouched: boolean } {
+  const paths = (change: CodeDiff["changes"][number]) =>
+    [change.path, ...(change.previousPath ? [change.previousPath] : [])].filter((path) =>
+      mayWiden(path, eligible),
+    );
   return {
-    authTouched: changes.some(
-      (change) =>
-        authPath(change.path, summary) ||
-        (change.previousPath ? authPath(change.previousPath, summary) : false),
-    ),
+    authTouched: changes.some((change) => paths(change).some((path) => authPath(path, summary))),
     sharedTouched: changes.some((change) =>
-      /(?:schema|migration|shared|database)/iu.test(change.path),
+      paths(change).some((path) => SHARED_DIRECTORY.test(path) || SHARED_FILE.test(path)),
     ),
   };
 }
@@ -248,7 +275,7 @@ export async function collectDiffChanges(
       head,
       "--",
     ]),
-  );
+  ).filter((change) => !TESTMASTER_ARTIFACT.test(change.path));
   let dirtyHash: string | null = null;
   if (options.workingTree) {
     // The project data directory holds the live SQLite database of the calling process; reading
@@ -260,10 +287,16 @@ export async function collectDiffChanges(
         ["diff", "--no-ext-diff", "--no-textconv", "--name-status", "-z", "HEAD", "--"],
         filterOverrides,
       ),
-    ).filter((change) => !insideDataDirectory(change.path, dataPrefixes));
+    ).filter(
+      (change) =>
+        !insideDataDirectory(change.path, dataPrefixes) && !TESTMASTER_ARTIFACT.test(change.path),
+    );
     const untracked = (await git(root, ["ls-files", "--others", "--exclude-standard", "-z"]))
       .split("\0")
-      .filter((path) => path && !insideDataDirectory(path, dataPrefixes));
+      .filter(
+        (path) =>
+          path && !insideDataDirectory(path, dataPrefixes) && !TESTMASTER_ARTIFACT.test(path),
+      );
     dirty.push(...untracked.map((path) => ({ status: "A", path })));
     const hashes: { path: string; contentHash: string | null }[] = [];
     for (const path of [...new Set(dirty.map((change) => change.path))].sort()) {
@@ -293,15 +326,22 @@ export async function collectDiffChanges(
 /** Selects the impact of collected changes: changed files, their importers, auth/shared fan-out. */
 export function assessDiffImpact(
   collected: DiffChanges,
-  options: Pick<DiffOptions, "summary" | "unreadFiles"> = {},
+  options: Pick<DiffOptions, "summary" | "unreadFiles"> & {
+    /** Extra admission of paths that may widen the impact (for example not excluded by the scan rules). */
+    fanOutEligible?: (path: string) => boolean;
+  } = {},
 ): CodeDiff {
   const { root, changes } = collected;
-  const { authTouched, sharedTouched } = touchesAuthOrShared(changes, options.summary);
+  const { authTouched, sharedTouched } = touchesAuthOrShared(
+    changes,
+    options.summary,
+    options.fanOutEligible,
+  );
+  // Tool state in hidden directories is a change of the repository listing but never of its code.
   const selected = new Set(
-    changes.flatMap((change) => [
-      change.path,
-      ...(change.previousPath ? [change.previousPath] : []),
-    ]),
+    changes
+      .flatMap((change) => [change.path, ...(change.previousPath ? [change.previousPath] : [])])
+      .filter((path) => !HIDDEN_DIRECTORY.test(path)),
   );
   expandReverseImports(root, selected, options.summary?.imports ?? []);
   if (authTouched || sharedTouched)

@@ -355,10 +355,14 @@ const supplemental = {
             type: Type.Union([P.Name, Type.Null()]),
             label: Type.Union([P.Description, Type.Null()]),
             form: Type.Union([P.Description, Type.Null()]),
+            placeholder: Type.Optional(Type.Union([P.Description, Type.Null()])),
+            testId: Type.Optional(Type.Union([P.Description, Type.Null()])),
             matched: Type.Boolean(),
             visible: Type.Boolean(),
           }),
         ),
+        /** Recorded elements not listed: document/metadata elements and candidates beyond the review cap. */
+        omittedCandidates: Type.Optional(Type.Integer({ minimum: 1 })),
         equivalence: Type.Union([
           P.Obj({ equivalent: Type.Boolean(), reasons: Type.Array(P.Description) }),
           Type.Null(),
@@ -622,6 +626,18 @@ const supplemental = {
       }),
     ),
   }),
+  /** `Analysis` plus, when a model reading was asked for, what became of it. */
+  McpAnalysis: P.Obj({
+    ...Entities.entities.Analysis.properties,
+    modelStatus: Type.Optional(
+      P.Obj({
+        state: P.Enum(["used", "abstained", "unavailable"]),
+        reasonCode: Type.Union([P.Name, Type.Null()]),
+        message: P.Description,
+        modelCallId: Type.Union([P.id("mdl"), Type.Null()]),
+      }),
+    ),
+  }),
   McpRunReceipt,
   McpBatchReceipt: P.Obj({
     ...Ops.BatchReceipt.properties,
@@ -632,7 +648,19 @@ const supplemental = {
     /** Revisions the call tried to generate code for; `candidates` plus failures show partial success. */
     requested: P.Nonnegative,
     candidates: Type.Array(P.id("rev")),
-    validationErrors: Type.Array(P.Obj({ path: P.Name, message: P.Description })),
+    /**
+     * One entry per revision without a candidate. A refused candidate carries path and message; a
+     * revision whose model call reached its deadline also carries `reasonCode` and, when known, the
+     * recorded `modelCallId`.
+     */
+    validationErrors: Type.Array(
+      P.Obj({
+        path: P.Name,
+        message: P.Description,
+        reasonCode: Type.Optional(P.Name),
+        modelCallId: Type.Optional(P.id("mdl")),
+      }),
+    ),
   }),
   EvidenceSummary: P.Obj({
     manifest: Ops.ArtifactManifest,

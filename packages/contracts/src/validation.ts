@@ -82,13 +82,125 @@ function assertNfc(value: unknown, path = ""): void {
       assertNfc(child, `${path}/${key.replaceAll("~", "~0").replaceAll("/", "~1")}`);
     }
 }
-/** Validate an admitted source-revision JSON Schema with the shared validator. */
+/**
+ * Admitted source schemas come from third-party documents (OpenAPI, JSON Schema). They get their
+ * own Ajv instance so TestMaster's strict contract validator (`ajv`) stays untouched: keywords
+ * remain strict, but type-union and tuple conventions of real documents are accepted and the
+ * OpenAPI numeric/binary formats are declared.
+ */
+const sourceAjv = new Ajv2020({
+  strict: true,
+  strictTypes: false,
+  strictTuples: false,
+  allowUnionTypes: true,
+  allErrors: true,
+  validateFormats: true,
+});
+addFormats.default(sourceAjv);
+for (const format of ["int32", "int64", "float", "double", "byte", "binary", "password"])
+  sourceAjv.addFormat(format, true);
+const sourceValidators = new Map<string, ValidateFunction>();
+const SOURCE_VALIDATOR_LIMIT = 256;
+/** OpenAPI annotations with no validation semantics; `x-*` vendor extensions are dropped too. */
+const SOURCE_ANNOTATIONS = new Set(["example", "xml", "externalDocs", "discriminator"]);
+/** Keywords whose value is a schema or a list of schemas. */
+const SCHEMA_KEYWORDS = new Set([
+  "additionalProperties",
+  "items",
+  "additionalItems",
+  "contains",
+  "not",
+  "if",
+  "then",
+  "else",
+  "propertyNames",
+  "unevaluatedItems",
+  "unevaluatedProperties",
+  "contentSchema",
+  "allOf",
+  "anyOf",
+  "oneOf",
+  "prefixItems",
+]);
+/** Keywords whose value maps names to schemas. */
+const SCHEMA_MAP_KEYWORDS = new Set([
+  "properties",
+  "patternProperties",
+  "$defs",
+  "definitions",
+  "dependentSchemas",
+  "dependencies",
+]);
+/**
+ * Copy of `schema` without annotation keywords, walking only schema positions: a property that is
+ * itself named `example` (a key of `properties`) or an `enum`/`const`/`default` value is data and
+ * is never touched.
+ */
+function withoutSourceAnnotations(schema: unknown): unknown {
+  if (Array.isArray(schema)) return schema.map(withoutSourceAnnotations);
+  if (!schema || typeof schema !== "object") return schema;
+  return Object.fromEntries(
+    Object.entries(schema)
+      .filter(([key]) => !SOURCE_ANNOTATIONS.has(key) && !key.startsWith("x-"))
+      .map(([key, value]) => [
+        key,
+        SCHEMA_KEYWORDS.has(key)
+          ? withoutSourceAnnotations(value)
+          : SCHEMA_MAP_KEYWORDS.has(key) && value && typeof value === "object"
+            ? Object.fromEntries(
+                Object.entries(value).map(([name, child]) => [
+                  name,
+                  withoutSourceAnnotations(child),
+                ]),
+              )
+            : value,
+      ]),
+  );
+}
+/** The schema itself is unusable (unknown keyword, dangling reference, invalid keyword value). */
+export class SourceSchemaError extends ContractError {
+  readonly problem: string;
+  constructor(problem: string) {
+    super("INVALID_ARGUMENT", `Source schema cannot be compiled: ${problem}`, {
+      schemaProblem: problem,
+    });
+    this.name = "SourceSchemaError";
+    this.problem = problem;
+  }
+}
+function compileSourceSchema(schema: Record<string, unknown>): ValidateFunction {
+  const sanitized = withoutSourceAnnotations(schema);
+  const key = JSON.stringify(sanitized);
+  const cached = sourceValidators.get(key);
+  if (cached) return cached;
+  let validator: ValidateFunction;
+  try {
+    // Different content under an already registered `$id` replaces it instead of colliding.
+    if (typeof schema.$id === "string") sourceAjv.removeSchema(schema.$id);
+    validator = sourceAjv.compile(sanitized as Record<string, unknown>);
+  } catch (error) {
+    throw new SourceSchemaError(
+      (error instanceof Error ? error.message : String(error)).slice(0, 512),
+    );
+  }
+  if (sourceValidators.size >= SOURCE_VALIDATOR_LIMIT) {
+    sourceValidators.clear();
+    sourceAjv.removeSchema();
+  }
+  sourceValidators.set(key, validator);
+  return validator;
+}
+/**
+ * Validate an admitted source-revision JSON Schema with the shared validator. An unusable schema
+ * throws `SourceSchemaError`; a value the schema rejects throws `INVALID_ARGUMENT` carrying the
+ * validator issues in `details.issues`.
+ */
 export function validateAgainstSchema<T = unknown>(
   schema: Record<string, unknown>,
   value: unknown,
 ): T {
   assertNfc(value);
-  const validator = ajv.compile(schema);
+  const validator = compileSourceSchema(schema);
   if (!validator(value))
     throw new ContractError("INVALID_ARGUMENT", "Response does not match source schema", {
       issues: validator.errors ?? [],

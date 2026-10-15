@@ -1469,18 +1469,218 @@ it("a password field on a feature that is not the login page makes it unreachabl
   // Control: the same page without a password field is only partially observed.
   observed = [observation("/orders", { hasPasswordField: false })];
   const plain = await f.app.explore.start({ ...request, featureIds: [orders.id] });
-  expect(states(plain)).toEqual([{ featureId: orders.id, state: "partial", reason: null }]);
+  expect(states(plain)).toEqual([
+    { featureId: orders.id, state: "partial", reason: "no_grounded_actions" },
+  ]);
 
   // Control: a password field on the login feature itself is expected, not a gate.
   const loginFeature = featureAt("/login");
   observed = [observation("/login", { hasPasswordField: true, text: "Enter your password" })];
   const own = await f.app.explore.start({ ...request, featureIds: [loginFeature.id] });
-  expect(states(own)).toEqual([{ featureId: loginFeature.id, state: "partial", reason: null }]);
+  expect(states(own)).toEqual([
+    { featureId: loginFeature.id, state: "partial", reason: "no_grounded_actions" },
+  ]);
 
-  // A seeded feature with nothing to follow is a complete observation: it asks no model and the
-  // outcome stays the runner's.
+  // A seeded feature with nothing to follow asks no model; the job says why (no_grounded_actions)
+  // and the outcome stays the runner's.
   expect(own.phase).toBe("completed");
   expect(f.counts().requests).toBe(0);
+});
+it("a feature-seeded exploration asks the model over the links that belong to the feature and explains a page with nothing to choose", async () => {
+  const f = await fixture();
+  f.setOutput({ index: 0 });
+  const environment = f.app.environments.list(f.projectId)[0];
+  if (!environment) throw new Error("Missing initialized environment");
+  const revision = f.app.context.entities.get(
+    "EnvironmentRevision",
+    f.app.context.workspaceId,
+    String(environment.activeRevisionId),
+  );
+  if (!revision) throw new Error("Missing initialized environment revision");
+  const url = String((revision.targetOrigins as string[])[0]);
+  const login = entity(f.app.context, "fea", {
+    projectId: f.projectId,
+    stableKey: "/login",
+    routeRefs: ["/login"],
+    endpointRefs: [],
+    requirementRefs: [],
+  });
+  f.app.context.entities.insert("Feature", login);
+  const link = (path: string) => ({
+    id: "explore-0",
+    kind: "action",
+    operation: "navigate",
+    description: `Observed link ${path}`,
+    input: { path: new URL(path, url).href },
+  });
+  const control = (tag: string, type: string, name: string) => ({
+    tag,
+    type,
+    role: tag === "button" ? "button" : null,
+    name,
+    placeholder: null,
+    testId: null,
+    visible: true,
+  });
+  const page = (path: string, actions: unknown[]) => ({
+    url: new URL(path, url).href,
+    title: "Sign in",
+    text: "Sign in",
+    settled: true,
+    hasPasswordField: false,
+    controls: [control("input", "text", "Email"), control("button", "submit", "Sign in")],
+    actions,
+  });
+  let observed: unknown[] = [];
+  const resolved: unknown[] = [];
+  vi.spyOn(AttemptExecutor.prototype, "execute").mockImplementation((async (input: {
+    resolveAction?: (stepId: string, value: unknown) => Promise<unknown>;
+  }) => {
+    for (const value of observed)
+      resolved.push(await input.resolveAction?.("explore-0", value).catch(() => undefined));
+    return { outcome: "passed", reasonCode: "assertions_satisfied" };
+  }) as never);
+  const extension = (job: { extensions?: unknown }, key: string) =>
+    (job.extensions as Record<string, unknown>)[`testmaster:${key}`];
+  const request = { projectId: f.projectId, url, featureIds: [login.id] };
+
+  // A form page whose only link leaves the feature gives the controller nothing to choose: no
+  // model call, and the job says why instead of reporting an unexplained success.
+  observed = [page("/login", [link("/pricing")])];
+  const idle = await f.app.explore.start(request);
+  expect(f.counts().completions).toBe(0);
+  expect(resolved).toEqual([null]);
+  expect(idle.usage).toMatchObject({ modelCalls: 0 });
+  expect(extension(idle, "featureStates")).toEqual([
+    { featureId: login.id, state: "partial", reason: "no_grounded_actions" },
+  ]);
+  expect(extension(idle, "reasonCode")).toBe("no_grounded_actions");
+  expect(extension(idle, "runReasonCode")).toBe("assertions_satisfied");
+  expect(String(extension(idle, "reasonDetail"))).toContain("2 form controls");
+
+  // Control: a link nested under the feature route is offered, so the model is asked, and only
+  // that link is selectable (the link elsewhere is dropped before the model sees it).
+  resolved.length = 0;
+  observed = [page("/login", [link("/pricing"), link("/login/forgot")])];
+  const asked = await f.app.explore.start(request);
+  expect(f.counts().completions).toBe(1);
+  expect(resolved).toEqual([
+    expect.objectContaining({ input: { path: link("/login/forgot").input.path } }),
+  ]);
+  expect(asked.usage).toMatchObject({ modelCalls: 1 });
+  expect(extension(asked, "reasonCode")).toBe("assertions_satisfied");
+  expect(extension(asked, "featureStates")).toEqual([
+    { featureId: login.id, state: "partial", reason: "no_completion_text" },
+  ]);
+
+  // Control: following the link adds evidence to the same feature instead of a second result.
+  resolved.length = 0;
+  observed = [page("/login", [link("/login/forgot")]), page("/login/forgot", [])];
+  const followed = await f.app.explore.start(request);
+  const [result] = followed.perFeatureResults as { evidenceRefs: unknown[] }[];
+  expect(followed.perFeatureResults).toHaveLength(1);
+  expect(result?.evidenceRefs).toHaveLength(2);
+});
+it("an approved mutation that matches a control on a feature-seeded form page leads to a model call, and invalid approvals are refused before the job", async () => {
+  const f = await fixture();
+  f.setOutput({ index: 0 });
+  const environment = f.app.environments.list(f.projectId)[0];
+  if (!environment) throw new Error("Missing initialized environment");
+  const revision = f.app.context.entities.get(
+    "EnvironmentRevision",
+    f.app.context.workspaceId,
+    String(environment.activeRevisionId),
+  );
+  if (!revision) throw new Error("Missing initialized environment revision");
+  const url = String((revision.targetOrigins as string[])[0]);
+  const login = entity(f.app.context, "fea", {
+    projectId: f.projectId,
+    stableKey: "/login",
+    routeRefs: ["/login"],
+    endpointRefs: [],
+    requirementRefs: [],
+  });
+  f.app.context.entities.insert("Feature", login);
+  const fill = {
+    id: "approved-email",
+    description: "Fill the email",
+    kind: "action",
+    operation: "fill",
+    input: {
+      locator: { by: "label", value: "Email", exact: true },
+      value: { literal: "a@b.test" },
+    },
+  } as PlanStep;
+  // The runner matches approved steps to observed controls; the fake runner offers what it was given.
+  const forwarded: unknown[] = [];
+  const resolved: unknown[] = [];
+  vi.spyOn(AttemptExecutor.prototype, "execute").mockImplementation((async (input: {
+    runnerInput: { agent: { mutationActions: PlanStep[] } };
+    resolveAction?: (stepId: string, value: unknown) => Promise<unknown>;
+  }) => {
+    forwarded.push(input.runnerInput.agent.mutationActions);
+    resolved.push(
+      await input.resolveAction?.("explore-0", {
+        url: new URL("/login", url).href,
+        title: "Sign in",
+        text: "Sign in",
+        settled: true,
+        hasPasswordField: false,
+        controls: [
+          {
+            tag: "input",
+            type: "text",
+            role: null,
+            name: "Email",
+            placeholder: null,
+            testId: null,
+            visible: true,
+          },
+        ],
+        actions: input.runnerInput.agent.mutationActions.map((step) => ({
+          ...step,
+          id: "explore-0",
+        })),
+      }),
+    );
+    return { outcome: "passed", reasonCode: "assertions_satisfied" };
+  }) as never);
+  const request = { projectId: f.projectId, url, featureIds: [login.id] };
+
+  // Control: with no approved step the form page offers nothing, so the model is not asked.
+  await f.app.explore.start(request);
+  expect(f.counts().completions).toBe(0);
+  expect(resolved).toEqual([null]);
+
+  // The approved step reaches the runner and is what the controller can select.
+  const job = await f.app.explore.start({ ...request, mutationActions: [fill] });
+  expect(forwarded[1]).toEqual([fill]);
+  expect(f.counts().completions).toBe(1);
+  expect(resolved[1]).toMatchObject({ operation: "fill", id: "explore-0" });
+  expect(job.usage).toMatchObject({ modelCalls: 1 });
+  expect((job.extensions as Record<string, unknown>)["testmaster:reasonCode"]).toBe(
+    "assertions_satisfied",
+  );
+
+  // Invalid approvals never create a job: a non-form operation, and more than 20 steps.
+  const jobs = allEntities(f.app.context, "DiscoveryJob").length;
+  const navigate = {
+    id: "go",
+    description: "Leave",
+    kind: "action",
+    operation: "navigate",
+    input: { path: "/elsewhere" },
+  } as PlanStep;
+  expect(() => f.app.explore.begin({ ...request, mutationActions: [navigate] })).toThrow(
+    expect.objectContaining({ code: "POLICY_DENIED" }),
+  );
+  expect(() =>
+    f.app.explore.begin({
+      ...request,
+      mutationActions: Array.from({ length: 21 }, () => fill),
+    }),
+  ).toThrow(expect.objectContaining({ code: "INVALID_ARGUMENT" }));
+  expect(allEntities(f.app.context, "DiscoveryJob")).toHaveLength(jobs);
 });
 it("an explicit exploration model choice is validated before the job and any provider request", async () => {
   const f = await fixture();

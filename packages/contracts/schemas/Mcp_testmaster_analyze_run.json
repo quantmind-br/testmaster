@@ -11,20 +11,23 @@
       "description": "Failed run to diagnose"
     },
     "model": {
-      "type": "boolean",
-      "description": "Also ask a model to read the recorded evidence"
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        }
+      ],
+      "description": "Also ask a model to read the recorded evidence: true uses the first capable model, a model id uses that model. Absent or false: rules only"
     },
     "provider": {
       "minLength": 1,
       "maxLength": 200,
       "type": "string",
-      "description": "Model provider id for the model reading; requires model=true"
-    },
-    "modelId": {
-      "minLength": 1,
-      "maxLength": 200,
-      "type": "string",
-      "description": "Model id for the model reading; requires model=true. Absent: first capable model"
+      "description": "Model provider id for the model reading; requires model (true or a model id)"
     },
     "discoveryId": {
       "pattern": "^dsc_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",

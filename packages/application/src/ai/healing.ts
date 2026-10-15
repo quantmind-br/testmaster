@@ -76,6 +76,21 @@ const interactiveTags = new Set([
   "option",
 ]);
 const modelCandidateLimit = 30;
+const reviewCandidateLimit = 50;
+const formControlTags = new Set(["input", "select", "textarea"]);
+/** Document and metadata elements: never a target of a healed locator unless the locator matched one. */
+const nonTargetTags = new Set([
+  "html",
+  "head",
+  "meta",
+  "script",
+  "style",
+  "link",
+  "title",
+  "noscript",
+  "template",
+  "base",
+]);
 /**
  * The model input admits a bounded number of candidates. Plain DOM order would spend that budget
  * on document scaffolding, so matched and interactive or identified elements go first (stable
@@ -83,6 +98,7 @@ const modelCandidateLimit = 30;
  */
 export function modelCandidates(
   candidates: LocatorEvidence["candidates"],
+  limit = modelCandidateLimit,
 ): LocatorEvidence["candidates"] {
   const rank = (candidate: LocatorEvidence["candidates"][number]) =>
     candidate.matched
@@ -95,8 +111,21 @@ export function modelCandidates(
   return candidates
     .map((candidate, index) => ({ candidate, index, rank: rank(candidate) }))
     .sort((a, b) => a.rank - b.rank || a.index - b.index)
-    .slice(0, modelCandidateLimit)
+    .slice(0, limit)
     .map((item) => item.candidate);
+}
+/**
+ * Candidates shown to the reviewer: only elements a healed locator can target (matched elements
+ * always stay), capped in DOM order with matched and identified elements kept first.
+ */
+export function reviewCandidates(
+  candidates: LocatorEvidence["candidates"],
+): LocatorEvidence["candidates"] {
+  const targets = candidates.filter(
+    (candidate) => candidate.matched || !nonTargetTags.has(candidate.tag),
+  );
+  const kept = new Set(modelCandidates(targets, reviewCandidateLimit));
+  return targets.filter((candidate) => kept.has(candidate));
 }
 function uniqueLocatorBaseline(record: LocatorEvidence, locator: Locator): boolean {
   if (
@@ -264,19 +293,27 @@ export class HealingService {
           "No comparable passing locator baseline recorded; equivalence unavailable",
         );
       for (const change of identityChanges) {
-        const candidates = (failed ?? [])
+        const recorded = (failed ?? [])
           .filter((record) => record.stepId === change.stepId && record.phase === "before")
-          .flatMap((record) => record.candidates)
-          .map((element) => ({
-            role: element.role || null,
-            name: element.name || null,
-            tag: element.tag || null,
-            type: element.type || null,
-            label: element.attributes.label ?? element.attributes["aria-label"] ?? null,
-            form: element.attributes.form ?? null,
-            matched: element.matched,
-            visible: element.visible,
-          }));
+          .flatMap((record) => record.candidates);
+        const listed = reviewCandidates(recorded);
+        const candidates = listed.map((element) => ({
+          role: element.role || null,
+          name: element.name || null,
+          tag: element.tag || null,
+          type: element.type || null,
+          label:
+            element.attributes.label ??
+            element.attributes["aria-label"] ??
+            // A form control's accessible name comes from its <label>, aria-labelledby or aria-label.
+            (formControlTags.has(element.tag) && element.name ? element.name : null),
+          form: element.attributes.form ?? null,
+          placeholder: element.attributes.placeholder ?? null,
+          testId: element.attributes["data-testid"] ?? null,
+          matched: element.matched,
+          visible: element.visible,
+        }));
+        const omittedCandidates = recorded.length - listed.length;
         if (!candidates.length)
           limitations.push(`Locator candidates unavailable for step ${change.stepId}`);
         if (candidates.some((element) => element.label === null))
@@ -287,6 +324,7 @@ export class HealingService {
           stepId: change.stepId,
           previous: change.before,
           candidates,
+          ...(omittedCandidates > 0 ? { omittedCandidates } : {}),
           equivalence:
             before && failed
               ? change.path === "/input/state"

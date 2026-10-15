@@ -742,7 +742,8 @@ it("OPS-014 deterministic analysis timeout preserves terminal execution and sour
         "--deadline-ms",
         "100",
       ]);
-      expect(partial.source).toBe("model");
+      // A reading cut by its deadline abstains: the stored analysis is the rules one plus the limit.
+      expect(partial.source).toBe("rules");
       expect(partial.limitations).not.toHaveLength(0);
       const afterFirst = requests;
       expect(afterFirst).toBeGreaterThan(0);

@@ -1,12 +1,16 @@
+import { once } from "node:events";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { ContractError } from "@testmaster/contracts";
 import { CODE_IMPORT_RULES } from "@testmaster/planner";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { completion, testProvider } from "../../../model-gateway/src/test-support.js";
 import { Application } from "../application.js";
 import { scaffoldPlan } from "../authoring.js";
+import { CODE_GENERATION_DEADLINE_MS, CODE_GENERATION_DEADLINE_REASON } from "./code-generation.js";
+import { ModelService } from "./model.js";
 
 const roots: string[] = [];
 const apps: Application[] = [];
@@ -36,6 +40,9 @@ async function fixture() {
   let completions = 0;
   const payloads: Record<string, unknown>[] = [];
   const queued: unknown[] = [];
+  // Per next completion: true = the server never answers and holds it until the client gives up.
+  const hangPlan: boolean[] = [];
+  let onHang: () => void = () => undefined;
   let output: unknown = generated(good);
   const server = createServer(async (request, response) => {
     requests++;
@@ -47,6 +54,11 @@ async function fixture() {
     const chunks: Buffer[] = [];
     for await (const chunk of request) chunks.push(Buffer.from(chunk));
     payloads.push(JSON.parse(Buffer.concat(chunks).toString()));
+    if (hangPlan.shift()) {
+      onHang();
+      await once(response, "close");
+      return;
+    }
     const content = queued.length ? queued.shift() : output;
     response.end(
       JSON.stringify({
@@ -96,6 +108,10 @@ async function fixture() {
     },
     queueOutputs(...values: unknown[]) {
       queued.push(...values);
+    },
+    hangCompletions(plan: boolean[], arrived?: () => void) {
+      hangPlan.push(...plan);
+      if (arrived) onHang = arrived;
     },
     counts: () => ({ requests, completions }),
   };
@@ -201,4 +217,99 @@ it("an unknown provider or model is refused before any model call, and an explic
   });
   expect(receipt.candidates).toHaveLength(1);
   expect(f.payloads[0]).toMatchObject({ model: "model" });
+});
+
+it("each revision's model call gets budget.deadlineMs, default 300000, and an out-of-range deadline is refused before any call", async () => {
+  const f = await fixture();
+  const request = { projectId: f.projectId, revisionIds: [f.revisionOf()] };
+  const complete = vi.spyOn(ModelService.prototype, "complete");
+  try {
+    await f.app.codeGeneration.generate(request);
+    expect(complete.mock.calls[0]?.[0].deadlineMs).toBe(CODE_GENERATION_DEADLINE_MS);
+    expect(CODE_GENERATION_DEADLINE_MS).toBe(300000);
+    await f.app.codeGeneration.generate({ ...request, budget: { deadlineMs: 600000 } });
+    expect(complete.mock.calls[1]?.[0].deadlineMs).toBe(600000);
+    const calls = complete.mock.calls.length;
+    for (const deadlineMs of [0, 600001, 1.5, -1])
+      await expect(
+        f.app.codeGeneration.generate({ ...request, budget: { deadlineMs } }),
+      ).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+    expect(complete.mock.calls).toHaveLength(calls);
+    expect(f.counts().completions).toBe(2);
+  } finally {
+    complete.mockRestore();
+  }
+});
+
+it("a revision whose model call reaches the deadline is listed and the next revision still produces a candidate", async () => {
+  const f = await fixture();
+  const slow = f.revisionOf();
+  const next = f.revisionOf();
+  f.hangCompletions([true, false]);
+  const receipt = await f.app.codeGeneration.generate({
+    projectId: f.projectId,
+    revisionIds: [slow, next],
+    budget: { deadlineMs: 1000 },
+  });
+  expect(receipt.requested).toBe(2);
+  expect(receipt.candidates).toHaveLength(1);
+  expect(receipt.validationErrors).toEqual([
+    {
+      path: slow,
+      message: "Model call reached its 1000 ms deadline, repairs included",
+      reasonCode: CODE_GENERATION_DEADLINE_REASON,
+      // The cut request is recorded and may be billed, so it is named.
+      modelCallId: expect.stringMatching(/^mdl_/u),
+    },
+  ]);
+  expect(f.counts().completions).toBe(2);
+});
+
+it("every revision reaching the deadline is UPSTREAM_TIMEOUT listing each revision", async () => {
+  const f = await fixture();
+  const only = f.revisionOf();
+  const before = f.revisionCount();
+  f.hangCompletions([true]);
+  await expect(
+    f.app.codeGeneration.generate({
+      projectId: f.projectId,
+      revisionIds: [only],
+      budget: { deadlineMs: 1000 },
+    }),
+  ).rejects.toMatchObject({
+    code: "UPSTREAM_TIMEOUT",
+    details: {
+      reasonCode: CODE_GENERATION_DEADLINE_REASON,
+      requested: 1,
+      deadlineMs: 1000,
+      validationErrors: [{ path: only, reasonCode: CODE_GENERATION_DEADLINE_REASON }],
+      modelCallIds: [expect.stringMatching(/^mdl_/u)],
+    },
+  });
+  expect(f.revisionCount()).toBe(before);
+});
+
+it("a cancellation stays fatal and its details list the candidates created before it", async () => {
+  const f = await fixture();
+  const created = f.revisionOf();
+  const cancelled = f.revisionOf();
+  const controller = new AbortController();
+  // The second revision's call reaches the server and hangs; the caller then cancels.
+  f.hangCompletions([false, true], () => controller.abort());
+  const failure = await f.app.codeGeneration
+    .generate({ projectId: f.projectId, revisionIds: [created, cancelled] }, controller.signal)
+    .catch((error: unknown) => error);
+  expect(failure).toMatchObject({
+    code: "PRECONDITION_FAILED",
+    details: { requested: 2, candidateRevisionIds: [expect.stringMatching(/^rev_/u)] },
+  });
+  const details = (failure as ContractError).details;
+  const candidateIds = details.candidateRevisionIds as string[];
+  expect(candidateIds).toHaveLength(1);
+  expect(f.app.revisions.get(String(candidateIds[0])).id).toBe(candidateIds[0]);
+  // The accepted call and the cancelled request, which is recorded and may be billed.
+  expect(details.modelCallIds).toEqual([
+    expect.stringMatching(/^mdl_/u),
+    expect.stringMatching(/^mdl_/u),
+  ]);
 });

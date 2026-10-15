@@ -41,6 +41,31 @@ const LOG_BYTES = 1024 * 1024;
 const DOM_BYTES = 1024 * 1024;
 const ARTIFACT_BYTES = 64 * 1024 * 1024;
 
+/**
+ * Expected URL of a `urlEquals` assertion as a full href. A relative value ("/dashboard") resolves
+ * against the environment base URL exactly as a navigate path does; an absolute one is kept.
+ */
+export function resolveExpectedUrl(expected: string, baseUrl: string | undefined): string {
+  try {
+    return new URL(expected, baseUrl).href;
+  } catch {
+    throw new RuntimeError(
+      "security_precondition_failed",
+      baseUrl === undefined && !/^[a-z][a-z0-9+.-]*:/iu.test(expected)
+        ? "A relative expected URL requires an environment base URL"
+        : "Expected URL is invalid",
+    );
+  }
+}
+/** Page URL as the same normalized href the expected value resolves to. */
+function normalizedUrl(url: string): string {
+  try {
+    return new URL(url).href;
+  } catch {
+    return url;
+  }
+}
+
 /** Cookie and web-storage values of a Playwright storage state (scrubbed from every artifact). */
 export function storageStateSecrets(raw: string): string[] {
   const state = JSON.parse(raw) as {
@@ -377,13 +402,27 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
         "responseStepId" in input
       )
         throw new RuntimeError("security_precondition_failed", "URL assertion requires page input");
-      const expected = await stringValue(expectation.value);
+      const expected = resolveExpectedUrl(
+        await stringValue(expectation.value),
+        runtime.input.baseUrl,
+      );
       const selected = pageFor(input.pageAlias);
-      await selected.waitForURL(expected, { timeout, waitUntil: "commit" });
-      if (selected.url() !== expected)
+      try {
+        // A predicate, not the string: Playwright reads a string as a glob pattern.
+        await selected.waitForURL((url) => url.href === expected, {
+          timeout,
+          waitUntil: "commit",
+        });
+      } catch (error) {
+        // The deadline is the verdict below; any other failure (a closed page) propagates.
+        if (!(error instanceof errors.TimeoutError) || runtime.signal.aborted) throw error;
+      }
+      const observed = normalizedUrl(selected.url());
+      runtime.recordComparison(runtime.scrub(observed), runtime.scrub(expected));
+      if (observed !== expected)
         throw new RuntimeError(
           "assertion_mismatch",
-          "Page URL differs from expected URL",
+          runtime.scrub(`Page URL ${observed} differs from expected URL ${expected}`),
           "failed",
         );
       return;
@@ -540,6 +579,16 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
     }
   }
   async function perform(step: PlanStep, remaining?: number): Promise<void> {
+    try {
+      await performStep(step, remaining);
+    } catch (error) {
+      // A fatal egress denial closes the context, so the pending Playwright call fails with
+      // "Target page, context or browser has been closed"; the denial is the cause.
+      if (violation) throw violation;
+      throw error;
+    }
+  }
+  async function performStep(step: PlanStep, remaining?: number): Promise<void> {
     if (violation) throw violation;
     if (runtime.signal.aborted)
       throw new RuntimeError("user_cancelled", "Attempt cancelled", "inconclusive");
@@ -800,11 +849,30 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       const observed = await selected.evaluateAll(
         (matches, testIdAttributes) => {
           const doc = matches[0]?.ownerDocument ?? document;
+          const matched = new Set(matches);
+          // Document and metadata elements are never locator targets; recording them would spend
+          // the 100-candidate budget on <head> contents. Matched elements always stay.
+          const metadataTags = [
+            "html",
+            "head",
+            "meta",
+            "script",
+            "style",
+            "link",
+            "title",
+            "noscript",
+            "template",
+            "base",
+          ];
+          const targetable = (node: Element) =>
+            matched.has(node as HTMLElement) || !metadataTags.includes(node.tagName.toLowerCase());
           const all: Element[] = [];
           const walker = doc.createTreeWalker(doc.documentElement, NodeFilter.SHOW_ELEMENT);
-          all.push(doc.documentElement);
-          while (all.length <= 100 && walker.nextNode()) all.push(walker.currentNode as Element);
-          const matched = new Set(matches);
+          if (targetable(doc.documentElement)) all.push(doc.documentElement);
+          while (all.length <= 100 && walker.nextNode()) {
+            const node = walker.currentNode as Element;
+            if (targetable(node)) all.push(node);
+          }
           const candidates = all.slice(0, 100).map((node) => {
             const tag = node.tagName.toLowerCase();
             const type = (node.getAttribute("type") ?? "").slice(0, 200);

@@ -6,7 +6,7 @@ import { semanticHash } from "@testmaster/domain";
 import type * as Playwright from "playwright-core";
 import { type Browser, errors } from "playwright-core";
 import { afterEach, beforeEach, expect, it, type Mock, vi } from "vitest";
-import { runBrowser } from "./browser.js";
+import { resolveExpectedUrl, runBrowser } from "./browser.js";
 import { observePage } from "./observation.js";
 import { ProtocolClient } from "./protocol.js";
 import { type RunnerInput, Runtime } from "./runtime.js";
@@ -1077,4 +1077,84 @@ it("offers an approved mutation when it matches a control by placeholder or by r
     ],
   });
   expect(choose.mock.calls[0]?.[1]).toHaveProperty("actions.length", 2);
+});
+
+function urlCheck(value: string): PlanStep {
+  return {
+    id: "url",
+    kind: "assertion",
+    operation: "assert",
+    description: "URL",
+    input: {},
+    expectation: { predicate: "urlEquals", value: { literal: value } },
+    timeoutMs: 300,
+  } as PlanStep;
+}
+/** Playwright's waitForURL resolves when the predicate holds for the current URL, else times out. */
+function waitForURLLikePlaywright() {
+  (context.page.waitForURL as Mock).mockImplementation(async (matcher: (url: URL) => boolean) => {
+    if (typeof matcher !== "function" || !matcher(new URL(context.page.href)))
+      throw new errors.TimeoutError("waitForURL timed out");
+  });
+}
+it("resolves a relative urlEquals value against the environment base URL, like a navigate path", async () => {
+  waitForURLLikePlaywright();
+  context.page.href = "http://fixture.test/dashboard";
+  for (const expected of ["/dashboard", "http://fixture.test/dashboard", "dashboard"]) {
+    events = [];
+    expect(await runBrowser(runtime([urlCheck(expected)]))).toMatchObject({ outcome: "passed" });
+    expect(
+      events.find((event) => event.type === "step.finished" && event.payload.stepId === "url")
+        ?.payload,
+    ).toMatchObject({
+      status: "passed",
+      observed: "http://fixture.test/dashboard",
+      expected: "http://fixture.test/dashboard",
+    });
+  }
+  // The matcher is a predicate: a string would be read as a glob pattern by Playwright.
+  expect(typeof (context.page.waitForURL.mock.calls as unknown[][])[0]?.[0]).toBe("function");
+});
+it("fails a urlEquals mismatch as assertion_mismatch and records observed and expected URLs", async () => {
+  waitForURLLikePlaywright();
+  context.page.href = "http://fixture.test/login?next=%2Fdashboard";
+  expect(await runBrowser(runtime([urlCheck("/dashboard")]))).toMatchObject({
+    outcome: "failed",
+    reasonCode: "assertion_mismatch",
+  });
+  const payload = events.find(
+    (event) => event.type === "step.finished" && event.payload.stepId === "url",
+  )?.payload as { error: { message: string }; observed: string; expected: string };
+  expect(payload.observed).toBe("http://fixture.test/login?next=%2Fdashboard");
+  expect(payload.expected).toBe("http://fixture.test/dashboard");
+  expect(payload.error.message).toBe(
+    "Page URL http://fixture.test/login?next=%2Fdashboard differs from expected URL http://fixture.test/dashboard",
+  );
+});
+it("reports a fatal egress denial, not the closed page it causes, while a URL assertion waits", async () => {
+  // The destination page fetches an unapproved origin while the assertion waits for its URL: the
+  // denial closes the context, so the pending wait fails with a closed-page error.
+  const news = routeFor("https://news.example.test/news.json", "fetch");
+  (context.page.waitForURL as Mock).mockImplementation(async () => {
+    const handler = (context.route.mock.calls as unknown[][])[0]?.[1] as (
+      route: RouteDouble,
+    ) => Promise<void>;
+    await handler(news);
+    throw new Error("page.waitForURL: Target page, context or browser has been closed");
+  });
+  expect(await runBrowser(runtime([urlCheck("/settings")]))).toMatchObject({
+    outcome: "blocked",
+    reasonCode: "egress_denied",
+  });
+  expect(egressEvents()).toEqual([
+    expect.objectContaining({ origin: "https://news.example.test", disposition: "fatal" }),
+  ]);
+});
+it("resolves expected URLs with the navigate rules and refuses a relative one without a base", () => {
+  expect(resolveExpectedUrl("/a?x=1", "http://h.test/base/")).toBe("http://h.test/a?x=1");
+  expect(resolveExpectedUrl("a", "http://h.test/base/")).toBe("http://h.test/base/a");
+  expect(resolveExpectedUrl("https://other.test", "http://h.test")).toBe("https://other.test/");
+  expect(() => resolveExpectedUrl("/a", undefined)).toThrow(
+    expect.objectContaining({ reasonCode: "security_precondition_failed" }),
+  );
 });

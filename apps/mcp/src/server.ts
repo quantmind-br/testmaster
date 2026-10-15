@@ -17,6 +17,7 @@ import {
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import {
+  type AnalysisModelStatus,
   type Application,
   correlationId,
   entity,
@@ -31,6 +32,7 @@ import {
   type HealingReview,
   jsonSchema,
   mcpToolCatalog,
+  type PlanStep,
   parseStrictJson,
   type RunResult,
   type SuiteRunInput,
@@ -156,6 +158,11 @@ function unavailable(name: string, milestone = "M2"): never {
 function object(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
+/** One line of the text content that says what became of a requested model reading. */
+function formatModelStatus(status: AnalysisModelStatus | undefined): string | null {
+  if (!status) return null;
+  return `Model reading: ${status.state}${status.reasonCode ? ` (${status.reasonCode})` : ""}: ${status.message}`;
+}
 
 export class TestMasterMcp {
   readonly server: Server;
@@ -192,11 +199,16 @@ export class TestMasterMcp {
     this.server.setRequestHandler(
       CallToolRequestSchema,
       async (request, extra): Promise<CallToolResult> => {
+        // An unknown tool is a malformed request (JSON-RPC -32602), not a failed tool execution.
+        const tool = mcpToolCatalog.find((item) => item.name === request.params.name);
+        if (!tool)
+          throw new McpError(
+            ErrorCode.InvalidParams,
+            `Unknown tool: ${request.params.name.slice(0, 200)}`,
+          );
         this.activeSignals.set(extra.requestId, extra.signal);
         try {
           this.options.authenticate?.();
-          const tool = mcpToolCatalog.find((item) => item.name === request.params.name);
-          if (!tool) throw new ContractError("NOT_FOUND", "Unknown tool");
           const args = this.parseArguments(tool, request.params.arguments ?? {});
           const scope = readTools[tool.name]
             ? "R"
@@ -247,21 +259,28 @@ export class TestMasterMcp {
                 }))
               : [];
           const summary =
-            tool.name === "testmaster_analyze_run" || tool.name === "testmaster_get_analysis"
+            tool.name === "testmaster_get_analysis"
               ? formatDiagnosisSummary(data as unknown as Analysis)
-              : tool.name === "testmaster_review_healing"
-                ? (() => {
-                    const review = data as unknown as HealingReview;
-                    return [
-                      "Healing review",
-                      `Automation: ${review.automation.decision}`,
-                      ...review.automation.reasons.map((reason) => `Reason: ${reason}`),
-                      `Risk: ${review.risk}; assertions intact: ${review.preservedAssertions.intact}`,
-                      `Verification: ${review.verification ? `${review.verification.runId}: ${review.verification.outcome}; gate ${review.verification.gate}` : "not recorded"}`,
-                      `Approval: testmaster heal approve ${review.approval.proposalId} --expected-version ${review.approval.expectedVersion}`,
-                    ].join("\n");
-                  })()
-                : null;
+              : tool.name === "testmaster_analyze_run"
+                ? [
+                    formatDiagnosisSummary(data as unknown as Analysis),
+                    formatModelStatus(data.modelStatus as AnalysisModelStatus | undefined),
+                  ]
+                    .filter(Boolean)
+                    .join("\n")
+                : tool.name === "testmaster_review_healing"
+                  ? (() => {
+                      const review = data as unknown as HealingReview;
+                      return [
+                        "Healing review",
+                        `Automation: ${review.automation.decision}`,
+                        ...review.automation.reasons.map((reason) => `Reason: ${reason}`),
+                        `Risk: ${review.risk}; assertions intact: ${review.preservedAssertions.intact}`,
+                        `Verification: ${review.verification ? `${review.verification.runId}: ${review.verification.outcome}; gate ${review.verification.gate}` : "not recorded"}`,
+                        `Approval: testmaster heal approve ${review.approval.proposalId} --expected-version ${review.approval.expectedVersion}`,
+                      ].join("\n");
+                    })()
+                  : null;
           const json = JSON.stringify(data);
           if (
             tool.name === "testmaster_normalize_requirements" &&
@@ -638,15 +657,27 @@ export class TestMasterMcp {
       }
       case "testmaster_analyze_run": {
         const budget = object(args.budget ?? {});
-        return app.analysis.analyze(String(args.runId), {
-          model: args.model === true,
+        // `model` is the switch (true) or the model id of the reading; provider only refines it.
+        const model = args.model;
+        const requested = model === true || typeof model === "string";
+        if (args.provider !== undefined && !requested)
+          throw new ContractError(
+            "INVALID_ARGUMENT",
+            "provider requires model (true or a model id)",
+          );
+        const analysis = await app.analysis.analyze(String(args.runId), {
+          model: requested,
           ...(typeof args.provider === "string" ? { provider: args.provider } : {}),
-          ...(typeof args.modelId === "string" ? { modelId: args.modelId } : {}),
+          ...(typeof model === "string" ? { modelId: model } : {}),
           ...(typeof args.discoveryId === "string" ? { discoveryId: args.discoveryId } : {}),
           ...(typeof budget.deadlineMs === "number"
             ? { budget: { deadlineMs: budget.deadlineMs } }
             : {}),
         });
+        // A reading that was asked for always reports its fate; rules-only calls carry no status.
+        return requested
+          ? { ...analysis, modelStatus: app.analysis.modelStatus(analysis) }
+          : analysis;
       }
       case "testmaster_cancel_run":
         return app.runs.cancel(String(args.runId));
@@ -832,7 +863,9 @@ export class TestMasterMcp {
             projectId: [...projects][0] as string,
             ...(revisions ? { revisionIds: revisions } : {}),
             ...(proposals ? { proposalIds: proposals } : {}),
-            ...(args.budget ? { budget: args.budget as { modelCalls?: number } } : {}),
+            ...(args.budget
+              ? { budget: args.budget as { modelCalls?: number; deadlineMs?: number } }
+              : {}),
             ...(typeof args.provider === "string" ? { provider: args.provider } : {}),
             ...(typeof args.model === "string" ? { model: args.model } : {}),
           },
@@ -879,6 +912,9 @@ export class TestMasterMcp {
               : {}),
             ...(typeof args.provider === "string" ? { provider: args.provider } : {}),
             ...(typeof args.model === "string" ? { model: args.model } : {}),
+            ...(Array.isArray(args.mutationActions)
+              ? { mutationActions: args.mutationActions as PlanStep[] }
+              : {}),
             budget: args.budget as { steps: number; timeMs: number; modelCalls: number },
           });
           jobId = begun.job.id;
@@ -908,7 +944,7 @@ export class TestMasterMcp {
         });
       case "testmaster_propose_healing": {
         const budget = object(args.budget ?? {});
-        return app.healing.propose(String(args.failedRunId), {
+        return app.healing.propose(String(args.runId), {
           ...(typeof args.provider === "string" ? { provider: args.provider } : {}),
           ...(typeof args.model === "string" ? { model: args.model } : {}),
           ...(typeof budget.deadlineMs === "number"
@@ -1142,7 +1178,16 @@ export class TestMasterMcp {
         if (parts.length === 1) return { json: app.projects.get(id) };
         break;
       case "revisions":
-        if (parts.length === 2 && parts[1] === "plan") return { json: app.revisions.get(id).plan };
+        if (parts.length === 2 && parts[1] === "plan") {
+          const revision = app.revisions.get(id);
+          if (!revision.plan)
+            throw new ContractError(
+              "NOT_FOUND",
+              `Revision ${id} is generated code and has no plan; read its code with 'testmaster test export ${revision.testId} --revision ${id} --format <playwright|pytest>' or GET /v1/revisions/${id}/code`,
+              { revisionId: id, testId: revision.testId, origin: revision.origin },
+            );
+          return { json: revision.plan };
+        }
         break;
       case "runs":
         if (parts.length === 2 && parts[1] === "result") return { json: this.result(id) };

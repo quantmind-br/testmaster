@@ -17,7 +17,7 @@ import { promoteRevisionCas, scaffoldPlan } from "../authoring.js";
 import { entity } from "../context.js";
 import { issueLocalToken } from "../local-auth.js";
 import type { AnalysisService } from "./analysis.js";
-import { HealingService, modelCandidates } from "./healing.js";
+import { HealingService, modelCandidates, reviewCandidates } from "./healing.js";
 import { applyHealingPatch, healingReplacements } from "./healing-patch.js";
 import { type ModelInput, ModelService } from "./model.js";
 
@@ -1294,6 +1294,70 @@ it("model locator candidates keep the matched and interactive elements ahead of 
   ).toBe(true);
   const matched = element("div", { matched: true });
   expect(modelCandidates([renamed, matched])[0]).toBe(matched);
+});
+
+it("healing review lists only locator-targetable candidates and keeps form control identity", async () => {
+  const f = await deferredFixture(true);
+  const proposal = await f.service.propose(f.failed.id);
+  const record = f.records.get(f.failed.id)![0]!;
+  const target = record.candidates[0]!;
+  Object.assign(target, { tag: "input", type: "text", role: "textbox", name: "Email address" });
+  target.attributes.placeholder = "you@example.com";
+  target.fingerprint = locatorFingerprint(target);
+  const metadata = ["html", "head", "meta", "script", "style", "link", "title"].map((tag) => {
+    const element = {
+      role: "",
+      name: "",
+      tag,
+      type: "",
+      attributes: {},
+      fingerprint: "",
+      matched: false,
+      visible: false,
+    };
+    element.fingerprint = locatorFingerprint(element);
+    return element;
+  });
+  record.candidates.unshift(...metadata);
+  const { evidenceHash: _hash, ...payload } = record;
+  record.evidenceHash = semanticHash(payload);
+  const review = await f.service.review(proposal.id);
+  const identity = review.identity[0]!;
+  expect(identity.candidates.map((candidate) => candidate.tag)).toEqual(["input"]);
+  expect(identity.candidates[0]).toMatchObject({
+    role: "textbox",
+    name: "Email address",
+    type: "text",
+    label: "Email address",
+    placeholder: "you@example.com",
+  });
+  expect(identity.omittedCandidates).toBe(metadata.length);
+});
+
+it("review candidates drop document metadata unless matched and cap the list in DOM order", () => {
+  const element = (tag: string, extra: Partial<LocatorEvidence["candidates"][number]> = {}) => ({
+    role: "",
+    name: "",
+    tag,
+    type: "",
+    attributes: {},
+    fingerprint: "",
+    matched: false,
+    visible: true,
+    ...extra,
+  });
+  const head = element("head");
+  const matchedTitle = element("title", { matched: true });
+  const button = element("button", { role: "button", name: "Save" });
+  expect(reviewCandidates([element("html"), head, matchedTitle, button])).toEqual([
+    matchedTitle,
+    button,
+  ]);
+  const divs = Array.from({ length: 80 }, () => element("div"));
+  const listed = reviewCandidates([...divs, button]);
+  expect(listed).toHaveLength(50);
+  expect(listed).toContain(button);
+  expect(listed.indexOf(divs[0]!)).toBeLessThan(listed.indexOf(button));
 });
 
 /** A reviewable proposal whose approval can be admitted: a browser plan and a locator replacement. */

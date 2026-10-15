@@ -1,4 +1,5 @@
-import { ContractError } from "@testmaster/contracts";
+import { readFile } from "node:fs/promises";
+import { ContractError, type PlanStep, parseStrictJson } from "@testmaster/contracts";
 import type { Command } from "commander";
 import { integer, type Options, type Runtime, required, string } from "./runtime.js";
 export function codeFormat(options: Options): "playwright" | "pytest" {
@@ -60,6 +61,10 @@ export function explorationCommands(program: Command, runtime: Runtime): void {
       .option("--video", "Collect restricted raw exploration video (admin only)")
       .option("--provider <id>", "Model provider of the action-resolution calls")
       .option("--model <id>", "Model id of the action-resolution calls")
+      .option(
+        "--mutation-actions <file>",
+        "JSON array (max 20) of typed form steps the controller may select when one matches an observed control",
+      )
       .option("--max-steps <count>", "Action budget", integer, 5)
       .option("--max-model-calls <count>", "Model budget", integer, 5)
       .option("--time-budget-ms <ms>", "Wall-clock budget", integer, 60000),
@@ -67,6 +72,17 @@ export function explorationCommands(program: Command, runtime: Runtime): void {
       const projectId = await rt.project(options);
       if (!projectId)
         throw new ContractError("PRECONDITION_FAILED", "Select a project before exploration");
+      const actionsFile = string(options, "mutationActions");
+      let mutationActions: PlanStep[] | undefined;
+      if (actionsFile) {
+        const parsed = parseStrictJson(await readFile(rt.path(actionsFile)));
+        if (!Array.isArray(parsed))
+          throw new ContractError(
+            "INVALID_ARGUMENT",
+            "--mutation-actions must name a file holding a JSON array of steps",
+          );
+        mutationActions = parsed as PlanStep[];
+      }
       return {
         data: await (await rt.app()).explore.start(
           {
@@ -79,6 +95,7 @@ export function explorationCommands(program: Command, runtime: Runtime): void {
             ...(options.video ? { video: true } : {}),
             ...(string(options, "provider") ? { provider: required(options, "provider") } : {}),
             ...(string(options, "model") ? { model: required(options, "model") } : {}),
+            ...(mutationActions ? { mutationActions } : {}),
             budget: {
               steps: Number(options.maxSteps),
               modelCalls: Number(options.maxModelCalls),

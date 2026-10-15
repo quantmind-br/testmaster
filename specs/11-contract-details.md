@@ -88,6 +88,8 @@ Assertions usam operação `assert` e expectation discriminada: `visible`, `hidd
 
 `frame.childSteps` conta no limite global e usa IDs únicos globais no plano. URLs/aliases/locators da assertion são explícitos; não há “último elemento” implícito. Persistência após reload é expressa por navigate seguido de assertion independente, não por confiar no toast de sucesso.
 
+`urlEquals` takes a full URL or a path. A relative value (`/dashboard`) resolves against the environment `baseUrl` exactly like a `navigate` path, and the comparison is on the full normalized href (Playwright's `waitForURL` receives a predicate, never a glob string). A mismatch fails as `assertion_mismatch` with the observed and resolved expected URLs recorded on the step.
+
 ### 3.4 Exemplo completo de frontend
 
 ```json
@@ -169,6 +171,8 @@ Action `request` contém `method`, `pathSegments`, `query`, `headers`, `body`, `
 `body` distingue `json`, `text`, `form` e `artifact`; Content-Type coerente e limites antes de materializar. `capture[]` usa `name`, `from` (`jsonPointer|header`), `pointer|header`, `valueType`, `sensitive`; resolve após response íntegra e valida tipo. JSON Pointer segue RFC 6901: root `""`, escaping `~0` e `~1`; path ausente não vira null. `sensitive=true` propaga taint a logs, interpolação, artifacts e modelo.
 
 Assertion input `{responseStepId, jsonPointer?}` referencia response no mesmo Attempt ou binding explicitamente declarado, nunca response global. Status 4xx/5xx é resposta válida a avaliar; transporte só falhou se não obteve resposta utilizável. `statusIn` usa array não vazio 100–599, não wildcard “qualquer 2xx/4xx”. `jsonSchema` guarda spec revision/pointer, não schema inferido da própria resposta.
+
+Source schemas keep full JSON Schema validation; OpenAPI annotation keywords (`example`, `xml`, `externalDocs`, `discriminator`, `x-*`) are ignored, while keywords outside both vocabularies still make a schema unusable. A schema that cannot be compiled (unknown keyword, dangling `$ref`, invalid keyword value) is `inconclusive/oracle_uncertain` with the schema problem in the step error, never `assertion_mismatch`. A response the schema rejects is `failed/assertion_mismatch`: `expected` names the schema (`sourceRevisionId`, `pointer`) and `observed` holds up to 20 validator violations (`path`, `keyword`, `message`, `property`) plus a bounded excerpt of the rejected value (dropped when it carries a secret). Any failed HTTP assertion whose value exceeds the 8 KiB comparison limit records `{truncated, sizeBytes, excerpt}` instead of a null.
 
 ### 4.1 Exemplo completo de backend
 

@@ -17,13 +17,13 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_normalize_requirements:
     "Normalize source revisions into requirements and conflicts; returns sourceSnapshotId (fingerprint) and version. Slow: pass a progressToken. Humans approve requirements (CLI or portal), then testmaster_generate_plan.",
   testmaster_explore:
-    "Run a budgeted browser exploration of features in an environment. budget: steps 1..100, modelCalls 1..steps, timeMs 1000..300000; provider/model pick the resolution model. A failed job's cause is in extensions['testmaster:errorMessage']. wait=true blocks; otherwise track the returned jobId.",
+    "Run a budgeted browser exploration of features. budget: steps 1..100, modelCalls 1..steps, timeMs 1000..300000; provider/model pick the resolution model; mutationActions approves typed form steps. A failed job's cause: extensions['testmaster:errorMessage']. wait=true blocks; else track jobId.",
   testmaster_generate_plan:
     "Generate plan proposals (candidates, not tests) from the approved requirement snapshot (sourceSnapshotId = its fingerprint). Declined: extensions['testmaster:unsupportedRequirements']; refused: INVALID_ARGUMENT details.refused, or partialGeneration. Next: testmaster_review_plan.",
   testmaster_review_plan:
     "Record accept or reject decisions for a proposal batch at expectedVersion. Unselected proposals stay pending. Next: testmaster_generate_tests.",
   testmaster_generate_tests:
-    "Generate executable candidates from accepted proposals or revisions, one project per call; provider/model choose the model. Refused candidates are listed in validationErrors; all refused: INVALID_ARGUMENT generated_code_refused. Not execution evidence; review before testmaster_run_tests.",
+    "Generate executable candidates from accepted proposals or revisions, one project per call; provider/model pick the model. budget.deadlineMs limits each revision's call (default 300000); refused or timed-out revisions go to validationErrors. Not execution evidence; review before testmaster_run_tests.",
   testmaster_run_tests:
     "Run testIds with environmentId, or a list (suiteId, replay only), in the sandbox; returns the batch receipt with live run status. wait=true blocks until timeoutMs (UPSTREAM_TIMEOUT; runs continue), else poll testmaster_get_run. idempotencyKey makes retries safe.",
   testmaster_get_run:
@@ -31,7 +31,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_get_evidence:
     "Page the evidence manifest (screenshots, DOM, console, network, logs) with resource links. Check integrity and freshness, follow nextCursor; failedOnly narrows. Next: testmaster_analyze_run.",
   testmaster_analyze_run:
-    "Diagnose a failed run from recorded evidence. model=true adds a model reading (provider/modelId choose it; an abstained reading stays source rules with a limitation). A cause without cited evidence is only a suggestion. Heal only if the advice allows.",
+    "Diagnose a failed run from recorded evidence. model=true (or a model id; provider optional) adds a model reading; modelStatus says if it was used, abstained or unavailable (analysis then stays source rules). A cause without cited evidence is only a suggestion. Heal only if the advice allows.",
   testmaster_get_analysis:
     "Read the stored analysis without recomputing. NOT_FOUND if never requested; then call testmaster_analyze_run.",
   testmaster_cancel_run:

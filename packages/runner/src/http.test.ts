@@ -971,3 +971,179 @@ it("refuses storage-state input as unsupported before any HTTP request", async (
   });
   expect(hits).toBe(0);
 });
+
+const OPENAPI_MODELS = {
+  components: {
+    schemas: {
+      Models: {
+        type: "object",
+        required: ["data"],
+        // OpenAPI annotations that Ajv strict mode does not know.
+        example: { data: [{ id: "gpt-5" }] },
+        xml: { name: "models" },
+        externalDocs: { url: "https://docs.example.test/models" },
+        "x-internal": true,
+        properties: {
+          data: {
+            type: "array",
+            items: {
+              type: "object",
+              required: ["id"],
+              properties: {
+                id: { type: "string", example: "gpt-5" },
+                owned_by: { type: "string", nullable: true, "x-vendor": { note: 1 } },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+};
+function schemaCheck(pointer = "/components/schemas/Models"): PlanStep {
+  return {
+    id: "check",
+    kind: "assertion",
+    operation: "assert",
+    description: "Response matches the source schema",
+    input: { responseStepId: "read" },
+    expectation: { predicate: "jsonSchema", sourceRevisionId: SOURCE, pointer },
+  };
+}
+it("validates a response against an OpenAPI schema that carries example and vendor annotations", async () => {
+  const base = await serve((_req, res) =>
+    res.end('{"data":[{"id":"gpt-5","owned_by":null},{"id":"o3"}]}'),
+  );
+  const f = fixture(base, { schemas: { [SOURCE]: OPENAPI_MODELS } });
+  expect(
+    await f.runtime.runSteps([requestStep("read", []), schemaCheck()], (step) =>
+      f.engine.perform(step),
+    ),
+  ).toMatchObject({ outcome: "passed" });
+});
+it("fails a non-conforming response with bounded violations, an excerpt and a schema reference", async () => {
+  const base = await serve((_req, res) =>
+    res.end('{"data":[{"id":7,"extra":"x"},{"owned_by":"o"}]}'),
+  );
+  const f = fixture(base, { schemas: { [SOURCE]: OPENAPI_MODELS } });
+  expect(
+    await f.runtime.runSteps([requestStep("read", []), schemaCheck()], (step) =>
+      f.engine.perform(step),
+    ),
+  ).toMatchObject({ outcome: "failed", reasonCode: "assertion_mismatch" });
+  const payload = f.events.find(
+    (event) => event.type === "step.finished" && event.payload.stepId === "check",
+  )!.payload as {
+    error: { message: string };
+    observed: {
+      violations: { path: string; keyword: string; message: string; property?: string }[];
+      omittedViolations: number;
+      excerpt: unknown;
+    };
+    expected: unknown;
+  };
+  expect(payload.error.message).toMatch(
+    /^Response does not match source schema: 2 violations; first at \/data\/0\/id: must be string/u,
+  );
+  expect(payload.observed.violations).toEqual([
+    { path: "/data/0/id", keyword: "type", message: "must be string" },
+    {
+      path: "/data/1",
+      keyword: "required",
+      message: "must have required property 'id'",
+      property: "id",
+    },
+  ]);
+  expect(payload.observed.omittedViolations).toBe(0);
+  expect(payload.observed.excerpt).toEqual({
+    data: [{ id: 7, extra: "x" }, { owned_by: "o" }],
+  });
+  expect(payload.expected).toEqual({
+    sourceRevisionId: SOURCE,
+    pointer: "/components/schemas/Models",
+  });
+});
+it("caps violations and degrades the schema observation instead of dropping it", async () => {
+  const rows = Array.from({ length: 30 }, () => ({ id: 1 }));
+  const base = await serve((_req, res) => res.end(JSON.stringify({ data: rows })));
+  const f = fixture(base, { schemas: { [SOURCE]: OPENAPI_MODELS } });
+  f.runtime.secrets.add("gpt-secret");
+  await f.runtime.runSteps([requestStep("read", []), schemaCheck()], (step) =>
+    f.engine.perform(step),
+  );
+  const payload = f.events.find(
+    (event) => event.type === "step.finished" && event.payload.stepId === "check",
+  )!.payload as { observed: { violations: unknown[]; omittedViolations: number } };
+  expect(payload.observed.violations).toHaveLength(20);
+  expect(payload.observed.omittedViolations).toBe(10);
+  // A secret inside the rejected value removes the excerpt but keeps the violations.
+  const secretBase = await serve((_req, res) =>
+    res.end('{"data":[{"id":"ok"},{"id":"gpt-secret-9"},{}]}'),
+  );
+  const g = fixture(secretBase, { schemas: { [SOURCE]: OPENAPI_MODELS } });
+  g.runtime.secrets.add("gpt-secret-9");
+  await g.runtime.runSteps([requestStep("read", []), schemaCheck()], (step) =>
+    g.engine.perform(step),
+  );
+  const secret = g.events.find(
+    (event) => event.type === "step.finished" && event.payload.stepId === "check",
+  )!.payload as { observed: { violations: unknown[]; excerpt?: unknown } };
+  expect(secret.observed.violations).toHaveLength(1);
+  expect(secret.observed).not.toHaveProperty("excerpt");
+  expect(JSON.stringify(g.events)).not.toContain("gpt-secret-9");
+});
+it("reports a schema that cannot be compiled as inconclusive, not as an assertion failure", async () => {
+  const base = await serve((_req, res) => res.end('{"data":[]}'));
+  const f = fixture(base, {
+    schemas: {
+      [SOURCE]: {
+        components: {
+          schemas: { Broken: { type: "object", properties: { a: { $ref: "#/$defs/Missing" } } } },
+        },
+      },
+    },
+  });
+  expect(
+    await f.runtime.runSteps(
+      [requestStep("read", []), schemaCheck("/components/schemas/Broken")],
+      (step) => f.engine.perform(step),
+    ),
+  ).toMatchObject({ outcome: "inconclusive", reasonCode: "oracle_uncertain" });
+  const payload = f.events.find(
+    (event) => event.type === "step.finished" && event.payload.stepId === "check",
+  )!.payload as { status: string; error: { message: string } };
+  expect(payload.status).toBe("inconclusive");
+  expect(payload.error.message).toMatch(/^Source schema .*Broken cannot be used for validation: /u);
+  expect(payload.error.message).toContain("Missing");
+});
+it("keeps a bounded excerpt of an oversized value when a JSON assertion fails", async () => {
+  const items = Array.from({ length: 400 }, (_, index) => ({ id: `item-${index}`, price: index }));
+  const base = await serve((_req, res) => res.end(JSON.stringify({ items })));
+  const f = fixture(base);
+  const check: PlanStep = {
+    id: "check",
+    kind: "assertion",
+    operation: "assert",
+    description: "Items equal the expectation",
+    input: { responseStepId: "read", jsonPointer: "/items" },
+    expectation: { predicate: "jsonEquals", value: { literal: [] } },
+  };
+  expect(
+    await f.runtime.runSteps([requestStep("read", []), check], (step) => f.engine.perform(step)),
+  ).toMatchObject({ outcome: "failed", reasonCode: "assertion_mismatch" });
+  const payload = f.events.find(
+    (event) => event.type === "step.finished" && event.payload.stepId === "check",
+  )!.payload as {
+    observed: { truncated: boolean; sizeBytes: number; excerpt: unknown[] };
+    expected: unknown;
+  };
+  expect(payload.observed.truncated).toBe(true);
+  expect(payload.observed.sizeBytes).toBeGreaterThan(8192);
+  expect(payload.observed.excerpt).toEqual([
+    { id: "item-0", price: 0 },
+    { id: "item-1", price: 1 },
+    { id: "item-2", price: 2 },
+    "...(397 more items)",
+  ]);
+  expect(payload.expected).toEqual([]);
+});

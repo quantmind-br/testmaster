@@ -758,6 +758,14 @@ export const mcpTools = {
       model: Type.Optional(
         d(Name, "Model id for action resolution; absent: the provider's first capable model"),
       ),
+      mutationActions: Type.Optional(
+        d(
+          // Each entry is validated as a plan Step by the service; inlining the recursive Step
+          // schema here would make the advertised tool schema hundreds of kilobytes.
+          Type.Array(Type.Object({}, { additionalProperties: true }), { maxItems: 20 }),
+          "Approved form steps (plan Step objects: click, fill, press, select, check, uncheck; each with a locator) the controller may select when one matches an observed control; max 20, refused in production environments. Without it a form-only page offers the model nothing to choose",
+        ),
+      ),
       jobId: Type.Optional(d(id("dsc"), "Existing exploration job to resume or retry")),
       wait: Type.Optional(
         d(Type.Boolean(), "Block until the job ends instead of returning its id"),
@@ -815,6 +823,12 @@ export const mcpTools = {
             {
               modelCalls: Type.Optional(
                 d(Type.Integer({ minimum: 1, maximum: 20 }), "Model calls, 1..20; default 10"),
+              ),
+              deadlineMs: Type.Optional(
+                d(
+                  Type.Integer({ minimum: 1, maximum: 600000 }),
+                  "Deadline in milliseconds of each revision's model call, repairs included, 1..600000; default 300000. A revision that reaches it is listed in validationErrors and the next one is still tried",
+                ),
               ),
             },
             { description: "Optional model-call budget" },
@@ -900,17 +914,19 @@ export const mcpTools = {
     milestone: "M3",
     input: Obj({
       runId: runId("Failed run to diagnose"),
-      model: Type.Optional(d(Type.Boolean(), "Also ask a model to read the recorded evidence")),
-      provider: Type.Optional(
-        d(Name, "Model provider id for the model reading; requires model=true"),
+      model: Type.Optional(
+        d(
+          Type.Union([Type.Boolean(), Name]),
+          "Also ask a model to read the recorded evidence: true uses the first capable model, a model id uses that model. Absent or false: rules only",
+        ),
       ),
-      modelId: Type.Optional(
-        d(Name, "Model id for the model reading; requires model=true. Absent: first capable model"),
+      provider: Type.Optional(
+        d(Name, "Model provider id for the model reading; requires model (true or a model id)"),
       ),
       discoveryId: Type.Optional(d(id("dsc"), "Discovery job to cross-reference")),
       budget: deadlineBudget("Optional time budget"),
     }),
-    output: "Analysis",
+    output: "McpAnalysis",
   },
   testmaster_get_evidence: {
     milestone: "M1",
@@ -950,7 +966,7 @@ export const mcpTools = {
   testmaster_propose_healing: {
     milestone: "M3",
     input: Obj({
-      failedRunId: runId("Failed run to heal"),
+      runId: runId("Failed run to heal"),
       provider: Type.Optional(d(Name, "Model provider id")),
       model: Type.Optional(d(Name, "Model id")),
       budget: deadlineBudget("Optional time budget"),

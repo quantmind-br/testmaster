@@ -39,6 +39,36 @@ export interface AnalysisInput {
   discoveryId?: string;
   budget?: { deadlineMs?: number };
 }
+/** What became of a requested model reading; `used` only when a model call produced the analysis. */
+export interface AnalysisModelStatus {
+  state: "used" | "abstained" | "unavailable";
+  reasonCode: string | null;
+  message: string;
+  modelCallId: string | null;
+}
+/**
+ * Status of a reading that produced no model analysis. A model that cannot be used at all (not
+ * configured, absent from the provider inventory, no capability, policy) is `unavailable`; any
+ * other refusal (rejected output, oversized evidence) is an `abstained` reading.
+ */
+function abstentionStatus(error: unknown): AnalysisModelStatus {
+  if (!(error instanceof ContractError))
+    return {
+      state: "abstained",
+      reasonCode: "provider_or_validation_failure",
+      message: "The model reading failed before it produced a valid analysis.",
+      modelCallId: null,
+    };
+  const reasonCode = error.details.reasonCode;
+  return {
+    state: ["CAPABILITY_UNAVAILABLE", "POLICY_DENIED"].includes(error.code)
+      ? "unavailable"
+      : "abstained",
+    reasonCode: typeof reasonCode === "string" ? reasonCode : error.code,
+    message: error.message,
+    modelCallId: null,
+  };
+}
 export type AnalysisStatus = Run["analysisStatus"];
 export type AnalysisEvidenceRef = Analysis["facts"][number]["evidenceRefs"][number];
 type ModelOutput = {
@@ -155,7 +185,13 @@ type CollectedEvidence = {
   plan: ExecutablePlan | null;
 };
 
-type HttpStatusEvidence = { kind: "http"; stepId: string; status: number };
+type HttpStatusEvidence = {
+  kind: "http";
+  stepId: string;
+  status: number;
+  /** Bounded error fields of a 4xx/5xx JSON body, scrubbed by the runner. */
+  failureExcerpt?: string;
+};
 function httpStatusEvidence(value: unknown): value is HttpStatusEvidence {
   return (
     value !== null &&
@@ -329,6 +365,23 @@ function boundedEvidence(value: unknown, secrets: string[], depth = 0): unknown 
   return { omitted: "unavailable" };
 }
 /**
+ * A failed assertion over a large value keeps a structural `excerpt` (runner `valueExcerpt`) that
+ * is deeper and wider than `boundedEvidence` admits, and any omission makes model enrichment
+ * abstain. The model gets the excerpt as one bounded JSON text instead; the violations and size
+ * beside it stay structured.
+ */
+function excerptAsText(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value) || !("excerpt" in value))
+    return value;
+  const { excerpt, ...rest } = value as Record<string, unknown>;
+  const text = JSON.stringify(excerpt) ?? "null";
+  return {
+    ...rest,
+    excerpt: text.length > 480 ? `${text.slice(0, 480)}…` : text,
+    excerptTruncated: text.length > 480,
+  };
+}
+/**
  * An entity write is an action that changes application state. A request that only establishes
  * credentials (it captures a sensitive value) is not one, so it never implies a read-after-write.
  */
@@ -386,6 +439,79 @@ function missingPointerType(step: StepResult, secrets: string[]): string | undef
   return value !== null && typeof value === "object" && "type" in value
     ? String(value.type)
     : undefined;
+}
+
+/** Short, code-composed text for one recorded schema violation; values never appear in it. */
+function schemaViolationText(violation: unknown): string | null {
+  if (violation === null || typeof violation !== "object" || Array.isArray(violation)) return null;
+  const { path, keyword, message, property } = violation as Record<string, unknown>;
+  if (typeof keyword !== "string" || typeof message !== "string") return null;
+  const where = typeof path === "string" && path !== "" ? path : "/";
+  return `${where}${typeof property === "string" ? ` (${property})` : ""} ${keyword}: ${message}`;
+}
+/**
+ * Facts naming what a failed jsonSchema or urlEquals assertion observed and expected, and why a
+ * schema check could not be evaluated, so the diagnosis never reduces them to a null value.
+ */
+function assertionMismatchFacts(
+  evidence: readonly Evidence[],
+  secrets: string[],
+  failed: boolean,
+): { text: string; evidenceRefs: AnalysisEvidenceRef[] }[] {
+  const facts: { text: string; evidenceRefs: AnalysisEvidenceRef[] }[] = [];
+  for (const item of evidence) {
+    const { step, planStep } = item;
+    if (!step || planStep?.kind !== "assertion") continue;
+    const label = `Step ${step.planStepId} (${planStep.expectation.predicate})`;
+    let text: string | null = null;
+    if (step.status === "failed" && step.reasonCode === "assertion_mismatch") {
+      if (
+        planStep.expectation.predicate === "urlEquals" &&
+        typeof step.observed === "string" &&
+        typeof step.expected === "string"
+      )
+        text = `${label} observed the page URL ${JSON.stringify(step.observed)} while expecting ${JSON.stringify(step.expected)}.`;
+      else if (
+        planStep.expectation.predicate === "jsonSchema" &&
+        step.observed !== null &&
+        typeof step.observed === "object" &&
+        !Array.isArray(step.observed)
+      ) {
+        const observed = step.observed as Record<string, unknown>;
+        const listed = Array.isArray(observed.violations) ? observed.violations : [];
+        const total =
+          typeof observed.violationCount === "number"
+            ? observed.violationCount
+            : listed.length +
+              (typeof observed.omittedViolations === "number" ? observed.omittedViolations : 0);
+        const first = listed
+          .map(schemaViolationText)
+          .filter((line): line is string => line !== null);
+        text = `${label} rejected the response against ${planStep.expectation.sourceRevisionId}${planStep.expectation.pointer}: ${total} schema violation${total === 1 ? "" : "s"}${first.length ? `; first: ${first.slice(0, 3).join("; ")}` : ""}.`;
+      }
+    } else if (
+      step.reasonCode === "oracle_uncertain" &&
+      step.error?.message.startsWith("Source schema ")
+    )
+      text = `${label} could not evaluate the response: ${step.error.message}`;
+    if (text)
+      facts.push({
+        text: scrubEvidenceText(text, secrets).text.slice(0, 1000),
+        evidenceRefs: [item.ref],
+      });
+  }
+  // The error fields a failing endpoint returned name its own complaint; a passing run needs none.
+  if (failed)
+    for (const item of evidence)
+      if (httpStatusEvidence(item.value) && item.value.failureExcerpt && item.value.status >= 400)
+        facts.push({
+          text: scrubEvidenceText(
+            `HTTP step ${item.value.stepId} responded ${item.value.status} with recorded error fields: ${item.value.failureExcerpt}`,
+            secrets,
+          ).text.slice(0, 1000),
+          evidenceRefs: [item.ref],
+        });
+  return facts.slice(0, 5);
 }
 
 function verifiedLocator(value: unknown): value is LocatorEvidence {
@@ -572,9 +698,32 @@ export class AnalysisService {
       return "pending";
     return analysis ? (analysis.limitations.length ? "partial" : "complete") : "not_requested";
   }
+  /** What became of the model reading that ended in `analysis`; read from the model job's receipt. */
+  modelStatus(analysis: Analysis): AnalysisModelStatus {
+    if (analysis.source === "model")
+      return {
+        state: "used",
+        reasonCode: null,
+        message: "A model call produced this analysis.",
+        modelCallId: analysis.modelCallId,
+      };
+    const stored = this.jobs
+      .forTarget(this.ctx.workspaceId, "analysis", analysis.runId)
+      .find((job) => job.payload.operation === "model" && job.result?.analysisId === analysis.id)
+      ?.result?.modelStatus as AnalysisModelStatus | undefined;
+    return (
+      stored ?? {
+        state: "abstained",
+        reasonCode: null,
+        message: "The model reading produced no model analysis.",
+        modelCallId: null,
+      }
+    );
+  }
   private persist(
     fields: Omit<Analysis, "id" | "workspaceId" | "createdAt" | "version" | "extensions">,
     fence?: AuxiliaryFence,
+    modelStatus?: AnalysisModelStatus,
   ): Analysis {
     if (!fields.diagnosis || fields.hypotheses.some((hypothesis) => !hypothesis.support))
       throw new ContractError(
@@ -585,7 +734,11 @@ export class AnalysisService {
     validate("Analysis", result);
     const apply = () => {
       this.ctx.entities.insert("Analysis", result);
-      if (fence) this.jobs.finish(fence, "completed", { analysisId: result.id });
+      if (fence)
+        this.jobs.finish(fence, "completed", {
+          analysisId: result.id,
+          ...(modelStatus ? { modelStatus } : {}),
+        });
       return result as unknown as Analysis;
     };
     return this.ctx.database.inTransaction ? apply() : this.ctx.database.withTx(apply);
@@ -849,9 +1002,22 @@ export class AnalysisService {
               Number.isInteger(status) &&
               status >= 100 &&
               status <= 599
-            )
-              value = { kind: "http", stepId, status };
-            else limitations.push(`HTTP status metadata ${entry.artifactId} is unavailable.`);
+            ) {
+              // The runner already scrubbed and bounded this excerpt; it is kept only as text.
+              const excerpt =
+                response &&
+                typeof response === "object" &&
+                "failureExcerpt" in response &&
+                typeof response.failureExcerpt === "string"
+                  ? response.failureExcerpt.slice(0, 512)
+                  : "";
+              value = {
+                kind: "http",
+                stepId,
+                status,
+                ...(excerpt ? { failureExcerpt: excerpt } : {}),
+              };
+            } else limitations.push(`HTTP status metadata ${entry.artifactId} is unavailable.`);
           } catch {
             limitations.push(`Malformed HTTP status metadata ${entry.artifactId} was excluded.`);
           }
@@ -1290,6 +1456,7 @@ export class AnalysisService {
             "textEquals",
             "textContains",
             "valueEquals",
+            "urlEquals",
             // Non-success statuses and headers alone do not establish product causality.
             "downloadMatches",
             "countEquals",
@@ -1476,6 +1643,7 @@ export class AnalysisService {
             evidenceRefs: [{ runId: run.id, contentHash: semanticHash(run) }],
           },
           ...artifactAvailabilityFacts(evidence),
+          ...assertionMismatchFacts(evidence, secrets, run.outcome !== "passed"),
           ...denialFacts.facts,
         ],
         hypotheses: hypothesis
@@ -1510,7 +1678,12 @@ export class AnalysisService {
    * limitation, so it stays `source: "rules"` with no model call. The schema admits a parent only
    * for `source: "model"`, so this row has none; the model job's receipt points at it.
    */
-  private limited(factual: Analysis, limitation: string, fence?: AuxiliaryFence): Analysis {
+  private limited(
+    factual: Analysis,
+    limitation: string,
+    fence?: AuxiliaryFence,
+    modelStatus?: AnalysisModelStatus,
+  ): Analysis {
     const {
       id: _id,
       workspaceId: _workspace,
@@ -1528,6 +1701,7 @@ export class AnalysisService {
         limitations: [...new Set([...factual.limitations, limitation])],
       },
       fence,
+      modelStatus,
     );
   }
   /**
@@ -1645,8 +1819,8 @@ export class AnalysisService {
             planStep && "responseStepId" in planStep.input ? planStep.input.responseStepId : null,
           jsonPointer:
             planStep && "jsonPointer" in planStep.input ? planStep.input.jsonPointer : null,
-          expected: boundedEvidence(step.expected, secrets),
-          observed: boundedEvidence(step.observed, secrets),
+          expected: boundedEvidence(excerptAsText(step.expected), secrets),
+          observed: boundedEvidence(excerptAsText(step.observed), secrets),
           missingJsonPointer: step.status !== "passed" ? missingJsonPointer(step, secrets) : null,
         });
       } else if (ref.artifactId) {
@@ -1720,7 +1894,14 @@ export class AnalysisService {
               : null,
           });
         } else if (httpStatusEvidence(record)) {
-          Object.assign(entry, { kind: "http", stepId: record.stepId, status: record.status });
+          Object.assign(entry, {
+            kind: "http",
+            stepId: record.stepId,
+            status: record.status,
+            ...(record.failureExcerpt
+              ? { failureExcerpt: boundedEvidence(record.failureExcerpt, secrets) }
+              : {}),
+          });
         } else if (terminalProcessEvidence(record)) {
           Object.assign(entry, {
             kind: "terminal",
@@ -1823,6 +2004,12 @@ export class AnalysisService {
         factual,
         "Evidence catalog omitted unsafe or oversized structures; model enrichment abstained without dispatch.",
         fence,
+        {
+          state: "abstained",
+          reasonCode: "evidence_too_large",
+          message: "The evidence catalog was omitted or oversized; no model was called.",
+          modelCallId: null,
+        },
       );
     this.jobs.mark(fence, { paidCallStarted: true, factualAnalysisId: factual.id });
     const result = await this.model.complete<ModelOutput>({
@@ -2096,6 +2283,7 @@ export class AnalysisService {
             // validation rejected the output without echoing model or evidence content.
             `Model enrichment abstained: ${error instanceof ContractError ? `${error.code}: ${error.message}` : "provider_or_validation_failure"}.`,
             fence,
+            abstentionStatus(error),
           );
         }
       } else analysis = await this.factual(run, fence);
@@ -2197,6 +2385,12 @@ export class AnalysisService {
       const prior = this.receipt(this.jobs.get(this.ctx.workspaceId, job.jobId)!);
       if (prior) return prior;
       const factual = requireEntity(this.ctx, "Analysis", id) as unknown as Analysis;
+      const modelStatus: AnalysisModelStatus = {
+        state: "abstained",
+        reasonCode: "completion_uncertain",
+        message: "Paid completion is uncertain; the model call was not reissued.",
+        modelCallId: null,
+      };
       const analysis = this.limited(
         factual,
         "Paid analysis completion is uncertain; usage reservation retained and the model call was not reissued.",
@@ -2204,6 +2398,7 @@ export class AnalysisService {
       this.jobs.settle(this.ctx.workspaceId, job.jobId, {
         analysisId: analysis.id,
         unknownUsage: true,
+        modelStatus,
       });
       return analysis;
     });
@@ -2242,6 +2437,12 @@ export class AnalysisService {
               JSON.parse(String(row.data_json)) as Analysis,
               "Model enrichment was interrupted before dispatch; recovery abstained without issuing a paid call.",
               fence,
+              {
+                state: "abstained",
+                reasonCode: "interrupted_before_dispatch",
+                message: "Enrichment was interrupted before dispatch; no paid call was issued.",
+                modelCallId: null,
+              },
             );
             settled++;
           }

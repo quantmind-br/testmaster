@@ -397,7 +397,8 @@ export class ModelGateway {
             throw new ContractError(
               input.signal?.aborted ? "PRECONDITION_FAILED" : "UPSTREAM_TIMEOUT",
               input.signal?.aborted ? "Model request cancelled" : "Model request deadline exceeded",
-              invalidDetails(),
+              // The cancelled request is recorded and may be billed: name it beside any invalid one.
+              { ...invalidDetails(), lastModelCallId: failed.modelCallId },
             );
           throw transportError;
         }

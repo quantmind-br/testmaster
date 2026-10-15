@@ -432,16 +432,18 @@ export async function summarizeDiffScope(
       ),
     ];
     await scan(changed);
-    const { authTouched, sharedTouched } = touchesAuthOrShared(changes, {
-      authPatterns: changed.flatMap((path) => scanned.get(path)?.authPatterns ?? []),
-    });
+    const { authTouched, sharedTouched } = touchesAuthOrShared(
+      changes,
+      { authPatterns: changed.flatMap((path) => scanned.get(path)?.authPatterns ?? []) },
+      (path) => !admit(path),
+    );
 
     const withPython = pythonRunner ? { pythonRunner } : {};
     if (authTouched || sharedTouched) {
       const refused = options.workingTree ? [] : await source.stage(analyzable, true);
       const summary = await summarizeCode(source.root(), { ...scanOptions, ...withPython });
       finish(summary, refused);
-      const diff = assessDiffImpact(collected, { summary });
+      const diff = assessDiffImpact(collected, { summary, fanOutEligible: (path) => !admit(path) });
       if (summary.skippedFiles.some((item) => LIMIT_REASONS.includes(item.reason)))
         diff.impact.gaps.push(
           "An authentication or shared-code change selects every analyzable file, but files beyond the size, count or byte limits were skipped (see skippedFiles); their impact is not analyzed.",
@@ -492,6 +494,7 @@ export async function summarizeDiffScope(
     const diff = assessDiffImpact(collected, {
       summary,
       unreadFiles: analyzable.filter((path) => !keep.has(path)),
+      fanOutEligible: (path) => !admit(path),
     });
     return { summary, diff };
   } finally {

@@ -367,6 +367,7 @@ export class ExploreService {
     const visited = new Set<string>();
     let observed = 0;
     let emptyFirst: BrowserObservation | undefined;
+    let seedControls = 0;
     let modelCalls = 0;
     const calls: { id: string; cost: unknown; usage: unknown }[] = [];
     const resolutionFailures: { stepId: string; code: string; message: string }[] = [];
@@ -449,8 +450,11 @@ export class ExploreService {
             let observation: BrowserObservation;
             try {
               observation = validateObservation(value, origins);
-              if (++observed === 1 && !prepared.features.length && !observation.actions.length)
-                emptyFirst = observation;
+              if (++observed === 1) {
+                seedControls = observation.controls?.length ?? 0;
+                if (!prepared.features.length && !observation.actions.length)
+                  emptyFirst = observation;
+              }
               const url = new URL(observation.url);
               url.search = "";
               url.hash = "";
@@ -472,22 +476,32 @@ export class ExploreService {
                     ((url.pathname === "/login" && !routes.includes("/login")) ||
                       (observation.hasPasswordField === true &&
                         !routes.some((route) => loginRoute.test(route)))));
-                observations.push({
-                  featureId: feature.id,
-                  status: loginRequired
-                    ? "unreachable"
-                    : typeof completionText === "string" &&
-                        observation.text.includes(completionText)
-                      ? "ready"
-                      : "partial",
-                  evidenceRefs: [
-                    {
-                      snapshotId: ids.snapshotId,
-                      relativePath: `browser/steps/${stepId}-observation.json`,
-                    },
-                  ],
-                  errors: loginRequired ? ["login_required"] : [],
-                });
+                const status = loginRequired
+                  ? "unreachable"
+                  : typeof completionText === "string" && observation.text.includes(completionText)
+                    ? "ready"
+                    : "partial";
+                const evidenceRef = {
+                  snapshotId: ids.snapshotId,
+                  relativePath: `browser/steps/${stepId}-observation.json`,
+                };
+                const earlier = expected
+                  ? observations.find((item) => item.featureId === feature.id)
+                  : undefined;
+                if (earlier) {
+                  // A later page of the same feature adds evidence and can only confirm it.
+                  earlier.evidenceRefs.push(evidenceRef);
+                  if (status === "ready") {
+                    earlier.status = "ready";
+                    earlier.errors = [];
+                  }
+                } else
+                  observations.push({
+                    featureId: feature.id,
+                    status,
+                    evidenceRefs: [evidenceRef],
+                    errors: loginRequired ? ["login_required"] : [],
+                  });
                 if (!expected && !features.some((value) => value.id === feature.id))
                   features.push(feature);
               }
@@ -497,21 +511,35 @@ export class ExploreService {
               recordFailure(stepId, error);
               throw error;
             }
+            // A feature-seeded exploration only follows links that belong to the selected
+            // features (one of their routes or a page nested under one): the seeded page is the
+            // target, and a link elsewhere would attribute another page's content to the feature.
             const available = {
               ...observation,
-              actions: observation.actions.filter(
-                (action) =>
-                  action.operation !== "navigate" ||
-                  (!prepared.features.length &&
-                    !visited.has(new URL(action.input.path, input.url).href)),
-              ),
+              actions: observation.actions.filter((action) => {
+                if (action.operation !== "navigate") return true;
+                const target = new URL(action.input.path, input.url);
+                return (
+                  !visited.has(target.href) &&
+                  (!prepared.features.length ||
+                    prepared.features.some((feature) =>
+                      (feature.routeRefs as string[]).some((route) => {
+                        const path = new URL(route, input.url).pathname.replace(/\/+$/u, "");
+                        return path
+                          ? target.pathname === path || target.pathname.startsWith(`${path}/`)
+                          : target.pathname === "/";
+                      }),
+                    ))
+                );
+              }),
             };
             // Nothing to select: a model call could only answer null. This covers both an empty
             // first observation (the runner ends that run inconclusive) and a legitimate stop
             // once every observed link is visited.
             if (!available.actions.length) return null;
-            if (++modelCalls > budget.modelCalls)
+            if (modelCalls >= budget.modelCalls)
               throw new ContractError("POLICY_DENIED", "Exploration model budget exceeded");
+            modelCalls++;
             try {
               const output = await new ModelService(this.ctx, this.config).complete<{
                 index: number | null;
@@ -540,6 +568,27 @@ export class ExploreService {
         },
         controller.signal,
       );
+      // A selected feature that stays partial without a recorded cause would read as an
+      // unexplained success; name why it was not confirmed.
+      const noGroundedActions = prepared.features.length > 0 && modelCalls === 0;
+      for (const item of observations) {
+        if (!prepared.features.length || item.status !== "partial" || item.errors.length) continue;
+        const completion = (
+          prepared.features.find((feature) => feature.id === item.featureId)?.extensions as
+            | Record<string, unknown>
+            | undefined
+        )?.["testmaster:completionText"];
+        item.errors.push(
+          noGroundedActions
+            ? "no_grounded_actions"
+            : typeof completion === "string"
+              ? "completion_text_not_observed"
+              : "no_completion_text",
+        );
+      }
+      const unexplored =
+        result.outcome === "passed" &&
+        observations.some((item) => item.errors[0] === "no_grounded_actions");
       const featureMap = validate("FeatureMap", {
         projectId: input.projectId,
         version: 1,
@@ -575,7 +624,13 @@ export class ExploreService {
           "testmaster:featureMap": featureMap,
           "testmaster:evidenceBundle": result.bundle ?? null,
           "testmaster:partial": true,
-          "testmaster:reasonCode": result.reasonCode,
+          "testmaster:reasonCode": unexplored ? "no_grounded_actions" : result.reasonCode,
+          ...(unexplored
+            ? {
+                "testmaster:runReasonCode": result.reasonCode,
+                "testmaster:reasonDetail": `The seeded page was observed but not exercised: it offered no same-origin link to the feature's routes and no approved mutation action matched an observed control (${seedControls} form controls), so the controller had nothing to choose and no model call was made. To exercise the page, approve a typed form step (click, fill, press, select, check, uncheck) whose locator matches an observed control: MCP testmaster_explore \`mutationActions\`, or \`testmaster explore --mutation-actions FILE\` (a JSON array of steps).`,
+              }
+            : {}),
           // Code-owned cause so a failed job explains itself without the evidence bundle.
           ...(result.outcome === "passed" || result.outcome === "cancelled"
             ? {}

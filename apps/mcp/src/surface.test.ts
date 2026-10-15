@@ -342,8 +342,19 @@ it("analyze_run model reading: an invalid choice fails before work and an unavai
   expect(unknown.error?.code).toBe("CAPABILITY_UNAVAILABLE");
   expect(unknown.error?.details).toMatchObject({ reasonCode: "provider_unavailable" });
   // A choice without the model switch is refused instead of silently running rules only.
-  const orphan = await f.call("testmaster_analyze_run", { runId: run.id, modelId: "any" });
+  const orphan = await f.call("testmaster_analyze_run", { runId: run.id, provider: "any" });
   expect(orphan.error?.code).toBe("INVALID_ARGUMENT");
+  expect(f.app.analysis.get(run.id)).toBeNull();
+  // `model` also carries the model id; the old `modelId` argument no longer exists.
+  const renamed = await f.call("testmaster_analyze_run", { runId: run.id, model: "any-model" });
+  expect(renamed.error?.code).toBe("CAPABILITY_UNAVAILABLE");
+  expect(renamed.error?.details).toMatchObject({ reasonCode: "provider_unavailable" });
+  const old = await f.call("testmaster_analyze_run", {
+    runId: run.id,
+    model: true,
+    modelId: "any-model",
+  });
+  expect(old.error?.code).toBe("INVALID_ARGUMENT");
   expect(f.app.analysis.get(run.id)).toBeNull();
 
   // No model is configured, so the reading abstains and must not claim to be model output.
@@ -358,6 +369,25 @@ it("analyze_run model reading: an invalid choice fails before work and an unavai
     parentId: null,
     limitations: expect.arrayContaining([expect.stringContaining("Model enrichment abstained")]),
   });
+  // The abstention is explicit: a structured status and a line of the text content.
+  expect(abstained.structuredContent).toMatchObject({
+    modelStatus: {
+      state: "unavailable",
+      reasonCode: "model_not_configured",
+      modelCallId: null,
+      message: expect.any(String),
+    },
+  });
+  const texts = (abstained.content as { type: string; text: string }[]).map((entry) => entry.text);
+  expect(
+    texts.some((text) => text.includes("Model reading: unavailable (model_not_configured)")),
+  ).toBe(true);
+  // Control: a rules-only call carries no model status.
+  const rulesOnly = await f.client.callTool({
+    name: "testmaster_analyze_run",
+    arguments: { runId: run.id },
+  });
+  expect(rulesOnly.structuredContent).not.toHaveProperty("modelStatus");
 });
 
 it("explore refuses an unknown model before it creates a job", async () => {
@@ -371,6 +401,63 @@ it("explore refuses an unknown model before it creates a job", async () => {
   const refused = await f.call("testmaster_explore", { ...args, provider: "missing" });
   expect(refused.error?.code).toBe("CAPABILITY_UNAVAILABLE");
   expect(refused.error?.details).toMatchObject({ reasonCode: "provider_unavailable" });
+  expect(f.app.database.get("SELECT COUNT(*) AS n FROM discovery_jobs")?.n ?? 0).toBe(0);
+});
+
+it("explore forwards approved mutationActions and refuses an invalid or non-form step", async () => {
+  const f = await fixture();
+  const fill = {
+    id: "approved-email",
+    description: "Fill the email",
+    kind: "action",
+    operation: "fill",
+    input: {
+      locator: { by: "label", value: "Email", exact: true },
+      value: { literal: "a@b.test" },
+    },
+  };
+  const args = {
+    projectId: f.init.projectId,
+    envId: f.init.environmentId,
+    featureIds: [],
+    budget: { steps: 5, modelCalls: 5, timeMs: 60000 },
+  };
+  const stop = new Error("stop before any browser work");
+  const begin = vi.spyOn(Object.getPrototypeOf(f.app.explore), "begin").mockImplementation(() => {
+    throw stop;
+  });
+  await f.call("testmaster_explore", { ...args, mutationActions: [fill] });
+  expect(begin.mock.calls[0]?.[0]).toMatchObject({ mutationActions: [fill] });
+  // Control: without the argument nothing is forwarded.
+  await f.call("testmaster_explore", args);
+  expect(begin.mock.calls[1]?.[0]).not.toHaveProperty("mutationActions");
+  begin.mockRestore();
+
+  // The schema refuses a malformed step and more than 20 steps before the service runs.
+  const malformed = await f.call("testmaster_explore", {
+    ...args,
+    mutationActions: [{ id: "bad", kind: "action", operation: "explode" }],
+  });
+  expect(malformed.error?.code).toBe("INVALID_ARGUMENT");
+  const tooMany = await f.call("testmaster_explore", {
+    ...args,
+    mutationActions: Array.from({ length: 21 }, () => fill),
+  });
+  expect(tooMany.error?.code).toBe("INVALID_ARGUMENT");
+  // A well-formed step that is not a form action is refused by the service, before the job exists.
+  const navigate = await f.call("testmaster_explore", {
+    ...args,
+    mutationActions: [
+      {
+        id: "go",
+        description: "Leave",
+        kind: "action",
+        operation: "navigate",
+        input: { path: "/elsewhere" },
+      },
+    ],
+  });
+  expect(navigate.error?.code).toBe("POLICY_DENIED");
   expect(f.app.database.get("SELECT COUNT(*) AS n FROM discovery_jobs")?.n ?? 0).toBe(0);
 });
 
@@ -405,6 +492,34 @@ it("generate_tests forwards the chosen provider and model and refuses an unknown
   expect(refused.error?.code).toBe("CAPABILITY_UNAVAILABLE");
   expect(refused.error?.details).toMatchObject({ reasonCode: "provider_unavailable" });
   expect(f.app.database.get("SELECT COUNT(*) AS n FROM model_calls")?.n ?? 0).toBe(0);
+});
+
+it("generate_tests forwards budget.deadlineMs and refuses an out-of-range deadline at validation", async () => {
+  const f = await fixture();
+  const test = f.app.tests.create({ projectId: f.init.projectId, plan: scaffoldPlan("backend") });
+  const revisionIds = [String(test.activeRevisionId)];
+  const generate = vi
+    .spyOn(Object.getPrototypeOf(f.app.codeGeneration), "generate")
+    .mockResolvedValue({ requested: 1, candidates: [], validationErrors: [] });
+  const forwarded = await f.call("testmaster_generate_tests", {
+    revisionIds,
+    budget: { modelCalls: 3, deadlineMs: 450000 },
+  });
+  expect(forwarded.isError).toBe(false);
+  expect(generate.mock.calls[0]?.[0]).toMatchObject({
+    budget: { modelCalls: 3, deadlineMs: 450000 },
+  });
+  for (const deadlineMs of [0, 600001]) {
+    const refused = await f.call("testmaster_generate_tests", {
+      revisionIds,
+      budget: { deadlineMs },
+    });
+    expect(refused.error?.code).toBe("INVALID_ARGUMENT");
+    expect(JSON.stringify(refused.error?.details.issues)).toContain("deadlineMs");
+  }
+  // Only the accepted call reached the service.
+  expect(generate).toHaveBeenCalledTimes(1);
+  generate.mockRestore();
 });
 
 it("normalize returns the snapshot fingerprint, announces progress with a total and links a large snapshot", async () => {
@@ -500,4 +615,55 @@ it("drain resolves immediately when idle and only after in-flight calls answered
   await draining;
   expect(drained).toBe(true);
   expect(answered.isError).toBe(true);
+});
+
+it("propose_healing names its run runId and no longer accepts failedRunId", async () => {
+  const f = await fixture();
+  const old = await f.call("testmaster_propose_healing", { failedRunId: missingRun });
+  expect(old.error?.code).toBe("INVALID_ARGUMENT");
+  // The renamed argument passes validation and reaches the service, which does not know the run.
+  const renamed = await f.call("testmaster_propose_healing", { runId: missingRun });
+  expect(renamed.error?.code).toBe("NOT_FOUND");
+});
+
+it("a generated-code revision has no plan resource and names how to read its code", async () => {
+  const f = await fixture();
+  const test = f.app.tests.create({ projectId: f.init.projectId, plan: scaffoldPlan("backend") });
+  const base = f.app.revisions.get(String(test.activeRevisionId));
+  // Positive control: a plan revision is served.
+  const served = await f.client.readResource({ uri: `testmaster://revisions/${base.id}/plan` });
+  expect(JSON.parse(String(served.contents[0]?.text))).not.toBeNull();
+  const { id: _id, ...fields } = base;
+  const generated = entity(f.app.context, "rev", {
+    ...fields,
+    ordinal: 2,
+    plan: null,
+    origin: "generated",
+    contentHash: "b".repeat(64),
+    parentId: base.id,
+  });
+  f.app.context.entities.insert("TestRevision", generated);
+  await expect(
+    f.client.readResource({ uri: `testmaster://revisions/${generated.id}/plan` }),
+  ).rejects.toMatchObject({
+    code: -32002,
+    message: expect.stringContaining("generated code"),
+  });
+  await expect(
+    f.client.readResource({ uri: `testmaster://revisions/${generated.id}/plan` }),
+  ).rejects.toMatchObject({
+    message: expect.stringContaining(
+      `testmaster test export ${test.id} --revision ${generated.id}`,
+    ),
+  });
+});
+
+it("an unknown tool is a JSON-RPC invalid-params error, not a failed tool result", async () => {
+  const f = await fixture();
+  await expect(
+    f.client.callTool({ name: "testmaster_no_such_tool", arguments: {} }),
+  ).rejects.toMatchObject({ code: -32602 });
+  // Control: a known tool still answers with a result.
+  const known = await f.call("testmaster_capabilities", {});
+  expect(known.isError).toBe(false);
 });

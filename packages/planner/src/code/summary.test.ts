@@ -604,7 +604,8 @@ describe("explicit diff provenance", () => {
       await writeFile(join(root, "a.js"), "export const a = 1;\n");
       execFileSync("git", ["-C", root, "add", "."]);
       execFileSync("git", ["-C", root, "commit", "-qm", "base"]);
-      const dataDir = join(root, ".testmaster");
+      // `.testmaster/` is always excluded; a custom data directory is excluded only via `dataDir`.
+      const dataDir = join(root, "tm-data");
       await mkdir(dataDir);
       await writeFile(join(dataDir, "testmaster.db"), "database");
       // Positive control 1: without the exclusion a change inside the data directory moves the hash.

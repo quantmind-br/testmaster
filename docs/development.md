@@ -272,6 +272,16 @@ concurrent CLI writer delete the live `-wal`/`-shm` and corrupt the server's vie
 also keeps `dirtyHash` stable across runs, which write their own evidence there. A data directory
 outside the repository is unaffected; `testmaster init` still does not edit `.gitignore`.
 
+A dirty or diff impact analysis never counts TestMaster's own artifacts (`testmaster.config.json`
+and any `.testmaster/` directory) as changes. A change widens the impact to every analyzable file
+(`criticalSmoke`) only when it touches authentication or shared code AND the changed path is code
+or a schema-like source (`.sql`, `.prisma`, `.graphql`, `.proto`), outside hidden tool directories
+(`.reversa/`, `.atl/`) and not excluded by the default or configured scan rules; untracked tool
+caches and binaries are listed in `changes` but never widen and never appear in `selectedFiles`.
+"Shared" is judged on path segments, not substrings: a directory named `schema(s)`, `migration(s)`,
+`shared` or `database`, or a file whose stem ends in one of those words (`schema.ts`,
+`user.schema.ts`, `prisma/schema.prisma`); `schema-summary.json` and `schemaless.ts` do not match.
+
 Reports reopening verified bundles declare `evidence-replay`; manifests distinguish
 `strict-execution-replay` from fresh agent-mode `fresh-llm-regeneration`. External target/data
 changes, platform-dependent rendering and unavailable remote model snapshots preclude bitwise
@@ -444,12 +454,17 @@ factual predecessor; `run analyze RUN --model --deadline-ms N` requests optional
 A timeout, unavailable capture, or rejected enrichment returns a partial diagnosis and cannot
 rewrite the Run outcome, gate, Attempts, or artifacts. Identical requests reuse their retained
 receipt rather than issuing another model call; unknown usage keeps its conservative charge.
-`--provider ID --model-id ID` (REST/MCP `provider`, `modelId`) choose the model of the reading and
+`--provider ID --model-id ID` (REST `provider`, `modelId`) choose the model of the reading and
 require `--model`; the choice is validated before any job or reservation exists and never falls
-back to another model. A reading that abstains is stored as a `source: "rules"` analysis without a
-`modelCallId` (the database admits a parent only for `source: "model"`, so it has none) plus the
-limitation; only a real model call produces `source: "model"`. A later enrichment with another
-model starts from the factual analysis, not from the abstention.
+back to another model. The MCP tool spells the same choice `model` (`true`, or a model id) and
+`provider`, like the other model tools. A reading that abstains is stored as a `source: "rules"`
+analysis without a `modelCallId` (the database admits a parent only for `source: "model"`, so it
+has none) plus the limitation; only a real model call produces `source: "model"`. The outcome is
+structured in the model job's receipt (`modelStatus`: `used`, `abstained` or `unavailable` with a
+`reasonCode`, e.g. `model_not_in_inventory`), and `testmaster_analyze_run` returns it as
+`modelStatus` and in its text content, so an agent never mistakes a rules-only analysis for a model
+reading. A later enrichment with another model starts from the factual analysis, not from the
+abstention.
 The model catalog carries bounded sanitized frozen predicates and expected/observed structures,
 scoped verified evidence hashes, contrary passed steps, and verified locator observations.
 Artifact availability is one fact per artifact kind ("Verified N log artifacts available.") citing
@@ -504,6 +519,18 @@ Business-input changes require manual review; generic write permission does not 
 Approval admits a distinct strict replay verification. Only its passed outcome AND passed gate,
 plus an unchanged active base revision, promote the candidate. Original failures and evidence
 remain immutable; failed verification remains reviewable and never starts a healing loop.
+In local mode `heal approve` follows the run admission ownership: when a worker heartbeat is fresh
+(under 30 s) the verification run is `worker`-owned and is returned queued unless `--wait` is given;
+when no worker is live the run is `ephemeral` and the command executes it in-process before
+returning (with or without `--wait`), prints the reconciled proposal and the verification run, and
+exits with the run outcome. It never leaves an ephemeral verification run queued without an executor.
+`heal review` lists, per identity change, only elements a healed locator can target: document and
+metadata elements (`html`, `head`, `meta`, `script`, `style`, `link`, `title`, `noscript`,
+`template`, `base`) are not recorded by the browser runner (a matched one always is) nor listed, the
+list is capped at 50 (matched and identified elements first, DOM order kept) and
+`omittedCandidates` counts the recorded elements not listed. Candidates keep role, accessible name,
+tag, type, `label` (aria-label, or the accessible name of a form control), `form`, `placeholder` and
+`testId` (`data-testid`).
 Automatic policy application additionally requires project extension
 `testmaster:healingPolicy: "apply"`, configured and frozen Run healing mode `apply`, matching
 policy hash, a non-production environment and uniquely proven locator/wait equivalence against
@@ -653,8 +680,22 @@ compensation preserves the owning Run's original verdict and records a separate 
   approved action, the run is `inconclusive` (`insufficient_evidence`), the job `failed`, and no
   model is called; its `testmaster:errorMessage` reads, for example, "Exploration observed no
   same-origin link at <url>: 2 form controls, password field present, 0 approved actions." A
-  feature-seeded exploration treats the seeded page as the target, so a page with nothing to follow
-  is a complete observation. Stopping after at least one observation because no unvisited link
+  feature-seeded exploration treats the seeded page as the target and follows only the unvisited
+  links that belong to the selected features (a link to one of their routes or to a page nested
+  under one; a link elsewhere would attribute another page's content to the feature). Form
+  actions (click, fill, press, select, check, uncheck) are never offered on their own: only an
+  approved `mutationActions` entry matching an observed control is. The allowlist is MCP
+  `testmaster_explore` `mutationActions` or `testmaster explore --mutation-actions FILE` (a JSON
+  array, max 20, of typed steps with a locator); a malformed step is `INVALID_ARGUMENT`, a
+  non-form step or a production environment `POLICY_DENIED`, both before the job exists. With
+  neither a feature link nor an approved match the
+  controller has nothing to choose, so no model call is made (`usage.modelCalls` counts the
+  calls made, never an attempt over the budget): the job stays the runner's outcome but reports
+  `testmaster:reasonCode: no_grounded_actions` (the runner's code moves to
+  `testmaster:runReasonCode`), `testmaster:reasonDetail`, and the feature state reason
+  `no_grounded_actions`. A feature that stays `partial` after calls reports
+  `completion_text_not_observed` or `no_completion_text` instead of a null reason. Stopping after at
+  least one observation because no unvisited link
   remains is legitimate and also costs no model call. The closing `observed` (body visible) step
   stays because a plan needs one required assertion, but it only confirms the page is still
   rendered: a run that observed nothing to act on is ended by the runner before it and never
@@ -805,6 +846,16 @@ the forbidden names as string keys (`x['require']`), `module` and `?.constructor
 refused after the repairs is listed in `validationErrors`; when every candidate is refused the call
 fails `INVALID_ARGUMENT` (`reasonCode generated_code_refused`, `requested`, `validationErrors`,
 `modelCallIds`). The receipt carries `requested`.
+
+Each revision's model call (first attempt and every repair) shares one deadline: `budget.deadlineMs`,
+default `CODE_GENERATION_DEADLINE_MS` (300000; `ModelService` keeps 180000 for the other purposes,
+and 1..600000 is accepted). Generated code is long output and a refused first answer is followed by
+repairs, so 180 s cut calls that were still progressing and lost the whole batch. A revision whose
+call ends `UPSTREAM_TIMEOUT` while the caller's signal is not aborted is a per-revision result
+(`validationErrors` entry with `reasonCode model_deadline_exceeded`) and the loop continues; all
+revisions timing out is `UPSTREAM_TIMEOUT`, any other failure with no candidate is
+`generated_code_refused`. A fatal error after calls were made carries `candidateRevisionIds`,
+`modelCallIds`, `validationErrors` and `requested`, so created candidates are never orphaned.
 
 Round 4 (`116f682e197727e867f2b4937caacbbb0be37fc8`) observed all eight planned trials:
 all full-source normalizations failed semantic grounding validation; no generated proposals,

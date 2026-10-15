@@ -68,6 +68,16 @@
       "type": "string",
       "description": "Model id for action resolution; absent: the provider's first capable model"
     },
+    "mutationActions": {
+      "maxItems": 20,
+      "type": "array",
+      "items": {
+        "additionalProperties": true,
+        "type": "object",
+        "properties": {}
+      },
+      "description": "Approved form steps (plan Step objects: click, fill, press, select, check, uncheck; each with a locator) the controller may select when one matches an observed control; max 20, refused in production environments. Without it a form-only page offers the model nothing to choose"
+    },
     "jobId": {
       "pattern": "^dsc_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
       "type": "string",
