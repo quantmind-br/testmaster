@@ -302,8 +302,17 @@ export class NotificationsService {
 
   // ---- fan-out -------------------------------------------------------------------------
 
-  /** Creates one delivery per (event, matching integration); the unique key makes a rescan harmless. */
+  /**
+   * Creates one delivery per (event, matching integration); the unique key makes a rescan harmless.
+   * The scan runs in one transaction: its writes (deliveries, cursor) would otherwise be bare
+   * statements, and a busy writer lock would escape as a raw SQLite error (logged `INTERNAL`)
+   * instead of the typed, retryable `writer_contention` refusal `withTx` raises.
+   */
   fanOut(): number {
+    return inTx(this.ctx, () => this.scan());
+  }
+
+  private scan(): number {
     const workspaceId = this.ctx.workspaceId;
     const now = this.now();
     const integrations = this.integrations.activeFor(channelProviders);

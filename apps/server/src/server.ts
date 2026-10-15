@@ -307,7 +307,7 @@ export function createServer(options: ServerOptions): FastifyInstance {
   });
   app.setErrorHandler((error, request, reply) => {
     const statusCode = (error as { statusCode?: number }).statusCode;
-    const failure =
+    let failure =
       error instanceof ContractError
         ? error
         : new ContractError(
@@ -318,20 +318,30 @@ export function createServer(options: ServerOptions): FastifyInstance {
                 : "INTERNAL",
             statusCode === 400 ? "Malformed request" : "Request failed",
           );
-    const metadata = errorRegistry[failure.code];
     if (["UNAUTHENTICATED", "FORBIDDEN", "POLICY_DENIED", "RATE_LIMITED"].includes(failure.code)) {
-      const identity = identities.get(request);
-      const context = identity
-        ? options.application.forIdentity(identity).context
-        : { ...options.application.context, principalId: "unauthenticated:local" };
-      auditSecurity(
-        context,
-        identity ? "api.authorization" : "auth",
-        "local-api",
-        "denied",
-        request.id,
-      );
+      try {
+        const identity = identities.get(request);
+        const context = identity
+          ? options.application.forIdentity(identity).context
+          : { ...options.application.context, principalId: "unauthenticated:local" };
+        auditSecurity(
+          context,
+          identity ? "api.authorization" : "auth",
+          "local-api",
+          "denied",
+          request.id,
+        );
+      } catch (auditError) {
+        // The denial could not be recorded, typically because the single writer is contended. The
+        // request still fails closed, but with that typed refusal, so the envelope contract holds
+        // instead of Fastify's bare 500 escaping from inside this handler.
+        failure =
+          auditError instanceof ContractError
+            ? auditError
+            : new ContractError("INTERNAL", "Request failed");
+      }
     }
+    const metadata = errorRegistry[failure.code];
     if (failure.code === "RATE_LIMITED") {
       const wait = Number(failure.details.retryAfterSeconds);
       reply.header("Retry-After", String(Number.isInteger(wait) && wait > 0 ? wait : 1));

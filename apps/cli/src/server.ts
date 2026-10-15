@@ -30,6 +30,63 @@ function waitForAbort(signal: AbortSignal): Promise<void> {
     else signal.addEventListener("abort", () => resolve(), { once: true });
   });
 }
+/** Built-in error classes; any other `name` (custom errors may embed secrets) is never printed. */
+const builtInErrorNames: Record<string, true> = {
+  Error: true,
+  TypeError: true,
+  RangeError: true,
+  SyntaxError: true,
+  ReferenceError: true,
+  EvalError: true,
+  URIError: true,
+  AggregateError: true,
+};
+/** `node:sqlite` error code; any other `code` (Node system errors, custom ones) is never printed. */
+const sqliteErrorCode = "ERR_SQLITE_ERROR";
+/** SQLite's own fixed `sqlite3_errstr` texts; an `errstr` outside this list is never printed. */
+const sqliteErrorStrings: Record<string, true> = {
+  "SQL logic error": true,
+  "database is locked": true,
+  "database table is locked": true,
+  "out of memory": true,
+  "attempt to write a readonly database": true,
+  "disk I/O error": true,
+  "database disk image is malformed": true,
+  "database or disk is full": true,
+  "unable to open database file": true,
+  "constraint failed": true,
+  "database schema has changed": true,
+};
+/**
+ * The stderr label of a failed loop. A typed error prints its code and its application-authored
+ * `reasonCode`. An untyped one prints only values from closed lists: a built-in error class name
+ * and, for `node:sqlite`, the fixed code, an integer `errcode` and a known `errstr`. Names, codes,
+ * messages and parameters an error carries beyond those lists are never printed, because they may
+ * contain secrets.
+ */
+function failureLabel(error: unknown): string {
+  if (error instanceof ContractError) {
+    const reason = (error.details as { reasonCode?: unknown } | undefined)?.reasonCode;
+    return typeof reason === "string" && /^[a-z][a-z0-9_]{0,63}$/u.test(reason)
+      ? `${error.code} (${reason})`
+      : error.code;
+  }
+  if (!(error instanceof Error)) return "INTERNAL";
+  const { code, errcode, errstr } = error as Error & {
+    code?: unknown;
+    errcode?: unknown;
+    errstr?: unknown;
+  };
+  const parts: string[] = [];
+  if (Object.hasOwn(builtInErrorNames, error.name)) parts.push(error.name);
+  if (code === sqliteErrorCode) {
+    parts.push(sqliteErrorCode);
+    if (typeof errcode === "number" && Number.isInteger(errcode) && errcode >= 0 && errcode < 65536)
+      parts.push(`errcode=${errcode}`);
+    if (typeof errstr === "string" && Object.hasOwn(sqliteErrorStrings, errstr)) parts.push(errstr);
+  }
+  return parts.length ? `INTERNAL (${parts.join(" ")})` : "INTERNAL";
+}
 /** Runs the controller loops until the signal aborts; a failing tick is reported and retried. */
 function controllerLoops(
   rt: Runtime,
@@ -41,9 +98,7 @@ function controllerLoops(
     profile,
     signal,
     onError: (name, error) =>
-      rt.stderr.write(
-        `controller ${name} failed: ${error instanceof ContractError ? error.code : "INTERNAL"}\n`,
-      ),
+      rt.stderr.write(`controller ${name} failed: ${failureLabel(error)}\n`),
   });
 }
 async function startServerProfile(
@@ -99,10 +154,24 @@ export function serverCommands(program: Command, runtime: Runtime): void {
         tokenPath ? { tokenPath: rt.path(tokenPath) } : {},
       );
       const app = createServer({ application, host, origins: strings(options, "origin") });
+      // `controller` stops the worker and loops; it is aborted by shutdown or by a worker failure.
       const controller = new AbortController();
-      const worker = application.worker.run({ signal: controller.signal }).catch((error) => {
-        controller.abort(error);
-      });
+      const worker = application.worker.run({ signal: controller.signal }).then(
+        () => {
+          // The worker ends by itself only when it was drained or stopped (or revoked) while the
+          // server runs: a server without a worker must not keep looking healthy.
+          if (!controller.signal.aborted) {
+            rt.stderr.write("worker drained; shutting the server down\n");
+            controller.abort();
+          }
+          return null;
+        },
+        (error: unknown) => {
+          rt.stderr.write(`worker failed: ${failureLabel(error)}; shutting the server down\n`);
+          controller.abort();
+          return { error };
+        },
+      );
       const loops = controllerLoops(rt, application, "local", controller.signal);
       const address = await app.listen({ host, port: options.port as number });
       const receipt = {
@@ -115,13 +184,14 @@ export function serverCommands(program: Command, runtime: Runtime): void {
         text: `Server listening at ${address}\nCapability token file: ${token.tokenPath}${options.printToken ? `\n${token.token}` : ""}`,
       });
       try {
-        await waitForAbort(rt.controller.signal);
+        await waitForAbort(AbortSignal.any([rt.controller.signal, controller.signal]));
       } finally {
         controller.abort();
         await app.close();
-        await worker;
         await loops;
       }
+      const outcome = await worker;
+      if (outcome) throw outcome.error;
       return { data: receipt };
     },
   );
@@ -234,42 +304,44 @@ export function identityCommands(program: Command, runtime: Runtime): void {
   );
 }
 /**
- * One worker loop per workspace; new workspaces are picked up while the process runs. A loop that
- * ends with `worker_schema_behind` (this build is older than the database, OPS-038) stops the whole
- * process with that error so the supervisor restarts it once the worker has been upgraded.
+ * One worker loop per workspace; new workspaces are picked up while the process runs. Any loop
+ * that ends in failure is fatal for the whole process: a loop that is not restarted would leave a
+ * healthy-looking process with no worker for that workspace. Sibling loops drain, then the first
+ * failure is thrown so the supervisor restarts the process (a build older than the database,
+ * `worker_schema_behind`, OPS-038, and persistent writer contention included).
  */
 export async function runServerWorkers(
   application: Application,
   signal: AbortSignal,
   onError: (workspaceId: string, error: unknown) => void,
 ): Promise<void> {
-  const loops = new Map<string, Promise<unknown>>();
-  let refusal: unknown = null;
-  while (!signal.aborted && !refusal) {
+  const fail = new AbortController();
+  const linked = AbortSignal.any([signal, fail.signal]);
+  const loops = new Map<string, Promise<{ error: unknown } | null>>();
+  while (!linked.aborted) {
     for (const workspaceId of application.operator.workspaceIds()) {
       if (loops.has(workspaceId)) continue;
       loops.set(
         workspaceId,
         application
           .forWorkspaceSystem(workspaceId)
-          .worker.run({ signal })
-          .catch((error) => {
-            if (
-              error instanceof ContractError &&
-              (error.details as { reasonCode?: string } | undefined)?.reasonCode ===
-                "worker_schema_behind"
-            )
-              refusal ??= error;
-            onError(workspaceId, error);
-          }),
+          .worker.run({ signal: linked })
+          .then(
+            () => null,
+            (error: unknown) => {
+              onError(workspaceId, error);
+              fail.abort();
+              return { error };
+            },
+          ),
       );
     }
     try {
-      await delay(5000, undefined, { signal });
+      await delay(5000, undefined, { signal: linked });
     } catch {
       break;
     }
   }
-  await Promise.all(loops.values());
-  if (refusal) throw refusal;
+  const failed = (await Promise.all(loops.values())).find((outcome) => outcome !== null);
+  if (failed) throw failed.error;
 }
