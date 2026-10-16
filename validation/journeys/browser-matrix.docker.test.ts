@@ -358,9 +358,10 @@ it("captures delayed password identity without values and refuses sensitive or m
       name: "Password",
       attributes: { name: "password", autocomplete: "current-password", "data-testid": "password" },
     });
+    // The control inside [data-sensitive] has no recorded identity, so it is not a candidate.
     expect(
       before.candidates.filter((candidate) => candidate.type === "password" && !candidate.matched),
-    ).toEqual([expect.objectContaining({ name: "", attributes: {} })]);
+    ).toEqual([]);
     drift = true;
     failed = await attempt(url, plan, { secret: "private-password-value" });
     expect(failed.result.outcome).toBe("failed");

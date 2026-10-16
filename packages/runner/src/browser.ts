@@ -891,8 +891,13 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
         (matches, testIdAttributes) => {
           const doc = matches[0]?.ownerDocument ?? document;
           const matched = new Set(matches);
+          // The walk is bounded two ways, so a huge DOM cannot stall the step: it stops at the first
+          // identified element beyond the candidate budget, and it never visits more than
+          // maxVisited elements. Either cut reports `truncated`.
+          const maxCandidates = 100;
+          const maxVisited = 10_000;
           // Document and metadata elements are never locator targets; recording them would spend
-          // the 100-candidate budget on <head> contents. Matched elements always stay.
+          // the candidate budget on <head> contents. Matched elements always stay.
           const metadataTags = [
             "html",
             "head",
@@ -905,16 +910,46 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
             "template",
             "base",
           ];
-          const targetable = (node: Element) =>
-            matched.has(node as HTMLElement) || !metadataTags.includes(node.tagName.toLowerCase());
-          const all: Element[] = [];
-          const walker = doc.createTreeWalker(doc.documentElement, NodeFilter.SHOW_ELEMENT);
-          if (targetable(doc.documentElement)) all.push(doc.documentElement);
-          while (all.length <= 100 && walker.nextNode()) {
-            const node = walker.currentNode as Element;
-            if (targetable(node)) all.push(node);
-          }
-          const candidates = all.slice(0, 100).map((node) => {
+          const recordedKeys = [
+            "id",
+            "name",
+            "autocomplete",
+            "aria-label",
+            "aria-haspopup",
+            "placeholder",
+            "data-semantic",
+            ...testIdAttributes,
+          ].filter(
+            (key) =>
+              key !== "value" && !/token|secret|password|authorization|cookie|^on/iu.test(key),
+          );
+          const sanitizedText = (element: Element) => {
+            const textWalker = doc.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+            let text = "";
+            let visited = 0;
+            while (visited++ < 100 && text.length < 200 && textWalker.nextNode()) {
+              const node = textWalker.currentNode;
+              if (
+                !node.parentElement?.closest(
+                  "input,textarea,[data-sensitive],[autocomplete*=password],script,style",
+                )
+              )
+                text += node.textContent ?? "";
+            }
+            return text.slice(0, 200);
+          };
+          type Described = {
+            node: Element;
+            role: string;
+            name: string;
+            tag: string;
+            type: string;
+            attributes: Record<string, string>;
+          };
+          const implicitRoleTags = ["button", "a", "option", "select", "textarea", "input"];
+          // Everything a locator or a healing replacement can identify, without computed style or
+          // layout: those are read only for the elements that end up recorded.
+          const describe = (node: Element): Described => {
             const tag = node.tagName.toLowerCase();
             const type = (node.getAttribute("type") ?? "").slice(0, 200);
             const sensitive =
@@ -923,18 +958,7 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
                 !!node.closest("[autocomplete*=password]"));
             const attributes: Record<string, string> = {};
             if (!sensitive)
-              for (const key of [
-                "id",
-                "name",
-                "autocomplete",
-                "aria-label",
-                "aria-haspopup",
-                "placeholder",
-                "data-semantic",
-                ...testIdAttributes,
-              ]) {
-                if (key === "value" || /token|secret|password|authorization|cookie|^on/iu.test(key))
-                  continue;
+              for (const key of recordedKeys) {
                 const value = node.getAttribute(key);
                 if (value !== null && value.length <= 200) attributes[key] = value;
               }
@@ -960,21 +984,6 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
                                   ? ""
                                   : "textbox"
                           : "";
-            const sanitizedText = (element: Element) => {
-              const textWalker = doc.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-              let text = "";
-              let visited = 0;
-              while (visited++ < 100 && text.length < 200 && textWalker.nextNode()) {
-                const node = textWalker.currentNode;
-                if (
-                  !node.parentElement?.closest(
-                    "input,textarea,[data-sensitive],[autocomplete*=password],script,style",
-                  )
-                )
-                  text += node.textContent ?? "";
-              }
-              return text.slice(0, 200);
-            };
             const labels = "labels" in node ? (node as HTMLInputElement).labels : null;
             const labelled = (node.getAttribute("aria-labelledby") ?? "")
               .slice(0, 200)
@@ -996,6 +1005,65 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
                     : ["button", "a", "option"].includes(tag)
                       ? sanitizedText(node)
                       : ""));
+            return {
+              node,
+              role,
+              name: name.trim().replace(/\s+/gu, " ").slice(0, 200),
+              tag,
+              type,
+              attributes,
+            };
+          };
+          // Matched elements are always recorded (they fill at most the whole budget); the rest of
+          // the budget goes to identified elements in tree order.
+          const kept = new Map<Element, Described>();
+          let unmatchedBudget = maxCandidates - Math.min(matches.length, maxCandidates);
+          let truncated = matches.length > maxCandidates;
+          const consider = (node: Element): boolean => {
+            if (matched.has(node as HTMLElement)) {
+              if (kept.size < maxCandidates) kept.set(node, describe(node));
+              return true;
+            }
+            if (metadataTags.includes(node.tagName.toLowerCase())) return true;
+            // Cheap necessary condition for an identity: only these elements are described, so
+            // anonymous wrappers cost a few attribute reads and no text walk.
+            if (
+              !(
+                node.hasAttribute("role") ||
+                node.hasAttribute("aria-labelledby") ||
+                implicitRoleTags.includes(node.tagName.toLowerCase()) ||
+                ("labels" in node && !!(node as HTMLInputElement).labels?.length) ||
+                recordedKeys.some((key) => node.hasAttribute(key))
+              )
+            )
+              return true;
+            const described = describe(node);
+            if (!(described.role || described.name || Object.keys(described.attributes).length))
+              return true;
+            if (unmatchedBudget === 0) {
+              truncated = true;
+              return false;
+            }
+            unmatchedBudget--;
+            kept.set(node, described);
+            return true;
+          };
+          const walker = doc.createTreeWalker(doc.documentElement, NodeFilter.SHOW_ELEMENT);
+          let walking = consider(doc.documentElement);
+          let visited = 0;
+          while (walking) {
+            if (visited >= maxVisited) {
+              if (walker.nextNode()) truncated = true;
+              break;
+            }
+            if (!walker.nextNode()) break;
+            visited++;
+            walking = consider(walker.currentNode as Element);
+          }
+          // A cut walk can end before reaching a matched element; matches are in hand, so add them.
+          for (const node of matches.slice(0, maxCandidates))
+            if (!kept.has(node)) kept.set(node, describe(node));
+          const candidates = Array.from(kept.values(), ({ node, ...described }) => {
             const style = getComputedStyle(node);
             const rect = node.getBoundingClientRect();
             const visible =
@@ -1004,20 +1072,12 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
               rect.height > 0 &&
               style.visibility !== "hidden" &&
               style.visibility !== "collapse";
-            return {
-              role,
-              name: name.trim().replace(/\s+/gu, " ").slice(0, 200),
-              tag,
-              type,
-              attributes,
-              matched: matched.has(node as HTMLElement),
-              visible,
-            };
+            return { ...described, matched: matched.has(node as HTMLElement), visible };
           });
           return {
             cardinality: matches.length,
             candidates,
-            truncated: all.length > 100 || testIdAttributes.length > 16,
+            truncated: truncated || testIdAttributes.length > 16,
             origin: doc.location.origin,
           };
         },

@@ -20,6 +20,17 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 - The REST routes that run a model (proposal generation and refinement, `POST /runs/{id}/analysis`, `POST /runs/{id}/healing-proposals`, requirement normalization) and `POST /mcp` turn off the server's 30 s socket idle timeout for their connection; other routes keep it (`ServerOptions.connectionTimeoutMs`).
 - The eval runner never kills a model command; its trial wall time only stops commands that do no model work and keeps later commands from starting. The development smoke forwarder relays model calls without a timeout.
 
+### Tenth Omnigent agent run
+
+Found when an omp agent drove the pipeline on Omnigent a tenth time (8 plan tests and 8 generated Playwright tests passed; a suite holding both revisions of each test reported 16/16 passed but 0/8 requirements verified; a stale-locator drill was healed and verified).
+
+- `verifiedRequirementCoverage` judges each test by the latest run of its current test and environment revision. A run of another revision of the same test in the report, such as a suite that pins the code revision next to the active plan, is stale for that test and no longer hides the current revision's passing run.
+- Locator evidence (`browser/steps/<step>-locator-N-<phase>.json`) records only elements a locator or a healing replacement can identify (a role, an accessible name or a recorded attribute) plus every matched element, so anonymous wrappers such as `body` and unnamed `div`s no longer spend the 100-candidate budget and push the page's controls out of the evidence. The walk stops at the first identified element past the budget or after 10,000 elements, and either cut sets `truncated`. Computed style and layout are read only for recorded candidates. The runner image is rebuilt.
+- The `manual_review_only` healing advice of `analyze_run` says why identity proof is unavailable: no passing run of the test revision exists in the environment revision, or passing runs exist but no observed candidate matches their control. It also says that a healing proposal can still be requested for a reviewer to decide.
+- A healing review lists each unmet condition for automatic application separately: the project does not authorize it, the run's frozen configuration or the project's current configuration does not have `healing.mode "apply"`, or the policy hash changed since the run. Each one says that a reviewer approves the proposal instead.
+- The `testmaster_save_test` description states that `plan.requirementRefs` is required (`[]` when the plan maps none), and the `testmaster_save_suite` description states how reports treat runs of other pinned revisions.
+- The quickstart documents that the egress proxy removes `X-Forwarded-*`, `Forwarded`, `Via` and `Proxy-*` request headers before they reach the target and records their names in `logs/egress.ndjson`.
+
 ### Ninth Omnigent agent run
 
 Found when an omp agent drove the pipeline on Omnigent a ninth time (5/5 plan tests passed twice as a suite after one locator fix; 4/5 generated Playwright tests passed first time).

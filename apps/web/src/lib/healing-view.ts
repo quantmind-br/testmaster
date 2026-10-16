@@ -402,7 +402,8 @@ export function describeHealingAdvice(advice: HealingAdvice): string {
     not_indicated: "Healing is not indicated for this failure.",
     proposal_possible:
       "A healing proposal is possible; it would still need an explicit review decision.",
-    manual_review_only: "Only a manual review can change this test; healing will not.",
+    manual_review_only:
+      "Automatic identity proof is unavailable; a healing proposal can still be generated and needs a reviewer's decision.",
   };
   return labels[advice];
 }

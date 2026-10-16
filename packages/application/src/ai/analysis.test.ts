@@ -1989,6 +1989,53 @@ it("ambiguous locator candidates produce manual-only advice without a supported 
   expect(analysis.diagnosis?.nextSteps[0]?.text).toContain("Inspect locator candidates");
 });
 
+async function unmatchedClickFixture() {
+  const f = await fixture({
+    plan: {
+      ...persistencePlan,
+      type: "frontend",
+      runner: "playwright",
+      steps: [
+        {
+          id: "price",
+          kind: "action",
+          operation: "click",
+          input: { locator: { by: "role", role: "button", name: "Old checkout", exact: true } },
+        },
+      ],
+    },
+    step: { reasonCode: "assertion_timeout", observed: null, expected: null },
+  });
+  await attachLocatorEvidence(f, 2);
+  return f;
+}
+
+it("manual-only advice for a test that never passed says there is no baseline and that a proposal can still be reviewed", async () => {
+  const f = await unmatchedClickFixture();
+  const healing = (await f.service.analyze(f.run.id)).diagnosis?.healing;
+  expect(healing?.advice).toBe("manual_review_only");
+  expect(healing?.reason).toContain("No passing run of this test revision exists");
+  expect(healing?.reason).toContain("A healing proposal can still be requested");
+});
+
+it("manual-only advice with a passing baseline that matches no control says so instead of claiming there is no baseline", async () => {
+  const f = await unmatchedClickFixture();
+  f.ctx.entities.insert("Run", {
+    ...f.run,
+    workspaceId: f.ctx.workspaceId,
+    id: "run_00000000-0000-4000-8000-000000000071",
+    createdAt: "2026-10-02T00:00:00.000Z",
+    outcome: "passed",
+    status: "passed",
+    gate: "passed",
+  });
+  const healing = (await f.service.analyze(f.run.id)).diagnosis?.healing;
+  expect(healing?.advice).toBe("manual_review_only");
+  expect(healing?.reason).toContain("Passing runs of this test revision exist");
+  expect(healing?.reason).not.toContain("No passing run");
+  expect(healing?.reason).toContain("A healing proposal can still be requested");
+});
+
 it("a click that timed out on a locator matching nothing reports the locator and the visible candidates, not a null value", async () => {
   const locator = { by: "role" as const, role: "button", name: "Log in", exact: true };
   const f = await fixture({

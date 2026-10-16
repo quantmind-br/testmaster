@@ -250,8 +250,10 @@ function latestRunPerTest(ctx: ServiceContext, runs: readonly ReportRun[]): Repo
 
 /**
  * `verifiedRequirementCoverage`: in-scope requirements whose mapped test passed a required business
- * assertion in the latest replay of the report (Run and gate passed, current revision and
- * environment, committed evidence, no diagnostic retry). Derived from recorded Run facts only.
+ * assertion in the latest replay of the report for the test's current revision and environment
+ * (Run and gate passed, committed evidence, no diagnostic retry). A run of another revision of the
+ * same test (a suite that pins a code revision next to the active plan) is stale for the test and
+ * never hides the current revision's run. Derived from recorded Run facts only.
  */
 export function verifiedRequirementCoverage(
   ctx: ServiceContext,
@@ -265,7 +267,9 @@ export function verifiedRequirementCoverage(
   const verified = new Set<string>();
   for (const item of latestRunPerTest(
     ctx,
-    snapshot.runs.filter((value) => requested.has(value.run.id)),
+    snapshot.runs.filter(
+      (value) => requested.has(value.run.id) && value.freshness?.state === "current",
+    ),
   )) {
     if (!freshPassingRun(item)) continue;
     const plan = ctx.entities.get("TestRevision", ctx.workspaceId, item.run.revisionId)
@@ -284,6 +288,6 @@ export function verifiedRequirementCoverage(
     inScope ? [...verified].filter((id) => inScope.has(id)).length : verified.size,
     inScope?.size ?? null,
     "Distinct in-scope requirements with a passed required assertion in the latest fresh passing replay of a mapped active test / declared in-scope requirements",
-    "Runs of this report only: latest replay per test, Run and gate passed, current test and environment revision, committed evidence, no diagnostic retry; a requirement without such a Run is uncovered",
+    "Runs of this report only: latest replay per test among runs of its current test and environment revision, Run and gate passed, committed evidence, no diagnostic retry; runs of other revisions are stale and ignored; a requirement without such a Run is uncovered",
   );
 }

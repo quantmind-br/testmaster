@@ -1020,7 +1020,9 @@ it("HEAL-003 automated assisted review preserves semantic failures and refuses s
           ]);
           expect(review.automation).toEqual({
             decision: "manual_review_required",
-            reasons: ["Project policy has not explicitly authorized automatic healing"],
+            reasons: [
+              "The project does not authorize automatic application of healing proposals; a reviewer approves this proposal instead",
+            ],
           });
           expect(review.identity[0]).toMatchObject({
             stepId: "quote",

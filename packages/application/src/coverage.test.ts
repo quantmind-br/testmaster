@@ -302,3 +302,47 @@ it("verifiedRequirementCoverage counts a requirement only when its test passed f
     ),
   ).toMatchObject({ numerator: 2, denominator: 4 });
 });
+
+it("verifiedRequirementCoverage judges each test by its current revision's latest run, not a later run of another revision", async () => {
+  const { app, projectId, environmentId } = await openApp();
+  const mixed = seed(app, projectId, "mixed");
+  const regressed = seed(app, projectId, "regressed");
+  storeRequirements(app, projectId, [mixed, regressed]);
+  const testFor = (requirement: Requirement) => {
+    const plan = scaffoldPlan("backend");
+    plan.requirementRefs = [requirement.id];
+    return app.tests.create({ projectId, plan }).id;
+  };
+  const mixedTest = testFor(mixed);
+  const regressedTest = testFor(regressed);
+  const prepare = (testId: string) => app.runs.prepare({ testId, environmentId });
+  // A suite that pins the active plan and a code revision of the same test: the code revision's
+  // run comes later and is stale for the test (another revision), and has no plan assertion.
+  const planRun = passedItem(projectId, prepare(mixedTest));
+  const codeRun = passedItem(projectId, prepare(mixedTest), {
+    steps: [{ planStepId: "imported-code", status: "passed" }],
+    freshness: { state: "stale", reasons: ["test_revision_changed"] },
+  });
+  // Negative control: a later current run of the same revision that failed still supersedes an
+  // earlier pass.
+  const earlierPass = passedItem(projectId, prepare(regressedTest));
+  const laterFailure = passedItem(projectId, prepare(regressedTest), {
+    steps: [{ planStepId: "check-status", status: "failed" }],
+    result: {
+      outcome: "failed",
+      gate: "failed",
+      passedOnRetry: false,
+      firstAttemptOutcome: "failed",
+    },
+  });
+  const runs = [planRun, codeRun, earlierPass, laterFailure];
+  const report = {
+    runs,
+    selection: { requestedRunIds: runs.map((item) => item.run.id), notDispatched: [] },
+  } as unknown as ReportSnapshot;
+
+  expect(verifiedRequirementCoverage(app.context, report)).toMatchObject({
+    numerator: 1,
+    denominator: 2,
+  });
+});

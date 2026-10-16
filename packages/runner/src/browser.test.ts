@@ -211,6 +211,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   vi.unstubAllEnvs();
   launch.mockReset();
 });
@@ -260,6 +261,158 @@ it("emits bounded hashed sanitized locator records on ordinary replay and failed
       "browser/steps/click-locator-0-after.json",
     ]),
   });
+});
+/**
+ * The locator evidence collector runs inside the page, so these tests execute the very callback
+ * handed to `evaluateAll` against a small DOM. It implements only the surface the collector reads.
+ */
+class DomText {
+  readonly nodeType = 3;
+  parentElement: DomElement | null = null;
+  constructor(readonly textContent: string) {}
+}
+class DomElement {
+  readonly nodeType = 1;
+  readonly tagName: string;
+  readonly childNodes: (DomElement | DomText)[] = [];
+  parentElement: DomElement | null = null;
+  constructor(
+    tag: string,
+    readonly attrs: Record<string, string> = {},
+    children: (DomElement | string)[] = [],
+  ) {
+    this.tagName = tag.toUpperCase();
+    for (const child of children) {
+      const node = typeof child === "string" ? new DomText(child) : child;
+      node.parentElement = this;
+      this.childNodes.push(node);
+    }
+  }
+  hasAttribute(name: string) {
+    return name in this.attrs;
+  }
+  getAttribute(name: string) {
+    return this.attrs[name] ?? null;
+  }
+  closest(selector: string): DomElement | null {
+    const parts = selector.split(",");
+    for (let node: DomElement | null = this; node; node = node.parentElement) {
+      const candidate = node;
+      if (parts.some((part) => candidate.matches(part))) return candidate;
+    }
+    return null;
+  }
+  private matches(part: string) {
+    const [, name, value] = /^\[([a-z-]+)(?:\*=(.+))?\]$/u.exec(part) ?? [];
+    if (!name) return this.tagName === part.toUpperCase();
+    const actual = this.attrs[name];
+    return actual !== undefined && (value === undefined || actual.includes(value));
+  }
+  checkVisibility() {
+    return true;
+  }
+  getBoundingClientRect() {
+    return { width: 10, height: 10 };
+  }
+}
+class DomDocument {
+  readonly location = { origin: "http://fixture.test" };
+  constructor(readonly documentElement: DomElement) {}
+  getElementById() {
+    return null;
+  }
+  createTreeWalker(root: DomElement, whatToShow: number) {
+    const nodes: (DomElement | DomText)[] = [];
+    const collect = (node: DomElement) => {
+      for (const child of node.childNodes) {
+        if (child.nodeType === (whatToShow === 1 ? 1 : 3)) nodes.push(child);
+        if (child instanceof DomElement) collect(child);
+      }
+    };
+    collect(root);
+    let position = 0;
+    const walker = {
+      currentNode: root as DomElement | DomText,
+      nextNode: () => {
+        const next = nodes[position++];
+        if (next) walker.currentNode = next;
+        return next ?? null;
+      },
+    };
+    return walker;
+  }
+}
+/** Replaces the locator's candidate collection with the real in-page callback run on `body`. */
+function observeDom(
+  target: LocatorStub,
+  body: (DomElement | string)[],
+  matches: DomElement[] = [],
+) {
+  const dom = new DomDocument(
+    new DomElement("html", {}, [
+      new DomElement("head", {}, [new DomElement("title", {}, ["Fixture"])]),
+      new DomElement("body", {}, body),
+    ]),
+  );
+  const readiness = target.evaluateAll.bind(target);
+  target.evaluateAll = (async (callback: (...args: unknown[]) => unknown, attributes?: unknown) => {
+    if (attributes === undefined) return readiness(callback);
+    vi.stubGlobal("document", dom);
+    vi.stubGlobal("NodeFilter", { SHOW_ELEMENT: 1, SHOW_TEXT: 4 });
+    vi.stubGlobal("getComputedStyle", () => ({ visibility: "visible" }));
+    return callback(matches, attributes);
+  }) as never;
+}
+function recordedLocator(phase: "before" | "after" = "before") {
+  return JSON.parse(
+    artifacts
+      .find((entry) => entry.path === `browser/steps/click-locator-0-${phase}.json`)!
+      .bytes.toString(),
+  ) as {
+    cardinality: number;
+    truncated: boolean;
+    candidates: { tag: string; role: string; name: string; matched: boolean; visible: boolean }[];
+  };
+}
+it("records a named control that follows more than a hundred anonymous wrappers", async () => {
+  const wrappers = Array.from({ length: 150 }, () => new DomElement("div"));
+  observeDom(context.page.locator("submit"), [
+    ...wrappers,
+    new DomElement("button", {}, ["Sign in"]),
+  ]);
+  expect(await runBrowser(runtime([click]))).toMatchObject({ outcome: "passed" });
+  const record = recordedLocator();
+  expect(record.candidates).toEqual([
+    expect.objectContaining({ tag: "button", role: "button", name: "Sign in", matched: false }),
+  ]);
+  expect(record.truncated).toBe(false);
+});
+it("always records matched elements, even anonymous ones behind a full budget of identified controls", async () => {
+  const controls = Array.from(
+    { length: 120 },
+    (_, index) => new DomElement("button", {}, [`Control ${index}`]),
+  );
+  const matchedWrapper = new DomElement("div");
+  observeDom(context.page.locator("submit"), [...controls, matchedWrapper], [matchedWrapper]);
+  expect(await runBrowser(runtime([click]))).toMatchObject({ outcome: "passed" });
+  const record = recordedLocator();
+  expect(record.cardinality).toBe(1);
+  expect(record.candidates).toHaveLength(100);
+  expect(record.candidates.filter((candidate) => candidate.matched)).toEqual([
+    expect.objectContaining({ tag: "div", role: "", name: "" }),
+  ]);
+  expect(record.truncated).toBe(true);
+});
+it("reports a tree walk cut by its visit bound as truncated", async () => {
+  const wrappers = Array.from({ length: 10_100 }, () => new DomElement("div"));
+  observeDom(context.page.locator("submit"), [
+    ...wrappers,
+    new DomElement("button", {}, ["Sign in"]),
+  ]);
+  expect(await runBrowser(runtime([click]))).toMatchObject({ outcome: "passed" });
+  const record = recordedLocator();
+  expect(record.candidates).toEqual([]);
+  expect(record.truncated).toBe(true);
 });
 it("captures asynchronously attached action identity before acting and spends only the remaining step budget", async () => {
   let now = 0;

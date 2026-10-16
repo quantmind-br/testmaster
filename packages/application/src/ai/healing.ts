@@ -1048,16 +1048,26 @@ export class HealingService {
     const project = requireEntity(this.ctx, "Project", String(test.projectId));
     const extensions = project.extensions as Record<string, unknown> | undefined;
     if (extensions?.["testmaster:healingPolicy"] !== "apply")
-      reasons.push("Project policy has not explicitly authorized automatic healing");
+      reasons.push(
+        "The project does not authorize automatic application of healing proposals; a reviewer approves this proposal instead",
+      );
     if (manualOnly) reasons.push("Business input changes require manual review");
     if (environment.production) reasons.push("Production healing requires manual review");
     if (
-      policy.config.healing?.mode !== "apply" ||
       (cell.effectiveConfig as typeof policy).config.healing?.mode !== "apply" ||
-      (run.gatePolicy as Record<string, unknown>).policyHash !== policy.policyHash ||
       cell.healingPolicy !== "apply"
     )
-      reasons.push("Policy application is not explicitly enabled and frozen");
+      reasons.push(
+        'The run\'s frozen configuration does not have healing.mode "apply", so it was not set up for automatic application; a reviewer approves this proposal instead',
+      );
+    if (policy.config.healing?.mode !== "apply")
+      reasons.push(
+        'The project\'s current configuration does not have healing.mode "apply", so automatic application is off; a reviewer approves this proposal instead',
+      );
+    if ((run.gatePolicy as Record<string, unknown>).policyHash !== policy.policyHash)
+      reasons.push(
+        "The effective policy hash changed since the run froze it, so automatic application is refused; a reviewer approves this proposal instead",
+      );
     if (reasons.length) return { equivalent: false, reasons, deferred };
     const baseline = this.runs
       .list()

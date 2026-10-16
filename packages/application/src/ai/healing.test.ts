@@ -1345,6 +1345,52 @@ it("healing review reports frozen changes and recorded manual policy reasons wit
   ).toBe(before);
 });
 
+it.each([
+  {
+    unmet: "project",
+    reason: "The project does not authorize automatic application",
+  },
+  {
+    unmet: "frozen",
+    reason: 'The run\'s frozen configuration does not have healing.mode "apply"',
+  },
+  {
+    unmet: "hash",
+    reason: "The effective policy hash changed since the run froze it",
+  },
+])(
+  "healing review names the $unmet condition when it is the only unmet one",
+  async ({ unmet, reason }) => {
+    const f = await deferredFixture(true);
+    if (unmet === "project") {
+      const project = f.app.projects.get(String(f.test.projectId));
+      f.app.context.entities.update(
+        "Project",
+        f.app.context.workspaceId,
+        project.id,
+        Number(project.version),
+        {
+          ...project,
+          extensions: { ...project.extensions, "testmaster:healingPolicy": "off" },
+          version: Number(project.version) + 1,
+        },
+      );
+    } else if (unmet === "frozen")
+      (f.app.runs.get(f.failed.id).matrixCell as Record<string, unknown>).healingPolicy = "propose";
+    else
+      (f.app.runs.get(f.failed.id).gatePolicy as Record<string, unknown>).policyHash = "f".repeat(
+        64,
+      );
+    const proposal = await proposed(f.service.propose(f.failed.id));
+    const review = await f.service.review(proposal.id);
+    expect(review.automation.decision).toBe("manual_review_required");
+    const policyReasons = review.automation.reasons.filter((item) =>
+      item.includes("a reviewer approves this proposal instead"),
+    );
+    expect(policyReasons).toEqual([expect.stringContaining(reason)]);
+  },
+);
+
 it("healing review names the steps and words behind the risk class", async () => {
   const probing = await deferredFixture(true, false, "Submit probe form");
   const probeProposal = await proposed(probing.service.propose(probing.failed.id));

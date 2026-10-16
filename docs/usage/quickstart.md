@@ -333,6 +333,13 @@ network profile permits (`local-loopback` loopback, `private` private ranges; th
 either). Offline profiles ignore the list. Every change creates a new environment revision, so earlier approvals do
 not apply.
 
+The proxy also removes the forwarding and proxy headers a page or runner request carries (`X-Forwarded-*`,
+`Forwarded`, `Via`, `Proxy-*`) before the request reaches the target, like a reverse proxy that drops
+client-supplied forwarding headers, and records only their names (`removedHeaders` on the `allow` entry of
+`logs/egress.ndjson`). A target that trusts a header such as `X-Forwarded-Email` from its own proxy therefore never
+sees it from a test; sign in through an auth profile instead. Plan validation refuses a request header with one of
+these names, and the HTTP runner refuses an auth-profile header with one when it sends the request.
+
 ## Selective reruns and read-only preview
 
 ```bash

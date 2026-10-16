@@ -143,6 +143,20 @@ function stepReference(location: string | null): string {
   return location === null ? "the step that stopped the Run" : `step ${location}`;
 }
 /**
+ * Why locator candidates cannot prove the identity of a replacement control. `baselineRuns` is the
+ * number of passing runs of this test revision in this environment revision found by the baseline
+ * search, or null when that search did not cover the failed step.
+ */
+function manualReviewReason(baselineRuns: number | null): string {
+  const fact =
+    baselineRuns === 0
+      ? "No passing run of this test revision exists in this environment revision, so there is no recorded control to compare the observed candidates with and automatic identity proof is unavailable."
+      : baselineRuns === null
+        ? "The observed candidates were not compared with a passing run for this step, so automatic identity proof is unavailable."
+        : "Passing runs of this test revision exist in this environment revision, but no single observed candidate matches the control they recorded, so automatic identity proof is unavailable.";
+  return `${fact} A healing proposal can still be requested; a reviewer decides whether to apply it.`;
+}
+/**
  * Visible text of a model-selected next step. The prefix identifies the same action when the rules
  * already advised it, so a repeated suggestion is not listed twice.
  */
@@ -1785,7 +1799,8 @@ export class AnalysisService {
     collected: CollectedEvidence,
     failureKind: Analysis["failureKind"],
     supports: AnalysisEvidenceRef[],
-    statusRejection?: RejectedStatus,
+    statusRejection: RejectedStatus | undefined,
+    baselineRuns: number | null,
   ): Promise<Diagnosis> {
     const secrets = environmentSecretValues();
     const steps = collected.evidence.filter((item) => item.step);
@@ -2258,7 +2273,7 @@ export class AnalysisService {
         alternative("The target may be changed, removed, or ambiguous.", "unknown");
         healing = {
           advice: "manual_review_only",
-          reason: "Observed candidates do not establish unique baseline identity.",
+          reason: manualReviewReason(baselineRuns),
         };
       } else {
         if (
@@ -2306,6 +2321,9 @@ export class AnalysisService {
     let hypothesis: string | null = null;
     let supports: AnalysisEvidenceRef[] = [];
     let diagnosedRejection: RejectedStatus | undefined;
+    // Most passing runs of this revision in this environment revision seen while looking for a
+    // baseline control; null when no baseline search ran.
+    let baselineRuns: number | null = null;
     const reasons = (codes: string[]) =>
       evidence.filter((item) => item.reason && codes.includes(item.reason));
     const protocolFailure = run.outcome === "passed" ? undefined : runnerProtocolFailure(evidence);
@@ -2450,6 +2468,7 @@ export class AnalysisService {
             run.environmentRevisionId,
             run.id,
           );
+          baselineRuns = Math.max(baselineRuns ?? 0, baselines.length);
           for (const row of baselines) {
             const baseline = await this.collect(authorizedRun(this.ctx, String(row.id)));
             const records = baseline.evidence.filter(
@@ -2624,7 +2643,14 @@ export class AnalysisService {
         modelCallId: null,
         limitations: [...new Set(collected.limitations)],
         recommendedAction,
-        diagnosis: await this.layered(run, collected, failureKind, supports, diagnosedRejection),
+        diagnosis: await this.layered(
+          run,
+          collected,
+          failureKind,
+          supports,
+          diagnosedRejection,
+          baselineRuns,
+        ),
       },
       fence,
     );
