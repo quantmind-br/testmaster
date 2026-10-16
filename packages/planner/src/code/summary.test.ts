@@ -7,6 +7,7 @@ import { canonicalJson, sha256 } from "@testmaster/domain";
 import { describe, expect, it } from "vitest";
 import { analyzeDiff } from "./diff.js";
 import { retainRelativeImports, summarizeCode } from "./summary.js";
+import type { PythonCodeSummary } from "./types.js";
 
 async function repo() {
   const root = await mkdtemp(join(tmpdir(), "testmaster-planner-"));
@@ -14,6 +15,22 @@ async function repo() {
   execFileSync("git", ["-C", root, "config", "user.email", "test@example.invalid"]);
   execFileSync("git", ["-C", root, "config", "user.name", "Test"]);
   return root;
+}
+type PythonFile = PythonCodeSummary["files"][number];
+/** A Python summary entry as the hardened runner emits it, with every fact list empty unless given. */
+function pythonFile(path: string, facts: Partial<PythonFile> = {}): PythonFile {
+  return {
+    path,
+    routes: [],
+    routers: [],
+    includes: [],
+    calls: [],
+    functions: [],
+    imports: [],
+    tests: [],
+    symbols: [],
+    ...facts,
+  };
 }
 describe("confined AST code summary", () => {
   it("summarizes reference-shop route logic and test hooks without executing it", async () => {
@@ -70,10 +87,9 @@ describe("confined AST code summary", () => {
             return {
               available: true,
               summary: {
-                version: "1.0.0",
+                version: "1.1.0",
                 files: [
-                  {
-                    path: "api.py",
+                  pythonFile("api.py", {
                     routes: [
                       {
                         framework: "fastapi",
@@ -81,11 +97,10 @@ describe("confined AST code summary", () => {
                         path: "/python",
                         handler: "health",
                         line: 1,
+                        router: null,
                       },
                     ],
-                    tests: [],
-                    symbols: [],
-                  },
+                  }),
                 ],
                 diagnostics: [],
               },
@@ -108,6 +123,173 @@ describe("confined AST code summary", () => {
         path: "excluded.js",
         reason: "config_exclude",
       });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+  it("reports FastAPI routes under the prefixes of the routers and includes that reach them", async () => {
+    const root = await repo();
+    try {
+      const sources = {
+        "app/main.py": "# create_app(): FastAPI(), include_router(...)\n",
+        "app/routes/auth.py": "# create_auth_router(): APIRouter() with POST /login\n",
+        "app/routes/sessions/__init__.py":
+          "# create_sessions_router() registers the events routes\n",
+        "app/routes/sessions/events.py": "# register_events_routes(router: APIRouter)\n",
+        "app/routes/legacy.py": "# router = APIRouter(prefix='/legacy')\n",
+        "app/routes/orphan.py": "# router = APIRouter(prefix='/orphan'), never included\n",
+      };
+      for (const [path, text] of Object.entries(sources)) {
+        await mkdir(join(root, path, ".."), { recursive: true });
+        await writeFile(join(root, path), text);
+      }
+      const route = (method: string, path: string, handler: string, line: number, router: number) =>
+        ({ framework: "fastapi", method, path, handler, line, router }) as const;
+      const router = (id: number, name: string, prefix: string | null, module = false) => ({
+        id,
+        kind: "router" as const,
+        name,
+        line: 4,
+        prefix,
+        module,
+      });
+      const summary = await summarizeCode(root, {
+        pythonRunner: {
+          async summarize(_repoRoot, files) {
+            expect([...files].sort()).toEqual(Object.keys(sources).sort());
+            return {
+              available: true,
+              summary: {
+                version: "1.1.0",
+                files: [
+                  pythonFile("app/main.py", {
+                    routers: [{ ...router(0, "app", ""), kind: "app" }],
+                    includes: [
+                      {
+                        parent: 0,
+                        child: { name: "create_auth_router", call: true },
+                        prefix: "/auth",
+                        line: 7,
+                      },
+                      {
+                        parent: 0,
+                        child: { name: "sessions.create_sessions_router", call: true },
+                        prefix: "/v1",
+                        line: 8,
+                      },
+                      {
+                        parent: 0,
+                        child: { name: "legacy.router", call: false },
+                        prefix: null,
+                        line: 9,
+                      },
+                    ],
+                    imports: [
+                      {
+                        local: "create_auth_router",
+                        module: "app.routes.auth",
+                        name: "create_auth_router",
+                        level: 0,
+                      },
+                      { local: "sessions", module: "app.routes", name: "sessions", level: 0 },
+                      { local: "legacy", module: "routes", name: "legacy", level: 1 },
+                    ],
+                  }),
+                  pythonFile("app/routes/auth.py", {
+                    routers: [router(0, "router", "")],
+                    routes: [route("POST", "/login", "login", 6, 0)],
+                    functions: [
+                      {
+                        name: "create_auth_router",
+                        parameters: [],
+                        routerParameters: {},
+                        returns: [0],
+                      },
+                    ],
+                  }),
+                  pythonFile("app/routes/sessions/__init__.py", {
+                    routers: [router(0, "router", "")],
+                    calls: [
+                      {
+                        callee: "register_events_routes",
+                        arguments: [{ router: 0, index: 0, keyword: null }],
+                        line: 6,
+                      },
+                    ],
+                    functions: [
+                      {
+                        name: "create_sessions_router",
+                        parameters: [],
+                        routerParameters: {},
+                        returns: [0],
+                      },
+                    ],
+                    imports: [
+                      {
+                        local: "register_events_routes",
+                        module: "app.routes.sessions.events",
+                        name: "register_events_routes",
+                        level: 0,
+                      },
+                    ],
+                  }),
+                  pythonFile("app/routes/sessions/events.py", {
+                    routers: [
+                      { ...router(0, "router", ""), kind: "parameter" },
+                      router(1, "event_router", "/events"),
+                    ],
+                    routes: [
+                      route("GET", "/{session_id}", "read_event", 6, 1),
+                      route("GET", "/sessions", "list_sessions", 9, 0),
+                    ],
+                    includes: [{ parent: 0, child: { router: 1 }, prefix: "", line: 12 }],
+                    functions: [
+                      {
+                        name: "register_events_routes",
+                        parameters: ["router"],
+                        routerParameters: { router: 0 },
+                        returns: [],
+                      },
+                    ],
+                  }),
+                  pythonFile("app/routes/legacy.py", {
+                    routers: [router(0, "router", "/legacy", true)],
+                    routes: [route("GET", "/ping", "ping", 6, 0)],
+                  }),
+                  pythonFile("app/routes/orphan.py", {
+                    routers: [router(0, "router", "/orphan", true)],
+                    routes: [route("GET", "/x", "orphan", 6, 0)],
+                  }),
+                ],
+                diagnostics: [],
+              },
+            };
+          },
+        },
+      });
+      expect(
+        summary.endpoints.map((endpoint) => `${endpoint.method} ${endpoint.path}`).sort(),
+      ).toEqual([
+        "GET /legacy/ping",
+        "GET /orphan/x",
+        "GET /v1/events/{session_id}",
+        "GET /v1/sessions",
+        "POST /auth/login",
+      ]);
+      expect(summary.endpoints.find((endpoint) => endpoint.handler === "login")?.ref).toMatchObject(
+        {
+          path: "app/routes/auth.py",
+          line: 6,
+        },
+      );
+      // An unresolvable include prefix and a router nobody includes are declared, never guessed.
+      expect(summary.warnings.filter((warning) => warning.code.startsWith("fastapi_"))).toEqual([
+        expect.objectContaining({
+          code: "fastapi_prefix_unresolved",
+          path: "app/routes/legacy.py",
+        }),
+        expect.objectContaining({ code: "fastapi_router_unmounted", path: "app/routes/orphan.py" }),
+      ]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

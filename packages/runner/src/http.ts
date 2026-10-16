@@ -369,11 +369,19 @@ export async function assertResponse(
       expected = expectation.values;
       matches = expectation.values.includes(response.status);
       break;
-    case "headerEquals":
-      observed = response.headers[expectation.header.toLowerCase()] ?? null;
-      expected = await runtime.resolve(expectation.value);
-      matches = isDeepStrictEqual(observed, expected);
+    case "headerEquals": {
+      const header = response.headers[expectation.header.toLowerCase()];
+      const wanted = await runtime.resolve(expectation.value);
+      matches = isDeepStrictEqual(header ?? null, wanted);
+      if (CREDENTIAL_HEADER[expectation.header.toLowerCase()]) {
+        observed = credentialHeaderObservation(response, expectation.header, header, matches);
+        expected = { value: REDACTED_VALUE };
+      } else {
+        observed = header ?? null;
+        expected = wanted;
+      }
       break;
+    }
     case "headerMatches": {
       let pattern: RegExp;
       try {
@@ -388,9 +396,11 @@ export async function assertResponse(
         );
       }
       const header = response.headers[expectation.header.toLowerCase()];
-      observed = header ?? null;
-      expected = { matches: expectation.pattern };
       matches = header !== undefined && pattern.test(header);
+      observed = CREDENTIAL_HEADER[expectation.header.toLowerCase()]
+        ? credentialHeaderObservation(response, expectation.header, header, matches)
+        : (header ?? null);
+      expected = { matches: expectation.pattern };
       break;
     }
     case "cookieAbsent":
@@ -595,6 +605,79 @@ function removesCookie(attributes: readonly string[]): boolean {
   const expires = values.get("expires");
   return expires !== undefined && Date.parse(expires) <= Date.now();
 }
+/**
+ * The header credentials of the environment's auth profile: each vault secret as `header`, after
+ * its `prefix`. A forbidden or duplicate header name denies the run.
+ */
+export async function loadProfileHeaders(runtime: Runtime): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {};
+  for (const credential of runtime.input.auth?.credentials ?? []) {
+    const name = credential.header.toLowerCase();
+    if (
+      !/^[!#$%&'*+.^_`|~0-9a-z-]+$/u.test(name) ||
+      FORBIDDEN_HEADER[name] ||
+      name.startsWith("proxy-") ||
+      name.startsWith("x-forwarded-") ||
+      Object.hasOwn(headers, name)
+    )
+      deny("Forbidden or duplicate auth profile header");
+    const secret = scalar(await runtime.resolve({ secretRef: credential.secretRef }));
+    const value = `${credential.prefix ?? ""}${secret}`;
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: Header values reject NUL and line breaks.
+    if (/[\r\n\u0000]/u.test(value)) deny("Invalid auth profile header value");
+    headers[name] = value;
+  }
+  return headers;
+}
+/** What a credential-header assertion records in place of the header value. */
+const REDACTED_VALUE = "[REDACTED]";
+/** Shorter issued values are flags and counters, never credentials; scrubbing them would corrupt evidence. */
+const MIN_ISSUED_CREDENTIAL_LENGTH = 8;
+/**
+ * The observation of a credential-header assertion: whether the header was present, the names of
+ * the cookies it set with their values redacted, and the verdict. The value is never recorded.
+ */
+function credentialHeaderObservation(
+  response: HttpResponse,
+  header: string,
+  value: string | undefined,
+  matches: boolean,
+): unknown {
+  const name = header.toLowerCase();
+  const present = value !== undefined;
+  if (name === "set-cookie")
+    return {
+      header: name,
+      present,
+      cookies: response.cookieNames.map((cookie) => ({ name: cookie, value: REDACTED_VALUE })),
+      matches,
+    };
+  return { header: name, present, ...(present ? { value: REDACTED_VALUE } : {}), matches };
+}
+/**
+ * Credential values a response issued (`Set-Cookie` values, a returned `Authorization` or API-key
+ * header). The target chose them, so they are unknown until now; they join the attempt's scrub
+ * set before any evidence is written.
+ */
+function issuedCredentials(headers: Record<string, string | string[] | undefined>): string[] {
+  const found: string[] = [];
+  for (const [header, raw] of Object.entries(headers)) {
+    const name = header.toLowerCase();
+    if (!CREDENTIAL_HEADER[name] || raw === undefined) continue;
+    for (const entry of Array.isArray(raw) ? raw : [raw]) {
+      if (name === "set-cookie") {
+        const pair = entry.split(";", 1)[0] ?? "";
+        const value = pair.slice(pair.indexOf("=") + 1).trim();
+        found.push(value, value.replace(/^"(.*)"$/u, "$1"));
+      } else {
+        const value = entry.trim();
+        // `Bearer <token>`: the token alone must be scrubbed as well as the whole header.
+        found.push(value, value.replace(/^\S+\s+/u, ""));
+      }
+    }
+  }
+  return found.filter((value) => value.length >= MIN_ISSUED_CREDENTIAL_LENGTH);
+}
 function scalar(value: unknown): string {
   if (typeof value === "string") return value;
   if (typeof value === "boolean" || (typeof value === "number" && Number.isFinite(value)))
@@ -709,23 +792,7 @@ export class HttpEngine {
           String(await runtime.resolve({ secretRef: auth.storageState.secretRef })),
         )
       : [];
-    const headers: Record<string, string> = {};
-    for (const credential of auth?.credentials ?? []) {
-      const name = credential.header.toLowerCase();
-      if (
-        !/^[!#$%&'*+.^_`|~0-9a-z-]+$/u.test(name) ||
-        FORBIDDEN_HEADER[name] ||
-        name.startsWith("proxy-") ||
-        name.startsWith("x-forwarded-") ||
-        Object.hasOwn(headers, name)
-      )
-        deny("Forbidden or duplicate auth profile header");
-      const secret = scalar(await runtime.resolve({ secretRef: credential.secretRef }));
-      const value = `${credential.prefix ?? ""}${secret}`;
-      // biome-ignore lint/suspicious/noControlCharactersInRegex: Header values reject NUL and line breaks.
-      if (/[\r\n\u0000]/u.test(value)) deny("Invalid auth profile header value");
-      headers[name] = value;
-    }
+    const headers = await loadProfileHeaders(runtime);
     if (cookies.length === 0 && Object.keys(headers).length === 0)
       throw new RuntimeError(
         "missing_secret",
@@ -958,6 +1025,8 @@ export class HttpEngine {
             responseHeaders[name.toLowerCase()] = Array.isArray(value) ? value.join(", ") : value;
         for (const name of setCookieNames(incoming.headers["set-cookie"]))
           if (!cookieNames.includes(name)) cookieNames.push(name);
+        for (const credential of issuedCredentials(incoming.headers))
+          runtime.secrets.add(credential);
         const upstreamFailure = responseHeaders[UPSTREAM_FAILURE_HEADER];
         if (upstreamFailure !== undefined) {
           // Only the egress proxy can emit this marker (it strips it from target responses). The

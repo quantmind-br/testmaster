@@ -126,6 +126,90 @@ export interface ProposalRefusal {
   /** Stable machine-readable cause; the error carries the human message. */
   reasonCode: string;
   error: ContractError;
+  /** Where the refusal applies in the model output, when the cause has locations. */
+  pointers?: string[];
+}
+type RawProposal = Omit<GeneratedProposal, "evidenceRefs"> & { evidenceIds: string[] };
+interface RawProposals {
+  proposals: RawProposal[];
+  unsupported?: UnsupportedRequirement[];
+}
+const MAX_REFUSAL_ISSUES = 5;
+/** One proposal's own validation failure, its issue paths located in the whole output. */
+function invalidProposal(
+  index: number,
+  item: unknown,
+  error: ContractError,
+): Pick<ProposalRefusal, "requirementIds" | "reasonCode" | "error" | "pointers"> {
+  const prefix = `/proposals/${index}`;
+  const pointers = error.issues.map(({ path }) =>
+    path.startsWith("/proposals/0")
+      ? `${prefix}${path.slice("/proposals/0".length)}`
+      : `${prefix}/plan${path}`,
+  );
+  const listed = error.issues
+    .slice(0, MAX_REFUSAL_ISSUES)
+    .map(({ rule, message }) => `${rule}: ${message}`);
+  const more =
+    error.issues.length > listed.length ? ` (+${error.issues.length - listed.length} more)` : "";
+  const summary = listed.length ? `${listed.join("; ")}${more}` : error.message;
+  const refs = (item as { requirementRefs?: unknown } | null)?.requirementRefs;
+  return {
+    requirementIds: Array.isArray(refs)
+      ? refs.filter((ref): ref is string => typeof ref === "string")
+      : [],
+    reasonCode: "plan_invalid",
+    error: new ContractError(
+      "INVALID_ARGUMENT",
+      `Generated proposal is invalid: ${summary}`,
+      error.details,
+      error.issues,
+    ),
+    pointers: pointers.slice(0, MAX_REFUSAL_ISSUES),
+  };
+}
+/**
+ * Validates the model output. When it is valid as a whole, every proposal passes. Otherwise each
+ * proposal is validated on its own: one that breaks the schema or the plan semantics is refused
+ * with its position instead of rejecting the whole output. A failure that no single proposal
+ * explains (not a `{proposals: [...]}` object, an invalid `unsupported` list, too many proposals)
+ * still throws.
+ */
+function splitOutput(input: unknown): {
+  valid: { index: number; proposal: RawProposal }[];
+  refused: ProposalRefusal[];
+  unsupported: UnsupportedRequirement[];
+} {
+  let whole: ContractError;
+  try {
+    const output = validate<RawProposals>("AIProposalsOutput", input);
+    return {
+      valid: output.proposals.map((proposal, index) => ({ index, proposal })),
+      refused: [],
+      unsupported: output.unsupported ?? [],
+    };
+  } catch (error) {
+    if (!(error instanceof ContractError)) throw error;
+    whole = error;
+  }
+  const items = (input as { proposals?: unknown } | null)?.proposals;
+  if (typeof input !== "object" || input === null || !Array.isArray(items)) throw whole;
+  const valid: { index: number; proposal: RawProposal }[] = [];
+  const refused: ProposalRefusal[] = [];
+  items.forEach((item, index) => {
+    try {
+      const [proposal] = validate<RawProposals>("AIProposalsOutput", {
+        proposals: [item],
+      }).proposals;
+      if (proposal) valid.push({ index, proposal });
+    } catch (error) {
+      if (!(error instanceof ContractError)) throw error;
+      refused.push({ index, ...invalidProposal(index, item, error) });
+    }
+  });
+  if (!refused.length) throw whole;
+  const envelope = validate<RawProposals>("AIProposalsOutput", { ...input, proposals: [] });
+  return { valid, refused, unsupported: envelope.unsupported ?? [] };
 }
 export interface InspectedProposals {
   /** Proposals that passed every check, duplicates dropped, with their output position. */
@@ -174,12 +258,9 @@ export function inspectGeneratedProposals(
   requirementIds: string[],
   catalog: EvidenceCatalog,
 ): InspectedProposals {
-  const output = validate<{
-    proposals: (Omit<GeneratedProposal, "evidenceRefs"> & { evidenceIds: string[] })[];
-    unsupported?: UnsupportedRequirement[];
-  }>("AIProposalsOutput", input);
-  const unsupported = output.unsupported ?? [];
-  if (!output.proposals.length && !unsupported.length)
+  const split = splitOutput(input);
+  const unsupported = split.unsupported;
+  if (!split.valid.length && !split.refused.length && !unsupported.length)
     throw new ContractError(
       "INVALID_ARGUMENT",
       "The model returned neither proposals nor declined requirements",
@@ -196,7 +277,10 @@ export function inspectGeneratedProposals(
       });
     declined.add(requirementId);
   }
-  const proposed = output.proposals.flatMap((proposal) => proposal.requirementRefs);
+  const proposed = [
+    ...split.valid.flatMap(({ proposal }) => proposal.requirementRefs),
+    ...split.refused.flatMap((item) => item.requirementIds),
+  ];
   const both = proposed.find((id) => declined.has(id));
   if (both)
     throw new ContractError("INVALID_ARGUMENT", "A requirement is both proposed and declined", {
@@ -206,8 +290,8 @@ export function inspectGeneratedProposals(
   const allowedEvidence = new Set(catalog.refs.map((ref) => canonicalJson(ref)));
   const hashes = new Set<string>();
   const accepted: InspectedProposals["accepted"] = [];
-  const refused: ProposalRefusal[] = [];
-  output.proposals.forEach(({ evidenceIds, ...rest }, index) => {
+  const refused: ProposalRefusal[] = [...split.refused];
+  split.valid.forEach(({ index, proposal: { evidenceIds, ...rest } }) => {
     const requirementRefs = rest.requirementRefs;
     let evidenceRefs: SourceEvidenceRef[];
     try {
@@ -233,6 +317,7 @@ export function inspectGeneratedProposals(
     hashes.add(hash);
     accepted.push({ index, proposal });
   });
+  refused.sort((a, b) => a.index - b.index);
   return { accepted, refused, unsupported };
 }
 /**

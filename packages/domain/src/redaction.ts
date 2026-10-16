@@ -16,6 +16,66 @@ export function scrubText(
   return { text: output, redacted: output !== text };
 }
 
+/** Identifiers the frozen plan declares; they are plan text, not target or secret data. */
+export interface PlanIdentifiers {
+  stepIds: ReadonlySet<string>;
+  captureNames: ReadonlySet<string>;
+}
+/**
+ * Collects the step ids (and the ids of their cleanup requests) and the capture names declared by
+ * the plan, login steps and approved agent actions in `roots`. The plan is stored verbatim, so
+ * redaction must not rewrite these names inside the records that report on them: the host matches
+ * step results, captures and locator evidence back to the plan by exact name.
+ */
+export function planIdentifiers(...roots: unknown[]): PlanIdentifiers {
+  const stepIds = new Set<string>();
+  const captureNames = new Set<string>();
+  const walk = (value: unknown): void => {
+    if (typeof value !== "object" || value === null) return;
+    if (Array.isArray(value)) {
+      for (const item of value) walk(item);
+      return;
+    }
+    const node = value as { id?: unknown; operation?: unknown; capture?: unknown };
+    if (typeof node.id === "string" && typeof node.operation === "string") {
+      stepIds.add(node.id);
+      stepIds.add(`cleanup-${node.id}`);
+    }
+    if (Array.isArray(node.capture))
+      for (const capture of node.capture as { name?: unknown }[])
+        if (typeof capture?.name === "string") captureNames.add(capture.name);
+    for (const child of Object.values(node)) walk(child);
+  };
+  for (const root of roots) walk(root);
+  return { stepIds, captureNames };
+}
+const stepIdField = (id: string): string => `"stepId":${JSON.stringify(id)}`;
+/**
+ * Puts plan step ids back into the `"stepId"` fields of already scrubbed JSON text, where `scrub`
+ * rewrote them because a secret value occurs inside the id. Only that exact field is restored: a
+ * step id is plan text, so the field reveals nothing the stored plan does not.
+ */
+export function restoreStepIds(
+  scrubbed: string,
+  stepIds: ReadonlySet<string>,
+  scrub: (text: string) => string,
+): string {
+  if (!scrubbed.includes('"stepId":')) return scrubbed;
+  let output = scrubbed;
+  for (const id of stepIds) {
+    const redacted = scrub(id);
+    if (redacted !== id) output = output.replaceAll(stepIdField(redacted), stepIdField(id));
+  }
+  return output;
+}
+/** Blanks the `"stepId"` fields that name plan steps, so a leak scan does not flag restored ids. */
+export function withoutStepIdFields(text: string, stepIds: ReadonlySet<string>): string {
+  if (!text.includes('"stepId":')) return text;
+  let output = text;
+  for (const id of stepIds) output = output.replaceAll(stepIdField(id), '"stepId":""');
+  return output;
+}
+
 /** Shared default-pattern policy; encoded/unknown PII is not an anonymity guarantee. */
 export function scrubEvidenceText(text: string, secrets: readonly string[] = []): RedactedText {
   let output = scrubText(

@@ -135,7 +135,8 @@ A form login that posts a JSON body and keeps the session cookie:
 
 ## Signing in
 
-- **Test sign-in** (`testmaster auth-profile test-login <id> --environment <env id>`,
+- **Test sign-in** (`testmaster auth-profile test-login <id> --environment <env id>` (`--environment` is
+  required), the MCP tool `testmaster_test_auth_login`,
   `POST /v1/auth-profiles/{id}/test-login`, or the profile page) signs in once and reports an outcome
   (`authenticated`, `failed`, `blocked`, `checkpoint_required`). It never saves a draft, revision or proposal
   (`draftsChanged` is always `false`) and never creates a checkpoint, because no Run waits for it.

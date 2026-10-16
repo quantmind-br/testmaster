@@ -374,7 +374,7 @@ const handlers: Record<string, RouteHandler> = {
     const revision = app.revisions.get(id);
     return app.codeExport.export(revision.testId, {
       revisionId: id,
-      format: revision.runnerKind === "pytest" ? "pytest" : "playwright",
+      format: revision.runnerKind === "python" ? "pytest" : "playwright",
     });
   }),
   "GET /approvals": h(({ app, page }) => page(app.approvals.list())),

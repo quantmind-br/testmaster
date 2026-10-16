@@ -6,9 +6,10 @@ import { parse } from "@babel/parser";
 import { ContractError } from "@testmaster/contracts";
 import { canonicalJson, sha256 } from "@testmaster/domain";
 import ignore from "ignore";
+import { resolvePythonRoutes } from "./python-routes.js";
 import type { CodeRef, CodeSummary, CodeSummaryOptions, CodeSymbol } from "./types.js";
 
-export const CODE_DETECTOR_VERSION = "1.5.0";
+export const CODE_DETECTOR_VERSION = "1.6.0";
 const DEFAULT_MAX_SYMBOLS_PER_FILE = 200;
 const DEFAULT_MAX_SYMBOLS = 20_000;
 const utf8 = new TextDecoder("utf-8", { fatal: true });
@@ -812,18 +813,22 @@ export async function summarizeCode(
       summary.warnings.push({ path: "", code: "python_unavailable", message: result.reason });
     else {
       const admitted = new Set(python);
-      for (const file of result.summary.files) {
-        const source = summary.fileRefs.find((ref) => ref.path === file.path);
-        if (!admitted.has(file.path) || !source)
+      const sources = new Map(summary.fileRefs.map((ref) => [ref.path, ref]));
+      for (const file of result.summary.files)
+        if (!admitted.has(file.path) || !sources.has(file.path))
           throw new ContractError("POLICY_DENIED", "Python summary referenced an unadmitted file");
-        for (const route of file.routes)
-          summary.endpoints.push({
-            framework: route.framework,
-            method: route.method,
-            path: route.path,
-            handler: route.handler,
-            ref: { ...source, line: route.line },
-          });
+      const routes = resolvePythonRoutes(result.summary.files);
+      for (const route of routes.endpoints)
+        summary.endpoints.push({
+          framework: route.framework,
+          method: route.method,
+          path: route.path,
+          handler: route.handler,
+          ref: { ...(sources.get(route.file) as CodeRef), line: route.line },
+        });
+      summary.warnings.push(...routes.warnings);
+      for (const file of result.summary.files) {
+        const source = sources.get(file.path) as CodeRef;
         for (const test of file.tests)
           summary.existingTests.push({
             name: test.name,

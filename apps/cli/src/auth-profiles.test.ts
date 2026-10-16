@@ -275,3 +275,17 @@ it("SEC-024 the CLI lists no checkpoints for a fresh project and validates dry r
   const profiles = await invoke([...base, "auth-profile", "list"]);
   expect(profiles.document.data).toEqual([]);
 });
+
+it("the help of a command marks the options it cannot run without as required", async () => {
+  const { base } = await workspace();
+  const flat = async (args: string[]) =>
+    String((await invoke([...base, ...args, "--help"])).document.data?.help).replace(/\s+/gu, " ");
+  // test-login fails at call time without --environment, so its help must say so up front.
+  expect(await flat(["auth-profile", "test-login"])).toContain(
+    "--environment <id> Environment whose origins the login is bound to (required)",
+  );
+  // Negative control: the options around a required one stay unmarked.
+  expect(await flat(["source", "add"])).toContain(
+    "--role <role> (required) --name <name> --format <format>",
+  );
+});

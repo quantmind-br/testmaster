@@ -11,7 +11,13 @@ import {
   type SupervisorEvent,
   validate,
 } from "@testmaster/contracts";
-import { AttemptClock, scrubEvidenceText } from "@testmaster/domain";
+import {
+  AttemptClock,
+  type PlanIdentifiers,
+  planIdentifiers,
+  scrubEvidenceText,
+  withoutStepIdFields,
+} from "@testmaster/domain";
 import type { ArtifactWriter, EvidenceStore } from "@testmaster/evidence";
 import {
   type CommandResult,
@@ -49,6 +55,55 @@ export function storageStateValues(storageState: string): string[] {
   } catch {
     return [];
   }
+}
+/** Ids the runner itself gives steps that are not plan steps (imported code, the attempt-wide egress denial). */
+const RUNNER_STEP_ID = /^(?:attempt|imported-code|imported-test-\d+|imported-step-\d+)$/u;
+/**
+ * Puts back, in a redacted event payload, the identifiers the redaction rewrote although they are
+ * plan text: `stepId`, the name of a captured variable, a resource handle reference, and the
+ * evidence paths that name an artifact the runner began (staging stores those verbatim). Every
+ * other string, observed values included, stays as `sanitized` has it.
+ */
+function restoreIdentifiers(
+  event: RunnerEvent,
+  sanitized: unknown,
+  identifiers: PlanIdentifiers,
+  artifactPaths: ReadonlySet<string>,
+): unknown {
+  // Every runner event payload is an object (RunnerEvent schema); the fields are checked below.
+  const original = event.payload as {
+    stepId?: unknown;
+    name?: unknown;
+    handleRef?: unknown;
+    evidencePaths?: unknown;
+  };
+  const restored = { ...(sanitized as Record<string, unknown>) };
+  const { stepId, name, handleRef, evidencePaths } = original;
+  if (
+    typeof stepId === "string" &&
+    (identifiers.stepIds.has(stepId) || RUNNER_STEP_ID.test(stepId))
+  )
+    restored.stepId = stepId;
+  if (
+    event.type === "variable.captured" &&
+    typeof name === "string" &&
+    identifiers.captureNames.has(name)
+  )
+    restored.name = name;
+  if (
+    event.type.startsWith("resource.") &&
+    typeof handleRef === "string" &&
+    handleRef.endsWith(".handle") &&
+    identifiers.stepIds.has(handleRef.slice(0, -".handle".length))
+  )
+    restored.handleRef = handleRef;
+  if (event.type === "step.finished" && Array.isArray(evidencePaths)) {
+    const scrubbed = restored.evidencePaths as unknown[];
+    restored.evidencePaths = evidencePaths.map((path, index) =>
+      typeof path === "string" && artifactPaths.has(path) ? path : scrubbed[index],
+    );
+  }
+  return restored;
 }
 export interface AttemptInput {
   workspaceId: string;
@@ -115,6 +170,14 @@ export class AttemptExecutor {
     const sockets = await prepareSocketsDir(input.attemptId, this.runtimeDir);
     const protocolPath = join(sockets, "protocol.sock");
     const egressPath = join(sockets, "egress.sock");
+    const identifiers = planIdentifiers(
+      input.plan,
+      input.runnerInput?.auth,
+      input.runnerInput?.agent,
+    );
+    // Paths of the artifacts the runner began: staging stores them verbatim, so a step that cites one
+    // must cite it unchanged for the manifest to resolve the reference.
+    const artifactPaths = new Set<string>();
     const values = new Set<string>();
     const staging = await this.evidence.openAttempt(
       {
@@ -127,7 +190,11 @@ export class AttemptExecutor {
         ...(input.reproduction ? { reproduction: input.reproduction } : {}),
       },
       {
-        scanText: (text) => ({ hit: scrubEvidenceText(text, [...values]).redacted }),
+        // A `"stepId"` field names a plan step: plan text, restored by the runner after scrubbing.
+        scanText: (text) => ({
+          hit: scrubEvidenceText(withoutStepIdFields(text, identifiers.stepIds), [...values])
+            .redacted,
+        }),
       },
     );
     const policy = input.networkPolicy;
@@ -234,6 +301,7 @@ export class AttemptExecutor {
         await send("agent.action", { stepId, action });
       } else if (event.type === "artifact.begin") {
         if (writers.has(event.payload.artifactId)) throw new Error("duplicate_artifact");
+        artifactPaths.add(event.payload.relativePath);
         try {
           writers.set(event.payload.artifactId, {
             writer: await staging.beginArtifact({
@@ -296,7 +364,10 @@ export class AttemptExecutor {
         return value;
       };
       if (!["artifact.begin", "artifact.chunk", "artifact.end"].includes(event.type))
-        event = { ...event, payload: sanitize(event.payload) } as RunnerEvent;
+        event = {
+          ...event,
+          payload: restoreIdentifiers(event, sanitize(event.payload), identifiers, artifactPaths),
+        } as RunnerEvent;
       events.push(event);
       await input.onEvent?.(event);
     };

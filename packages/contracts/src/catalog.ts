@@ -736,7 +736,7 @@ const supplemental = {
   McpRequirementsReview: P.Obj({
     results: Type.Array(
       P.Obj({
-        action: P.Enum(["update", "adjudicate", "approve"]),
+        action: P.Enum(["update", "adjudicate", "reject", "approve"]),
         id: P.Name,
         ok: Type.Boolean(),
         error: Type.Union([P.Obj({ code: P.Name, message: P.Description }), Type.Null()]),

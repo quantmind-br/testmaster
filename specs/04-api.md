@@ -67,6 +67,7 @@ Não retry de 401/403, validation, policy, crédito/orçamento esgotado, produce
 | POST `/discovery/{id}/retry` | featureIds e novo input fingerprint se alterou | discovery:X | M2 |
 | POST `/discovery/{id}/cancel` | partial preserved | discovery:X | M2 |
 | GET/PATCH `/projects/{id}/requirements` | snapshot e reviewed requirements; ETag | plans:R/W | M2 |
+| POST `/requirements/{id}/approve` / `/requirements/{id}/reject` | If-Match requirement version; `reject` takes `{reason}` (mandatory, 1-2000 characters), records reason, reviewer and time, audits `requirement.rejected`, and is final: a rejected requirement cannot be approved or edited and is never planned; the snapshot version moves but its fingerprint does not | plans:W | M4 |
 | POST `/projects/{id}/proposal-batches` | generation inputRefs/scope, Job receipt | plans:W | M2 |
 | GET `/proposal-batches/{id}` | proposals/validation/inputFingerprint/version | plans:R | M2 |
 | PATCH `/proposals/{id}` | editar candidata com versão | plans:W | M2 |

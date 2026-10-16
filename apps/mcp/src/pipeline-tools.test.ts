@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { Application, entity } from "@testmaster/application";
+import { Application, entity, requirementRejection } from "@testmaster/application";
 import { afterEach, expect, it, vi } from "vitest";
 import { createMcpServer } from "./server.js";
 
@@ -416,6 +416,67 @@ it("review_requirements decides at the snapshot version and returns the fingerpr
   expect(again.body.sourceSnapshotId).toBe(snapshot.fingerprint);
 });
 
+it("review_requirements rejects a requirement with a mandatory reason and keeps the snapshot fingerprint", async () => {
+  const f = await fixture();
+  const seeded = await seedSnapshot(f);
+  const base = { projectId: f.init.projectId, expectedVersion: 2 };
+
+  const blank = await f.call("testmaster_review_requirements", {
+    ...base,
+    reject: [{ requirementId: seeded.second, reason: "" }],
+  });
+  expect(blank.error?.code).toBe("INVALID_ARGUMENT");
+  // One call cannot approve and reject the same requirement.
+  const both = await f.call("testmaster_review_requirements", {
+    ...base,
+    approve: [seeded.second],
+    reject: [{ requirementId: seeded.second, reason: "Out of scope" }],
+  });
+  expect(both.error?.code).toBe("INVALID_ARGUMENT");
+  expect(f.app.requirements.snapshot(f.init.projectId).version).toBe(2);
+
+  const decided = await f.call("testmaster_review_requirements", {
+    ...base,
+    reject: [{ requirementId: seeded.second, reason: "Latency is not part of this release" }],
+  });
+  expect(decided.isError, decided.text).toBe(false);
+  expect(decided.body.results).toEqual([
+    { action: "reject", id: seeded.second, ok: true, error: null },
+  ]);
+  // Rejecting changes the version, not the fingerprint, and the requirement is no longer pending.
+  expect(decided.body).toMatchObject({
+    sourceSnapshotId: "seed-fingerprint",
+    version: 3,
+    pendingApprovalIds: [seeded.first],
+  });
+  expect(requirementRejection(f.app.requirements.get(seeded.second))).toMatchObject({
+    reason: "Latency is not part of this release",
+  });
+
+  // A rejected requirement cannot be approved, and planning it is refused with the reason.
+  const approve = await f.call("testmaster_review_requirements", {
+    projectId: f.init.projectId,
+    expectedVersion: 3,
+    approve: [seeded.second],
+  });
+  expect(approve.body.results).toEqual([
+    {
+      action: "approve",
+      id: seeded.second,
+      ok: false,
+      error: { code: "PRECONDITION_FAILED", message: expect.stringContaining("rejected") },
+    },
+  ]);
+  const plan = await f.call("testmaster_generate_plan", {
+    projectId: f.init.projectId,
+    sourceSnapshotId: "seed-fingerprint",
+    type: "backend",
+    requirementIds: [seeded.second],
+  });
+  expect(plan.error?.code).toBe("PRECONDITION_FAILED");
+  expect(plan.error?.details).toMatchObject({ reasonCode: "requirement_rejected" });
+});
+
 it("set_secret stores the trimmed file value or variable, echoes only metadata and refuses inline or unsafe sources", async () => {
   const f = await fixture();
   const set = vi.spyOn(Object.getPrototypeOf(f.app.secrets), "set");
@@ -711,4 +772,64 @@ it("normalize keeps each conflict's id, reason and requirements and counts one c
     arguments: args,
   });
   expect(firstText(plural.content)).toContain("Normalized 2 requirements and 0 conflicts");
+});
+
+it("test_auth_login signs in with a profile bound to the environment, reports a blocked one and needs the execution scope", async () => {
+  const f = await fixture();
+  const environment = f.app.environments.get(f.init.environmentId);
+  const [target] = f.app.environments.revisions(environment.id)[0]?.targetOrigins ?? [];
+  if (!target) throw new Error("Missing target origin");
+  await writeFile(join(f.cwd, "token.txt"), "bearer-value-under-test\n");
+  const profileFor = async (name: string, origin: string) => {
+    const secret = await f.call("testmaster_set_secret", {
+      name: name.toUpperCase(),
+      valueFile: "token.txt",
+      allowedOrigins: [origin],
+    });
+    const created = await f.call("testmaster_save_auth_profile", {
+      projectId: f.init.projectId,
+      name,
+      kind: "bearer",
+      originBindings: [origin],
+      secrets: { token: String(secret.body.id) },
+      config: {},
+    });
+    expect(created.isError, created.text).toBe(false);
+    return String(created.body.id);
+  };
+  const bound = await profileFor("api", target);
+  const signedIn = await f.call("testmaster_test_auth_login", {
+    profileId: bound,
+    environmentId: environment.id,
+  });
+  expect(signedIn.isError, signedIn.text).toBe(false);
+  expect(signedIn.body).toMatchObject({
+    profileId: bound,
+    environmentId: environment.id,
+    outcome: "authenticated",
+    credentialRoles: ["token"],
+    draftsChanged: false,
+  });
+  expect(signedIn.text).not.toContain("bearer-value-under-test");
+
+  // A profile bound to another origin cannot sign in to this environment: a receipt, not a throw.
+  const elsewhere = await profileFor("elsewhere", "https://elsewhere.example.test");
+  const blocked = await f.call("testmaster_test_auth_login", {
+    profileId: elsewhere,
+    environmentId: environment.id,
+  });
+  expect(blocked.isError, blocked.text).toBe(false);
+  expect(blocked.body).toMatchObject({
+    outcome: "blocked",
+    reasonCode: "security_precondition_failed",
+  });
+
+  // Like the CLI command, the call needs the execution scope: reading and writing are not enough.
+  const writer = await fixture(["R", "W"]);
+  const denied = await writer.call("testmaster_test_auth_login", {
+    profileId: bound,
+    environmentId: environment.id,
+  });
+  expect(denied.isError).toBe(true);
+  expect(denied.error?.code).toBe("FORBIDDEN");
 });

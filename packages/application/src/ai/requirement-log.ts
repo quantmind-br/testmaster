@@ -12,6 +12,7 @@ export type RequirementLogKind =
   | "edited"
   | "approved"
   | "approval_reset"
+  | "rejected"
   | "conflict_decided"
   | "normalized";
 export interface RequirementLogEntry {

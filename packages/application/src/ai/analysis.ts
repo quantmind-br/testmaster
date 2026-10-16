@@ -271,52 +271,70 @@ interface StatusMeaning {
   alternatives: [text: string, failureKind: Analysis["failureKind"]][];
   next: string;
 }
-/** What a 4xx answer to request step `stepId` points at; the status never proves the cause. */
-function statusMeaning(status: number, stepId: string): StatusMeaning {
+/** The request a status assertion judges: a plan's request step, or whatever a code step asserted. */
+function statusTarget(stepId: string, code: boolean): string {
+  return code ? `the request asserted by code step ${stepId}` : `request step ${stepId}`;
+}
+/**
+ * What a 4xx answer to the request of step `stepId` points at; the status never proves the cause.
+ * `code` marks a Playwright code step, whose request the runner did not record; `authProfiles`
+ * names the profiles bound to the environment so a 401/403 hint can point at them.
+ */
+function statusMeaning(
+  status: number,
+  stepId: string,
+  code = false,
+  authProfiles: readonly string[] = [],
+): StatusMeaning {
   const reading = `the error fields of the ${status} response`;
+  const target = statusTarget(stepId, code);
   switch (status) {
     case 401:
     case 403:
       return {
         failureKind: "environment",
         recommendedAction: "fix_environment",
-        subject: `the target refused the credentials or session of request step ${stepId}`,
+        subject: `the target refused the credentials or session of ${target}`,
         alternatives: [
           [
             "The endpoint may now require a different permission than the contract states.",
             "product_bug",
           ],
           [
-            "The request may not send the environment's auth profile or secret at all.",
+            code
+              ? "The generated code may not send the environment's auth profile session at all."
+              : "The request may not send the environment's auth profile or secret at all.",
             "test_fragility",
           ],
         ],
-        next: `Check that the environment's auth profile or secret is valid and bound to the target origin, and that request step ${stepId} sends it (auth "profile" or a secret reference); read ${reading}, then rerun the test.`,
+        next: code
+          ? `Check that ${authProfiles.length ? `the environment's auth profile ${authProfiles.map((name) => `"${name}"`).join(", ")}` : "the environment's auth profile or secret"} is valid and bound to the target origin, and that the code sends its session or secret with ${target}; read ${reading}, then rerun the test.`
+          : `Check that the environment's auth profile or secret is valid and bound to the target origin, and that ${target} sends it (auth "profile" or a secret reference); read ${reading}, then rerun the test.`,
       };
     case 404:
       return {
         failureKind: "contract_violation",
         recommendedAction: "review_contract",
-        subject: `the target found no resource at the path of request step ${stepId}`,
+        subject: `the target found no resource at the path of ${target}`,
         alternatives: [
           ["The resource the request names may not exist in this environment.", "environment"],
           ["The path may have been renamed or removed in the product.", "product_bug"],
         ],
-        next: `Compare the path of request step ${stepId} with the API contract and check that the resource exists in this environment; read ${reading}.`,
+        next: `Compare the path of ${target} with the API contract and check that the resource exists in this environment; read ${reading}.`,
       };
     case 405:
       return {
         failureKind: "contract_violation",
         recommendedAction: "review_contract",
-        subject: `the target does not allow the method of request step ${stepId} on that path`,
+        subject: `the target does not allow the method of ${target} on that path`,
         alternatives: [["The product may have dropped or moved this operation.", "product_bug"]],
-        next: `Compare the method and path of request step ${stepId} with the API contract; read ${reading}.`,
+        next: `Compare the method and path of ${target} with the API contract; read ${reading}.`,
       };
     case 409:
       return {
         failureKind: "environment",
         recommendedAction: "fix_environment",
-        subject: `the request of step ${stepId} conflicts with the current state of the target`,
+        subject: `${target} conflicts with the current state of the target`,
         alternatives: [
           ["The product may reject a transition its contract allows.", "product_bug"],
           [
@@ -324,23 +342,23 @@ function statusMeaning(status: number, stepId: string): StatusMeaning {
             "test_fragility",
           ],
         ],
-        next: `Inspect the state the target holds for the resource of request step ${stepId} (data left by earlier runs or steps), reset it and rerun; read ${reading}.`,
+        next: `Inspect the state the target holds for the resource of ${target} (data left by earlier runs or steps), reset it and rerun; read ${reading}.`,
       };
     case 429:
       return {
         failureKind: "environment",
         recommendedAction: "fix_environment",
-        subject: `the target rate-limited request step ${stepId}`,
+        subject: `the target rate-limited ${target}`,
         alternatives: [
           ["The test may send more requests than the contract allows.", "test_fragility"],
         ],
-        next: `Check the target's rate limit and the retry-after information of the ${status} response for request step ${stepId}, then rerun after it lapses or with a higher limit for this environment.`,
+        next: `Check the target's rate limit and the retry-after information of the ${status} response for ${target}, then rerun after it lapses or with a higher limit for this environment.`,
       };
     default:
       return {
         failureKind: "contract_violation",
         recommendedAction: "review_contract",
-        subject: `the target rejected the content of request step ${stepId}`,
+        subject: `the target rejected the content of ${target}`,
         alternatives: [
           ["The product may have started validating a field the test sends.", "product_bug"],
           [
@@ -348,29 +366,92 @@ function statusMeaning(status: number, stepId: string): StatusMeaning {
             "test_fragility",
           ],
         ],
-        next: `Compare the body, query parameters and headers sent by request step ${stepId} with the API contract; read ${reading}; then correct the request or revise the contract.`,
+        next: `Compare the body, query parameters and headers sent by ${target} with the API contract; read ${reading}; then correct the request or revise the contract.`,
       };
   }
 }
 interface RejectedStatus {
-  /** The failed statusIn assertion step. */
+  /** The failed statusIn assertion step, or the failed code step that compared two statuses. */
   item: Evidence;
   /** The recorded response and request step results the assertion verifies, when persisted. */
   http: Evidence | undefined;
   request: Evidence | undefined;
-  requestStepId: string;
+  /** How prose names the judged request: a plan request step, or what a code step asserted. */
+  target: string;
   status: number;
   expected: number[];
   meaning: StatusMeaning;
 }
+function isHttpStatus(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 100 && value <= 599;
+}
+/**
+ * The failed Playwright step that carries a code Run's failure. Playwright reports a failure on
+ * the failing expect and, with the same message, on every test and `test.step` around it; the
+ * reporter keeps the details on the innermost step only. Runs recorded before that kept them on
+ * all of them, so among equal messages the step that started last is the one that failed.
+ */
+function codeFailure(steps: readonly Evidence[]): Evidence | undefined {
+  const carriers = steps.filter(
+    (item) =>
+      item.codeOperation &&
+      item.codeOperation !== "playwright_run" &&
+      item.step?.status === "failed" &&
+      item.step.error,
+  );
+  const first = carriers[0];
+  return (
+    first && carriers.findLast((item) => item.step!.error!.message === first.step!.error!.message)
+  );
+}
+/**
+ * A failed code step that compared HTTP statuses (expected 200, received 401): the generated
+ * code did not record its request, but the compared values are the status class the target
+ * answered with.
+ */
+function rejectedCodeStatus(
+  evidence: readonly Evidence[],
+  authProfiles: readonly string[],
+): RejectedStatus[] {
+  const item = codeFailure(evidence);
+  const step = item?.step;
+  if (!item || !step || step.reasonCode !== "assertion_mismatch") return [];
+  const status = step.observed;
+  const compared: unknown[] = Array.isArray(step.expected) ? step.expected : [step.expected];
+  const expected = compared.filter(isHttpStatus);
+  if (
+    !isHttpStatus(status) ||
+    status < 400 ||
+    status > 499 ||
+    !expected.length ||
+    expected.length !== compared.length ||
+    expected.includes(status)
+  )
+    return [];
+  return [
+    {
+      item,
+      http: undefined,
+      request: undefined,
+      target: statusTarget(step.planStepId, true),
+      status,
+      expected,
+      meaning: statusMeaning(status, step.planStepId, true, authProfiles),
+    },
+  ];
+}
 /**
  * Failed required statusIn assertions where the target answered a 4xx outside the expected set
  * and no followed redirect explains the mismatch: the target refused the request, which the
- * status class alone attributes to the request, the credentials or the target state.
+ * status class alone attributes to the request, the credentials or the target state. A code
+ * Run has no statusIn assertions; its failing step is read the same way when it compared statuses.
  */
-function rejectedStatuses(evidence: readonly Evidence[]): RejectedStatus[] {
+function rejectedStatuses(
+  evidence: readonly Evidence[],
+  authProfiles: readonly string[],
+): RejectedStatus[] {
   const followed = followedRedirects(evidence);
-  return evidence.flatMap((item) => {
+  const planned = evidence.flatMap((item): RejectedStatus[] => {
     const { step, planStep } = item;
     if (
       step?.status !== "failed" ||
@@ -404,13 +485,14 @@ function rejectedStatuses(evidence: readonly Evidence[]): RejectedStatus[] {
         item,
         http,
         request: evidence.find((candidate) => candidate.step?.planStepId === requestStepId),
-        requestStepId,
+        target: statusTarget(requestStepId, false),
         status,
         expected: planStep.expectation.values,
         meaning: statusMeaning(status, requestStepId),
       },
     ];
   });
+  return [...planned, ...rejectedCodeStatus(evidence, authProfiles)];
 }
 function httpStatusEvidence(value: unknown): value is HttpStatusEvidence {
   return (
@@ -1354,6 +1436,18 @@ export class AnalysisService {
       limitations.push("No persisted step or observation evidence is available.");
     return { evidence, snapshotId, limitations: [...new Set(limitations)], plan };
   }
+  /** Names of the auth profiles bound to the Run's environment revision; never their secrets. */
+  private environmentAuthProfiles(run: Run): string[] {
+    const { workspaceId, entities } = this.ctx;
+    const environment = entities.get("EnvironmentRevision", workspaceId, run.environmentRevisionId);
+    const refs: unknown[] = Array.isArray(environment?.authProfileRefs)
+      ? environment.authProfileRefs
+      : [];
+    return refs.flatMap((id) => {
+      const name = entities.get("AuthProfile", workspaceId, String(id))?.name;
+      return typeof name === "string" ? [name] : [];
+    });
+  }
   private async layered(
     run: Run,
     collected: CollectedEvidence,
@@ -1363,7 +1457,7 @@ export class AnalysisService {
   ): Promise<Diagnosis> {
     const secrets = environmentSecretValues();
     const steps = collected.evidence.filter((item) => item.step);
-    const failed = steps.find((item) => item.step!.status === "failed");
+    const failed = codeFailure(steps) ?? steps.find((item) => item.step!.status === "failed");
     // A timed-out terminal process records no expected/observed values; its own artifact holds
     // the evidence, which is what the diagnosis reports instead of a null value.
     const processId = failed?.planStep
@@ -1407,9 +1501,20 @@ export class AnalysisService {
     const missing = planSteps(collected.plan).filter(
       (step) => !steps.some((item) => item.step!.planStepId === step.id),
     );
+    // Results recorded under an id the frozen plan does not contain: the plan step they belong to
+    // is among the missing ones (an id rewritten by redaction, for example).
+    const foreign = collected.plan ? steps.filter((item) => !item.planStep) : [];
+    const named = (ids: readonly string[]) =>
+      `${ids.slice(0, 10).join(", ")}${ids.length > 10 ? ` and ${ids.length - 10} more` : ""}`;
+    const missingIds = missing.map((step) => step.id);
+    const foreignIds = foreign.map((item) => item.step!.planStepId);
     if (missing.length)
       gaps.push(
-        `${missing.length} frozen plan steps have no persisted result in the latest attempt.`,
+        `${missing.length} frozen plan step${missing.length === 1 ? " has" : "s have"} no recorded result in the latest attempt: ${named(missingIds)}.`,
+      );
+    if (foreign.length)
+      gaps.push(
+        `${foreign.length} recorded step result${foreign.length === 1 ? " matches" : "s match"} no frozen plan step: ${named(foreignIds)}.`,
       );
     const priority = new Set<Evidence>();
     const prioritize = (item: Evidence | undefined) => {
@@ -1510,7 +1615,9 @@ export class AnalysisService {
       status: "cause_unknown",
       text:
         location === null
-          ? "The failure could not be localized to a recorded step result; the evidence does not establish a cause."
+          ? missing.length
+            ? `The Run ended ${run.outcome} and no recorded step failed; ${missing.length} frozen plan step${missing.length === 1 ? " has" : "s have"} no recorded result (${named(missingIds)}), so the Run could not be judged complete; the evidence does not establish a cause.`
+            : "The failure could not be localized to a recorded step result; the evidence does not establish a cause."
           : `The failure is localized to step ${location}; the evidence does not establish a cause.`,
     };
     let healing: Diagnosis["healing"] = {
@@ -1554,10 +1661,10 @@ export class AnalysisService {
         );
       healing.reason = "Changing the test would bypass the refused precondition.";
     } else if (statusRejection) {
-      const { meaning, status, expected, requestStepId, item, http, request } = statusRejection;
+      const { meaning, status, expected, target, item, http, request } = statusRejection;
       conclusion = {
         status: "cause_partially_supported",
-        text: `Request step ${requestStepId} was answered with HTTP ${status} instead of the expected ${expected.join(", ")}: ${meaning.subject}; the evidence does not establish why.`,
+        text: `${target.charAt(0).toUpperCase()}${target.slice(1)} was answered with HTTP ${status} instead of the expected ${expected.join(", ")}: ${meaning.subject}; the evidence does not establish why.`,
       };
       for (const [text, kind] of meaning.alternatives) alternative(text, kind);
       next(
@@ -1566,7 +1673,7 @@ export class AnalysisService {
       );
       healing = {
         advice: "not_indicated",
-        reason: `Healing proposes locator changes only; a ${status} answer to request step ${requestStepId} is not caused by a locator.`,
+        reason: `Healing proposes locator changes only; a ${status} answer to ${target} is not caused by a locator.`,
       };
     } else if (failureKind === "environment") {
       conclusion = {
@@ -1707,7 +1814,9 @@ export class AnalysisService {
             "unknown",
           );
         next(
-          collectEvidenceText(location, collected.plan?.runner),
+          location === null && missing.length
+            ? `Find out why no result was recorded for plan step${missing.length === 1 ? "" : "s"} ${named(missingIds)}${foreign.length ? `; results were recorded under ${named(foreignIds)}, which the frozen plan does not contain, so compare those ids with the plan's` : ""}, then rerun the test.`
+            : collectEvidenceText(location, collected.plan?.runner),
           failed ? [failed.ref] : supports,
         );
       }
@@ -1831,7 +1940,7 @@ export class AnalysisService {
           !item.planStep.expectation.values.includes(item.step.observed) &&
           !followed.some((entry) => entry.item === item),
       );
-      const statusRejection = rejectedStatuses(evidence)[0];
+      const statusRejection = rejectedStatuses(evidence, this.environmentAuthProfiles(run))[0];
       let locatorSupport: AnalysisEvidenceRef[] = [];
       if (
         !security.length &&

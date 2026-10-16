@@ -3,9 +3,10 @@ import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
 import { StringDecoder } from "node:string_decoder";
 import { runBrowser } from "./browser.js";
+import { type CodeProfile, readCodeProfile } from "./code-profile.js";
 import { startForwarder } from "./forwarder/index.js";
 import { runHttp } from "./http.js";
-import { CODE_SECRETS_ENV, stageImportedModules } from "./imported-modules.js";
+import { CODE_PROFILE_ENV, CODE_SECRETS_ENV, stageImportedModules } from "./imported-modules.js";
 import { ProtocolClient } from "./protocol.js";
 import {
   abortVerdict,
@@ -172,10 +173,13 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
     imported.files.some((file) => isAbsolute(file) || file.split(/[\\/]/u).includes(".."))
   )
     throw new Error("imported_path_denied");
-  // Secrets are fetched before anything is staged or started: a missing one blocks the attempt.
+  // Secrets and the profile session are fetched before anything is staged or started: a missing
+  // one blocks the attempt.
   let secretValues: Record<string, string>;
+  let profile: CodeProfile | undefined;
   try {
     secretValues = await readCodeSecrets(runtime, imported.secrets ?? []);
+    if (imported.profile) profile = await readCodeProfile(runtime);
   } catch (error) {
     if (error instanceof RuntimeError)
       return { outcome: error.outcome, reasonCode: error.reasonCode };
@@ -218,7 +222,11 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
     ["test", "--config", "/tmp/imported/config.json"],
     {
       cwd: stagedRoot,
-      env: { ...process.env, [CODE_SECRETS_ENV]: JSON.stringify(secretValues) },
+      env: {
+        ...process.env,
+        [CODE_SECRETS_ENV]: JSON.stringify(secretValues),
+        ...(profile ? { [CODE_PROFILE_ENV]: JSON.stringify(profile) } : {}),
+      },
       stdio: ["ignore", "pipe", "pipe", "ipc"],
     },
   );

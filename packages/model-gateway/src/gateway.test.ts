@@ -296,6 +296,41 @@ describe("policy-controlled model requests", () => {
     expect(accepting.records.map((record) => record.outcome)).toEqual(["success"]);
   });
 
+  it("hands the unvalidated output to the check when the caller validates the schema", async () => {
+    const answer = (_req: unknown, res: { end(body: string): void }) =>
+      res.end(
+        JSON.stringify({
+          ...completion,
+          choices: [
+            {
+              message: { content: JSON.stringify({ amount: "bad", currency: "USD", scale: 2 }) },
+              finish_reason: "stop",
+            },
+          ],
+        }),
+      );
+    const seen: unknown[] = [];
+    const f = await fixture(answer);
+    const result = await f.gateway.complete({
+      ...testRequest,
+      callerValidatesSchema: true,
+      check: (output) => {
+        seen.push(output);
+      },
+    });
+    expect(seen).toEqual([{ amount: "bad", currency: "USD", scale: 2 }]);
+    expect(result.output).toEqual(seen[0]);
+    expect(f.counts().completions).toBe(1);
+    // Controls: the gateway still validates by default, and the option needs a check to stand on.
+    const strict = await fixture(answer);
+    await expect(strict.gateway.complete({ ...testRequest })).rejects.toMatchObject({
+      code: "INVALID_ARGUMENT",
+    });
+    await expect(
+      strict.gateway.complete({ ...testRequest, callerValidatesSchema: true }),
+    ).rejects.toMatchObject({ code: "INTERNAL" });
+  });
+
   it("surfaces the check's own error with the repair account once repairs run out", async () => {
     const f = await fixture();
     const refusal = () =>

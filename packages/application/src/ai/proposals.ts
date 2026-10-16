@@ -31,7 +31,14 @@ import { allEntities, entity, requireEntity, type ServiceContext } from "../cont
 import { estimateDuration, flattenSteps, planSimilarity } from "../plan-analysis.js";
 import { stepIdAt } from "../plan-validation.js";
 import type { ModelService } from "./model.js";
-import type { RequirementsService } from "./requirements.js";
+import {
+  type RequirementSnapshot,
+  type RequirementsService,
+  refuseRejected,
+  requirementContentHash,
+  requirementContentHashes,
+  requirementRejection,
+} from "./requirements.js";
 import { applyServerBasePath, unresolvedSchemaPointers } from "./source-documents.js";
 
 const AUTH_PROFILE_INSTRUCTION =
@@ -257,8 +264,10 @@ export class ProposalsService {
         "sourceSnapshotId must be the current requirement snapshot fingerprint returned by testmaster_normalize_requirements and readable at testmaster://requirements/{projectId}; the supplied value does not match (the snapshot changed since it was read, or the value is not a fingerprint)",
         { reasonCode: "requirement_snapshot_mismatch" },
       );
-    const requirements = snapshot.requirements.filter(
-      (item) => !input.requirementIds || input.requirementIds.includes(item.id),
+    // Without an explicit selection every requirement that was not rejected is planned; an
+    // explicitly selected rejected requirement is refused by requireApproved below.
+    const requirements = snapshot.requirements.filter((item) =>
+      input.requirementIds ? input.requirementIds.includes(item.id) : !requirementRejection(item),
     );
     if (
       !requirements.length ||
@@ -352,6 +361,7 @@ export class ProposalsService {
         requirementIds: item.requirementIds,
         reasonCode: item.reasonCode,
         message: item.error.message,
+        ...(item.pointers?.length ? { pointers: item.pointers } : {}),
       }));
       const valid: { index: number; proposal: GeneratedProposal }[] = [];
       for (const { index, proposal } of inspected.accepted) {
@@ -419,6 +429,9 @@ export class ProposalsService {
         ...(input.model ? { model: input.model } : {}),
         ...(input.signal ? { signal: input.signal } : {}),
         check,
+        // A partial generation keeps the valid proposals of an output whose other proposals break
+        // the schema or the plan semantics, so each proposal is validated by `check` on its own.
+        ...(input.partialGeneration ? { callerValidatesSchema: true } : {}),
       })
       .catch(recoverPartial);
     const generated = inspect(output.output);
@@ -449,6 +462,7 @@ export class ProposalsService {
         state: "proposed",
         extensions: {
           "testmaster:requirementVersion": snapshot.version,
+          "testmaster:requirementHashes": requirementContentHashes(snapshot.requirements),
           "testmaster:modelCallId": output.modelCallId,
           ...(generated.unsupported.length
             ? { "testmaster:unsupportedRequirements": generated.unsupported }
@@ -495,6 +509,7 @@ export class ProposalsService {
     requirement: Requirement,
     conflicts: { requirementIds: string[]; resolution: { selectedRequirementId: string } | null }[],
   ): void {
+    refuseRejected(requirement, "planned");
     if (!requirement.approval)
       throw new ContractError("PRECONDITION_FAILED", "Requirements need explicit approval", {
         requirementId: requirement.id,
@@ -513,6 +528,50 @@ export class ProposalsService {
         "PRECONDITION_FAILED",
         "Requirement is unresolved or superseded by conflict adjudication",
       );
+  }
+  /**
+   * The requirements a proposal cites that differ from the ones it was generated from: changed, or
+   * no longer in the approved snapshot. Empty while the snapshot the batch was made from is
+   * current. A batch stored without content hashes has no baseline, so every cited one counts.
+   */
+  private changedRequirements(
+    batch: StoredBatch,
+    proposal: StoredProposal,
+    snapshot: RequirementSnapshot,
+  ): string[] {
+    if (snapshot.fingerprint === batch.sourceSnapshotId) return [];
+    const baseline = (batch.extensions as Record<string, unknown> | undefined)?.[
+      "testmaster:requirementHashes"
+    ] as Record<string, string> | undefined;
+    const current = new Map(snapshot.requirements.map((item) => [item.id, item]));
+    const cited = new Set([
+      ...proposal.requirementRefs,
+      ...(proposal.plan.kind === "executable" ? proposal.plan.requirementRefs : []),
+    ]);
+    return [...cited].filter((requirementId) => {
+      const item = current.get(requirementId);
+      return !item || baseline?.[requirementId] !== requirementContentHash(item);
+    });
+  }
+  /** Refuses accepting proposals whose cited requirements changed; the rest of the batch is unaffected. */
+  private requireFreshRequirements(batch: StoredBatch, selected: readonly StoredProposal[]): void {
+    const snapshot = this.requirements.snapshot(batch.projectId);
+    const stale = selected.flatMap((proposal) => {
+      const requirementIds = this.changedRequirements(batch, proposal, snapshot);
+      return requirementIds.length ? [{ proposalId: proposal.id, requirementIds }] : [];
+    });
+    if (!stale.length) return;
+    throw new ContractError(
+      "PRECONDITION_FAILED",
+      `Proposal source requirements are stale: ${stale.length} of the selected proposals cite requirements that changed after generation`,
+      {
+        reasonCode: "proposal_requirements_stale",
+        staleProposals: stale,
+        changedRequirementIds: [...new Set(stale.flatMap((item) => item.requirementIds))],
+        nextAction:
+          "Reject the stale proposals and generate them again from the current requirements (generate_plan with requirementIds), or accept the other proposals of the batch without them",
+      },
+    );
   }
   list(projectId: string): StoredBatch[] {
     this.ctx.authorize("R", projectId);
@@ -559,7 +618,7 @@ export class ProposalsService {
               plan,
               requirementRefs: current.requirementRefs,
               evidenceRefs,
-              warnings: current.warnings,
+              warnings: [],
             },
           ],
         },
@@ -573,6 +632,8 @@ export class ProposalsService {
       const next = {
         ...current,
         plan,
+        // The model's warnings describe the plan it wrote, not this one; the audit event keeps them.
+        warnings: [],
         version: expectedVersion + 1,
         extensions: {
           ...current.extensions,
@@ -683,6 +744,10 @@ export class ProposalsService {
         )
           throw new ContractError("INVALID_ARGUMENT", "Unknown or already decided proposal");
         if (input.acceptIds.length) {
+          this.requireFreshRequirements(
+            current,
+            proposals.filter((proposal) => input.acceptIds.includes(proposal.id)),
+          );
           this.requireDuplicateDecisions(
             current,
             proposals,
@@ -698,11 +763,6 @@ export class ProposalsService {
               throw new ContractError("INVALID_ARGUMENT", "Invalid proposal cannot enter a suite");
             validateProposalPlan(proposal.plan);
             const snapshot = this.requirements.snapshot(current.projectId);
-            if (snapshot.fingerprint !== current.sourceSnapshotId)
-              throw new ContractError(
-                "PRECONDITION_FAILED",
-                "Proposal source requirements are stale",
-              );
             for (const requirementId of proposal.requirementRefs)
               this.requireApproved(this.requirements.get(requirementId), snapshot.conflicts);
             const refined = this.refinedTest(current);
@@ -1048,13 +1108,14 @@ export class ProposalsService {
         } catch (error) {
           failure("requirement", error, semantic);
         }
-      if (!stale && snapshot.fingerprint !== batch.sourceSnapshotId)
+      const changed = stale ? [] : this.changedRequirements(batch, proposal, snapshot);
+      if (changed.length)
         semantic.push({
           severity: "error",
           code: "requirements_changed",
           field: "",
           stepId: null,
-          message: "The approved requirements changed after generation.",
+          message: `The requirements this proposal cites changed after generation: ${changed.join(", ")}.`,
         });
       const selectable = !structural.length && !semantic.length;
       const similar = this.similarities(batch, proposal, proposals, proposalIds);

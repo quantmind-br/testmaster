@@ -154,6 +154,35 @@ it("reports no secrets for code that never reads one", async () => {
   });
   expect(bundle.secrets).toEqual([]);
 });
+it("records that code destructures a profile fixture and never marks code that only uses request and page", async () => {
+  const signedIn = await importCode(
+    await source(
+      secretTest(
+        "const response = await profileRequest.get('/me'); expect(response.status()).toBe(200);",
+        "{ profileRequest }",
+      ),
+    ),
+  );
+  expect(signedIn.profile).toBe(true);
+  const browser = await importCode(
+    await source(
+      secretTest(
+        "await profilePage.goto('/'); expect(profilePage.url()).toContain('/');",
+        "{ profilePage: profilePage }",
+      ),
+    ),
+  );
+  expect(browser.profile).toBe(true);
+  const anonymous = await importCode(
+    await source(
+      secretTest(
+        "const response = await request.get('/me'); expect(response.status()).toBe(401);",
+        "{ request }",
+      ),
+    ),
+  );
+  expect(anonymous).not.toHaveProperty("profile");
+});
 it("refuses a secret the project did not declare for the test, without echoing the value", async () => {
   const options = await source(
     secretTest("expect(secrets.get('MISSING')).toBe('x'); expect(1).toBe(1);"),

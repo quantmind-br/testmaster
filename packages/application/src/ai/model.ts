@@ -56,6 +56,8 @@ export interface ModelInput {
   reasoningEffort?: ModelRequest["reasoningEffort"];
   /** Semantic validation of the schema-valid output; see ModelRequest.check. */
   check?: ModelRequest["check"];
+  /** `check` validates the response schema itself; see ModelRequest.callerValidatesSchema. */
+  callerValidatesSchema?: boolean;
 }
 export class ModelService {
   readonly ledger: SqliteBudgetLedger;
@@ -240,6 +242,7 @@ export class ModelService {
       dataPolicy: { dataClasses: input.dataClasses ?? ["documents"] },
       ...(input.signal ? { signal: input.signal } : {}),
       ...(input.check ? { check: input.check } : {}),
+      ...(input.callerValidatesSchema ? { callerValidatesSchema: true } : {}),
     });
   }
 }

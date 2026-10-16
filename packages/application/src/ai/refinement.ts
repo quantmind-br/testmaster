@@ -19,7 +19,7 @@ import { authoringTransaction } from "../authoring.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "../context.js";
 import { diffPaths, flattenSteps, stepSignature } from "../plan-analysis.js";
 import type { ModelService } from "./model.js";
-import type { RequirementsService } from "./requirements.js";
+import { type RequirementsService, requirementContentHashes } from "./requirements.js";
 
 type StoredProposal = Proposal & EntityDocument;
 type StoredBatch = ProposalBatch & EntityDocument;
@@ -235,6 +235,7 @@ export class RefinementService {
         state: "proposed",
         extensions: {
           "testmaster:requirementVersion": snapshot.version,
+          "testmaster:requirementHashes": requirementContentHashes(snapshot.requirements),
           "testmaster:modelCallId": generated.modelCallId,
           "testmaster:refinesTest": { testId, baseRevisionId: revision.id },
         },

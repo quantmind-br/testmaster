@@ -94,9 +94,14 @@ export function requirementCommands(program: Command, runtime: Runtime): void {
   runtime.bind(
     group
       .command("approve <id>")
+      .option("--reason <text>", "Why it is approved (at most 200 characters)")
       .requiredOption("--expected-version <version>", "Current version", integer),
     async (rt, args, options) => ({
-      data: await (await rt.app()).requirements.approve(String(args[0]), version(options)),
+      data: await (await rt.app()).requirements.approve(
+        String(args[0]),
+        version(options),
+        string(options, "reason"),
+      ),
     }),
     (_rt, args, options) => {
       const id = String(args[0]);
@@ -115,6 +120,39 @@ export function requirementCommands(program: Command, runtime: Runtime): void {
           `requirement ${id} must still be at version ${expectedVersion}`,
           "the requirement must have no unresolved conflict",
           "the project must have an environment",
+        ],
+      );
+    },
+  );
+  runtime.bind(
+    group
+      .command("reject <id>")
+      .requiredOption("--reason <text>", "Why it is out of scope (recorded, mandatory)")
+      .requiredOption("--expected-version <version>", "Current version", integer),
+    async (rt, args, options) => ({
+      data: await (await rt.app()).requirements.reject(
+        String(args[0]),
+        required(options, "reason"),
+        version(options),
+      ),
+    }),
+    (_rt, args, options) => {
+      const id = String(args[0]);
+      const expectedVersion = version(options);
+      required(options, "reason");
+      return dryRunReport(
+        [
+          {
+            operation: "requirement.reject",
+            requirementId: id,
+            expectedVersion,
+            resultingVersion: expectedVersion + 1,
+            records: "the reason and reviewer on the requirement, audited as requirement.rejected",
+          },
+        ],
+        [
+          `requirement ${id} must still be at version ${expectedVersion}`,
+          "the requirement must not be rejected already",
         ],
       );
     },

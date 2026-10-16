@@ -225,6 +225,7 @@ testmaster source add openapi.yaml --role api --format openapi
 testmaster discover --scope codebase                      # or --scope diff --base <ref> --head <ref>; bounded receipt, --full for everything
 testmaster requirement normalize --source-revision <svr-id> && testmaster requirement list
 testmaster requirement approve <requirement-id> --expected-version <n>   # never automatic
+testmaster requirement reject <requirement-id> --reason "Out of scope: CLI behavior" --expected-version <n>   # final; never planned
 testmaster plan generate --type frontend --requirement <requirement-id>
 testmaster plan get "$BATCH_ID"
 testmaster plan accept "$BATCH_ID" --only <proposal-a>,<proposal-b> --expected-version <n>
@@ -351,6 +352,16 @@ removed blocks the Run with `missing_secret` before anything starts, and values 
 reports. When code fails, the report shows Playwright's message with the failing line, plus the expected and
 received values, and the analysis names the failing test instead of `unmapped`.
 
+An environment bound to an auth profile gives code its session only on request: destructure `profileRequest`
+(an authenticated `APIRequestContext`) or `profilePage` (a page with the profile's browser state) in the test
+callback, for example `async ({ profileRequest }) => { await profileRequest.get("/v1/agents"); }`. The plain
+`request` and `page` fixtures are never authenticated, so a test that expects a `401` from the same endpoint
+keeps using them. The code never sees the cookie or token values, and they are scrubbed from every log and
+report. A profile that sends a header credential (bearer token, API key) is applied to the environment's
+origins only and its `profileRequest` calls do not follow redirects. Generation refuses a candidate whose plan
+has `auth: "profile"` request steps but whose code uses neither fixture, and a run of code that uses them is
+blocked (`missing_secret`) when the environment has no usable session.
+
 ## Agents: API, MCP and skills
 
 ```bash
@@ -367,7 +378,7 @@ different `--scope` set needs another file. On a server profile, tokens come fro
 An agent with that token can run the whole pipeline through MCP without asking a person for anything:
 `testmaster_bootstrap`, `testmaster_analyze_code`, `testmaster_add_source` (a file inside an approved root; an
 invalid source is an error that lists its diagnostics), `testmaster_normalize_requirements`,
-`testmaster_review_requirements` (edit, adjudicate conflicts and approve at the snapshot `version`; it returns the
+`testmaster_review_requirements` (edit, adjudicate conflicts, reject with a reason and approve at the snapshot `version`; it returns the
 `sourceSnapshotId` that `testmaster_generate_plan` needs), `testmaster_set_secret` (the value comes from a file
 inside an approved root or from an environment variable of the MCP process, never from an argument),
 `testmaster_save_auth_profile` and `testmaster_update_environment` (`authRefs`, `additionalOrigins`). Create the

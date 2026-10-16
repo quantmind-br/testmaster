@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,7 +8,7 @@ import { promisify } from "node:util";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { Application, entity, HealingService, scaffoldPlan } from "@testmaster/application";
-import { ajv, ContractError } from "@testmaster/contracts";
+import { ajv, ContractError, mcpToolCatalog } from "@testmaster/contracts";
 import { afterEach, expect, it, vi } from "vitest";
 import { createMcpServer } from "./server.js";
 
@@ -461,7 +462,7 @@ it("the features resource maps stable keys to ids, filters by substring and page
 it("no tool input is a top-level combinator, generate_tests shows every property and normalize takes a provider", async () => {
   const f = await fixture();
   const tools = (await f.client.listTools()).tools;
-  expect(tools).toHaveLength(30);
+  expect(tools).toHaveLength(mcpToolCatalog.length);
   for (const tool of tools) {
     for (const keyword of ["anyOf", "oneOf", "allOf", "not"])
       expect(tool.inputSchema, `${tool.name} ${keyword}`).not.toHaveProperty(keyword);
@@ -515,6 +516,27 @@ it("normalize_requirements forwards provider and model to the service", async ()
   expect(normalized.isError, JSON.stringify(normalized.body)).toBe(false);
   expect(normalized.body.sourceSnapshotId).toBe("fingerprint-1");
   expect(normalize).toHaveBeenCalledWith(
+    expect.objectContaining({ provider: "gateway", model: "m1" }),
+  );
+});
+
+it("generate_plan advertises provider and forwards provider and model to the service", async () => {
+  const f = await fixture();
+  const properties = (await f.client.listTools()).tools.find(
+    (tool) => tool.name === "testmaster_generate_plan",
+  )?.inputSchema.properties;
+  expect(Object.keys(properties ?? {})).toEqual(expect.arrayContaining(["provider", "model"]));
+  const generate = vi
+    .spyOn(Object.getPrototypeOf(f.app.proposals), "generate")
+    .mockRejectedValue(new ContractError("PRECONDITION_FAILED", "stop here"));
+  await f.call("testmaster_generate_plan", {
+    projectId: f.init.projectId,
+    sourceSnapshotId: "fingerprint-1",
+    type: "backend",
+    provider: "gateway",
+    model: "m1",
+  });
+  expect(generate).toHaveBeenCalledWith(
     expect.objectContaining({ provider: "gateway", model: "m1" }),
   );
 });
@@ -927,9 +949,7 @@ it("a generated-code revision has no plan resource and names how to read its cod
   await expect(
     f.client.readResource({ uri: `testmaster://revisions/${generated.id}/plan` }),
   ).rejects.toMatchObject({
-    message: expect.stringContaining(
-      `testmaster test export ${test.id} --revision ${generated.id}`,
-    ),
+    message: expect.stringContaining(`testmaster://revisions/${generated.id}/code`),
   });
 });
 
@@ -944,4 +964,406 @@ it("an unknown tool is a JSON-RPC invalid-params error, not a failed tool result
   // Control: a known tool still answers with a result.
   const known = await f.call("testmaster_capabilities", {});
   expect(known.isError).toBe(false);
+});
+
+it("audits a tool error of an admitted call as failed and a refused call as denied", async () => {
+  const f = await fixture();
+  const missing = await f.call("testmaster_get_analysis", {
+    runId: "run_01900000-0000-7000-8000-000000000001",
+  });
+  expect(missing.isError).toBe(true);
+  const malformed = await f.call("testmaster_capabilities", { command: "touch denied" });
+  expect(malformed.isError).toBe(true);
+  expect(
+    f.app.database.all(
+      "SELECT action,resource_id FROM audit_events WHERE action LIKE 'mcp.tool.%' ORDER BY rowid",
+    ),
+  ).toEqual([
+    { action: "mcp.tool.failed", resource_id: "testmaster_get_analysis" },
+    { action: "mcp.tool.denied", resource_id: "testmaster_capabilities" },
+  ]);
+});
+
+async function readJson<T>(f: { client: Client }, uri: string): Promise<T> {
+  return JSON.parse(String((await f.client.readResource({ uri })).contents[0]?.text)) as T;
+}
+/** Every page of a list resource, following `next` from the first URI. */
+async function readPages<Page extends { next: string | null }>(
+  f: { client: Client },
+  uri: string,
+): Promise<Page[]> {
+  const pages: Page[] = [];
+  for (let next: string | null = uri; next; ) {
+    const page: Page = await readJson<Page>(f, next);
+    pages.push(page);
+    next = page.next;
+  }
+  return pages;
+}
+
+it("the revision resources serve the revision and every file of its code as text pages", async () => {
+  const f = await fixture();
+  const test = f.app.tests.create({ projectId: f.init.projectId, plan: scaffoldPlan("backend") });
+  const revisionId = String(test.activeRevisionId);
+  const revision = await readJson<Record<string, unknown>>(
+    f,
+    `testmaster://revisions/${revisionId}`,
+  );
+  expect(revision).toMatchObject({
+    id: revisionId,
+    testId: test.id,
+    resources: {
+      plan: `testmaster://revisions/${revisionId}/plan`,
+      code: `testmaster://revisions/${revisionId}/code`,
+    },
+  });
+
+  const exported = await f.app.codeExport.export(test.id, { format: "playwright", revisionId });
+  const index = await readJson<{
+    testId: string;
+    revisionId: string;
+    format: string;
+    files: { path: string; sizeBytes: number; sha256: string; resource: string }[];
+  }>(f, `testmaster://revisions/${revisionId}/code`);
+  expect(index).toMatchObject({ testId: test.id, revisionId, format: "playwright" });
+  expect(index.files.map((entry) => entry.path).sort()).toEqual(Object.keys(exported.files).sort());
+  // Each listed file reads back, page by page, as exactly the bytes the export holds.
+  for (const entry of index.files) {
+    let text = "";
+    for (let next: string | null = entry.resource; next; ) {
+      const page = (await f.client.readResource({ uri: next })).contents[0] as Record<
+        string,
+        unknown
+      >;
+      expect(page.mimeType).toBe("text/plain");
+      expect(Buffer.byteLength(String(page.text))).toBeLessThanOrEqual(65536);
+      text += String(page.text);
+      next = (page._meta as Record<string, string | null>)["testmaster:next"] ?? null;
+    }
+    expect(text, entry.path).toBe(exported.files[entry.path]);
+    expect(Buffer.byteLength(text), entry.path).toBe(entry.sizeBytes);
+    expect(createHash("sha256").update(text).digest("hex"), entry.path).toBe(entry.sha256);
+  }
+
+  // A plan revision exports to either framework; an unknown one and an unknown file are refused.
+  const pytest = await readJson<{ format: string; metadata: { entrypoint: string } }>(
+    f,
+    `testmaster://revisions/${revisionId}/code?format=pytest`,
+  );
+  expect(pytest.format).toBe("pytest");
+  expect(pytest.metadata.entrypoint).toMatch(/\.py$/);
+  await expect(
+    f.client.readResource({ uri: `testmaster://revisions/${revisionId}/code?format=ruby` }),
+  ).rejects.toMatchObject({ code: -32602 });
+  await expect(
+    f.client.readResource({
+      uri: `testmaster://revisions/${revisionId}/code/${encodeURIComponent("no-such-file.txt")}`,
+    }),
+  ).rejects.toMatchObject({ code: -32002 });
+  await expect(
+    f.client.readResource({
+      uri: "testmaster://revisions/rev_019bf434-20c0-7000-8000-000000000001/code",
+    }),
+  ).rejects.toMatchObject({ code: -32002 });
+});
+
+it("the steps resource pages the steps of a run, narrows to one attempt and binds its cursor", async () => {
+  const f = await fixture();
+  const test = f.app.tests.create({ projectId: f.init.projectId, plan: scaffoldPlan("backend") });
+  const run = f.app.runs.resolve({ testId: test.id, environmentId: f.init.environmentId });
+  f.app.context.entities.insert("Run", run);
+  await expect(
+    f.client.readResource({ uri: `testmaster://runs/${missingRun}/steps` }),
+  ).rejects.toMatchObject({ code: -32002 });
+
+  const steps = Array.from({ length: 120 }, (_, index) => ({ id: `step-${index}`, index }));
+  const asked: (string | undefined)[] = [];
+  vi.spyOn(Object.getPrototypeOf(f.app.runs), "steps").mockImplementation(((
+    _id: string,
+    attemptId?: string,
+  ) => {
+    asked.push(attemptId);
+    return attemptId ? steps.slice(0, 3) : steps;
+  }) as never);
+  type Page = { total: number; steps: { id: string }[]; next: string | null; attemptId?: string };
+  const base = `testmaster://runs/${run.id}/steps`;
+  const pages = await readPages<Page>(f, base);
+  expect(pages.map((page) => page.steps.length)).toEqual([50, 50, 20]);
+  expect(pages.every((page) => page.total === 120)).toBe(true);
+  expect(pages.flatMap((page) => page.steps.map((step) => step.id))).toEqual(
+    steps.map((step) => step.id),
+  );
+  // One attempt: the id reaches the service, is echoed and the list is that attempt's.
+  const attempt = await readJson<Page>(f, `${base}?attemptId=att_one`);
+  expect(asked.at(-1)).toBe("att_one");
+  expect(attempt).toMatchObject({ total: 3, attemptId: "att_one", next: null });
+  // A cursor belongs to the list it was issued for.
+  const first = await readJson<Page>(f, base);
+  await expect(
+    f.client.readResource({
+      uri: `${base}?attemptId=att_one&cursor=${encodeURIComponent(String(new URL(String(first.next)).searchParams.get("cursor")))}`,
+    }),
+  ).rejects.toMatchObject({ code: -32602 });
+});
+
+it("the report resource serves junit, markdown and html as text and refuses allure and unknown formats", async () => {
+  const f = await fixture();
+  const test = f.app.tests.create({ projectId: f.init.projectId, plan: scaffoldPlan("backend") });
+  const run = f.app.runs.resolve({ testId: test.id, environmentId: f.init.environmentId });
+  Object.assign(run, { phase: "completed", status: "passed", outcome: "passed", gate: "passed" });
+  f.app.context.entities.insert("Run", run);
+  // "é" takes two bytes: the junit document needs several pages, each cut on a character boundary.
+  const documents: Record<string, string> = {
+    json: JSON.stringify({ report: "json" }),
+    junit: `<testsuites>${"é".repeat(70000)}</testsuites>`,
+    markdown: "# Report",
+    html: "<html></html>",
+  };
+  const exported = vi
+    .spyOn(Object.getPrototypeOf(f.app.reports), "export")
+    .mockImplementation((async (_id: string, format: string) => ({
+      content: documents[format],
+    })) as never);
+  const base = `testmaster://runs/${run.id}/report`;
+  const text = async (uri: string) =>
+    (await f.client.readResource({ uri })).contents[0] as Record<string, unknown>;
+
+  expect((await text(base)).mimeType).toBe("application/json");
+  expect(exported).toHaveBeenLastCalledWith(run.id, "json");
+  const markdown = await text(`${base}?format=markdown`);
+  expect(markdown).toMatchObject({ mimeType: "text/markdown", text: "# Report" });
+  expect((await text(`${base}?format=html`)).mimeType).toBe("text/html");
+
+  const pages: string[] = [];
+  let next: string | null = `${base}?format=junit`;
+  while (next) {
+    const page = await text(next);
+    expect(page.mimeType).toBe("application/xml");
+    expect(String(page.text)).not.toContain("\uFFFD");
+    pages.push(String(page.text));
+    next = (page._meta as Record<string, string | null>)["testmaster:next"] ?? null;
+  }
+  expect(exported).toHaveBeenLastCalledWith(run.id, "junit");
+  expect(pages.length).toBeGreaterThan(1);
+  expect(pages.join("")).toBe(documents.junit);
+
+  // Allure is a directory of files and an unknown format has no document: both are refused.
+  for (const format of ["allure", "docx"])
+    await expect(text(`${base}?format=${format}`)).rejects.toMatchObject({ code: -32602 });
+  // A cursor belongs to the format it was issued for.
+  const junit = await text(`${base}?format=junit`);
+  const cursor = new URL(
+    String((junit._meta as Record<string, string>)["testmaster:next"]),
+  ).searchParams.get("cursor");
+  await expect(
+    text(`${base}?format=markdown&cursor=${encodeURIComponent(String(cursor))}`),
+  ).rejects.toMatchObject({ code: -32602 });
+});
+
+it("the tests resource lists a project's tests, narrows them like test list and pages", async () => {
+  const f = await fixture();
+  const plan = scaffoldPlan("backend");
+  const make = (name: string, extra: { tags?: string[]; priority?: "critical" } = {}) =>
+    f.app.tests.create({ projectId: f.init.projectId, plan, name, ...extra });
+  const login = make("login", { tags: ["smoke"], priority: "critical" });
+  const old = make("old", { tags: ["smoke"] });
+  f.app.tests.archive(old.id, old.version);
+  for (let index = 0; index < 100; index++) make(`bulk-${index}`);
+  const other = f.app.projects.create({ name: "elsewhere" });
+  f.app.tests.create({ projectId: other.id, plan, name: "of-another-project" });
+
+  type Page = { total: number; tests: { id: string }[]; next: string | null };
+  const base = `testmaster://projects/${f.init.projectId}/tests`;
+  const pages = await readPages<Page>(f, base);
+  expect(pages.map((page) => page.tests.length)).toEqual([100, 2]);
+  const ids = pages.flatMap((page) => page.tests.map((test) => test.id));
+  expect(new Set(ids).size).toBe(102);
+  expect(ids).toContain(login.id);
+
+  const idsOf = async (query: string) =>
+    (await readJson<Page>(f, `${base}?${query}`)).tests.map((test) => test.id).sort();
+  expect(await idsOf("tag=smoke")).toEqual([login.id, old.id].sort());
+  expect(await idsOf("tag=smoke&status=active")).toEqual([login.id]);
+  expect(await idsOf("status=archived")).toEqual([old.id]);
+  expect(await idsOf("priority=critical")).toEqual([login.id]);
+  expect(await idsOf("tag=nothing-like-this")).toEqual([]);
+  for (const query of ["priority=urgent", "status=deleted"])
+    await expect(f.client.readResource({ uri: `${base}?${query}` })).rejects.toMatchObject({
+      code: -32602,
+    });
+  // A cursor follows its own filter, and an unknown project is an unknown resource.
+  const cursor = new URL(String(pages[0]?.next)).searchParams.get("cursor");
+  await expect(
+    f.client.readResource({
+      uri: `${base}?status=active&cursor=${encodeURIComponent(String(cursor))}`,
+    }),
+  ).rejects.toMatchObject({ code: -32602 });
+  await expect(
+    f.client.readResource({
+      uri: "testmaster://projects/prj_019bf434-20c0-7000-8000-000000000001/tests",
+    }),
+  ).rejects.toMatchObject({ code: -32002 });
+});
+
+it("the test and revision list resources show which revision is active and keep plans out", async () => {
+  const f = await fixture();
+  const test = f.app.tests.create({ projectId: f.init.projectId, plan: scaffoldPlan("backend") });
+  const candidate = f.app.revisions.create(test.id, {
+    ...scaffoldPlan("backend"),
+    name: "Candidate revision",
+  });
+  expect(await readJson(f, `testmaster://tests/${test.id}`)).toMatchObject({
+    id: test.id,
+    activeRevisionId: test.activeRevisionId,
+  });
+  const listed = await readJson<{
+    activeRevisionId: string;
+    total: number;
+    revisions: Record<string, unknown>[];
+  }>(f, `testmaster://tests/${test.id}/revisions`);
+  expect(listed).toMatchObject({ activeRevisionId: test.activeRevisionId, total: 2 });
+  expect(
+    listed.revisions.map((revision) => [revision.id, revision.active, revision.hasPlan]),
+  ).toEqual([
+    [test.activeRevisionId, true, true],
+    [candidate.id, false, true],
+  ]);
+  expect(listed.revisions.some((revision) => "plan" in revision)).toBe(false);
+  await expect(
+    f.client.readResource({
+      uri: "testmaster://tests/tst_019bf434-20c0-7000-8000-000000000001/revisions",
+    }),
+  ).rejects.toMatchObject({ code: -32002 });
+});
+
+it("the source resources list a project's sources and read one without its chunks", async () => {
+  const f = await fixture();
+  await writeFile(
+    join(f.cwd, "prd.md"),
+    "# Login\n\nUsers sign in with an email and a password.\n",
+  );
+  const detail = await f.app.sources.add({
+    projectId: f.init.projectId,
+    role: "prd",
+    path: join(f.cwd, "prd.md"),
+  });
+  const listed = await readJson<{
+    total: number;
+    sources: { id: string; resource: string }[];
+    next: string | null;
+  }>(f, `testmaster://projects/${f.init.projectId}/sources`);
+  expect(listed).toMatchObject({ total: 1, next: null });
+  expect(listed.sources[0]).toMatchObject({
+    id: detail.source.id,
+    resource: `testmaster://sources/${detail.source.id}`,
+  });
+  const read = await readJson<{
+    source: { id: string };
+    revision: Record<string, unknown>;
+    chunkCount: number;
+    diagnostics: unknown[];
+  }>(f, `testmaster://sources/${detail.source.id}`);
+  expect(read.source.id).toBe(detail.source.id);
+  expect(read.revision.id).toBe(detail.revision.id);
+  expect(read.chunkCount).toBe(detail.revision.chunks.length);
+  expect(read.chunkCount).toBeGreaterThan(0);
+  expect(read.revision).not.toHaveProperty("chunks");
+  expect(Array.isArray(read.diagnostics)).toBe(true);
+  await expect(
+    f.client.readResource({
+      uri: "testmaster://sources/src_019bf434-20c0-7000-8000-000000000001",
+    }),
+  ).rejects.toMatchObject({ code: -32002 });
+});
+
+it("the plan batch resources list a project's batches and page the proposals of one", async () => {
+  const f = await fixture();
+  const batchOf = (projectId: string) => {
+    const batch = entity(f.app.context, "pbt", {
+      projectId,
+      sourceSnapshotId: "snapshot-fingerprint",
+      version: 1,
+      state: "proposed",
+    });
+    f.app.context.entities.insert("ProposalBatch", batch);
+    return batch;
+  };
+  const batch = batchOf(f.init.projectId);
+  for (let index = 0; index < 12; index++)
+    f.app.context.entities.insert(
+      "Proposal",
+      entity(f.app.context, "pro", {
+        batchId: batch.id,
+        plan: { ...scaffoldPlan("backend"), name: `Proposal ${index}` },
+        requirementRefs: [],
+        evidenceRefs: [{ relativePath: "spec.md" }],
+        warnings: [],
+        state: "proposed",
+        validation: "valid",
+      }),
+    );
+  batchOf(f.app.projects.create({ name: "elsewhere" }).id);
+
+  const listed = await readJson<{
+    total: number;
+    batches: { id: string; resource: string }[];
+  }>(f, `testmaster://projects/${f.init.projectId}/plan-batches`);
+  expect(listed.total).toBe(1);
+  expect(listed.batches[0]).toMatchObject({
+    id: batch.id,
+    resource: `testmaster://plan-batches/${batch.id}`,
+  });
+
+  type Page = {
+    batch: { id: string; version: number };
+    total: number;
+    proposals: { id: string; version: number; plan: { name: string } }[];
+    next: string | null;
+  };
+  const pages = await readPages<Page>(f, `testmaster://plan-batches/${batch.id}`);
+  expect(pages.map((page) => page.proposals.length)).toEqual([10, 2]);
+  expect(pages.every((page) => page.total === 12 && page.batch.version === 1)).toBe(true);
+  const proposals = pages.flatMap((page) => page.proposals);
+  expect(new Set(proposals.map((proposal) => proposal.id)).size).toBe(12);
+  expect(proposals.every((proposal) => proposal.version === 1)).toBe(true);
+  expect(proposals.map((proposal) => proposal.plan.name)).toContain("Proposal 11");
+  await expect(
+    f.client.readResource({
+      uri: "testmaster://plan-batches/pbt_019bf434-20c0-7000-8000-000000000001",
+    }),
+  ).rejects.toMatchObject({ code: -32002 });
+  await expect(
+    f.client.readResource({
+      uri: "testmaster://projects/prj_019bf434-20c0-7000-8000-000000000001/plan-batches",
+    }),
+  ).rejects.toMatchObject({ code: -32002 });
+});
+
+it("the list and document resources refuse a caller without the read scope", async () => {
+  const f = await fixture(["W"]);
+  const test = f.app.tests.create({ projectId: f.init.projectId, plan: scaffoldPlan("backend") });
+  const run = f.app.runs.resolve({ testId: test.id, environmentId: f.init.environmentId });
+  f.app.context.entities.insert("Run", run);
+  const revisionId = String(test.activeRevisionId);
+  const uris = [
+    `testmaster://projects/${f.init.projectId}/tests`,
+    `testmaster://projects/${f.init.projectId}/sources`,
+    `testmaster://projects/${f.init.projectId}/plan-batches`,
+    `testmaster://tests/${test.id}`,
+    `testmaster://tests/${test.id}/revisions`,
+    `testmaster://revisions/${revisionId}`,
+    `testmaster://revisions/${revisionId}/code`,
+    `testmaster://revisions/${revisionId}/code/package.json`,
+    `testmaster://runs/${run.id}/steps`,
+    `testmaster://runs/${run.id}/report?format=junit`,
+  ];
+  for (const uri of uris)
+    await expect(f.client.readResource({ uri }), uri).rejects.toThrow(
+      "Session scope is insufficient",
+    );
+  // Positive control: the same resources are served to a reader.
+  const reader = await fixture(["R"]);
+  expect(
+    await readJson(reader, `testmaster://projects/${reader.init.projectId}/tests`),
+  ).toMatchObject({ total: 0 });
 });

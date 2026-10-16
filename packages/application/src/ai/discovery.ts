@@ -172,14 +172,24 @@ export class DockerPythonSummaryRunner implements PythonSummaryRunner {
           additionalProperties: false,
           required: ["version", "files", "diagnostics"],
           properties: {
-            version: { const: "1.0.0" },
+            version: { const: "1.1.0" },
             files: {
               type: "array",
               maxItems: 20000,
               items: {
                 type: "object",
                 additionalProperties: false,
-                required: ["path", "routes", "tests", "symbols"],
+                required: [
+                  "path",
+                  "routes",
+                  "routers",
+                  "includes",
+                  "calls",
+                  "functions",
+                  "imports",
+                  "tests",
+                  "symbols",
+                ],
                 properties: {
                   path: { type: "string", maxLength: 4096 },
                   routes: {
@@ -187,13 +197,115 @@ export class DockerPythonSummaryRunner implements PythonSummaryRunner {
                     items: {
                       type: "object",
                       additionalProperties: false,
-                      required: ["framework", "method", "path", "handler", "line"],
+                      required: ["framework", "method", "path", "handler", "line", "router"],
                       properties: {
                         framework: { enum: ["fastapi", "flask"] },
                         method: { type: "string" },
                         path: { type: "string" },
                         handler: { type: "string" },
                         line: { type: "integer", minimum: 1 },
+                        router: { type: ["integer", "null"], minimum: 0 },
+                      },
+                    },
+                  },
+                  routers: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      additionalProperties: false,
+                      required: ["id", "kind", "name", "line", "prefix", "module"],
+                      properties: {
+                        id: { type: "integer", minimum: 0 },
+                        kind: { enum: ["app", "router", "parameter"] },
+                        name: { type: "string" },
+                        line: { type: "integer", minimum: 1 },
+                        prefix: { type: ["string", "null"] },
+                        module: { type: "boolean" },
+                      },
+                    },
+                  },
+                  includes: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      additionalProperties: false,
+                      required: ["parent", "child", "prefix", "line"],
+                      properties: {
+                        parent: { type: "integer", minimum: 0 },
+                        child: {
+                          anyOf: [
+                            {
+                              type: "object",
+                              additionalProperties: false,
+                              required: ["router"],
+                              properties: { router: { type: "integer", minimum: 0 } },
+                            },
+                            {
+                              type: "object",
+                              additionalProperties: false,
+                              required: ["name", "call"],
+                              properties: { name: { type: "string" }, call: { type: "boolean" } },
+                            },
+                          ],
+                        },
+                        prefix: { type: ["string", "null"] },
+                        line: { type: "integer", minimum: 1 },
+                      },
+                    },
+                  },
+                  calls: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      additionalProperties: false,
+                      required: ["callee", "arguments", "line"],
+                      properties: {
+                        callee: { type: "string" },
+                        arguments: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            additionalProperties: false,
+                            required: ["router", "index", "keyword"],
+                            properties: {
+                              router: { type: "integer", minimum: 0 },
+                              index: { type: ["integer", "null"], minimum: 0 },
+                              keyword: { type: ["string", "null"] },
+                            },
+                          },
+                        },
+                        line: { type: "integer", minimum: 1 },
+                      },
+                    },
+                  },
+                  functions: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      additionalProperties: false,
+                      required: ["name", "parameters", "routerParameters", "returns"],
+                      properties: {
+                        name: { type: "string" },
+                        parameters: { type: "array", items: { type: "string" } },
+                        routerParameters: {
+                          type: "object",
+                          additionalProperties: { type: "integer", minimum: 0 },
+                        },
+                        returns: { type: "array", items: { type: "integer", minimum: 0 } },
+                      },
+                    },
+                  },
+                  imports: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      additionalProperties: false,
+                      required: ["local", "module", "name", "level"],
+                      properties: {
+                        local: { type: "string" },
+                        module: { type: "string" },
+                        name: { type: ["string", "null"] },
+                        level: { type: "integer", minimum: 0 },
                       },
                     },
                   },

@@ -656,8 +656,13 @@ export class WorkerService {
       };
       // Dynamic authentication: bring every attached profile to a usable state before any
       // credential is released; a human step or revoked credential blocks the Run here.
+      // Code gets the session only when it asked for it (profileRequest/profilePage); like an HTTP
+      // plan it brings its own login, because the code runner has no browser login phase.
+      const usesProfile = imported?.bundle.format === "playwright" && !!imported.bundle.profile;
       const authService =
-        (env.authProfileRefs as string[]).length > 0 ? this.host.auth?.() : undefined;
+        (env.authProfileRefs as string[]).length > 0 && (plan || usesProfile)
+          ? this.host.auth?.()
+          : undefined;
       const prepared = authService
         ? await authService.prepare({
             run: {
@@ -678,7 +683,7 @@ export class WorkerService {
             signal: controller.signal,
             deadlineAt: Date.now() + attemptDeadlineMs,
             interactive: ["cli", "api", "mcp"].includes(run.origin) && process.env.CI !== "true",
-            ...(plan ? { runner: plan.runner } : {}),
+            runner: plan ? plan.runner : "http",
           })
         : null;
       const secretIds = new Set<string>(prepared?.secretIds);
@@ -821,6 +826,7 @@ export class WorkerService {
                     imported: {
                       files: [imported.bundle.entrypoint],
                       ...(codeSecrets.length ? { secrets: codeSecrets } : {}),
+                      ...(usesProfile ? { profile: true } : {}),
                     },
                   }
               : {}),

@@ -2240,6 +2240,42 @@ it("partialGeneration stores the proposals that pass and lists the refused ones,
   });
   expect(f.app.proposals.list(f.projectId)).toHaveLength(stored);
 });
+it("partialGeneration keeps the proposals that pass when another one breaks the plan semantics", async () => {
+  const { f, first, second, proposalFor } = await refusedGenerationFixture();
+  // A terminal-only predicate in an HTTP plan: the output schema accepts it, the plan rules refuse it.
+  const terminalPredicate = (requirementId: string) => {
+    const proposal = proposalFor(requirementId);
+    const step = proposal.plan.steps.find((candidate) => candidate.id === "check-health");
+    if (step?.kind !== "assertion") throw new Error("Missing assertion step");
+    step.expectation = { predicate: "fileAbsent" };
+    return proposal;
+  };
+  f.setOutput({ proposals: [proposalFor(first), terminalPredicate(second)] });
+  // Without the flag the whole output is refused by the gateway, as before.
+  const before = f.counts().completions;
+  await expect(f.app.proposals.generate({ projectId: f.projectId })).rejects.toMatchObject({
+    code: "INVALID_ARGUMENT",
+    message: "Provider returned invalid output after two repairs",
+  });
+  expect(f.counts().completions - before).toBe(3);
+  expect(f.app.proposals.list(f.projectId)).toEqual([]);
+  // With it, the repairs cost the same and the valid proposal is stored beside the refusal.
+  const partialBefore = f.counts().completions;
+  const batch = await f.app.proposals.generate({ projectId: f.projectId, partialGeneration: true });
+  expect(f.counts().completions - partialBefore).toBe(3);
+  const detail = f.app.proposals.detail(batch.id);
+  expect(detail.proposals.map((proposal) => proposal.requirementRefs)).toEqual([[first]]);
+  expect(detail.batch.extensions?.["testmaster:refusedProposals"]).toEqual([
+    {
+      requirementIds: [second],
+      reasonCode: "plan_invalid",
+      message: expect.stringContaining("predicateInput: Predicate requires the terminal runner"),
+      pointers: expect.arrayContaining([
+        expect.stringMatching(/^\/proposals\/1\/plan\/steps\/\d+\/expectation$/u),
+      ]),
+    },
+  ]);
+});
 it("generation offers the project's auth profiles and the JSON body set guidance, and refuses auth profile when none exists", async () => {
   const { f, secret, proposal } = await openApiGenerationFixture();
   const withProfileAuth = () => {

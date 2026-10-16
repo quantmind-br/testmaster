@@ -7,7 +7,17 @@ import { CodeImportService, type CodeSecretBinding } from "./code-import.js";
 import { ModelService } from "./model.js";
 
 /** What the model must obey; the importer enforces the same constants (planner `CODE_IMPORT_RULES`). */
-const generationInstructions = `Return standalone Playwright test code importing only @playwright/test. Preserve every deterministic plan assertion and action. Use page.goto relative URLs and runner-configured baseURL. No shell, dependency installs, eval, filesystem or empty assertions. Do not use TestMaster APIs. A plan value {"secretRef": <id>} is a credential: read it with secrets.get(NAME), where NAME is the entry of the data "secrets" list (name, id, allowedOrigins; never values) whose id matches. The code is machine-checked before it is accepted and any violation is refused, so obey every rule: ${CODE_IMPORT_RULES.join(" ")}`;
+const generationInstructions = `Return standalone Playwright test code importing only @playwright/test. Preserve every deterministic plan assertion and action. Use page.goto relative URLs and runner-configured baseURL. No shell, dependency installs, eval, filesystem or empty assertions. Do not use TestMaster APIs. A plan value {"secretRef": <id>} is a credential: read it with secrets.get(NAME), where NAME is the entry of the data "secrets" list (name, id, allowedOrigins; never values) whose id matches. A plan request step with "auth": "profile" is sent with the environment's logged-in auth profile session: send it with the profileRequest fixture (destructure it in the test callback, async ({ profileRequest }) => { ... }), an APIRequestContext with the session applied, and use the profilePage fixture the same way for a browser flow that needs that session. The plain request and page fixtures are never authenticated: use them for steps without "auth" (for example a request that must answer 401), and never copy cookies, tokens or other session values into the code. A profileRequest does not follow redirects when the profile sends a header credential. The code is machine-checked before it is accepted and any violation is refused, so obey every rule: ${CODE_IMPORT_RULES.join(" ")}`;
+/** Ids of the plan's request steps that ask for the environment's auth profile session. */
+function profileSteps(plan: unknown, found: string[] = []): string[] {
+  if (Array.isArray(plan)) for (const item of plan) profileSteps(item, found);
+  else if (plan && typeof plan === "object") {
+    const step = plan as { id?: unknown; operation?: unknown; input?: { auth?: unknown } };
+    if (step.operation === "request" && step.input?.auth === "profile") found.push(String(step.id));
+    for (const child of Object.values(plan)) profileSteps(child, found);
+  }
+  return found;
+}
 // A refused candidate is a per-revision result; any other failure (budget, provider) is not.
 const refusalCodes: readonly string[] = ["INVALID_ARGUMENT", "POLICY_DENIED", "PAYLOAD_TOO_LARGE"];
 interface GenerationFailure {
@@ -155,6 +165,12 @@ export class CodeGenerationService {
                 output,
                 offered.map((secret) => secret.name),
               );
+              const unauthenticated = profileSteps(revision.plan);
+              if (unauthenticated.length && !accepted.bundle.profile)
+                throw new ContractError(
+                  "INVALID_ARGUMENT",
+                  `The plan sends ${unauthenticated.map((id) => JSON.stringify(id)).join(", ")} with "auth": "profile" but the code does not use the auth profile session: destructure profileRequest in the test callback and send those requests with it (the plain request fixture is never authenticated)`,
+                );
             },
           });
           modelCallIds.push(result.modelCallId);

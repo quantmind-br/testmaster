@@ -1,0 +1,23 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "profileId",
+    "environmentId"
+  ],
+  "properties": {
+    "profileId": {
+      "pattern": "^aup_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string",
+      "description": "Auth profile to sign in with"
+    },
+    "environmentId": {
+      "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string",
+      "description": "Environment the login targets; the profile must be bound to it (testmaster_update_environment authRefs)"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:Mcp_testmaster_test_auth_login",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

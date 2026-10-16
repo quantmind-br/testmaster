@@ -143,6 +143,13 @@ export interface ModelRequest {
    * failure, exactly like a schema violation. Any other error is a defect and is not repaired.
    */
   check?: (output: unknown) => Promise<void> | void;
+  /**
+   * The gateway only parses the JSON and leaves the `responseSchema` validation to `check`, which
+   * is then required and receives the unvalidated output. It lets a caller keep the valid parts of
+   * an output that is invalid only in some of its items. A failure `check` throws is repaired and
+   * recorded like a schema violation.
+   */
+  callerValidatesSchema?: boolean;
   reasoningEffort?: ReasoningEffort;
   dataPolicy: {
     dataClasses: string[];

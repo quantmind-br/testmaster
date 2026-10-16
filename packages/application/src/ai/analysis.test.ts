@@ -36,6 +36,8 @@ async function fixture(
     plan?: ExecutablePlan;
     /** The frozen revision is imported code: no plan, a Playwright runner. */
     code?: boolean;
+    /** Name of an auth profile bound to the Run's environment revision. */
+    authProfile?: string;
     step?: Partial<StepResult>;
   } = {},
 ) {
@@ -62,6 +64,15 @@ async function fixture(
   };
   const ws = String(get("Workspace").dto.id);
   const principal = String(get("Principal").dto.id);
+  if (options.authProfile) {
+    const profile = get("AuthProfile");
+    Object.assign(profile.dto, { name: options.authProfile });
+    profile.row.data_json = canonicalJson(profile.dto);
+    const environment = get("EnvironmentRevision");
+    Object.assign(environment.dto, { authProfileRefs: [profile.dto.id] });
+    environment.row.data_json = canonicalJson(environment.dto);
+    needed.push("AuthProfile");
+  }
   const revision = get("TestRevision");
   const plan: ExecutablePlan = options.plan ?? {
     schemaVersion: "1.0.0",
@@ -2450,6 +2461,14 @@ it("a failure localizes to the first inconclusive step and never prints a placeh
   expect(analysis.diagnosis?.nextSteps[0]?.text).toContain("for step request");
   // Without any non-passed step result there is nothing to name, and no placeholder appears.
   const none = await fixture({ step: { status: "passed", observed: 10 } });
+  none.ctx.entities.insert("StepResult", {
+    ...none.step,
+    id: "stp_00000000-0000-4000-8000-000000000003",
+    workspaceId: none.ctx.workspaceId,
+    planStepId: "request",
+    index: 1,
+    observed: null,
+  });
   const unlocalized = await none.service.analyze(none.run.id, {});
   expect(unlocalized.diagnosis?.conclusion.text).toBe(
     "The failure could not be localized to a recorded step result; the evidence does not establish a cause.",
@@ -2565,4 +2584,110 @@ it("code steps are named by their reporter id, and a failed test and its failing
     "imported-code": "playwright_run",
   });
   expect(analysis.facts.filter((item) => item.text.includes("Received: 1"))).toHaveLength(1);
+});
+/** Another persisted step of the fixture's attempt, with the fields it overrides. */
+function addStep(
+  f: AnalysisFixture,
+  planStepId: string,
+  index: number,
+  fields: Partial<StepResult>,
+) {
+  f.ctx.entities.insert("StepResult", {
+    ...f.step,
+    id: `stp_00000000-0000-4000-8000-000000000${String(200 + index).padStart(3, "0")}`,
+    workspaceId: f.ctx.workspaceId,
+    planStepId,
+    index,
+    ...fields,
+  });
+}
+const statusMessage = (expected: number, received: number) =>
+  `expect(received).toBe(expected) // Object.is equality\n\nExpected: ${expected}\nReceived: ${received}\n    at generated.spec.ts:10:31`;
+it("a code step that expected a status and received a 401 or 403 is diagnosed like a rejected request and names the environment's auth profile", async () => {
+  const failure = (observed: number): Partial<StepResult> => ({
+    planStepId: "imported-step-1",
+    expected: 200,
+    observed,
+    error: { code: "assertion_mismatch", message: statusMessage(200, observed) },
+  });
+  const f = await fixture({ code: true, authProfile: "root-session", step: failure(401) });
+  const analysis = await f.service.analyze(f.run.id, {});
+  expect(analysis).toMatchObject({
+    failureKind: "environment",
+    recommendedAction: "fix_environment",
+  });
+  expect(analysis.hypotheses[0]).toMatchObject({ support: "partially_supported" });
+  const diagnosis = analysis.diagnosis!;
+  expect(diagnosis.conclusion).toMatchObject({ status: "cause_partially_supported" });
+  expect(diagnosis.conclusion.text).toContain(
+    "The request asserted by code step imported-step-1 was answered with HTTP 401 instead of the expected 200",
+  );
+  expect(diagnosis.nextSteps[0]?.text).toContain('auth profile "root-session"');
+  expect(diagnosis.nextSteps[0]?.evidenceRefs).toEqual([
+    expect.objectContaining({ stepId: f.step.id }),
+  ]);
+  expect(diagnosis.healing.advice).toBe("not_indicated");
+  // Control: the same 403 in an environment without an auth profile still gets the diagnosis.
+  const bare = await fixture({ code: true, step: failure(403) });
+  const bareDiagnosis = (await bare.service.analyze(bare.run.id, {})).diagnosis!;
+  expect(bareDiagnosis.nextSteps[0]?.text).toContain("auth profile or secret");
+  expect(bareDiagnosis.nextSteps[0]?.text).not.toContain("root-session");
+  // Control: a code step whose compared values are not HTTP statuses is not read as a rejection.
+  const count = await fixture({
+    code: true,
+    step: { ...failure(404), expected: 10, error: { code: "assertion_mismatch", message: "x" } },
+  });
+  expect(await count.service.analyze(count.run.id, {})).toMatchObject({
+    failureKind: "unknown",
+    hypotheses: [],
+  });
+});
+it("a code failure is localized to the innermost failed step, whether or not its enclosing steps repeat the error", async () => {
+  const error = { code: "assertion_mismatch", message: statusMessage(200, 401) };
+  const compared = { expected: 200, observed: 401 };
+  // Runs recorded before the reporter fix repeat the failure on the test and the steps around it.
+  const repeated = await fixture({
+    code: true,
+    step: { planStepId: "imported-test-0", error, ...compared },
+  });
+  addStep(repeated, "imported-step-1", 1, { status: "passed", error: null });
+  addStep(repeated, "imported-step-2", 2, { error, ...compared });
+  addStep(repeated, "imported-step-3", 3, { error, ...compared });
+  // Runs recorded after it keep the details on the innermost step only.
+  const single = await fixture({
+    code: true,
+    step: { planStepId: "imported-test-0", error: null },
+  });
+  addStep(single, "imported-step-1", 1, { status: "passed", error: null });
+  addStep(single, "imported-step-2", 2, { error: null });
+  addStep(single, "imported-step-3", 3, { error, ...compared });
+  for (const f of [repeated, single]) {
+    const analysis = await f.service.analyze(f.run.id, {});
+    expect(analysis.diagnosis?.observation).toMatchObject({
+      stepId: "imported-step-3",
+      operation: "playwright_step",
+      expected: expect.stringContaining("200"),
+      observed: expect.stringContaining("401"),
+    });
+    expect(analysis.diagnosis?.conclusion.text).toContain("imported-step-3");
+    expect(analysis.facts.filter((item) => item.text.includes("Received: 401"))).toHaveLength(1);
+  }
+});
+it("names the plan steps that have no recorded result when no recorded step failed", async () => {
+  // The runner recorded `price` under an id that is not the plan's (a redacted one), and never
+  // recorded the plan's `price`.
+  const f = await fixture({ step: { planStepId: "request", status: "passed", observed: null } });
+  addStep(f, "pr[REDACTED]e", 1, { status: "passed", observed: 10 });
+  const analysis = await f.service.analyze(f.run.id, {});
+  const diagnosis = analysis.diagnosis!;
+  expect(diagnosis.conclusion.status).toBe("cause_unknown");
+  expect(diagnosis.conclusion.text).toContain("1 frozen plan step has no recorded result (price)");
+  expect(diagnosis.nextSteps[0]?.text).toContain("plan step price");
+  expect(diagnosis.nextSteps[0]?.text).toContain("pr[REDACTED]e");
+  expect(diagnosis.evidenceGaps).toEqual(
+    expect.arrayContaining([
+      "1 frozen plan step has no recorded result in the latest attempt: price.",
+      "1 recorded step result matches no frozen plan step: pr[REDACTED]e.",
+    ]),
+  );
 });

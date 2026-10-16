@@ -60,6 +60,8 @@ export interface ImportedCodeBundle {
   tests: string[];
   /** Secret names read through `secrets.get`; absent on bundles stored before the fixture existed. */
   secrets?: string[];
+  /** True when the code destructures `profileRequest` or `profilePage`: it needs the profile session. */
+  profile?: boolean;
   limitations: string[];
 }
 export interface CodeImportOptions {
@@ -158,6 +160,16 @@ function literalKey(value: unknown): string | undefined {
   if (!text || typeof text !== "object" || !("cooked" in text)) return undefined;
   return typeof text.cooked === "string" ? text.cooked : undefined;
 }
+/** The fixtures that carry the environment's auth profile session; `request` and `page` never do. */
+const CODE_PROFILE_FIXTURES: readonly string[] = ["profileRequest", "profilePage"];
+function usesProfileFixture(pattern: Node): boolean {
+  return (pattern.properties as Node[]).some(
+    (property) =>
+      property.type === "ObjectProperty" &&
+      !property.computed &&
+      CODE_PROFILE_FIXTURES.includes(name(property.key) ?? ""),
+  );
+}
 const SECRETS_FIXTURE = "secrets";
 const SECRET_ACCESS_REFUSAL =
   'Secrets are read only through the harness fixture: secrets.get("NAME") with one literal name';
@@ -221,6 +233,7 @@ interface Inspection {
   tests: string[];
   assertions: number;
   secrets?: string[];
+  profile?: boolean;
 }
 function inspectTypescript(text: string, declared: ReadonlySet<string>): Inspection {
   let ast: unknown;
@@ -262,6 +275,7 @@ function inspectTypescript(text: string, declared: ReadonlySet<string>): Inspect
   });
   walk(ast, (item) => {
     inspectSecretAccess(item, secretUse);
+    if (item.type === "ObjectPattern" && usesProfileFixture(item)) result.profile = true;
     if (
       ["ImportExpression", "NewExpression"].includes(item.type) &&
       (item.type === "ImportExpression" || name(item.callee) === "Function")
@@ -474,6 +488,7 @@ export async function importCode(options: CodeImportOptions): Promise<ImportedCo
   let assertions = 0;
   const declared: ReadonlySet<string> = new Set(options.secrets ?? []);
   const secrets = new Set<string>();
+  let profile = false;
   const load = async (file: string): Promise<void> => {
     if (file in files) return;
     if (Object.keys(files).length >= 64)
@@ -502,6 +517,7 @@ export async function importCode(options: CodeImportOptions): Promise<ImportedCo
       options.format === "pytest" ? await inspectPython(text) : inspectTypescript(text, declared);
     if (file === entrypoint) tests.push(...result.tests);
     for (const secret of result.secrets ?? []) secrets.add(secret);
+    if (result.profile) profile = true;
     assertions += result.assertions;
     for (const source of result.imports) {
       if (options.format === "playwright" && source === "@playwright/test") continue;
@@ -545,6 +561,7 @@ export async function importCode(options: CodeImportOptions): Promise<ImportedCo
     sourceHashes,
     tests,
     secrets: [...secrets].sort(),
+    ...(profile ? { profile: true } : {}),
     limitations: [
       "AST validation does not establish sandbox safety or passing behavior.",
       "Assertions in imported code use the runner reporter/process contract; static checks are not independent business-oracle proof.",

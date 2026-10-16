@@ -15,8 +15,21 @@ export interface CodeSymbol {
   kind: string;
   ref: CodeRef;
 }
+/** What an `include_router`/`mount` call or a router-passing call names: a local router, or a name to resolve across modules. */
+export type PythonRouterReference = { router: number } | { name: string; call: boolean };
+/** A FastAPI application, an `APIRouter`, or an `APIRouter` function parameter, declared in one file. */
+export interface PythonRouter {
+  id: number;
+  kind: "app" | "router" | "parameter";
+  name: string;
+  line: number;
+  /** `APIRouter(prefix=...)`: "" when absent, null when it is not a string literal or a literal constant. */
+  prefix: string | null;
+  /** Declared at module level, so another module can import it by name. */
+  module: boolean;
+}
 export interface PythonCodeSummary {
-  version: "1.0.0";
+  version: "1.1.0";
   files: {
     path: string;
     routes: {
@@ -25,7 +38,32 @@ export interface PythonCodeSummary {
       path: string;
       handler: string;
       line: number;
+      /** FastAPI only: the id of the app or router the decorator is on; null for Flask or an ambiguous name. */
+      router: number | null;
     }[];
+    routers: PythonRouter[];
+    /** `parent.include_router(child, prefix=...)` and `parent.mount(path, child)`; `prefix` is null when unresolved. */
+    includes: {
+      parent: number;
+      child: PythonRouterReference;
+      prefix: string | null;
+      line: number;
+    }[];
+    /** Calls that pass a router of this file as an argument (`register_routes(router, ...)`). */
+    calls: {
+      callee: string;
+      arguments: { router: number; index: number | null; keyword: string | null }[];
+      line: number;
+    }[];
+    /** Module-level functions that return a router or take an `APIRouter` parameter. */
+    functions: {
+      name: string;
+      parameters: string[];
+      routerParameters: Record<string, number>;
+      returns: number[];
+    }[];
+    /** Import bindings that composition refers to (every import of a package `__init__.py`). */
+    imports: { local: string; module: string; name: string | null; level: number }[];
     tests: { name: string; line: number; async: boolean }[];
     symbols: { name: string; kind: "function" | "class"; line: number }[];
   }[];

@@ -1,7 +1,7 @@
 import type { FeatureCoverageMap, PlanStep, Requirement, TestCase } from "@testmaster/contracts";
 import type { EntityDocument } from "@testmaster/persistence";
 import type { DiscoveryService } from "./ai/discovery.js";
-import type { RequirementsService } from "./ai/requirements.js";
+import { type RequirementsService, requirementRejection } from "./ai/requirements.js";
 import { flattenSteps, pathMatches, requestPath } from "./ai/source-insights.js";
 import type { SourcesService } from "./ai/sources.js";
 import { allEntities, requireEntity, type ServiceContext } from "./context.js";
@@ -109,9 +109,13 @@ export class FeatureMapService {
     const hashesWithRequirement = new Set<string>();
     const operationsByRequirement = new Map<string, string[]>();
     for (const item of snapshot.requirements as Requirement[]) {
+      for (const ref of item.sourceRefs)
+        if (ref.contentHash) hashesWithRequirement.add(ref.contentHash);
+      // A rejected requirement is out of scope: its statement is accounted for (no desired-statement
+      // row), but it is no coverage row and no feature cites it.
+      if (requirementRejection(item)) continue;
       const endpoints: string[] = [];
       for (const ref of item.sourceRefs) {
-        if (ref.contentHash) hashesWithRequirement.add(ref.contentHash);
         const match = ref.jsonPointer ? OPERATION_POINTER.exec(ref.jsonPointer) : null;
         if (match?.[1] && match[2])
           endpoints.push(`${match[2].toUpperCase()} ${unescapePointer(match[1])}`);

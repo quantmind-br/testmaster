@@ -189,6 +189,18 @@ it("blocks imported code as missing_secret before staging or starting Playwright
   ]);
 }, 30000);
 
+it("blocks imported code that uses the profile fixtures as missing_secret when the attempt has no auth session", async () => {
+  const { result, finished, steps } = await attempt({
+    steps: [],
+    imported: { files: ["code.spec.ts"], profile: true },
+  });
+  expect(result).toEqual({ outcome: "blocked", reasonCode: "missing_secret" });
+  expect(finished).toEqual([{ outcome: "blocked", reasonCode: "missing_secret" }]);
+  expect(steps.map((step) => [step.stepId, step.status, step.reasonCode])).toEqual([
+    ["imported-code", "blocked", "missing_secret"],
+  ]);
+}, 30000);
+
 describe("attempt deadline while the host resolves a model request", () => {
   // `process.exit` is mocked for the file in beforeAll, which runs after this body is collected.
   const exit = () => vi.mocked(process.exit);

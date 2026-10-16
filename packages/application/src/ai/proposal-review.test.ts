@@ -335,6 +335,51 @@ it("UX-018 a new source marks the previous generation stale and blocks accepting
   expect(counts(f)).toEqual({ tests: 0, revisions: 0 });
 });
 
+it("UX-012 a rejected requirement is left out of planning and does not make its batch or snapshot stale", async () => {
+  const f = await open();
+  const { batch, proposals, requirements } = await f.generatedBatch(["A", "B", "C"]);
+  const [a, , c] = proposals;
+  const [reqA, reqB, reqC] = requirements;
+  if (!a || !c || !reqA || !reqB || !reqC) throw new Error("Missing fixtures");
+  const before = f.app.requirements.snapshot(f.projectId);
+  const currentC = before.requirements.find((item) => item.id === reqC.id);
+  f.app.requirements.reject(reqC.id, "Out of scope for this release", currentC?.version ?? 1);
+
+  // The snapshot fingerprint is unchanged, so the batch built from it is still current.
+  const after = f.app.requirements.snapshot(f.projectId);
+  expect(after.fingerprint).toBe(before.fingerprint);
+  expect(f.app.proposals.summaries(f.projectId)[0]).toMatchObject({ id: batch.id, stale: false });
+  // Only the proposal that cites the rejected requirement is refused at acceptance.
+  expect(() =>
+    f.app.proposals.accept(batch.id, {
+      proposalIds: [c.id],
+      expectedVersion: batch.version ?? 1,
+      idempotencyKey: "ux012-rejected-requirement",
+    }),
+  ).toThrowError(expect.objectContaining({ code: "PRECONDITION_FAILED" }));
+  expect(
+    f.app.proposals.accept(batch.id, {
+      proposalIds: [a.id],
+      expectedVersion: batch.version ?? 1,
+      idempotencyKey: "ux012-kept-requirement",
+    }).accepted,
+  ).toHaveLength(1);
+
+  // Planning without a selection covers the requirements that were not rejected; choosing the
+  // rejected one explicitly is refused before any model call.
+  const calls = f.completions;
+  await expect(
+    f.app.proposals.generate({ projectId: f.projectId, requirementIds: [reqC.id] }),
+  ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+  expect(f.completions).toBe(calls);
+  f.setOutput({ proposals: [f.planFor(reqA.id, "Again A"), f.planFor(reqB.id, "Again B")] });
+  const regenerated = await f.app.proposals.generate({ projectId: f.projectId });
+  const planned = f.app.proposals
+    .detail(regenerated.id)
+    .proposals.flatMap((proposal) => proposal.requirementRefs);
+  expect(planned.sort()).toEqual([reqA.id, reqB.id].sort());
+});
+
 it("UX-019 an API credential, a service account agent and a session each accept a proposal and the revision records who", async () => {
   const f = await open();
   const { batch, proposals } = await f.generatedBatch();
@@ -408,4 +453,72 @@ it("UX-019 an API credential, a service account agent and a session each accept 
     ]),
   );
   expect(acceptances.some((value) => value && "channel" in (value as object))).toBe(false);
+});
+
+it("accepting proposals checks only the requirements they cite and names the stale ones it refuses", async () => {
+  const f = await open();
+  const { batch, requirements, proposals } = await f.generatedBatch(["A", "B", "C"]);
+  const [a, b, c] = proposals;
+  const changed = requirements[2];
+  if (!a || !b || !c || !changed) throw new Error("Missing fixtures");
+  // Clarifying and re-approving C changes the requirement snapshot but not A or B.
+  const edited = f.app.requirements.update(
+    changed.id,
+    { text: "Health requirement C, clarified" },
+    f.app.requirements.get(changed.id).version ?? 1,
+  );
+  f.app.requirements.approve(changed.id, edited.version ?? 1);
+  const preview = f.app.proposals.preview(batch.id, [a.id, c.id]);
+  expect(preview.items.map((item) => item.selectable)).toEqual([true, false]);
+  expect(preview.items[1]?.validation.issues).toEqual([
+    expect.objectContaining({ code: "requirements_changed" }),
+  ]);
+  expect(() =>
+    f.app.proposals.accept(batch.id, {
+      proposalIds: [a.id, c.id],
+      expectedVersion: batch.version ?? 1,
+      idempotencyKey: "stale-requirement-refused",
+    }),
+  ).toThrowError(
+    expect.objectContaining({
+      code: "PRECONDITION_FAILED",
+      details: expect.objectContaining({
+        reasonCode: "proposal_requirements_stale",
+        staleProposals: [{ proposalId: c.id, requirementIds: [changed.id] }],
+        changedRequirementIds: [changed.id],
+        nextAction: expect.stringMatching(/\S/u),
+      }),
+    }),
+  );
+  expect(counts(f)).toEqual({ tests: 0, revisions: 0 });
+  // Control: the proposals that cite only unchanged requirements are accepted.
+  expect(
+    f.app.proposals.accept(batch.id, {
+      proposalIds: [a.id, b.id],
+      expectedVersion: batch.version ?? 1,
+      idempotencyKey: "unchanged-requirements-accepted",
+    }).accepted,
+  ).toHaveLength(2);
+});
+
+it("editing a proposal drops the model warnings that described the plan it wrote", async () => {
+  const f = await open();
+  const { requirements } = await f.approvedRequirements(["A"]);
+  const [requirement] = requirements;
+  if (!requirement) throw new Error("Missing requirement");
+  const caveat = "No response schema was supplied, so the body shape is not asserted";
+  f.setOutput({
+    proposals: [{ ...f.planFor(requirement.id, "Scenario A"), warnings: [caveat] }],
+  });
+  const batch = await f.app.proposals.generate({ projectId: f.projectId });
+  const [proposal] = f.app.proposals.detail(batch.id).proposals;
+  if (!proposal || proposal.plan.kind !== "executable") throw new Error("Missing proposal");
+  expect(proposal.warnings).toEqual([caveat]);
+  const edited = f.app.proposals.edit(
+    proposal.id,
+    { ...proposal.plan, name: "Scenario A with a schema assertion" },
+    proposal.version ?? 1,
+  );
+  expect(edited.warnings).toEqual([]);
+  expect(f.app.proposals.detail(batch.id).proposals[0]?.warnings).toEqual([]);
 });

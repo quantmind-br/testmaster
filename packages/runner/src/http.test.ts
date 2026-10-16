@@ -1450,6 +1450,94 @@ it("evaluates headerMatches as an unanchored pattern and never lets a bad patter
   });
 });
 
+it("asserts on a credential header against its real value but records only cookie names, never the value", async () => {
+  const session = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJyb290In0.c2lnbmF0dXJl";
+  const base = await serve((_req, res) => {
+    res.setHeader("set-cookie", `ap_session=${session}; Path=/; HttpOnly`);
+    res.setHeader("content-type", "application/json");
+    // The session value also comes back in the body, under a key no default redaction pattern knows.
+    res.end(JSON.stringify({ session }));
+  });
+  const f = fixture(base, { policy: { httpBodies: true, restrictedRaw: true } });
+  const matches: Expectation = {
+    predicate: "headerMatches",
+    header: "Set-Cookie",
+    pattern: "^ap_session=",
+  };
+  const mismatch: Expectation = {
+    predicate: "headerMatches",
+    header: "set-cookie",
+    pattern: "^other=",
+  };
+  expect(
+    await f.runtime.runSteps(
+      [
+        requestStep("login", [], { redirect: "manual" }),
+        assertStep("cookie_set", "login", matches),
+        assertStep("cookie_other", "login", mismatch),
+      ],
+      (step) => f.engine.perform(step),
+    ),
+  ).toMatchObject({ outcome: "failed", reasonCode: "assertion_mismatch" });
+  // The assertion still evaluates the real header value: the pattern that fits passes, the other fails.
+  expect(stepPayload(f.events, "cookie_set")).toMatchObject({
+    status: "passed",
+    observed: {
+      header: "set-cookie",
+      present: true,
+      cookies: [{ name: "ap_session", value: "[REDACTED]" }],
+      matches: true,
+    },
+    expected: { matches: "^ap_session=" },
+  });
+  expect(stepPayload(f.events, "cookie_other")).toMatchObject({
+    status: "failed",
+    observed: { present: true, matches: false },
+  });
+  const recorded =
+    JSON.stringify(f.events) +
+    [...f.artifacts.values()].map((bytes) => new TextDecoder().decode(bytes)).join("");
+  expect(recorded).not.toContain(session);
+  // The issued value joined the scrub set, so the body evidence is redacted too.
+  expect(new TextDecoder().decode(f.artifacts.get("http/login-bodies.json"))).toContain(
+    "[REDACTED]",
+  );
+  const equals = await f.runtime.runSteps(
+    [
+      requestStep("again", [], { redirect: "manual" }),
+      assertStep("cookie_equals", "again", {
+        predicate: "headerEquals",
+        header: "set-cookie",
+        value: { literal: "ap_session=nope" },
+      }),
+    ],
+    (step) => f.engine.perform(step),
+  );
+  expect(equals).toMatchObject({ outcome: "failed" });
+  expect(stepPayload(f.events, "cookie_equals")).toMatchObject({
+    status: "failed",
+    observed: { header: "set-cookie", present: true, matches: false },
+    expected: { value: "[REDACTED]" },
+  });
+});
+
+it("writes a plan step id whole into an artifact's stepId field although a secret value occurs inside it", async () => {
+  const base = await serve((_req, res) => res.end("ok"));
+  const f = fixture(base, { plan: plan([requestStep("assert_root_url", [])]) });
+  f.runtime.secrets.add("root");
+  await f.runtime.artifact(
+    "browser/steps/assert_root_url-locator-0-before.json",
+    "locator-evidence",
+    "application/json",
+    Buffer.from(JSON.stringify({ stepId: "assert_root_url", text: "signed in as root" })),
+  );
+  expect(
+    new TextDecoder().decode(
+      f.artifacts.get("browser/steps/assert_root_url-locator-0-before.json"),
+    ),
+  ).toBe('{"stepId":"assert_root_url","text":"signed in as [REDACTED]"}');
+});
+
 it("sends a fresh invalid credential per request without turning a rejection into a credential failure", async () => {
   const seen: string[] = [];
   const base = await serve((req, res) => {

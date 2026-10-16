@@ -2,7 +2,9 @@ import type { Run } from "@testmaster/contracts";
 import { semanticHash } from "@testmaster/domain";
 import { describe, expect, it } from "vitest";
 import {
+  ComparisonsService,
   comparisonPage,
+  crossRunnerDifferences,
   logicalRunKey,
   metadataDifferences,
   runComparability,
@@ -114,6 +116,142 @@ describe("history comparison boundaries", () => {
     expect(runComparability(left, right)).toMatchObject({
       comparability: "comparable",
       reasons: [],
+    });
+  });
+});
+
+describe("comparing a plan Run with an imported-code Run of one test", () => {
+  const step = (planStepId: string, index: number, fields: Record<string, unknown>) => ({
+    id: `stp_${index}`,
+    attemptId: "att_1",
+    planStepId,
+    index,
+    expected: null,
+    observed: null,
+    error: null,
+    ...fields,
+  });
+  const statusPlan = {
+    steps: [
+      { id: "request", kind: "action", operation: "request", input: {} },
+      {
+        id: "status",
+        kind: "assertion",
+        operation: "assert",
+        expectation: { predicate: "statusIn" },
+      },
+    ],
+  };
+  function service() {
+    const runs: Record<string, Run> = {
+      "run-plan": {
+        ...run(),
+        id: "run-plan",
+        revisionId: "rev-plan",
+        phase: "completed",
+        outcome: "passed",
+        gate: "passed",
+        cleanupOutcome: "passed",
+      } as unknown as Run,
+      "run-code": {
+        ...run(),
+        id: "run-code",
+        revisionId: "rev-code",
+        phase: "completed",
+        outcome: "failed",
+        gate: "failed",
+        cleanupOutcome: "passed",
+      } as unknown as Run,
+    };
+    runMatrixCell(runs["run-code"]!).admissionSnapshot = {
+      ...(runMatrixCell(runs["run-code"]!).admissionSnapshot as object),
+      requiredCapabilities: ["playwright"],
+    } as never;
+    const revisions: Record<string, unknown> = {
+      "rev-plan": { plan: statusPlan, runnerKind: "http", origin: "manual" },
+      "rev-code": { plan: null, runnerKind: "playwright", origin: "generated" },
+    };
+    const steps: Record<string, unknown[]> = {
+      "run-plan": [
+        step("request", 0, { status: "passed" }),
+        step("status", 1, { status: "passed", expected: [200], observed: 200 }),
+      ],
+      "run-code": [
+        // Playwright repeats the failure on the test around the failing expect, without details.
+        step("imported-test-0", 0, { status: "failed" }),
+        step("imported-step-1", 1, {
+          status: "failed",
+          reasonCode: "assertion_mismatch",
+          expected: 200,
+          observed: 401,
+          error: { code: "assertion_mismatch", message: "Expected: 200\nReceived: 401" },
+        }),
+        step("imported-code", 1000000, { status: "failed" }),
+      ],
+    };
+    const ctx = {
+      workspaceId: "ws",
+      entities: {
+        get: (_kind: string, _workspace: string, id: string) => revisions[id],
+        page: () => ({ items: [], next: null }),
+      },
+      database: { get: () => undefined },
+    };
+    const runService = {
+      get: (id: string) => runs[id],
+      steps: (id: string) => steps[id],
+    };
+    return new ComparisonsService(ctx as never, runService as never, {} as never);
+  }
+  it("compares the verdicts, the failing step and the HTTP statuses, and states why the steps cannot be diffed", () => {
+    const result = service().runs("run-plan", "run-code");
+    expect(result.comparability).toBe("incomparable");
+    expect(result.reasons).toEqual(
+      expect.arrayContaining(["different-runner", "step-diff-unavailable"]),
+    );
+    const field = (name: string) => result.differences.find((item) => item.field === name);
+    expect(field("outcome")).toMatchObject({ left: "passed", right: "failed" });
+    expect(field("gate")).toMatchObject({ left: "passed", right: "failed" });
+    expect(field("failingStep")).toMatchObject({
+      left: null,
+      right: {
+        stepId: "imported-step-1",
+        reasonCode: "assertion_mismatch",
+        expected: 200,
+        observed: 401,
+        error: expect.stringContaining("Received: 401"),
+      },
+    });
+    expect(field("statusCodes")).toMatchObject({
+      left: [{ stepId: "status", expected: [200], observed: 200 }],
+      right: [{ stepId: "imported-step-1", expected: [200], observed: 401 }],
+    });
+    expect(field("stepComparison")).toMatchObject({
+      left: { runner: "http", stepCount: 2, byStatus: { passed: 2 } },
+      right: {
+        runner: "playwright",
+        stepCount: 3,
+        byStatus: { failed: 3 },
+        stepSource: expect.stringContaining("name no plan step"),
+      },
+    });
+    expect(result.differences[0]?.field).toBe("stepComparison");
+  });
+  it("pairs only the steps both sides name by the same id", () => {
+    const side = (stepKind: "plan" | "code", steps: Record<string, unknown>[]) => ({
+      runner: "x",
+      stepKind,
+      statusAssertionIds: null,
+      steps,
+    });
+    const differences = crossRunnerDifferences(
+      side("plan", [step("login", 0, { status: "passed" }), step("only-left", 1, {})]),
+      side("code", [step("login", 0, { status: "failed" }), step("only-right", 1, {})]),
+    );
+    const paired = differences.find((item) => item.field === "pairedSteps");
+    expect(paired).toMatchObject({
+      left: [{ stepId: "login", status: "passed" }],
+      right: [{ stepId: "login", status: "failed" }],
     });
   });
 });

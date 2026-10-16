@@ -1,5 +1,12 @@
 import type { ExecutablePlan, NetworkPolicy, PlanStep } from "@testmaster/contracts";
-import { AttemptClock, scrubEvidenceText, scrubText } from "@testmaster/domain";
+import {
+  AttemptClock,
+  type PlanIdentifiers,
+  planIdentifiers,
+  restoreStepIds,
+  scrubEvidenceText,
+  scrubText,
+} from "@testmaster/domain";
 import type { ProtocolClient } from "./protocol.js";
 
 export interface RunnerInput {
@@ -29,11 +36,16 @@ export interface RunnerInput {
   timeoutMs?: number;
   stepTimeoutMs?: number;
   bodyBytes?: number;
-  /** `secrets` are the names the code may read through the harness `secrets` fixture. */
+  /**
+   * `secrets` are the names the code may read through the harness `secrets` fixture. `profile` is set
+   * when the code uses the `profileRequest`/`profilePage` fixtures: the run then needs the session of
+   * `auth` and is blocked without one.
+   */
   imported?: {
     files: string[];
     codeRoot?: string;
     secrets?: { name: string; secretRef: string }[];
+    profile?: boolean;
   };
   agent?: {
     resolveSteps: string[];
@@ -54,7 +66,8 @@ export interface RunnerInput {
    * and reports the resulting storage state back through the protocol, never through an event.
    * An HTTP run applies the session to requests with `auth: "profile"` only: the cookies of
    * `storageState` that match the request URL and every `credentials` entry (a vault secret sent
-   * as `header`, after `prefix` when the secret is a bare token).
+   * as `header`, after `prefix` when the secret is a bare token). Imported code with `profile` set
+   * receives the same session through its `profileRequest` and `profilePage` fixtures only.
    */
   auth?: {
     storageState?: { secretRef: string };
@@ -114,6 +127,7 @@ export class Runtime {
   private readonly evidence = new Map<string, string[]>();
   private readonly comparisons = new Map<string, { observed: unknown; expected: unknown }>();
   private activeStep: string | undefined;
+  private readonly identifiers: PlanIdentifiers;
   constructor(
     readonly input: RunnerInput,
     readonly protocol: ProtocolClient,
@@ -122,6 +136,7 @@ export class Runtime {
     this.variables = new Map(Object.entries(input.variables ?? {}));
     for (const entry of this.variables.values())
       if (entry.sensitive) this.secrets.add(String(entry.value));
+    this.identifiers = planIdentifiers(input.plan, input.auth, input.agent);
   }
   emit(type: string, payload: unknown): Promise<void> {
     return this.protocol.emit(type, payload);
@@ -132,9 +147,18 @@ export class Runtime {
   }
   artifact(path: string, kind: string, mimeType: string, bytes: Uint8Array): Promise<void> {
     this.reference([path]);
+    // A `"stepId"` field names a plan step, which is plan text: it stays exact so that consumers
+    // (healing matches locator evidence to plan steps) still find the step even when a secret
+    // value, such as the user name `root`, occurs inside its id.
     const safe =
       mimeType.startsWith("text/") || /json|xml|javascript/u.test(mimeType)
-        ? Buffer.from(this.scrub(Buffer.from(bytes).toString("utf8")))
+        ? Buffer.from(
+            restoreStepIds(
+              this.scrub(Buffer.from(bytes).toString("utf8")),
+              this.identifiers.stepIds,
+              (text) => this.scrub(text),
+            ),
+          )
         : bytes;
     return this.protocol.artifact(path, kind, mimeType, safe);
   }

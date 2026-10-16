@@ -119,6 +119,7 @@ const RequirementChange = Obj({
     "interpretation_changed",
     "edited",
     "approved",
+    "rejected",
     "approval_reset",
     "conflict_decided",
     "normalized",
@@ -215,6 +216,10 @@ export const sourceInsightContracts = {
     reason: Type.String({ minLength: 1, maxLength: 2000 }),
     expectedVersion: Type.Integer({ minimum: 0 }),
   }),
+  /** A reviewer's decision that a requirement is out of scope; the reason is mandatory. */
+  RequirementRejectionInput: Obj({
+    reason: Type.String({ minLength: 1, maxLength: 2000 }),
+  }),
   RequirementReview: Obj({
     id: id("prj"),
     projectId: id("prj"),
@@ -231,6 +236,10 @@ export const sourceInsightContracts = {
         originKind: Enum(["explicit", "user_spec", "inferred", "observed"]),
         confidence: nullable(Type.Number({ minimum: 0, maximum: 1 })),
         approval: nullable(id("apr")),
+        /** Set when a reviewer rejected the requirement: it is not pending and is never planned. */
+        rejection: nullable(
+          Obj({ reason: Type.String({ maxLength: 2000 }), actorId: Name, rejectedAt: Timestamp }),
+        ),
         reason: nullable(Description),
         origins: Type.Array(Origin, { maxItems: 50 }),
         conflictIds: names,
@@ -316,5 +325,8 @@ export type SourceHistory = Static<typeof sourceInsightContracts.SourceHistory>;
 export type DiscoverySummary = Static<typeof sourceInsightContracts.DiscoverySummary>;
 export type NormalizationInput = Static<typeof sourceInsightContracts.NormalizationInput>;
 export type ConflictDecisionInput = Static<typeof sourceInsightContracts.ConflictDecisionInput>;
+export type RequirementRejectionInput = Static<
+  typeof sourceInsightContracts.RequirementRejectionInput
+>;
 export type RequirementReview = Static<typeof sourceInsightContracts.RequirementReview>;
 export type FeatureCoverageMap = Static<typeof sourceInsightContracts.FeatureCoverageMap>;

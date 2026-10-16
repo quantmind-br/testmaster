@@ -1,6 +1,6 @@
 import { nodeSupport } from "@testmaster/application";
 import { ContractError } from "@testmaster/contracts";
-import { Command, CommanderError, Option } from "commander";
+import { Command, CommanderError, Help, Option } from "commander";
 import { agentCommands } from "./agents.js";
 import { explorationCommands } from "./ai-execution.js";
 import { approvalCommands } from "./approvals.js";
@@ -39,8 +39,15 @@ import { unavailableCommands } from "./unavailable.js";
 import { usageCommands } from "./usage.js";
 import { workerCommands } from "./workers.js";
 
+/** Commander lists a `requiredOption` like any other flag; the help must say it is mandatory. */
+function markMandatory(this: Help, option: Option): string {
+  const text = Help.prototype.optionDescription.call(this, option);
+  if (!option.mandatory) return text;
+  return text ? `${text} (required)` : "(required)";
+}
+
 export function createCli(runtime: Runtime): Command {
-  const program = new Command("testmaster");
+  const program = new Command("testmaster").configureHelp({ optionDescription: markMandatory });
   program
     .description("Local deterministic test execution and evidence")
     .version("0.1.0")

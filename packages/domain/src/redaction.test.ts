@@ -1,5 +1,12 @@
 import { expect, it } from "vitest";
-import { environmentSecretValues, scrubEvidenceText, scrubEvidenceValue } from "./redaction.js";
+import {
+  environmentSecretValues,
+  planIdentifiers,
+  restoreStepIds,
+  scrubEvidenceText,
+  scrubEvidenceValue,
+  withoutStepIdFields,
+} from "./redaction.js";
 
 it("redacts sensitive headers, fields, URLs and configured known values while preserving benign observations", () => {
   const raw =
@@ -59,4 +66,26 @@ it("structured scrubbing redacts strings and sensitive properties but never chan
   });
   expect(JSON.parse(JSON.stringify(scrubbed))).toEqual(scrubbed);
   expect(value.token).toBe("json-canary");
+});
+
+it("restores plan step ids in stepId fields a secret rewrote, and nowhere else", () => {
+  const { stepIds } = planIdentifiers({
+    steps: [{ id: "assert_root_url", operation: "assert" }],
+  });
+  const scrub = (text: string) => scrubEvidenceText(text, ["root"]).text;
+  const record = JSON.stringify({
+    stepId: "assert_root_url",
+    candidates: [{ text: "Signed in as root", stepId: "other_root" }],
+  });
+  expect(scrub(record)).toContain('"stepId":"assert_[REDACTED]_url"');
+  const restored = restoreStepIds(scrub(record), stepIds, scrub);
+  // The plan step keeps its id; observed text and ids the plan does not declare stay redacted.
+  expect(restored).toContain('"stepId":"assert_root_url"');
+  expect(restored).toContain("Signed in as [REDACTED]");
+  expect(restored).toContain('"stepId":"other_[REDACTED]"');
+  // The leak scan blanks only the plan's own stepId fields.
+  expect(scrubEvidenceText(withoutStepIdFields(restored, stepIds), ["root"]).redacted).toBe(false);
+  expect(
+    scrubEvidenceText(withoutStepIdFields('{"stepId":"other_root"}', stepIds), ["root"]).redacted,
+  ).toBe(true);
 });

@@ -28,6 +28,7 @@ const changeLabels: Record<string, string> = {
   interpretation_changed: "Interpretation changed",
   edited: "Edited",
   approved: "Approved",
+  rejected: "Rejected",
   approval_reset: "Approval reset",
   conflict_decided: "Conflict decided",
   normalized: "Normalized",
@@ -347,7 +348,9 @@ function RequirementCard({
         <span className="badge">
           {originLabels[requirement.originKind] ?? requirement.originKind}
         </span>{" "}
-        {requirement.approval ? (
+        {requirement.rejection ? (
+          <span className="badge tone-warning">Rejected</span>
+        ) : requirement.approval ? (
           <StatusBadge status="verified" label="Approved" />
         ) : (
           <StatusBadge status="pending" label="Not approved" />
@@ -368,6 +371,12 @@ function RequirementCard({
           </ul>
         </>
       ) : null}
+      {requirement.rejection ? (
+        <p>
+          Why it was rejected:{" "}
+          <UntrustedText value={requirement.rejection.reason} maxLength={400} />
+        </p>
+      ) : null}
       {requirement.reason ? (
         <p>
           Why it was derived: <UntrustedText value={requirement.reason} maxLength={400} />
@@ -386,7 +395,7 @@ function RequirementCard({
           ))}
         </ul>
       )}
-      {requirement.approval ? null : (
+      {requirement.approval || requirement.rejection ? null : (
         <>
           <button
             type="button"

@@ -73,6 +73,15 @@
               "minimum": 0,
               "type": "integer"
             },
+            "testmaster:requirementHashes": {
+              "type": "object",
+              "patternProperties": {
+                "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                }
+              }
+            },
             "testmaster:modelCallId": {
               "pattern": "^mdl_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
               "type": "string"

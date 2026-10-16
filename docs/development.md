@@ -262,10 +262,30 @@ a file that imports `http`/`https`/`http2` (or the `node:` forms) and calls `cre
 never under `app/` or `pages/`, in `.tsx`/`.jsx`, or in a test file (`*.test.*`, `*.spec.*`, or
 under `__tests__/`, `test/`, `tests/`: a stub server there is a fixture, not an application route).
 The method is the `method === "GET"` / `req.method === "GET"` comparison in the same `&&` chain,
-else `UNKNOWN`. Bumping `CODE_DETECTOR_VERSION` (now 1.5.0) stops old discovery jobs from resuming.
+else `UNKNOWN`. Bumping `CODE_DETECTOR_VERSION` (now 1.6.0) stops old discovery jobs from resuming.
 A file is skipped as `binary` only when its bytes are not valid UTF-8 or more than a tenth of them
 are NUL (UTF-16 text, zero-filled data); a literal NUL inside a source string, even near the start
 of the file, does not exclude it.
+
+Python is read by `python/testmaster_runner/code_summary.py` (AST only, in the pinned Python image;
+`PythonCodeSummary` version 1.1.0) and composed in `packages/planner/src/code/python-routes.ts`. A
+FastAPI route is reported under its full path: `<parent prefix><include prefix><router prefix><decorator path>`
+along every chain that reaches it. The chain links are `APIRouter(prefix=...)`,
+`parent.include_router(child, prefix=...)`, `parent.mount(path, child_app)`, and routers handed to
+another function (`register_routes(router, ...)` where the parameter is annotated `APIRouter`, which
+makes a decorator on that parameter an endpoint of the caller's router). The child of an include is a
+router name, a call to a factory that `return`s a router (`include_router(create_x_router(...))`), or
+a dotted name; names are followed across modules through static imports (absolute, relative,
+`import a.b as m`, and re-exports in a package `__init__.py`) when the module is among the analyzed
+files, matching module names by their path suffix so a `src/` root works. A prefix may be a string
+literal or a name bound to one in the same file. A router mounted more than once yields one endpoint
+per distinct full path. Scope is respected: two factories that each build a local `router` stay
+separate. When a prefix is not resolvable (a call, an attribute, a name from another module, a
+conditionally reassigned name) the endpoint is kept with the path it declares plus the router's own
+literal prefix, never a guessed one, and the file gets a `fastapi_prefix_unresolved` warning; a
+router that no analyzed file includes (for example because a diff scan did not read the file that
+mounts it) is kept with its own prefix and gets `fastapi_router_unmounted`. Flask blueprints,
+routers imported into another module that decorates them, and `app.add_api_route` are not composed.
 
 The project data directory (`<repo>/.testmaster/` by default, or `TESTMASTER_DATA_DIR`) is never
 listed or opened by repository provenance or by the working-tree diff, whether or not Git ignores
@@ -454,7 +474,13 @@ real normalization, proposal generation and code export. Observations are retain
 `validation/results/network-*.json`; these checks do not claim M4 web or GitHub integration.
 
 Requirements preserve conflicting source refs; reviewers adjudicate conflicts and explicitly approve
-selected requirements. Generated executable proposals need typed nontrivial assertions and grounded
+selected requirements, or reject out-of-scope ones with a mandatory reason (`requirement reject`,
+MCP `reject`, REST `POST /requirements/{id}/reject`; audited as `requirement.rejected`, stored in the
+`testmaster:rejection` extension). A rejection is final: the requirement is not pending, is never
+planned and can be neither approved nor edited, so a statement is proposed anew only by normalizing the
+sources again. It raises the snapshot version but keeps its fingerprint, so approved snapshots and
+proposal batches stay valid; a proposal citing the rejected requirement is refused when accepted.
+Generated executable proposals need typed nontrivial assertions and grounded
 refs, and must match the requested `--type` (`backend` → `http`, `frontend` → `playwright`;
 absent means `backend`). `--type auto` (MCP `type: "auto"`, REST `scope: ["frontend","backend"]`)
 lets the model choose per requirement but still requires one of those two pairs; `--type integration`
@@ -901,8 +927,15 @@ message and `details {atomicity: "all_or_nothing", refused: [{index, requirement
 message, pointers?}], modelCallId}`, nothing stored; `partialGeneration` (MCP, CLI `plan generate
 --partial`; the REST body has no such field) stores the proposals that pass and records the refused
 ones in `extensions['testmaster:refusedProposals']` (they count as covering their requirements, are
-never stored, and a batch with none valid is still refused whole). Known gap: `proposals.edit` only
-re-runs the planner checks, not the secret, schema-pointer and status-only ones.
+never stored, and a batch with none valid is still refused whole). `partialGeneration` also sets
+`ModelRequest.callerValidatesSchema`, so the gateway only parses the JSON and the check validates
+each proposal on its own (`plan_invalid` with the issue paths as `pointers`): one proposal that
+breaks the schema or the plan rules no longer fails the whole output. Accepting a proposal compares
+the requirements it cites with `extensions['testmaster:requirementHashes']` of its batch (content
+hashes taken at generation), not with the batch-wide snapshot fingerprint; a batch stored without
+them counts every cited requirement as changed. `proposals.edit` clears the proposal's `warnings`
+(the model wrote them for its own plan; the audit event keeps the old list). Known gap:
+`proposals.edit` only re-runs the planner checks, not the secret, schema-pointer and status-only ones.
 
 `generate_tests` takes `provider`/`model` (checked by `ModelService.select` before any call) and runs
 the code importer as the response check, so a refusal is repair feedback. The generation prompt

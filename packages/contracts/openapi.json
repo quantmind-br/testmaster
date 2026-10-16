@@ -4289,6 +4289,82 @@
         }
       }
     },
+    "/requirements/{id}/reject": {
+      "post": {
+        "operationId": "post__requirements_id_reject",
+        "tags": [
+          "M4"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "plans:W",
+        "x-milestone": "M4",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Requirement"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequirementRejectionInput"
+              }
+            }
+          }
+        }
+      }
+    },
     "/projects/{id}/feature-map": {
       "get": {
         "operationId": "get__projects_id_feature_map",
@@ -95469,6 +95545,10 @@
                       "type": "string"
                     },
                     {
+                      "const": "reject",
+                      "type": "string"
+                    },
+                    {
                       "const": "approve",
                       "type": "string"
                     }
@@ -114648,11 +114728,17 @@
             },
             "description": "Restrict the plan to these requirements"
           },
+          "provider": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string",
+            "description": "Model provider id for plan generation; absent: first allowed provider"
+          },
           "model": {
             "minLength": 1,
             "maxLength": 200,
             "type": "string",
-            "description": "Model id from the project's profiles"
+            "description": "Model id from the project's profiles; absent: the provider's first capable model"
           },
           "partialGeneration": {
             "type": "boolean",
@@ -115024,6 +115110,33 @@
               }
             },
             "description": "Conflict decisions applied after the edits"
+          },
+          "reject": {
+            "minItems": 1,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "requirementId",
+                "reason"
+              ],
+              "properties": {
+                "requirementId": {
+                  "pattern": "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string",
+                  "description": "Requirement that is out of scope or not wanted"
+                },
+                "reason": {
+                  "minLength": 1,
+                  "maxLength": 2000,
+                  "type": "string",
+                  "description": "Why it is rejected; required and recorded"
+                }
+              }
+            },
+            "description": "Rejections applied after the conflict decisions and before the approvals. A rejected requirement is not pending, is never planned and cannot be approved or edited again; an id in both reject and approve refuses the whole call"
           },
           "approve": {
             "minItems": 1,
@@ -115678,6 +115791,27 @@
               "type": "string"
             },
             "description": "Exact origins (scheme://host[:port]) the secret may be sent to; any other destination is refused"
+          }
+        },
+        "$defs": {}
+      },
+      "Mcp_testmaster_test_auth_login": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "profileId",
+          "environmentId"
+        ],
+        "properties": {
+          "profileId": {
+            "pattern": "^aup_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string",
+            "description": "Auth profile to sign in with"
+          },
+          "environmentId": {
+            "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string",
+            "description": "Environment the login targets; the profile must be bound to it (testmaster_update_environment authRefs)"
           }
         },
         "$defs": {}
@@ -141262,6 +141396,15 @@
                     "minimum": 0,
                     "type": "integer"
                   },
+                  "testmaster:requirementHashes": {
+                    "type": "object",
+                    "patternProperties": {
+                      "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$": {
+                        "pattern": "^[0-9a-f]{64}$",
+                        "type": "string"
+                      }
+                    }
+                  },
                   "testmaster:modelCallId": {
                     "pattern": "^mdl_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
                     "type": "string"
@@ -162147,6 +162290,21 @@
           }
         }
       },
+      "RequirementRejectionInput": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "minLength": 1,
+            "maxLength": 2000,
+            "type": "string"
+          }
+        },
+        "$defs": {}
+      },
       "RequirementReview": {
         "additionalProperties": false,
         "type": "object",
@@ -162191,6 +162349,7 @@
                 "originKind",
                 "confidence",
                 "approval",
+                "rejection",
                 "reason",
                 "origins",
                 "conflictIds",
@@ -162265,6 +162424,38 @@
                     {
                       "pattern": "^apr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
                       "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "rejection": {
+                  "anyOf": [
+                    {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "reason",
+                        "actorId",
+                        "rejectedAt"
+                      ],
+                      "properties": {
+                        "reason": {
+                          "maxLength": 2000,
+                          "type": "string"
+                        },
+                        "actorId": {
+                          "minLength": 1,
+                          "maxLength": 200,
+                          "type": "string"
+                        },
+                        "rejectedAt": {
+                          "format": "date-time",
+                          "pattern": "Z$",
+                          "type": "string"
+                        }
+                      }
                     },
                     {
                       "type": "null"
@@ -162651,6 +162842,10 @@
                     },
                     {
                       "const": "approved",
+                      "type": "string"
+                    },
+                    {
+                      "const": "rejected",
                       "type": "string"
                     },
                     {

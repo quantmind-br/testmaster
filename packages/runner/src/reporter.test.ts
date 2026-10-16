@@ -103,3 +103,50 @@ it("reports a failed expect step with the same error mapping and a passed test w
   expect(sent[3]?.payload).toMatchObject({ stepId: "imported-test-0", status: "passed" });
   expect(sent[3]?.payload).not.toHaveProperty("error");
 });
+
+it("reports a failure once, on the innermost step, and not again on the test.step and the test around it", async () => {
+  const error = { message: matcherMessage("200", "401"), location };
+  const test = { expectedStatus: "passed" };
+  const result = { status: "failed", errors: [error], duration: 12 };
+  const outer = { category: "test.step", error };
+  const inner = { category: "expect", parent: outer, error };
+  const sent = await report((reporter) => {
+    reporter.onTestBegin(test as never);
+    reporter.onStepBegin(test as never, result as never, outer as never);
+    reporter.onStepBegin(test as never, result as never, inner as never);
+    // Playwright ends the inner step first, then the one that encloses it, then the test.
+    reporter.onStepEnd(test as never, result as never, inner as never);
+    reporter.onStepEnd(test as never, result as never, outer as never);
+    reporter.onTestEnd(test as never, result as never);
+  });
+  const finished = Object.fromEntries(
+    sent
+      .filter((message) => message.type === "step.finished")
+      .map((message) => [message.payload.stepId as string, message.payload]),
+  );
+  expect(finished["imported-step-2"]).toMatchObject({
+    status: "failed",
+    expected: 200,
+    observed: 401,
+    error: { code: "assertion_mismatch" },
+  });
+  for (const stepId of ["imported-step-1", "imported-test-0"]) {
+    expect(finished[stepId]).toMatchObject({ status: "failed", reasonCode: "assertion_mismatch" });
+    for (const field of ["error", "expected", "observed"])
+      expect(finished[stepId], `${stepId} ${field}`).not.toHaveProperty(field);
+  }
+  // A different failure on the enclosing step is its own: only an equal message is a repeat.
+  const other = { category: "test.step", error: { message: "boom", location } };
+  const caught = { category: "expect", parent: other, error };
+  const own = await report((reporter) => {
+    reporter.onTestBegin(test as never);
+    reporter.onStepBegin(test as never, result as never, other as never);
+    reporter.onStepBegin(test as never, result as never, caught as never);
+    reporter.onStepEnd(test as never, result as never, caught as never);
+    reporter.onStepEnd(test as never, result as never, other as never);
+  });
+  expect(own.at(-1)?.payload).toMatchObject({
+    stepId: "imported-step-1",
+    error: { message: expect.stringContaining("boom") },
+  });
+});

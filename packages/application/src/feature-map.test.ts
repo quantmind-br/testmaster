@@ -197,6 +197,17 @@ it("UX-013 never reports a requirement as covered when no test links to it and s
   expect(after.limitations.join(" ")).not.toContain("No code discovery has run");
 });
 
+it("UX-013 lists no coverage row for a rejected requirement", async () => {
+  const f = await fixture();
+  const kept = seedRequirement(f, "kept", "Kept", []);
+  const dropped = seedRequirement(f, "dropped", "Dropped", []);
+  expect(f.app.featureMap.get(f.projectId).summary.noTests).toBe(2);
+  f.app.requirements.reject(dropped.id, "Out of scope", dropped.version ?? 1);
+  const map = f.app.featureMap.get(f.projectId);
+  expect(map.rows.map((row) => row.key)).toEqual([`requirement:${kept.id}`]);
+  expect(map.summary).toEqual({ noTests: 1, testsWithoutValidRun: 0, validRun: 0 });
+});
+
 it("UX-014 lists discovery runs newest first with scope, counts and the files that were skipped", async () => {
   const f = await fixture();
   await writeFile(

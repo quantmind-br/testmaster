@@ -3,6 +3,7 @@ import type {
   NormalizationInput,
   OnboardingStateInput,
   PrerequisiteInput,
+  RequirementRejectionInput,
 } from "@testmaster/contracts";
 import { holdConnectionOpen } from "./authoring.js";
 import type { RouteContext, RouteModule } from "./types.js";
@@ -46,6 +47,12 @@ export const onboardingRoutes: RouteModule = {
     },
     "POST /requirements/{id}/approve": (context) =>
       context.service.requirements.approve(id(context), context.ifMatch()),
+    "POST /requirements/{id}/reject": (context) =>
+      context.service.requirements.reject(
+        id(context),
+        (context.body as RequirementRejectionInput).reason,
+        context.ifMatch(),
+      ),
     "GET /projects/{id}/feature-map": (context) => context.service.featureMap.get(id(context)),
   },
   // Only synchronous handlers can be wrapped: `executeIdempotent` stores the receipt of a handler
@@ -54,5 +61,6 @@ export const onboardingRoutes: RouteModule = {
     "PUT /projects/{id}/onboarding",
     "POST /projects/{id}/requirements/decisions",
     "POST /requirements/{id}/approve",
+    "POST /requirements/{id}/reject",
   ],
 };

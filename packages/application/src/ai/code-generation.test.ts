@@ -320,6 +320,59 @@ it("refuses generated code that reads a secret the environment does not offer", 
   expect(secretPrompt(f.payloads[1])).toContain("is not declared for this test");
 });
 
+const profileCode = good
+  .replace("{ request }", "{ profileRequest }")
+  .replace("request.get", "profileRequest.get");
+
+/** A revision whose plan sends its request with the environment's auth profile session. */
+function profileRevisionOf(app: Application, projectId: string): string {
+  const plan = scaffoldPlan("backend");
+  const request = plan.steps.find((step) => step.operation === "request");
+  if (request?.operation !== "request") throw new Error("Missing request step");
+  request.input.auth = "profile";
+  return String(app.tests.create({ projectId, plan }).activeRevisionId);
+}
+
+it("refuses code that sends a profile-auth plan step without the profile session, as repair feedback", async () => {
+  const f = await fixture();
+  const revisionId = profileRevisionOf(f.app, f.projectId);
+  f.setOutput(generated(good));
+  await expect(
+    f.app.codeGeneration.generate({ projectId: f.projectId, revisionIds: [revisionId] }),
+  ).rejects.toMatchObject({
+    code: "INVALID_ARGUMENT",
+    details: {
+      validationErrors: [
+        { path: revisionId, message: expect.stringContaining('with "auth": "profile"') },
+      ],
+    },
+  });
+  // The model was told how to authenticate and asked to repair: names the fixture, never the code.
+  expect(secretPrompt(f.payloads[0])).toContain("profileRequest fixture");
+  expect(secretPrompt(f.payloads[1])).toContain("destructure profileRequest");
+  expect(f.counts().completions).toBe(3);
+});
+
+it("accepts the repaired code that uses the profile session and leaves a plan without profile steps alone", async () => {
+  const f = await fixture();
+  const revisionId = profileRevisionOf(f.app, f.projectId);
+  f.queueOutputs(generated(good));
+  f.setOutput(generated(profileCode));
+  const receipt = await f.app.codeGeneration.generate({
+    projectId: f.projectId,
+    revisionIds: [revisionId],
+  });
+  expect(receipt.candidates).toHaveLength(1);
+  expect(f.counts().completions).toBe(2);
+  // Control: the same unauthenticated code passes for a plan that never asks for the profile.
+  f.setOutput(generated(good));
+  const plain = await f.app.codeGeneration.generate({
+    projectId: f.projectId,
+    revisionIds: [f.revisionOf()],
+  });
+  expect(plain.candidates).toHaveLength(1);
+});
+
 it("a generated code revision's admission snapshot names the generating call and its configuration hash", async () => {
   const f = await fixture();
   f.setOutput(generated(good));

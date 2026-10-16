@@ -19,9 +19,9 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_explore:
     "Browser exploration. featureIds: testmaster://projects/{projectId}/features?match=. budget: steps 1..100, modelCalls 1..steps, timeMs 1000..300000 (browser time only; a model call is never cut). provider/model pick the model; mutationActions: form steps. Failure: testmaster:errorMessage.",
   testmaster_generate_plan:
-    "Generate plan proposals (not tests) from the approved snapshot (sourceSnapshotId from testmaster_review_requirements). The model sees only secrets and auth profiles that already exist: create them first (testmaster_set_secret, testmaster_save_auth_profile). Next: testmaster_review_plan.",
+    "Generate plan proposals (not tests) from the approved snapshot (sourceSnapshotId from testmaster_review_requirements); provider/model pick the model. The model sees only existing secrets and auth profiles (testmaster_set_secret, testmaster_save_auth_profile first). Next: testmaster_review_plan.",
   testmaster_review_plan:
-    "Record accept or reject decisions for a proposal batch at expectedVersion. Unselected proposals stay pending. Next: testmaster_generate_tests.",
+    "Record accept or reject decisions for a proposal batch at expectedVersion. Unselected proposals stay pending. Accepting refuses only the proposals whose cited requirements changed since generation (details.staleProposals). Next: testmaster_generate_tests.",
   testmaster_generate_tests:
     "Generate executable candidates from accepted proposals (proposalIds) or revisions (revisionIds), at least one, one project per call; provider/model pick the model; a model call has no deadline. Refused revisions go to validationErrors. Not execution evidence; review before testmaster_run_tests.",
   testmaster_run_tests:
@@ -55,15 +55,17 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_approve_execution:
     "Approve risky production actions your run was refused for (approval_required): copy details.binding, add a reason, then repeat testmaster_run_tests. Bound to that revision, environment revision, origins and policy; expires in 30 minutes; used once.",
   testmaster_open_report:
-    "Return the testmaster://runs/{id}/report location of the committed report; read it as a paged text resource (JSON, cut on character boundaries) and follow _meta next, then concatenate the pages and parse.",
+    "Return the testmaster://runs/{id}/report location of the committed report; read it as a paged text resource (JSON by default, ?format=junit|markdown|html) and follow _meta next, then concatenate the pages and parse.",
   testmaster_add_source:
     "Import a PRD, OpenAPI, GraphQL, Postman or text file inside an approved root as a source revision; returns its status and diagnostics. An invalid source (e.g. unsupported OpenAPI) is an error with its diagnostics. Next: testmaster_normalize_requirements.",
   testmaster_review_requirements:
-    "Edit, adjudicate conflicts and approve requirements at the snapshot expectedVersion (edits, then conflicts, then approvals); an explicit audited decision of the caller. Returns per-item results and the new sourceSnapshotId. Next: testmaster_generate_plan.",
+    "Edit, adjudicate conflicts, reject (reason required; final, never planned) and approve requirements at the snapshot expectedVersion, applied in that order; an audited decision of the caller. Returns per-item results and the new sourceSnapshotId. Next: testmaster_generate_plan.",
   testmaster_set_secret:
     "Register a secret from valueFile or fromEnv (never an argument; one trailing newline trimmed) with its allowedOrigins; returns metadata only. Secrets and auth profiles must exist before testmaster_generate_plan. Next: testmaster_save_auth_profile.",
   testmaster_save_auth_profile:
     "Create (projectId, name, kind, originBindings, secrets, config) or update (profileId, expectedVersion, patch) an auth profile from secret ids; returns the view, never credentials. Next: testmaster_update_environment authRefs.",
   testmaster_update_environment:
     "Patch an environment at expectedVersion: authRefs (profiles bound to the target origin), additionalOrigins, baseUrl, networkProfile, locale, timezone, production, name. Returns the environment and its new active revision.",
+  testmaster_test_auth_login:
+    "Sign in once with an auth profile bound to an environment and report the outcome (authenticated, failed, blocked, checkpoint_required); saves no draft or revision, never returns credentials. Scope X, like auth-profile test-login.",
 };

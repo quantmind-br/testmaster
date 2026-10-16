@@ -34,9 +34,52 @@ export interface RequirementSnapshot {
   fingerprint: string;
 }
 type StoredRequirement = Requirement & EntityDocument;
+/** A reviewer's final decision that a requirement is out of scope (kept in the entity extensions). */
+export interface RequirementRejection {
+  reason: string;
+  actorId: string;
+  rejectedAt: string;
+}
+const REJECTION_EXTENSION = "testmaster:rejection";
+/** The rejection a reviewer recorded, or null while the requirement is pending or approved. */
+export function requirementRejection(value: Requirement): RequirementRejection | null {
+  const stored = value.extensions?.[REJECTION_EXTENSION];
+  return stored && typeof stored === "object" && !Array.isArray(stored)
+    ? (stored as unknown as RequirementRejection)
+    : null;
+}
+const MAX_APPROVAL_REASON = 200;
+const MAX_REJECTION_REASON = 2000;
+/** Refuses a decision on a requirement a reviewer already rejected. */
+export function refuseRejected(value: Requirement, action: string): void {
+  const rejection = requirementRejection(value);
+  if (rejection)
+    throw new ContractError(
+      "PRECONDITION_FAILED",
+      `Requirement was rejected (${rejection.reason}) and cannot be ${action}; a rejection is final, normalize the sources again to propose it anew`,
+      { reasonCode: "requirement_rejected", requirementId: value.id },
+    );
+}
 /** Stable identity of a requirement across normalizations: the model-assigned key, else its ID. */
 export function requirementKey(value: Requirement): string {
   return String(value.extensions?.["testmaster:key"] ?? value.id);
+}
+/**
+ * What a proposal depends on in a requirement: its statement, acceptance criteria and evidence.
+ * Approval is left out because accepting a proposal checks it on its own.
+ */
+export function requirementContentHash(value: Requirement): string {
+  return semanticHash({
+    text: value.text,
+    acceptanceCriteria: value.acceptanceCriteria,
+    sourceRefs: value.sourceRefs,
+  });
+}
+/** The content hash of each requirement, recorded on a proposal batch to tell later which ones changed. */
+export function requirementContentHashes(
+  requirements: readonly Requirement[],
+): Record<string, string> {
+  return Object.fromEntries(requirements.map((item) => [item.id, requirementContentHash(item)]));
 }
 export class RequirementsService {
   constructor(
@@ -227,6 +270,8 @@ export class RequirementsService {
     id: string,
     expectedVersion: number,
     action: (current: StoredRequirement) => StoredRequirement,
+    /** `keep`: the change leaves the set of plannable requirements as the fingerprint describes it. */
+    fingerprint: "recompute" | "keep" = "recompute",
   ): StoredRequirement {
     return authoringTransaction(this.ctx, () => {
       const current = this.get(id);
@@ -241,21 +286,35 @@ export class RequirementsService {
       const snapshot = this.snapshot(projectId);
       snapshot.requirements = snapshot.requirements.map((item) => (item.id === id ? next : item));
       snapshot.version += 1;
-      snapshot.fingerprint = semanticHash(snapshot.requirements);
+      if (fingerprint === "recompute")
+        // A rejected requirement is never planned: it takes no part in what the snapshot describes.
+        snapshot.fingerprint = semanticHash(
+          snapshot.requirements.filter((item) => !requirementRejection(item)),
+        );
       this.save(projectId, snapshot);
       this.audit("requirement.updated", id, current, next);
       const textBefore = describeRequirement(current);
       const textAfter = describeRequirement(next);
       const identity = { requirementId: id, requirementKey: requirementKey(current) };
+      const rejection = requirementRejection(next);
       appendRequirementLog(this.ctx, projectId, [
         ...(textBefore === textAfter
           ? []
           : [{ kind: "edited", before: textBefore, after: textAfter, ...identity } as const]),
         ...(current.approval && !next.approval
-          ? [{ kind: "approval_reset", note: "Edited after approval", ...identity } as const]
+          ? [
+              {
+                kind: "approval_reset",
+                note: rejection ? "Rejected after approval" : "Edited after approval",
+                ...identity,
+              } as const,
+            ]
           : []),
         ...(!current.approval && next.approval
           ? [{ kind: "approved", note: next.approval, ...identity } as const]
+          : []),
+        ...(rejection && !requirementRejection(current)
+          ? [{ kind: "rejected", note: rejection.reason, ...identity } as const]
           : []),
       ]);
       return next;
@@ -268,12 +327,10 @@ export class RequirementsService {
   ): StoredRequirement {
     if (Object.keys(patch).some((key) => !["text", "acceptanceCriteria"].includes(key)))
       throw new ContractError("INVALID_ARGUMENT", "Unknown requirement patch field");
-    return this.mutate(id, expectedVersion, (current) => ({
-      ...current,
-      ...patch,
-      approval: null,
-      version: expectedVersion + 1,
-    }));
+    return this.mutate(id, expectedVersion, (current) => {
+      refuseRejected(current, "edited");
+      return { ...current, ...patch, approval: null, version: expectedVersion + 1 };
+    });
   }
   apply(
     projectId: string,
@@ -301,6 +358,13 @@ export class RequirementsService {
             "POLICY_DENIED",
             "Reviewed edits cannot forge approvals, origin or evidence",
           );
+        // A rejected requirement returned unchanged (a snapshot read and sent back) is not an edit.
+        if (
+          requirementRejection(current) &&
+          submitted.text === current.text &&
+          canonicalJson(submitted.acceptanceCriteria) === canonicalJson(current.acceptanceCriteria)
+        )
+          continue;
         this.update(
           current.id,
           { text: submitted.text, acceptanceCriteria: submitted.acceptanceCriteria },
@@ -310,8 +374,15 @@ export class RequirementsService {
       return this.snapshot(projectId);
     });
   }
-  approve(id: string, expectedVersion: number): StoredRequirement {
+  approve(id: string, expectedVersion: number, reason?: string): StoredRequirement {
+    const approvalReason = reason?.trim() || `Approve requirement ${id}`;
+    if (approvalReason.length > MAX_APPROVAL_REASON)
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        `An approval reason is at most ${MAX_APPROVAL_REASON} characters`,
+      );
     return this.mutate(id, expectedVersion, (current) => {
+      refuseRejected(current, "approved");
       const projectId = this.project(current);
       const snapshot = this.snapshot(projectId);
       if (
@@ -341,12 +412,51 @@ export class RequirementsService {
         expiresAt: "9999-12-31T23:59:59.000Z",
         revokedAt: null,
         policyHash: this.model.config.effectiveConfig.policyHash,
-        reason: `Approve requirement ${id}`,
+        reason: approvalReason,
       });
       this.ctx.entities.insert("Approval", approval);
       this.audit("requirement.approved", id, current, approval);
       return { ...current, approval: approval.id, version: expectedVersion + 1 };
     });
+  }
+  /**
+   * Records that a requirement is out of scope. The reason is mandatory. A rejected requirement is
+   * not pending, is never planned, and is final: it can be neither approved nor edited, so the only
+   * way to propose the statement again is to normalize the sources again. Rejecting changes the
+   * snapshot version but not its fingerprint, so approved snapshots and the proposal batches built
+   * from them stay valid; a batch that cites the rejected requirement is refused at acceptance.
+   */
+  reject(id: string, reason: string, expectedVersion: number): StoredRequirement {
+    const text = reason.trim();
+    if (!text || text.length > MAX_REJECTION_REASON)
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        `A rejection needs a reason of 1 to ${MAX_REJECTION_REASON} characters`,
+      );
+    return this.mutate(
+      id,
+      expectedVersion,
+      (current) => {
+        if (requirementRejection(current))
+          throw new ContractError("PRECONDITION_FAILED", "Requirement is already rejected", {
+            reasonCode: "requirement_rejected",
+            requirementId: id,
+          });
+        const rejection: RequirementRejection = {
+          reason: text,
+          actorId: this.ctx.principalId,
+          rejectedAt: new Date().toISOString(),
+        };
+        this.audit("requirement.rejected", id, current, rejection);
+        return {
+          ...current,
+          approval: null,
+          extensions: { ...current.extensions, [REJECTION_EXTENSION]: { ...rejection } },
+          version: expectedVersion + 1,
+        };
+      },
+      "keep",
+    );
   }
   adjudicate(
     projectId: string,
@@ -441,6 +551,7 @@ export class RequirementsService {
           confidence: item.confidence,
           approval: item.approval,
           reason: typeof reason === "string" ? reason : null,
+          rejection: requirementRejection(item),
           origins,
           conflictIds: snapshot.conflicts
             .filter((conflict) => conflict.requirementIds.includes(item.id))

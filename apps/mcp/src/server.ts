@@ -25,6 +25,7 @@ import {
   entity,
   type PlanGenerationType,
   refuseInvalidSource,
+  requirementRejection,
   runVerdict,
   SignedCursorCodec,
   type SourceAddInput,
@@ -114,6 +115,7 @@ const annotations: Record<ToolName, Annotations> = {
   testmaster_set_secret: ADDITIVE,
   testmaster_save_auth_profile: DESTRUCTIVE,
   testmaster_update_environment: DESTRUCTIVE,
+  testmaster_test_auth_login: DESTRUCTIVE,
   testmaster_run_tests: DESTRUCTIVE,
   testmaster_review_plan: DESTRUCTIVE,
   testmaster_approve_healing: DESTRUCTIVE,
@@ -133,6 +135,28 @@ const RESOURCE_NOT_FOUND = -32002;
 const RESOURCE_PAGE_BYTES = 65536;
 /** Entries of a project-features resource page. */
 const FEATURE_PAGE = 100;
+/** Entries of a list resource page (tests, sources, plan batches, revisions). */
+const LIST_PAGE = 100;
+/** Run steps per page: each one carries its observed values. */
+const STEP_PAGE = 50;
+/** Proposals per page: each one carries a whole plan. */
+const PROPOSAL_PAGE = 10;
+/** Report formats a resource can serve; Allure is a directory of files and needs the CLI `--out`. */
+const REPORT_MEDIA_TYPES = {
+  json: "application/json",
+  markdown: "text/markdown",
+  html: "text/html",
+  junit: "application/xml",
+} as const;
+type ReportFormat = keyof typeof REPORT_MEDIA_TYPES;
+const TEST_PRIORITIES = ["critical", "high", "normal", "low"];
+/** Error codes that refuse a tool call itself; other errors are failed operations. */
+const DENIED_CODES: Record<string, true> = {
+  INVALID_ARGUMENT: true,
+  UNAUTHENTICATED: true,
+  FORBIDDEN: true,
+  POLICY_DENIED: true,
+};
 /** The part of a run receipt this server reads back. */
 interface McpReceipt {
   batchId: string;
@@ -265,7 +289,7 @@ export class TestMasterMcp {
         // it is still a denied call and is audited like one.
         const tool = mcpToolCatalog.find((item) => item.name === request.params.name);
         if (!tool) {
-          this.auditDenial(request.params.name, extra.requestId, "NOT_FOUND");
+          this.auditToolError(request.params.name, extra.requestId, "NOT_FOUND", true);
           throw new McpError(
             ErrorCode.InvalidParams,
             `Unknown tool: ${request.params.name.slice(0, 200)}`,
@@ -287,6 +311,7 @@ export class TestMasterMcp {
                   "testmaster_analyze_code",
                   "testmaster_analyze_run",
                   "testmaster_propose_healing",
+                  "testmaster_test_auth_login",
                 ].includes(tool.name)
               ? "X"
               : "W";
@@ -404,7 +429,7 @@ export class TestMasterMcp {
             error instanceof ContractError
               ? error
               : new ContractError("INTERNAL", "MCP operation failed");
-          this.auditDenial(request.params.name, extra.requestId, failure.code);
+          this.auditToolError(request.params.name, extra.requestId, failure.code);
           const data = {
             error: { code: failure.code, message: failure.message, details: failure.details },
           };
@@ -428,11 +453,66 @@ export class TestMasterMcp {
         ["testmaster://runs/{id}/result", "Run result", "Phase, outcome and gate of a run"],
         ["testmaster://runs/{id}/manifest", "Evidence manifest", "Evidence manifest page of a run"],
         [
-          "testmaster://runs/{id}/report",
+          "testmaster://runs/{id}/report{?format,cursor}",
           "Committed report",
-          "Committed JSON report as text pages (cut on UTF-8 character boundaries); concatenate the pages, then parse. _meta carries next, offset and sizeBytes",
+          "Committed report as text pages (cut on UTF-8 character boundaries); concatenate the pages, then parse. format: json (default), junit, markdown or html; Allure needs the CLI. _meta carries next, offset and sizeBytes",
+        ],
+        [
+          "testmaster://runs/{id}/steps{?attemptId,cursor}",
+          "Run steps",
+          "Recorded step results of a run (every attempt, or one attemptId) in execution order, paged 50 at a time; follow next",
+        ],
+        [
+          "testmaster://revisions/{id}",
+          "Test revision",
+          "A test revision: origin, ordinal, hashes, plan or code reference",
         ],
         ["testmaster://revisions/{id}/plan", "Executable plan", "Plan of a test revision"],
+        [
+          "testmaster://revisions/{id}/code{?format}",
+          "Revision code",
+          "Files of the code of a revision (generated code, imported code, or the export of a plan): path, size, sha256 and the resource of each file. format: playwright (default) or pytest; imported code keeps its own",
+        ],
+        [
+          "testmaster://revisions/{id}/code/{path}{?format,offset}",
+          "Revision code file",
+          "One file of a revision's code as text pages (cut on UTF-8 character boundaries); _meta carries next, offset and sizeBytes",
+        ],
+        [
+          "testmaster://tests/{id}",
+          "Test",
+          "Test case by id: name, tags, priority, active revision, version",
+        ],
+        [
+          "testmaster://tests/{id}/revisions{?cursor}",
+          "Test revisions",
+          "Revisions of a test in ordinal order without their plans, each marked active or candidate; read one at testmaster://revisions/{id}",
+        ],
+        [
+          "testmaster://projects/{projectId}/tests{?tag,priority,status,cursor}",
+          "Project tests",
+          "Tests of a project, paged 100 at a time. tag, priority (critical|high|normal|low) and status (active|archived) narrow the list like test list; follow next",
+        ],
+        [
+          "testmaster://projects/{projectId}/sources{?cursor}",
+          "Project sources",
+          "Sources of a project (not archived), paged 100 at a time; read one at testmaster://sources/{id}",
+        ],
+        [
+          "testmaster://sources/{id}",
+          "Source",
+          "A source with its active revision (no chunks), chunk count and diagnostics",
+        ],
+        [
+          "testmaster://projects/{projectId}/plan-batches{?cursor}",
+          "Plan batches",
+          "Proposal batches of a project, paged 100 at a time; read one at testmaster://plan-batches/{id}",
+        ],
+        [
+          "testmaster://plan-batches/{id}{?cursor}",
+          "Plan batch",
+          "A proposal batch with its proposals (plans, status, version), paged 10 at a time; the version is the expectedVersion of testmaster_review_plan and testmaster_edit_plan",
+        ],
         [
           "testmaster://requirements/{projectId}",
           "Requirements",
@@ -449,7 +529,9 @@ export class TestMasterMcp {
         description: String(description),
         mimeType: uriTemplate?.includes("/artifacts/")
           ? "application/octet-stream"
-          : "application/json",
+          : uriTemplate?.includes("/code/")
+            ? "text/plain"
+            : "application/json",
       })),
     }));
     this.server.setRequestHandler(ListResourcesRequestSchema, async (request) => {
@@ -572,14 +654,24 @@ export class TestMasterMcp {
     }
     return canonical;
   }
-  /** Records a denied tool call: actor, tool name and a hash of the outcome, never the arguments. */
-  private auditDenial(name: string, requestId: string | number, code: string): void {
+  /**
+   * Records a tool call that ended in an error: actor, tool name and a hash of the outcome, never
+   * the arguments. A refusal of the call itself (unknown tool, malformed arguments, missing
+   * authority or policy) is `mcp.tool.denied`; any other error, such as a failed precondition,
+   * is `mcp.tool.failed`.
+   */
+  private auditToolError(
+    name: string,
+    requestId: string | number,
+    code: string,
+    denied = DENIED_CODES[code] === true,
+  ): void {
     const app = this.options.application;
     app.context.entities.insert(
       "AuditEvent",
       entity(app.context, "aud", {
         actor: app.context.principalId,
-        action: "mcp.tool.denied",
+        action: denied ? "mcp.tool.denied" : "mcp.tool.failed",
         resourceId: name.slice(0, 200),
         requestId: String(requestId),
         beforeHash: null,
@@ -718,6 +810,8 @@ export class TestMasterMcp {
         return this.saveAuthProfile(args, app);
       case "testmaster_update_environment":
         return this.updateEnvironment(args, app);
+      case "testmaster_test_auth_login":
+        return app.authProfiles.testLogin(String(args.profileId), String(args.environmentId));
       case "testmaster_validate_document":
         return validateDocument(String(args.schema), args.document);
       case "testmaster_capabilities": {
@@ -918,6 +1012,7 @@ export class TestMasterMcp {
           ...(Array.isArray(args.requirementIds)
             ? { requirementIds: args.requirementIds as string[] }
             : {}),
+          ...(typeof args.provider === "string" ? { provider: args.provider } : {}),
           ...(typeof args.model === "string" ? { model: args.model } : {}),
           ...(args.partialGeneration === true ? { partialGeneration: true } : {}),
           signal,
@@ -1271,9 +1366,10 @@ export class TestMasterMcp {
     };
   }
   /**
-   * Applies edits, then conflict decisions, then approvals, each at the requirement's current
-   * version after one check of the snapshot version. Nothing awaits in between, so no other writer
-   * interleaves; a refused item is reported and the rest still applies.
+   * Applies edits, then conflict decisions, then rejections, then approvals, each at the
+   * requirement's current version after one check of the snapshot version. Nothing awaits in
+   * between, so no other writer interleaves; a refused item is reported and the rest still
+   * applies.
    */
   private reviewRequirements(args: Arguments, app: Application) {
     const projectId = String(args.projectId);
@@ -1289,13 +1385,24 @@ export class TestMasterMcp {
           sourceSnapshotId: before.fingerprint,
         },
       );
+    const rejections = (args.reject ?? []) as { requirementId: string; reason: string }[];
+    const contradicting = ((args.approve ?? []) as string[]).filter((id) =>
+      rejections.some((item) => item.requirementId === id),
+    );
+    if (contradicting.length)
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        "A requirement cannot be approved and rejected in the same call",
+        { requirementIds: contradicting },
+      );
+    type ReviewAction = "update" | "adjudicate" | "reject" | "approve";
     const results: {
-      action: "update" | "adjudicate" | "approve";
+      action: ReviewAction;
       id: string;
       ok: boolean;
       error: { code: string; message: string } | null;
     }[] = [];
-    const attempt = (action: "update" | "adjudicate" | "approve", id: string, run: () => void) => {
+    const attempt = (action: ReviewAction, id: string, run: () => void) => {
       try {
         run();
         results.push({ action, id, ok: true, error: null });
@@ -1340,6 +1447,11 @@ export class TestMasterMcp {
           expectedVersion: service.snapshot(projectId).version,
         });
       });
+    for (const item of rejections)
+      attempt("reject", item.requirementId, () => {
+        const requirement = current(item.requirementId);
+        service.reject(item.requirementId, item.reason, Number(requirement.version));
+      });
     for (const id of (args.approve ?? []) as string[])
       attempt("approve", id, () => {
         const requirement = current(id);
@@ -1362,7 +1474,7 @@ export class TestMasterMcp {
       sourceSnapshotId: after.fingerprint,
       version: after.version,
       pendingApprovalIds: after.requirements
-        .filter((item) => !item.approval && !superseded.has(item.id))
+        .filter((item) => !item.approval && !requirementRejection(item) && !superseded.has(item.id))
         .map((item) => item.id),
       unresolvedConflictIds: after.conflicts
         .filter((item) => !item.resolution)
@@ -1662,18 +1774,39 @@ export class TestMasterMcp {
               url.searchParams.get("cursor") ?? undefined,
             ),
           };
+        if (parts.length === 2 && parts[1] === "tests") return { json: this.projectTests(id, url) };
+        if (parts.length === 2 && parts[1] === "sources")
+          return { json: this.projectSources(id, url) };
+        if (parts.length === 2 && parts[1] === "plan-batches")
+          return { json: this.projectPlanBatches(id, url) };
         break;
       case "revisions":
+        if (parts.length === 1) return { json: this.revisionDocument(id) };
         if (parts.length === 2 && parts[1] === "plan") {
           const revision = app.revisions.get(id);
           if (!revision.plan)
             throw new ContractError(
               "NOT_FOUND",
-              `Revision ${id} is generated code and has no plan; read its code with 'testmaster test export ${revision.testId} --revision ${id} --format <playwright|pytest>' or GET /v1/revisions/${id}/code`,
+              `Revision ${id} is generated code and has no plan; read its code at testmaster://revisions/${id}/code`,
               { revisionId: id, testId: revision.testId, origin: revision.origin },
             );
           return { json: revision.plan };
         }
+        if (parts.length === 2 && parts[1] === "code")
+          return { json: await this.revisionCode(id, url) };
+        if (parts.length === 3 && parts[1] === "code")
+          return this.revisionCodeFile(id, decodeURIComponent(String(parts[2])), url);
+        break;
+      case "tests":
+        if (parts.length === 1) return { json: app.tests.get(id) };
+        if (parts.length === 2 && parts[1] === "revisions")
+          return { json: this.testRevisions(id, url) };
+        break;
+      case "sources":
+        if (parts.length === 1) return { json: this.sourceDocument(id) };
+        break;
+      case "plan-batches":
+        if (parts.length === 1) return { json: this.planBatch(id, url) };
         break;
       case "runs":
         if (parts.length === 2 && parts[1] === "result") return { json: this.result(id) };
@@ -1684,34 +1817,8 @@ export class TestMasterMcp {
               ...(url.searchParams.has("cursor") ? { cursor: url.searchParams.get("cursor") } : {}),
             }),
           };
-        if (parts.length === 2 && parts[1] === "report") {
-          const report = await app.reports.export(id, "json");
-          const serialized = Buffer.from(
-            typeof report.content === "string" ? report.content : JSON.stringify(report.content),
-          );
-          const offset = this.decodeCursor(
-            url.searchParams.get("cursor") ?? undefined,
-            `report:${id}`,
-          );
-          if (offset > serialized.length)
-            throw new ContractError("INVALID_ARGUMENT", "Invalid report cursor");
-          const window = serialized.subarray(offset, offset + RESOURCE_PAGE_BYTES);
-          const more = offset + window.length < serialized.length;
-          // A page ends on a character boundary: clients concatenate the pages, then parse.
-          const end = offset + (more ? utf8PrefixLength(window) : window.length);
-          return {
-            bytes: serialized.subarray(offset, end),
-            mimeType: "application/json",
-            meta: {
-              "testmaster:offset": offset,
-              "testmaster:sizeBytes": serialized.length,
-              "testmaster:next": more
-                ? `testmaster://runs/${id}/report?cursor=${encodeURIComponent(this.cursor(end, `report:${id}`))}`
-                : null,
-              "testmaster:result": this.result(id),
-            },
-          };
-        }
+        if (parts.length === 2 && parts[1] === "steps") return { json: this.runSteps(id, url) };
+        if (parts.length === 2 && parts[1] === "report") return this.report(id, url);
         if (parts.length === 3 && parts[1] === "artifacts") {
           const offset = Number(url.searchParams.get("offset") ?? 0);
           const page = await app.artifacts.read(id, decodeURIComponent(String(parts[2])), {
@@ -1749,6 +1856,292 @@ export class TestMasterMcp {
         break;
     }
     throw new ContractError("NOT_FOUND", "Unknown resource");
+  }
+  /** One page of an ordered list; its cursor is bound to the list it pages, so another list refuses it. */
+  private listPage<T>(items: readonly T[], size: number, binding: string, cursor: string | null) {
+    const offset = this.decodeCursor(cursor ?? undefined, binding);
+    if (offset > items.length) throw new ContractError("INVALID_ARGUMENT", "Invalid page cursor");
+    const end = Math.min(offset + size, items.length);
+    return {
+      total: items.length,
+      items: items.slice(offset, end),
+      cursor: end < items.length ? this.cursor(end, binding) : null,
+    };
+  }
+  /** The URI of the next page of a list resource, carrying the filters the cursor was issued for. */
+  private pageLink(
+    base: string,
+    filters: Record<string, string | null>,
+    cursor: string | null,
+  ): string | null {
+    if (cursor === null) return null;
+    const query = new URLSearchParams();
+    for (const [name, value] of Object.entries(filters)) if (value !== null) query.set(name, value);
+    query.set("cursor", cursor);
+    return `${base}?${query}`;
+  }
+  /** A window of `bytes` served as one text page: it ends on a character boundary unless it is the last. */
+  private textPage(
+    bytes: Buffer,
+    offset: number,
+    mimeType: string,
+    next: (end: number) => string,
+    meta: Record<string, unknown>,
+  ): ResourcePayload {
+    if (offset > bytes.length) throw new ContractError("INVALID_ARGUMENT", "Invalid page offset");
+    const window = bytes.subarray(offset, offset + RESOURCE_PAGE_BYTES);
+    const more = offset + window.length < bytes.length;
+    const end = offset + (more ? utf8PrefixLength(window) : window.length);
+    return {
+      bytes: bytes.subarray(offset, end),
+      mimeType,
+      meta: {
+        "testmaster:offset": offset,
+        "testmaster:sizeBytes": bytes.length,
+        "testmaster:next": more ? next(end) : null,
+        ...meta,
+      },
+    };
+  }
+  /** The committed report of a run in one of the formats a text resource can carry. */
+  private async report(runId: string, url: URL): Promise<ResourcePayload> {
+    const format = url.searchParams.get("format") ?? "json";
+    if (!Object.hasOwn(REPORT_MEDIA_TYPES, format))
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        `Unsupported report format; use ${Object.keys(REPORT_MEDIA_TYPES).join(", ")} (Allure needs the CLI with --out)`,
+        { field: "format", allowed: Object.keys(REPORT_MEDIA_TYPES) },
+      );
+    const report = await this.options.application.reports.export(runId, format as ReportFormat);
+    const serialized = Buffer.from(
+      typeof report.content === "string" ? report.content : JSON.stringify(report.content),
+    );
+    // JSON keeps the cursor binding it always had; another format is another document.
+    const binding = format === "json" ? `report:${runId}` : `report:${runId}:${format}`;
+    const offset = this.decodeCursor(url.searchParams.get("cursor") ?? undefined, binding);
+    // A page ends on a character boundary: clients concatenate the pages, then parse.
+    return this.textPage(
+      serialized,
+      offset,
+      REPORT_MEDIA_TYPES[format as ReportFormat],
+      (end) => {
+        const query = new URLSearchParams(format === "json" ? {} : { format });
+        query.set("cursor", this.cursor(end, binding));
+        return `testmaster://runs/${runId}/report?${query}`;
+      },
+      { "testmaster:result": this.result(runId) },
+    );
+  }
+  /** Recorded steps of a run, every attempt or one, in execution order. */
+  private runSteps(runId: string, url: URL) {
+    const attemptId = url.searchParams.get("attemptId");
+    const steps = this.options.application.runs.steps(runId, attemptId ?? undefined);
+    const page = this.listPage(
+      steps,
+      STEP_PAGE,
+      `steps:${runId}:${attemptId ?? ""}`,
+      url.searchParams.get("cursor"),
+    );
+    return {
+      runId,
+      ...(attemptId === null ? {} : { attemptId }),
+      total: page.total,
+      steps: page.items,
+      next: this.pageLink(`testmaster://runs/${runId}/steps`, { attemptId }, page.cursor),
+    };
+  }
+  /** A revision as stored, with where its plan and its code can be read. */
+  private revisionDocument(id: string) {
+    const revision = this.options.application.revisions.get(id);
+    return {
+      ...revision,
+      resources: {
+        ...(revision.plan ? { plan: `testmaster://revisions/${id}/plan` } : {}),
+        code: `testmaster://revisions/${id}/code`,
+      },
+    };
+  }
+  /** Revisions of a test without their plans: which one is active, which are candidates. */
+  private testRevisions(testId: string, url: URL) {
+    const app = this.options.application;
+    const test = app.tests.get(testId);
+    const revisions = app.revisions.list(testId).map(({ plan, ...revision }) => ({
+      ...revision,
+      hasPlan: plan !== null,
+      active: revision.id === test.activeRevisionId,
+      resource: `testmaster://revisions/${revision.id}`,
+    }));
+    const page = this.listPage(
+      revisions,
+      LIST_PAGE,
+      `revisions:${testId}`,
+      url.searchParams.get("cursor"),
+    );
+    return {
+      testId,
+      activeRevisionId: test.activeRevisionId,
+      total: page.total,
+      revisions: page.items,
+      next: this.pageLink(`testmaster://tests/${testId}/revisions`, {}, page.cursor),
+    };
+  }
+  /** The code of a revision as the CLI `test export` and GET /revisions/{id}/code read it. */
+  private async exportRevision(id: string, requested: string | null) {
+    const app = this.options.application;
+    const revision = app.revisions.get(id);
+    const format = requested ?? (revision.runnerKind === "python" ? "pytest" : "playwright");
+    if (format !== "playwright" && format !== "pytest")
+      throw new ContractError("INVALID_ARGUMENT", "format must be playwright or pytest", {
+        field: "format",
+      });
+    const exported = await app.codeExport.export(revision.testId, { format, revisionId: id });
+    return { exported, format, origin: revision.origin };
+  }
+  /** The files of a revision's code: path, size and hash of each, and where to read it. */
+  private async revisionCode(id: string, url: URL) {
+    const { exported, format, origin } = await this.exportRevision(
+      id,
+      url.searchParams.get("format"),
+    );
+    return {
+      testId: exported.testId,
+      revisionId: exported.revisionId,
+      origin,
+      format,
+      metadata: exported.metadata,
+      files: Object.entries(exported.files).map(([path, content]) => ({
+        path,
+        sizeBytes: Buffer.byteLength(content),
+        sha256: createHash("sha256").update(content).digest("hex"),
+        resource: `testmaster://revisions/${id}/code/${encodeURIComponent(path)}?format=${format}&offset=0`,
+      })),
+    };
+  }
+  /** One file of a revision's code, as text pages. */
+  private async revisionCodeFile(id: string, path: string, url: URL): Promise<ResourcePayload> {
+    const { exported, format } = await this.exportRevision(id, url.searchParams.get("format"));
+    if (!Object.hasOwn(exported.files, path))
+      throw new ContractError("NOT_FOUND", "Revision code has no such file", {
+        path,
+        files: Object.keys(exported.files),
+      });
+    const raw = url.searchParams.get("offset");
+    const offset = raw === null ? 0 : Number(raw);
+    if (!Number.isSafeInteger(offset) || offset < 0)
+      throw new ContractError("INVALID_ARGUMENT", "offset must be a non-negative integer", {
+        field: "offset",
+      });
+    return this.textPage(
+      Buffer.from(exported.files[path] as string),
+      offset,
+      "text/plain",
+      (end) =>
+        `testmaster://revisions/${id}/code/${encodeURIComponent(path)}?format=${format}&offset=${end}`,
+      { "testmaster:file": path },
+    );
+  }
+  /** Tests of a project, narrowed like `test list`. */
+  private projectTests(projectId: string, url: URL) {
+    const tag = url.searchParams.get("tag");
+    const priority = url.searchParams.get("priority");
+    const status = url.searchParams.get("status");
+    if (priority !== null && !TEST_PRIORITIES.includes(priority))
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        "priority must be critical, high, normal or low",
+        { field: "priority" },
+      );
+    if (status !== null && status !== "active" && status !== "archived")
+      throw new ContractError("INVALID_ARGUMENT", "status must be active or archived", {
+        field: "status",
+      });
+    const tests = this.options.application.tests
+      .list(projectId)
+      .filter(
+        (test) =>
+          (tag === null || test.tags.includes(tag)) &&
+          (priority === null || test.priority === priority) &&
+          (status === null || (test.archivedAt ? "archived" : "active") === status),
+      );
+    const filters = { tag, priority, status };
+    const page = this.listPage(
+      tests,
+      LIST_PAGE,
+      `tests:${projectId}:${JSON.stringify(filters)}`,
+      url.searchParams.get("cursor"),
+    );
+    return {
+      projectId,
+      total: page.total,
+      tests: page.items,
+      next: this.pageLink(`testmaster://projects/${projectId}/tests`, filters, page.cursor),
+    };
+  }
+  /** Sources of a project that are not archived. */
+  private projectSources(projectId: string, url: URL) {
+    const page = this.listPage(
+      this.options.application.sources.list(projectId),
+      LIST_PAGE,
+      `sources:${projectId}`,
+      url.searchParams.get("cursor"),
+    );
+    return {
+      projectId,
+      total: page.total,
+      sources: page.items.map((source) => ({
+        ...source,
+        resource: `testmaster://sources/${source.id}`,
+      })),
+      next: this.pageLink(`testmaster://projects/${projectId}/sources`, {}, page.cursor),
+    };
+  }
+  /** A source with its active revision, without the chunks (the receipt of testmaster_add_source). */
+  private sourceDocument(id: string) {
+    const detail = this.options.application.sources.get(id);
+    const { chunks, ...revision } = detail.revision;
+    return {
+      source: detail.source,
+      revision,
+      chunkCount: chunks.length,
+      diagnostics: detail.diagnostics,
+      archivedAt: detail.archivedAt,
+    };
+  }
+  /** Proposal batches of a project. */
+  private projectPlanBatches(projectId: string, url: URL) {
+    const app = this.options.application;
+    app.projects.get(projectId);
+    const page = this.listPage(
+      app.proposals.list(projectId),
+      LIST_PAGE,
+      `plan-batches:${projectId}`,
+      url.searchParams.get("cursor"),
+    );
+    return {
+      projectId,
+      total: page.total,
+      batches: page.items.map((batch) => ({
+        ...batch,
+        resource: `testmaster://plan-batches/${batch.id}`,
+      })),
+      next: this.pageLink(`testmaster://projects/${projectId}/plan-batches`, {}, page.cursor),
+    };
+  }
+  /** One proposal batch and a page of its proposals. */
+  private planBatch(id: string, url: URL) {
+    const { batch, proposals } = this.options.application.proposals.detail(id);
+    const page = this.listPage(
+      proposals,
+      PROPOSAL_PAGE,
+      `plan-batch:${id}`,
+      url.searchParams.get("cursor"),
+    );
+    return {
+      batch,
+      total: page.total,
+      proposals: page.items,
+      next: this.pageLink(`testmaster://plan-batches/${id}`, {}, page.cursor),
+    };
   }
   /** One page of a project's features, ordered by stable key, optionally narrowed by key substring. */
   private features(projectId: string, match: string | undefined, cursor: string | undefined) {

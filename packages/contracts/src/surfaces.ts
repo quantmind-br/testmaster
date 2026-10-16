@@ -175,6 +175,14 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
     "RequirementReview",
   ],
   ["POST", "/requirements/{id}/approve", "plans:W", "M4", "Empty", "Requirement"],
+  [
+    "POST",
+    "/requirements/{id}/reject",
+    "plans:W",
+    "M4",
+    "RequirementRejectionInput",
+    "Requirement",
+  ],
   ["GET", "/projects/{id}/feature-map", "plans:R", "M4", "Empty", "FeatureCoverageMap"],
   ["POST", "/discovery/{id}/cancel", "discovery:X", "M2", "Empty", "DiscoveryJobView"],
   [
@@ -797,7 +805,12 @@ export const mcpTools = {
           "Restrict the plan to these requirements",
         ),
       ),
-      model: Type.Optional(d(Name, "Model id from the project's profiles")),
+      provider: Type.Optional(
+        d(Name, "Model provider id for plan generation; absent: first allowed provider"),
+      ),
+      model: Type.Optional(
+        d(Name, "Model id from the project's profiles; absent: the provider's first capable model"),
+      ),
       partialGeneration: Type.Optional(
         d(
           Type.Boolean(),
@@ -1175,6 +1188,21 @@ export const mcpTools = {
           "Conflict decisions applied after the edits",
         ),
       ),
+      reject: Type.Optional(
+        d(
+          Type.Array(
+            Obj({
+              requirementId: d(id("req"), "Requirement that is out of scope or not wanted"),
+              reason: d(
+                Type.String({ minLength: 1, maxLength: 2000 }),
+                "Why it is rejected; required and recorded",
+              ),
+            }),
+            { minItems: 1, maxItems: 100 },
+          ),
+          "Rejections applied after the conflict decisions and before the approvals. A rejected requirement is not pending, is never planned and cannot be approved or edited again; an id in both reject and approve refuses the whole call",
+        ),
+      ),
       approve: Type.Optional(
         d(
           Type.Array(id("req"), { minItems: 1, maxItems: 100 }),
@@ -1280,6 +1308,17 @@ export const mcpTools = {
       ),
     }),
     output: "McpEnvironmentUpdate",
+  },
+  testmaster_test_auth_login: {
+    milestone: "M4",
+    input: Obj({
+      profileId: d(id("aup"), "Auth profile to sign in with"),
+      environmentId: d(
+        id("env"),
+        "Environment the login targets; the profile must be bound to it (testmaster_update_environment authRefs)",
+      ),
+    }),
+    output: "AuthTestLoginReceipt",
   },
 } as const;
 export const mcpToolCatalog = Object.entries(mcpTools).map(([name, tool]) => ({

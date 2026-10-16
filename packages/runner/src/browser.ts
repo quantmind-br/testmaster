@@ -86,7 +86,7 @@ export function storageStateSecrets(raw: string): string[] {
   ].filter((value): value is string => typeof value === "string" && value.length >= 6);
 }
 
-interface LoadedStorageState {
+export interface LoadedStorageState {
   cookies: {
     name: string;
     value: string;
@@ -103,7 +103,7 @@ interface LoadedStorageState {
  * Reads the vault storage state named by the host. Cookies for hosts outside the network policy
  * are dropped, so a state captured for one site is never replayed toward another origin.
  */
-async function loadStorageState(runtime: Runtime): Promise<LoadedStorageState | undefined> {
+export async function loadStorageState(runtime: Runtime): Promise<LoadedStorageState | undefined> {
   const reference = runtime.input.auth?.storageState;
   if (!reference) return undefined;
   const raw = String(await runtime.resolve({ secretRef: reference.secretRef }));

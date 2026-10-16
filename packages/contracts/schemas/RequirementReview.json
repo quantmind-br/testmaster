@@ -42,6 +42,7 @@
           "originKind",
           "confidence",
           "approval",
+          "rejection",
           "reason",
           "origins",
           "conflictIds",
@@ -116,6 +117,38 @@
               {
                 "pattern": "^apr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
                 "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rejection": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "reason",
+                  "actorId",
+                  "rejectedAt"
+                ],
+                "properties": {
+                  "reason": {
+                    "maxLength": 2000,
+                    "type": "string"
+                  },
+                  "actorId": {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  "rejectedAt": {
+                    "format": "date-time",
+                    "pattern": "Z$",
+                    "type": "string"
+                  }
+                }
               },
               {
                 "type": "null"
@@ -502,6 +535,10 @@
               },
               {
                 "const": "approved",
+                "type": "string"
+              },
+              {
+                "const": "rejected",
                 "type": "string"
               },
               {

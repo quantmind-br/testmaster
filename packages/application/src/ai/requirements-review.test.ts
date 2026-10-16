@@ -259,3 +259,68 @@ it("UX-012 shows a conflict with the spans on both sides and keeps approval bloc
   expect(decided.changes[0]).toMatchObject({ kind: "conflict_decided", requirementId: wrong.id });
   expect(f.app.requirements.approve(wrong.id, wrong.version).approval).not.toBeNull();
 });
+
+it("UX-012 rejecting a requirement records who and why, is audited, and is final", async () => {
+  const f = await fixture();
+  await writeFile(join(f.root, "prd.md"), "# Health\nThe health endpoint must report ok.");
+  const source = await f.app.sources.add({
+    projectId: f.projectId,
+    role: "prd",
+    path: "prd.md",
+    format: "markdown",
+  });
+  const handle = source.chunks.length;
+  f.setOutput(
+    output(
+      statement("health", "Health reports ok", handle),
+      statement("billing", "Invoices are paid in 30 days", handle),
+    ),
+  );
+  await f.app.requirements.normalize({
+    projectId: f.projectId,
+    sourceRevisionIds: [source.revision.id],
+  });
+  const before = f.app.requirements.review(f.projectId);
+  const kept = before.requirements.find((item) => item.key === "health");
+  const dropped = before.requirements.find((item) => item.key === "billing");
+  if (!kept || !dropped) throw new Error("Missing requirements");
+  const rejectDropped = (reason: string) =>
+    f.app.requirements.reject(dropped.id, reason, dropped.version);
+
+  // A rejection without a reason is refused and changes nothing.
+  expect(() => rejectDropped("   ")).toThrow(expect.objectContaining({ code: "INVALID_ARGUMENT" }));
+  expect(f.app.requirements.review(f.projectId).version).toBe(before.version);
+
+  rejectDropped("Out of scope for the health service");
+  const after = f.app.requirements.review(f.projectId);
+  expect(after.requirements.find((item) => item.id === dropped.id)).toMatchObject({
+    approval: null,
+    rejection: {
+      reason: "Out of scope for the health service",
+      actorId: f.app.context.principalId,
+      rejectedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+    },
+  });
+  expect(after.requirements.find((item) => item.id === kept.id)?.rejection).toBeNull();
+  expect(after.changes[0]).toMatchObject({
+    kind: "rejected",
+    requirementId: dropped.id,
+    note: "Out of scope for the health service",
+  });
+  expect(
+    f.app.database.all("SELECT resource_id FROM audit_events WHERE action='requirement.rejected'"),
+  ).toEqual([{ resource_id: dropped.id }]);
+  // The version moves so a reviewer re-reads, but the fingerprint of what can be planned does not.
+  expect(after.version).toBe(before.version + 1);
+  expect(after.fingerprint).toBe(before.fingerprint);
+
+  // A rejection is final: no approval, edit or second rejection revives it.
+  const current = f.app.requirements.get(dropped.id);
+  for (const attempt of [
+    () => f.app.requirements.approve(dropped.id, current.version ?? 1),
+    () => f.app.requirements.update(dropped.id, { text: "Invoices" }, current.version ?? 1),
+    () => f.app.requirements.reject(dropped.id, "Again", current.version ?? 1),
+  ])
+    expect(attempt).toThrow(expect.objectContaining({ code: "PRECONDITION_FAILED" }));
+  expect(f.app.requirements.approve(kept.id, kept.version).approval).not.toBeNull();
+});

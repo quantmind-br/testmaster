@@ -305,6 +305,8 @@ const ProposalBatchRecord = P.Obj({
   extensions: Type.Optional(
     P.Obj({
       "testmaster:requirementVersion": Type.Optional(P.Nonnegative),
+      /** Content hash of each requirement when the batch was made; a later difference marks a proposal stale. */
+      "testmaster:requirementHashes": Type.Optional(Type.Record(P.id("req"), P.ContentDigest)),
       "testmaster:modelCallId": Type.Optional(P.id("mdl")),
       /** Requirements the model declined because no HTTP or browser plan can observe them. */
       "testmaster:unsupportedRequirements": Type.Optional(

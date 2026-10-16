@@ -49,11 +49,17 @@
       },
       "description": "Restrict the plan to these requirements"
     },
+    "provider": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string",
+      "description": "Model provider id for plan generation; absent: first allowed provider"
+    },
     "model": {
       "minLength": 1,
       "maxLength": 200,
       "type": "string",
-      "description": "Model id from the project's profiles"
+      "description": "Model id from the project's profiles; absent: the provider's first capable model"
     },
     "partialGeneration": {
       "type": "boolean",

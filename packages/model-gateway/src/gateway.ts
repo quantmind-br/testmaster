@@ -131,6 +131,11 @@ export class ModelGateway {
     const reasoningEffort = input.reasoningEffort ?? declared.reasoningEffort;
     if (reasoningEffort !== undefined && !reasoningEfforts.includes(reasoningEffort))
       throw new ContractError("INVALID_ARGUMENT", "Invalid reasoning effort");
+    if (input.callerValidatesSchema && (!input.responseSchema || !input.check))
+      throw new ContractError(
+        "INTERNAL",
+        "callerValidatesSchema needs a responseSchema and a check that validates it",
+      );
     const required = new Set(input.requiredCapabilities ?? []);
     if (input.responseSchema) required.add("structuredJson");
     if (input.tools?.length) required.add("toolCalls");
@@ -466,11 +471,14 @@ export class ModelGateway {
               : null;
           if (typeof message.content === "string") {
             const content = scrubText(message.content, secrets).text;
-            result.output = (
-              input.responseSchema
-                ? validate<T>(input.responseSchema, parseStrictJson(content))
-                : content
-            ) as T;
+            const schema = input.responseSchema;
+            if (!schema) result.output = content as T;
+            else {
+              const parsed = parseStrictJson(content);
+              result.output = (
+                input.callerValidatesSchema ? parsed : validate<T>(schema, parsed)
+              ) as T;
+            }
             if (input.check) {
               try {
                 await input.check(result.output);

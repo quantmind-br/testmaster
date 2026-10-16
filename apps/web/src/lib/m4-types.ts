@@ -256,6 +256,7 @@ export interface RequirementReview {
     originKind: string;
     confidence: number | null;
     approval: string | null;
+    rejection: { reason: string; actorId: string; rejectedAt: string } | null;
     reason: string | null;
     origins: Origin[];
     conflictIds: string[];

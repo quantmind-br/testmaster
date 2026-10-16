@@ -157,6 +157,120 @@ export function metadataDifferences(
     return semanticHash(a) === semanticHash(b) ? [] : [{ field, left: a, right: b }];
   });
 }
+type StepRecord = Record<string, unknown>;
+/** One side of a comparison, reduced to what can be compared across runners. */
+export interface ComparedSide {
+  runner: unknown;
+  /** Where the step ids come from: the frozen plan, or the Playwright reporter for imported code. */
+  stepKind: "plan" | "code";
+  /** The plan's statusIn assertion ids; null when the revision has no plan. */
+  statusAssertionIds: ReadonlySet<string> | null;
+  steps: readonly StepRecord[];
+}
+const isHttpStatus = (value: unknown): value is number =>
+  typeof value === "number" && Number.isInteger(value) && value >= 100 && value <= 599;
+/** The statusIn assertion ids of a plan, frames included. */
+export function statusAssertionIds(
+  plan: { steps?: StepRecord[] } | null,
+): ReadonlySet<string> | null {
+  if (!plan) return null;
+  const ids = new Set<string>();
+  const visit = (steps: StepRecord[]) => {
+    for (const step of steps) {
+      if ((step.expectation as { predicate?: string } | undefined)?.predicate === "statusIn")
+        ids.add(String(step.id));
+      const input = step.input as { childSteps?: StepRecord[] } | undefined;
+      if (step.operation === "frame" && Array.isArray(input?.childSteps)) visit(input.childSteps);
+    }
+  };
+  visit(plan.steps ?? []);
+  return ids;
+}
+function stepSummary(step: StepRecord | undefined) {
+  if (!step) return null;
+  const error = step.error as { message?: string } | null | undefined;
+  return {
+    stepId: step.planStepId ?? null,
+    status: step.status ?? null,
+    reasonCode: step.reasonCode ?? null,
+    expected: step.expected ?? null,
+    observed: step.observed ?? null,
+    error: typeof error?.message === "string" ? error.message : null,
+  };
+}
+/** The step a failed Run is about: the first failed one that carries details, else the first failed. */
+function failingStep(steps: readonly StepRecord[]): StepRecord | undefined {
+  const failed = steps.filter((step) => step.status === "failed");
+  return (
+    failed.find((step) => step.error || step.expected != null || step.observed != null) ?? failed[0]
+  );
+}
+/** Every HTTP status a side's steps compared: the expected set and the status that was observed. */
+function comparedStatuses(side: ComparedSide) {
+  return side.steps.flatMap((step) => {
+    const id = String(step.planStepId);
+    const expected = Array.isArray(step.expected) ? step.expected : [step.expected];
+    if (
+      !isHttpStatus(step.observed) ||
+      !expected.length ||
+      !expected.every(isHttpStatus) ||
+      (side.statusAssertionIds && !side.statusAssertionIds.has(id))
+    )
+      return [];
+    return [{ stepId: id, expected, observed: step.observed, status: step.status ?? null }];
+  });
+}
+function describeSteps(side: ComparedSide) {
+  const byStatus: Record<string, number> = {};
+  for (const step of side.steps) {
+    const status = String(step.status);
+    byStatus[status] = (byStatus[status] ?? 0) + 1;
+  }
+  return {
+    runner: side.runner,
+    stepSource:
+      side.stepKind === "plan"
+        ? "frozen plan step ids"
+        : "Playwright reporter ordinals (imported-test-N, imported-step-N); they name no plan step",
+    stepCount: side.steps.length,
+    byStatus,
+    stepIds: side.steps.slice(0, 20).map((step) => step.planStepId ?? null),
+  };
+}
+/**
+ * Differences two Runs of one test can still be read for when their steps cannot be paired: a plan
+ * step and an imported-code step share no identity, so the steps themselves are listed per side
+ * (`stepComparison`) and what both sides do state (the failing step with its expected and observed
+ * values, the HTTP statuses compared, steps that do share an id) is compared directly.
+ */
+export function crossRunnerDifferences(
+  left: ComparedSide,
+  right: ComparedSide,
+): ComparisonResult["differences"] {
+  const differences: ComparisonResult["differences"] = [
+    { field: "stepComparison", left: describeSteps(left), right: describeSteps(right) },
+  ];
+  const failing = [stepSummary(failingStep(left.steps)), stepSummary(failingStep(right.steps))];
+  if (semanticHash(failing[0]) !== semanticHash(failing[1]))
+    differences.push({ field: "failingStep", left: failing[0], right: failing[1] });
+  const statuses = [comparedStatuses(left), comparedStatuses(right)];
+  if (semanticHash(statuses[0]) !== semanticHash(statuses[1]))
+    differences.push({ field: "statusCodes", left: statuses[0], right: statuses[1] });
+  const rightById = new Map(right.steps.map((step) => [String(step.planStepId), step]));
+  const paired = left.steps.flatMap((step) => {
+    const other = rightById.get(String(step.planStepId));
+    const a = stepSummary(step);
+    const b = stepSummary(other);
+    return other && semanticHash(a) !== semanticHash(b) ? [{ a, b }] : [];
+  });
+  if (paired.length)
+    differences.push({
+      field: "pairedSteps",
+      left: paired.map((entry) => entry.a),
+      right: paired.map((entry) => entry.b),
+    });
+  return differences;
+}
 export class ComparisonsService {
   constructor(
     readonly ctx: ServiceContext,
@@ -241,9 +355,28 @@ export class ComparisonsService {
     const r = metadata(right);
     const differences = metadataDifferences(l, r);
     const comparability = runComparability(left, right);
+    const side = (run: Run, compared: typeof l): ComparedSide => {
+      const plan = requireEntity(this.ctx, "TestRevision", run.revisionId).plan as {
+        steps?: Record<string, unknown>[];
+      } | null;
+      return {
+        runner: compared.runner,
+        stepKind: plan ? "plan" : "code",
+        statusAssertionIds: statusAssertionIds(plan),
+        steps: compared.steps,
+      };
+    };
+    const leftSide = side(left, l);
+    const rightSide = side(right, r);
     if (l.runner !== r.runner) {
       comparability.comparability = "incomparable";
       comparability.reasons.push("different-runner");
+    }
+    // A plan step and an imported-code step share no identity, whatever their runner: the steps
+    // cannot be diffed one by one, so the sides are compared on what both state.
+    if (l.runner !== r.runner || leftSide.stepKind !== rightSide.stepKind) {
+      comparability.reasons.push("step-diff-unavailable");
+      differences.unshift(...crossRunnerDifferences(leftSide, rightSide));
     }
     return comparisonPage(
       semanticHash({ leftRunId, rightRunId, l, r }),
