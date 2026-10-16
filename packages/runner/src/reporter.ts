@@ -5,6 +5,13 @@ import type {
   TestResult,
   TestStep,
 } from "@playwright/test/reporter";
+import {
+  FAILURE_ARTIFACT_EVENT,
+  FAILURE_WARNING_ATTACHMENT,
+  FAILURE_WARNING_CHARS,
+  failureKind,
+  vetAttachment,
+} from "./code-evidence.js";
 import { describeFailure, isAssertionFailure } from "./failure.js";
 
 /** A failure already reported on a step, and whether it was a failed assertion. */
@@ -59,6 +66,33 @@ export default class TestMasterReporter implements Reporter {
     this.tests.set(test, data);
     this.send("step.started", data);
   }
+  /**
+   * Forwards what the shim attached to a failed test about its page: the screenshot and DOM
+   * snapshot for the harness to record, and the reason when it could not capture. Anything else
+   * the test attached is the test's own and is not read, and an attachment that is not a plain
+   * body of the right type is refused with a warning, never read from a path.
+   */
+  private sendFailureEvidence(stepId: string, attachments: TestResult["attachments"]): void {
+    for (const attachment of attachments) {
+      if (attachment.name === FAILURE_WARNING_ATTACHMENT) {
+        if (Buffer.isBuffer(attachment.body))
+          this.send("log", {
+            level: "warn",
+            message: attachment.body.toString("utf8").slice(0, FAILURE_WARNING_CHARS),
+          });
+        continue;
+      }
+      const kind = failureKind(attachment.name);
+      if (!kind) continue;
+      const vetted = vetAttachment(kind, attachment);
+      if ("refused" in vetted)
+        this.send("log", {
+          level: "warn",
+          message: `Failure evidence refused: ${kind} ${vetted.refused}`,
+        });
+      else this.send(FAILURE_ARTIFACT_EVENT, { stepId, kind, data: vetted.data });
+    }
+  }
   onTestEnd(test: TestCase, result: TestResult): void {
     const data = this.tests.get(test);
     if (!data) throw new Error("unknown_imported_test");
@@ -71,6 +105,7 @@ export default class TestMasterReporter implements Reporter {
     // A test that failed with no error at all failed its expectation of failing.
     const assertion =
       first === undefined || (repeat ? recorded.assertion : isAssertionFailure(first));
+    if (!passed) this.sendFailureEvidence(data.stepId, result.attachments);
     this.send("step.finished", {
       ...data,
       ...(passed

@@ -238,6 +238,24 @@ it("M8 source add exits 5 with the diagnostics when the source ends invalid", as
   expect(text.stderr).toContain("unsupported_openapi: ");
 });
 
+it("test lint in text output names the path, message and rule of each plan issue", async () => {
+  const root = await emptyRoot();
+  const { requirementRefs: _dropped, ...plan } = scaffoldPlan("backend");
+  await writeFile(join(root, "plan.json"), JSON.stringify(plan));
+  const args = ["--cwd", root, "test", "lint", "--plan", "plan.json"];
+  const json = await invoke(args);
+  expect(json.exit).toBe(5);
+  expect(json.document.error?.details?.issues).toEqual([
+    { path: "", rule: "required", message: "must have required property 'requirementRefs'" },
+  ]);
+  process.exitCode = originalExitCode;
+  const text = await invoke(args, "--output=text");
+  expect(text.exit).toBe(5);
+  expect(text.stderr).toBe(
+    "INVALID_ARGUMENT: Invalid ExecutablePlan\n  /: must have required property 'requirementRefs' (required)\n",
+  );
+});
+
 it("m1 test export lists the format choices and names the --out rule when it refuses a destination", async () => {
   const { root, base } = await project();
   const help = await invoke([...base, "test", "export", "--help"]);

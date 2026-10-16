@@ -383,7 +383,11 @@ registered with `testmaster secret set`; generated code may use the secrets whos
 the environment's origins (the model sees their names and ids, never a value). A secret that has been
 removed blocks the Run with `missing_secret` before anything starts, and values never appear in logs or
 reports. When code fails, the report shows Playwright's message with the failing line, plus the expected and
-received values, and the analysis names the failing test instead of `unmapped`.
+received values, and the analysis names the failing test instead of `unmapped`. A failed test that used the
+`page` or `profilePage` fixture also leaves a screenshot and a DOM snapshot of its page in the run's evidence
+(`browser/code/imported-test-N-failure.png` and `.html`), protected like the declarative runner's: fields,
+images and every secret value are blacked out or removed. A passed test leaves none, and a capture that cannot
+be taken is a warning in the logs, never a change of verdict.
 
 An environment bound to an auth profile gives code its session only on request: destructure `profileRequest`
 (an authenticated `APIRequestContext`) or `profilePage` (a page with the profile's browser state) in the test

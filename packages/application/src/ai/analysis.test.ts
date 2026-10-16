@@ -2044,6 +2044,78 @@ it("a click that timed out on a locator matching nothing reports the locator and
   expect(analysis.diagnosis?.conclusion.status).toBe("cause_unknown");
 });
 
+const containedLocator = {
+  by: "role" as const,
+  role: "link",
+  name: "New session",
+  exact: true,
+  container: { by: "role" as const, role: "main" },
+};
+const locatorAssertionPlan = (
+  expectation: { predicate: "hidden" } | { predicate: "countEquals"; value: number },
+) => ({
+  ...persistencePlan,
+  type: "frontend" as const,
+  runner: "playwright" as const,
+  steps: [
+    {
+      id: "price",
+      kind: "assertion" as const,
+      operation: "assert" as const,
+      required: true,
+      description: "Locator expectation",
+      input: { locator: containedLocator },
+      expectation,
+    },
+  ],
+});
+
+it.each([
+  [{ predicate: "hidden" as const }, "No visible element matching locator"],
+  [{ predicate: "countEquals" as const, value: 2 }, "2 elements matching locator"],
+])(
+  "a failed %j locator assertion states its own expectation, not one element",
+  async (expectation, wanted) => {
+    const f = await fixture({
+      plan: locatorAssertionPlan(expectation),
+      step: { reasonCode: "assertion_mismatch", observed: null, expected: null },
+    });
+    const identity = { role: "link", name: "New session", tag: "a", type: "", attributes: {} };
+    const payload = {
+      schemaVersion: "1.0.0" as const,
+      stepId: "price",
+      phase: "after" as const,
+      frameOrigin: "http://localhost",
+      locator: containedLocator,
+      cardinality: 1,
+      candidates: [
+        { ...identity, fingerprint: locatorFingerprint(identity), matched: true, visible: true },
+      ],
+      truncated: false,
+      state: null,
+    };
+    await attachLocatorRecord(f, { ...payload, evidenceHash: semanticHash(payload) });
+    const analysis = await f.service.analyze(f.run.id);
+    const observation = analysis.diagnosis?.observation;
+    expect(observation?.expected).toContain(wanted);
+    expect(observation?.expected).not.toContain("One element matching");
+    expect(observation?.observed).toContain("1 element matched (1 visible)");
+  },
+);
+
+it("a failed locator step whose locator evidence was not recorded is evidence_unavailable, not a null value", async () => {
+  const f = await fixture({
+    plan: locatorAssertionPlan({ predicate: "hidden" }),
+    step: { reasonCode: "assertion_timeout", observed: null, expected: null },
+  });
+  const analysis = await f.service.analyze(f.run.id);
+  const diagnosis = analysis.diagnosis!;
+  expect(diagnosis.observation?.absence).toBe("evidence_unavailable");
+  expect(diagnosis.evidenceGaps.some((gap) => gap.includes("locator evidence"))).toBe(true);
+  const alternatives = diagnosis.alternatives.map((item) => item.text).join(" ");
+  expect(alternatives).not.toMatch(/response shape|requested entity/iu);
+});
+
 it("layered observations remain bounded and scrubbed while retaining immutable evidence references", async () => {
   vi.stubEnv("TESTMASTER_DIAGNOSIS_SECRET", "sentinel-private-value");
   try {

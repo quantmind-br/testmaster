@@ -373,15 +373,28 @@ export class Runtime {
     await this.application?.close();
   }
 }
-/** One line per diagnostic in an error's `details.diagnostics`, for the text output. */
+/**
+ * One line per entry of an error's `details.diagnostics` (`code: message`) and `details.issues`
+ * (`path: message (rule)`), for the text output: without them a refused document only says that
+ * it is invalid.
+ */
 function diagnosticLines(details: Record<string, unknown>): string[] {
-  const { diagnostics } = details;
-  if (!Array.isArray(diagnostics)) return [];
-  return diagnostics.flatMap((item: unknown) =>
-    typeof item === "object" && item !== null && "message" in item
-      ? [`${"code" in item ? `${String(item.code)}: ` : ""}${String(item.message)}`]
-      : [],
-  );
+  const entries = (value: unknown) =>
+    Array.isArray(value)
+      ? value.filter(
+          (item): item is Record<string, unknown> =>
+            typeof item === "object" && item !== null && "message" in item,
+        )
+      : [];
+  return [
+    ...entries(details.diagnostics).map(
+      (item) => `${"code" in item ? `${String(item.code)}: ` : ""}${String(item.message)}`,
+    ),
+    ...entries(details.issues).map(
+      (item) =>
+        `${String(item.path || "/")}: ${String(item.message)}${"rule" in item ? ` (${String(item.rule)})` : ""}`,
+    ),
+  ];
 }
 export function errorData(error: unknown): {
   code: ErrorCode;

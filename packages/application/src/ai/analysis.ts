@@ -1088,15 +1088,28 @@ function verifiedLocator(value: unknown): value is LocatorEvidence {
  * What a failed locator step saw on the page: how many elements the locator matched and which
  * visible controls the page offered instead. A missing element is a count of zero, not a null
  * value, so this replaces the empty expected/observed an action step records. Only identities the
- * runner already recorded (role, accessible name) are rendered, bounded and scrubbed.
+ * runner already recorded (role, accessible name) are rendered, bounded and scrubbed. The
+ * expectation follows the step's assertion predicate; any other step expects one element.
  */
+function locatorExpectation(
+  step: PlanStep,
+  target: string | null,
+  state: string | null | undefined,
+): string {
+  if (state != null) return `Element matching locator ${target} reaches state ${state}`;
+  const expectation = step.kind === "assertion" ? step.expectation : undefined;
+  if (expectation?.predicate === "hidden") return `No visible element matching locator ${target}`;
+  if (expectation?.predicate === "countEquals")
+    return `${expectation.value} element${expectation.value === 1 ? "" : "s"} matching locator ${target}`;
+  return `One element matching locator ${target}`;
+}
 function locatorObservation(
   locators: Evidence[],
-  stepId: string,
+  step: PlanStep,
   secrets: string[],
 ): { expected: string; observed: string; ref: AnalysisEvidenceRef } | null {
   const records = locators.filter(
-    (item) => verifiedLocator(item.value) && item.value.stepId === stepId,
+    (item) => verifiedLocator(item.value) && item.value.stepId === step.id,
   );
   const chosen =
     records.find((item) => (item.value as LocatorEvidence).phase === "after") ?? records[0];
@@ -1120,9 +1133,7 @@ function locatorObservation(
     ? `; visible ${sameRole.length ? `${wantedRole} ` : ""}candidates: ${listed.join(", ")}${pool.length > listed.length ? ` and ${pool.length - listed.length} more` : ""}`
     : "; no named visible candidates were recorded";
   return {
-    expected: record.state
-      ? `Element matching locator ${target} reaches state ${record.state.requested}`
-      : `One element matching locator ${target}`,
+    expected: locatorExpectation(step, target, record.state?.requested),
     observed: scrubEvidenceText(
       `${record.cardinality} element${record.cardinality === 1 ? "" : "s"} matched${record.cardinality ? ` (${matchedVisible} visible)` : ""} at the ${record.phase} phase${offered}${record.truncated ? "; the recorded candidate list is truncated" : ""}`,
       secrets,
@@ -1891,7 +1902,7 @@ export class AnalysisService {
     const locatorSeen = (() => {
       if (!failed || timedOut || codeThrown) return null;
       if (!failed.planStep || !("locator" in failed.planStep.input)) return null;
-      const seen = locatorObservation(collected.evidence, failed.step!.planStepId, secrets);
+      const seen = locatorObservation(collected.evidence, failed.planStep, secrets);
       if (!seen) return null;
       const { expected, observed } = failed.step!;
       return {
@@ -1903,13 +1914,27 @@ export class AnalysisService {
     const pointer = failed
       ? (missingJsonPointer(failed.step!, secrets) as { type?: string; length?: number } | null)
       : null;
+    // A browser locator step records no observed value; without its locator evidence the page's
+    // state is unknown, which is not a null response value.
+    const locatorUnrecorded =
+      !!failed?.planStep &&
+      "locator" in failed.planStep.input &&
+      !timedOut &&
+      !codeThrown &&
+      !locatorSeen &&
+      failed.step!.observed == null;
     let absence: NonNullable<Diagnosis["observation"]>["absence"] = null;
     if (pointer?.type === "array" && pointer.length === 0) absence = "empty_collection";
     else if (pointer?.type === "null") absence = "null_value";
     else if (pointer) absence = "missing_field";
     else if (Array.isArray(failed?.step?.observed) && failed.step.observed.length === 0)
       absence = "empty_collection";
-    else if (
+    else if (locatorUnrecorded) {
+      absence = "evidence_unavailable";
+      gaps.push(
+        `The locator evidence of step ${failed!.step!.planStepId} was not recorded, so what the page showed for its locator is unknown.`,
+      );
+    } else if (
       failed?.step?.observed === null &&
       !timedOut &&
       !failed.codeOperation &&

@@ -32,7 +32,7 @@ async function report(run: (reporter: TestMasterReporter) => void): Promise<Sent
 }
 const failedTest = (errors: unknown[], status = "failed") => ({
   test: { expectedStatus: "passed" },
-  result: { status, errors, duration: 12 },
+  result: { status, errors, duration: 12, attachments: [] },
 });
 
 it("reports a failed test's message, location, expected and observed values instead of an empty failure", async () => {
@@ -86,7 +86,7 @@ it("reports an error the test code threw as inconclusive with its message, not a
 it("keeps the verdict of the innermost failure on the steps around it", async () => {
   const thrown = { message: "Error: boom", location };
   const test = { expectedStatus: "passed" };
-  const result = { status: "failed", errors: [thrown], duration: 12 };
+  const result = { status: "failed", errors: [thrown], duration: 12, attachments: [] };
   const outer = { category: "test.step", error: thrown };
   const inner = { category: "test.step", parent: outer, error: thrown };
   const sent = await report((reporter) => {
@@ -173,7 +173,7 @@ it("reports a failed expect step with the same error mapping and a passed test w
 it("reports a failure once, on the innermost step, and not again on the test.step and the test around it", async () => {
   const error = { message: matcherMessage("200", "401"), location };
   const test = { expectedStatus: "passed" };
-  const result = { status: "failed", errors: [error], duration: 12 };
+  const result = { status: "failed", errors: [error], duration: 12, attachments: [] };
   const outer = { category: "test.step", error };
   const inner = { category: "expect", parent: outer, error };
   const sent = await report((reporter) => {
@@ -215,4 +215,95 @@ it("reports a failure once, on the innermost step, and not again on the test.ste
     stepId: "imported-step-1",
     error: { message: expect.stringContaining("boom") },
   });
+});
+
+const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
+const screenshot = (extra: object = {}) => ({
+  name: "testmaster-failure-screenshot",
+  contentType: "image/png",
+  body: PNG,
+  ...extra,
+});
+const dom = {
+  name: "testmaster-failure-dom",
+  contentType: "text/html",
+  body: Buffer.from("<p>x</p>"),
+};
+const withAttachments = (status: string, attachments: unknown[]) => {
+  const { test, result } = failedTest([{ message: "Error: boom", location }], status);
+  return { test, result: { ...result, attachments } };
+};
+
+it("forwards the page evidence of a failed test before the step that cites it, and nothing for a passed test", async () => {
+  const failed = withAttachments("failed", [screenshot(), dom]);
+  const sent = await report((reporter) => {
+    reporter.onTestBegin(failed.test as never);
+    reporter.onTestEnd(failed.test as never, failed.result as never);
+  });
+  expect(sent.map((message) => message.type)).toEqual([
+    "step.started",
+    "failure.artifact",
+    "failure.artifact",
+    "step.finished",
+  ]);
+  expect(sent[1]?.payload).toEqual({
+    stepId: "imported-test-0",
+    kind: "screenshot",
+    data: PNG.toString("base64"),
+  });
+  expect(sent[2]?.payload).toMatchObject({ stepId: "imported-test-0", kind: "dom" });
+  // A test that passed (or was skipped) never leaves page evidence, whatever it attached.
+  const passed = withAttachments("passed", [screenshot(), dom]);
+  const quiet = await report((reporter) => {
+    reporter.onTestBegin(passed.test as never);
+    reporter.onTestEnd(passed.test as never, passed.result as never);
+  });
+  expect(quiet.map((message) => message.type)).toEqual(["step.started", "step.finished"]);
+});
+
+it("refuses an evidence attachment that points at a file or is not what its name says, with a warning and no artifact", async () => {
+  const failed = withAttachments("failed", [
+    screenshot({ body: undefined, path: "../../etc/passwd" }),
+    screenshot({ body: Buffer.from("not a png") }),
+    { ...dom, contentType: "application/octet-stream" },
+    { name: "other-attachment", contentType: "text/plain", body: Buffer.from("x") },
+  ]);
+  const sent = await report((reporter) => {
+    reporter.onTestBegin(failed.test as never);
+    reporter.onTestEnd(failed.test as never, failed.result as never);
+  });
+  expect(sent.map((message) => message.type)).toEqual([
+    "step.started",
+    "log",
+    "log",
+    "log",
+    "step.finished",
+  ]);
+  expect(sent.slice(1, 4).map((message) => message.payload.level)).toEqual([
+    "warn",
+    "warn",
+    "warn",
+  ]);
+  expect(JSON.stringify(sent)).not.toContain("etc/passwd");
+  // The verdict is the test's own.
+  expect(sent[4]?.payload).toMatchObject({ status: "inconclusive" });
+});
+
+it("turns the shim's capture warning into a warn log without changing the verdict", async () => {
+  const failed = withAttachments("failed", [
+    {
+      name: "testmaster-failure-warning",
+      contentType: "text/plain",
+      body: Buffer.from("Page evidence of the failed test is unavailable: closed"),
+    },
+  ]);
+  const sent = await report((reporter) => {
+    reporter.onTestBegin(failed.test as never);
+    reporter.onTestEnd(failed.test as never, failed.result as never);
+  });
+  expect(sent[1]).toEqual({
+    type: "log",
+    payload: { level: "warn", message: "Page evidence of the failed test is unavailable: closed" },
+  });
+  expect(sent[2]?.payload).toMatchObject({ status: "inconclusive" });
 });

@@ -20,6 +20,17 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 - The REST routes that run a model (proposal generation and refinement, `POST /runs/{id}/analysis`, `POST /runs/{id}/healing-proposals`, requirement normalization) and `POST /mcp` turn off the server's 30 s socket idle timeout for their connection; other routes keep it (`ServerOptions.connectionTimeoutMs`).
 - The eval runner never kills a model command; its trial wall time only stops commands that do no model work and keeps later commands from starting. The development smoke forwarder relays model calls without a timeout.
 
+### Ninth Omnigent agent run
+
+Found when an omp agent drove the pipeline on Omnigent a ninth time (5/5 plan tests passed twice as a suite after one locator fix; 4/5 generated Playwright tests passed first time).
+
+- A browser `hidden` assertion, a `countEquals 0` assertion and a `waitFor` with state `hidden` or `detached` on a target scoped to a container that is not on the page now pass at once: an absent container means an absent target, as in Playwright's chained `toBeHidden()`. Before, the runner waited for the container until the step deadline and failed with `assertion_timeout`. A container that matches several elements still fails as ambiguous, and every other step still waits for its container. The runner image is rebuilt.
+- Locator evidence (`browser/steps/<step>-locator-N-<phase>.json`) is recorded when the container is absent, with `cardinality: 0` and the page's candidates, instead of being dropped. The rules analysis states a hidden or counted expectation for `hidden` and `countEquals` steps, and reports a locator step without locator evidence as `evidence_unavailable` (with an evidence gap) instead of a null value with response-shape alternatives.
+- `http/<stepId>.json` records `request.credentials`: each credential the first hop sent, by header, with its source and a non-secret reference (the `secretRef` id, the `variableRef`, or the auth profile's cookie and header names), never a value. The field is absent when the request sent no credential, so a negative test with a forged session cookie stored as a secret now proves what it sent.
+- A failed Playwright code test records a masked screenshot and a redacted DOM snapshot of its page (`browser/code/<test step>-failure.png` and `.html`, kinds `screenshot` and `dom`), with the masking, redaction, scrub and byte limits of declarative browser steps; the harness builds the paths itself, refuses malformed attachments with a warning, and a capture failure never changes the verdict. Exported projects capture nothing.
+- The `testmaster_propose_healing` description states that healing proposes locator-only changes to declarative plans and that `healing_not_indicated` and `code_revision` are `PRECONDITION_FAILED` refusals made before any model call.
+- A refused document in text output lists each validation issue under the error as `<path>: <message> (<rule>)`, so `test lint` names what is wrong instead of only `INVALID_ARGUMENT: Invalid ExecutablePlan`.
+
 ### Eighth Omnigent agent run
 
 Found when an omp agent drove the pipeline on Omnigent an eighth time (6/6 plan tests and 6/6 generated Playwright tests passed, both suites 12/12 twice; a stale-locator drill was diagnosed, healed and verified).

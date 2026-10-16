@@ -27,6 +27,13 @@ import {
 import { authorizeUrl, canonicalUrl, HttpEngine, readAuthorizedArtifact } from "./http.js";
 import { type ObservedPage, observePage } from "./observation.js";
 import {
+  ARTIFACT_BYTES,
+  DOM_BYTES,
+  pageMarkup,
+  redactMarkup,
+  screenshotPage,
+} from "./page-evidence.js";
+import {
   abortVerdict,
   type RunnerResult,
   type Runtime,
@@ -44,8 +51,6 @@ interface DownloadOutput {
 const SETTLE_INTERVAL_MS = 500;
 const SETTLE_LIMIT_MS = 5_000;
 const LOG_BYTES = 1024 * 1024;
-const DOM_BYTES = 1024 * 1024;
-const ARTIFACT_BYTES = 64 * 1024 * 1024;
 
 /**
  * Expected URL of a `urlEquals` assertion as a full href. A relative value ("/dashboard") resolves
@@ -248,14 +253,17 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
     const url = frame.url();
     if (url !== "about:blank") authorizeUrl(runtime, url);
   }
-  async function unique(locator: Locator, timeout: number): Promise<Locator> {
-    const initialCount = await locator.count();
-    if (initialCount > 1)
+  async function rejectAmbiguous(locator: Locator): Promise<void> {
+    const count = await locator.count();
+    if (count > 1)
       throw new RuntimeError(
         "assertion_mismatch",
-        `Locator is ambiguous; matched ${initialCount}`,
+        `Locator is ambiguous; matched ${count}`,
         "failed",
       );
+  }
+  async function unique(locator: Locator, timeout: number): Promise<Locator> {
+    await rejectAmbiguous(locator);
     try {
       await locator.waitFor({ state: "attached", timeout });
     } catch (error) {
@@ -296,14 +304,27 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       await handle?.dispose();
     }
   }
+  // "wait": a container must attach (within `timeout`) and be unique before the target resolves
+  // inside it. "lazy": a container is only chained, so an absent container leaves the target
+  // with zero matches while an ambiguous container still fails. Absence paths and locator
+  // evidence use "lazy"; a frame always has to exist.
+  type ContainerMode = "wait" | "lazy";
   async function locate(
     spec: LocatorSpec,
     timeout: number,
     base: Scope | Locator = scope,
+    containers: ContainerMode = "wait",
   ): Promise<Locator> {
     let root: Scope | Locator = spec.pageAlias === undefined ? base : pageFor(spec.pageAlias);
     if (spec.frame) root = await frameFrom(await locate(spec.frame, timeout, root), timeout);
-    if (spec.container) root = await unique(await locate(spec.container, timeout, root), timeout);
+    if (spec.container) {
+      const container = await locate(spec.container, timeout, root, containers);
+      if (containers === "wait") root = await unique(container, timeout);
+      else {
+        await rejectAmbiguous(container);
+        root = container;
+      }
+    }
     switch (spec.by) {
       case "testId": {
         const attributes = runtime.input.browser?.testIdAttributes ?? ["data-testid"];
@@ -435,7 +456,10 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
     }
     if (!("locator" in input))
       throw new RuntimeError("security_precondition_failed", "UI assertion requires a locator");
-    const locator = await locate(input.locator, timeout);
+    const assertsAbsence =
+      expectation.predicate === "hidden" ||
+      (expectation.predicate === "countEquals" && expectation.value === 0);
+    const locator = await locate(input.locator, timeout, scope, assertsAbsence ? "lazy" : "wait");
     if (expectation.predicate === "countEquals") {
       const count = await locator.count();
       if (count !== expectation.value)
@@ -785,9 +809,15 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       case "waitFor": {
         const waitTimeout = deadline(step, step.input.deadlineMs);
         if ("locator" in step.input) {
-          const locator = await locate(step.input.locator, waitTimeout);
-          if (step.input.state === "attached" || step.input.state === "visible")
-            await unique(locator, waitTimeout);
+          const waitsForAttachment =
+            step.input.state === "attached" || step.input.state === "visible";
+          const locator = await locate(
+            step.input.locator,
+            waitTimeout,
+            scope,
+            waitsForAttachment ? "wait" : "lazy",
+          );
+          if (waitsForAttachment) await unique(locator, waitTimeout);
           else if ((await locator.count()) > 1)
             throw new RuntimeError("assertion_mismatch", "Wait locator is ambiguous", "failed");
           const state = step.input.state;
@@ -856,7 +886,7 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
     observationComplete = true,
   ): Promise<void> {
     try {
-      const selected = await locate(spec, 100);
+      const selected = await locate(spec, 100, scope, "lazy");
       const observed = await selected.evaluateAll(
         (matches, testIdAttributes) => {
           const doc = matches[0]?.ownerDocument ?? document;
@@ -1072,23 +1102,7 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
   async function evidence(step: PlanStep, phase: "before" | "after"): Promise<void> {
     if (page.isClosed()) return;
     try {
-      const masks: Locator[] = [];
-      for (const frame of page.frames()) {
-        masks.push(
-          frame.locator(
-            "input, textarea, [data-sensitive], [autocomplete*=password], canvas, img, video, iframe",
-          ),
-        );
-        for (const secret of runtime.secrets)
-          if (secret) masks.push(frame.getByText(secret, { exact: false }));
-      }
-      const png = await page.screenshot({
-        type: "png",
-        timeout: Math.min(deadline(step), 5000),
-        animations: "disabled",
-        mask: masks,
-        maskColor: "#000000",
-      });
+      const png = await screenshotPage(page, runtime.secrets, Math.min(deadline(step), 5000));
       if (png.byteLength > ARTIFACT_BYTES)
         throw new RuntimeError("artifact_limit_exceeded", "Screenshot byte limit", "inconclusive");
       await runtime.artifact(
@@ -1097,36 +1111,9 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
         "image/png",
         png,
       );
-      const snapshots: string[] = [];
-      for (const frame of page.frames()) {
-        const html = await frame.evaluate(() => {
-          const clone = document.documentElement.cloneNode(true) as HTMLElement;
-          for (const node of clone.querySelectorAll(
-            "input, textarea, [data-sensitive], script, style, noscript, meta",
-          )) {
-            node.removeAttribute("value");
-            node.textContent = "[REDACTED]";
-            if (["SCRIPT", "STYLE", "NOSCRIPT", "META"].includes(node.tagName)) node.remove();
-          }
-          for (const node of clone.querySelectorAll("*"))
-            for (const attribute of Array.from(node.attributes)) {
-              if (/token|secret|password|authorization|cookie|^on/i.test(attribute.name))
-                node.removeAttribute(attribute.name);
-            }
-          return clone.outerHTML;
-        });
-        let redacted = runtime.scrub(html);
-        for (const secret of runtime.secrets)
-          if (secret) {
-            const escaped = secret
-              .replaceAll("&", "&amp;")
-              .replaceAll("<", "&lt;")
-              .replaceAll(">", "&gt;")
-              .replaceAll('"', "&quot;");
-            redacted = redacted.split(escaped).join("[REDACTED]");
-          }
-        snapshots.push(redacted);
-      }
+      const snapshots = (await pageMarkup(page)).map((markup) =>
+        redactMarkup(runtime.scrub(markup), runtime.secrets),
+      );
       const dom = Buffer.from(snapshots.join("\n"));
       if (dom.byteLength > DOM_BYTES) {
         await runtime.emit("log", {
@@ -1315,7 +1302,7 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
     const sample = async () => {
       if (selected.operation !== "waitFor" || !("locator" in selected.input)) return;
       try {
-        const locator = await locate(selected.input.locator, 100);
+        const locator = await locate(selected.input.locator, 100, scope, "lazy");
         const state = await locator.evaluateAll((nodes) => ({
           cardinality: nodes.length,
           attached: nodes.length > 0,

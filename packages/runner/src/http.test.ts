@@ -1963,3 +1963,108 @@ it("auth profile blocks before sending when there is no session, nothing for the
   ).rejects.toMatchObject({ reasonCode: "security_precondition_failed" });
   expect(hits).toBe(0);
 });
+
+function requestEvidence(
+  artifacts: Map<string, Uint8Array>,
+  stepId: string,
+): { request: Record<string, unknown> } {
+  const bytes = artifacts.get(`http/${stepId}.json`);
+  if (!bytes) throw new Error(`Missing evidence: ${stepId}`);
+  return JSON.parse(new TextDecoder().decode(bytes)) as { request: Record<string, unknown> };
+}
+
+it("records which credentials a request sent by header, source and reference, without any value", async () => {
+  const base = await serve((_req, res) => res.end("{}"));
+  const { engine, artifacts } = fixture(
+    base,
+    {
+      secrets: [{ secretRef: SECRET_REF, secretVersion: 1 }],
+      variables: {
+        token: { value: "Bearer variable-canary-token", sensitive: true },
+        trace: { value: "trace-123", sensitive: false },
+      },
+    },
+    { [SECRET_REF]: "cookie-canary-secret" },
+  );
+  await engine.perform(
+    requestStep("sent", ["me"], {
+      headers: {
+        Cookie: { secretRef: SECRET_REF },
+        Authorization: { variableRef: "token" },
+        "X-Trace": { variableRef: "trace" },
+        "X-Api-Key": { invalidCredential: {} },
+      },
+    }),
+  );
+  await engine.perform(
+    requestStep("plain", ["me"], { headers: { "X-Trace": { variableRef: "trace" } } }),
+  );
+  const sent = requestEvidence(artifacts, "sent");
+  // A forged credential stays in `invalidCredentials`; a plain variable is a binding only.
+  expect(sent.request.credentials).toEqual([
+    { header: "cookie", source: "secret", secretRef: SECRET_REF },
+    { header: "authorization", source: "variable", variableRef: "token" },
+  ]);
+  expect(sent.request.invalidCredentials).toEqual([{ header: "x-api-key" }]);
+  for (const value of ["cookie-canary-secret", "variable-canary-token"])
+    expect(JSON.stringify(sent)).not.toContain(value);
+  expect(requestEvidence(artifacts, "plain").request).not.toHaveProperty("credentials");
+});
+
+it("records the auth profile cookie names and header names a request sent, never their values", async () => {
+  const base = await serve((_req, res) => res.end("{}"));
+  const { engine, artifacts } = profileFixture(base, {
+    auth: {
+      storageState: { secretRef: STATE_REF },
+      credentials: [{ header: "X-Session-Token", secretRef: TOKEN_REF, prefix: "Bearer " }],
+    },
+  });
+  await engine.perform(requestStep("api", ["api", "me"], { auth: "profile" }));
+  await engine.perform(requestStep("root", [], { auth: "profile" }));
+  await engine.perform(requestStep("anonymous", ["api", "me"]));
+  const api = requestEvidence(artifacts, "api");
+  // The `/api` cookie only goes to `/api`, so the same profile sends other cookies to `/`.
+  expect(api.request.credentials).toEqual([
+    { header: "x-session-token", source: "authProfile" },
+    { header: "cookie", source: "authProfile", cookies: ["sid", "wide"] },
+  ]);
+  expect(requestEvidence(artifacts, "root").request.credentials).toEqual([
+    { header: "x-session-token", source: "authProfile" },
+    { header: "cookie", source: "authProfile", cookies: ["wide"] },
+  ]);
+  for (const step of ["api", "root"])
+    for (const value of ["sid-canary-value", "wide-canary-value", "token-canary-value"])
+      expect(JSON.stringify(requestEvidence(artifacts, step))).not.toContain(value);
+  expect(requestEvidence(artifacts, "anonymous").request).not.toHaveProperty("credentials");
+});
+
+it("records the credentials of the first hop only when a redirect drops them", async () => {
+  let observed: IncomingMessage["headers"] = {};
+  const destination = await serve((req, res) => {
+    observed = req.headers;
+    res.end("ok");
+  });
+  const base = await serve((_req, res) => {
+    res.writeHead(302, { location: `${destination}/target` });
+    res.end();
+  });
+  const { engine, artifacts } = fixture(
+    base,
+    {
+      networkPolicy: {
+        allowedOrigins: [base, destination],
+        additionalOrigins: [destination],
+        networkProfile: "local-loopback",
+      },
+      secrets: [{ secretRef: SECRET_REF, secretVersion: 1 }],
+    },
+    { [SECRET_REF]: "bearer-canary-secret" },
+  );
+  await engine.perform(
+    requestStep("redirected", [], { headers: { Authorization: { secretRef: SECRET_REF } } }),
+  );
+  expect(observed.authorization).toBeUndefined();
+  expect(requestEvidence(artifacts, "redirected").request.credentials).toEqual([
+    { header: "authorization", source: "secret", secretRef: SECRET_REF },
+  ]);
+});

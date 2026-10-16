@@ -20,6 +20,9 @@ export interface PlaywrightFixturesOptions {
    * - `sessionFor(fixture, baseURL)`: `{ storageState?, headers, origins }` of the auth profile
    *   session (`headers` keyed by lowercase name, `origins` the only origins it is sent to), or
    *   throw when there is none.
+   * It MAY define `capturePageFailure(page, testInfo)`, which the `page` and `profilePage`
+   * fixtures call once a test that used them has failed, while the page is still open. Without
+   * it (an exported project run outside TestMaster) nothing is captured.
    */
   preamble: string;
 }
@@ -37,6 +40,15 @@ export function playwrightFixturesCommonjs(options: PlaywrightFixturesOptions): 
   return `"use strict";
 const base = require(${JSON.stringify(options.realModule)});
 ${options.preamble}
+const afterPageFailure = typeof capturePageFailure === "function" ? capturePageFailure : undefined;
+async function capturePageOfFailedTest(page, testInfo) {
+  if (!afterPageFailure || testInfo.status === testInfo.expectedStatus || testInfo.status === "skipped") return;
+  try {
+    await afterPageFailure(page, testInfo);
+  } catch {
+    // Evidence is a courtesy: it never changes what the test proved.
+  }
+}
 const secrets = Object.freeze({
   get(name) {
     return secretValue(name);
@@ -67,17 +79,28 @@ const extended = base.extend({
   secrets: async ({}, use) => {
     await use(secrets);
   },
+  // Only the runner's preamble captures failures; an exported project keeps the stock page.
+  ...(afterPageFailure
+    ? {
+        page: async ({ page }, use, testInfo) => {
+          await use(page);
+          await capturePageOfFailedTest(page, testInfo);
+        },
+      }
+    : {}),
   profileRequest: async ({ playwright, baseURL }, use) => {
     const session = sessionFor("profileRequest", baseURL);
     const context = await playwright.request.newContext(session.storageState ? { storageState: session.storageState } : {});
     await use(withProfileHeaders(context, session, baseURL));
     await context.dispose();
   },
-  profilePage: async ({ browser, baseURL }, use) => {
+  profilePage: async ({ browser, baseURL }, use, testInfo) => {
     const session = sessionFor("profilePage", baseURL);
     if (!session.storageState) throw new Error("The profilePage fixture needs a browser session, and this auth profile only has header credentials");
     const context = await browser.newContext({ storageState: session.storageState });
-    await use(await context.newPage());
+    const page = await context.newPage();
+    await use(page);
+    await capturePageOfFailedTest(page, testInfo);
     await context.close();
   },
   sourceSchemas: async ({}, use) => {

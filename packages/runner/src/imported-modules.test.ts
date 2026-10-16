@@ -8,7 +8,12 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { type ContractError, validateAgainstSchema } from "@testmaster/contracts";
 import { afterEach, expect, it } from "vitest";
-import { CODE_PROFILE_ENV, CODE_SECRETS_ENV, stageImportedModules } from "./imported-modules.js";
+import {
+  CODE_PROFILE_ENV,
+  CODE_REDACTIONS_ENV,
+  CODE_SECRETS_ENV,
+  stageImportedModules,
+} from "./imported-modules.js";
 
 const run = promisify(execFile);
 const runnerModules = fileURLToPath(new URL("../node_modules", import.meta.url));
@@ -23,16 +28,10 @@ afterEach(async () => {
 });
 
 /**
- * Stages the shim and runs the real Playwright CLI over `spec`; no browser is needed. `esm` makes
- * the staged root a `"type": "module"` package, as an exported project is.
+ * Stages the shim beside `spec` in a temporary project. `esm` makes the staged root a
+ * `"type": "module"` package, as an exported project is.
  */
-async function playwright(
-  spec: string,
-  secrets: Record<string, string>,
-  esm = false,
-  env: Record<string, string> = {},
-  schemas: Record<string, unknown> = {},
-) {
+async function stage(spec: string, esm: boolean, schemas: Record<string, unknown>) {
   const root = await mkdtemp(join(tmpdir(), "tm-imported-modules-"));
   roots.push(root);
   await mkdir(join(root, "node_modules"), { recursive: true });
@@ -45,6 +44,18 @@ async function playwright(
       : "module.exports = { testDir: '.', workers: 1 };",
   );
   await writeFile(join(root, "code.spec.ts"), spec);
+  return root;
+}
+
+/** Runs the real Playwright CLI over `spec`; no browser is needed. */
+async function playwright(
+  spec: string,
+  secrets: Record<string, string>,
+  esm = false,
+  env: Record<string, string> = {},
+  schemas: Record<string, unknown> = {},
+) {
+  const root = await stage(spec, esm, schemas);
   return await run(
     process.execPath,
     [join(runnerModules, "@playwright/test/cli.js"), "test", "--reporter=json"],
@@ -234,3 +245,96 @@ it("fails a test that names a schema it was not given, or a schema that cannot b
     'Source schema \\"svr_bad/x\\" cannot be used for validation',
   );
 }, 60_000);
+
+interface ReportedTest {
+  title: string;
+  status: string;
+  attachments: { name: string; contentType: string; path?: string; body?: string }[];
+}
+/**
+ * Runs `spec` in a real Chromium through the staged shim and reports, per test, its status and the
+ * attachments Playwright's reporters receive (TestMaster's reporter reads exactly these).
+ */
+async function reportedTests(spec: string, redactions: string[]): Promise<ReportedTest[]> {
+  const root = await stage(spec, false, {});
+  await writeFile(
+    join(root, "attachments-reporter.cjs"),
+    `module.exports = class { onTestEnd(test, result) { process.stdout.write(JSON.stringify({ title: test.title, status: result.status, attachments: result.attachments.map((a) => ({ name: a.name, contentType: a.contentType, path: a.path, body: a.body && a.body.toString("base64") })) }) + "\\n"); } };`,
+  );
+  const finish = (stdout: string) =>
+    stdout
+      .split("\n")
+      .filter((line) => line.startsWith("{"))
+      .map((line) => JSON.parse(line) as ReportedTest);
+  return await run(
+    process.execPath,
+    [
+      join(runnerModules, "@playwright/test/cli.js"),
+      "test",
+      "--reporter=./attachments-reporter.cjs",
+    ],
+    {
+      cwd: root,
+      env: {
+        ...process.env,
+        [CODE_SECRETS_ENV]: "{}",
+        [CODE_REDACTIONS_ENV]: JSON.stringify(redactions),
+      },
+    },
+  ).then(
+    ({ stdout }) => finish(stdout),
+    (error: { stdout: string }) => finish(error.stdout),
+  );
+}
+const attachment = (test: ReportedTest | undefined, name: string) =>
+  test?.attachments.find((entry) => entry.name === name);
+const SHOWN_SECRET = "canary-session-value";
+const pageSpec = (text: string) =>
+  `import { test, expect } from '@playwright/test';\n` +
+  `const markup = ${JSON.stringify(
+    `<form><input type="password" value="typed-password"></form><p style="font: 16px monospace">${text}</p><a href="/next" data-token="attr-token">next</a><script>window.leak = 'script-body'</script>`,
+  )};\n` +
+  `test('fails on its page', async ({ page }) => { await page.setContent(markup); expect(1).toBe(2); });\n` +
+  `test('passes on its page', async ({ page }) => { await page.setContent(markup); });\n` +
+  `test('fails after closing its page', async ({ page }) => { await page.setContent(markup); await page.close(); expect(1).toBe(2); });\n` +
+  `test('fails without a page', async () => { expect(1).toBe(2); });\n`;
+
+it("attaches a masked screenshot and a redacted DOM of the page of a failed test, and nothing for a test that passed or had no open page", async () => {
+  const tests = await reportedTests(pageSpec(SHOWN_SECRET), [SHOWN_SECRET]);
+  const byTitle = (title: string) => tests.find((entry) => entry.title === title);
+  const failed = byTitle("fails on its page");
+  // The failure is the test's own: capturing the page changed neither status.
+  expect(tests.map((entry) => entry.status)).toEqual(["failed", "passed", "failed", "failed"]);
+  const shot = attachment(failed, "testmaster-failure-screenshot");
+  expect(shot).toMatchObject({ contentType: "image/png" });
+  expect(shot?.path).toBeUndefined();
+  expect(Buffer.from(shot?.body ?? "", "base64").subarray(0, 8)).toEqual(
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  );
+  const markup = attachment(failed, "testmaster-failure-dom");
+  expect(markup).toMatchObject({ contentType: "text/html" });
+  const html = Buffer.from(markup?.body ?? "", "base64").toString("utf8");
+  expect(html).toContain('href="/next"');
+  for (const leaked of [SHOWN_SECRET, "typed-password", "attr-token", "script-body"])
+    expect(html).not.toContain(leaked);
+  for (const quiet of [
+    "passes on its page",
+    "fails after closing its page",
+    "fails without a page",
+  ])
+    expect(
+      byTitle(quiet)?.attachments.filter((entry) => entry.name.startsWith("testmaster-failure-")),
+    ).toEqual([]);
+}, 120_000);
+
+it("blacks out text equal to a secret in the screenshot: same pixels as a page that shows another masked value", async () => {
+  const decoy = "x".repeat(SHOWN_SECRET.length);
+  const [withSecret] = await reportedTests(pageSpec(SHOWN_SECRET), [SHOWN_SECRET]);
+  const [withDecoy] = await reportedTests(pageSpec(decoy), [decoy]);
+  const secretShot = attachment(withSecret, "testmaster-failure-screenshot")?.body;
+  expect(secretShot).toBeDefined();
+  expect(secretShot).toBe(attachment(withDecoy, "testmaster-failure-screenshot")?.body);
+  // Without the value in the redactions the text is drawn, so the pixels differ.
+  const [unmasked] = await reportedTests(pageSpec(SHOWN_SECRET), []);
+  expect(attachment(unmasked, "testmaster-failure-screenshot")?.body).not.toBe(secretShot);
+}, 120_000);

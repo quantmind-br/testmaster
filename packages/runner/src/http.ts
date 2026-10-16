@@ -593,6 +593,47 @@ function invalidCredentialsOf(
   );
 }
 /**
+ * A credential the first hop of a request sent, by lower-cased header: where it came from and a
+ * non-secret reference to it (a secret id, a variable reference, the names of the profile's
+ * cookies). Never the value, never a prefix of it.
+ */
+type SentCredential = { header: string } & (
+  | { source: "secret"; secretRef: string }
+  | { source: "variable"; variableRef: string }
+  | { source: "authProfile"; cookies?: string[] }
+);
+/** The credentials the request's own headers carry: a `secretRef` or a sensitive variable. */
+function requestCredentialsOf(
+  runtime: Runtime,
+  headers: Record<string, unknown> | undefined,
+): SentCredential[] {
+  return Object.entries(headers ?? {}).flatMap(([name, value]): SentCredential[] => {
+    if (!value || typeof value !== "object" || isInvalidCredential(value)) return [];
+    const header = name.toLowerCase();
+    if ("secretRef" in value)
+      return [{ header, source: "secret", secretRef: String(value.secretRef) }];
+    if ("variableRef" in value && sensitiveInput(runtime, value))
+      return [{ header, source: "variable", variableRef: String(value.variableRef) }];
+    return [];
+  });
+}
+/** The credentials of the auth profile session a hop sent: its header names and cookie names. */
+function profileCredentialsOf(
+  session: ProfileSession,
+  cookies: readonly StoredCookie[],
+): SentCredential[] {
+  const credentials = new Map<string, SentCredential>(
+    Object.keys(session.headers).map((header) => [header, { header, source: "authProfile" }]),
+  );
+  if (cookies.length > 0)
+    credentials.set("cookie", {
+      header: "cookie",
+      source: "authProfile",
+      cookies: [...new Set(cookies.map(({ name }) => name))],
+    });
+  return [...credentials.values()];
+}
+/**
  * Names of the cookies a `Set-Cookie` header sets; a value is never kept. A header that removes
  * its cookie (RFC 6265: `Max-Age` <= 0, or without `Max-Age` an `Expires` in the past) sets
  * nothing, so a response that clears a session cookie still satisfies `cookieAbsent`.
@@ -827,15 +868,16 @@ export class HttpEngine {
     return { cookies, headers };
   }
   /**
-   * Adds the profile session to the headers of one hop of a `auth: "profile"` request. The first
-   * hop must target an environment origin and must have a credential to send, otherwise the run is
-   * blocked before anything is sent; a redirect hop only receives it on a target origin.
+   * Adds the profile session to the headers of one hop of a `auth: "profile"` request, and names
+   * the credentials it added. The first hop must target an environment origin and must have a
+   * credential to send, otherwise the run is blocked before anything is sent; a redirect hop only
+   * receives it on a target origin.
    */
   private async withProfileSession(
     headers: Record<string, string>,
     url: URL,
     first: boolean,
-  ): Promise<Record<string, string> | undefined> {
+  ): Promise<{ headers: Record<string, string>; credentials: SentCredential[] } | undefined> {
     const runtime = this.runtime;
     const additional = (runtime.input.networkPolicy.additionalOrigins ?? []).map(
       (origin) => canonicalUrl(origin).origin,
@@ -864,7 +906,10 @@ export class HttpEngine {
     }
     if (Object.keys(applied).some((name) => Object.hasOwn(headers, name)))
       deny("A request header conflicts with the auth profile credential");
-    return { ...headers, ...applied };
+    return {
+      headers: { ...headers, ...applied },
+      credentials: profileCredentialsOf(session, cookies),
+    };
   }
   private async prepare(
     input: RequestInput,
@@ -1027,6 +1072,9 @@ export class HttpEngine {
       let profileSent = false;
       const invalidCredentials = invalidCredentialsOf(input.headers);
       const fakeCredentials = new Set(invalidCredentials.map(({ header }) => header));
+      // What the first hop sent. A redirect hop may drop or add credentials: `redirects` lists
+      // the hops, `credentials` does not follow them.
+      const credentials = requestCredentialsOf(runtime, input.headers);
       for (let redirects = 0; ; redirects++) {
         url = authorizeUrl(runtime, url.href);
         deadline.throwIfAborted();
@@ -1034,8 +1082,9 @@ export class HttpEngine {
         if (input.auth === "profile") {
           const withSession = await this.withProfileSession(headers, url, redirects === 0);
           if (withSession) {
-            outgoing = withSession;
+            outgoing = withSession.headers;
             profileSent = true;
+            if (redirects === 0) credentials.push(...withSession.credentials);
           }
         }
         sent = true;
@@ -1212,6 +1261,7 @@ export class HttpEngine {
             },
             bindings,
             ...(invalidCredentials.length ? { invalidCredentials } : {}),
+            ...(credentials.length ? { credentials } : {}),
           },
           captures: (input.capture ?? []).map((capture) => {
             const variable = runtime.variables.get(`${stepId}.${capture.name}`);

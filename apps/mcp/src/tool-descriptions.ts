@@ -39,7 +39,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_compare_runs:
     "Compare two runs, paged by cursor and limit. Example: a failed run against a green baseline, to tell regression from drift.",
   testmaster_propose_healing:
-    "Propose a candidate revision for a failed run without changing assertions; nothing is applied. Next: testmaster_review_healing. A normal abstained: true result (reasonCode, reason) means no safe repair; healing_not_indicated refuses before any model call.",
+    "Propose a locator-only candidate revision for a failed declarative-plan run; assertions never change, nothing is applied. Next: testmaster_review_healing. abstained: true (reasonCode, reason) = no safe repair. Refused before a model call as PRECONDITION_FAILED: healing_not_indicated, code_revision.",
   testmaster_review_healing:
     "Read the healing diff, risk, assertions-intact check, verification and approval. Next: testmaster_approve_healing with approval.expectedVersion, only after review.",
   testmaster_approve_healing:

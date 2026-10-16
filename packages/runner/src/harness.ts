@@ -3,10 +3,16 @@ import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
 import { StringDecoder } from "node:string_decoder";
 import { runBrowser } from "./browser.js";
+import { FAILURE_ARTIFACT_EVENT, FailureEvidence } from "./code-evidence.js";
 import { type CodeProfile, readCodeProfile } from "./code-profile.js";
 import { startForwarder } from "./forwarder/index.js";
 import { runHttp } from "./http.js";
-import { CODE_PROFILE_ENV, CODE_SECRETS_ENV, stageImportedModules } from "./imported-modules.js";
+import {
+  CODE_PROFILE_ENV,
+  CODE_REDACTIONS_ENV,
+  CODE_SECRETS_ENV,
+  stageImportedModules,
+} from "./imported-modules.js";
 import { ProtocolClient } from "./protocol.js";
 import {
   abortVerdict,
@@ -243,6 +249,7 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
   let count = 0;
   let failures = 0;
   let assertionFailures = 0;
+  const failureEvidence = new FailureEvidence(runtime);
   let queue = Promise.resolve();
   const child = fork(
     resolve("/opt/testmaster/runner/node_modules/@playwright/test/cli.js"),
@@ -252,6 +259,9 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
       env: {
         ...process.env,
         [CODE_SECRETS_ENV]: JSON.stringify(secretValues),
+        // Declared secrets, the profile session and every other value the runner scrubs: the
+        // shim masks them on the page of a failed test.
+        [CODE_REDACTIONS_ENV]: JSON.stringify([...runtime.secrets]),
         ...(profile ? { [CODE_PROFILE_ENV]: JSON.stringify(profile) } : {}),
       },
       stdio: ["ignore", "pipe", "pipe", "ipc"],
@@ -268,8 +278,17 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
         throw new Error("reporter_message_invalid");
       const type = message.type;
       const payload = message.payload;
-      if (typeof type !== "string" || !["step.started", "step.finished", "log"].includes(type))
+      if (
+        typeof type !== "string" ||
+        !["step.started", "step.finished", "log", FAILURE_ARTIFACT_EVENT].includes(type)
+      )
         throw new Error("reporter_event_denied");
+      if (type === FAILURE_ARTIFACT_EVENT) {
+        await failureEvidence.accept(payload);
+        return;
+      }
+      if (type === "step.started" && payload && typeof payload === "object" && "stepId" in payload)
+        failureEvidence.begin(payload.stepId);
       if (
         type === "step.finished" &&
         payload &&
@@ -285,7 +304,16 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
         )
           assertionFailures++;
       }
-      await runtime.emit(type, scrubDeep(runtime, payload));
+      // A step cites only the artifacts the harness itself recorded for it.
+      const published =
+        type === "step.finished" &&
+        payload &&
+        typeof payload === "object" &&
+        "stepId" in payload &&
+        typeof payload.stepId === "string"
+          ? { ...payload, evidencePaths: failureEvidence.pathsFor(payload.stepId) }
+          : payload;
+      await runtime.emit(type, scrubDeep(runtime, published));
     });
   });
   const stop = () => child.kill("SIGTERM");

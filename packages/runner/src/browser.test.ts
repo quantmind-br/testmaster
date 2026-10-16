@@ -29,7 +29,14 @@ class LocatorStub {
   readonly waitFor = vi.fn(async () => undefined);
   readonly selectOption = vi.fn(async () => []);
   readonly setInputFiles = vi.fn(async () => undefined);
-  constructor(readonly owner: PageStub) {}
+  constructor(
+    readonly owner: PageStub,
+    readonly key: string,
+  ) {}
+  /** A chained locator is its own stub, keyed by the chain, like Playwright's lazy resolution. */
+  getByTestId(value: string) {
+    return this.owner.locator(`${this.key} >> ${value}`);
+  }
   async count() {
     return this.countValue;
   }
@@ -89,7 +96,7 @@ class PageStub extends EventEmitter {
   locator(selector: string) {
     let locator = this.selectors.get(selector);
     if (!locator) {
-      locator = new LocatorStub(this);
+      locator = new LocatorStub(this, selector);
       this.selectors.set(selector, locator);
     }
     return locator;
@@ -983,6 +990,115 @@ it("allows detached waits to target absent elements but rejects ambiguous hidden
     outcome: "failed",
     reasonCode: "assertion_mismatch",
   });
+});
+
+const inPanel = (value: string) => ({
+  by: "testId" as const,
+  value,
+  container: { by: "testId" as const, value: "panel" },
+});
+const absenceChecks: [string, PlanStep][] = [
+  [
+    "a hidden assertion",
+    {
+      id: "check",
+      kind: "assertion",
+      operation: "assert",
+      description: "Gone",
+      input: { locator: inPanel("gone") },
+      expectation: { predicate: "hidden" },
+      timeoutMs: 300,
+    },
+  ],
+  [
+    "a countEquals 0 assertion",
+    {
+      id: "check",
+      kind: "assertion",
+      operation: "assert",
+      description: "Gone",
+      input: { locator: inPanel("gone") },
+      expectation: { predicate: "countEquals", value: 0 },
+      timeoutMs: 300,
+    },
+  ],
+  ...(["hidden", "detached"] as const).map((state): [string, PlanStep] => [
+    `a ${state} wait`,
+    {
+      id: "check",
+      kind: "action",
+      operation: "waitFor",
+      description: "Wait",
+      input: { locator: inPanel("gone"), state, deadlineMs: 300 },
+    },
+  ]),
+];
+/** The container never attaches (Playwright times its attachment wait out); the target is absent. */
+function absentPanel() {
+  const panel = context.page.locator("panel");
+  panel.countValue = 0;
+  panel.waitFor.mockRejectedValue(new errors.TimeoutError("Container never attached"));
+  context.page.locator("panel >> gone").countValue = 0;
+  return panel;
+}
+it.each(absenceChecks)(
+  "%s on a target in an absent container passes without waiting for the container",
+  async (_name, step) => {
+    const panel = absentPanel();
+    expect(await runBrowser(runtime([step]))).toMatchObject({ outcome: "passed" });
+    expect(panel.waitFor).not.toHaveBeenCalled();
+  },
+);
+it.each(absenceChecks)(
+  "%s on a target in an ambiguous container still fails as ambiguous",
+  async (_name, step) => {
+    context.page.locator("panel").countValue = 2;
+    context.page.locator("panel >> gone").countValue = 0;
+    expect(await runBrowser(runtime([step]))).toMatchObject({
+      outcome: "failed",
+      reasonCode: "assertion_mismatch",
+    });
+  },
+);
+it("a visible assertion on a target in an absent container fails as an attachment timeout", async () => {
+  absentPanel();
+  const visible: PlanStep = {
+    id: "check",
+    kind: "assertion",
+    operation: "assert",
+    description: "Shown",
+    input: { locator: inPanel("gone") },
+    expectation: { predicate: "visible" },
+    timeoutMs: 300,
+  };
+  expect(await runBrowser(runtime([visible]))).toMatchObject({
+    outcome: "failed",
+    reasonCode: "assertion_timeout",
+  });
+});
+it("records locator evidence with cardinality 0 and the page candidates when the container is absent", async () => {
+  absentPanel();
+  const clickInPanel: PlanStep = {
+    id: "click",
+    kind: "action",
+    operation: "click",
+    description: "Click",
+    input: { locator: inPanel("gone") },
+    timeoutMs: 20,
+  };
+  expect(await runBrowser(runtime([clickInPanel]))).toMatchObject({
+    outcome: "failed",
+    reasonCode: "assertion_timeout",
+  });
+  for (const phase of ["before", "after"]) {
+    const artifact = artifacts.find(
+      (entry) => entry.path === `browser/steps/click-locator-0-${phase}.json`,
+    );
+    expect(artifact?.kind).toBe("locator-evidence");
+    const record = JSON.parse(artifact!.bytes.toString());
+    expect(record.cardinality).toBe(0);
+    expect(record.candidates.length).toBeGreaterThan(0);
+  }
 });
 
 it("distinguishes a live state-wait timeout from a crashed page without treating either as passed", async () => {
