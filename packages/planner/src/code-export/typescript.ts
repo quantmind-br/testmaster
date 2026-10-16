@@ -187,6 +187,7 @@ export async function executePlan(plan: Data, initialPage: Page, request: APIReq
       const e = step.expectation;
       if('responseStepId' in i) { const r = responses.get(i.responseStepId); if(!r) throw new Error('Missing referenced response'); checkResponse(r,e,i.jsonPointer); return; }
       if(e.predicate === 'urlEquals') { const p = selected(i.pageAlias); const expected = string(e.value); await p.waitForURL(expected,{timeout,waitUntil:'commit'}); expect(p.url()).toBe(expected); return; }
+      if(e.predicate === 'urlMatches') { await expect(selected(i.pageAlias)).toHaveURL(new RegExp(e.pattern,'u'),{timeout}); return; }
       if(e.predicate === 'downloadMatches') { expect(i.outputName).toBe(e.outputName); const d = downloads.get(i.outputName); if(!d) throw new Error('Missing named download'); for(const key of ['sha256','mimeType','sizeBytes']) if(e[key] !== undefined) expect(d[key]).toBe(e[key]); return; }
       const l = await locate(i.locator,timeout);
       if(e.predicate === 'countEquals') { await expect(l).toHaveCount(e.value,{timeout}); return; }

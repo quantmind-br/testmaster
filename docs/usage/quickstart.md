@@ -293,11 +293,23 @@ stops there is refused as repair feedback (`browser_postcondition_missing`); the
 
 A negative check (`hidden`, `countEquals` 0, `countAtMost` 0, `waitFor` hidden or detached) also passes while the page is still blank,
 so it may not directly follow a page load. After a `navigate`, or a click or key press that submits a form or is
-followed by a `urlEquals` assertion, put a required positive assertion on content of the destination page (or a
+followed by a URL assertion (`urlEquals` or `urlMatches`), put a required positive assertion on content of the destination page (or a
 `waitFor` visible) before it; for a login: submit, URL check, a visible element of the authenticated page, then the
 checks that the login fields are hidden. `test lint`, `test create`, `testmaster_save_test`, `testmaster_edit_plan`,
 `testmaster_validate_document` and proposal generation refuse the plan with `negativeBeforeRender` at the negative
 step (`negative_before_render` as repair feedback); plans already stored keep running.
+
+### URL assertions
+
+`urlEquals` compares the whole page URL, query included; a path (`/dashboard`) resolves against the environment base
+URL. When the destination carries a query that is not fixed (a `return_to` parameter) or only the path matters, use
+`urlMatches` with an unanchored ECMAScript pattern (flag `u`) tested against the full URL:
+
+- `{"predicate": "urlMatches", "pattern": "/login(?:[?#]|$)"}` passes on `/login` and `/login?return_to=%2F`;
+- `{"predicate": "urlMatches", "pattern": "^(?!.*/login(?:[?#]|$))"}` passes once the page has left `/login`, wherever it went.
+
+Keep the origin out of the pattern so the plan runs against every environment. Both URL predicates belong to browser
+(`playwright`) plans; an HTTP plan asserts a redirect with `statusIn` and `headerMatches` on `Location`.
 
 ### `jsonSchema` pointers
 
@@ -308,8 +320,9 @@ A `jsonSchema` assertion cites a source revision and a JSON pointer into the Ope
 
 A schema that still holds recursive references is bundled so it validates on its own. An empty pointer, a
 pointer outside `/paths`, `/components` and `/definitions`, or one that reaches nothing is unresolved: the project-aware
-plan validation (`POST /projects/{id}/plan-validations`) reports `schema_pointer_unresolved` at the step, and the run would be blocked with
-`unsupported_capability`.
+plan validation (`POST /projects/{id}/plan-validations`) reports `schema_pointer_unresolved` at the step, and saving the
+plan as a test or revision, or editing a proposal with it, is refused with the same reason code. `validate_document`
+checks the contract only and does not resolve pointers.
 
 A pointer that resolves to a schema the validator cannot compile (for example an unknown keyword) is reported before the run: plan validation returns `schema_uncompilable` at the step with the compile error, and saving the plan is refused with `source_schema_uncompilable`. Schemas that list `required` names only inside `not`, `anyOf`, `oneOf`, `allOf` or `then` compile and validate normally.
 

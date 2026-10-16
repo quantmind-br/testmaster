@@ -7265,6 +7265,25 @@
                             "type": "object",
                             "required": [
                               "predicate",
+                              "pattern"
+                            ],
+                            "properties": {
+                              "predicate": {
+                                "const": "urlMatches",
+                                "type": "string"
+                              },
+                              "pattern": {
+                                "minLength": 1,
+                                "maxLength": 512,
+                                "type": "string"
+                              }
+                            }
+                          },
+                          {
+                            "additionalProperties": false,
+                            "type": "object",
+                            "required": [
+                              "predicate",
                               "value"
                             ],
                             "properties": {
@@ -9589,6 +9608,25 @@
                                 }
                               }
                             ]
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "pattern"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "urlMatches",
+                            "type": "string"
+                          },
+                          "pattern": {
+                            "minLength": 1,
+                            "maxLength": 512,
+                            "type": "string"
                           }
                         }
                       },
@@ -17476,6 +17514,25 @@
                           }
                         }
                       ]
+                    }
+                  }
+                },
+                {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "predicate",
+                    "pattern"
+                  ],
+                  "properties": {
+                    "predicate": {
+                      "const": "urlMatches",
+                      "type": "string"
+                    },
+                    "pattern": {
+                      "minLength": 1,
+                      "maxLength": 512,
+                      "type": "string"
                     }
                   }
                 },

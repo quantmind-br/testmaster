@@ -675,6 +675,15 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
           "countAtLeast 0 always passes because a count is never negative: use a positive minimum, or countEquals 0 or countAtMost 0 to assert absence",
         );
       if (
+        (predicate === "urlEquals" || predicate === "urlMatches") &&
+        (plan.runner !== "playwright" || "locator" in input || "responseStepId" in input)
+      )
+        reject(
+          `${path}/input`,
+          "predicateInput",
+          "URL assertion requires the playwright runner and page input (no locator or responseStepId)",
+        );
+      if (
         "responseStepId" in input &&
         !seenResponses.has(String(input.responseStepId)) &&
         !captures.has(String(input.responseStepId))
@@ -778,10 +787,10 @@ const locatingOperations: Record<string, true> = {
  * detached) passes on a page that has not rendered yet, because the element is not there. When
  * such a check follows a page load without a positive check of the destination in between, it can
  * pass without testing anything. A page load is a `navigate`, or a click or key press that submits
- * a form (it follows a fill) or is followed by a `urlEquals` assertion, which declares that the URL
- * changed. A required positive assertion or `waitFor` on rendered content, or an action that must
- * find an element, settles the page. A click that neither follows a fill nor is followed by a
- * `urlEquals` assertion is not known to navigate and is not treated as a page load.
+ * a form (it follows a fill) or is followed by a URL assertion (`urlEquals`, `urlMatches`), which
+ * declares that the URL changed. A required positive assertion or `waitFor` on rendered content, or
+ * an action that must find an element, settles the page. A click that neither follows a fill nor is
+ * followed by a URL assertion is not known to navigate and is not treated as a page load.
  */
 export function findNegativeBeforeRender(plan: ExecutablePlan): ValidationIssue[] {
   if (plan.runner !== "playwright") return [];
@@ -813,7 +822,11 @@ export function findNegativeBeforeRender(plan: ExecutablePlan): ValidationIssue[
           unsettled = null;
           lastNavigating = null;
           formFilled = false;
-        } else if (step.expectation.predicate === "urlEquals" && lastNavigating !== null)
+        } else if (
+          (step.expectation.predicate === "urlEquals" ||
+            step.expectation.predicate === "urlMatches") &&
+          lastNavigating !== null
+        )
           unsettled ??= lastNavigating;
         return;
       }
@@ -959,9 +972,9 @@ function validateRequestBody(input: RequestInputShape, path: string, reject: Rej
     }
   }
 }
-/** A `headerMatches` pattern the runner could not compile is a plan error, never a runtime failure. */
+/** A `headerMatches` or `urlMatches` pattern the runner could not compile is a plan error, never a runtime failure. */
 function validatePattern(expectation: Expectation, path: string, reject: Reject): void {
-  if (expectation.predicate !== "headerMatches") return;
+  if (expectation.predicate !== "headerMatches" && expectation.predicate !== "urlMatches") return;
   try {
     new RegExp(expectation.pattern, "u");
   } catch (error) {

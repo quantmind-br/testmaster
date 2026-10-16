@@ -6,12 +6,12 @@ import { isDeepStrictEqual } from "node:util";
 import {
   ContractError,
   type Expectation,
-  headerPatternMaxLength,
   invalidCredentialRefusal,
   JsonSetError,
   type JsonValue,
   type PlanStep,
   parseStrictJson,
+  patternMaxLength,
   SourceSchemaError,
   setJsonPointer,
   validateAgainstSchema,
@@ -391,7 +391,7 @@ export async function assertResponse(
     case "headerMatches": {
       let pattern: RegExp;
       try {
-        if (expectation.pattern.length > headerPatternMaxLength)
+        if (expectation.pattern.length > patternMaxLength)
           throw new RangeError("Pattern is too long");
         pattern = new RegExp(expectation.pattern, "u");
       } catch {

@@ -2656,6 +2656,44 @@ it("a failed urlEquals step reports the observed and expected URLs instead of an
     observed: expect.stringContaining("http://app.test/login?error=1"),
   });
 });
+it("a failed urlMatches step reports the observed URL and the pattern it misses", async () => {
+  const pattern = "^(?!.*/login(?:[?#]|$))";
+  const f = await fixture({
+    plan: {
+      schemaVersion: "1.0.0",
+      kind: "executable",
+      name: "Login leaves the form",
+      type: "frontend",
+      runner: "playwright",
+      requirementRefs: ["req_00000000-0000-4000-8000-000000000003"],
+      steps: [
+        {
+          id: "left_login",
+          kind: "assertion",
+          operation: "assert",
+          required: true,
+          description: "Leaves the login page",
+          input: { pageAlias: "main" },
+          expectation: { predicate: "urlMatches", pattern },
+        },
+      ],
+    },
+    step: {
+      planStepId: "left_login",
+      expected: { matches: pattern },
+      observed: "http://app.test/login?error=1",
+      error: {
+        code: "Error",
+        message: `Page URL http://app.test/login?error=1 does not match pattern ${pattern}`,
+      },
+    },
+  });
+  const analysis = await f.service.analyze(f.run.id, {});
+  expect(analysis.failureKind).toBe("product_bug");
+  expect(analysis.facts.map((fact) => fact.text)).toContain(
+    `Step left_login (urlMatches) observed the page URL "http://app.test/login?error=1", which the pattern ${JSON.stringify(pattern)} does not match.`,
+  );
+});
 it("the error fields a failing endpoint returned become a fact and reach the model data", async () => {
   const f = await fixture({ status: true });
   await attachTerminalProcess(

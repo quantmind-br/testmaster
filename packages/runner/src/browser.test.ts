@@ -1744,6 +1744,50 @@ it("fails a urlEquals mismatch as assertion_mismatch and records observed and ex
     "Page URL http://fixture.test/login?next=%2Fdashboard differs from expected URL http://fixture.test/dashboard",
   );
 });
+it("passes urlMatches on a URL with any query and on leaving a page, and records a mismatch", async () => {
+  waitForURLLikePlaywright();
+  const matches = (pattern: string): PlanStep =>
+    ({ ...urlCheck("/"), expectation: { predicate: "urlMatches", pattern } }) as PlanStep;
+  const finished = () =>
+    events.find((event) => event.type === "step.finished" && event.payload.stepId === "url")
+      ?.payload as {
+      status: string;
+      observed: string;
+      expected: unknown;
+      error?: { message: string };
+    };
+  context.page.href = "http://fixture.test/login?return_to=%2F";
+  events = [];
+  expect(await runBrowser(runtime([matches("/login(?:[?#]|$)")]))).toMatchObject({
+    outcome: "passed",
+  });
+  expect(finished()).toMatchObject({
+    status: "passed",
+    observed: "http://fixture.test/login?return_to=%2F",
+    expected: { matches: "/login(?:[?#]|$)" },
+  });
+  context.page.href = "http://fixture.test/";
+  events = [];
+  expect(await runBrowser(runtime([matches("^(?!.*/login(?:[?#]|$))")]))).toMatchObject({
+    outcome: "passed",
+  });
+  // Still on the login page: the page did not leave it, so the inequality fails.
+  context.page.href = "http://fixture.test/login?error=1";
+  events = [];
+  expect(await runBrowser(runtime([matches("^(?!.*/login(?:[?#]|$))")]))).toMatchObject({
+    outcome: "failed",
+    reasonCode: "assertion_mismatch",
+  });
+  expect(finished()).toMatchObject({
+    status: "failed",
+    observed: "http://fixture.test/login?error=1",
+    expected: { matches: "^(?!.*/login(?:[?#]|$))" },
+    error: {
+      message:
+        "Page URL http://fixture.test/login?error=1 does not match pattern ^(?!.*/login(?:[?#]|$))",
+    },
+  });
+});
 it("reports a fatal egress denial, not the closed page it causes, while a URL assertion waits", async () => {
   // The destination page fetches an unapproved origin while the assertion waits for its URL: the
   // denial closes the context, so the pending wait fails with a closed-page error.

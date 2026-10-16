@@ -281,3 +281,52 @@ describe("a named role locator inside an identical container", () => {
       expect(issues([navigate(), assertVisible(nested)])).toEqual([]);
   });
 });
+
+describe("URL assertions", () => {
+  const matches = (pattern: string, input: Json = {}, id = "left_login"): Json =>
+    check(id, input, { predicate: "urlMatches", pattern });
+  const issues = (document: Json): { path: string; rule: string }[] => {
+    try {
+      validate("ExecutablePlan", document);
+      return [];
+    } catch (error) {
+      if (!(error instanceof ContractError)) throw error;
+      return error.issues.map(({ path, rule }) => ({ path, rule }));
+    }
+  };
+
+  it("refuses a urlMatches pattern that does not compile, and a URL assertion outside a page", () => {
+    expect(issues(plan([navigate(), matches("^(?!.*/login"), visible()]))).toEqual([
+      { path: "/steps/1/expectation/pattern", rule: "pattern" },
+    ]);
+    expect(
+      issues(plan([navigate(), matches("/login", { locator: field("Username") }), visible()])),
+    ).toEqual([{ path: "/steps/1/input", rule: "predicateInput" }]);
+    const request = action("request", "get_home", {
+      method: "GET",
+      pathSegments: [{ literal: "home" }],
+    });
+    const http = {
+      ...plan([
+        request,
+        check("ok", { responseStepId: "get_home" }, { predicate: "statusIn", values: [200] }),
+        url("home_url"),
+      ]),
+      type: "backend",
+      runner: "http",
+    };
+    expect(issues(http)).toEqual([{ path: "/steps/2/input", rule: "predicateInput" }]);
+    // Positive control: the same patterns on a page of a browser plan.
+    expect(
+      issues(plan([navigate(), matches("^(?!.*/login(?:[?#]|$))"), url(), visible()])),
+    ).toEqual([]);
+  });
+
+  it("treats a click followed by urlMatches as a page load, like urlEquals", () => {
+    const menu = action("click", "open_menu", { locator: field("Menu") });
+    expect(
+      flagged([navigate(), visible(), menu, matches("/settings(?:[?#]|$)"), hidden()]),
+    ).toEqual([{ path: "/steps/4/expectation", ids: ["gone", "open_menu", "open_menu", "gone"] }]);
+    expect(flagged([navigate(), visible(), menu, hidden()])).toEqual([]);
+  });
+});

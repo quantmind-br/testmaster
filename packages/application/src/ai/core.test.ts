@@ -2394,6 +2394,51 @@ it("a plan citing a source schema the validator cannot compile is reported when 
     }),
   );
 });
+it("saving a plan whose jsonSchema reaches no schema is refused, naming the step, revision and pointer", async () => {
+  const { f, proposal, pointer } = await openApiGenerationFixture();
+  const citing = (sourceRevisionId: string | null, cited: string) => {
+    const base = proposal().proposals[0]!.plan;
+    base.steps = base.steps.map((step) =>
+      step.operation === "assert" && step.expectation.predicate === "jsonSchema"
+        ? {
+            ...step,
+            expectation: {
+              ...step.expectation,
+              ...(sourceRevisionId ? { sourceRevisionId } : {}),
+              pointer: cited,
+            },
+          }
+        : step,
+    );
+    return base;
+  };
+  // Control: the generated citation resolves and the plan is saved.
+  expect(f.app.tests.create({ projectId: f.projectId, plan: citing(null, pointer) }).id).toMatch(
+    /^tst_/u,
+  );
+  const missing = "/paths/~1nowhere/get/responses/200/content/application~1json/schema";
+  const absent = "svr_01900000-0000-7000-8000-00000000dead";
+  for (const [plan, sourceRevisionId, cited] of [
+    [citing(null, missing), undefined, missing],
+    [citing(absent, pointer), absent, pointer],
+  ] as const)
+    expect(() => f.app.tests.create({ projectId: f.projectId, plan })).toThrow(
+      expect.objectContaining({
+        code: "INVALID_ARGUMENT",
+        message: expect.stringContaining(`#${cited}, which reaches no schema`),
+        details: expect.objectContaining({
+          reasonCode: "schema_pointer_unresolved",
+          schemas: [
+            expect.objectContaining({
+              stepId: "schema",
+              pointer: cited,
+              ...(sourceRevisionId ? { sourceRevisionId } : {}),
+            }),
+          ],
+        }),
+      }),
+    );
+});
 it("generation refuses proposals that cannot run: unreachable schema pointer, unknown secret, 200-only status", async () => {
   const { f, proposal } = await openApiGenerationFixture();
   const before = f.app.proposals.list(f.projectId).length;

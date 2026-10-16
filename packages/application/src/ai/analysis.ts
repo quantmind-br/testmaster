@@ -1145,8 +1145,9 @@ function schemaViolationText(violation: unknown): string | null {
   return `${where}${typeof property === "string" ? ` (${property})` : ""} ${keyword}: ${message}`;
 }
 /**
- * Facts naming what a failed jsonSchema or urlEquals assertion observed and expected, and why a
- * schema check could not be evaluated, so the diagnosis never reduces them to a null value.
+ * Facts naming what a failed jsonSchema, urlEquals or urlMatches assertion observed and expected,
+ * and why a schema check could not be evaluated, so the diagnosis never reduces them to a null
+ * value.
  */
 function assertionMismatchFacts(
   evidence: readonly Evidence[],
@@ -1187,6 +1188,8 @@ function assertionMismatchFacts(
         typeof step.expected === "string"
       )
         text = `${label} observed the page URL ${JSON.stringify(step.observed)} while expecting ${JSON.stringify(step.expected)}.`;
+      else if (planStep.expectation.predicate === "urlMatches" && typeof step.observed === "string")
+        text = `${label} observed the page URL ${JSON.stringify(step.observed)}, which the pattern ${JSON.stringify(planStep.expectation.pattern)} does not match.`;
       else if (
         planStep.expectation.predicate === "jsonSchema" &&
         step.observed !== null &&
@@ -2644,6 +2647,7 @@ export class AnalysisService {
             "textContains",
             "valueEquals",
             "urlEquals",
+            "urlMatches",
             // Non-success statuses and headers alone do not establish product causality.
             "downloadMatches",
             "countEquals",

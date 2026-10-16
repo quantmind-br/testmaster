@@ -9,7 +9,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_capabilities:
     "Read versions, enabled features (with the reason a feature is disabled) and limits. Call this first; never emulate a disabled feature.",
   testmaster_validate_document:
-    "Validate an ExecutablePlan, ProjectConfig or RunRequest without storing or running it. Use before creating or running one.",
+    "Validate an ExecutablePlan, ProjectConfig or RunRequest (schema names which) against its contract and plan rules; nothing is stored or run. A jsonSchema sourceRevisionId and pointer are resolved on save: testmaster_save_test and testmaster_edit_plan refuse one that reaches no schema.",
   testmaster_bootstrap:
     "Create or find the project of an approved root; returns projectId, proposedConfig (a config file proposal, never written), environment, preflight, next actions. Adds an environment for the target origin if none exists; never retargets one. Idempotent. Next: testmaster_analyze_code.",
   testmaster_analyze_code:
@@ -67,9 +67,9 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_set_secret:
     "Register a secret from valueFile or fromEnv (never an argument; one trailing newline trimmed) with its allowedOrigins; returns metadata only. Secrets and auth profiles must exist before testmaster_generate_plan. Next: testmaster_save_auth_profile.",
   testmaster_save_auth_profile:
-    "Create (projectId, name, kind, originBindings, secrets, config) or update (profileId, expectedVersion, patch) an auth profile from secret ids (username may be plain, unmasked); config keys per kind: see input schema. Returns the view, no credentials. Next: testmaster_update_environment authRefs.",
+    "Create (projectId, name, kind, originBindings, secrets, config) or update (profileId, expectedVersion, top-level fields to change) an auth profile; secrets are secret ids, username may be plain (unmasked); config keys per kind: input schema. Returns the view. Next: testmaster_update_environment.",
   testmaster_update_environment:
-    "Patch an environment at expectedVersion: authRefs (profiles bound to the target origin), additionalOrigins, baseUrl, networkProfile, locale, timezone, production, name. Returns the environment and its new active revision.",
+    "Change an environment at expectedVersion; give only the fields to change, at top level next to environmentId: authRefs (profiles bound to the target origin), additionalOrigins, baseUrl, networkProfile, locale, timezone, production, name. Returns the environment and its new active revision.",
   testmaster_test_auth_login:
     "Sign in once with an auth profile bound to an environment and report the outcome (authenticated, failed, blocked, checkpoint_required); saves no draft or revision, never returns credentials. Scope X, like auth-profile test-login.",
 };

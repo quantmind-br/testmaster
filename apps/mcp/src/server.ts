@@ -1654,7 +1654,10 @@ export class TestMasterMcp {
   private updateEnvironment(args: Arguments, app: Application) {
     const { environmentId, expectedVersion, ...patch } = args;
     if (!Object.keys(patch).length)
-      throw new ContractError("INVALID_ARGUMENT", "Provide at least one field to change");
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        "Nothing to change: give name, baseUrl, networkProfile, locale, timezone, production, additionalOrigins or authRefs at top level, next to environmentId",
+      );
     const environment = app.environments.update(
       String(environmentId),
       patch as EnvironmentPatch,

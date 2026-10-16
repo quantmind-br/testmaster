@@ -5,7 +5,12 @@ import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
-import { type Locator as LocatorSpec, type PlanStep, validate } from "@testmaster/contracts";
+import {
+  type Locator as LocatorSpec,
+  type PlanStep,
+  patternMaxLength,
+  validate,
+} from "@testmaster/contracts";
 import { semanticHash } from "@testmaster/domain";
 import {
   type Browser,
@@ -76,6 +81,38 @@ function normalizedUrl(url: string): string {
   } catch {
     return url;
   }
+}
+/** What a URL assertion waits for, the expectation it records, and the text of its mismatch. */
+interface UrlTarget {
+  holds(href: string): boolean;
+  expected: string | { matches: string };
+  mismatch(observed: string): string;
+}
+function exactUrl(expected: string): UrlTarget {
+  return {
+    holds: (href) => href === expected,
+    expected,
+    mismatch: (observed) => `Page URL ${observed} differs from expected URL ${expected}`,
+  };
+}
+/** A `urlMatches` pattern, compiled as the plan validator compiles it (flag `u`, unanchored). */
+function urlPattern(pattern: string): UrlTarget {
+  let regex: RegExp;
+  try {
+    if (pattern.length > patternMaxLength) throw new RangeError("Pattern is too long");
+    regex = new RegExp(pattern, "u");
+  } catch {
+    throw new RuntimeError(
+      "oracle_uncertain",
+      "urlMatches pattern is not a valid bounded ECMAScript regular expression",
+      "inconclusive",
+    );
+  }
+  return {
+    holds: (href) => regex.test(href),
+    expected: { matches: pattern },
+    mismatch: (observed) => `Page URL ${observed} does not match pattern ${pattern}`,
+  };
 }
 
 /** Cookie and web-storage values of a Playwright storage state (scrubbed from every artifact). */
@@ -415,7 +452,7 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
         );
       return;
     }
-    if (expectation.predicate === "urlEquals") {
+    if (expectation.predicate === "urlEquals" || expectation.predicate === "urlMatches") {
       if (
         "locator" in input ||
         "outputName" in input ||
@@ -426,14 +463,16 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
         "responseStepId" in input
       )
         throw new RuntimeError("security_precondition_failed", "URL assertion requires page input");
-      const expected = resolveExpectedUrl(
-        await stringValue(expectation.value),
-        runtime.input.baseUrl,
-      );
+      const target =
+        expectation.predicate === "urlMatches"
+          ? urlPattern(expectation.pattern)
+          : exactUrl(
+              resolveExpectedUrl(await stringValue(expectation.value), runtime.input.baseUrl),
+            );
       const selected = pageFor(input.pageAlias);
       try {
         // A predicate, not the string: Playwright reads a string as a glob pattern.
-        await selected.waitForURL((url) => url.href === expected, {
+        await selected.waitForURL((url) => target.holds(url.href), {
           timeout,
           waitUntil: "commit",
         });
@@ -442,11 +481,14 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
         if (!(error instanceof errors.TimeoutError) || runtime.signal.aborted) throw error;
       }
       const observed = normalizedUrl(selected.url());
-      runtime.recordComparison(runtime.scrub(observed), runtime.scrub(expected));
-      if (observed !== expected)
+      runtime.recordComparison(
+        runtime.scrub(observed),
+        typeof target.expected === "string" ? runtime.scrub(target.expected) : target.expected,
+      );
+      if (!target.holds(observed))
         throw new RuntimeError(
           "assertion_mismatch",
-          runtime.scrub(`Page URL ${observed} differs from expected URL ${expected}`),
+          runtime.scrub(target.mismatch(observed)),
           "failed",
         );
       return;

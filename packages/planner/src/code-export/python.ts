@@ -337,6 +337,11 @@ class PlanRuntime:
                 await page.wait_for_url(expected, timeout=timeout, wait_until="commit")
                 assert page.url == expected
                 return
+            if predicate == "urlMatches":
+                page = self.selected(input.get("pageAlias"))
+                pattern = re.compile(expectation["pattern"], re.ASCII)
+                await page.wait_for_url(lambda url: pattern.search(url) is not None, timeout=timeout, wait_until="commit")
+                return
             if predicate == "downloadMatches":
                 assert input["outputName"] == expectation["outputName"]
                 download = self.downloads[input["outputName"]]

@@ -280,13 +280,39 @@ export function unusableSchemaText(item: UnusableSchema): string {
   return `Step ${JSON.stringify(item.stepId)} cites source schema ${item.sourceRevisionId}#${item.pointer}, which cannot be compiled: ${item.problem}`;
 }
 /**
- * Refuses a plan that cites a schema the source-schema validator cannot compile: its `jsonSchema`
- * step could only end inconclusive at run time, so it is reported where the plan is saved.
+ * Refuses a plan that cites a schema it cannot use: a pointer that reaches no schema in the cited
+ * source revision (or a revision that does not exist) would block its `jsonSchema` step at run time,
+ * and a schema the source-schema validator cannot compile would end it inconclusive, so both are
+ * reported where the plan is saved.
  */
-export function assertCitedSchemasCompile(ctx: ServiceContext, plan: ExecutablePlan): void {
+export function assertCitedSchemasUsable(ctx: ServiceContext, plan: ExecutablePlan): void {
   const citations = schemaCitations(plan);
   if (!citations.length) return;
-  const unusable = unusableSchemas(citations, sourceSchemasFor(ctx, plan));
+  const schemas = sourceSchemasFor(ctx, plan);
+  const unresolved = citations.filter(
+    ({ sourceRevisionId, pointer }) => !(`${sourceRevisionId}${pointer}` in schemas),
+  );
+  if (unresolved.length)
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      `${unresolved
+        .map(
+          ({ stepId, sourceRevisionId, pointer }) =>
+            `Step ${JSON.stringify(stepId)} cites source schema ${sourceRevisionId}#${pointer}, which reaches no schema (the revision does not exist in this workspace or the pointer leads nowhere)`,
+        )
+        .join(
+          "; ",
+        )}; cite an existing source revision and a pointer to a schema in it, such as /paths/~1items/get/responses/200/content/application~1json/schema or /components/schemas/Item`,
+      {
+        reasonCode: "schema_pointer_unresolved",
+        schemas: unresolved.map(({ stepId, sourceRevisionId, pointer }) => ({
+          stepId,
+          sourceRevisionId,
+          pointer,
+        })),
+      },
+    );
+  const unusable = unusableSchemas(citations, schemas);
   if (unusable.length)
     throw new ContractError(
       "INVALID_ARGUMENT",

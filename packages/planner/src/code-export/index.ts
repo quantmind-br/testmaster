@@ -182,6 +182,7 @@ const uiPredicates: Record<string, true> = {
   countAtLeast: true,
   countAtMost: true,
   urlEquals: true,
+  urlMatches: true,
   downloadMatches: true,
 };
 const httpPredicates: Record<string, true> = {
@@ -423,7 +424,8 @@ export function exportCode(input: ExecutablePlan, options: CodeExportOptions): C
           unsupported(step.id, predicate, "HTTP assertions need responseStepId");
         if (
           options.format === "pytest" &&
-          step.expectation.predicate === "headerMatches" &&
+          (step.expectation.predicate === "headerMatches" ||
+            step.expectation.predicate === "urlMatches") &&
           pythonIncompatiblePattern.test(step.expectation.pattern)
         )
           unsupported(step.id, predicate, pythonIncompatibleReason);

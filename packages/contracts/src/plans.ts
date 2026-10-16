@@ -41,8 +41,8 @@ export const Locator = Type.Recursive((Self) => {
     Obj({ by: Type.Literal("css"), value: Name, ...scope }),
   ]);
 });
-/** Longest `headerMatches` pattern: it bounds the plan text the runner compiles. */
-export const headerPatternMaxLength = 512;
+/** Longest `headerMatches` or `urlMatches` pattern: it bounds the plan text the runner compiles. */
+export const patternMaxLength = 512;
 /** RFC 6265 cookie-name token. */
 const CookieName = Type.String({ pattern: "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$", maxLength: 200 });
 /** Request headers that take the token form of an invalid credential (`scheme` optional). */
@@ -95,6 +95,14 @@ const httpAndBrowserExpectations = [
   ...(["textEquals", "textContains", "valueEquals", "urlEquals", "jsonEquals"] as const).map(
     valuePredicate,
   ),
+  /**
+   * ECMAScript pattern (`u` flag, unanchored) tested against the page's full URL; the plan validator
+   * compiles it. A negative lookahead states where the page must not be (`^(?!.*\/login)`).
+   */
+  Obj({
+    predicate: Type.Literal("urlMatches"),
+    pattern: Type.String({ minLength: 1, maxLength: patternMaxLength }),
+  }),
   Obj({ predicate: Type.Literal("countEquals"), value: Nonnegative }),
   /** The observed count is at least `value`; `0` always passes, so the plan validator refuses it. */
   Obj({ predicate: Type.Literal("countAtLeast"), value: Nonnegative }),
@@ -112,7 +120,7 @@ const httpAndBrowserExpectations = [
   Obj({
     predicate: Type.Literal("headerMatches"),
     header: Name,
-    pattern: Type.String({ minLength: 1, maxLength: headerPatternMaxLength }),
+    pattern: Type.String({ minLength: 1, maxLength: patternMaxLength }),
   }),
   /** No response of the request step (redirect hops included) sets a cookie with this name. */
   Obj({ predicate: Type.Literal("cookieAbsent"), name: CookieName }),

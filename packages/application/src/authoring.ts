@@ -15,7 +15,7 @@ import {
 import { materializePlanDefaults, semanticHash } from "@testmaster/domain";
 import { AuditRepository, type EntityDocument } from "@testmaster/persistence";
 import { type CanonicalTarget, canonicalUrl, classifyIp, PolicyDenied } from "@testmaster/sandbox";
-import { assertCitedSchemasCompile } from "./ai/source-documents.js";
+import { assertCitedSchemasUsable } from "./ai/source-documents.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "./context.js";
 import { type RevisionStanding, revisionStanding } from "./revision-standing.js";
 
@@ -889,7 +889,7 @@ export class RevisionsService {
   ): Stored<TestRevision> {
     this.ctx.authorize("W");
     const plan = lintPlan(JSON.stringify(input));
-    assertCitedSchemasCompile(this.ctx, plan);
+    assertCitedSchemasUsable(this.ctx, plan);
     return authoringTransaction(this.ctx, () => {
       const owner = requireEntity(this.ctx, "TestCase", testId) as Stored<TestCase>;
       this.ctx.authorize("W", owner.projectId);
