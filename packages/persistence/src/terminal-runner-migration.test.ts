@@ -58,7 +58,7 @@ async function releaseBeforeTerminal() {
 it.skipIf(postgresParity)(
   "migration 0022 rebuilds test_revisions keeping every row, reference and immutability, and admits terminal",
   async () => {
-    const { path, old } = await releaseBeforeTerminal();
+    const { path, old, all } = await releaseBeforeTerminal();
     const before = revisions(old);
     const referencing = dependents(old);
     expect(before.map((row) => row.runner_kind)).toEqual(["http", "playwright", "python"]);
@@ -68,7 +68,7 @@ it.skipIf(postgresParity)(
 
     const db = await PersistenceDatabase.open(path);
     try {
-      expect(db.status()).toMatchObject({ currentVersion: 22, pending: [] });
+      expect(db.status()).toMatchObject({ currentVersion: all.length, pending: [] });
       expect(revisions(db)).toEqual(before);
       expect(dependents(db)).toEqual(referencing);
       expect(db.all("PRAGMA foreign_key_check")).toEqual([]);
@@ -105,12 +105,12 @@ it.skipIf(postgresParity)(
 it.skipIf(postgresParity)(
   "restores a pre-0022 backup at its own schema or forward into the terminal schema without altering any revision",
   async () => {
-    const { root, path, old, legacyDir } = await releaseBeforeTerminal();
+    const { root, path, old, legacyDir, all } = await releaseBeforeTerminal();
     const before = revisions(old);
     old.close();
     const backupDir = join(root, "backup");
     const receipt = await upgradeDatabase(path, { backupDir, drainTimeoutMs: 0 });
-    expect(receipt).toMatchObject({ upgraded: true, fromVersion: 21, toVersion: 22 });
+    expect(receipt).toMatchObject({ upgraded: true, fromVersion: 21, toVersion: all.length });
 
     const kept = await PersistenceDatabase.restore(backupDir, join(root, "restore-kept"), {
       keepSchema: true,
@@ -136,7 +136,7 @@ it.skipIf(postgresParity)(
 
     const forward = await PersistenceDatabase.restore(backupDir, join(root, "restore-forward"));
     try {
-      expect(forward.database.status()).toMatchObject({ currentVersion: 22, pending: [] });
+      expect(forward.database.status()).toMatchObject({ currentVersion: all.length, pending: [] });
       expect(revisions(forward.database)).toEqual(before);
       expect(forward.database.all("PRAGMA foreign_key_check")).toEqual([]);
       expect(reject(forward.database, insertRevision("rev-term", 4, "terminal", "rev-py"))).toBe(

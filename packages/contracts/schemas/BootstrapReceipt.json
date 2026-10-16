@@ -3,7 +3,7 @@
   "type": "object",
   "required": [
     "projectId",
-    "config",
+    "proposedConfig",
     "preflight",
     "nextActions"
   ],
@@ -12,7 +12,8 @@
       "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
       "type": "string"
     },
-    "config": {
+    "proposedConfig": {
+      "description": "Proposal for testmaster.config.json built from the requested target and mode; never written to disk and never the stored environment (see environment)",
       "additionalProperties": false,
       "type": "object",
       "required": [

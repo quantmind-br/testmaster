@@ -245,6 +245,20 @@ describe("batch identities and dependency admission", () => {
       ),
     );
   });
+  it("never counts a run whose gate failed as passed", () => {
+    const member = (key: string, gate: "passed" | "failed") => ({
+      key,
+      runId: key,
+      requested: true,
+      dependency: false,
+      required: true,
+      outcome: "passed" as const,
+      gate,
+    });
+    const result = aggregateBatch([member("clean", "passed"), member("unpublished", "failed")]);
+    expect(result.counts).toMatchObject({ passed: 1, inconclusive: 1 });
+    expect(result.gate).toBe("failed");
+  });
   it("empty explicitly allowed is not_applicable and otherwise denied", () => {
     expect(() => aggregateBatch([])).toThrow();
     expect(aggregateBatch([], true).gate).toBe("not_applicable");

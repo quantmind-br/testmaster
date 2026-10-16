@@ -143,7 +143,11 @@ const handlers: Record<string, RouteHandler> = {
     const rev = app.revisions.get(body.revisionId as string);
     if (rev.testId !== id)
       throw new ContractError("INVALID_ARGUMENT", "Revision belongs to another test");
-    return app.revisions.promote(rev.id, ifMatch());
+    return app.revisions.promote(
+      rev.id,
+      ifMatch(),
+      typeof body.reason === "string" ? body.reason : undefined,
+    );
   }),
   "POST /runs": h(({ app, body, key }) =>
     app.runs.admit({ ...body, origin: "api" } as RunRequest, { idempotencyKey: key }),
@@ -347,6 +351,7 @@ const handlers: Record<string, RouteHandler> = {
       proposalIds: body.proposalIds as string[],
       expectedVersion,
       idempotencyKey: key,
+      ...(body.reason ? { reason: body.reason as string } : {}),
     });
   }),
   "GET /resources": h(({ app, query, page }) => page(app.resources.list(query.runId))),
@@ -398,7 +403,11 @@ const handlers: Record<string, RouteHandler> = {
   "GET /healing-proposals/{id}": h(({ app, id }) => app.healing.get(id)),
   "GET /healing-proposals/{id}/review": h(({ app, id }) => app.healing.review(id)),
   "POST /healing-proposals/{id}/approve": h(({ app, id, body }) =>
-    app.healing.approve(id, Number(body.expectedVersion)),
+    app.healing.approve(
+      id,
+      Number(body.expectedVersion),
+      typeof body.reason === "string" ? body.reason : undefined,
+    ),
   ),
   "POST /healing-proposals/{id}/reject": h(({ app, id, body }) =>
     app.healing.reject(id, String(body.reason)),

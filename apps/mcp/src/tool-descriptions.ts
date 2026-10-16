@@ -11,27 +11,27 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_validate_document:
     "Validate an ExecutablePlan, ProjectConfig or RunRequest without storing or running it. Use before creating or running one.",
   testmaster_bootstrap:
-    "Create or find the project for an approved root; returns projectId, config, environment, preflight, next actions. Adds an environment for the target origin when none exists; never retargets one (preflight says). Idempotent per root; never installs or runs the app. Next: testmaster_analyze_code.",
+    "Create or find the project of an approved root; returns projectId, proposedConfig (a config file proposal, never written), environment, preflight, next actions. Adds an environment for the target origin if none exists; never retargets one. Idempotent. Next: testmaster_analyze_code.",
   testmaster_analyze_code:
     "Snapshot the code: whole codebase (no base), base..head, or base..working tree (dirty=true, needs base). Bounded receipt: counts, first 50 skipped files, first 100 features {id, stableKey}, diff impact. All features by key: testmaster://projects/{projectId}/features?match=. Not a plan source.",
   testmaster_normalize_requirements:
-    "Normalize source revisions into requirements (each with a status) and conflicts (id, reason, requirementIds); returns sourceSnapshotId and version. provider/model pick the model. Slow: _meta.progressToken gets progress notifications. Next: testmaster_review_requirements.",
+    "Normalize source revisions into requirements (each with a status) and conflicts; returns sourceSnapshotId and version. A PRD section with its criteria is one requirement; API specs need no normalizing. Slow: _meta.progressToken notifies. Next: testmaster_review_requirements.",
   testmaster_explore:
     "Browser exploration. featureIds: testmaster://projects/{projectId}/features?match=. budget: steps 1..100, modelCalls 1..steps, timeMs 1000..300000 (browser time only; a model call is never cut). provider/model pick the model; mutationActions: form steps. Failure: testmaster:errorMessage.",
   testmaster_generate_plan:
-    "Generate plan proposals (not tests) from the approved snapshot (sourceSnapshotId from testmaster_review_requirements); provider/model pick the model. The model sees only existing secrets and auth profiles (testmaster_set_secret, testmaster_save_auth_profile first). Next: testmaster_review_plan.",
+    "Generate plan proposals (not tests) from the approved snapshot (sourceSnapshotId from testmaster_review_requirements); provider/model pick the model. Sees only existing secrets, auth profiles and API-spec sources (operations, schema pointers): add them first. Next: testmaster_review_plan.",
   testmaster_review_plan:
-    "Accept or reject proposals at expectedVersion = the batch version (plan-batches resource batch.version, or batchVersion of an edit). Unselected stay pending; stale requirements: details.staleProposals. A stale version returns each proposal's state in details.diff. Next: testmaster_generate_tests.",
+    "Accept or reject proposals at expectedVersion = the batch version (plan-batches resource batch.version, or batchVersion of an edit); an optional reason is kept on each decided proposal. Unselected stay pending. A stale version: details.diff or details.staleProposals. Next: testmaster_generate_tests.",
   testmaster_generate_tests:
     "Generate executable candidates from accepted proposals (proposalIds) or revisions (revisionIds), one project per call; provider/model pick the model; a model call has no deadline. Each candidate names its testId, testName and proposalId. Refused ones go to validationErrors. Not execution evidence.",
   testmaster_run_tests:
     "Run testIds with environmentId (revisionId: exact candidate or healed revision) or a list (suiteId) in the sandbox; mode defaults to replay (lists: replay only). jobId re-reads a batch. wait=true blocks until timeoutMs (runs continue), or poll testmaster_get_run. idempotencyKey makes retries safe.",
   testmaster_get_run:
-    "Get phase, outcome, gate and analysisStatus. Summary only: if the run did not pass, call testmaster_get_evidence then testmaster_analyze_run before naming a cause.",
+    "Get phase, outcome, gate and analysisStatus. Summary only: a run that did not pass, or whose gate failed, needs testmaster_get_evidence then testmaster_analyze_run before naming a cause; executionError names an error recorded after the steps.",
   testmaster_get_evidence:
-    "Page the evidence manifest (screenshots, DOM, console, network, logs) with resource links. Check integrity and freshness (staleReasons says why), follow nextCursor; failedOnly narrows. Next: testmaster_analyze_run.",
+    "Page the evidence manifest (screenshots, DOM, console, network, logs) with resource links. Check integrity and freshness (staleReasons says why), follow nextCursor; failedOnly narrows. Unpublished evidence names the run executionError. Next: testmaster_analyze_run.",
   testmaster_analyze_run:
-    "Diagnose a failed run from recorded evidence. model=true (or a model id; provider optional) adds a model reading; modelStatus says if it was used, abstained or unavailable (analysis then stays source rules). A cause without cited evidence is only a suggestion. Heal only if the advice allows.",
+    "Diagnose a failed run, or a pass whose gate failed, from recorded evidence. model=true (or a model id; provider optional) adds a model reading; modelStatus says if it was used or abstained. A cause without cited evidence is only a suggestion. Heal only if the advice allows.",
   testmaster_get_analysis:
     "Read the stored analysis without recomputing. NOT_FOUND if never requested; then call testmaster_analyze_run.",
   testmaster_cancel_run:
@@ -43,13 +43,13 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_review_healing:
     "Read the healing diff, risk, assertions-intact check, verification and approval. Next: testmaster_approve_healing with approval.expectedVersion, only after review.",
   testmaster_approve_healing:
-    "Approve at expectedVersion after testmaster_review_healing; creates the candidate revision and a verification run, which this server executes when no worker is live (follow it with testmaster_get_run wait=true); healed only when it passes. Needs write scope; the decision is audited.",
+    "Approve at expectedVersion after testmaster_review_healing, with an optional reason; creates the candidate revision and a verification run, which this server executes when no worker is live (follow with testmaster_get_run wait=true); healed only when it passes. Needs write scope; audited.",
   testmaster_edit_plan:
-    "Replace the plan of a still-proposed proposal at the proposal's expectedVersion (validated; its requirement and evidence references are kept). Returns the proposal and batchVersion, the version testmaster_review_plan wants: every edit raises it. Next: testmaster_review_plan.",
+    "Replace the plan of a still-proposed proposal at its expectedVersion (validated; requirement and evidence references kept). Returns the Proposal itself, not wrapped, plus batchVersion, which testmaster_review_plan takes: every edit raises it. Next: testmaster_review_plan.",
   testmaster_save_test:
     "Store a plan as a new test (projectId) or a new candidate revision of a test (testId). Returns test, revision, active and nextActions: a new revision is not active until testmaster_promote_revision.",
   testmaster_promote_revision:
-    "Make a candidate revision the active one of its test at expectedVersion (test.version). A generated candidate needs a passing replay first: testmaster_run_tests with revisionId. Healed revisions go through testmaster_approve_healing.",
+    "Make a candidate revision the active one of its test at expectedVersion (test.version); an optional reason is recorded. A generated candidate needs a passing replay first: testmaster_run_tests with revisionId. Healed revisions go through testmaster_approve_healing.",
   testmaster_save_suite:
     "Create a list, or change one at expectedVersion: replace the selection, addMembers or removeMembers of a fixed list. Run it with testmaster_run_tests suiteId (replay only).",
   testmaster_approve_execution:

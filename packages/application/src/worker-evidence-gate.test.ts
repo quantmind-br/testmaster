@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { RunnerEvent } from "@testmaster/contracts";
+import { ContractError, type RunnerEvent } from "@testmaster/contracts";
 import { exitCodeForRun, uuidV7IdGenerator } from "@testmaster/domain";
 import type * as Evidence from "@testmaster/evidence";
 import { AttemptExecutor } from "@testmaster/sandbox";
@@ -10,17 +10,23 @@ import { Application } from "./application.js";
 import { scaffoldPlan } from "./authoring.js";
 import { runVerdict } from "./run-verdict.js";
 
-const manifest = vi.hoisted(() => ({ entries: [] as Record<string, unknown>[] }));
+const manifest = vi.hoisted(() => ({
+  entries: [] as Record<string, unknown>[],
+  error: undefined as Error | undefined,
+}));
 vi.mock("@testmaster/evidence", async (importOriginal) => ({
   ...(await importOriginal<typeof Evidence>()),
-  verifyBundle: vi.fn(async () => ({
-    meta: {
-      manifestHash: "a".repeat(64),
-      committedAt: new Date().toISOString(),
-      redactionPolicyHash: "b".repeat(64),
-    },
-    manifest: { entries: manifest.entries },
-  })),
+  verifyBundle: vi.fn(async () => {
+    if (manifest.error) throw manifest.error;
+    return {
+      meta: {
+        manifestHash: "a".repeat(64),
+        committedAt: new Date().toISOString(),
+        redactionPolicyHash: "b".repeat(64),
+      },
+      manifest: { entries: manifest.entries },
+    };
+  }),
 }));
 
 const roots: string[] = [];
@@ -43,8 +49,14 @@ function entry(state: "available" | "missing") {
   };
 }
 
-/** Every step passes, so only the evidence manifest decides the gate. */
-async function passedRun(state: "available" | "missing") {
+/**
+ * Every step passes, so only the evidence manifest decides the gate. The mocked manifest has no
+ * files or snapshot, so `analyze` is only meaningful for a run whose bundle failed to verify.
+ */
+async function passedRun(
+  state: "available" | "missing",
+  options: { failure?: Error; analyze?: boolean } = {},
+) {
   const root = await mkdtemp(join(tmpdir(), "tm-evidence-gate-"));
   roots.push(root);
   const home = join(root, "home");
@@ -55,6 +67,7 @@ async function passedRun(state: "available" | "missing") {
   const plan = scaffoldPlan("backend");
   const test = app.tests.create({ projectId: init.projectId, plan });
   manifest.entries = [entry(state)];
+  manifest.error = options.failure;
   vi.spyOn(AttemptExecutor.prototype, "execute").mockImplementation(async (input) => {
     let seq = 0;
     const emit = (type: string, payload: unknown) =>
@@ -108,8 +121,10 @@ async function passedRun(state: "available" | "missing") {
   await app.worker.run({ ephemeral: true, runIds: [receipt.runId] });
   const run = app.runs.get(receipt.runId);
   const events = app.runs.events(receipt.runId);
+  const evidence = await app.artifacts.get(receipt.runId).catch((error: unknown) => error);
+  const analysis = options.analyze ? await app.analysis.analyze(receipt.runId, {}) : null;
   app.close();
-  return { run, events, verdict: runVerdict(run, events) };
+  return { run, events, verdict: runVerdict(run, events), evidence, analysis };
 }
 
 it("explains a passed run whose gate failed on unavailable evidence and never exits 0", async () => {
@@ -140,4 +155,43 @@ it("keeps assertions_satisfied and exit 0 when all evidence is available", async
   expect(
     exitCodeForRun({ gate: run.gate, outcome: run.outcome, reasonCode: verdict.reasonCode }),
   ).toBe(0);
+});
+
+const publicationFailure = () =>
+  new ContractError("INVALID_ARGUMENT", "Invalid Artifact", {
+    issues: [
+      {
+        path: "/storageKey",
+        rule: "maxLength",
+        message: "must NOT have more than 200 characters",
+      },
+    ],
+  });
+
+it("reports a run whose evidence could not be published by its recorded error, in every reading", async () => {
+  const { run, verdict, evidence, analysis } = await passedRun("available", {
+    failure: publicationFailure(),
+    analyze: true,
+  });
+  expect(run).toMatchObject({ phase: "completed", outcome: "passed", gate: "failed" });
+  // get_run: the error is carried and the reason is no longer the success reason.
+  expect(verdict.reasonCode).toBe("insufficient_evidence");
+  expect(verdict.executionError).toEqual({
+    code: "INVALID_ARGUMENT",
+    message: "Invalid Artifact",
+    reasonCode: "insufficient_evidence",
+    issues: [
+      { path: "/storageKey", rule: "maxLength", message: "must NOT have more than 200 characters" },
+    ],
+  });
+  // get_evidence: "Run evidence is missing" names why.
+  expect(evidence).toMatchObject({
+    code: "PRECONDITION_FAILED",
+    message: expect.stringContaining("/storageKey maxLength"),
+    details: { reason: "missing", executionError: { code: "INVALID_ARGUMENT" } },
+  });
+  // analyze_run: never "no failure".
+  expect(analysis?.diagnosis?.conclusion.status).not.toBe("no_failure");
+  expect(analysis?.diagnosis?.conclusion.text).toContain('INVALID_ARGUMENT "Invalid Artifact"');
+  expect(analysis?.diagnosis?.conclusion.text).toContain("/storageKey maxLength");
 });

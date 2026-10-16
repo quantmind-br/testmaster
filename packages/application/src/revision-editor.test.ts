@@ -68,6 +68,35 @@ it("UX-020 history marks current, candidate, superseded and accepted revisions f
   expect(f.app.revisions.get(activeId).contentHash).toBe(semanticHash(original.plan, "plan"));
 });
 
+it("a reason given at promotion is stored with the reviewer and time and shown in the history, and promoting without one still works", async () => {
+  const f = await open();
+  const test = f.app.tests.create({ projectId: f.projectId, plan: plan("Health") });
+  const first = f.app.revisions.create(test.id, plan("Health v2"), String(test.activeRevisionId));
+  const second = f.app.revisions.create(test.id, plan("Health v3"), first.id);
+  const version = () => f.app.tests.get(test.id).version ?? 1;
+  const promotion = (id: string) =>
+    f.app.revisionHistory.list(test.id).find((entry) => entry.id === id)?.promotion;
+  expect(() => f.app.revisions.promote(first.id, version(), "  ")).toThrowError(
+    expect.objectContaining({ code: "INVALID_ARGUMENT" }),
+  );
+  expect(f.app.tests.get(test.id).activeRevisionId).toBe(test.activeRevisionId);
+
+  const promoted = f.app.revisions.promote(first.id, version(), "Replay passed against staging");
+  expect(promoted.activeRevisionId).toBe(first.id);
+  expect(promotion(first.id)).toEqual({
+    reason: "Replay passed against staging",
+    actorId: f.app.context.principalId,
+    promotedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+  });
+  f.app.revisions.promote(second.id, version());
+  expect(f.app.tests.get(test.id).activeRevisionId).toBe(second.id);
+  expect(promotion(second.id)).toBeUndefined();
+  // A later promotion does not erase the reason recorded for an earlier one.
+  expect(promotion(first.id)?.reason).toBe("Replay passed against staging");
+  const audit = JSON.stringify(f.app.database.all("SELECT * FROM audit_events"));
+  expect(audit).not.toContain("Replay passed against staging");
+});
+
 it("UX-024 history separates assertion, operational and source/model changes and never reduces an assertion edit to auto-heal", async () => {
   const f = await open();
   const test = f.app.tests.create({ projectId: f.projectId, plan: plan("Health") });

@@ -38,6 +38,31 @@ export function auditPromotion(
     timestamp: new Date().toISOString(),
   });
 }
+const MAX_DECISION_REASON = 2000;
+/** The reason a reviewer gave with a decision, trimmed; null when none was given, `INVALID_ARGUMENT` when blank or too long. */
+export function decisionReason(reason: string | undefined): string | null {
+  if (reason === undefined) return null;
+  const text = reason.trim();
+  if (!text || text.length > MAX_DECISION_REASON)
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      `A reason needs 1 to ${MAX_DECISION_REASON} characters`,
+    );
+  return text;
+}
+const PROMOTIONS_EXTENSION = "testmaster:promotions";
+// A type alias (not an interface) so it is assignable to the JSON-valued extensions map.
+export type PromotionRecord = {
+  revisionId: string;
+  reason: string;
+  actorId: string;
+  promotedAt: string;
+};
+/** The promotions of a test that recorded a reason, oldest first (kept in the test's extensions). */
+export function promotionRecords(test: Pick<TestCase, "extensions">): PromotionRecord[] {
+  const stored = test.extensions?.[PROMOTIONS_EXTENSION];
+  return Array.isArray(stored) ? (stored as unknown as PromotionRecord[]) : [];
+}
 /**
  * Binding an auth profile to an environment needs no approval (the secret's allowed origins
  * already bound where a credential may go), so the change itself is recorded: the actor, the
@@ -764,6 +789,7 @@ export function promoteRevisionCas(
   revision: Stored<TestRevision>,
   current: Stored<TestCase>,
   expectedVersion: number,
+  reason: string | null = null,
 ): Stored<TestCase> {
   if (revision.origin === "healed") {
     const proposal = allEntities(ctx, "HealingProposal").find(
@@ -808,7 +834,27 @@ export function promoteRevisionCas(
     else ctx.authorize("X", current.projectId);
   } else ctx.authorize("W", current.projectId);
   expected(current, expectedVersion);
-  const next = { ...current, activeRevisionId: revision.id, version: expectedVersion + 1 };
+  const next = {
+    ...current,
+    ...(reason
+      ? {
+          extensions: {
+            ...current.extensions,
+            [PROMOTIONS_EXTENSION]: [
+              ...promotionRecords(current),
+              {
+                revisionId: revision.id,
+                reason,
+                actorId: ctx.principalId,
+                promotedAt: new Date().toISOString(),
+              },
+            ],
+          },
+        }
+      : {}),
+    activeRevisionId: revision.id,
+    version: expectedVersion + 1,
+  };
   ctx.entities.update("TestCase", ctx.workspaceId, current.id, expectedVersion, next);
   auditPromotion(ctx, current.id, revision.id, current.activeRevisionId);
   return next;
@@ -873,8 +919,9 @@ export class RevisionsService {
     this.ctx.authorize("R", owner.projectId);
     return value;
   }
-  promote(id: string, expectedVersion: number): Stored<TestCase> {
+  promote(id: string, expectedVersion: number, reason?: string): Stored<TestCase> {
     this.ctx.authorize("W");
+    const text = decisionReason(reason);
     return authoringTransaction(this.ctx, () => {
       const revision = requireEntity(this.ctx, "TestRevision", id) as Stored<TestRevision>;
       const current = requireEntity(this.ctx, "TestCase", revision.testId) as Stored<TestCase>;
@@ -909,7 +956,7 @@ export class RevisionsService {
           "PRECONDITION_FAILED",
           "Generated candidate requires a passing deterministic replay before promotion",
         );
-      return promoteRevisionCas(this.ctx, revision, current, expectedVersion);
+      return promoteRevisionCas(this.ctx, revision, current, expectedVersion, text);
     });
   }
 }

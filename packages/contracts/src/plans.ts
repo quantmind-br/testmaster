@@ -66,7 +66,15 @@ const valuePredicate = <P extends string>(predicate: P) =>
   Obj({ predicate: Type.Literal(predicate), value: Value });
 export const Expectation = Type.Union([
   ...(
-    ["visible", "hidden", "enabled", "noLingeringProcesses", "fileExists", "fileAbsent"] as const
+    [
+      "visible",
+      "hidden",
+      "enabled",
+      "disabled",
+      "noLingeringProcesses",
+      "fileExists",
+      "fileAbsent",
+    ] as const
   ).map((predicate) => Obj({ predicate: Type.Literal(predicate) })),
   Obj({
     predicate: Type.Literal("exitCodeIn"),

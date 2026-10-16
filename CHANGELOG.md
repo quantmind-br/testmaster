@@ -20,6 +20,22 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 - The REST routes that run a model (proposal generation and refinement, `POST /runs/{id}/analysis`, `POST /runs/{id}/healing-proposals`, requirement normalization) and `POST /mcp` turn off the server's 30 s socket idle timeout for their connection; other routes keep it (`ServerOptions.connectionTimeoutMs`).
 - The eval runner never kills a model command; its trial wall time only stops commands that do no model work and keeps later commands from starting. The development smoke forwarder relays model calls without a timeout.
 
+### Sixth Omnigent agent run
+
+Found when an omp agent drove the pipeline on Omnigent a sixth time.
+
+- A plan with long step ids or download names no longer fails at publication. Artifact storage keys are relative paths bounded at 4096 characters (PATH_MAX) instead of 200, so a passing run with valid step ids keeps its evidence. Migration 23 widens the matching SQLite and PostgreSQL constraint, and the runner image is rebuilt because it bundles the contracts.
+- A run whose evidence could not be published (or that recorded any other execution error after its steps) now reports it: `get_run`/`run get` carry `executionError` and a real `reasonCode` (`insufficient_evidence` instead of `assertions_satisfied`), `get_evidence` names the error instead of only "Run evidence is missing", and `analyze_run` no longer says "No failure observed" for a pass whose gate failed. Batch `counts.passed` no longer includes runs whose gate failed; they count as `inconclusive`.
+- Normalization sends each Markdown section (heading, statement and acceptance criteria) to the model whole and asks for one requirement per stated behavior, so a PRD with 9 requirements no longer comes back as 29 (one per acceptance bullet plus a summary).
+- Plan generation offers the model the operations and response-schema pointers of the project's active API-spec sources, so requirements normalized from a PRD alone still get `jsonSchema` assertions against the OpenAPI document.
+- Requirement coverage in reports counts only requirements still in scope; rejected and superseded requirements no longer appear as uncovered.
+- `testmaster --version` prints the CLI build with the schema and runner versions that `capabilities` reports. A new source starts at version 1 (it read 2).
+- `testmaster_bootstrap` returns its config as `proposedConfig`, a proposal for `testmaster.config.json` that is never written; `config` is gone. The stored environment stays in `environment`, and one aimed at another origin is never retargeted.
+- Evidence of a request step whose id contains a secret value (the user name `root` inside `open_root`) keeps the plan's exact `variableRef` text in `captures[]` and `request.bindings[]` of `http/<stepId>.json`; those fields were rewritten to `[REDACTED]` while `stepId` was already exact.
+- `testmaster_review_plan`, `testmaster_promote_revision` and `testmaster_approve_healing`, and their CLI (`plan accept|reject`, `test revision promote`, `heal approve`) and REST counterparts, take an optional `reason` (1–2000 characters). It is stored with the reviewer and time on each decided proposal, on the test and its history entry, and on the healing proposal (`heal review` shows it); it stays out of the audit trail.
+- New `disabled` assertion predicate, the inverse of `enabled`: the browser runner polls Playwright's `isDisabled` and records the observation on failure; plan lint and the Playwright and pytest exports support it.
+- A healing review whose verification already ran and failed reads `Automation: not_eligible` and no longer prints an approval command that `approve` then refuses with "Healing cannot start another verification"; the MCP and CLI texts point to repairing the test or proposing healing for a new failed run.
+
 ### Fifth Omnigent agent run
 
 Found when an omp agent drove the pipeline on Omnigent a fifth time (8/8 plan tests and 8/8 generated Playwright tests passed; a probe test with a stale locator was diagnosed, healed and verified).
@@ -278,3 +294,4 @@ and rollback means restoring a backup taken before the upgrade.
 | 20 | `integration_created_by` | `8122a9cad6da` | Moves each integration's consent grantor (or, failing that, its creation audit actor) into `createdBy` and removes the stored consent record; the migration aborts with `integration_created_by_unresolvable` and rolls back if any integration has no resolvable creator; lifecycle state is untouched (ADR-024) |
 | 21 | `onboarding_remove_consents` | `2734105e8a81` | Removes `choices.consents` from stored setup-wizard state (`operational_state` keys `onboarding:*`); every other field, the version and the saved history are preserved (ADR-024) |
 | 22 | `terminal_runner` | `28f7197ad66a` | Lets `test_revisions` accept runner kind `terminal` for plan type `cli`: the SQLite table is rebuilt with its rows, indexes, immutability and contract triggers preserved, and the PostgreSQL migration (checksum prefix `ce2f4babc5f1`) replaces the inline CHECK and the contract projection constraint (ADR-025) |
+| 23 | `artifact_storage_key` | `a47270a215b6` | Widens the `artifacts` contract constraint on `storage_key` from 200 to 4096 characters (a relative path built from plan step ids and output names): SQLite replaces the contract triggers after validating existing rows, and the PostgreSQL migration (checksum prefix `916906a0a8e8`) replaces the projection CHECK |

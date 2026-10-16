@@ -346,6 +346,24 @@ describe("standalone deterministic code export", () => {
     expect(() => exportCode(plan, { format: "pytest" })).toThrow(/ECMAScript construct/);
     expect(() => exportCode(plan, { format: "playwright" })).not.toThrow();
   });
+  it("exports a disabled assertion with the Playwright disabled semantics in both formats", async () => {
+    const plan = await fixture("frontend");
+    plan.steps = [
+      {
+        id: "sign-in-disabled",
+        kind: "assertion",
+        operation: "assert",
+        description: "Sign in is disabled while the password is empty",
+        input: { locator: { by: "role", role: "button", name: "Sign in", exact: true } },
+        expectation: { predicate: "disabled" },
+      },
+    ];
+    const playwright = exportCode(plan, { format: "playwright" });
+    expect(playwright.metadata.assertionIds).toEqual(["sign-in-disabled"]);
+    expect(playwright.files["helpers/standalone.ts"] ?? "").toContain("toBeDisabled");
+    const python = exportCode(plan, { format: "pytest" }).files["standalone.py"] ?? "";
+    expect(python).toContain("is_disabled");
+  });
   it("refuses auth profile sessions and JSON body set entries that exported code cannot reproduce", async () => {
     const plan = await fixture("backend");
     const request = plan.steps[0];

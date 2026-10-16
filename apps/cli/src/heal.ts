@@ -67,9 +67,22 @@ export function healingReviewText(review: HealingReview): string {
     review.verification
       ? `Verification: ${review.verification.runId} — ${review.verification.outcome ?? "not finished"}/${review.verification.gate}`
       : "Verification: not recorded",
+    ...(review.approval.decision
+      ? [
+          `Approved by ${review.approval.decision.actorId} at ${review.approval.decision.approvedAt}: ${review.approval.decision.reason}`,
+        ]
+      : []),
     "",
-    "Approval is bound to this proposal, candidate revision and expected version:",
-    `testmaster heal approve ${review.approval.proposalId} --expected-version ${review.approval.expectedVersion}`,
+    ...(review.automation.decision === "manual_review_required"
+      ? [
+          "Approval is bound to this proposal, candidate revision and expected version:",
+          `testmaster heal approve ${review.approval.proposalId} --expected-version ${review.approval.expectedVersion}`,
+        ]
+      : review.verification && review.verification.outcome !== "passed"
+        ? [
+            "Approval: not available, this proposal's verification did not pass; repair the test with `testmaster test revision create` and replay it, or propose healing for a new failed run",
+          ]
+        : [`Approval: not available (${review.automation.decision})`]),
   );
   if (review.limitations.length)
     lines.push("", "Limitations:", ...review.limitations.map((limitation) => `- ${limitation}`));
@@ -118,12 +131,17 @@ export function healingCommands(program: Command, runtime: Runtime): void {
       .command("approve <proposalId>")
       .requiredOption("--expected-version <version>", "CAS version", integer)
       .option(
+        "--reason <text>",
+        "Why you approve (1-2000 characters), recorded on the proposal with the reviewer and time",
+      )
+      .option(
         "--wait",
         "Wait for the verification run (it always runs in-process when no worker is live)",
       ),
     async (rt, args, options) => {
       const app = await rt.app();
-      const proposal = await app.healing.approve(String(args[0]), version(options));
+      const reason = string(options, "reason");
+      const proposal = await app.healing.approve(String(args[0]), version(options), reason);
       if (!proposal.verificationRunId)
         throw new ContractError("PRECONDITION_FAILED", "Approval did not admit verification");
       const run = app.runs.get(proposal.verificationRunId);

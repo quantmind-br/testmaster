@@ -270,6 +270,22 @@ export const RunResult = Obj({
       { maxItems: 500 },
     ),
   ),
+  /**
+   * The error the Run recorded after its steps ran (for example, evidence that could not be
+   * published): code, message, reason and issue paths, bounded and scrubbed. A Run that carries
+   * one did not complete cleanly, whatever its outcome says.
+   */
+  executionError: Type.Optional(
+    Obj({
+      code: Name,
+      message: Type.Optional(Name),
+      reasonCode: Type.Optional(Name),
+      issues: Type.Array(
+        Obj({ path: Name, rule: Type.Optional(Name), message: Type.Optional(Name) }),
+        { maxItems: 10 },
+      ),
+    }),
+  ),
   passedOnRetry: Type.Boolean(),
   firstAttemptOutcome: Type.Union([Outcome, Type.Null()]),
 });

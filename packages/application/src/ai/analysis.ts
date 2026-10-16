@@ -32,6 +32,11 @@ import {
 import { type ArtifactsService, isEvidenceUnavailable } from "../artifacts.js";
 import { entity, requireEntity, type ServiceContext } from "../context.js";
 import type { AdmissionSnapshot } from "../provenance.js";
+import {
+  describeExecutionError,
+  type RunExecutionError,
+  readExecutionError,
+} from "../run-verdict.js";
 import type { DiscoveryDetail, DiscoveryService } from "./discovery.js";
 import { AUXILIARY_LEASE_MS, keepLeaseAlive } from "./job-lease.js";
 import { type ModelService, promptVersions, unsentModelReasons } from "./model.js";
@@ -98,6 +103,8 @@ type Evidence = {
   planStep?: PlanStep | undefined;
   /** Set on a code revision's step (no plan step): the operation the Playwright reporter named. */
   codeOperation?: string;
+  /** Set on the `run.execution_error` observation: the error the Run recorded after its steps. */
+  executionError?: RunExecutionError;
 };
 type Diagnosis = NonNullable<Analysis["diagnosis"]>;
 /** One availability fact per artifact kind, citing every artifact of that kind. */
@@ -1386,11 +1393,16 @@ export class AnalysisService {
         reason === "security_precondition_failed" && typeof value.control === "string"
           ? ` (control ${value.control}${typeof value.diagnostic === "string" ? `: ${value.diagnostic}` : ""})`
           : "";
+      const executionError =
+        row.type === "run.execution_error" ? readExecutionError(value) : undefined;
       evidence.push({
         value,
         reason: reason ?? (diagnostic ? "network_unreachable" : undefined),
         ref: { runId: run.id, observationSeq: Number(row.seq), contentHash: semanticHash(value) },
-        text: `Persisted ${String(row.type)} observation${reason ? `: ${reason}${control}` : diagnostic ? `: ${diagnostic}` : ""}.`,
+        text: executionError
+          ? `Persisted run.execution_error observation: ${describeExecutionError(executionError)}.`
+          : `Persisted ${String(row.type)} observation${reason ? `: ${reason}${control}` : diagnostic ? `: ${diagnostic}` : ""}.`,
+        ...(executionError ? { executionError } : {}),
       });
     }
     try {
@@ -1734,9 +1746,27 @@ export class AnalysisService {
       gaps.push(
         `${timedOut.process.lingeringProcesses} process(es) outlived process ${timedOut.processId}; their state after the sweep is not recorded.`,
       );
+    // A pass whose gate failed (evidence not published, unavailable entries) is not "no failure".
+    const gateFailedPass = run.outcome === "passed" && run.gate === "failed";
+    const recorded = gateFailedPass
+      ? collected.evidence.find((item) => item.executionError)
+      : undefined;
+    const recordedError = recorded?.executionError;
     const observation: Diagnosis["observation"] =
       run.outcome === "passed"
-        ? null
+        ? gateFailedPass
+          ? {
+              stepId: null,
+              operation: null,
+              summary: recordedError
+                ? `The Run's steps passed, then it recorded an execution error: ${describeExecutionError(recordedError)}.`
+                : "The Run's assertions passed but its gate failed.",
+              expected: null,
+              observed: null,
+              absence: "evidence_unavailable",
+              evidenceRefs: [recorded?.ref ?? { runId: run.id, contentHash: semanticHash(run) }],
+            }
+          : null
         : {
             stepId: failed?.step?.planStepId ?? null,
             operation: failed?.planStep?.operation ?? failed?.codeOperation ?? null,
@@ -1796,8 +1826,23 @@ export class AnalysisService {
       nextSteps.push({ text, source: "rules", evidenceRefs });
     const alternative = (text: string, kind: Analysis["failureKind"]) =>
       alternatives.push({ text, failureKind: kind, evidenceRefs: supports });
+    if (gateFailedPass && recorded)
+      next(
+        "Resolve the recorded execution error, then rerun the test: a pass whose gate failed is not a verified pass, and its evidence may be missing.",
+        [recorded.ref],
+      );
     if (run.outcome === "passed")
-      conclusion = { status: "no_failure", text: "The Run passed; no failure was observed." };
+      conclusion = !gateFailedPass
+        ? { status: "no_failure", text: "The Run passed; no failure was observed." }
+        : recordedError
+          ? {
+              status: "cause_supported",
+              text: `The Run's steps passed, but it then recorded an execution error and its gate failed: ${describeExecutionError(recordedError)}. The pass is not established.`,
+            }
+          : {
+              status: "cause_unknown",
+              text: "The Run's assertions passed but its gate failed; no failure of the target was observed, and the recorded evidence does not establish why the gate failed.",
+            };
     else if (failureKind === "security_policy") {
       const denied = collected.evidence.filter(
         (item) => egressDenial(item.value)?.disposition === "fatal",

@@ -1538,6 +1538,37 @@ it("writes a plan step id whole into an artifact's stepId field although a secre
   ).toBe('{"stepId":"assert_root_url","text":"signed in as [REDACTED]"}');
 });
 
+it("records the variable references of a step whose id contains a secret value exactly as the plan writes them", async () => {
+  const base = await serve((_req, res) => res.end('{"session":"opaque-value"}'));
+  const login = requestStep("login_root", [], {
+    capture: [
+      {
+        name: "session",
+        from: "jsonPointer",
+        pointer: "/session",
+        valueType: "string",
+        sensitive: false,
+      },
+    ],
+  });
+  const consume = requestStep("use_session", [], {
+    headers: { "x-session": { variableRef: "login_root.session" } },
+  });
+  const f = fixture(base, { plan: plan([login, consume]) });
+  f.runtime.secrets.add("root");
+  await f.engine.perform(login);
+  await f.engine.perform(consume);
+  const record = (path: string) =>
+    JSON.parse(new TextDecoder().decode(f.artifacts.get(path))) as {
+      captures: { variableRef: string }[];
+      request: { bindings: { variableRef: string }[] };
+    };
+  expect(record("http/login_root.json").captures[0]?.variableRef).toBe("login_root.session");
+  expect(record("http/use_session.json").request.bindings[0]?.variableRef).toBe(
+    "login_root.session",
+  );
+});
+
 it("sends a fresh invalid credential per request without turning a rejection into a credential failure", async () => {
   const seen: string[] = [];
   const base = await serve((req, res) => {

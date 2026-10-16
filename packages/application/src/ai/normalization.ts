@@ -16,6 +16,80 @@ export interface NormalizeProgress {
   message: string;
 }
 
+const MAX_BATCH_BYTES = 6000;
+const MAX_BATCH_CHUNKS = 6;
+/** Markdown block kinds: a heading opens a section that the blocks after it complete. */
+const MARKDOWN_KINDS: Record<string, true> = {
+  heading: true,
+  paragraph: true,
+  listItem: true,
+  table: true,
+  code: true,
+};
+
+/**
+ * Chunks that must reach the model together: a Markdown heading with the paragraphs, list items
+ * and tables up to the next heading of the same revision, a heading that has no content of its
+ * own (a group title) staying with the heading under it. Cut apart, the acceptance criteria of
+ * a requirement reach the model without the statement they belong to, and each one comes back as
+ * a requirement of its own. Any other chunk (an OpenAPI operation, a PDF page, a text line)
+ * stands alone.
+ */
+function sectionsOf(chunks: SourceChunk[]): SourceChunk[][] {
+  const sections: SourceChunk[][] = [];
+  for (const chunk of chunks) {
+    const open = sections.at(-1);
+    const first = open?.[0];
+    if (
+      open &&
+      first &&
+      MARKDOWN_KINDS[chunk.kind] &&
+      MARKDOWN_KINDS[first.kind] &&
+      first.evidenceRef.sourceRevisionId === chunk.evidenceRef.sourceRevisionId &&
+      (chunk.kind !== "heading" || open.every((member) => member.kind === "heading"))
+    )
+      open.push(chunk);
+    else sections.push([chunk]);
+  }
+  return sections;
+}
+
+/**
+ * Model batches of at most MAX_BATCH_BYTES and MAX_BATCH_CHUNKS, cut between sections. A section
+ * that alone exceeds MAX_BATCH_BYTES is the only case split inside, at the byte limit.
+ */
+export function batchChunks(chunks: SourceChunk[]): SourceChunk[][] {
+  const batches: SourceChunk[][] = [];
+  let current: SourceChunk[] = [];
+  let bytes = 0;
+  const flush = () => {
+    if (current.length) batches.push(current);
+    current = [];
+    bytes = 0;
+  };
+  for (const section of sectionsOf(chunks)) {
+    const sizes = section.map((chunk) => Buffer.byteLength(canonicalJson(chunk)));
+    const total = sizes.reduce((sum, size) => sum + size, 0);
+    if (total > MAX_BATCH_BYTES) {
+      flush();
+      for (const [index, chunk] of section.entries()) {
+        if (current.length && bytes + (sizes[index] ?? 0) > MAX_BATCH_BYTES) flush();
+        current.push(chunk);
+        bytes += sizes[index] ?? 0;
+      }
+      flush();
+      continue;
+    }
+    const full =
+      bytes + total > MAX_BATCH_BYTES || current.length + section.length > MAX_BATCH_CHUNKS;
+    if (current.length && full) flush();
+    current.push(...section);
+    bytes += total;
+  }
+  flush();
+  return batches;
+}
+
 /** Bounded extraction, with prior statements available for cross-source conflict detection. */
 export async function normalizeSources(
   model: ModelService,
@@ -57,20 +131,7 @@ export async function normalizeSources(
     instructions:
       "Compare the normalized statements AND original source chunks from different source revisions for incompatible acceptance criteria. Inspect every concrete status code, error condition, field name, authorization rule, and numeric constraint for the same operation/condition across sources. A source mentioning a deliberate conflict is not a resolution; preserve the disagreement. Link disagreements to the existing requirement keys that cover each side and cite the evidenceId values of the chunks stating each side, from at least two different sourceRevisionId values; never invent evidenceIds. Do not invent, rewrite or discard requirements. Disagreement remains unresolved for human adjudication. Return concise reasons and complete JSON. If extraction omitted either conflicting statement, describe the omitted statement and its evidenceId in openQuestions; do not claim no conflict.",
   });
-  const batches: SourceChunk[][] = [];
-  let current: SourceChunk[] = [];
-  let bytes = 0;
-  for (const chunk of chunks) {
-    const size = Buffer.byteLength(canonicalJson(chunk));
-    if (current.length && (bytes + size > 6000 || current.length >= 6)) {
-      batches.push(current);
-      current = [];
-      bytes = 0;
-    }
-    current.push(chunk);
-    bytes += size;
-  }
-  if (current.length) batches.push(current);
+  const batches = batchChunks(chunks);
   // The reconciliation sends every source chunk. Refuse before the first paid batch when those
   // chunks alone cannot fit the model's declared context (the extracted requirements, unknown
   // until the batches ran, only add to it).
@@ -92,7 +153,7 @@ export async function normalizeSources(
         batchKeyPrefix: `batch-${index + 1}-`,
       },
       instructions:
-        "Extract concise explicit product requirements and acceptance criteria from the current chunks only, not titles, headings, administrative commands or review instructions. Emit one requirement per distinct requirement statement in the source; never split one requirement into several or merge independent ones. At most 12 requirements. Each text/reason/criterion must be concise (under 200 characters). Cite evidence only by the evidenceId values of the chunks that state it (for example E3); never invent evidenceIds, never repeat source text or schemas. Requirement keys must start with batchKeyPrefix. Prior requirements are context only: do not re-emit them. A conflict MUST cite evidenceIds from at least two DIFFERENT sourceRevisionId values. If only one source revision is available, return conflicts: [] and record ambiguity in openQuestions instead. Mentioning another document inside a chunk does not provide evidence for that other revision. Preserve contradictory current/prior statements as separate requirements and conflicts referencing both existing and new keys with their actual evidenceIds from different revisions. Never approve anything. Inference requires confidence and reason. Return complete JSON without commentary.",
+        "Extract concise explicit product requirements and acceptance criteria from the current chunks only, not titles, headings, administrative commands or review instructions. Emit one requirement per requirement the source states: a stated behavior together with ALL of its acceptance criteria. When the source lays requirements out as sections (a heading chunk naming a requirement or carrying a REQ-style id, then its statement and its acceptance criteria as paragraph and listItem chunks), every such section is exactly ONE requirement: text is the statement, and each criterion listed under it (a listItem, a checklist or an 'Acceptance criteria' line) is one entry of that requirement's acceptanceCriteria, never a requirement of its own. Never emit both a summary requirement and separate requirements for the criteria of the same section, and never restate one behavior in several requirements. Split a section only when the source itself states distinct behaviors with their own acceptance criteria; merge nothing the source states separately. At most 12 requirements. Each text/reason/criterion must be concise (under 200 characters). Cite evidence only by the evidenceId values of the chunks that state it (for example E3); never invent evidenceIds, never repeat source text or schemas. Requirement keys must start with batchKeyPrefix. Prior requirements are context only: do not re-emit them. A conflict MUST cite evidenceIds from at least two DIFFERENT sourceRevisionId values. If only one source revision is available, return conflicts: [] and record ambiguity in openQuestions instead. Mentioning another document inside a chunk does not provide evidence for that other revision. Preserve contradictory current/prior statements as separate requirements and conflicts referencing both existing and new keys with their actual evidenceIds from different revisions. Never approve anything. Inference requires confidence and reason. Return complete JSON without commentary.",
     });
     callIds.push(result.modelCallId);
     const output = resolveNormalizationOutput(result.output, catalog);

@@ -609,3 +609,63 @@ it("editing a proposal drops the model warnings that described the plan it wrote
   expect(edited.warnings).toEqual([]);
   expect(f.app.proposals.detail(batch.id).proposals[0]?.warnings).toEqual([]);
 });
+
+it("a reason given with accept or reject is kept on each decided proposal with the reviewer and time, and omitting it still works", async () => {
+  const f = await open();
+  const { batch, proposals } = await f.generatedBatch();
+  const [a, b, c] = proposals;
+  if (!a || !b || !c) throw new Error("Missing proposals");
+  const decision = (id: string) =>
+    f.app.proposals.detail(batch.id).proposals.find((proposal) => proposal.id === id)?.extensions?.[
+      "testmaster:decision"
+    ];
+  const accepted = { proposalIds: [a.id], expectedVersion: batch.version ?? 1 };
+  expect(() =>
+    f.app.proposals.accept(batch.id, {
+      ...accepted,
+      reason: "   ",
+      idempotencyKey: "blank-reason-accept",
+    }),
+  ).toThrowError(expect.objectContaining({ code: "INVALID_ARGUMENT" }));
+  expect(() =>
+    f.app.proposals.accept(batch.id, {
+      ...accepted,
+      reason: "r".repeat(2001),
+      idempotencyKey: "long-reason-accept",
+    }),
+  ).toThrowError(expect.objectContaining({ code: "INVALID_ARGUMENT" }));
+  expect(counts(f)).toEqual({ tests: 0, revisions: 0 });
+
+  f.app.proposals.accept(batch.id, {
+    ...accepted,
+    reason: "Covers the login requirement",
+    idempotencyKey: "reasoned-accept-key",
+  });
+  expect(decision(a.id)).toEqual({
+    reason: "Covers the login requirement",
+    actorId: f.app.context.principalId,
+    decidedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+  });
+  f.app.proposals.reject(batch.id, {
+    proposalIds: [b.id],
+    expectedVersion: f.app.proposals.detail(batch.id).batch.version ?? 1,
+    reason: "Duplicates scenario A",
+  });
+  expect(decision(b.id)).toMatchObject({
+    reason: "Duplicates scenario A",
+    actorId: f.app.context.principalId,
+  });
+  // No reason, no decision record: the call is as valid as before.
+  f.app.proposals.reject(batch.id, {
+    proposalIds: [c.id],
+    expectedVersion: f.app.proposals.detail(batch.id).batch.version ?? 1,
+  });
+  expect(decision(c.id)).toBeUndefined();
+  const state = (id: string) =>
+    f.app.proposals.detail(batch.id).proposals.find((proposal) => proposal.id === id)?.state;
+  expect([a.id, b.id, c.id].map(state)).toEqual(["accepted", "rejected", "rejected"]);
+  // Audit rows keep ids and hashes only, so a reason never reaches the audit trail.
+  const audit = JSON.stringify(f.app.database.all("SELECT * FROM audit_events"));
+  expect(audit).not.toContain("Covers the login requirement");
+  expect(audit).not.toContain("Duplicates scenario A");
+});

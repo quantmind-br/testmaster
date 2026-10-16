@@ -8254,7 +8254,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ExpectedVersionInput"
+                "$ref": "#/components/schemas/HealingApproveInput"
               }
             }
           }
@@ -21396,6 +21396,19 @@
                                     ],
                                     "properties": {
                                       "predicate": {
+                                        "const": "disabled",
+                                        "type": "string"
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "type": "object",
+                                    "required": [
+                                      "predicate"
+                                    ],
+                                    "properties": {
+                                      "predicate": {
                                         "const": "noLingeringProcesses",
                                         "type": "string"
                                       }
@@ -23662,6 +23675,19 @@
                                 "properties": {
                                   "predicate": {
                                     "const": "enabled",
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              {
+                                "additionalProperties": false,
+                                "type": "object",
+                                "required": [
+                                  "predicate"
+                                ],
+                                "properties": {
+                                  "predicate": {
+                                    "const": "disabled",
                                     "type": "string"
                                   }
                                 }
@@ -29667,6 +29693,19 @@
                         ],
                         "properties": {
                           "predicate": {
+                            "const": "disabled",
+                            "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate"
+                        ],
+                        "properties": {
+                          "predicate": {
                             "const": "noLingeringProcesses",
                             "type": "string"
                           }
@@ -33340,7 +33379,7 @@
           },
           "storageKey": {
             "minLength": 1,
-            "maxLength": 200,
+            "maxLength": 4096,
             "type": "string"
           },
           "state": {
@@ -42238,6 +42277,19 @@
                               ],
                               "properties": {
                                 "predicate": {
+                                  "const": "disabled",
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate"
+                              ],
+                              "properties": {
+                                "predicate": {
                                   "const": "noLingeringProcesses",
                                   "type": "string"
                                 }
@@ -49911,6 +49963,19 @@
                         ],
                         "properties": {
                           "predicate": {
+                            "const": "disabled",
+                            "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate"
+                        ],
+                        "properties": {
+                          "predicate": {
                             "const": "noLingeringProcesses",
                             "type": "string"
                           }
@@ -56077,7 +56142,7 @@
         "type": "object",
         "required": [
           "projectId",
-          "config",
+          "proposedConfig",
           "preflight",
           "nextActions"
         ],
@@ -56086,7 +56151,8 @@
             "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
             "type": "string"
           },
-          "config": {
+          "proposedConfig": {
+            "description": "Proposal for testmaster.config.json built from the requested target and mode; never written to disk and never the stored environment (see environment)",
             "additionalProperties": false,
             "type": "object",
             "required": [
@@ -73997,6 +74063,19 @@
                           ],
                           "properties": {
                             "predicate": {
+                              "const": "disabled",
+                              "type": "string"
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "predicate"
+                          ],
+                          "properties": {
+                            "predicate": {
                               "const": "noLingeringProcesses",
                               "type": "string"
                             }
@@ -76263,6 +76342,19 @@
                       "properties": {
                         "predicate": {
                           "const": "enabled",
+                          "type": "string"
+                        }
+                      }
+                    },
+                    {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "predicate"
+                      ],
+                      "properties": {
+                        "predicate": {
+                          "const": "disabled",
                           "type": "string"
                         }
                       }
@@ -83886,6 +83978,19 @@
                         ],
                         "properties": {
                           "predicate": {
+                            "const": "disabled",
+                            "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate"
+                        ],
+                        "properties": {
+                          "predicate": {
                             "const": "noLingeringProcesses",
                             "type": "string"
                           }
@@ -88505,6 +88610,25 @@
         },
         "$defs": {}
       },
+      "HealingApproveInput": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expectedVersion"
+        ],
+        "properties": {
+          "expectedVersion": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "reason": {
+            "minLength": 1,
+            "maxLength": 2000,
+            "type": "string"
+          }
+        },
+        "$defs": {}
+      },
       "HealingInput": {
         "additionalProperties": false,
         "type": "object",
@@ -90013,6 +90137,32 @@
               "candidateRevisionId": {
                 "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
                 "type": "string"
+              },
+              "decision": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "reason",
+                  "actorId",
+                  "approvedAt"
+                ],
+                "properties": {
+                  "reason": {
+                    "minLength": 1,
+                    "maxLength": 2000,
+                    "type": "string"
+                  },
+                  "actorId": {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  "approvedAt": {
+                    "format": "date-time",
+                    "pattern": "Z$",
+                    "type": "string"
+                  }
+                }
               }
             }
           },
@@ -102169,6 +102319,19 @@
                                   ],
                                   "properties": {
                                     "predicate": {
+                                      "const": "disabled",
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "predicate"
+                                  ],
+                                  "properties": {
+                                    "predicate": {
                                       "const": "noLingeringProcesses",
                                       "type": "string"
                                     }
@@ -104435,6 +104598,19 @@
                               "properties": {
                                 "predicate": {
                                   "const": "enabled",
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "disabled",
                                   "type": "string"
                                 }
                               }
@@ -112367,6 +112543,19 @@
                         "properties": {
                           "predicate": {
                             "const": "enabled",
+                            "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "disabled",
                             "type": "string"
                           }
                         }
@@ -120886,6 +121075,19 @@
                                       ],
                                       "properties": {
                                         "predicate": {
+                                          "const": "disabled",
+                                          "type": "string"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "type": "object",
+                                      "required": [
+                                        "predicate"
+                                      ],
+                                      "properties": {
+                                        "predicate": {
                                           "const": "noLingeringProcesses",
                                           "type": "string"
                                         }
@@ -123152,6 +123354,19 @@
                                   "properties": {
                                     "predicate": {
                                       "const": "enabled",
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "predicate"
+                                  ],
+                                  "properties": {
+                                    "predicate": {
+                                      "const": "disabled",
                                       "type": "string"
                                     }
                                   }
@@ -131039,6 +131254,19 @@
                         ],
                         "properties": {
                           "predicate": {
+                            "const": "disabled",
+                            "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate"
+                        ],
+                        "properties": {
+                          "predicate": {
                             "const": "noLingeringProcesses",
                             "type": "string"
                           }
@@ -132622,6 +132850,12 @@
             "minimum": 1,
             "type": "integer",
             "description": "approval.expectedVersion from testmaster_review_healing"
+          },
+          "reason": {
+            "minLength": 1,
+            "maxLength": 2000,
+            "type": "string",
+            "description": "Why you approve; recorded on the proposal with the reviewer and time (testmaster_review_healing shows it)"
           }
         },
         "$defs": {}
@@ -133126,6 +133360,12 @@
             "minimum": 1,
             "type": "integer",
             "description": "Current version of the test (test.version from testmaster_save_test)"
+          },
+          "reason": {
+            "minLength": 1,
+            "maxLength": 2000,
+            "type": "string",
+            "description": "Why you promote; recorded on the test with the reviewer and time (test history shows it)"
           }
         },
         "$defs": {}
@@ -133207,6 +133447,12 @@
               "type": "string"
             },
             "description": "Proposals to reject"
+          },
+          "reason": {
+            "minLength": 1,
+            "maxLength": 2000,
+            "type": "string",
+            "description": "Why you accept or reject; recorded on each decided proposal with the reviewer and time"
           }
         },
         "$defs": {}
@@ -141325,6 +141571,11 @@
           "approval": {
             "pattern": "^apr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
             "type": "string"
+          },
+          "reason": {
+            "minLength": 1,
+            "maxLength": 2000,
+            "type": "string"
           }
         },
         "$defs": {}
@@ -148085,6 +148336,19 @@
                                   ],
                                   "properties": {
                                     "predicate": {
+                                      "const": "disabled",
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "predicate"
+                                  ],
+                                  "properties": {
+                                    "predicate": {
                                       "const": "noLingeringProcesses",
                                       "type": "string"
                                     }
@@ -150351,6 +150615,19 @@
                               "properties": {
                                 "predicate": {
                                   "const": "enabled",
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "disabled",
                                   "type": "string"
                                 }
                               }
@@ -158279,6 +158556,19 @@
                         "properties": {
                           "predicate": {
                             "const": "enabled",
+                            "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "disabled",
                             "type": "string"
                           }
                         }
@@ -166456,6 +166746,19 @@
                                         ],
                                         "properties": {
                                           "predicate": {
+                                            "const": "disabled",
+                                            "type": "string"
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "type": "object",
+                                        "required": [
+                                          "predicate"
+                                        ],
+                                        "properties": {
+                                          "predicate": {
                                             "const": "noLingeringProcesses",
                                             "type": "string"
                                           }
@@ -168722,6 +169025,19 @@
                                     "properties": {
                                       "predicate": {
                                         "const": "enabled",
+                                        "type": "string"
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "type": "object",
+                                    "required": [
+                                      "predicate"
+                                    ],
+                                    "properties": {
+                                      "predicate": {
+                                        "const": "disabled",
                                         "type": "string"
                                       }
                                     }
@@ -176698,6 +177014,19 @@
                         ],
                         "properties": {
                           "predicate": {
+                            "const": "disabled",
+                            "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate"
+                        ],
+                        "properties": {
+                          "predicate": {
                             "const": "noLingeringProcesses",
                             "type": "string"
                           }
@@ -177954,7 +178283,8 @@
             "type": "integer"
           },
           "reason": {
-            "maxLength": 8000,
+            "minLength": 1,
+            "maxLength": 2000,
             "type": "string"
           },
           "acknowledgedDuplicates": {
@@ -184365,6 +184695,59 @@
                   "minLength": 1,
                   "maxLength": 200,
                   "type": "string"
+                }
+              }
+            }
+          },
+          "executionError": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "code",
+              "issues"
+            ],
+            "properties": {
+              "code": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "message": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "reasonCode": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "issues": {
+                "maxItems": 10,
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "path"
+                  ],
+                  "properties": {
+                    "path": {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    "rule": {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    }
+                  }
                 }
               }
             }
@@ -200641,6 +201024,19 @@
                     ],
                     "properties": {
                       "predicate": {
+                        "const": "disabled",
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "predicate"
+                    ],
+                    "properties": {
+                      "predicate": {
                         "const": "noLingeringProcesses",
                         "type": "string"
                       }
@@ -208204,6 +208600,19 @@
                         "properties": {
                           "predicate": {
                             "const": "enabled",
+                            "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "disabled",
                             "type": "string"
                           }
                         }
@@ -218375,6 +218784,19 @@
                                     ],
                                     "properties": {
                                       "predicate": {
+                                        "const": "disabled",
+                                        "type": "string"
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "type": "object",
+                                    "required": [
+                                      "predicate"
+                                    ],
+                                    "properties": {
+                                      "predicate": {
                                         "const": "noLingeringProcesses",
                                         "type": "string"
                                       }
@@ -225961,6 +226383,19 @@
                         ],
                         "properties": {
                           "predicate": {
+                            "const": "disabled",
+                            "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate"
+                        ],
+                        "properties": {
+                          "predicate": {
                             "const": "noLingeringProcesses",
                             "type": "string"
                           }
@@ -227891,6 +228326,32 @@
                 "type": "null"
               }
             ]
+          },
+          "promotion": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "reason",
+              "actorId",
+              "promotedAt"
+            ],
+            "properties": {
+              "reason": {
+                "minLength": 1,
+                "maxLength": 2000,
+                "type": "string"
+              },
+              "actorId": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "promotedAt": {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              }
+            }
           }
         },
         "$defs": {}
@@ -234722,6 +235183,19 @@
                                   ],
                                   "properties": {
                                     "predicate": {
+                                      "const": "disabled",
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "predicate"
+                                  ],
+                                  "properties": {
+                                    "predicate": {
                                       "const": "noLingeringProcesses",
                                       "type": "string"
                                     }
@@ -236988,6 +237462,19 @@
                               "properties": {
                                 "predicate": {
                                   "const": "enabled",
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "disabled",
                                   "type": "string"
                                 }
                               }
@@ -244821,6 +245308,19 @@
                         "properties": {
                           "predicate": {
                             "const": "enabled",
+                            "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "disabled",
                             "type": "string"
                           }
                         }
@@ -252670,6 +253170,19 @@
                                   ],
                                   "properties": {
                                     "predicate": {
+                                      "const": "disabled",
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "predicate"
+                                  ],
+                                  "properties": {
+                                    "predicate": {
                                       "const": "noLingeringProcesses",
                                       "type": "string"
                                     }
@@ -254936,6 +255449,19 @@
                               "properties": {
                                 "predicate": {
                                   "const": "enabled",
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "disabled",
                                   "type": "string"
                                 }
                               }
@@ -262726,6 +263252,19 @@
                         "properties": {
                           "predicate": {
                             "const": "enabled",
+                            "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "disabled",
                             "type": "string"
                           }
                         }

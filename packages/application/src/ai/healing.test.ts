@@ -329,6 +329,8 @@ it("failed verification returns to reviewable without another candidate and leav
   await expect(f.app.healing.approve(result.id, Number(result.version))).rejects.toMatchObject({
     code: "PRECONDITION_FAILED",
   });
+  // The review must not offer an approval that approve() refuses.
+  expect((await f.app.healing.review(result.id)).automation.decision).toBe("not_eligible");
   expect(f.app.revisions.list(f.test.id)).toHaveLength(2);
   expect(semanticHash(f.app.runs.get(f.failed.id))).toBe(before);
 });
@@ -1852,4 +1854,22 @@ it("rejecting a healing proposal audits it without the rejection reason", async 
   expect(rejected.limitations.at(-1)).toContain(reason);
   f.app.healing.reject(f.proposal.id, reason);
   expect(healingAudit(f.app)).toHaveLength(1);
+});
+it("an approval reason is stored on the proposal with the approver and time, shown by the review and kept out of the audit trail", async () => {
+  const f = await proposedFixture();
+  vi.spyOn(f.app, "preflight").mockResolvedValue();
+  const reason = "canary-approval-reason-stays-on-the-proposal";
+  await expect(f.app.healing.approve(f.proposal.id, 1, "   ")).rejects.toMatchObject({
+    code: "INVALID_ARGUMENT",
+  });
+  expect(f.app.healing.get(f.proposal.id)).toMatchObject({ status: "proposed", version: 1 });
+  const approved = await f.app.healing.approve(f.proposal.id, 1, reason);
+  const recorded = {
+    reason,
+    actorId: f.app.context.principalId,
+    approvedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+  };
+  expect(approved.extensions?.["testmaster:approval"]).toEqual(recorded);
+  expect((await f.app.healing.review(f.proposal.id)).approval.decision).toEqual(recorded);
+  expect(JSON.stringify(f.app.database.all("SELECT * FROM audit_events"))).not.toContain(reason);
 });

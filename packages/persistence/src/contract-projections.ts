@@ -163,6 +163,18 @@ CREATE TRIGGER test_revisions_no_update BEFORE UPDATE ON test_revisions BEGIN SE
 CREATE TRIGGER test_revisions_no_delete BEFORE DELETE ON test_revisions BEGIN SELECT RAISE(ABORT,'immutable'); END;
 `;
 }
+/**
+ * `Artifact.storageKey` was a `Name` (200 characters) when 0004 shipped. A key is a relative path
+ * built from plan step ids and output names, so a valid plan outgrew it. 0023 replaces the
+ * `artifacts` constraint with the current bound; every other `artifacts` column is regenerated
+ * unchanged. Neither engine can alter the old constraint in place: SQLite drops its triggers,
+ * PostgreSQL its CHECK, and the generated section installs the new ones.
+ */
+function artifactStorageKeyPrologue(engine: Engine): string {
+  if (engine === "postgres")
+    return "ALTER TABLE artifacts DROP CONSTRAINT contract_artifacts_projection;\n";
+  return "DROP TRIGGER contract_artifacts_insert;\nDROP TRIGGER contract_artifacts_update;\n";
+}
 export const constraintMigrations = {
   "0004_contract_constraints": {
     tables: null,
@@ -170,6 +182,7 @@ export const constraintMigrations = {
       "test_revisions.runner_kind": {
         anyOf: [{ const: "playwright" }, { const: "http" }, { const: "python" }],
       },
+      "artifacts.storage_key": { type: "string", minLength: 1, maxLength: 200 },
     },
   },
   "0007_m3_contract_constraints": {
@@ -180,6 +193,7 @@ export const constraintMigrations = {
     },
   },
   "0022_terminal_runner": { tables: ["test_revisions"], prologue: terminalRunnerPrologue },
+  "0023_artifact_storage_key": { tables: ["artifacts"], prologue: artifactStorageKeyPrologue },
 } as const satisfies Record<string, ConstraintMigrationSpec>;
 export type ConstraintMigration = keyof typeof constraintMigrations;
 export function generatedConstraintMigrations(

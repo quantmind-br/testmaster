@@ -4,6 +4,7 @@ import { SuiteFixedMember, SuiteSelection } from "./m4/lists.js";
 import { ExecutionLimits } from "./operations.js";
 import {
   ContentDigest,
+  DecisionReason,
   Description,
   Enum,
   id,
@@ -285,7 +286,7 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
     "/healing-proposals/{id}/approve",
     "healing:W",
     "M3",
-    "ExpectedVersionInput",
+    "HealingApproveInput",
     "HealingProposal",
   ],
   [
@@ -827,6 +828,12 @@ export const mcpTools = {
       expectedVersion: d(Version, "Batch version being reviewed, for optimistic concurrency"),
       acceptIds: d(Type.Array(id("pro")), "Proposals to accept"),
       rejectIds: d(Type.Array(id("pro")), "Proposals to reject"),
+      reason: Type.Optional(
+        d(
+          DecisionReason,
+          "Why you accept or reject; recorded on each decided proposal with the reviewer and time",
+        ),
+      ),
     }),
     output: "ProposalDecisionReceipt",
   },
@@ -1002,6 +1009,12 @@ export const mcpTools = {
     input: Obj({
       proposalId: d(id("hea"), "Healing proposal id"),
       expectedVersion: d(Version, "approval.expectedVersion from testmaster_review_healing"),
+      reason: Type.Optional(
+        d(
+          DecisionReason,
+          "Why you approve; recorded on the proposal with the reviewer and time (testmaster_review_healing shows it)",
+        ),
+      ),
     }),
     output: "HealingProposal",
   },
@@ -1058,6 +1071,12 @@ export const mcpTools = {
       expectedVersion: d(
         Version,
         "Current version of the test (test.version from testmaster_save_test)",
+      ),
+      reason: Type.Optional(
+        d(
+          DecisionReason,
+          "Why you promote; recorded on the test with the reviewer and time (test history shows it)",
+        ),
       ),
     }),
     output: "TestCase",

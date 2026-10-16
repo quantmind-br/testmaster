@@ -51,6 +51,15 @@ const names = Type.Array(Name);
  * whole snapshot. 4096 is the longest path Linux accepts (PATH_MAX).
  */
 const RepoPath = Type.String({ minLength: 1, maxLength: 4096 });
+/**
+ * Where an artifact's bytes live under the evidence root, as a relative path:
+ * `runs/<ws>/<run>/<attempt>/<relativePath>`. The artifact's own path inside the bundle comes
+ * from plan step ids (up to 64 characters), download output names (`Name`, 200 characters) and
+ * fixed 40-character ids, so a valid plan reaches ~350 characters and `Name` would refuse the
+ * publication of its whole bundle. The only bound kept is the longest path Linux accepts
+ * (PATH_MAX, 4096): a key beyond it could never be a file.
+ */
+const StorageKey = Type.String({ minLength: 1, maxLength: 4096 });
 const digest = nullable(ContentDigest);
 const entity = <F extends Record<string, TSchema>>(prefix: EntityPrefix, fields: F) =>
   Obj({
@@ -296,7 +305,7 @@ export const entities = {
     hash: digest,
     bytes: Nonnegative,
     mime: Name,
-    storageKey: Name,
+    storageKey: StorageKey,
     state: ArtifactState,
     redactionStatus: RedactionStatus,
   }),

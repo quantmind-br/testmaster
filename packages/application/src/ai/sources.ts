@@ -529,19 +529,22 @@ export class SourcesService {
           body: input,
         },
         () => {
-          if (!previous) this.ctx.entities.insert("Source", source);
+          // A new source is stored with its first revision already active, so it starts at version 1;
+          // only a further revision of an existing source bumps the version.
+          if (!previous) this.ctx.entities.insert("Source", next);
           this.ctx.entities.insert(
             "SourceRevision",
             { ...entity(this.ctx, "svr", {}), ...result.revision },
             { sourceId: source.id },
           );
-          this.ctx.entities.update(
-            "Source",
-            this.ctx.workspaceId,
-            source.id,
-            source.version as number,
-            next,
-          );
+          if (previous)
+            this.ctx.entities.update(
+              "Source",
+              this.ctx.workspaceId,
+              source.id,
+              source.version as number,
+              next,
+            );
           saveAiState(this.ctx, `revision:${id}`, {
             sourceId: source.id,
             projectId: input.projectId,

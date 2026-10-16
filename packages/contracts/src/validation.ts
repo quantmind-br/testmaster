@@ -600,6 +600,7 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
         "textContains",
         "valueEquals",
         "enabled",
+        "disabled",
         // countEquals accepts either a browser locator or an HTTP JSON array.
         "visualMatches",
         "accessibilityViolations",

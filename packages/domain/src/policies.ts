@@ -67,7 +67,15 @@ export function aggregateBatch(
       inconclusive: 0,
       inFlight: 0,
     };
-    for (const member of items) if (member.runId) counts[member.outcome ?? "inFlight"]++;
+    // A Run whose assertions passed but whose gate failed (evidence not published, cleanup not
+    // proven) is not a pass: it counts as inconclusive, so `passed` never contradicts the gate.
+    for (const member of items)
+      if (member.runId)
+        counts[
+          member.outcome === "passed" && member.gate === "failed"
+            ? "inconclusive"
+            : (member.outcome ?? "inFlight")
+        ]++;
     return counts;
   };
   const accepted = requestedMembers.filter((member) => member.runId !== null).length;

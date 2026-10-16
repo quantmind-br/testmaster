@@ -20,6 +20,7 @@ vi.mock("playwright-core", async (importOriginal) => {
 class LocatorStub {
   countValue = 1;
   text = "saved";
+  disabled = false;
   frame: PageStub | undefined;
   readonly click = vi.fn(async () => {
     this.owner.onClick?.();
@@ -62,7 +63,10 @@ class LocatorStub {
     return this.text;
   }
   async isEnabled() {
-    return true;
+    return !this.disabled;
+  }
+  async isDisabled() {
+    return this.disabled;
   }
   page() {
     return this.owner;
@@ -769,6 +773,87 @@ it("waits for an authorized download before triggering and checks exact digest/M
   });
   expect(artifacts.find((artifact) => artifact.kind === "download")?.bytes).toEqual(bytes);
 });
+it("emits evidence for the longest step ids, a frame child and the longest output name, all publishable as Artifact storage keys", async () => {
+  const frameId = "f".repeat(64);
+  const childId = "c".repeat(64);
+  const downloadId = "d".repeat(64);
+  const checkId = "k".repeat(64);
+  const outputName = "o".repeat(200);
+  const bytes = Buffer.from("approved");
+  context.page.locator("frame").frame = new PageStub();
+  context.page.onClick = () => {
+    context.page.emit("response", {
+      url: () => "http://fixture.test/file",
+      status: () => 200,
+      headers: () => ({ "content-type": "text/plain; charset=utf-8" }),
+    });
+    context.page.emit("download", {
+      url: () => "http://fixture.test/file",
+      createReadStream: async () => Readable.from([bytes]),
+      failure: async () => null,
+      delete: async () => undefined,
+    });
+  };
+  const steps: PlanStep[] = [
+    {
+      id: frameId,
+      kind: "action",
+      operation: "frame",
+      description: "Enter frame",
+      input: {
+        locator: { by: "testId", value: "frame" },
+        childSteps: [{ ...click, id: childId }],
+      },
+    },
+    {
+      id: downloadId,
+      kind: "action",
+      operation: "download",
+      description: "Download",
+      input: {
+        trigger: { operation: "click", input: { locator: { by: "testId", value: "submit" } } },
+        outputName,
+      },
+    },
+    {
+      id: checkId,
+      kind: "assertion",
+      operation: "assert",
+      description: "Check download",
+      input: { outputName },
+      expectation: { predicate: "downloadMatches", outputName, sizeBytes: bytes.length },
+    },
+  ];
+  const attempt = runtime(steps, { allowDownloads: true, allowFrames: true });
+  expect(() => validate("ExecutablePlan", attempt.input.plan)).not.toThrow();
+  expect(await runBrowser(attempt)).toMatchObject({ outcome: "passed" });
+  const paths = artifacts.map((artifact) => artifact.path);
+  expect(paths).toContain(`browser/steps/${childId}-locator-0-before.json`);
+  expect(paths).toContain(`browser/downloads/${outputName}`);
+  // The worker publishes every artifact at runs/<workspace>/<run>/<attempt>/<relativePath>.
+  const [workspace, run, att] = [
+    "ws_01900000-0000-7000-8000-000000000001",
+    "run_01900000-0000-7000-8000-000000000001",
+    "att_01900000-0000-7000-8000-000000000001",
+  ];
+  for (const path of paths)
+    expect(() =>
+      validate("Artifact", {
+        id: "art_01900000-0000-7000-8000-000000000001",
+        runId: run,
+        attemptId: att,
+        revisionId: "rev_01900000-0000-7000-8000-000000000001",
+        snapshotId: "snp_01900000-0000-7000-8000-000000000001",
+        kind: "log",
+        hash: "a".repeat(64),
+        bytes: 1,
+        mime: "text/plain",
+        storageKey: `runs/${workspace}/${run}/${att}/${path}`,
+        state: "available",
+        redactionStatus: "redacted",
+      }),
+    ).not.toThrow();
+});
 it("enforces typed wait deadlines and refuses raw artifacts without explicit authorization", async () => {
   const wait: PlanStep = {
     id: "wait",
@@ -812,6 +897,33 @@ it("waits for an eventually consistent value within the step deadline but fails 
     events.findLast((event) => event.type === "step.finished" && event.payload.stepId === "assert")
       ?.payload,
   ).toMatchObject({ observed: "", expected: "saved" });
+});
+it("asserts a disabled control, and fails with the recorded observation when it is enabled", async () => {
+  const disabledStep: PlanStep = {
+    id: "assert-disabled",
+    kind: "assertion",
+    operation: "assert",
+    description: "Sign in is disabled",
+    input: { locator: { by: "testId", value: "sign-in" } },
+    expectation: { predicate: "disabled" },
+    timeoutMs: 300,
+  };
+  const plan = runtime([disabledStep]).input.plan;
+  expect(() => validate("ExecutablePlan", plan)).not.toThrow();
+  const signIn = context.page.locator("sign-in");
+  signIn.disabled = true;
+  expect(await runBrowser(runtime([disabledStep]))).toMatchObject({ outcome: "passed" });
+  signIn.disabled = false;
+  events = [];
+  expect(await runBrowser(runtime([disabledStep]))).toMatchObject({
+    outcome: "failed",
+    reasonCode: "assertion_mismatch",
+  });
+  expect(
+    events.findLast(
+      (event) => event.type === "step.finished" && event.payload.stepId === "assert-disabled",
+    )?.payload,
+  ).toMatchObject({ observed: false, expected: true });
 });
 it("keeps a stale observation as the mismatch when the final sample read times out", async () => {
   const message = context.page.locator("message");

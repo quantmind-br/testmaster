@@ -172,6 +172,7 @@ const uiPredicates: Record<string, true> = {
   textContains: true,
   valueEquals: true,
   enabled: true,
+  disabled: true,
   countEquals: true,
   urlEquals: true,
   downloadMatches: true,

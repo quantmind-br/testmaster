@@ -3,7 +3,7 @@ import {
   AttemptClock,
   type PlanIdentifiers,
   planIdentifiers,
-  restoreStepIds,
+  restorePlanIdentifiers,
   scrubEvidenceText,
   scrubText,
 } from "@testmaster/domain";
@@ -147,15 +147,15 @@ export class Runtime {
   }
   artifact(path: string, kind: string, mimeType: string, bytes: Uint8Array): Promise<void> {
     this.reference([path]);
-    // A `"stepId"` field names a plan step, which is plan text: it stays exact so that consumers
+    // A `"stepId"` or `"variableRef"` field names plan text: it stays exact so that consumers
     // (healing matches locator evidence to plan steps) still find the step even when a secret
     // value, such as the user name `root`, occurs inside its id.
     const safe =
       mimeType.startsWith("text/") || /json|xml|javascript/u.test(mimeType)
         ? Buffer.from(
-            restoreStepIds(
+            restorePlanIdentifiers(
               this.scrub(Buffer.from(bytes).toString("utf8")),
-              this.identifiers.stepIds,
+              this.identifiers,
               (text) => this.scrub(text),
             ),
           )

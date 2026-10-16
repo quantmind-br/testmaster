@@ -33,7 +33,7 @@ import {
 } from "@testmaster/planner";
 import { planRiskActions, type RiskClass } from "../approvals.js";
 import { type ArtifactsService, isEvidenceUnavailable } from "../artifacts.js";
-import { authoringTransaction, promoteRevisionCas } from "../authoring.js";
+import { authoringTransaction, decisionReason, promoteRevisionCas } from "../authoring.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "../context.js";
 import type { RunsService } from "../runs.js";
 import { type AnalysisService, resolveAnalysisEvidence } from "./analysis.js";
@@ -200,6 +200,14 @@ function boundedRejectionReason(reason: string): string {
   const text = scrubEvidenceText(reason).text;
   const marker = " [truncated]";
   return text.length <= 200 ? text : `${text.slice(0, 200 - marker.length)}${marker}`;
+}
+/** The approver's reason, with the approver and time, kept in the proposal's extensions. */
+const APPROVAL_EXTENSION = "testmaster:approval";
+function approvalDecision(proposal: Stored): HealingReview["approval"]["decision"] {
+  const stored = proposal.extensions?.[APPROVAL_EXTENSION];
+  return stored && typeof stored === "object" && !Array.isArray(stored)
+    ? (stored as unknown as NonNullable<HealingReview["approval"]["decision"]>)
+    : undefined;
 }
 function planSteps(plan: ExecutablePlan) {
   const steps = [...plan.steps];
@@ -421,14 +429,16 @@ export class HealingService {
     const verification = proposal.verificationRunId
       ? this.runs.get(proposal.verificationRunId)
       : null;
+    const decision = approvalDecision(proposal);
     return validate<HealingReview>("HealingReview", {
       changes,
       identity,
       automation: {
+        // A proposal whose verification already ran (and failed) cannot be approved again.
         decision:
           proposal.status === "verified" && proposal.approvalMode === "policy"
             ? "applied_by_policy"
-            : proposal.status === "proposed"
+            : proposal.status === "proposed" && !proposal.verificationRunId
               ? "manual_review_required"
               : "not_eligible",
         reasons: [...proposal.limitations],
@@ -453,6 +463,7 @@ export class HealingService {
         expectedVersion: proposal.version,
         proposalId: proposal.id,
         candidateRevisionId: proposal.candidateRevisionId,
+        ...(decision ? { decision } : {}),
       },
       evidenceRefs: structuredClone(proposal.evidenceRefs),
       limitations: [...new Set(limitations)],
@@ -1108,11 +1119,11 @@ export class HealingService {
     }
     return { equivalent: !reasons.length, reasons, deferred };
   }
-  async approve(proposalId: string, expectedVersion: number): Promise<Stored> {
+  async approve(proposalId: string, expectedVersion: number, reason?: string): Promise<Stored> {
     const proposal = this.get(proposalId),
       { test } = this.owner(proposal);
     this.ctx.authorize("W", String(test.projectId));
-    return this.approveBound(proposal, expectedVersion, "manual");
+    return this.approveBound(proposal, expectedVersion, "manual", decisionReason(reason));
   }
   private async approvePolicy(proposalId: string): Promise<Stored> {
     const proposal = this.get(proposalId),
@@ -1124,6 +1135,7 @@ export class HealingService {
     proposal: Stored,
     expectedVersion: number,
     mode: "manual" | "policy",
+    reason: string | null = null,
   ): Promise<Stored> {
     if (!Number.isSafeInteger(expectedVersion) || expectedVersion < 1)
       throw new ContractError("INVALID_ARGUMENT", "Expected version is required");
@@ -1177,7 +1189,19 @@ export class HealingService {
         reviewerId: mode === "manual" ? this.ctx.principalId : null,
         policyHash: this.model.config.effectiveConfig.policyHash,
         version: Number(current.version) + 1,
-        extensions: { ...current.extensions, "testmaster:approvalActorId": this.ctx.principalId },
+        extensions: {
+          ...current.extensions,
+          "testmaster:approvalActorId": this.ctx.principalId,
+          ...(reason
+            ? {
+                [APPROVAL_EXTENSION]: {
+                  reason,
+                  actorId: this.ctx.principalId,
+                  approvedAt: new Date().toISOString(),
+                },
+              }
+            : {}),
+        },
       };
       this.ctx.entities.update(
         "HealingProposal",

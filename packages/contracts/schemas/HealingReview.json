@@ -511,6 +511,32 @@
         "candidateRevisionId": {
           "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
           "type": "string"
+        },
+        "decision": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "reason",
+            "actorId",
+            "approvedAt"
+          ],
+          "properties": {
+            "reason": {
+              "minLength": 1,
+              "maxLength": 2000,
+              "type": "string"
+            },
+            "actorId": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "approvedAt": {
+              "format": "date-time",
+              "pattern": "Z$",
+              "type": "string"
+            }
+          }
         }
       }
     },

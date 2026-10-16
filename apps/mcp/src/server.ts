@@ -47,8 +47,10 @@ import {
   mcpToolCatalog,
   type PlanStep,
   parseStrictJson,
+  RUNNER_VERSION,
   type Run,
   type RunResult,
+  SCHEMA_VERSION,
   type SuiteInput,
   type SuitePatchInput,
   type SuiteRunInput,
@@ -398,7 +400,11 @@ export class TestMasterMcp {
                           ...review.automation.reasons.map((reason) => `Reason: ${reason}`),
                           `Risk: ${formatReviewRisk(review)}; assertions intact: ${review.preservedAssertions.intact}`,
                           `Verification: ${review.verification ? `${review.verification.runId}: ${review.verification.outcome}; gate ${review.verification.gate}` : "not recorded"}`,
-                          `Approval: testmaster_approve_healing proposalId=${review.approval.proposalId} expectedVersion=${review.approval.expectedVersion}, once the diff, risk and verification above are acceptable`,
+                          review.automation.decision === "manual_review_required"
+                            ? `Approval: testmaster_approve_healing proposalId=${review.approval.proposalId} expectedVersion=${review.approval.expectedVersion}, once the diff, risk and verification above are acceptable`
+                            : review.verification && review.verification.outcome !== "passed"
+                              ? "Approval: not available, this proposal's verification did not pass; repair the test with testmaster_save_test (testId) and replay it, or propose healing for a new failed run"
+                              : `Approval: not available (${review.automation.decision})`,
                         ].join("\n");
                       })()
                     : null;
@@ -843,9 +849,9 @@ export class TestMasterMcp {
       case "testmaster_capabilities": {
         const manifest = await app.capabilities();
         return {
-          schemaVersion: "1.0.0",
+          schemaVersion: SCHEMA_VERSION,
           apiVersion: "v1",
-          runnerVersion: "1.0.0",
+          runnerVersion: RUNNER_VERSION,
           protocolVersion: this.protocolVersion,
           capabilities: manifest.features.map(
             ({ id, enabled, milestone, disabledReason, ...rest }) => ({
@@ -1044,6 +1050,7 @@ export class TestMasterMcp {
           rejectIds: args.rejectIds as string[],
           expectedVersion: Number(args.expectedVersion),
           idempotencyKey: `mcp-review-${String(args.batchId)}-${args.expectedVersion}`,
+          ...(typeof args.reason === "string" ? { reason: args.reason } : {}),
         });
       case "testmaster_generate_tests": {
         const revisions = args.revisionIds as string[] | undefined;
@@ -1192,6 +1199,7 @@ export class TestMasterMcp {
         const proposal = await app.healing.approve(
           String(args.proposalId),
           Number(args.expectedVersion),
+          typeof args.reason === "string" ? args.reason : undefined,
         );
         // A verification admitted while no worker was live has no other executor (the CLI runs it
         // in its own process); this server runs it, and the worker settles the proposal after it.
@@ -1216,7 +1224,11 @@ export class TestMasterMcp {
       case "testmaster_save_test":
         return this.saveTest(args, app);
       case "testmaster_promote_revision":
-        return app.revisions.promote(String(args.revisionId), Number(args.expectedVersion));
+        return app.revisions.promote(
+          String(args.revisionId),
+          Number(args.expectedVersion),
+          typeof args.reason === "string" ? args.reason : undefined,
+        );
       case "testmaster_save_suite":
         return this.saveSuite(args, app);
       case "testmaster_approve_execution":
@@ -1708,7 +1720,7 @@ export class TestMasterMcp {
     const bound = configuredId === project.id;
     return {
       projectId: project.id,
-      config: {
+      proposedConfig: {
         ...base,
         project: { name: String(project.name), id: project.id },
         environment: environmentConfig,

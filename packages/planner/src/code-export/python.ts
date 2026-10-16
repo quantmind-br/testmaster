@@ -354,13 +354,15 @@ class PlanRuntime:
             locator = await self.unique(locator, timeout)
             if predicate == "visible":
                 await locator.wait_for(state="visible", timeout=timeout)
-            elif predicate in ("enabled", "textEquals", "textContains", "valueEquals"):
-                expected = True if predicate == "enabled" else self.string(expectation["value"])
+            elif predicate in ("enabled", "disabled", "textEquals", "textContains", "valueEquals"):
+                expected = True if predicate in ("enabled", "disabled") else self.string(expectation["value"])
                 expires = time.monotonic() + timeout / 1000
                 while True:
                     assert await locator.count() == 1, "Locator is no longer unique"
                     if predicate == "enabled":
                         observed = await locator.is_enabled(timeout=timeout)
+                    elif predicate == "disabled":
+                        observed = await locator.is_disabled(timeout=timeout)
                     elif predicate == "valueEquals":
                         observed = await locator.input_value(timeout=timeout)
                     else:

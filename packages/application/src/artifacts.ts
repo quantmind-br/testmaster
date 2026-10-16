@@ -43,6 +43,12 @@ import {
   type FixtureImportReceipt,
   importFixtureInput,
 } from "./input-fixtures.js";
+import {
+  describeExecutionError,
+  type RunExecutionError,
+  runExecutionError,
+  runVerdict,
+} from "./run-verdict.js";
 import type { RunsService } from "./runs.js";
 import { sumTimings } from "./timing.js";
 
@@ -66,8 +72,14 @@ export class EvidenceUnavailableError extends ContractError {
   constructor(
     readonly reason: "missing" | "expired",
     runId: string,
+    executionError?: RunExecutionError,
   ) {
-    super("PRECONDITION_FAILED", `Run evidence is ${reason}`, { runId, reason });
+    // A Run whose evidence was never published names why: its recorded execution error.
+    super(
+      "PRECONDITION_FAILED",
+      `Run evidence is ${reason}${executionError ? `; the run recorded an execution error: ${describeExecutionError(executionError)}` : ""}`,
+      { runId, reason, ...(executionError ? { executionError } : {}) },
+    );
   }
 }
 export function isEvidenceUnavailable(
@@ -169,6 +181,14 @@ export class ArtifactsService {
       );
     return this.getBundle(runId, options);
   }
+  /** A Run whose evidence was never published names the error it recorded instead. */
+  private evidenceMissing(runId: string): EvidenceUnavailableError {
+    return new EvidenceUnavailableError(
+      "missing",
+      runId,
+      runExecutionError(this.runs.events(runId)),
+    );
+  }
   private async getBundle(
     runId: string,
     options: {
@@ -188,7 +208,7 @@ export class ArtifactsService {
       options.attemptId ?? null,
       options.attemptId ?? null,
     );
-    if (!row) throw new EvidenceUnavailableError("missing", runId);
+    if (!row) throw this.evidenceMissing(runId);
     const attemptId = String(row.attempt_id);
     const bundleDir = join(this.config.dataDir, "runs", this.ctx.workspaceId, runId, attemptId);
     const bundle = await verifyBundle(bundleDir, {
@@ -206,8 +226,7 @@ export class ArtifactsService {
         )
         .map((artifact) => String(artifact.id)),
     }).catch((error: unknown) => {
-      if ((error as NodeJS.ErrnoException)?.code === "ENOENT")
-        throw new EvidenceUnavailableError("missing", runId);
+      if ((error as NodeJS.ErrnoException)?.code === "ENOENT") throw this.evidenceMissing(runId);
       if (
         error instanceof UnsafePathError ||
         ["ELOOP", "ENOTDIR"].includes((error as NodeJS.ErrnoException)?.code ?? "")
@@ -558,7 +577,8 @@ export class ReportsService {
           runId,
         )
         .map((row) => requireEntity(this.ctx, "Attempt", String(row.id)) as unknown as Attempt);
-      const reduced = this.runs.events(runId).findLast((e) => e.type === "run.reduced")?.payload as
+      const runEvents = this.runs.events(runId);
+      const reduced = runEvents.findLast((e) => e.type === "run.reduced")?.payload as
         | Record<string, unknown>
         | undefined;
       const result: RunResult = {
@@ -573,14 +593,7 @@ export class ReportsService {
         firstAttemptOutcome: (reduced?.firstAttemptOutcome ??
           attempts[0]?.outcome ??
           null) as RunResult["firstAttemptOutcome"],
-        ...(reduced?.reasonCode ? { reasonCode: String(reduced.reasonCode) } : {}),
-        ...(Array.isArray(reduced?.unavailableEvidence) && reduced.unavailableEvidence.length
-          ? {
-              unavailableEvidence: reduced.unavailableEvidence as unknown as NonNullable<
-                RunResult["unavailableEvidence"]
-              >,
-            }
-          : {}),
+        ...runVerdict(run, runEvents),
       };
       const recordedTimings = this.runs
         .events(runId)

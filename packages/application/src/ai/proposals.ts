@@ -26,7 +26,7 @@ import {
   validateGeneratedProposals,
   validateProposalPlan,
 } from "@testmaster/planner";
-import { auditPromotion, authoringTransaction } from "../authoring.js";
+import { auditPromotion, authoringTransaction, decisionReason } from "../authoring.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "../context.js";
 import { estimateDuration, flattenSteps, planSimilarity } from "../plan-analysis.js";
 import { stepIdAt } from "../plan-validation.js";
@@ -43,7 +43,11 @@ import {
   snapshotDigest,
   supersedingConflict,
 } from "./requirements.js";
-import { applyServerBasePath, unresolvedSchemaPointers } from "./source-documents.js";
+import {
+  applyServerBasePath,
+  offeredApiSpecs,
+  unresolvedSchemaPointers,
+} from "./source-documents.js";
 
 const AUTH_PROFILE_INSTRUCTION =
   'When authProfiles are supplied, a request to an endpoint that needs a logged-in session or credential the profile manages (cookie session, bearer or API-key header) sets "auth": "profile" in the request input, so the environment\'s bound auth profile supplies the session for that request only; do not copy session secrets into headers for it. Leave auth out for public endpoints and for requests that must be unauthenticated (401/403 negatives). When no authProfiles are supplied never set auth.';
@@ -51,7 +55,11 @@ const JSON_BODY_SET_INSTRUCTION =
   'A secret or a value captured by an earlier request that belongs inside a JSON body (a password, an id) is bound with body.set, never nested in the body literal: {"kind":"json","value":{"user":"demo"},"set":[{"pointer":"/password","value":{"secretRef":<entry id>}}]}. A {"secretRef":...} or {"variableRef":...} object inside body.value is plain data and is sent as written.';
 const BROWSER_POSTCONDITION_INSTRUCTION =
   "A browser plan that ends after a state-changing action (login, navigation, click, submit) must assert a positive, observable post-condition on rendered content after the last such action: a visible, textContains, textEquals, valueEquals or countEquals (above 0) assertion on a locator for content that exists only when the action worked, such as the dashboard heading after login. A URL check and the absence of earlier elements also hold on a blank page and are rejected.";
+const API_SPEC_INSTRUCTION =
+  "When apiSpecs are supplied, they are the project's API specifications: each lists its sourceRevisionId and its operations with the pointer of the JSON response schema per HTTP status. They are offered even where no requirement cites them. A jsonSchema assertion for a response cites that apiSpecs entry's sourceRevisionId with one of the listed pointers copied exactly; the requirement's own evidence does not have to be the specification. Write request paths as the listed operation paths. Never warn that no OpenAPI document or schema was supplied when apiSpecs lists the operation; an operation absent from apiSpecs has no schema to cite. An operation marked public declares no credential.";
 type StoredProposal = Proposal & EntityDocument;
+/** The reviewer's reason, with the reviewer and time, kept on each proposal a decision with a reason settled. */
+const DECISION_EXTENSION = "testmaster:decision";
 function secretRefsOf(value: unknown, found: string[] = []): string[] {
   if (Array.isArray(value)) for (const item of value) secretRefsOf(item, found);
   else if (value && typeof value === "object")
@@ -285,6 +293,7 @@ export class ProposalsService {
     const catalog = new EvidenceCatalog(
       requirements.flatMap((item) => item.sourceRefs) as SourceEvidenceRef[],
     );
+    const apiSpecs = offeredApiSpecs(this.ctx, input.projectId);
     const type = input.type ?? "backend";
     const allowed = type === "auto" ? (["backend", "frontend"] as const) : [type];
     const typeInstruction =
@@ -372,11 +381,10 @@ export class ProposalsService {
       }));
       const valid: { index: number; proposal: GeneratedProposal }[] = [];
       for (const { index, proposal } of inspected.accepted) {
-        const plan = applyServerBasePath(
-          this.ctx,
-          proposal.plan,
-          proposal.evidenceRefs.map((ref) => ref.sourceRevisionId),
-        );
+        const plan = applyServerBasePath(this.ctx, proposal.plan, [
+          ...proposal.evidenceRefs.map((ref) => ref.sourceRevisionId),
+          ...apiSpecs.map((spec) => spec.sourceRevisionId),
+        ]);
         const reason = unrunnable(plan);
         if (reason) refused.push({ index, requirementIds: proposal.requirementRefs, ...reason });
         else valid.push({ index, proposal: { ...proposal, plan } });
@@ -428,9 +436,16 @@ export class ProposalsService {
           ...(secrets.length ? { secrets } : {}),
           // Names and kinds only: each environment binds one of them, and the runner applies its session.
           ...(authProfiles.length ? { authProfiles } : {}),
+          // Operations and schema pointers only: the documents stay in the store.
+          ...(apiSpecs.length ? { apiSpecs } : {}),
         },
-        instructions: `Return exactly one independent executable proposal per supplied requirement that an HTTP or browser plan can observe, not an intent. ${declineInstruction} ${typeInstruction} Copy requirement IDs exactly and cite only the evidenceId values supplied with that requirement. Use deterministic business assertions deriving expected values only from approved requirements. Include an assertion that would fail if the required feature were broken; body/html visibility and broad all-status checks are trivial and rejected, and an HTTP 200 status check alone is trivial too: add a body, schema or header assertion. HTTP paths are relative pathSegments of literal values, written as the source document's paths (a declared server path prefix such as /v1 is added to the request automatically). A jsonSchema assertion's pointer must be a non-empty JSON pointer into the cited source document that reaches the response schema: either inside the operation, for example /paths/~1items/get/responses/200/content/application~1json/schema, or a document-level schema such as /components/schemas/Item; an empty pointer is rejected. When a secrets entry fits the target API, send its credential as a header whose value is {"secretRef": <entry id>} (for example authorization) on every request unless the source explicitly declares the operation public (security: []): specifications often omit security, and a request without a needed credential only proves the 401. Use only secretRef ids from the supplied secrets and never invent secret values. Secrets entries are valid credentials: a negative case (wrong password, unknown user, invalid or missing token) sends literal values that are visibly fake, such as "not-a-real-password", and never a secrets entry, so a refusal proves the check and no real credential is spent on it. ${AUTH_PROFILE_INSTRUCTION} ${JSON_BODY_SET_INSTRUCTION} Frontend locators use testId/role/label. ${BROWSER_POSTCONDITION_INSTRUCTION} Do not invent absolute destinations or secret values.`,
-        sourceRevisionIds: [...new Set(catalog.refs.map((ref) => ref.sourceRevisionId))],
+        instructions: `Return exactly one independent executable proposal per supplied requirement that an HTTP or browser plan can observe, not an intent. ${declineInstruction} ${typeInstruction} Copy requirement IDs exactly and cite only the evidenceId values supplied with that requirement. Use deterministic business assertions deriving expected values only from approved requirements. Include an assertion that would fail if the required feature were broken; body/html visibility and broad all-status checks are trivial and rejected, and an HTTP 200 status check alone is trivial too: add a body, schema or header assertion. HTTP paths are relative pathSegments of literal values, written as the source document's paths (a declared server path prefix such as /v1 is added to the request automatically). A jsonSchema assertion's pointer must be a non-empty JSON pointer into the cited source document that reaches the response schema: either inside the operation, for example /paths/~1items/get/responses/200/content/application~1json/schema, or a document-level schema such as /components/schemas/Item; an empty pointer is rejected. ${API_SPEC_INSTRUCTION} When a secrets entry fits the target API, send its credential as a header whose value is {"secretRef": <entry id>} (for example authorization) on every request unless the source explicitly declares the operation public (security: []): specifications often omit security, and a request without a needed credential only proves the 401. Use only secretRef ids from the supplied secrets and never invent secret values. Secrets entries are valid credentials: a negative case (wrong password, unknown user, invalid or missing token) sends literal values that are visibly fake, such as "not-a-real-password", and never a secrets entry, so a refusal proves the check and no real credential is spent on it. ${AUTH_PROFILE_INSTRUCTION} ${JSON_BODY_SET_INSTRUCTION} Frontend locators use testId/role/label. ${BROWSER_POSTCONDITION_INSTRUCTION} Do not invent absolute destinations or secret values.`,
+        sourceRevisionIds: [
+          ...new Set([
+            ...catalog.refs.map((ref) => ref.sourceRevisionId),
+            ...apiSpecs.map((spec) => spec.sourceRevisionId),
+          ]),
+        ],
         dataClasses: ["requirements"],
         ...(input.provider ? { provider: input.provider } : {}),
         ...(input.model ? { model: input.model } : {}),
@@ -682,13 +697,19 @@ export class ProposalsService {
   }
   reject(
     id: string,
-    input: { proposalIds: string[]; expectedVersion: number; idempotencyKey?: string },
+    input: {
+      proposalIds: string[];
+      expectedVersion: number;
+      idempotencyKey?: string;
+      reason?: string;
+    },
   ): ProposalReceipt {
     return this.review(id, {
       acceptIds: [],
       rejectIds: input.proposalIds,
       expectedVersion: input.expectedVersion,
       idempotencyKey: input.idempotencyKey ?? crypto.randomUUID(),
+      ...(input.reason ? { reason: input.reason } : {}),
     });
   }
   review(
@@ -706,6 +727,7 @@ export class ProposalsService {
     this.ctx.authorize("W", batch.projectId);
     if (!input.acceptIds.length && !input.rejectIds.length)
       throw new ContractError("INVALID_ARGUMENT", "A nonempty proposal subset is required");
+    const reason = decisionReason(input.reason);
     if (
       new Set([...input.acceptIds, ...input.rejectIds]).size !==
       input.acceptIds.length + input.rejectIds.length
@@ -721,6 +743,9 @@ export class ProposalsService {
       },
       () => {
         const { batch: current, proposals } = this.detail(id);
+        const decision = reason
+          ? { reason, actorId: this.ctx.principalId, decidedAt: new Date().toISOString() }
+          : null;
         if (current.state === "stale")
           throw new ContractError(
             "PRECONDITION_FAILED",
@@ -822,7 +847,7 @@ export class ProposalsService {
                   at: new Date().toISOString(),
                   batchVersion: current.version,
                 },
-                ...(input.reason ? { "testmaster:justification": input.reason } : {}),
+                ...(reason ? { "testmaster:justification": reason } : {}),
               },
             }) as TestRevision & EntityDocument;
             this.ctx.entities.insert("TestRevision", revision);
@@ -846,6 +871,7 @@ export class ProposalsService {
                   ...proposal.extensions,
                   "testmaster:candidateRevisionId": revision.id,
                   "testmaster:testId": test.id,
+                  ...(decision ? { [DECISION_EXTENSION]: decision } : {}),
                 },
               },
             );
@@ -860,7 +886,13 @@ export class ProposalsService {
               this.ctx.workspaceId,
               proposal.id,
               proposal.version ?? 1,
-              { ...proposal, state: "rejected" },
+              {
+                ...proposal,
+                state: "rejected",
+                ...(decision
+                  ? { extensions: { ...proposal.extensions, [DECISION_EXTENSION]: decision } }
+                  : {}),
+              },
             );
             rejected.push(proposal.id);
           }

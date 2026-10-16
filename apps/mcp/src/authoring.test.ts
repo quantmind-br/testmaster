@@ -239,9 +239,18 @@ it("save_test stores a new test as active, keeps a new revision a candidate and 
   const promoted = await call("testmaster_promote_revision", {
     revisionId: candidate.data?.revision.id,
     expectedVersion: candidate.data?.test.version,
+    reason: "Replay passed",
   });
   expect(promoted.isError).toBe(false);
   expect(promoted.data?.activeRevisionId).toBe(candidate.data?.revision.id);
+  expect(promoted.data?.extensions?.["testmaster:promotions"]).toEqual([
+    {
+      revisionId: candidate.data?.revision.id,
+      reason: "Replay passed",
+      actorId: f.app.context.principalId,
+      promotedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+    },
+  ]);
   expect(f.app.tests.get(test.id).activeRevisionId).toBe(candidate.data?.revision.id);
 });
 

@@ -1286,8 +1286,11 @@ export class WorkerService {
                 ? (error.details.reasonCode ?? "insufficient_evidence")
                 : "insufficient_evidence";
         // A proven verdict keeps its own reason; otherwise the error's registered reason is final.
+        // A pass whose gate the error failed never keeps `assertions_satisfied`: that reads as success.
         const finalReason =
-          (reduced.outcome === "blocked" || reduced.outcome === "inconclusive") &&
+          (reduced.outcome === "passed" ||
+            reduced.outcome === "blocked" ||
+            reduced.outcome === "inconclusive") &&
           typeof errorReason === "string" &&
           Object.hasOwn(reasonRegistry, errorReason)
             ? errorReason

@@ -128,14 +128,22 @@ export function planCommands(program: Command, runtime: Runtime): void {
         .command(`${operation} <batch-id>`)
         .requiredOption("--only <id...>", "Proposal IDs (comma-separated also supported)")
         .requiredOption("--expected-version <version>", "Current batch version", integer)
-        .requiredOption("--idempotency-key <key>"),
-      async (rt, args, options) => ({
-        data: await (await rt.app()).proposals[operation](String(args[0]), {
-          proposalIds: selection(options),
-          expectedVersion: version(options),
-          idempotencyKey: required(options, "idempotencyKey"),
-        }),
-      }),
+        .requiredOption("--idempotency-key <key>")
+        .option(
+          "--reason <text>",
+          `Why you ${operation} (1-2000 characters), recorded on each decided proposal with the reviewer and time`,
+        ),
+      async (rt, args, options) => {
+        const reason = string(options, "reason");
+        return {
+          data: await (await rt.app()).proposals[operation](String(args[0]), {
+            proposalIds: selection(options),
+            expectedVersion: version(options),
+            idempotencyKey: required(options, "idempotencyKey"),
+            ...(reason !== undefined ? { reason } : {}),
+          }),
+        };
+      },
       (_rt, _args, options) => {
         selection(options);
         version(options);

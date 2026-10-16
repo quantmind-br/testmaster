@@ -40,6 +40,8 @@ async function fixture(
     authProfile?: string;
     /** A completed Run and its attempt that ended inconclusive instead of passed/failed. */
     outcome?: "inconclusive";
+    /** A passed Run whose gate failed (its evidence could not be published). */
+    gateFailed?: boolean;
     step?: Partial<StepResult>;
   } = {},
 ) {
@@ -122,7 +124,7 @@ async function fixture(
     phase: options.queued ? "queued" : "completed",
     status: options.queued ? "queued" : terminal,
     outcome: options.queued ? null : terminal,
-    gate: options.queued ? "pending" : options.passed ? "passed" : "failed",
+    gate: options.queued ? "pending" : options.passed && !options.gateFailed ? "passed" : "failed",
     analysisStatus: "not_requested",
   } as unknown as Run;
   const repository = {
@@ -143,6 +145,7 @@ async function fixture(
     phase: run.phase,
     status: run.status,
     outcome: run.outcome,
+    gate: run.gate,
     data_json: canonicalJson(run),
   });
   const attempt = get("Attempt");
@@ -290,6 +293,48 @@ it("passed execution abstains without inventing a failure hypothesis", async () 
   expect(analysis.diagnosis?.conclusion.status).toBe("no_failure");
   expect(analysis.diagnosis?.healing.advice).toBe("not_indicated");
   expect(analysis.diagnosis?.nextSteps).toEqual([]);
+});
+it("a passed run whose gate failed on a recorded execution error names it and never reports no failure", async () => {
+  const f = await fixture({ passed: true, gateFailed: true });
+  f.db.run(
+    "INSERT INTO outbox(workspace_id,id,created_at,aggregate_id,seq,type,payload_ref,data_json) VALUES(?,?,?,?,?,?,?,?)",
+    f.ctx.workspaceId,
+    "evt_00000000-0000-4000-8000-000000000046",
+    new Date().toISOString(),
+    f.run.id,
+    8,
+    "run.execution_error",
+    "inline",
+    canonicalJson({
+      reasonCode: "insufficient_evidence",
+      error: "INVALID_ARGUMENT",
+      message: "Invalid Artifact",
+      details: {
+        issues: [
+          {
+            path: "/storageKey",
+            rule: "maxLength",
+            message: "must NOT have more than 200 characters",
+          },
+        ],
+      },
+    }),
+  );
+  const analysis = await f.service.analyze(f.run.id, {});
+  const diagnosis = analysis.diagnosis!;
+  expect(diagnosis.conclusion.status).not.toBe("no_failure");
+  expect(diagnosis.conclusion.text).not.toContain("no failure was observed");
+  expect(diagnosis.conclusion.text).toContain('INVALID_ARGUMENT "Invalid Artifact"');
+  expect(diagnosis.conclusion.text).toContain("/storageKey maxLength");
+  expect(diagnosis.observation?.summary).toContain("/storageKey");
+  expect(diagnosis.nextSteps).toHaveLength(1);
+  expect(analysis.facts.map((fact) => fact.text).join("\n")).toContain("/storageKey maxLength");
+});
+it("a passed run whose gate failed without a recorded error is not reported as no failure either", async () => {
+  const f = await fixture({ passed: true, gateFailed: true });
+  const analysis = await f.service.analyze(f.run.id, {});
+  expect(analysis.diagnosis?.conclusion.status).toBe("cause_unknown");
+  expect(analysis.diagnosis?.conclusion.text).toContain("its gate failed");
 });
 it("HTTP 500 request response is not locator drift or a certain product cause", async () => {
   const f = await fixture({ requestOnly: true });

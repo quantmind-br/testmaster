@@ -1,6 +1,7 @@
 import type { CoverageMetrics, ExecutablePlan, PlanStep } from "@testmaster/contracts";
 import type { ReportSnapshot } from "@testmaster/reporting";
 import { coverageMetrics } from "@testmaster/reporting";
+import { type RequirementSnapshot, requirementStatus } from "./ai/requirements.js";
 import { allEntities, type ServiceContext } from "./context.js";
 
 export function reportCoverage(ctx: ServiceContext, snapshot: ReportSnapshot): CoverageMetrics {
@@ -17,18 +18,25 @@ export function reportCoverage(ctx: ServiceContext, snapshot: ReportSnapshot): C
   const mapped = revisions.flatMap(
     (value) => (value.plan as ExecutablePlan | null)?.requirementRefs ?? [],
   );
-  const requirements = allEntities(ctx, "Requirement").filter((value) => {
-    const extensions = value.extensions as Record<string, unknown> | undefined;
-    return projects.has(String(extensions?.["testmaster:projectId"]));
-  });
-  const requirementsKnown =
-    projects.size > 0 &&
-    [...projects].every((project) =>
-      ctx.database.get(
-        "SELECT value FROM operational_state WHERE key=?",
-        `requirements:${ctx.workspaceId}:${project}`,
-      ),
+  // The denominator is the requirements still in scope: a rejected requirement and one a conflict
+  // decision superseded are decided out, so they are not uncovered work.
+  const inScopeRequirements: string[] = [];
+  let requirementsKnown = projects.size > 0;
+  for (const project of projects) {
+    const row = ctx.database.get(
+      "SELECT value FROM operational_state WHERE key=?",
+      `requirements:${ctx.workspaceId}:${project}`,
     );
+    if (!row) {
+      requirementsKnown = false;
+      continue;
+    }
+    const stored = JSON.parse(String(row.value)) as RequirementSnapshot;
+    for (const value of stored.requirements) {
+      const status = requirementStatus(value, stored.conflicts);
+      if (status !== "rejected" && status !== "superseded") inScopeRequirements.push(value.id);
+    }
+  }
   const coveredOperations: string[] = [],
     declaredOperations: string[] = [],
     visitedRoutes: string[] = [];
@@ -124,8 +132,9 @@ export function reportCoverage(ctx: ServiceContext, snapshot: ReportSnapshot): C
   return coverageMetrics({
     requirement: {
       covered: mapped,
-      declared: requirementsKnown ? requirements.map((value) => value.id) : null,
-      scope: "Current project requirement inventory and active accepted revisions; mapping only",
+      declared: requirementsKnown ? inScopeRequirements : null,
+      scope:
+        "Current project requirements still in scope (rejected and superseded ones excluded) and active accepted revisions; mapping only",
     },
     route: {
       covered: visitedRoutes,

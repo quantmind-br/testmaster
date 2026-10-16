@@ -1,5 +1,5 @@
 import type { ExecutablePlan } from "@testmaster/contracts";
-import type { ServiceContext } from "../context.js";
+import { allEntities, type ServiceContext } from "../context.js";
 import { flattenSteps } from "../plan-analysis.js";
 
 /**
@@ -247,6 +247,91 @@ export function unresolvedSchemaPointers(ctx: ServiceContext, plan: ExecutablePl
   return schemaCitations(plan)
     .filter(({ sourceRevisionId, pointer }) => !(`${sourceRevisionId}${pointer}` in schemas))
     .map(({ sourceRevisionId, pointer }) => `${sourceRevisionId}#${pointer}`);
+}
+
+/** One operation of an offered API specification and where its JSON response schemas live. */
+export interface OfferedOperation {
+  method: string;
+  path: string;
+  operationId?: string;
+  /** The operation declares `security: []`, so it needs no credential. */
+  public?: true;
+  /** HTTP status to the `jsonSchema` pointer of that response's JSON schema. */
+  responseSchemas: Record<string, string>;
+}
+
+/** An API specification of the project the planner may cite in a `jsonSchema` assertion. */
+export interface OfferedApiSpec {
+  sourceRevisionId: string;
+  sourceName: string;
+  operations: OfferedOperation[];
+}
+
+const escapePointerToken = (token: string): string =>
+  token.replaceAll("~", "~0").replaceAll("/", "~1");
+
+/** The parts of a parsed OpenAPI operation the catalog reads; the source parser validated the document. */
+interface ParsedOperation {
+  operationId?: unknown;
+  security?: unknown;
+  responses?: Record<string, { content?: Record<string, unknown>; schema?: unknown } | undefined>;
+}
+
+/**
+ * The pointers of one operation's JSON response schemas. OpenAPI 3 keeps a schema under
+ * `content/<media type>/schema`, Swagger 2 directly under the response; only pointers that
+ * resolve exactly as a `jsonSchema` assertion's runner input does are offered.
+ */
+function responseSchemaPointers(
+  view: SourceView,
+  base: string,
+  operation: ParsedOperation,
+): Record<string, string> {
+  const found: Record<string, string> = {};
+  for (const [status, response] of Object.entries(operation.responses ?? {})) {
+    const at = `${base}/responses/${escapePointerToken(status)}`;
+    const candidates = response?.content
+      ? Object.keys(response.content)
+          .filter((mediaType) => /json/iu.test(mediaType))
+          .map((mediaType) => `${at}/content/${escapePointerToken(mediaType)}/schema`)
+      : [`${at}/schema`];
+    const pointer = candidates.find((candidate) => resolveSourceSchema(view, candidate));
+    if (pointer) found[status] = pointer;
+  }
+  return found;
+}
+
+/**
+ * The operations of every API specification the project currently has (the active revision of
+ * each source that parsed as one), so a plan can check a response against its schema although no
+ * requirement cites that document. Archived sources and unreadable revisions offer nothing.
+ */
+export function offeredApiSpecs(ctx: ServiceContext, projectId: string): OfferedApiSpec[] {
+  const specs: OfferedApiSpec[] = [];
+  for (const source of allEntities(ctx, "Source")) {
+    if (source.projectId !== projectId || !source.activeRevisionId) continue;
+    const sourceRevisionId = String(source.activeRevisionId);
+    const view = loadSourceView(ctx, sourceRevisionId);
+    if (!view) continue;
+    const operations: OfferedOperation[] = [];
+    for (const [path, methods] of Object.entries(view.document.paths))
+      for (const [method, operation] of Object.entries(methods)) {
+        const parsed = operation as ParsedOperation;
+        const base = `/paths/${escapePointerToken(path)}/${method}`;
+        operations.push({
+          method: method.toUpperCase(),
+          path,
+          ...(typeof parsed.operationId === "string" ? { operationId: parsed.operationId } : {}),
+          ...(Array.isArray(parsed.security) && parsed.security.length === 0
+            ? { public: true as const }
+            : {}),
+          responseSchemas: responseSchemaPointers(view, base, parsed),
+        });
+      }
+    if (operations.length)
+      specs.push({ sourceRevisionId, sourceName: String(source.displayName), operations });
+  }
+  return specs;
 }
 
 /**

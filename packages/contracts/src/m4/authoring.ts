@@ -163,6 +163,10 @@ export const authoringContracts = {
     modelCallId: Nullable(P.Name),
     states: Type.Array(P.Enum(revisionStates)),
     promotedAt: Nullable(P.Timestamp),
+    /** The reviewer's reason when the promotion recorded one. */
+    promotion: Type.Optional(
+      P.Obj({ reason: P.DecisionReason, actorId: P.Name, promotedAt: P.Timestamp }),
+    ),
   }),
   TestDraftInput: P.Obj({
     baseRevisionId: P.id("rev"),

@@ -1,4 +1,4 @@
-import { type Static, type TSchema, Type } from "@sinclair/typebox";
+import { CloneType, type Static, type TSchema, Type } from "@sinclair/typebox";
 import * as Entities from "./entities.js";
 import { auditContracts } from "./m4/audit.js";
 import { authContracts } from "./m4/auth.js";
@@ -201,7 +201,8 @@ const supplemental = {
   ProposalDecisionInput: P.Obj({
     proposalIds: Type.Array(P.id("pro")),
     expectedVersion: P.Version,
-    reason: Type.Optional(P.Description),
+    /** Why the proposals are accepted or rejected; recorded on each decided proposal with the reviewer and time. */
+    reason: Type.Optional(P.DecisionReason),
     /** Selected proposals the preview flagged as exact duplicates and the caller accepts anyway (UX-017). */
     acknowledgedDuplicates: Type.Optional(Type.Array(P.id("pro"), { uniqueItems: true })),
   }),
@@ -219,6 +220,8 @@ const supplemental = {
     revisionId: P.id("rev"),
     expectedActiveRevisionId: P.id("rev"),
     approval: Type.Optional(P.id("apr")),
+    /** Why the revision is promoted; recorded on the test with the reviewer and time. */
+    reason: Type.Optional(P.DecisionReason),
   }),
   CancelInput: P.Obj({ reason: Type.Optional(P.Description) }),
   RerunInput: P.Obj({ environmentId: Type.Optional(P.id("env")) }),
@@ -342,6 +345,11 @@ const supplemental = {
     model: Type.Optional(P.Name),
   }),
   HealingRejectInput: P.Obj({ reason: Type.String({ minLength: 1, maxLength: 8000 }) }),
+  HealingApproveInput: P.Obj({
+    expectedVersion: P.Version,
+    /** Why the reviewer approves; recorded on the proposal with the reviewer and time. */
+    reason: Type.Optional(P.DecisionReason),
+  }),
   /**
    * A healing request that ended without a candidate because no safe test-only repair exists. It
    * is a normal result, not an error: `reasonCode` and `reason` are code-owned, never model text.
@@ -422,6 +430,10 @@ const supplemental = {
       expectedVersion: P.Version,
       proposalId: P.id("hea"),
       candidateRevisionId: P.id("rev"),
+      /** Present once an approver recorded a reason. */
+      decision: Type.Optional(
+        P.Obj({ reason: P.DecisionReason, actorId: P.Name, approvedAt: P.Timestamp }),
+      ),
     }),
     evidenceRefs: Type.Array(P.EvidenceRef),
     limitations: Type.Array(P.Description),
@@ -610,7 +622,15 @@ const supplemental = {
   }),
   BootstrapReceipt: P.Obj({
     projectId: P.id("prj"),
-    config: Ops.ProjectConfig,
+    /**
+     * What testmaster.config.json would hold for this call (the file's effective config with the
+     * requested target, mode and project id applied). Nothing is written; the stored environment is
+     * `environment`, and one aimed at another origin is never retargeted.
+     */
+    proposedConfig: CloneType(Ops.ProjectConfig, {
+      description:
+        "Proposal for testmaster.config.json built from the requested target and mode; never written to disk and never the stored environment (see environment)",
+    }),
     preflight: Type.Array(P.Obj({ check: P.Name, passed: Type.Boolean() })),
     /** The environment that targets the given origin: found, or created because the project had none. */
     environment: Type.Optional(

@@ -5,6 +5,7 @@ import type {
   TestRevision,
 } from "@testmaster/contracts";
 import type { EntityDocument } from "@testmaster/persistence";
+import { promotionRecords } from "./authoring.js";
 import { allEntities, requireEntity, type ServiceContext } from "./context.js";
 import { comparePlans } from "./plan-analysis.js";
 
@@ -51,6 +52,9 @@ export class RevisionHistoryService {
       if (revision.origin !== "manual") kinds.add("source_model");
       if (!kinds.size) kinds.add("operational");
       const promotedAt = promotions.get(revision.id) ?? null;
+      const promotion = promotionRecords(test).findLast(
+        (entry) => entry.revisionId === revision.id,
+      );
       const current = test.activeRevisionId === revision.id;
       const states: TestHistoryEntry["states"] = [];
       if (current) states.push("current");
@@ -89,6 +93,15 @@ export class RevisionHistoryService {
         modelCallId: healing?.modelCallId ?? authorship?.generatedBy ?? null,
         states,
         promotedAt,
+        ...(promotion
+          ? {
+              promotion: {
+                reason: promotion.reason,
+                actorId: promotion.actorId,
+                promotedAt: promotion.promotedAt,
+              },
+            }
+          : {}),
       } as TestHistoryEntry;
     });
   }

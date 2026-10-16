@@ -1,5 +1,5 @@
 import { nodeSupport } from "@testmaster/application";
-import { ContractError } from "@testmaster/contracts";
+import { ContractError, RUNNER_VERSION, SCHEMA_VERSION } from "@testmaster/contracts";
 import { Command, CommanderError, Help, Option } from "commander";
 import { agentCommands } from "./agents.js";
 import { explorationCommands } from "./ai-execution.js";
@@ -50,7 +50,7 @@ export function createCli(runtime: Runtime): Command {
   const program = new Command("testmaster").configureHelp({ optionDescription: markMandatory });
   program
     .description("Local deterministic test execution and evidence")
-    .version("0.1.0")
+    .version(`0.1.0 (schema ${SCHEMA_VERSION}, runner ${RUNNER_VERSION})`)
     .option("--json", "Emit exactly one JSON envelope")
     .addOption(
       new Option("--output <format>", "Output format").choices(["json", "text"]).default("text"),

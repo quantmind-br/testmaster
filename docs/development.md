@@ -315,7 +315,8 @@ Reports publish five independent coverage metrics (`requirement`, `route`, `oper
 `execution`) plus spec-10 named execution rates. Each ratio carries numerator, denominator,
 known/unknown state, scope and definition; an absent inventory is `insufficientData`, an explicit
 empty denominator is `notApplicable`, and neither renders as a percentage. Requirement coverage
-is scenario mapping, not independent verification; OpenAPI coverage requires passing status and
+counts only requirements still in scope (rejected requirements and those a conflict decision
+superseded are not in the denominator) and is scenario mapping, not independent verification; OpenAPI coverage requires passing status and
 schema assertions for the declared method/path/status/media pair. Partial route exploration and
 uninstrumented code retain unknown denominators. Duplicate selections and extra dependency Runs
 are reported separately and never inflate the frozen requested denominator.
@@ -493,8 +494,10 @@ requests `integration` plans. Any other plan rejects the batch. The evaluator ge
 with `auto` so UI-only requirements are not forced into invented HTTP endpoints, as observed in
 Round 6. Generation sees each requirement's evidence locators (path,
 JSON pointer) next to its handle but cites only handles.
-`plan accept --only ... --expected-version N --idempotency-key KEY` atomically creates only
-selected generated revisions and preserves retained proposals. Edits are CAS and return a diff on
+`plan accept --only ... --expected-version N --idempotency-key KEY [--reason TEXT]` atomically creates only
+selected generated revisions and preserves retained proposals; `plan reject` takes the same options.
+The optional reason (1-2000 characters) is kept on every proposal the call decides, with the reviewer and
+the time (`extensions['testmaster:decision']`), and the audit event stays content-free. Edits are CAS and return a diff on
 conflict. J02/J03 live journeys record their exercised evidence in `validation/results/`.
 M3–M6 groups report their milestone rather than returning successful placeholders.
 
@@ -547,8 +550,10 @@ tests an unavailable model/idempotency/accounting and positive/negative source b
 acceptance, not evidence of live-model diagnostic quality.
 
 M3 healing is an explicit separate workflow: `heal propose RUN [--provider ID] [--model ID]`,
-`heal get PROPOSAL`, `heal approve PROPOSAL --expected-version N [--wait]`, and
-`heal reject PROPOSAL --reason TEXT`. Proposals require a terminal failed declarative Run,
+`heal get PROPOSAL`, `heal approve PROPOSAL --expected-version N [--reason TEXT] [--wait]`, and
+`heal reject PROPOSAL --reason TEXT`. An approval reason (1-2000 characters, optional) is stored on the
+proposal with the approver and the time and shown by `heal review`; the `healing.approved` audit event stays
+content-free like `healing.rejected`. Proposals require a terminal failed declarative Run,
 an allowed structured-output provider. Without `--provider`/`--model`
 (`provider`/`model` in the API body and MCP input) the first allowed provider's first
 structured-output model is used; an explicit choice must be configured, allowed by the profile and
@@ -628,7 +633,7 @@ not live-model repair quality.
 
 An unambiguous locator state wait that exceeds its approved deadline on a live page is
 `failed/assertion_timeout`; a crashed page or detached frame remains an evidence failure.
-Browser value predicates (`textEquals`, `textContains`, `valueEquals`, `enabled`) poll the
+Browser value predicates (`textEquals`, `textContains`, `valueEquals`, `enabled`, `disabled`) poll the
 bound element until the step deadline and fail with the last observation, so an eventually
 rendered value passes while a stale one fails. An HTTP assertion whose JSON Pointer target is
 absent from a complete, valid response fails as `assertion_mismatch`; captures still treat an
@@ -885,6 +890,17 @@ regenerate both engines with `node packages/persistence/dist/generate-contract-c
 SQLite validates existing rows before installing triggers, and PostgreSQL validates before
 adding CHECK constraints. Incompatible historical rows stop the migration without rewriting
 them; an operator must inspect preserved data before attempting a corrected upgrade.
+A contract change reaches existing tables only through a new migration: the generator freezes
+the scalar schemas an applied migration shipped with (`frozen` in
+`packages/persistence/src/contract-projections.ts`). `0023_artifact_storage_key.sql` replaces
+the `artifacts` constraint because `Artifact.storageKey` is no longer a 200-character `Name`: it
+is the relative path `runs/<workspace>/<run>/<attempt>/<relativePath>`, and `relativePath` embeds
+plan step ids (up to 64 characters, e.g. `browser/steps/<id>-locator-<n>-before.json`) and
+download output names (up to 200 characters, `browser/downloads/<name>`), so a valid plan reaches
+about 350 characters. Both the contract and the database now bound the key at 4096 characters,
+the longest path Linux accepts (`PATH_MAX`): a key beyond it could never name a file under the
+evidence root. Publishing a bundle is all-or-nothing, so any tighter bound would discard the whole
+evidence of a run whose steps all passed.
 
 
 ### Provider-controlled generation

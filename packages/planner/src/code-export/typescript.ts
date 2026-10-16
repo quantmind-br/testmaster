@@ -192,6 +192,7 @@ export async function executePlan(plan: Data, initialPage: Page, request: APIReq
       switch(e.predicate) {
         case 'visible': await l.waitFor({state:'visible',timeout}); return;
         case 'enabled': await expect(l).toBeEnabled({timeout}); return;
+        case 'disabled': await expect(l).toBeDisabled({timeout}); return;
         case 'textEquals': await expect.poll(() => l.innerText({timeout}),{timeout}).toBe(string(e.value)); return;
         case 'textContains': await expect.poll(() => l.innerText({timeout}),{timeout}).toContain(string(e.value)); return;
         case 'valueEquals': await expect.poll(() => l.inputValue({timeout}),{timeout}).toBe(string(e.value)); return;

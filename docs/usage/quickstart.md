@@ -35,7 +35,7 @@ alias testmaster="node $PWD/apps/cli/dist/main.js"
 make install PREFIX="$HOME/.local"
 make verify PREFIX="$HOME/.local"
 export PATH="$HOME/.local/bin:$PATH"
-testmaster --version
+testmaster --version   # e.g. 0.1.0 (schema 1.0.0, runner 1.0.0): the CLI build, then the contract versions capabilities reports
 # Remove only this managed installation; project data is retained.
 make uninstall PREFIX="$HOME/.local"
 ```
@@ -257,9 +257,14 @@ project when it runs, so create these first:
   endpoint that needs the session sets `"auth": "profile"`, and the runner applies the session of the profile
   bound to the environment to that request only. A proposal that sets `auth: "profile"` in a project with no
   auth profile is sent back to the model for repair.
+- **API specifications** (`testmaster source add openapi.json --role api-spec`): the model sees, for every active
+  OpenAPI/Swagger source, each operation (method, path, `operationId`) and the pointer of its JSON response schema
+  per HTTP status, and a `jsonSchema` assertion may cite that source's revision id. The specification does not have
+  to be normalized: normalize only the PRD to keep the requirements scoped to it, and the planner still reads the
+  specification. An archived source (`source archive`) is no longer offered.
 
-A secret or profile created after generation is not retroactively added to existing proposals; regenerate or
-edit the plan.
+A secret, profile or specification created after generation is not retroactively added to existing proposals;
+regenerate or edit the plan.
 
 Generated browser plans must end with a positive check on rendered content (`visible`, `textContains`,
 `textEquals`, `valueEquals` or `countEquals` above 0) after the last state-changing action (login, navigation,
@@ -391,7 +396,11 @@ invalid source is an error that lists its diagnostics), `testmaster_normalize_re
 inside an approved root or from an environment variable of the MCP process, never from an argument),
 `testmaster_save_auth_profile` and `testmaster_update_environment` (`authRefs`, `additionalOrigins`). Create the
 secrets and auth profiles before `testmaster_generate_plan`, because the model is offered only what already exists.
-Every decision is recorded with the acting principal.
+Every decision is recorded with the acting principal. `testmaster_review_plan` (accept or reject),
+`testmaster_promote_revision` and `testmaster_approve_healing` take an optional `reason` (1-2000 characters), kept
+with the reviewer and the time: on each decided proposal, on the test (and its history entry) and on the
+healing proposal (`testmaster_review_healing` shows it). The CLI flag is `--reason` on `plan accept|reject`,
+`test revision promote` and `heal approve`.
 
 The same token covers authoring, execution and approvals. `testmaster_edit_plan` changes a still-proposed plan
 at the proposal's `expectedVersion` and reports `batchVersion`, the version `testmaster_review_plan` takes (every

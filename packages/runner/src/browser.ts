@@ -473,6 +473,11 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
             expected = true;
             holds = observed === true;
             break;
+          case "disabled":
+            observed = await locator.isDisabled({ timeout: remaining });
+            expected = true;
+            holds = observed === true;
+            break;
           case "textEquals":
             observed = await locator.innerText({ timeout: remaining });
             expected = await stringValue(expectation.value);

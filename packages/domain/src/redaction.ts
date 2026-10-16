@@ -20,59 +20,90 @@ export function scrubText(
 export interface PlanIdentifiers {
   stepIds: ReadonlySet<string>;
   captureNames: ReadonlySet<string>;
+  /** Variable references the plan or the runner derives from plan text: `<stepId>.<capture>`, `<stepId>.handle`, and every `variableRef` the plan writes. */
+  variableRefs: ReadonlySet<string>;
 }
 /**
- * Collects the step ids (and the ids of their cleanup requests) and the capture names declared by
- * the plan, login steps and approved agent actions in `roots`. The plan is stored verbatim, so
- * redaction must not rewrite these names inside the records that report on them: the host matches
- * step results, captures and locator evidence back to the plan by exact name.
+ * Collects the step ids (and the ids of their cleanup requests), the capture names and the variable
+ * references declared by the plan, login steps and approved agent actions in `roots`. The plan is
+ * stored verbatim, so redaction must not rewrite these names inside the records that report on
+ * them: the host matches step results, captures and locator evidence back to the plan by exact
+ * name. A plan author cannot avoid a collision, because a short secret value such as the user name
+ * `root` also occurs in ordinary words (`open_root`), and a warning that named the colliding secret
+ * would let an author who may not read secrets probe its value, so the names are exempt instead.
  */
 export function planIdentifiers(...roots: unknown[]): PlanIdentifiers {
   const stepIds = new Set<string>();
   const captureNames = new Set<string>();
+  const variableRefs = new Set<string>();
   const walk = (value: unknown): void => {
     if (typeof value !== "object" || value === null) return;
     if (Array.isArray(value)) {
       for (const item of value) walk(item);
       return;
     }
-    const node = value as { id?: unknown; operation?: unknown; capture?: unknown };
+    const node = value as {
+      id?: unknown;
+      operation?: unknown;
+      capture?: unknown;
+      input?: { capture?: unknown; resource?: unknown } | null;
+      variableRef?: unknown;
+    };
     if (typeof node.id === "string" && typeof node.operation === "string") {
       stepIds.add(node.id);
       stepIds.add(`cleanup-${node.id}`);
+      const input = node.input;
+      if (Array.isArray(input?.capture))
+        for (const capture of input.capture as { name?: unknown }[])
+          if (typeof capture?.name === "string") variableRefs.add(`${node.id}.${capture.name}`);
+      if (input?.resource) variableRefs.add(`${node.id}.handle`);
     }
+    if (typeof node.variableRef === "string") variableRefs.add(node.variableRef);
     if (Array.isArray(node.capture))
       for (const capture of node.capture as { name?: unknown }[])
         if (typeof capture?.name === "string") captureNames.add(capture.name);
     for (const child of Object.values(node)) walk(child);
   };
   for (const root of roots) walk(root);
-  return { stepIds, captureNames };
+  return { stepIds, captureNames, variableRefs };
 }
-const stepIdField = (id: string): string => `"stepId":${JSON.stringify(id)}`;
+/** The JSON fields of runner records that hold plan identifiers, and the identifiers each may hold. */
+const identifierFields = (
+  identifiers: PlanIdentifiers,
+): readonly (readonly [field: string, names: ReadonlySet<string>])[] => [
+  ["stepId", identifiers.stepIds],
+  ["variableRef", identifiers.variableRefs],
+];
+const identifierField = (field: string, id: string): string => `"${field}":${JSON.stringify(id)}`;
 /**
- * Puts plan step ids back into the `"stepId"` fields of already scrubbed JSON text, where `scrub`
- * rewrote them because a secret value occurs inside the id. Only that exact field is restored: a
- * step id is plan text, so the field reveals nothing the stored plan does not.
+ * Puts plan identifiers back into the `"stepId"` and `"variableRef"` fields of already scrubbed
+ * JSON text, where `scrub` rewrote them because a secret value occurs inside the name. Only those
+ * exact fields are restored: a step id or variable reference is plan text, so the field reveals
+ * nothing the stored plan does not.
  */
-export function restoreStepIds(
+export function restorePlanIdentifiers(
   scrubbed: string,
-  stepIds: ReadonlySet<string>,
+  identifiers: PlanIdentifiers,
   scrub: (text: string) => string,
 ): string {
-  if (!scrubbed.includes('"stepId":')) return scrubbed;
   let output = scrubbed;
-  for (const id of stepIds) {
-    const redacted = scrub(id);
-    if (redacted !== id) output = output.replaceAll(stepIdField(redacted), stepIdField(id));
+  for (const [field, names] of identifierFields(identifiers)) {
+    if (!output.includes(`"${field}":`)) continue;
+    for (const id of names) {
+      const redacted = scrub(id);
+      if (redacted !== id)
+        output = output.replaceAll(identifierField(field, redacted), identifierField(field, id));
+    }
   }
   return output;
 }
-/** Blanks the `"stepId"` fields that name plan steps, so a leak scan does not flag restored ids. */
-export function withoutStepIdFields(text: string, stepIds: ReadonlySet<string>): string {
-  if (!text.includes('"stepId":')) return text;
+/** Blanks the `"stepId"` and `"variableRef"` fields that name plan identifiers, so a leak scan does not flag restored names. */
+export function withoutPlanIdentifierFields(text: string, identifiers: PlanIdentifiers): string {
   let output = text;
-  for (const id of stepIds) output = output.replaceAll(stepIdField(id), '"stepId":""');
+  for (const [field, names] of identifierFields(identifiers)) {
+    if (!output.includes(`"${field}":`)) continue;
+    for (const id of names) output = output.replaceAll(identifierField(field, id), `"${field}":""`);
+  }
   return output;
 }
 

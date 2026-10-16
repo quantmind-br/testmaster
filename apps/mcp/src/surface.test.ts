@@ -170,7 +170,7 @@ it("bootstrap binds each root to one project and refuses clashes and bad targets
   expect(initRoot.isError).toBe(false);
   expect(initRoot.body.projectId).toBe(f.init.projectId);
   expect(f.app.projects.list()).toHaveLength(1);
-  expect(initRoot.body.config).toMatchObject({
+  expect(initRoot.body.proposedConfig).toMatchObject({
     environment: { baseUrl: "http://127.0.0.1:3000", networkProfile: "local-loopback" },
     execution: { mode: "replay" },
   });
@@ -222,6 +222,10 @@ it("bootstrap reports an environment aimed at another origin with the exact upda
     passed: false,
   });
   expect(moved.body).not.toHaveProperty("environment");
+  // The receipt's config is a proposal for testmaster.config.json, not the stored environment: it
+  // names the requested target while the environment (and the file) keep their own origin.
+  expect(moved.body).not.toHaveProperty("config");
+  expect(moved.body.proposedConfig).toMatchObject({ environment: { baseUrl: target } });
   expect(JSON.stringify(moved.body.nextActions)).toContain(
     `testmaster_update_environment {environmentId: ${environment.id}, expectedVersion: ${environment.version}, baseUrl: ${target}}`,
   );

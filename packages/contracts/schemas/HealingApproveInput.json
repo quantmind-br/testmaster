@@ -1,0 +1,21 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "expectedVersion"
+  ],
+  "properties": {
+    "expectedVersion": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "reason": {
+      "minLength": 1,
+      "maxLength": 2000,
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:HealingApproveInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

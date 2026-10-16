@@ -2,10 +2,10 @@ import { expect, it } from "vitest";
 import {
   environmentSecretValues,
   planIdentifiers,
-  restoreStepIds,
+  restorePlanIdentifiers,
   scrubEvidenceText,
   scrubEvidenceValue,
-  withoutStepIdFields,
+  withoutPlanIdentifierFields,
 } from "./redaction.js";
 
 it("redacts sensitive headers, fields, URLs and configured known values while preserving benign observations", () => {
@@ -69,7 +69,7 @@ it("structured scrubbing redacts strings and sensitive properties but never chan
 });
 
 it("restores plan step ids in stepId fields a secret rewrote, and nowhere else", () => {
-  const { stepIds } = planIdentifiers({
+  const identifiers = planIdentifiers({
     steps: [{ id: "assert_root_url", operation: "assert" }],
   });
   const scrub = (text: string) => scrubEvidenceText(text, ["root"]).text;
@@ -78,14 +78,59 @@ it("restores plan step ids in stepId fields a secret rewrote, and nowhere else",
     candidates: [{ text: "Signed in as root", stepId: "other_root" }],
   });
   expect(scrub(record)).toContain('"stepId":"assert_[REDACTED]_url"');
-  const restored = restoreStepIds(scrub(record), stepIds, scrub);
+  const restored = restorePlanIdentifiers(scrub(record), identifiers, scrub);
   // The plan step keeps its id; observed text and ids the plan does not declare stay redacted.
   expect(restored).toContain('"stepId":"assert_root_url"');
   expect(restored).toContain("Signed in as [REDACTED]");
   expect(restored).toContain('"stepId":"other_[REDACTED]"');
   // The leak scan blanks only the plan's own stepId fields.
-  expect(scrubEvidenceText(withoutStepIdFields(restored, stepIds), ["root"]).redacted).toBe(false);
   expect(
-    scrubEvidenceText(withoutStepIdFields('{"stepId":"other_root"}', stepIds), ["root"]).redacted,
+    scrubEvidenceText(withoutPlanIdentifierFields(restored, identifiers), ["root"]).redacted,
+  ).toBe(false);
+  expect(
+    scrubEvidenceText(withoutPlanIdentifierFields('{"stepId":"other_root"}', identifiers), ["root"])
+      .redacted,
+  ).toBe(true);
+});
+
+it("restores the variable references a plan step id yields in variableRef fields a secret rewrote, and nowhere else", () => {
+  const identifiers = planIdentifiers({
+    steps: [
+      {
+        id: "login_root",
+        operation: "request",
+        input: { capture: [{ name: "session" }], resource: { kind: "account" } },
+      },
+      {
+        id: "use_session",
+        operation: "request",
+        input: { headers: { cookie: { variableRef: "login_root.session" } } },
+      },
+    ],
+  });
+  const scrub = (text: string) => scrubEvidenceText(text, ["root"]).text;
+  const record = JSON.stringify({
+    bindings: [{ variableRef: "login_root.session" }, { variableRef: "other_root.session" }],
+    captures: [{ name: "session", variableRef: "login_root.session" }],
+    handle: { variableRef: "login_root.handle" },
+    text: "variableRef login_root.session observed for root",
+  });
+  expect(scrub(record)).toContain('"variableRef":"login_[REDACTED].session"');
+  const restored = restorePlanIdentifiers(scrub(record), identifiers, scrub);
+  expect(restored).toContain(
+    '"bindings":[{"variableRef":"login_root.session"},{"variableRef":"other_[REDACTED].session"}]',
+  );
+  expect(restored).toContain('"captures":[{"name":"session","variableRef":"login_root.session"}]');
+  expect(restored).toContain('"handle":{"variableRef":"login_root.handle"}');
+  expect(restored).toContain("for [REDACTED]");
+  // The leak scan blanks only the plan's own variableRef fields.
+  expect(
+    scrubEvidenceText(withoutPlanIdentifierFields(restored, identifiers), ["root"]).redacted,
+  ).toBe(false);
+  expect(
+    scrubEvidenceText(
+      withoutPlanIdentifierFields('{"variableRef":"other_root.session"}', identifiers),
+      ["root"],
+    ).redacted,
   ).toBe(true);
 });

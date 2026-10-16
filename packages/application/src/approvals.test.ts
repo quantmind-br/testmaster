@@ -5,7 +5,7 @@ import {
 } from "@testmaster/contracts";
 import { uuidV7IdGenerator } from "@testmaster/domain";
 import { EntityRepository, PersistenceDatabase } from "@testmaster/persistence";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApprovalsService, planRiskActions } from "./approvals.js";
 import {
   EnvironmentsService,
@@ -254,11 +254,16 @@ describe("bound production approvals", () => {
   });
   it("defaults an execution approval to a 30-minute window", async () => {
     const { approvals, input } = await setup();
-    const before = Date.now();
-    const approval = approvals.create(input);
-    const window = Date.parse(approval.expiresAt) - before;
-    expect(window).toBeLessThanOrEqual(30 * 60_000);
-    expect(window).toBeGreaterThan(29 * 60_000);
+    // A frozen clock: with a real one, a millisecond between reading it and creating the approval
+    // makes the window look one millisecond too long.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const before = Date.now();
+      const approval = approvals.create(input);
+      expect(Date.parse(approval.expiresAt) - before).toBe(30 * 60_000);
+    } finally {
+      vi.useRealTimers();
+    }
   });
   it("requires a non-empty reason and stores it on the approval", async () => {
     const { approvals, run, test, env, input, ctx } = await setup();

@@ -47,6 +47,7 @@ function observesContent(expectation: Expectation): boolean {
   switch (expectation.predicate) {
     case "visible":
     case "enabled":
+    case "disabled":
     case "textEquals":
     case "textContains":
     case "valueEquals":

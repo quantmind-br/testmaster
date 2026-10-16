@@ -16,7 +16,7 @@ import {
   type PlanIdentifiers,
   planIdentifiers,
   scrubEvidenceText,
-  withoutStepIdFields,
+  withoutPlanIdentifierFields,
 } from "@testmaster/domain";
 import type { ArtifactWriter, EvidenceStore } from "@testmaster/evidence";
 import {
@@ -190,9 +190,9 @@ export class AttemptExecutor {
         ...(input.reproduction ? { reproduction: input.reproduction } : {}),
       },
       {
-        // A `"stepId"` field names a plan step: plan text, restored by the runner after scrubbing.
+        // `"stepId"` and `"variableRef"` fields name plan text, restored by the runner after scrubbing.
         scanText: (text) => ({
-          hit: scrubEvidenceText(withoutStepIdFields(text, identifiers.stepIds), [...values])
+          hit: scrubEvidenceText(withoutPlanIdentifierFields(text, identifiers), [...values])
             .redacted,
         }),
       },

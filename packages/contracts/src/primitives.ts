@@ -1,6 +1,8 @@
 import { type Static, type TSchema, Type } from "@sinclair/typebox";
 
 export const SCHEMA_VERSION = "1.0.0" as const;
+/** Version of the runner contract that `testmaster_capabilities` reports and `testmaster --version` prints. */
+export const RUNNER_VERSION = "1.0.0" as const;
 export const entityPrefixes = [
   "ws",
   "usr",
@@ -56,6 +58,8 @@ export const ContentDigest = Type.String({ pattern: "^[0-9a-f]{64}$" });
 export const Version = Type.Integer({ minimum: 1 });
 export const Name = Type.String({ minLength: 1, maxLength: 200 });
 export const Description = Type.String({ maxLength: 8000 });
+/** Optional reason a reviewer records with a decision (accept, reject, promote, approve): 1-2000 characters. */
+export const DecisionReason = Type.String({ minLength: 1, maxLength: 2000 });
 export const Nonnegative = Type.Integer({ minimum: 0 });
 export const Positive = Type.Integer({ minimum: 1 });
 export const Enum = <T extends string>(values: readonly T[]) =>

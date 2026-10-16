@@ -305,6 +305,92 @@ it("normalization reports progress per model batch and forwards an explicit mode
   ]);
   expect(f.payloads.map((payload) => payload.model)).toEqual(["model", "model"]);
 });
+interface RecordedMessage {
+  role: string;
+  content: string;
+}
+interface RecordedChunk {
+  kind: string;
+  text: string;
+}
+/** The system and user messages of a recorded completion request, as one string. */
+function promptText(payload: Record<string, unknown> | undefined): string {
+  // The fixture server records the chat-completions body it received.
+  const messages = (payload?.messages ?? []) as RecordedMessage[];
+  return messages.map((message) => message.content).join("\n");
+}
+/** The `untrustedData` object the application sent as the user message of a recorded request. */
+function userData(payload: Record<string, unknown> | undefined): Record<string, unknown> {
+  const messages = (payload?.messages ?? []) as RecordedMessage[];
+  // The gateway frames the request with its own messages; the application's data is the user turn.
+  const user = messages.findLast((message) => message.role === "user");
+  const body: { untrustedData: Record<string, unknown> } = JSON.parse(user?.content ?? "{}");
+  return body.untrustedData;
+}
+it("normalization sends each Markdown requirement section to the model whole, never cut between its statement and its criteria", async () => {
+  const f = await fixture();
+  const sectionCount = 9;
+  const criteria = 4;
+  const section = (index: number) =>
+    [
+      // A group title sits above the first requirement of each group, as in a PRD with chapters.
+      ...(index === 1 || index === 6 ? [`## Group ${index}`] : []),
+      `### REQ-${index} Feature ${index}`,
+      `Feature ${index} is available to every user.`,
+      "Acceptance criteria:",
+      ...Array.from(
+        { length: criteria },
+        (_, number) => `- Criterion ${number + 1} of feature ${index} holds.`,
+      ),
+    ].join("\n\n");
+  const path = join(f.root, "prd.md");
+  await writeFile(
+    path,
+    Array.from({ length: sectionCount }, (_, i) => section(i + 1)).join("\n\n"),
+  );
+  const source = await f.app.sources.add({
+    projectId: f.projectId,
+    role: "prd",
+    path,
+    format: "markdown",
+  });
+  // Enough distinct scripted answers for however many batches the request needs.
+  f.queueOutputs(
+    ...Array.from({ length: 30 }, (_, index) => ({
+      requirements: [
+        {
+          key: `batch-${index + 1}-feature`,
+          text: `Feature ${index + 1} is available`,
+          acceptanceCriteria: ["Available"],
+          evidenceIds: ["E1"],
+          originKind: "explicit",
+          confidence: null,
+          reason: "PRD",
+        },
+      ],
+      conflicts: [],
+      openQuestions: [],
+    })),
+  );
+  await f.app.requirements.normalize({
+    projectId: f.projectId,
+    sourceRevisionIds: [source.revision.id],
+  });
+  const batches = f.payloads.map((payload) => userData(payload).chunks as RecordedChunk[]);
+  // A group title never travels alone: the model must return at least one requirement per batch.
+  expect(batches.every((chunks) => chunks.some((chunk) => chunk.kind !== "heading"))).toBe(true);
+  // Every requirement section reaches the model in one batch, with all of its criteria.
+  for (let index = 1; index <= sectionCount; index++) {
+    const holders = batches.filter((chunks) =>
+      chunks.some((chunk) => chunk.text.startsWith(`### REQ-${index} `)),
+    );
+    expect(holders).toHaveLength(1);
+    for (let number = 1; number <= criteria; number++)
+      expect(holders[0]?.map((chunk) => chunk.text)).toContain(
+        `- Criterion ${number} of feature ${index} holds.`,
+      );
+  }
+});
 it("normalization refuses before the first paid batch when the reconciliation cannot fit the declared context", async () => {
   const f = await fixture(undefined, 30_000);
   const section = (name: string, index: number) =>
@@ -2101,6 +2187,143 @@ it("generation offers secret names to the model, prefixes the OpenAPI server pat
     { literal: "v1" },
     { literal: "items" },
   ]);
+});
+it("generation offers the project's API specification to the model although no requirement cites it", async () => {
+  const f = await fixture();
+  await writeFile(
+    join(f.root, "openapi.json"),
+    JSON.stringify({
+      openapi: "3.0.3",
+      info: { title: "Items", version: "1" },
+      servers: [{ url: "https://api.example.test/v1" }],
+      paths: {
+        "/items": {
+          get: {
+            operationId: "listItems",
+            responses: {
+              "200": {
+                description: "ok",
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "object",
+                      required: ["items"],
+                      properties: { items: { type: "array", items: { type: "string" } } },
+                    },
+                  },
+                },
+              },
+              "401": { description: "no session" },
+            },
+          },
+        },
+      },
+    }),
+  );
+  await writeFile(join(f.root, "PRD.md"), "# Items\n\nListing items returns an items array.\n");
+  const api = await f.app.sources.add({
+    projectId: f.projectId,
+    role: "api-spec",
+    path: join(f.root, "openapi.json"),
+    format: "openapi",
+  });
+  const prd = await f.app.sources.add({
+    projectId: f.projectId,
+    role: "prd",
+    path: join(f.root, "PRD.md"),
+    format: "markdown",
+  });
+  f.setOutput({
+    requirements: [
+      {
+        key: "items",
+        text: "Listing items returns an items array",
+        acceptanceCriteria: ["GET /items returns an object with an items array"],
+        evidenceIds: ["E2"],
+        originKind: "explicit",
+        confidence: null,
+        reason: "PRD",
+      },
+    ],
+    conflicts: [],
+    openQuestions: [],
+  });
+  // Only the PRD is normalized: the specification never becomes a requirement.
+  const [requirement] = (
+    await f.app.requirements.normalize({
+      projectId: f.projectId,
+      sourceRevisionIds: [prd.revision.id],
+    })
+  ).requirements;
+  if (!requirement) throw new Error("Missing normalized requirement");
+  f.app.requirements.approve(requirement.id, requirement.version ?? 1);
+  const pointer = "/paths/~1items/get/responses/200/content/application~1json/schema";
+  const plan = scaffoldPlan("backend");
+  plan.requirementRefs = [requirement.id];
+  plan.steps = [
+    {
+      id: "call",
+      kind: "action",
+      operation: "request",
+      description: "List items",
+      input: { method: "GET", pathSegments: [{ literal: "items" }] },
+    },
+    {
+      id: "status",
+      kind: "assertion",
+      operation: "assert",
+      description: "Status is 200",
+      input: { responseStepId: "call" },
+      expectation: { predicate: "statusIn", values: [200] },
+    },
+    {
+      id: "schema",
+      kind: "assertion",
+      operation: "assert",
+      description: "Body matches the declared response schema",
+      input: { responseStepId: "call" },
+      expectation: { predicate: "jsonSchema", sourceRevisionId: api.revision.id, pointer },
+    },
+  ];
+  f.setOutput({
+    proposals: [{ plan, requirementRefs: [requirement.id], evidenceIds: ["E1"], warnings: [] }],
+  });
+  const batch = await f.app.proposals.generate({ projectId: f.projectId });
+  const prompt = promptText(f.payloads.at(-1));
+  const offered = userData(f.payloads.at(-1)).apiSpecs;
+  expect(offered).toEqual([
+    {
+      sourceRevisionId: api.revision.id,
+      sourceName: expect.any(String),
+      operations: [
+        {
+          method: "GET",
+          path: "/items",
+          operationId: "listItems",
+          responseSchemas: { "200": pointer },
+        },
+      ],
+    },
+  ]);
+  // The schema the plan cites is the specification's, although the requirement cites the PRD,
+  // and the specification's server path prefix is applied to the request.
+  const [generated] = f.app.proposals.detail(batch.id).proposals;
+  if (generated?.plan.kind !== "executable") throw new Error("Missing generated plan");
+  const request = generated.plan.steps[0];
+  if (request?.operation !== "request") throw new Error("Missing request step");
+  expect(request.input.pathSegments).toEqual([{ literal: "v1" }, { literal: "items" }]);
+  expect(Object.keys(sourceSchemasFor(f.app.context, generated.plan))).toEqual([
+    `${api.revision.id}${pointer}`,
+  ]);
+  // Control: an archived specification is no longer offered.
+  f.app.sources.archive(api.source.id, Number(api.source.version));
+  f.setOutput({
+    proposals: [{ plan, requirementRefs: [requirement.id], evidenceIds: ["E1"], warnings: [] }],
+  });
+  await f.app.proposals.generate({ projectId: f.projectId });
+  expect(prompt).toContain('"apiSpecs"');
+  const afterArchive = promptText(f.payloads.at(-1));
+  expect(afterArchive).not.toContain('"apiSpecs"');
 });
 it("generation refuses proposals that cannot run: unreachable schema pointer, unknown secret, 200-only status", async () => {
   const { f, proposal } = await openApiGenerationFixture();

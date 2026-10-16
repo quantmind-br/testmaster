@@ -198,6 +198,23 @@ describe("source ingestion", () => {
     expect(sources.get(first.source.id).archivedAt).not.toBeNull();
     expect(sources.list(projectId).map((source) => source.id)).toEqual([second.source.id]);
   });
+  it("starts a new source at version 1 and bumps it once per further revision", async () => {
+    const { cwd, sources, projectId } = await fixture();
+    await writeFile(join(cwd, "prd.md"), "Buyer must keep the cart.");
+    const first = await sources.add({ projectId, role: "prd", path: "prd.md" });
+    expect(first.source.version).toBe(1);
+    expect(sources.get(first.source.id).source.version).toBe(1);
+    await writeFile(join(cwd, "prd.md"), "Buyer must empty the cart.");
+    const revised = await sources.add({
+      projectId,
+      role: "prd",
+      path: "prd.md",
+      sourceId: first.source.id,
+      expectedVersion: 1,
+    });
+    expect(revised.source.version).toBe(2);
+    expect(revised.source.activeRevisionId).toBe(revised.revision.id);
+  });
   it("makes parser failures explicit and rejects path, symlink and hardlink escapes", async () => {
     const { root, cwd, sources, projectId } = await fixture();
     await writeFile(join(cwd, "invalid.json"), "{broken");

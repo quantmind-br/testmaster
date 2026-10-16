@@ -91,3 +91,24 @@ it("test revision create says the new revision is inactive and gives the exact p
   expect(text.stderr).toContain("testmaster test revision promote rev_");
   expect(text.stderr).toContain(`--expected-version ${app.tests.get(test.id).version}`);
 });
+
+it("test revision promote --reason records the reason on the test", async () => {
+  const { app, test, invoke } = await fixture();
+  const created = await invoke(["test", "revision", "create", test.id, "--plan", "next.json"]);
+  const revisionId = (JSON.parse(created.stdout) as RevisionReceipt).data.id;
+  const promoted = await invoke([
+    "test",
+    "revision",
+    "promote",
+    revisionId,
+    "--expected-version",
+    String(app.tests.get(test.id).version),
+    "--reason",
+    "Candidate replay passed",
+  ]);
+  expect(promoted.exit).toBe(0);
+  expect(app.revisionHistory.list(test.id).find((entry) => entry.id === revisionId)).toMatchObject({
+    states: ["current"],
+    promotion: { reason: "Candidate replay passed", actorId: app.context.principalId },
+  });
+});
