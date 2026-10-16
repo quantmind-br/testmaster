@@ -5,6 +5,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { Application, entity, scaffoldPlan } from "@testmaster/application";
 import { uuidV7IdGenerator } from "@testmaster/domain";
+import { assertionsHash } from "@testmaster/planner";
 import { afterEach, expect, it, vi } from "vitest";
 import { createMcpServer } from "./server.js";
 
@@ -590,3 +591,51 @@ it("get_evidence says why a run is stale and treats the run of a candidate revis
     "environment_revision_changed",
   ]);
 });
+
+it.each(["ephemeral", "worker"] as const)(
+  "approve_healing executes its verification run in the server only when no worker owns it (%s)",
+  async (ownership) => {
+    const f = await fixture();
+    const worker = Object.getPrototypeOf(f.app.worker);
+    vi.spyOn(worker, "live").mockReturnValue(false);
+    const workerRun = vi.spyOn(worker, "run").mockResolvedValue({});
+    const test = f.app.tests.create({ projectId: f.init.projectId, plan: scaffoldPlan("backend") });
+    const run = f.app.runs.resolve({ testId: test.id, environmentId: f.init.environmentId });
+    Object.assign(run, { phase: "queued", matrixCell: { ...run.matrixCell, ownership } });
+    f.app.context.entities.insert("Run", run);
+    const revision = f.app.revisions.get(String(run.revisionId));
+    if (!revision.plan) throw new Error("Missing fixture plan");
+    const proposal = entity(f.app.context, "hea", {
+      failedRunId: run.id,
+      testId: test.id,
+      analysisId: null,
+      baseRevisionId: revision.id,
+      candidateRevisionId: revision.id,
+      diff: "Locator change",
+      changes: [],
+      evidenceRefs: [],
+      preservedAssertionsHash: assertionsHash(revision.plan),
+      risk: "read",
+      status: "approved",
+      approvalMode: "manual",
+      reviewerId: f.init.principalId,
+      policyHash: null,
+      verificationRunId: run.id,
+      modelCallId: null,
+      limitations: [],
+    });
+    vi.spyOn(Object.getPrototypeOf(f.app.healing), "approve").mockResolvedValue(proposal);
+    const { call } = await f.connect();
+
+    const approved = await call("testmaster_approve_healing", {
+      proposalId: proposal.id,
+      expectedVersion: 3,
+    });
+
+    expect(approved.error).toBeUndefined();
+    expect(approved.data?.verificationRunId).toBe(run.id);
+    if (ownership === "ephemeral")
+      expect(workerRun).toHaveBeenCalledWith({ ephemeral: true, runIds: [run.id] });
+    else expect(workerRun).not.toHaveBeenCalled();
+  },
+);

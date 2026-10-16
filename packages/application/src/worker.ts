@@ -1860,6 +1860,8 @@ export class WorkerService {
       workerId?: string;
       /** How long one operation keeps retrying a contended writer lock before the worker fails. */
       writerContentionBudgetMs?: number;
+      /** Called once a registered worker is recorded ready and about to claim, with its id. */
+      onReady?: (workerId: string) => void;
     } = {},
   ) {
     if (options.ephemeral && options.runIds?.length) {
@@ -1974,6 +1976,7 @@ export class WorkerService {
       | { failed: true; error: unknown };
     try {
       await contended(() => this.maintenance());
+      if (this.workerId) options.onReady?.(this.workerId);
       for (;;) {
         if (this.workerId) {
           // One unit so a contended heartbeat repeats whole; the worker stays ready while it is alive.

@@ -10,7 +10,8 @@ network and distributed fairness are M5.
    response contains the worker (`enrolling`) and a one-use `tm_wrk_` token, shown once.
 2. Store the token in a file readable only by the operator (mode 0600) and start the worker:
    `testmaster worker start --mode server --config <server.json> --enroll-token-file <file>`.
-3. The worker registers its labels, slot count and heartbeat and becomes `ready`.
+3. The worker registers its labels, slot count and heartbeat and becomes `ready`; stderr then shows
+   `worker <wrk_id> ready: …` after the `enrolled` (or `resumed`) line.
 
 A token enrolls exactly one identity. On first use the token becomes that worker's credential: its
 expiry is extended to 30 days and it authorizes only `POST /v1/workers/{id}/heartbeat` for that

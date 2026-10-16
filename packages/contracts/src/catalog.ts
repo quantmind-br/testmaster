@@ -402,6 +402,13 @@ const supplemental = {
       stepIds: Type.Array(P.Name),
     }),
     risk: P.Risk,
+    /**
+     * The steps of the candidate plan whose own class is `risk` (changed steps first, at most 10),
+     * each with the short reason for that class, e.g. `text mentions "probe"`.
+     */
+    riskBasis: Type.Array(P.Obj({ stepId: P.Description, risk: P.Risk, basis: P.Description }), {
+      maxItems: 10,
+    }),
     verification: Type.Union([
       // Null while the verification Run has not reached a verdict (queued, running, collecting).
       P.Obj({

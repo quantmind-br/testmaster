@@ -923,6 +923,53 @@ function verifiedLocator(value: unknown): value is LocatorEvidence {
 }
 
 /**
+ * What a failed locator step saw on the page: how many elements the locator matched and which
+ * visible controls the page offered instead. A missing element is a count of zero, not a null
+ * value, so this replaces the empty expected/observed an action step records. Only identities the
+ * runner already recorded (role, accessible name) are rendered, bounded and scrubbed.
+ */
+function locatorObservation(
+  locators: Evidence[],
+  stepId: string,
+  secrets: string[],
+): { expected: string; observed: string; ref: AnalysisEvidenceRef } | null {
+  const records = locators.filter(
+    (item) => verifiedLocator(item.value) && item.value.stepId === stepId,
+  );
+  const chosen =
+    records.find((item) => (item.value as LocatorEvidence).phase === "after") ?? records[0];
+  if (!chosen) return null;
+  const record = chosen.value as LocatorEvidence;
+  const target = evidenceRendering(record.locator, secrets);
+  const wantedRole =
+    record.locator.by === "role" && "role" in record.locator ? record.locator.role : null;
+  const named = record.candidates.filter(
+    (candidate) => candidate.visible && candidate.role && candidate.name,
+  );
+  const sameRole = named.filter((candidate) => candidate.role === wantedRole);
+  const pool = sameRole.length ? sameRole : named;
+  const listed = pool
+    .slice(0, 5)
+    .map((candidate) => `${candidate.role} ${evidenceRendering(candidate.name, secrets)}`);
+  const matchedVisible = record.candidates.filter(
+    (candidate) => candidate.matched && candidate.visible,
+  ).length;
+  const offered = listed.length
+    ? `; visible ${sameRole.length ? `${wantedRole} ` : ""}candidates: ${listed.join(", ")}${pool.length > listed.length ? ` and ${pool.length - listed.length} more` : ""}`
+    : "; no named visible candidates were recorded";
+  return {
+    expected: record.state
+      ? `Element matching locator ${target} reaches state ${record.state.requested}`
+      : `One element matching locator ${target}`,
+    observed: scrubEvidenceText(
+      `${record.cardinality} element${record.cardinality === 1 ? "" : "s"} matched${record.cardinality ? ` (${matchedVisible} visible)` : ""} at the ${record.phase} phase${offered}${record.truncated ? "; the recorded candidate list is truncated" : ""}`,
+      secrets,
+    ).text.slice(0, 2000),
+    ref: chosen.ref,
+  };
+}
+
+/**
  * A code revision has no plan steps: its steps are what the runner's reporter emitted, named
  * after what produced them (`imported-test-N` is a test, `imported-step-N` one of its steps; the
  * Python harness names pytest steps after their node id, which is `code_step`).
@@ -1651,6 +1698,20 @@ export class AnalysisService {
           evidenceRefs: [item.ref, ...(http ? [http.ref] : [])],
         };
       });
+    // A locator step records no expected or observed value: what it saw is in the locator evidence.
+    // The recorded value of an assertion step, when it has one, stays authoritative.
+    const locatorSeen = (() => {
+      if (!failed || timedOut || codeThrown) return null;
+      if (!failed.planStep || !("locator" in failed.planStep.input)) return null;
+      const seen = locatorObservation(collected.evidence, failed.step!.planStepId, secrets);
+      if (!seen) return null;
+      const { expected, observed } = failed.step!;
+      return {
+        ref: seen.ref,
+        expected: expected == null ? seen.expected : null,
+        observed: observed == null ? seen.observed : null,
+      };
+    })();
     const pointer = failed
       ? (missingJsonPointer(failed.step!, secrets) as { type?: string; length?: number } | null)
       : null;
@@ -1660,7 +1721,12 @@ export class AnalysisService {
     else if (pointer) absence = "missing_field";
     else if (Array.isArray(failed?.step?.observed) && failed.step.observed.length === 0)
       absence = "empty_collection";
-    else if (failed?.step?.observed === null && !timedOut && !failed.codeOperation)
+    else if (
+      failed?.step?.observed === null &&
+      !timedOut &&
+      !failed.codeOperation &&
+      !locatorSeen?.observed
+    )
       absence = "null_value";
     else if (run.outcome !== "passed" && (!failed || !collected.snapshotId))
       absence = "evidence_unavailable";
@@ -1682,17 +1748,23 @@ export class AnalysisService {
                 ? `Process ${timedOut.processId} exits within its step time limit`
                 : codeThrown
                   ? null
-                  : evidenceRendering(failed.step!.expected, secrets)
+                  : (locatorSeen?.expected ?? evidenceRendering(failed.step!.expected, secrets))
               : null,
             observed: failed
               ? timedOut
                 ? terminalObserved(timedOut.process)
                 : codeThrown
                   ? null
-                  : evidenceRendering(failed.step!.observed, secrets)
+                  : (locatorSeen?.observed ?? evidenceRendering(failed.step!.observed, secrets))
               : null,
             absence,
-            evidenceRefs: failed ? [failed.ref, ...(timedOut ? [timedOut.ref] : [])] : supports,
+            evidenceRefs: failed
+              ? [
+                  failed.ref,
+                  ...(timedOut ? [timedOut.ref] : []),
+                  ...(locatorSeen ? [locatorSeen.ref] : []),
+                ]
+              : supports,
           };
     // The first step that did not pass: a failed step, else an inconclusive or blocked one (for
     // example a navigation aborted before any assertion ran).

@@ -131,8 +131,8 @@ it("derives nested upload/frame/download and ordered unique page aliases without
   });
   expect(planRiskActions(plan)).toEqual(
     expect.arrayContaining([
-      { stepId: "upload", risk: "write" },
-      { stepId: "download", risk: "write" },
+      expect.objectContaining({ stepId: "upload", risk: "write" }),
+      expect.objectContaining({ stepId: "download", risk: "write" }),
     ]),
   );
 });

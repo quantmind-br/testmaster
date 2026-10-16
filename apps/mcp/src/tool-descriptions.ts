@@ -43,7 +43,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_review_healing:
     "Read the healing diff, risk, assertions-intact check, verification and approval. Next: testmaster_approve_healing with approval.expectedVersion, only after review.",
   testmaster_approve_healing:
-    "Approve at expectedVersion after testmaster_review_healing; creates the candidate revision and a verification run, healed only when it passes (testmaster_get_run). Needs write scope; the decision is recorded with your principal.",
+    "Approve at expectedVersion after testmaster_review_healing; creates the candidate revision and a verification run, which this server executes when no worker is live (follow it with testmaster_get_run wait=true); healed only when it passes. Needs write scope; the decision is audited.",
   testmaster_edit_plan:
     "Replace the plan of a still-proposed proposal at the proposal's expectedVersion (validated; its requirement and evidence references are kept). Returns the proposal and batchVersion, the version testmaster_review_plan wants: every edit raises it. Next: testmaster_review_plan.",
   testmaster_save_test:

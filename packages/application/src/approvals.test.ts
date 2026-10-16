@@ -337,4 +337,62 @@ describe("bound production approvals", () => {
     request.risk = "read";
     expect(planRiskActions(backend)[0]?.risk).toBe("destructive");
   });
+  it("explains every risk class by the declaration, operation, method or word that set it", () => {
+    const frontend = scaffoldPlan("frontend");
+    const locator = { by: "testId" as const, value: "target" };
+    frontend.steps = [
+      {
+        id: "menu",
+        kind: "action",
+        operation: "hover",
+        description: "Open menu",
+        input: { locator },
+      },
+      {
+        id: "open",
+        kind: "action",
+        operation: "click",
+        description: "Open item",
+        input: { locator },
+      },
+      {
+        id: "trash",
+        kind: "action",
+        operation: "click",
+        description: "Remove the row",
+        input: { locator },
+      },
+      {
+        id: "probe_login",
+        kind: "action",
+        operation: "hover",
+        description: "Probe the login form",
+        input: { locator },
+      },
+      {
+        id: "declared",
+        kind: "action",
+        operation: "hover",
+        description: "Open menu",
+        risk: "destructive",
+        input: { locator },
+      },
+    ];
+    expect(planRiskActions(frontend)).toEqual([
+      { stepId: "menu", risk: "read", basis: 'read-only operation "hover"' },
+      { stepId: "open", risk: "write", basis: 'operation "click"' },
+      { stepId: "trash", risk: "destructive", basis: 'text mentions "remove"' },
+      { stepId: "probe_login", risk: "securityProbe", basis: 'text mentions "probe"' },
+      { stepId: "declared", risk: "destructive", basis: 'declared risk "destructive"' },
+    ]);
+    const backend = scaffoldPlan("backend");
+    const request = backend.steps[0];
+    if (request?.operation !== "request") throw new Error("Expected request scaffold");
+    request.input.method = "DELETE";
+    request.risk = "read";
+    expect(planRiskActions(backend)[0]).toMatchObject({
+      risk: "destructive",
+      basis: "HTTP method DELETE",
+    });
+  });
 });

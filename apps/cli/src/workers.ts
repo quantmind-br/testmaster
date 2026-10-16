@@ -15,6 +15,13 @@ async function readEnrollmentToken(path: string): Promise<string> {
   return (await readFile(path, "utf8")).trim();
 }
 
+/** One stderr line once the worker claims, so a supervisor can wait for it (stdout keeps the result). */
+function announceReady(rt: Runtime, workerId: string): void {
+  rt.stderr.write(
+    `worker ${workerId} ready: claiming queued runs until interrupted or \`testmaster worker stop\`\n`,
+  );
+}
+
 export function workerCommands(program: Command, runtime: Runtime): void {
   const group = program.command("worker");
   runtime.bind(
@@ -39,9 +46,11 @@ export function workerCommands(program: Command, runtime: Runtime): void {
           rt.stderr.write(
             `worker ${workerId} ${resumed ? "resumed" : "enrolled"} in ${workspaceId}\n`,
           );
-          await application
-            .forWorkspaceSystem(workspaceId)
-            .worker.run({ signal: rt.controller.signal, workerId });
+          await application.forWorkspaceSystem(workspaceId).worker.run({
+            signal: rt.controller.signal,
+            workerId,
+            onReady: (id) => announceReady(rt, id),
+          });
           if (rt.signal) throw rt.interrupted();
           return { data: { mode: "server", workerId, workspaceId } };
         }
@@ -54,7 +63,10 @@ export function workerCommands(program: Command, runtime: Runtime): void {
         return { data: { mode: "server", workspaces: application.operator.workspaceIds() } };
       }
       const app = await rt.app();
-      await app.worker.run({ signal: rt.controller.signal });
+      await app.worker.run({
+        signal: rt.controller.signal,
+        onReady: (id) => announceReady(rt, id),
+      });
       if (rt.signal) throw rt.interrupted();
       return { data: await app.worker.status() };
     },

@@ -80,6 +80,27 @@ it("a leased diagnosis job held by another process does not make the worker trea
   ).toMatchObject({ state: "leased", fence: claimed?.fence, lease_owner: "another-process" });
 });
 
+it("a registered worker reports its id once its row is ready, so a supervisor can wait for it", async () => {
+  const { application } = await open();
+  const lock = await sandbox.readImageLock(
+    new URL("../../../containers/images.lock.json", import.meta.url).pathname,
+  );
+  vi.spyOn(application, "images").mockResolvedValue(lock);
+  vi.spyOn(sandbox.DockerExecutor.prototype, "listOrphans").mockResolvedValue([]);
+  const controller = new AbortController();
+  const seen: { workerId: string; state: unknown }[] = [];
+  const running = application.worker.run({
+    signal: controller.signal,
+    onReady: (workerId) => {
+      const row = application.worker.status().find((worker) => worker.id === workerId);
+      seen.push({ workerId, state: row?.state });
+      controller.abort();
+    },
+  });
+  await expect(running).resolves.toMatchObject({ drained: true });
+  expect(seen).toEqual([{ workerId: expect.stringMatching(/^wrk_/), state: "ready" }]);
+});
+
 it("worker maintenance leaves an auxiliary job needing settlement to its owning service", async () => {
   const { application, init } = await open();
   const job = analysisJob(application, init.workspaceId);

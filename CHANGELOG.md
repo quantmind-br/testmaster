@@ -20,6 +20,16 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 - The REST routes that run a model (proposal generation and refinement, `POST /runs/{id}/analysis`, `POST /runs/{id}/healing-proposals`, requirement normalization) and `POST /mcp` turn off the server's 30 s socket idle timeout for their connection; other routes keep it (`ServerOptions.connectionTimeoutMs`).
 - The eval runner never kills a model command; its trial wall time only stops commands that do no model work and keeps later commands from starting. The development smoke forwarder relays model calls without a timeout.
 
+### Fifth Omnigent agent run
+
+Found when an omp agent drove the pipeline on Omnigent a fifth time (8/8 plan tests and 8/8 generated Playwright tests passed; a probe test with a stale locator was diagnosed, healed and verified).
+
+- MCP `testmaster_approve_healing` executes the verification run itself when no worker is live, like `heal approve` in the CLI and `testmaster_run_tests`: the server runs the ephemeral run in the background and the worker settles the proposal when it finishes. Before, the run stayed queued until someone started `worker start`, and `testmaster_get_run` with `wait` gave up after its timeout.
+- `worker start` writes `worker <id> ready: …` to stderr once the worker is registered and claiming (also after the `enrolled` line in server mode), so a supervisor or an agent can wait for it. Before, the local worker printed nothing until it stopped.
+- Healing approval (manual or automatic) and rejection record `healing.approved` and `healing.rejected` in the audit trail, with the actor, the proposal id and before/after hashes, in the same transaction as the decision; the rejection reason is never written to the audit row.
+- `analyze_run` reports a failed locator step as "one element matching {locator}" with the number of matched elements and the visible candidates of the same role (for example `button "Sign in"`), and cites the locator evidence. Before, it read `Expected: null` / `Observed: null (null value)`. The conclusion and the healing advice are unchanged.
+- Healing reviews (REST, MCP and CLI) include `riskBasis`, the steps that set the risk class and why: `text mentions "probe"`, an HTTP method, the operation or a declared risk. The review text reads like `Risk: securityProbe (submit_probe_login: text mentions "probe")`. The classification itself is unchanged.
+
 ### Fourth Omnigent agent run
 
 Found when an omp agent drove the pipeline on Omnigent a fourth time (13/13 plan tests passed; 2 of 13 generated Playwright tests failed on purpose).

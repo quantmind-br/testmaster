@@ -32,9 +32,16 @@ export interface ApprovalInput {
 }
 export type RiskClass = "read" | "write" | "destructive" | "securityProbe";
 
+export interface RiskAction {
+  stepId: string;
+  risk: RiskClass;
+  /** Short, machine-friendly and human-readable reason for `risk` (for example `text mentions "probe"`). */
+  basis: string;
+}
+
 /** A declaration can increase risk, never downgrade a mutating operation. */
-export function planRiskActions(plan: ExecutablePlan): Array<{ stepId: string; risk: RiskClass }> {
-  const actions: Array<{ stepId: string; risk: RiskClass }> = [];
+export function planRiskActions(plan: ExecutablePlan): RiskAction[] {
+  const actions: RiskAction[] = [];
   const severity: Record<RiskClass, number> = {
     read: 0,
     write: 1,
@@ -49,41 +56,65 @@ export function planRiskActions(plan: ExecutablePlan): Array<{ stepId: string; r
       }
       if (step.kind === "assertion") continue;
       let inferred: RiskClass = "read";
+      let basis = `read-only operation "${step.operation}"`;
       if (step.operation === "request") {
-        if (step.input.method === "DELETE") inferred = "destructive";
-        else if (
-          !["GET", "HEAD", "OPTIONS"].includes(step.input.method) ||
-          step.input.body ||
-          step.input.resource
-        )
+        const { method } = step.input;
+        if (method === "DELETE") {
+          inferred = "destructive";
+          basis = "HTTP method DELETE";
+        } else if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
           inferred = "write";
+          basis = `HTTP method ${method}`;
+        } else if (step.input.body) {
+          inferred = "write";
+          basis = "request with body";
+        } else if (step.input.resource) {
+          inferred = "write";
+          basis = "request with resource";
+        } else basis = `read-only HTTP method ${method}`;
       } else if (!["navigate", "hover", "waitFor", "switchPage"].includes(step.operation)) {
         inferred = "write";
+        basis = `operation "${step.operation}"`;
       }
       const meaning = `${step.description} ${JSON.stringify(step.input)}`;
-      if (/\b(delete|remove|destroy|purge|erase|reset|terminate|unsubscribe)\b/i.test(meaning))
+      const destructive =
+        /\b(delete|remove|destroy|purge|erase|reset|terminate|unsubscribe)\b/i.exec(meaning);
+      const mutating =
+        inferred === "read"
+          ? /\b(create|update|save|purchase|payment|checkout|send|email|sms|password|auth|logout|charge)\b/i.exec(
+              meaning,
+            )
+          : null;
+      // The basis names what set the class: a word that only repeats it (DELETE) does not replace it.
+      if (destructive && inferred !== "destructive") {
         inferred = "destructive";
-      else if (
-        inferred === "read" &&
-        /\b(create|update|save|purchase|payment|checkout|send|email|sms|password|auth|logout|charge)\b/i.test(
-          meaning,
-        )
-      )
+        basis = `text mentions "${destructive[0].toLowerCase()}"`;
+      } else if (mutating) {
         inferred = "write";
-      if (/\b(fuzz|load[- ]?test|stress|probe|penetration|injection|exploit)\b/i.test(meaning))
+        basis = `text mentions "${mutating[0].toLowerCase()}"`;
+      }
+      const probe = /\b(fuzz|load[- ]?test|stress|probe|penetration|injection|exploit)\b/i.exec(
+        meaning,
+      );
+      if (probe) {
         inferred = "securityProbe";
+        basis = `text mentions "${probe[0].toLowerCase()}"`;
+      }
       const declared = step.risk ?? "read";
-      actions.push({
-        stepId: step.id,
-        risk: severity[declared] > severity[inferred] ? declared : inferred,
-      });
+      actions.push(
+        severity[declared] > severity[inferred]
+          ? { stepId: step.id, risk: declared, basis: `declared risk "${declared}"` }
+          : { stepId: step.id, risk: inferred, basis },
+      );
     }
   };
   visit(plan.steps);
   for (const cleanup of plan.cleanup ?? []) {
+    const destructive = cleanup.input.method === "DELETE";
     actions.push({
       stepId: `cleanup:${cleanup.resourceRef}`,
-      risk: cleanup.input.method === "DELETE" ? "destructive" : "write",
+      risk: destructive ? "destructive" : "write",
+      basis: `cleanup HTTP method ${cleanup.input.method}`,
     });
   }
   return actions;

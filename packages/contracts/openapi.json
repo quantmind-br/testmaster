@@ -89509,6 +89509,7 @@
           "automation",
           "preservedAssertions",
           "risk",
+          "riskBasis",
           "verification",
           "approval",
           "evidenceRefs",
@@ -89875,6 +89876,49 @@
                 "type": "string"
               }
             ]
+          },
+          "riskBasis": {
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "stepId",
+                "risk",
+                "basis"
+              ],
+              "properties": {
+                "stepId": {
+                  "maxLength": 8000,
+                  "type": "string"
+                },
+                "risk": {
+                  "anyOf": [
+                    {
+                      "const": "read",
+                      "type": "string"
+                    },
+                    {
+                      "const": "write",
+                      "type": "string"
+                    },
+                    {
+                      "const": "destructive",
+                      "type": "string"
+                    },
+                    {
+                      "const": "securityProbe",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "basis": {
+                  "maxLength": 8000,
+                  "type": "string"
+                }
+              }
+            }
           },
           "verification": {
             "anyOf": [

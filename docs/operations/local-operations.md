@@ -20,6 +20,11 @@ testmaster worker drain      # stop claiming; in-flight attempts finish within t
 testmaster worker reconcile  # one reconciliation pass (expired leases, orphan staging/containers, outbox)
 ```
 
+Once the worker is registered and claiming, `worker start` writes one line to stderr,
+``worker <wrk_id> ready: claiming queued runs until interrupted or `testmaster worker stop` ``; a
+supervisor (systemd, a background job, an agent) can wait for `ready` in that line. Stdout keeps
+only the final JSON or text result printed when the worker stops.
+
 Defaults (`specs/08-operations.md` §2.2): heartbeat 10 s, lease 30 s, drain 60 s, reconciler every 30 s,
 `maxAttempts` 2 (retries only for infrastructure failures before any effect or assertion). Each claim
 increments the lease fence; a worker holding a stale fence cannot publish. A killed worker leaves its

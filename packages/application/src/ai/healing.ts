@@ -18,6 +18,7 @@ import {
   semanticHash,
 } from "@testmaster/domain";
 import {
+  AuditRepository,
   AuxiliaryLeaseRepository,
   type EntityDocument,
   OutboxRepository,
@@ -226,6 +227,25 @@ function reviewValue(
   }
   return structuredClone(value) as HealingReview["changes"][number]["before"];
 }
+const maxReviewRiskBasis = 10;
+/** The candidate steps whose own class is the proposal's risk, changed steps first, with why. */
+function reviewRiskBasis(
+  plan: ExecutablePlan,
+  risk: RiskClass,
+  changedStepIds: ReadonlySet<string>,
+): { basis: HealingReview["riskBasis"]; total: number } {
+  const actions = planRiskActions(plan).filter((action) => action.risk === risk);
+  const ordered = [
+    ...actions.filter((action) => changedStepIds.has(action.stepId)),
+    ...actions.filter((action) => !changedStepIds.has(action.stepId)),
+  ];
+  return { basis: ordered.slice(0, maxReviewRiskBasis), total: ordered.length };
+}
+/** `securityProbe (step: text mentions "probe"; ...)`, the review's risk with the steps that set it. */
+export function formatReviewRisk(review: Pick<HealingReview, "risk" | "riskBasis">): string {
+  if (!review.riskBasis.length) return review.risk;
+  return `${review.risk} (${review.riskBasis.map((entry) => `${entry.stepId}: ${entry.basis}`).join("; ")})`;
+}
 export class HealingService {
   constructor(
     readonly ctx: ServiceContext,
@@ -388,6 +408,15 @@ export class HealingService {
         });
       }
     }
+    const riskBasis = reviewRiskBasis(
+      candidate.plan,
+      proposal.risk,
+      new Set(changes.map((change) => change.stepId)),
+    );
+    if (riskBasis.total > riskBasis.basis.length)
+      limitations.push(
+        `Risk basis lists ${riskBasis.basis.length} of ${riskBasis.total} steps of class ${proposal.risk}`,
+      );
     const hash = assertionsHash(candidate.plan);
     const verification = proposal.verificationRunId
       ? this.runs.get(proposal.verificationRunId)
@@ -416,6 +445,7 @@ export class HealingService {
           .map((step) => step.id),
       },
       risk: proposal.risk,
+      riskBasis: riskBasis.basis,
       verification: verification
         ? { runId: verification.id, outcome: verification.outcome, gate: verification.gate }
         : null,
@@ -1140,21 +1170,23 @@ export class HealingService {
           "Candidate does not match the authorized replacement patch",
         );
       this.checkSecrets(base.plan, rebuilt.patch, run.environmentRevisionId);
+      const next = {
+        ...current,
+        status: "approved" as const,
+        approvalMode: mode,
+        reviewerId: mode === "manual" ? this.ctx.principalId : null,
+        policyHash: this.model.config.effectiveConfig.policyHash,
+        version: Number(current.version) + 1,
+        extensions: { ...current.extensions, "testmaster:approvalActorId": this.ctx.principalId },
+      };
       this.ctx.entities.update(
         "HealingProposal",
         this.ctx.workspaceId,
         current.id,
         Number(current.version),
-        {
-          ...current,
-          status: "approved",
-          approvalMode: mode,
-          reviewerId: mode === "manual" ? this.ctx.principalId : null,
-          policyHash: this.model.config.effectiveConfig.policyHash,
-          version: Number(current.version) + 1,
-          extensions: { ...current.extensions, "testmaster:approvalActorId": this.ctx.principalId },
-        },
+        next,
       );
+      this.audit("healing.approved", current, next);
     };
     await this.runs.admitHealingVerification(proposal.id, { mode, write });
     return this.get(proposal.id);
@@ -1184,7 +1216,21 @@ export class HealingService {
         Number(current.version),
         next,
       );
+      this.audit("healing.rejected", current, next);
       return next;
+    });
+  }
+  /** Content-free: ids and hashes only, so a rejection reason never reaches the audit trail. */
+  private audit(action: string, before: Stored, after: Stored): void {
+    new AuditRepository(this.ctx.database).append({
+      workspaceId: this.ctx.workspaceId,
+      actor: this.ctx.principalId,
+      action,
+      resourceId: after.id,
+      requestId: this.ctx.correlationId ?? crypto.randomUUID(),
+      beforeHash: semanticHash(before),
+      afterHash: semanticHash(after),
+      timestamp: new Date().toISOString(),
     });
   }
   async reconcile(verificationRunId: string): Promise<Stored> {

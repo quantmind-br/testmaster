@@ -18,6 +18,7 @@ import { entity } from "../context.js";
 import { issueLocalToken } from "../local-auth.js";
 import type { AnalysisService } from "./analysis.js";
 import {
+  formatReviewRisk,
   type HealingOutcome,
   HealingService,
   isHealingAbstention,
@@ -804,13 +805,17 @@ it("a real credential in the environment is still redacted from the evidence sen
   }
 });
 
-function repeatedControlPlan(differentOriginal = false, password = false): ExecutablePlan {
+function repeatedControlPlan(
+  differentOriginal = false,
+  password = false,
+  description = "Submit form",
+): ExecutablePlan {
   const plan = scaffoldPlan("frontend");
   plan.steps = ["first", "later"].map((id) => ({
     id,
     kind: "action" as const,
     operation: "click" as const,
-    description: "Submit form",
+    description,
     input: {
       locator: password
         ? { by: "testId" as const, value: "password" }
@@ -859,12 +864,12 @@ function locatorRecord(
   };
   return { ...payload, evidenceHash: semanticHash(payload) };
 }
-async function deferredFixture(differentOriginal = false, password = false) {
+async function deferredFixture(differentOriginal = false, password = false, description?: string) {
   const replacement: Locator = password
     ? { by: "testId", value: "login-password" }
     : { by: "role", role: "button", name: "Sign in", exact: true };
   const name = password ? "Password" : "Sign in";
-  const plan = repeatedControlPlan(differentOriginal, password);
+  const plan = repeatedControlPlan(differentOriginal, password, description);
   const f = await generationFixture(
     {
       kind: "patch",
@@ -1337,6 +1342,29 @@ it("healing review reports frozen changes and recorded manual policy reasons wit
   ).toBe(before);
 });
 
+it("healing review names the steps and words behind the risk class", async () => {
+  const probing = await deferredFixture(true, false, "Submit probe form");
+  const probeProposal = await proposed(probing.service.propose(probing.failed.id));
+  const probeReview = await probing.service.review(probeProposal.id);
+  expect(probeReview.risk).toBe("securityProbe");
+  expect(probeReview.riskBasis).toEqual([
+    { stepId: "first", risk: "securityProbe", basis: 'text mentions "probe"' },
+    { stepId: "later", risk: "securityProbe", basis: 'text mentions "probe"' },
+  ]);
+  expect(formatReviewRisk(probeReview)).toBe(
+    'securityProbe (first: text mentions "probe"; later: text mentions "probe")',
+  );
+  // Control: the same selector change without the word is a plain write, explained by its operation.
+  const plain = await deferredFixture(true);
+  const plainProposal = await proposed(plain.service.propose(plain.failed.id));
+  const plainReview = await plain.service.review(plainProposal.id);
+  expect(plainReview.risk).toBe("write");
+  expect(plainReview.riskBasis).toEqual([
+    { stepId: "first", risk: "write", basis: 'operation "click"' },
+    { stepId: "later", risk: "write", basis: 'operation "click"' },
+  ]);
+});
+
 it("healing review resolves nested download replacement pointers from both immutable plans", async () => {
   const plan = browser();
   plan.steps.push({
@@ -1779,4 +1807,49 @@ it("a service account agent with write permission approves healing and is record
   const approved = await caller.healing.approve(f.proposal.id, 1);
   expect(approved).toMatchObject({ status: "approved", approvalMode: "manual", reviewerId: agent });
   expect(f.app.healing.get(f.proposal.id).reviewerId).toBe(agent);
+});
+const healingAudit = (app: Application) =>
+  app.database.all(
+    "SELECT actor,action,resource_id,before_hash,after_hash FROM audit_events WHERE action LIKE 'healing.%'",
+  );
+it("approving a healing proposal audits it once with the approving principal, and a refused approval audits nothing", async () => {
+  const f = await proposedFixture();
+  vi.spyOn(f.app, "preflight").mockResolvedValue();
+  await expect(f.app.healing.approve(f.proposal.id, 2)).rejects.toMatchObject({
+    code: "REVISION_CONFLICT",
+  });
+  expect(healingAudit(f.app)).toEqual([]);
+  const before = semanticHash(f.app.healing.get(f.proposal.id));
+  await f.app.healing.approve(f.proposal.id, 1);
+  const [event] = healingAudit(f.app);
+  expect(healingAudit(f.app)).toHaveLength(1);
+  expect(event).toMatchObject({
+    actor: f.app.context.principalId,
+    action: "healing.approved",
+    resource_id: f.proposal.id,
+    before_hash: before,
+  });
+  expect(event!.after_hash).not.toBe(before);
+  // Approving again is idempotent and must not add a second decision.
+  await f.app.healing.approve(f.proposal.id, 1);
+  expect(healingAudit(f.app)).toHaveLength(1);
+});
+it("rejecting a healing proposal audits it without the rejection reason", async () => {
+  const f = await proposedFixture();
+  const reason = "canary-reason-must-stay-on-the-proposal";
+  const before = semanticHash(f.app.healing.get(f.proposal.id));
+  const rejected = f.app.healing.reject(f.proposal.id, reason);
+  const [event] = healingAudit(f.app);
+  expect(healingAudit(f.app)).toHaveLength(1);
+  expect(event).toMatchObject({
+    actor: f.app.context.principalId,
+    action: "healing.rejected",
+    resource_id: f.proposal.id,
+    before_hash: before,
+    after_hash: semanticHash(rejected),
+  });
+  expect(JSON.stringify(f.app.database.all("SELECT * FROM audit_events"))).not.toContain(reason);
+  expect(rejected.limitations.at(-1)).toContain(reason);
+  f.app.healing.reject(f.proposal.id, reason);
+  expect(healingAudit(f.app)).toHaveLength(1);
 });

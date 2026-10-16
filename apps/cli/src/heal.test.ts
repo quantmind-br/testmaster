@@ -39,6 +39,7 @@ const review: HealingReview = {
   },
   preservedAssertions: { hash: "a".repeat(64), intact: true, stepIds: ["check_saved"] },
   risk: "read",
+  riskBasis: [{ stepId: "submit", risk: "read", basis: 'read-only operation "hover"' }],
   verification: {
     runId: "run_00000000-0000-4000-8000-000000000001",
     outcome: "failed",
@@ -75,7 +76,7 @@ it("heal review renders recorded changes, candidates, blockers and the exact ver
       '"button" | "Save" | "button" | "submit" | null | null | false | true',
     );
     expect(stdout).toContain("Production healing requires manual review");
-    expect(stdout).toContain("Risk: read");
+    expect(stdout).toContain('Risk: read (submit: read-only operation "hover")');
     expect(stdout).toContain(`Verification: ${review.verification!.runId} — failed/failed`);
     expect(stdout).toContain(
       `testmaster heal approve ${review.approval.proposalId} --expected-version 3`,

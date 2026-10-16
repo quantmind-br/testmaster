@@ -600,11 +600,17 @@ Business-input changes require manual review; generic write permission does not 
 Approval admits a distinct strict replay verification. Only its passed outcome AND passed gate,
 plus an unchanged active base revision, promote the candidate. Original failures and evidence
 remain immutable; failed verification remains reviewable and never starts a healing loop.
+Approving (manual or policy) records `healing.approved` and rejecting records `healing.rejected` in the
+audit trail, in the same transaction as the state change: actor, proposal id and before/after hashes
+only, never the rejection reason (it stays on the proposal's limitations).
 In local mode `heal approve` follows the run admission ownership: when a worker heartbeat is fresh
 (under 30 s) the verification run is `worker`-owned and is returned queued unless `--wait` is given;
 when no worker is live the run is `ephemeral` and the command executes it in-process before
 returning (with or without `--wait`), prints the reconciled proposal and the verification run, and
 exits with the run outcome. It never leaves an ephemeral verification run queued without an executor.
+MCP `testmaster_approve_healing` does the same: it returns the approved proposal at once and the
+server process executes an `ephemeral` verification run in the background (`close` waits for it), so
+`testmaster_get_run` with `wait` sees it finish and the proposal is settled without a worker.
 `heal review` lists, per identity change, only elements a healed locator can target: document and
 metadata elements (`html`, `head`, `meta`, `script`, `style`, `link`, `title`, `noscript`,
 `template`, `base`) are not recorded by the browser runner (a matched one always is) nor listed, the

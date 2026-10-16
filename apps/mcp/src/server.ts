@@ -23,6 +23,7 @@ import {
   correlationId,
   type EnvironmentPatch,
   entity,
+  formatReviewRisk,
   type PlanGenerationType,
   refuseInvalidSource,
   requirementRejection,
@@ -395,7 +396,7 @@ export class TestMasterMcp {
                           "Healing review",
                           `Automation: ${review.automation.decision}`,
                           ...review.automation.reasons.map((reason) => `Reason: ${reason}`),
-                          `Risk: ${review.risk}; assertions intact: ${review.preservedAssertions.intact}`,
+                          `Risk: ${formatReviewRisk(review)}; assertions intact: ${review.preservedAssertions.intact}`,
                           `Verification: ${review.verification ? `${review.verification.runId}: ${review.verification.outcome}; gate ${review.verification.gate}` : "not recorded"}`,
                           `Approval: testmaster_approve_healing proposalId=${review.approval.proposalId} expectedVersion=${review.approval.expectedVersion}, once the diff, risk and verification above are acceptable`,
                         ].join("\n");
@@ -637,6 +638,15 @@ export class TestMasterMcp {
   async drain(): Promise<void> {
     while (this.activeSignals.size) await delay(50);
     await delay(10);
+  }
+  /** Runs admitted runs in this process when no worker will claim them; `close` awaits them. */
+  private executeWithoutWorker(app: Application, runIds: readonly string[]): void {
+    const job = app.worker
+      .run({ ephemeral: true, runIds: [...runIds] })
+      .then(() => {})
+      .catch(() => {});
+    this.jobs.add(job);
+    void job.finally(() => this.jobs.delete(job));
   }
   async confined(path: string): Promise<string> {
     const absolute = resolve(this.options.application.config.cwd, path);
@@ -937,14 +947,7 @@ export class TestMasterMcp {
             });
             receipt = await app.batches.admit(request, { wait: true, ...idempotency });
           }
-          if (!app.worker.live()) {
-            const job = app.worker
-              .run({ ephemeral: true, runIds: receipt.allMembers })
-              .then(() => {})
-              .catch(() => {});
-            this.jobs.add(job);
-            void job.finally(() => this.jobs.delete(job));
-          }
+          if (!app.worker.live()) this.executeWithoutWorker(app, receipt.allMembers);
         }
         if (args.wait)
           await this.wait(
@@ -1185,8 +1188,22 @@ export class TestMasterMcp {
         });
       case "testmaster_review_healing":
         return app.healing.review(String(args.proposalId));
-      case "testmaster_approve_healing":
-        return app.healing.approve(String(args.proposalId), Number(args.expectedVersion));
+      case "testmaster_approve_healing": {
+        const proposal = await app.healing.approve(
+          String(args.proposalId),
+          Number(args.expectedVersion),
+        );
+        // A verification admitted while no worker was live has no other executor (the CLI runs it
+        // in its own process); this server runs it, and the worker settles the proposal after it.
+        const runId = proposal.verificationRunId;
+        const run = typeof runId === "string" ? app.runs.get(runId) : null;
+        if (
+          run?.phase === "queued" &&
+          (run.matrixCell as Record<string, unknown>).ownership === "ephemeral"
+        )
+          this.executeWithoutWorker(app, [run.id]);
+        return proposal;
+      }
       case "testmaster_edit_plan": {
         const proposal = app.proposals.edit(
           String(args.proposalId),

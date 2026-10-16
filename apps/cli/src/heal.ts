@@ -1,4 +1,4 @@
-import { isHealingAbstention } from "@testmaster/application";
+import { formatReviewRisk, isHealingAbstention } from "@testmaster/application";
 import { ContractError, type HealingAbstention, type HealingReview } from "@testmaster/contracts";
 import { exitCodeForRun } from "@testmaster/domain";
 import type { Command } from "commander";
@@ -12,7 +12,7 @@ export function healingReviewText(review: HealingReview): string {
     `Candidate revision: ${review.approval.candidateRevisionId}`,
     `Automation: ${review.automation.decision}`,
     ...review.automation.reasons.map((reason) => `- ${reason}`),
-    `Risk: ${review.risk}`,
+    `Risk: ${formatReviewRisk(review)}`,
     "",
     "Step | Path | Before | After",
     "--- | --- | --- | ---",

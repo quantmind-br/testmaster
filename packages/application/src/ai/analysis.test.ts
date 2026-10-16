@@ -417,7 +417,12 @@ async function attachLocatorEvidence(
     truncated: false,
     state: null,
   };
-  const record: LocatorEvidence = { ...payload, evidenceHash: semanticHash(payload) };
+  return attachLocatorRecord(f, { ...payload, evidenceHash: semanticHash(payload) });
+}
+async function attachLocatorRecord(
+  f: Awaited<ReturnType<typeof fixture>>,
+  record: LocatorEvidence,
+) {
   const fixtures = relationalFixtures(f.db);
   const snapshot = fixtures.find((item) => item.kind === "Snapshot")!;
   const artifact = fixtures.find((item) => item.kind === "Artifact")!;
@@ -1937,6 +1942,61 @@ it("ambiguous locator candidates produce manual-only advice without a supported 
   expect(analysis.diagnosis?.conclusion.status).toBe("cause_unknown");
   expect(analysis.diagnosis?.healing.advice).toBe("manual_review_only");
   expect(analysis.diagnosis?.nextSteps[0]?.text).toContain("Inspect locator candidates");
+});
+
+it("a click that timed out on a locator matching nothing reports the locator and the visible candidates, not a null value", async () => {
+  const locator = { by: "role" as const, role: "button", name: "Log in", exact: true };
+  const f = await fixture({
+    plan: {
+      ...persistencePlan,
+      type: "frontend",
+      runner: "playwright",
+      steps: [{ id: "price", kind: "action", operation: "click", input: { locator } }],
+    },
+    step: { reasonCode: "assertion_timeout", observed: null, expected: null },
+  });
+  const identity = (role: string, name: string, tag: string) => ({
+    role,
+    name,
+    tag,
+    type: "",
+    attributes: {},
+  });
+  const candidates = [
+    identity("button", "Sign in", "button"),
+    identity("link", "Forgot password", "a"),
+  ].map((item) => ({
+    ...item,
+    fingerprint: locatorFingerprint(item),
+    matched: false,
+    visible: true,
+  }));
+  const payload = {
+    schemaVersion: "1.0.0" as const,
+    stepId: "price",
+    phase: "after" as const,
+    frameOrigin: "http://localhost",
+    locator,
+    cardinality: 0,
+    candidates,
+    truncated: false,
+    state: null,
+  };
+  const { locatorPath } = await attachLocatorRecord(f, {
+    ...payload,
+    evidenceHash: semanticHash(payload),
+  });
+  const analysis = await f.service.analyze(f.run.id);
+  const observation = analysis.diagnosis?.observation;
+  expect(observation?.expected).toContain("Log in");
+  expect(observation?.observed).toContain("0 elements matched");
+  expect(observation?.observed).toContain('button "Sign in"');
+  expect(observation?.observed).not.toContain("Forgot password");
+  expect(observation?.absence).not.toBe("null_value");
+  expect(observation?.evidenceRefs).toContainEqual(
+    expect.objectContaining({ relativePath: locatorPath }),
+  );
+  expect(analysis.diagnosis?.conclusion.status).toBe("cause_unknown");
 });
 
 it("layered observations remain bounded and scrubbed while retaining immutable evidence references", async () => {
