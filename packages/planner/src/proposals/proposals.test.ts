@@ -92,7 +92,10 @@ it("accepts a browser plan whose last action is followed by a positive assertion
     ),
     assertion("rows", { locator: heading }, { predicate: "countEquals", value: 1 }),
   ])
-    expect(validateProposalPlan(await loginPlan([...urlOnly, positive])).runner).toBe("playwright");
+    expect(
+      validateProposalPlan(await loginPlan([...urlOnly.slice(0, 1), positive, ...urlOnly.slice(1)]))
+        .runner,
+    ).toBe("playwright");
   // Negative controls: a positive assertion before the last action, an optional one and an empty
   // count do not observe the final page.
   const early = await loginPlan(urlOnly);
@@ -113,6 +116,37 @@ it("accepts a browser plan whose last action is followed by a positive assertion
     expect(() => validateProposalPlan(weak)).toThrow(
       expect.objectContaining({ details: { reasonCode: "browser_postcondition_missing" } }),
     );
+});
+
+it("refuses a browser plan whose absence checks run before any positive check of the page", async () => {
+  const heading = { by: "role", role: "heading", name: "Dashboard", exact: true };
+  const positive = assertion("heading", { locator: heading }, { predicate: "visible" });
+  // The real generated login plan: URL, fields gone, then the authenticated UI.
+  const vacuous = await loginPlan([...urlOnly, positive]);
+  expect(() => validateProposalPlan(vacuous)).toThrow(
+    expect.objectContaining({
+      code: "INVALID_ARGUMENT",
+      details: expect.objectContaining({ reasonCode: "negative_before_render" }),
+      issues: [
+        expect.objectContaining({ rule: "negativeBeforeRender", path: "/steps/3/expectation" }),
+      ],
+    }),
+  );
+  const id = requirementId();
+  const inspected = inspectGeneratedProposals(
+    { proposals: [{ plan: vacuous, requirementRefs: [id], evidenceIds: ["E1"], warnings: [] }] },
+    [id],
+    new EvidenceCatalog([
+      {
+        sourceRevisionId: "svr_01900000-0000-7000-8000-000000000001",
+        contentHash: `sha256:${"a".repeat(64)}`,
+      },
+    ]),
+  );
+  expect(inspected.refused.map(({ reasonCode }) => reasonCode)).toEqual(["negative_before_render"]);
+  // Positive control: the check of the page first.
+  const settled = await loginPlan([...urlOnly.slice(0, 1), positive, ...urlOnly.slice(1)]);
+  expect(validateProposalPlan(settled).runner).toBe("playwright");
 });
 
 const requirementId = () => `req_${randomUUID()}`;

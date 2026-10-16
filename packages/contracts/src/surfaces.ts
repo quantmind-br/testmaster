@@ -1,5 +1,5 @@
 import { type TSchema, Type } from "@sinclair/typebox";
-import { authContracts } from "./m4/auth.js";
+import { AuthConfigInput, authContracts } from "./m4/auth.js";
 import { SuiteFixedMember, SuiteSelection } from "./m4/lists.js";
 import { ExecutionLimits } from "./operations.js";
 import {
@@ -175,7 +175,14 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
     "ConflictDecisionInput",
     "RequirementReview",
   ],
-  ["POST", "/requirements/{id}/approve", "plans:W", "M4", "Empty", "Requirement"],
+  [
+    "POST",
+    "/requirements/{id}/approve",
+    "plans:W",
+    "M4",
+    "RequirementApprovalInput",
+    "Requirement",
+  ],
   [
     "POST",
     "/requirements/{id}/reject",
@@ -1233,6 +1240,12 @@ export const mcpTools = {
           "Requirements to approve, applied last; a requirement in an unresolved conflict is refused",
         ),
       ),
+      reason: Type.Optional(
+        d(
+          DecisionReason,
+          "Why you edit and approve; recorded on each edited or approved requirement with the reviewer and time (the requirements resource shows it). Rejections and conflict decisions carry their own reason",
+        ),
+      ),
     }),
     output: "McpRequirementsReview",
   },
@@ -1290,8 +1303,8 @@ export const mcpTools = {
       ),
       config: Type.Optional(
         d(
-          Json,
-          "Kind-specific configuration (contract AuthFormConfig, AuthBasicConfig, AuthStaticConfig, AuthOAuthConfig or AuthManualConfig); {} for basic, bearer, api-key and cookie",
+          AuthConfigInput,
+          "Keys of the kind: form {http|browser}; basic, bearer, api-key, cookie: {} (header optional for the last three); oauth/oidc adapter, issuer, clientId, scopes, allowedScopes, redirectUris, redirectUri; manual challenge. Each key names its kinds",
         ),
       ),
       refreshPolicy: Type.Optional(

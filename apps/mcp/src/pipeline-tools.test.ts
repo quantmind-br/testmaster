@@ -462,6 +462,48 @@ it("the requirements resource states each requirement's decision as one status",
   expect(await statuses()).toEqual(["approved", "rejected"]);
 });
 
+it("review_requirements records one reason on the approved requirement and the resource shows it", async () => {
+  const f = await fixture();
+  const seeded = await seedSnapshot(f);
+  const base = { projectId: f.init.projectId, expectedVersion: 2 };
+  const read = async (id: string) => {
+    const resource = await f.client.readResource({ uri: `testmaster://requirements/${id}` });
+    return JSON.parse(String(resource.contents[0]?.text)) as {
+      extensions?: Record<string, unknown>;
+    };
+  };
+  const adjudicate = [
+    { conflictId: "conflict-1", selectedRequirementId: seeded.first, reason: "First wins" },
+  ];
+
+  // A blank reason refuses the approval, reported for the item; nothing is approved.
+  const blank = await f.call("testmaster_review_requirements", {
+    ...base,
+    adjudicate,
+    approve: [seeded.first],
+    reason: "   ",
+  });
+  expect(blank.body.results).toContainEqual(
+    expect.objectContaining({ action: "approve", id: seeded.first, ok: false }),
+  );
+  expect(f.app.requirements.get(seeded.first).approval).toBeNull();
+
+  const reason = "Matches the signed-off acceptance criteria";
+  const decided = await f.call("testmaster_review_requirements", {
+    projectId: f.init.projectId,
+    expectedVersion: f.app.requirements.snapshot(f.init.projectId).version,
+    approve: [seeded.first],
+    reason,
+  });
+  expect(decided.isError, decided.text).toBe(false);
+  expect((await read(seeded.first)).extensions?.["testmaster:decision"]).toEqual({
+    action: "approved",
+    reason,
+    actorId: f.app.context.principalId,
+    decidedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+  });
+});
+
 it("review_requirements rejects a requirement with a mandatory reason and keeps the snapshot fingerprint", async () => {
   const f = await fixture();
   const seeded = await seedSnapshot(f);
@@ -752,6 +794,54 @@ it("save_auth_profile creates and updates a profile and update_environment binds
     authProfileRefs: [profile.id],
     additionalOrigins: ["https://cdn.example.test"],
   });
+});
+
+it("save_auth_profile advertises the config keys per kind and rejects a malformed config naming its fields", async () => {
+  const f = await fixture();
+  type Node = { properties?: Record<string, Node>; required?: string[] };
+  const input = (await f.client.listTools()).tools.find(
+    (tool) => tool.name === "testmaster_save_auth_profile",
+  )?.inputSchema as Node | undefined;
+  const config = input?.properties?.config;
+  expect(Object.keys(config?.properties ?? {})).toEqual(
+    expect.arrayContaining(["http", "browser", "adapter", "issuer", "redirectUris", "header"]),
+  );
+  const http = config?.properties?.http;
+  expect([...(http?.required ?? [])].sort()).toEqual([
+    "contentType",
+    "fields",
+    "loginUrl",
+    "success",
+  ]);
+  expect(http?.properties?.success?.required).toEqual(["statusIn"]);
+
+  const rejected = await f.call("testmaster_save_auth_profile", {
+    projectId: f.init.projectId,
+    name: "login",
+    kind: "form",
+    originBindings: ["http://127.0.0.1:20311"],
+    secrets: {},
+    config: {
+      http: {
+        loginUrl: "http://127.0.0.1:20311/auth/login",
+        contentType: "xml",
+        fields: { username: "username" },
+        success: {},
+      },
+    },
+  });
+  expect(rejected.error?.code).toBe("INVALID_ARGUMENT");
+  const issues = (rejected.error?.details.issues ?? []) as { path: string; message: string }[];
+  expect(issues.map((issue) => issue.path)).toEqual(
+    expect.arrayContaining([
+      "/config/http/contentType",
+      "/config/http/fields",
+      "/config/http/success",
+    ]),
+  );
+  expect(issues.find((issue) => issue.path === "/config/http/contentType")?.message).toContain(
+    "form, json",
+  );
 });
 
 it("normalize keeps each conflict's id, reason and requirements and counts one conflict in the singular", async () => {

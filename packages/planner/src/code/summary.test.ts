@@ -741,6 +741,95 @@ describe("confined AST code summary", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+  it("records React Router routes with their full paths and ignores fixtures", async () => {
+    const root = await repo();
+    try {
+      await mkdir(join(root, "web", "src"), { recursive: true });
+      await writeFile(
+        join(root, "web", "src", "App.tsx"),
+        [
+          'import { Navigate, Route, Routes } from "react-router-dom";',
+          "export default function App({ basename }: { basename?: string }) {",
+          '  const prefix = basename ?? "";',
+          "  return (",
+          "    <Routes>",
+          "      {accounts && (",
+          "        <>",
+          "          <Route path={`${prefix}/login`} element={<LoginPage />} />",
+          "        </>",
+          "      )}",
+          '      <Route path="approve/:sessionId" element={<ApprovePage />} />',
+          "      <Route element={<AppShell />}>",
+          '        <Route path={prefix || "/"} element={<ChatPage />} />',
+          "        <Route path={`${prefix}/c/:conversationId`} element={<ChatPage />} />",
+          '        <Route path={`${prefix}/settings`} element={<Navigate to="/settings/general" />} />',
+          "        <Route path={`${prefix}/settings/:section/:subSection?`} element={<SettingsPage />} />",
+          "        <Route path={`${prefix}/extensions/:id/*`} element={<ExtensionPage />} />",
+          '        <Route path="team" element={<TeamLayout />}>',
+          "          <Route index element={<TeamHome />} />",
+          '          <Route path="members" element={<Members />} />',
+          "        </Route>",
+          '        <Route path={basename ? `${prefix}/*` : "*"} element={<NotFoundPage />} />',
+          "        <Route path={dynamicPath()} element={<Dynamic />} />",
+          "      </Route>",
+          "    </Routes>",
+          "  );",
+          "}",
+          "",
+        ].join("\n"),
+      );
+      // Fixtures and look-alikes: a memory-router test, and a `Route` that is not React Router's.
+      await writeFile(
+        join(root, "web", "src", "App.test.tsx"),
+        'import { Route, Routes } from "react-router-dom";\nexport const Fixture = () => <Routes><Route path="/fixture" element={null} /></Routes>;\n',
+      );
+      await writeFile(
+        join(root, "web", "src", "Other.tsx"),
+        'import { Route } from "./Route";\nexport const Other = () => <Route path="/other" />;\n',
+      );
+      const summary = await summarizeCode(root);
+      const found = summary.routes.filter((route) => route.framework === "react-router");
+      expect(found.map((route) => `${route.method} ${route.path}`).sort()).toEqual([
+        "GET /",
+        "GET /approve/{sessionId}",
+        "GET /c/{conversationId}",
+        "GET /extensions/{id}/{splat}",
+        "GET /login",
+        "GET /settings",
+        "GET /settings/{section}",
+        "GET /settings/{section}/{subSection}",
+        "GET /team",
+        "GET /team/members",
+      ]);
+      expect(new Set(found.map((route) => route.ref.path))).toEqual(new Set(["web/src/App.tsx"]));
+      expect(found.find((route) => route.path === "/login")?.ref.line).toBe(8);
+      expect(summary.warnings).toContainEqual(
+        expect.objectContaining({
+          path: "web/src/App.tsx",
+          code: "route_path_unresolved",
+          message: expect.stringContaining("line 23"),
+        }),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+  it("reads every source file however many bytes the repository holds", async () => {
+    const root = await repo();
+    try {
+      await mkdir(join(root, "src"), { recursive: true });
+      // 28 files of 1 MB: over the former 25 MiB total-bytes limit, which skipped the last ones.
+      const comment = `// ${"x".repeat(999_990)}\n`;
+      for (let index = 0; index < 28; index++)
+        await writeFile(join(root, "src", `file-${String(index).padStart(2, "0")}.ts`), comment);
+      await writeFile(join(root, "src", "zz-last.ts"), "export const last = 1;\n");
+      const summary = await summarizeCode(root);
+      expect(summary.skippedFiles.map((file) => file.reason)).not.toContain("total_byte_limit");
+      expect(summary.scannedFiles).toHaveLength(29);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
   it("lists exported components only as features", async () => {
     const root = await repo();
     try {

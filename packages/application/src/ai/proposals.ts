@@ -45,16 +45,25 @@ import {
 } from "./requirements.js";
 import {
   applyServerBasePath,
+  assertCitedSchemasCompile,
   offeredApiSpecs,
+  schemaCitations,
+  sourceSchemasFor,
   unresolvedSchemaPointers,
+  unusableSchemas,
+  unusableSchemaText,
 } from "./source-documents.js";
 
 const AUTH_PROFILE_INSTRUCTION =
   'When authProfiles are supplied, a request to an endpoint that needs a logged-in session or credential the profile manages (cookie session, bearer or API-key header) sets "auth": "profile" in the request input, so the environment\'s bound auth profile supplies the session for that request only; do not copy session secrets into headers for it. Leave auth out for public endpoints and for requests that must be unauthenticated (401/403 negatives). When no authProfiles are supplied never set auth.';
 const JSON_BODY_SET_INSTRUCTION =
-  'A secret or a value captured by an earlier request that belongs inside a JSON body (a password, an id) is bound with body.set, never nested in the body literal: {"kind":"json","value":{"user":"demo"},"set":[{"pointer":"/password","value":{"secretRef":<entry id>}}]}. A {"secretRef":...} or {"variableRef":...} object inside body.value is plain data and is sent as written.';
+  'A secret or a value captured by an earlier request that belongs inside a JSON body (a user name, a password, an id) is bound with body.set, never nested in the body literal: {"kind":"json","value":{"remember":true},"set":[{"pointer":"/username","value":{"secretRef":<user entry id>}},{"pointer":"/password","value":{"secretRef":<password entry id>}}]}. A {"secretRef":...} or {"variableRef":...} object inside body.value is plain data and is sent as written.';
+const SECRET_CREDENTIAL_INSTRUCTION =
+  'Each secrets entry names a registered secret; its value is never shown. Read the name for what the entry holds (a user name, an email, a password, a token) and supply that credential as {"secretRef": <entry id>} wherever a request or a form needs it: a browser fill value, a header or a JSON body.set binding. That includes the account\'s user name: when a secrets entry holds it, never write the account name as a literal, even where a requirement or source states it in plain text, and take the password from its own entry. Keep account names and credential values out of step ids, step descriptions and plan names (enter_username, not enter_root_username). Only a negative case uses visibly fake literals.';
+const PLAN_PREDICATE_INSTRUCTION =
+  'Assertions depend on the runner. An HTTP plan (runner "http") has request steps and assertions over a request through responseStepId: statusIn, headerEquals, headerMatches, cookieAbsent, jsonEquals, jsonSchema and countEquals (over a JSON array). Locator predicates (visible, hidden, enabled, disabled, textEquals, textContains, valueEquals, visualMatches, accessibilityViolations), urlEquals and downloadMatches belong to a browser plan (runner "playwright"). The output schema lists only predicates an HTTP or browser plan can execute; a predicate the plan\'s runner does not execute refuses the proposal.';
 const BROWSER_POSTCONDITION_INSTRUCTION =
-  "A browser plan that ends after a state-changing action (login, navigation, click, submit) must assert a positive, observable post-condition on rendered content after the last such action: a visible, textContains, textEquals, valueEquals or countEquals (above 0) assertion on a locator for content that exists only when the action worked, such as the dashboard heading after login. A URL check and the absence of earlier elements also hold on a blank page and are rejected.";
+  "A browser plan that ends after a state-changing action (login, navigation, click, submit) must assert a positive, observable post-condition on rendered content after the last such action: a visible, textContains, textEquals, valueEquals or countEquals (above 0) assertion on a locator for content that exists only when the action worked, such as the dashboard heading after login. A URL check and the absence of earlier elements also hold on a blank page and are rejected. A negative check (a hidden or countEquals 0 assertion, or a waitFor hidden or detached) never directly follows a page load (navigate, or the click or key press that submits a form or changes the URL): put a required positive assertion on content of the destination page between them, because an absent element also passes while the page is still blank. Order a login plan as: submit, URL check, positive assertion on the authenticated page, then the checks that the login fields are hidden.";
 const API_SPEC_INSTRUCTION =
   "When apiSpecs are supplied, they are the project's API specifications: each lists its sourceRevisionId and its operations with the pointer of the JSON response schema per HTTP status. They are offered even where no requirement cites them. A jsonSchema assertion for a response cites that apiSpecs entry's sourceRevisionId with one of the listed pointers copied exactly; the requirement's own evidence does not have to be the specification. Write request paths as the listed operation paths. Never warn that no OpenAPI document or schema was supplied when apiSpecs lists the operation; an operation absent from apiSpecs has no schema to cite. An operation marked public declares no credential.";
 type StoredProposal = Proposal & EntityDocument;
@@ -71,8 +80,11 @@ function secretRefsOf(value: unknown, found: string[] = []): string[] {
 type StoredBatch = ProposalBatch & EntityDocument;
 export type PlanGenerationType = "frontend" | "backend" | "integration" | "auto";
 const planRunners = { backend: "http", frontend: "playwright", integration: "http" } as const;
+/** The test and candidate revision an accepted proposal produced. */
+export type AcceptedProposal = { proposalId: string; testId: string; revisionId: string };
 export interface ProposalReceipt {
   accepted: string[];
+  acceptedProposals: AcceptedProposal[];
   retained: string[];
   rejected: string[];
 }
@@ -139,6 +151,71 @@ interface GenerationRefusal {
   reasonCode: string;
   message: string;
   pointers?: string[];
+  /** Name of the refused plan, so the agent can tell which proposal it was. */
+  planName?: string;
+  /** Ids of the steps the pointers pass through. */
+  stepIds?: string[];
+  /** Predicates of the assertions the pointers pass through. */
+  predicates?: string[];
+  /** How to ask the model for this requirement again. */
+  regenerate?: string;
+}
+/** Longest plan name a refusal repeats (the plan schema's own `Name` limit). */
+const REFUSAL_NAME_MAX = 200;
+/**
+ * The innermost step a JSON pointer passes through and its assertion's predicate: the predicate
+ * the pointer itself names (`.../expectation/predicate`) wins over the one of the step it is in.
+ */
+function stepAt(raw: unknown, pointer: string): { stepId: string; predicate?: string } | null {
+  let current = raw;
+  let step: { id: string; expectation?: { predicate?: unknown } } | null = null;
+  let named: string | undefined;
+  for (const segment of pointer.split("/").slice(1)) {
+    if (!current || typeof current !== "object") break;
+    current = (current as Record<string, unknown>)[
+      segment.replaceAll("~1", "/").replaceAll("~0", "~")
+    ];
+    const node = current as { id?: unknown; kind?: unknown; predicate?: unknown } | null;
+    if (node && typeof node === "object") {
+      if ("kind" in node && typeof node.id === "string")
+        step = node as { id: string; expectation?: { predicate?: unknown } };
+      if (typeof node.predicate === "string") named = node.predicate;
+    }
+  }
+  if (!step?.id) return null;
+  const predicate = named ?? step.expectation?.predicate;
+  return { stepId: step.id, ...(typeof predicate === "string" ? { predicate } : {}) };
+}
+/**
+ * What an agent needs to act on a refused proposal, which is never stored: the plan it was, the
+ * steps and predicates its pointers name, and the call that proposes the requirement again. The
+ * pointers are already capped, so the lists are bounded.
+ */
+function refusalContext(
+  raw: unknown,
+  index: number,
+  requirementIds: readonly string[],
+  pointers: readonly string[] = [],
+): Pick<GenerationRefusal, "planName" | "stepIds" | "predicates" | "regenerate"> {
+  const proposals = (raw as { proposals?: unknown } | null)?.proposals;
+  const plan = Array.isArray(proposals)
+    ? (proposals[index] as { plan?: { name?: unknown } } | null)?.plan
+    : undefined;
+  const located = pointers.flatMap((pointer) => stepAt(raw, pointer) ?? []);
+  const stepIds = [...new Set(located.map((step) => step.stepId))];
+  const predicates = [...new Set(located.flatMap((step) => step.predicate || []))];
+  return {
+    ...(typeof plan?.name === "string" && plan.name
+      ? { planName: plan.name.slice(0, REFUSAL_NAME_MAX) }
+      : {}),
+    ...(stepIds.length ? { stepIds } : {}),
+    ...(predicates.length ? { predicates } : {}),
+    ...(requirementIds.length
+      ? {
+          regenerate: `Call testmaster_generate_plan with requirementIds ${JSON.stringify(requirementIds)} (CLI: plan generate ${requirementIds.map((id) => `--requirement ${id}`).join(" ")}) to propose ${requirementIds.length === 1 ? "it" : "them"} again`,
+        }
+      : {}),
+  };
 }
 interface GenerationInspection {
   valid: GeneratedProposal[];
@@ -331,6 +408,15 @@ export class ProposalsService {
             "Generated jsonSchema assertion does not reach a schema in the cited source revision",
           pointers,
         };
+      const uncompilable = unusableSchemas(schemaCitations(plan), sourceSchemasFor(this.ctx, plan));
+      if (uncompilable.length)
+        return {
+          reasonCode: "schema_uncompilable",
+          message: uncompilable.map(unusableSchemaText).join("; "),
+          pointers: uncompilable.map(
+            ({ sourceRevisionId, pointer }) => `${sourceRevisionId}#${pointer}`,
+          ),
+        };
       // Any HTTP 200 passes for an unrelated page (e.g. an HTML portal behind a mistyped path),
       // so a success status only counts together with an assertion over the body or headers.
       if (
@@ -378,6 +464,7 @@ export class ProposalsService {
         reasonCode: item.reasonCode,
         message: item.error.message,
         ...(item.pointers?.length ? { pointers: item.pointers } : {}),
+        ...refusalContext(raw, item.index, item.requirementIds, item.pointers),
       }));
       const valid: { index: number; proposal: GeneratedProposal }[] = [];
       for (const { index, proposal } of inspected.accepted) {
@@ -386,7 +473,13 @@ export class ProposalsService {
           ...apiSpecs.map((spec) => spec.sourceRevisionId),
         ]);
         const reason = unrunnable(plan);
-        if (reason) refused.push({ index, requirementIds: proposal.requirementRefs, ...reason });
+        if (reason)
+          refused.push({
+            index,
+            requirementIds: proposal.requirementRefs,
+            ...reason,
+            ...refusalContext(raw, index, proposal.requirementRefs),
+          });
         else valid.push({ index, proposal: { ...proposal, plan } });
       }
       refused.sort((a, b) => a.index - b.index);
@@ -439,7 +532,7 @@ export class ProposalsService {
           // Operations and schema pointers only: the documents stay in the store.
           ...(apiSpecs.length ? { apiSpecs } : {}),
         },
-        instructions: `Return exactly one independent executable proposal per supplied requirement that an HTTP or browser plan can observe, not an intent. ${declineInstruction} ${typeInstruction} Copy requirement IDs exactly and cite only the evidenceId values supplied with that requirement. Use deterministic business assertions deriving expected values only from approved requirements. Include an assertion that would fail if the required feature were broken; body/html visibility and broad all-status checks are trivial and rejected, and an HTTP 200 status check alone is trivial too: add a body, schema or header assertion. HTTP paths are relative pathSegments of literal values, written as the source document's paths (a declared server path prefix such as /v1 is added to the request automatically). A jsonSchema assertion's pointer must be a non-empty JSON pointer into the cited source document that reaches the response schema: either inside the operation, for example /paths/~1items/get/responses/200/content/application~1json/schema, or a document-level schema such as /components/schemas/Item; an empty pointer is rejected. ${API_SPEC_INSTRUCTION} When a secrets entry fits the target API, send its credential as a header whose value is {"secretRef": <entry id>} (for example authorization) on every request unless the source explicitly declares the operation public (security: []): specifications often omit security, and a request without a needed credential only proves the 401. Use only secretRef ids from the supplied secrets and never invent secret values. Secrets entries are valid credentials: a negative case (wrong password, unknown user, invalid or missing token) sends literal values that are visibly fake, such as "not-a-real-password", and never a secrets entry, so a refusal proves the check and no real credential is spent on it. ${AUTH_PROFILE_INSTRUCTION} ${JSON_BODY_SET_INSTRUCTION} Frontend locators use testId/role/label. ${BROWSER_POSTCONDITION_INSTRUCTION} Do not invent absolute destinations or secret values.`,
+        instructions: `Return exactly one independent executable proposal per supplied requirement that an HTTP or browser plan can observe, not an intent. ${declineInstruction} ${typeInstruction} Copy requirement IDs exactly and cite only the evidenceId values supplied with that requirement. Use deterministic business assertions deriving expected values only from approved requirements. Include an assertion that would fail if the required feature were broken; body/html visibility and broad all-status checks are trivial and rejected, and an HTTP 200 status check alone is trivial too: add a body, schema or header assertion. HTTP paths are relative pathSegments of literal values, written as the source document's paths (a declared server path prefix such as /v1 is added to the request automatically). A jsonSchema assertion's pointer must be a non-empty JSON pointer into the cited source document that reaches the response schema: either inside the operation, for example /paths/~1items/get/responses/200/content/application~1json/schema, or a document-level schema such as /components/schemas/Item; an empty pointer is rejected. ${API_SPEC_INSTRUCTION} When a secrets entry fits the target API, send its credential as a header whose value is {"secretRef": <entry id>} (for example authorization) on every request unless the source explicitly declares the operation public (security: []): specifications often omit security, and a request without a needed credential only proves the 401. Use only secretRef ids from the supplied secrets and never invent secret values. Secrets entries are valid credentials: a negative case (wrong password, unknown user, invalid or missing token) sends literal values that are visibly fake, such as "not-a-real-password", and never a secrets entry, so a refusal proves the check and no real credential is spent on it. ${SECRET_CREDENTIAL_INSTRUCTION} ${AUTH_PROFILE_INSTRUCTION} ${JSON_BODY_SET_INSTRUCTION} ${PLAN_PREDICATE_INSTRUCTION} Frontend locators use testId/role/label. ${BROWSER_POSTCONDITION_INSTRUCTION} Do not invent absolute destinations or secret values.`,
         sourceRevisionIds: [
           ...new Set([
             ...catalog.refs.map((ref) => ref.sourceRevisionId),
@@ -610,6 +703,7 @@ export class ProposalsService {
   }
   edit(id: string, plan: ExecutablePlan, expectedVersion: number): StoredProposal {
     validateProposalPlan(plan);
+    assertCitedSchemasCompile(this.ctx, plan);
     return authoringTransaction(this.ctx, () => {
       const current = requireEntity(this.ctx, "Proposal", id) as StoredProposal;
       const batch = this.get(current.batchId);
@@ -788,6 +882,7 @@ export class ProposalsService {
           );
         }
         const accepted: string[] = [];
+        const acceptedProposals: AcceptedProposal[] = [];
         const rejected: string[] = [];
         for (const proposal of proposals) {
           if (input.acceptIds.includes(proposal.id)) {
@@ -880,6 +975,11 @@ export class ProposalsService {
                 revisionId: revision.id,
               });
             accepted.push(test.id);
+            acceptedProposals.push({
+              proposalId: proposal.id,
+              testId: test.id,
+              revisionId: revision.id,
+            });
           } else if (input.rejectIds.includes(proposal.id)) {
             this.ctx.entities.update(
               "Proposal",
@@ -914,7 +1014,7 @@ export class ProposalsService {
               : "rejected",
           version: current.version + 1,
         });
-        const receipt = { accepted, retained, rejected };
+        const receipt = { accepted, acceptedProposals, retained, rejected };
         this.audit("proposals.reviewed", id, current, receipt);
         return receipt;
       },

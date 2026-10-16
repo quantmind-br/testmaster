@@ -272,6 +272,14 @@ click, submit). A URL check and the absence of the earlier elements also hold on
 stops there is refused as repair feedback (`browser_postcondition_missing`); the project-aware plan validation
 (REST `POST /projects/{id}/plan-validations`, used by the portal editor) reports the same rule for hand-written plans.
 
+A negative check (`hidden`, `countEquals` 0, `waitFor` hidden or detached) also passes while the page is still blank,
+so it may not directly follow a page load. After a `navigate`, or a click or key press that submits a form or is
+followed by a `urlEquals` assertion, put a required positive assertion on content of the destination page (or a
+`waitFor` visible) before it; for a login: submit, URL check, a visible element of the authenticated page, then the
+checks that the login fields are hidden. `test lint`, `test create`, `testmaster_save_test`, `testmaster_edit_plan`,
+`testmaster_validate_document` and proposal generation refuse the plan with `negativeBeforeRender` at the negative
+step (`negative_before_render` as repair feedback); plans already stored keep running.
+
 ### `jsonSchema` pointers
 
 A `jsonSchema` assertion cites a source revision and a JSON pointer into the OpenAPI document. Accepted forms:
@@ -283,6 +291,8 @@ A schema that still holds recursive references is bundled so it validates on its
 pointer outside `/paths`, `/components` and `/definitions`, or one that reaches nothing is unresolved: the project-aware
 plan validation (`POST /projects/{id}/plan-validations`) reports `schema_pointer_unresolved` at the step, and the run would be blocked with
 `unsupported_capability`.
+
+A pointer that resolves to a schema the validator cannot compile (for example an unknown keyword) is reported before the run: plan validation returns `schema_uncompilable` at the step with the compile error, and saving the plan is refused with `source_schema_uncompilable`. Schemas that list `required` names only inside `not`, `anyOf`, `oneOf`, `allOf` or `then` compile and validate normally.
 
 ## Third-party subresources and additional origins
 
@@ -397,10 +407,14 @@ inside an approved root or from an environment variable of the MCP process, neve
 `testmaster_save_auth_profile` and `testmaster_update_environment` (`authRefs`, `additionalOrigins`). Create the
 secrets and auth profiles before `testmaster_generate_plan`, because the model is offered only what already exists.
 Every decision is recorded with the acting principal. `testmaster_review_plan` (accept or reject),
-`testmaster_promote_revision` and `testmaster_approve_healing` take an optional `reason` (1-2000 characters), kept
-with the reviewer and the time: on each decided proposal, on the test (and its history entry) and on the
+`testmaster_review_requirements` (edits and approvals; rejections and conflict decisions already carry their own
+reason), `testmaster_promote_revision` and `testmaster_approve_healing` take an optional `reason` (1-2000
+characters), kept with the reviewer and the time: on each decided proposal, on each edited or approved
+requirement (`testmaster://requirements/{projectId}` shows it), on the test (and its history entry) and on the
 healing proposal (`testmaster_review_healing` shows it). The CLI flag is `--reason` on `plan accept|reject`,
-`test revision promote` and `heal approve`.
+`requirement approve|update`, `test revision promote` and `heal approve`. The `testmaster_review_plan` receipt
+lists `acceptedProposals`, one `{proposalId, testId, revisionId}` per accepted proposal, so no tests listing is
+needed to tell which proposal produced which test.
 
 The same token covers authoring, execution and approvals. `testmaster_edit_plan` changes a still-proposed plan
 at the proposal's `expectedVersion` and reports `batchVersion`, the version `testmaster_review_plan` takes (every

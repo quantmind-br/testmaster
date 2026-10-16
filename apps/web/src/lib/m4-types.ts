@@ -257,6 +257,12 @@ export interface RequirementReview {
     confidence: number | null;
     approval: string | null;
     rejection: { reason: string; actorId: string; rejectedAt: string } | null;
+    decision?: {
+      action: "approved" | "edited";
+      reason: string;
+      actorId: string;
+      decidedAt: string;
+    } | null;
     reason: string | null;
     origins: Origin[];
     conflictIds: string[];

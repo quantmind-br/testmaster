@@ -588,6 +588,35 @@ function runnerProtocolFailure(
   );
 }
 
+/** A recorded runner or test-code refusal to judge a response with a cited source schema it cannot compile. */
+const UNUSABLE_SCHEMA = /Source schema (.+?) cannot be used for validation: ([^\n]*)/u;
+function unusableSchema(
+  evidence: readonly Evidence[],
+): { item: Evidence; schema: string; problem: string } | undefined {
+  for (const item of evidence) {
+    const { step, planStep } = item;
+    const message = step?.error?.message;
+    if (
+      !message ||
+      !(
+        item.codeOperation ||
+        (step.reasonCode === "oracle_uncertain" &&
+          planStep?.kind === "assertion" &&
+          planStep.expectation.predicate === "jsonSchema")
+      )
+    )
+      continue;
+    const match = UNUSABLE_SCHEMA.exec(message);
+    if (match?.[1] && match[2])
+      return {
+        item,
+        schema: match[1].replace(/^"(.*)"$/u, "$1"),
+        problem: match[2].trim().slice(0, 300),
+      };
+  }
+  return undefined;
+}
+
 /** Code-composed description of a process that hit its time limit; no external text enters it. */
 function terminalObserved(process: TerminalProcessEvidence): string {
   const parts = [
@@ -1807,6 +1836,8 @@ export class AnalysisService {
     // means a cause the protocol failure did not outrank.
     const protocolFailure =
       failureKind === "unknown" ? runnerProtocolFailure(collected.evidence) : undefined;
+    const unusable =
+      failureKind === "test_fragility" ? unusableSchema(collected.evidence) : undefined;
     const alternatives: Diagnosis["alternatives"] = [];
     const nextSteps: Diagnosis["nextSteps"] = [];
     let conclusion: Diagnosis["conclusion"] = {
@@ -1884,6 +1915,23 @@ export class AnalysisService {
       );
       healing.reason =
         "The test was not judged: no assertion or locator failed, so there is nothing to repair.";
+    } else if (unusable) {
+      conclusion = {
+        status: "cause_supported",
+        text: scrubEvidenceText(
+          `Step ${location} could not judge the response: the source schema ${unusable.schema} cannot be compiled (${unusable.problem}). The defect is in that source schema or in the pointer that cites it, not in the product.`,
+          secrets,
+        ).text.slice(0, 1000),
+      };
+      next(
+        "Fix the source schema in a new source revision, or cite a pointer to a schema that compiles, then save the test again and rerun it.",
+        [unusable.item.ref],
+      );
+      healing = {
+        advice: "not_indicated",
+        reason:
+          "Healing proposes locator changes only; the repair is in the source schema or the pointer that cites it.",
+      };
     } else if (codeThrown && failureKind === "test_fragility") {
       const thrown = scrubEvidenceText(
         errorHeadline(codeThrown.step!.error!.message),
@@ -2120,6 +2168,7 @@ export class AnalysisService {
         );
       });
       const codeThrown = codeThrow(evidence);
+      const unusable = unusableSchema(evidence);
       const schema = evidence.find(
         (item) =>
           item.step?.status === "failed" &&
@@ -2282,6 +2331,14 @@ export class AnalysisService {
         collected.limitations.push(
           "The runner's evidence protocol failed and its step results were discarded; no product, contract or locator cause can be derived from this Run.",
         );
+      } else if (unusable) {
+        failureKind = "test_fragility";
+        recommendedAction = "fix_test";
+        hypothesis = scrubEvidenceText(
+          `The source schema ${unusable.schema} cannot be compiled (${unusable.problem}), so no response was judged against it; the defect is in that source schema or in the pointer that cites it, not in the product.`,
+          secrets,
+        ).text.slice(0, 1000);
+        supports = [unusable.item.ref];
       } else if (schema) {
         failureKind = "contract_violation";
         recommendedAction = "review_contract";

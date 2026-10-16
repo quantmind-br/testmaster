@@ -17,10 +17,18 @@ import {
   computeManifestHash,
   createPathAdmission,
   summarizeCode,
+  TEST_FILE,
 } from "./summary.js";
 import type { CodeDiff, CodeRef, CodeSummary, CodeSummaryOptions } from "./types.js";
 
 const MAX_LISTING_BYTES = 256 * 1024 * 1024;
+/**
+ * Disk bound of the temporary copy a pinned head is staged into when a change selects every
+ * analyzable file. Reading is one file at a time and keeps only derived, separately capped data,
+ * so no bound applies to the bytes read; a larger tree is refused file by file (`total_byte_limit`),
+ * tests last, and declared in `skippedFiles`.
+ */
+const MAX_STAGED_BYTES = 1024 * 1024 * 1024;
 const SCAN_CHUNK_FILES = 200;
 const SCAN_CHUNK_BYTES = 16 * 1024 * 1024;
 const GREP_PATTERNS_PER_CALL = 100;
@@ -224,7 +232,6 @@ async function pinnedSource(
   limits: Omit<CodeSummaryOptions, "only">,
 ): Promise<TreeSource> {
   const maxFileBytes = limits.maxFileBytes ?? CODE_SUMMARY_DEFAULT_LIMITS.maxFileBytes;
-  const maxTotalBytes = limits.maxTotalBytes ?? CODE_SUMMARY_DEFAULT_LIMITS.maxTotalBytes;
   const maxFiles = limits.maxFiles ?? CODE_SUMMARY_DEFAULT_LIMITS.maxFiles;
   const tree = await readOnlyGit(
     root,
@@ -308,7 +315,7 @@ async function pinnedSource(
         if (entry.size > maxFileBytes) refused.push({ path, reason: "oversize" });
         else if (enforceLimits && staged.size >= maxFiles)
           refused.push({ path, reason: "file_count_limit" });
-        else if (enforceLimits && stagedBytes + entry.size > maxTotalBytes)
+        else if (enforceLimits && stagedBytes + entry.size > MAX_STAGED_BYTES)
           refused.push({ path, reason: "total_byte_limit" });
         else {
           await write(path, entry);
@@ -440,7 +447,16 @@ export async function summarizeDiffScope(
 
     const withPython = pythonRunner ? { pythonRunner } : {};
     if (authTouched || sharedTouched) {
-      const refused = options.workingTree ? [] : await source.stage(analyzable, true);
+      // Application files are staged before tests, so a staging bound refuses tests first.
+      const refused = options.workingTree
+        ? []
+        : await source.stage(
+            [
+              ...analyzable.filter((path) => !TEST_FILE.test(path)),
+              ...analyzable.filter((path) => TEST_FILE.test(path)),
+            ],
+            true,
+          );
       const summary = await summarizeCode(source.root(), { ...scanOptions, ...withPython });
       finish(summary, refused);
       const diff = assessDiffImpact(collected, { summary, fanOutEligible: (path) => !admit(path) });

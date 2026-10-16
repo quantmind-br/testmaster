@@ -2325,6 +2325,72 @@ it("generation offers the project's API specification to the model although no r
   const afterArchive = promptText(f.payloads.at(-1));
   expect(afterArchive).not.toContain('"apiSpecs"');
 });
+it("a plan citing a source schema the validator cannot compile is reported when it is validated and refused when it is saved", async () => {
+  const { f, proposal, pointer } = await openApiGenerationFixture();
+  const addSource = async (name: string, schema: unknown) => {
+    await writeFile(
+      join(f.root, name),
+      JSON.stringify({
+        openapi: "3.1.0",
+        info: { title: name, version: "1" },
+        paths: {
+          "/items": {
+            get: {
+              responses: {
+                "200": { description: "ok", content: { "application/json": { schema } } },
+              },
+            },
+          },
+        },
+      }),
+    );
+    return f.app.sources.add({
+      projectId: f.projectId,
+      role: "api-spec",
+      path: join(f.root, name),
+      format: "openapi",
+    });
+  };
+  const planCiting = (source: { revision: { id: string } }) => {
+    const base = proposal().proposals[0]!.plan;
+    base.steps = base.steps.map((step) =>
+      step.operation === "assert" && step.expectation.predicate === "jsonSchema"
+        ? { ...step, expectation: { ...step.expectation, sourceRevisionId: source.revision.id } }
+        : step,
+    );
+    return base;
+  };
+  const usable = await addSource("usable.json", {
+    type: "object",
+    required: ["error"],
+    properties: { error: { type: "object" } },
+    not: { anyOf: [{ required: ["data"] }, { required: ["object"] }] },
+  });
+  const broken = await addSource("broken.json", { type: "object", bogusKeyword: 1 });
+  const issues = (plan: unknown) =>
+    f.app.planValidation
+      .validate(f.projectId, { plan })
+      .issues.filter((issue) => issue.code === "schema_uncompilable");
+  // Control: a valid schema whose `not`/`anyOf` branches only list `required` is accepted and saved.
+  const fine = planCiting(usable);
+  expect(issues(fine)).toEqual([]);
+  expect(f.app.tests.create({ projectId: f.projectId, plan: fine }).id).toMatch(/^tst_/u);
+  const refused = planCiting(broken);
+  expect(issues(refused)).toEqual([
+    expect.objectContaining({
+      field: "/steps/2/expectation/pointer",
+      stepId: "schema",
+      message: expect.stringContaining("bogusKeyword"),
+    }),
+  ]);
+  expect(() => f.app.tests.create({ projectId: f.projectId, plan: refused })).toThrow(
+    expect.objectContaining({
+      code: "INVALID_ARGUMENT",
+      message: expect.stringContaining(`${broken.revision.id}#${pointer}`),
+      details: expect.objectContaining({ reasonCode: "source_schema_uncompilable" }),
+    }),
+  );
+});
 it("generation refuses proposals that cannot run: unreachable schema pointer, unknown secret, 200-only status", async () => {
   const { f, proposal } = await openApiGenerationFixture();
   const before = f.app.proposals.list(f.projectId).length;
@@ -2441,7 +2507,14 @@ it("partialGeneration stores the proposals that pass and lists the refused ones,
   const detail = f.app.proposals.detail(batch.id);
   expect(detail.proposals.map((proposal) => proposal.requirementRefs)).toEqual([[first]]);
   expect(detail.batch.extensions?.["testmaster:refusedProposals"]).toEqual([
-    { requirementIds: [second], reasonCode: refusal.reasonCode, message: refusal.message },
+    {
+      requirementIds: [second],
+      reasonCode: refusal.reasonCode,
+      message: refusal.message,
+      // The agent sees which proposal it was and how to ask for the requirement again.
+      planName: mixed.proposals[1]?.plan.name,
+      regenerate: expect.stringContaining(`requirementIds ["${second}"]`),
+    },
   ]);
   expect(detail.batch.extensions?.["testmaster:modelCallId"]).toMatch(/^mdl_/u);
   // Control: a batch with nothing refused carries no refused list and costs one call.
@@ -2465,15 +2538,16 @@ it("partialGeneration stores the proposals that pass and lists the refused ones,
 });
 it("partialGeneration keeps the proposals that pass when another one breaks the plan semantics", async () => {
   const { f, first, second, proposalFor } = await refusedGenerationFixture();
-  // A terminal-only predicate in an HTTP plan: the output schema accepts it, the plan rules refuse it.
-  const terminalPredicate = (requirementId: string) => {
+  // A locator predicate in an HTTP plan: the output schema accepts it, the plan rules refuse it.
+  const locatorPredicate = (requirementId: string) => {
     const proposal = proposalFor(requirementId);
     const step = proposal.plan.steps.find((candidate) => candidate.id === "check-health");
     if (step?.kind !== "assertion") throw new Error("Missing assertion step");
-    step.expectation = { predicate: "fileAbsent" };
+    step.expectation = { predicate: "visible" };
     return proposal;
   };
-  f.setOutput({ proposals: [proposalFor(first), terminalPredicate(second)] });
+  const refused = locatorPredicate(second);
+  f.setOutput({ proposals: [proposalFor(first), refused] });
   // Without the flag the whole output is refused by the gateway, as before.
   const before = f.counts().completions;
   await expect(f.app.proposals.generate({ projectId: f.projectId })).rejects.toMatchObject({
@@ -2492,10 +2566,39 @@ it("partialGeneration keeps the proposals that pass when another one breaks the 
     {
       requirementIds: [second],
       reasonCode: "plan_invalid",
-      message: expect.stringContaining("predicateInput: Predicate requires the terminal runner"),
+      message: expect.stringContaining("predicateInput: Predicate requires browser locator"),
       pointers: expect.arrayContaining([
-        expect.stringMatching(/^\/proposals\/1\/plan\/steps\/\d+\/expectation$/u),
+        expect.stringMatching(/^\/proposals\/1\/plan\/steps\/\d+\/input$/u),
       ]),
+      // The refusal names the offending step and predicate, not only a pointer into an output stored nowhere.
+      planName: refused.plan.name,
+      stepIds: ["check-health"],
+      predicates: ["visible"],
+      regenerate: expect.stringContaining(`requirementIds ["${second}"]`),
+    },
+  ]);
+});
+it("a terminal-only predicate in a proposal is refused at the schema with its step, predicate and requirement", async () => {
+  const { f, first, second, proposalFor } = await refusedGenerationFixture();
+  const refused = proposalFor(second);
+  const step = refused.plan.steps.find((candidate) => candidate.id === "check-health");
+  if (step?.kind !== "assertion") throw new Error("Missing assertion step");
+  step.expectation = { predicate: "fileAbsent" };
+  f.setOutput({ proposals: [proposalFor(first), refused] });
+  const batch = await f.app.proposals.generate({ projectId: f.projectId, partialGeneration: true });
+  const extensions = f.app.proposals.detail(batch.id).batch.extensions;
+  expect(extensions?.["testmaster:refusedProposals"]).toEqual([
+    {
+      requirementIds: [second],
+      reasonCode: "plan_invalid",
+      message: expect.stringContaining("must be equal to one of the allowed values"),
+      pointers: expect.arrayContaining([
+        expect.stringMatching(/^\/proposals\/1\/plan\/steps\/\d+\/expectation\/predicate$/u),
+      ]),
+      planName: refused.plan.name,
+      stepIds: ["check-health"],
+      predicates: ["fileAbsent"],
+      regenerate: expect.stringContaining(`requirementIds ["${second}"]`),
     },
   ]);
 });
@@ -2539,6 +2642,9 @@ it("generation offers the project's auth profiles and the JSON body set guidance
   expect(prompt).toContain('"auth": "profile"');
   expect(prompt).toContain("body.set");
   expect(prompt).toContain('"pointer":"/password"');
+  // The registered secret is offered by name and id, and a user name is bound from one too.
+  expect(prompt).toContain(`"secretRef":"${secret.id}"`);
+  expect(prompt).toContain('"pointer":"/username"');
   expect(prompt).not.toContain("canary-credential-value");
 });
 it("a jsonSchema pointer into /components/schemas resolves for generation, the runner input and plan validation", async () => {
@@ -2593,7 +2699,7 @@ it("generation sends a browser proposal that asserts only the URL back to the mo
     { predicate: "visible" },
   );
   f.queueOutputs(browser(urlOnly));
-  f.setOutput(browser([...urlOnly, shown]));
+  f.setOutput(browser([urlOnly[0], shown, urlOnly[1]]));
   const before = f.counts().completions;
   const batch = await f.app.proposals.generate({ projectId: f.projectId, type: "frontend" });
   expect(f.counts().completions - before).toBe(2);
@@ -2604,7 +2710,64 @@ it("generation sends a browser proposal that asserts only the URL back to the mo
     "open-login",
     "submit-login",
     "url",
-    "gone",
     "items",
+    "gone",
+  ]);
+});
+it("generation sends a browser proposal that checks absence before the page back to the model and stores the repaired one", async () => {
+  const { f, proposal } = await openApiGenerationFixture();
+  const base = proposal().proposals[0];
+  if (!base) throw new Error("Missing base proposal");
+  const browser = (after: unknown[]) => {
+    const plan = scaffoldPlan("frontend");
+    plan.requirementRefs = base.requirementRefs;
+    plan.steps = [...plan.steps.slice(0, 2), ...(after as PlanStep[])];
+    return { proposals: [{ ...base, plan }] };
+  };
+  const assertion = (id: string, input: unknown, expectation: unknown) => ({
+    id,
+    kind: "assertion",
+    operation: "assert",
+    description: id,
+    required: true,
+    input,
+    expectation,
+  });
+  const url = assertion(
+    "url",
+    { url: "/items" },
+    { predicate: "urlEquals", value: { literal: "/items" } },
+  );
+  const gone = assertion(
+    "gone",
+    { locator: { by: "testId", value: "login" } },
+    { predicate: "hidden" },
+  );
+  const shown = assertion(
+    "items",
+    { locator: { by: "testId", value: "items" } },
+    { predicate: "visible" },
+  );
+  // The real generated login test: the fields are asserted gone before the authenticated page.
+  f.queueOutputs(browser([url, gone, shown]));
+  f.setOutput(browser([url, shown, gone]));
+  const before = f.counts().completions;
+  const batch = await f.app.proposals.generate({ projectId: f.projectId, type: "frontend" });
+  expect(f.counts().completions - before).toBe(2);
+  expect(JSON.stringify(f.payloads.at(-1)?.messages)).toContain("negative_before_render");
+  const [stored] = f.app.proposals.detail(batch.id).proposals;
+  expect(stored?.plan.kind === "executable" && stored.plan.steps.map((step) => step.id)).toEqual([
+    "open-login",
+    "submit-login",
+    "url",
+    "items",
+    "gone",
+  ]);
+  // The editor's validation names the step of the same plan before it is saved.
+  const report = f.app.planValidation.validate(f.projectId, {
+    plan: browser([url, gone, shown]).proposals[0]?.plan,
+  });
+  expect(report.issues.filter((issue) => issue.code === "negative_before_render")).toEqual([
+    expect.objectContaining({ stepId: "gone", field: "/steps/3/expectation" }),
   ]);
 });

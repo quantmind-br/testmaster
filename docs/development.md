@@ -241,7 +241,7 @@ identity.
 
 The working-tree diff (`collectDiffChanges` in `packages/planner/src/code/diff.ts`) hashes untracked
 files with the same streaming digest (`hashConfinedCodeFile`), so an untracked file larger than the
-25 MiB code-read limit is hashed rather than aborting the analysis; the read limit applies only to
+1 MiB code-read limit is hashed rather than aborting the analysis; the read limit applies only to
 files whose content is parsed. `summarizeDiffScope` (`code/scope.ts`) limits a diff analysis to the
 changed files plus their reverse relative-import closure: `git grep` over-approximates importers
 (untracked files included for a working tree, the pinned head's blobs otherwise), then the AST
@@ -263,10 +263,23 @@ a file that imports `http`/`https`/`http2` (or the `node:` forms) and calls `cre
 never under `app/` or `pages/`, in `.tsx`/`.jsx`, or in a test file (`*.test.*`, `*.spec.*`, or
 under `__tests__/`, `test/`, `tests/`: a stub server there is a fixture, not an application route).
 The method is the `method === "GET"` / `req.method === "GET"` comparison in the same `&&` chain,
-else `UNKNOWN`. Bumping `CODE_DETECTOR_VERSION` (now 1.6.0) stops old discovery jobs from resuming.
+else `UNKNOWN`. A file that imports `Route` from `react-router`/`react-router-dom` yields one
+`react-router` route (`GET`) per `<Route>` JSX element that renders something (`element`,
+`Component`, `lazy`, `index`) or has no nested route, with the full path: a relative `path` extends
+its parent's, a `path`-less `<Route>` is a layout, `index` serves the parent's path, `:id` becomes
+`{id}`, a splat `*` becomes `{splat}` and an optional segment (`:id?`) yields the path with and
+without it. A leading identifier is the mount prefix of an embedded app (`` `${prefix}/login` ``,
+`prefix || "/"`) and is dropped; the catch-all `*` not-found route is not a route. A `path` that is
+not a static string is reported by `route_path_unresolved` and skips that route and its nested
+routes. Test files and `*.stories.*` files are fixtures and yield none; object route tables
+(`createBrowserRouter([...])`) and routes rendered under another file's route are not followed.
+Bumping `CODE_DETECTOR_VERSION` (now 1.7.0) stops old discovery jobs from resuming.
 A file is skipped as `binary` only when its bytes are not valid UTF-8 or more than a tenth of them
 are NUL (UTF-16 text, zero-filled data); a literal NUL inside a source string, even near the start
-of the file, does not exclude it.
+of the file, does not exclude it. A full scan reads files one at a time and keeps only derived data,
+so it has no total-bytes limit; the bounds are 1 MiB per file, 20000 files and the symbol and import
+caps. Only a pinned diff that selects every analyzable file stages a disk copy of the tree, bounded
+at 1 GiB (`total_byte_limit`, tests refused first).
 
 Python is read by `python/testmaster_runner/code_summary.py` (AST only, in the pinned Python image;
 `PythonCodeSummary` version 1.1.0) and composed in `packages/planner/src/code/python-routes.ts`. A
@@ -967,13 +980,22 @@ that hook (evidence, requirement refs, plan validity, offered secrets, schema po
 status-only plans, type/runner, integration workflow) and collects all refused proposals, not the
 first. A batch still refused after the repairs fails `INVALID_ARGUMENT` with the first cause as
 message and `details {atomicity: "all_or_nothing", refused: [{index, requirementIds, reasonCode,
-message, pointers?}], modelCallId}`, nothing stored; `partialGeneration` (MCP, CLI `plan generate
---partial`; the REST body has no such field) stores the proposals that pass and records the refused
-ones in `extensions['testmaster:refusedProposals']` (they count as covering their requirements, are
+message, pointers?, planName?, stepIds?, predicates?, regenerate?}], modelCallId}`, nothing stored
+(`planName` is the refused plan, `stepIds`/`predicates` the steps and assertion predicates its
+pointers pass through, `regenerate` the call that proposes the requirement again); `partialGeneration`
+(MCP, CLI `plan generate --partial`; the REST body has no such field) stores the proposals that pass
+and records the refused ones, with the same fields minus `index`, in
+`extensions['testmaster:refusedProposals']` (they count as covering their requirements, are
 never stored, and a batch with none valid is still refused whole). `partialGeneration` also sets
 `ModelRequest.callerValidatesSchema`, so the gateway only parses the JSON and the check validates
 each proposal on its own (`plan_invalid` with the issue paths as `pointers`): one proposal that
-breaks the schema or the plan rules no longer fails the whole output. Accepting a proposal compares
+breaks the schema or the plan rules no longer fails the whole output. The model-facing plan schema
+(`ModelExecutablePlan`) offers `ModelExpectation`, which leaves out the predicates only the terminal
+runner executes (`terminalPredicateNames`), so a model proposal that uses one is refused at the schema
+with the allowed predicates listed, and the prompt lists the predicates of each runner. The prompt also
+tells the model to supply every credential a `secrets` entry holds, user names included, as a
+`secretRef`, and to keep account names out of step ids.
+Accepting a proposal compares
 the requirements it cites with `extensions['testmaster:requirementHashes']` of its batch (content
 hashes taken at generation), not with the batch-wide snapshot fingerprint; a batch stored without
 them counts every cited requirement as changed. `proposals.edit` clears the proposal's `warnings`

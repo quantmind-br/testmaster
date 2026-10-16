@@ -1,7 +1,8 @@
 import {
+  assertNoNegativeBeforeRender,
   ContractError,
   type ExecutablePlan,
-  type Expectation,
+  observesRenderedContent,
   type PlanStep,
   validate,
 } from "@testmaster/contracts";
@@ -42,24 +43,6 @@ function flatSteps(steps: readonly PlanStep[]): PlanStep[] {
     step.operation === "frame" ? [step, ...flatSteps(step.input.childSteps)] : [step],
   );
 }
-/** Observes content on the page, not its URL or the absence of earlier elements. */
-function observesContent(expectation: Expectation): boolean {
-  switch (expectation.predicate) {
-    case "visible":
-    case "enabled":
-    case "disabled":
-    case "textEquals":
-    case "textContains":
-    case "valueEquals":
-    case "visualMatches":
-    case "downloadMatches":
-      return true;
-    case "countEquals":
-      return expectation.value > 0;
-    default:
-      return false;
-  }
-}
 /**
  * A browser plan that changes state (login, navigation, submit) must assert, after its last such
  * action, content the page renders. A URL check and the absence of the earlier elements also hold
@@ -76,7 +59,9 @@ function requireBrowserPostCondition(plan: ExecutablePlan): void {
     .slice(last + 1)
     .some(
       (step) =>
-        step.kind === "assertion" && step.required !== false && observesContent(step.expectation),
+        step.kind === "assertion" &&
+        step.required !== false &&
+        observesRenderedContent(step.expectation),
     );
   if (!observed)
     throw new ContractError(
@@ -118,6 +103,7 @@ export function validateProposalPlan(input: unknown): ExecutablePlan {
       "Trivial assertions cannot establish requirement coverage",
     );
   requireBrowserPostCondition(plan);
+  assertNoNegativeBeforeRender(plan);
   return plan;
 }
 /** A proposal refused on its own merits, located by its position in the model output. */

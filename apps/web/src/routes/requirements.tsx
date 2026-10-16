@@ -377,6 +377,12 @@ function RequirementCard({
           <UntrustedText value={requirement.rejection.reason} maxLength={400} />
         </p>
       ) : null}
+      {requirement.decision ? (
+        <p>
+          Why it was {requirement.decision.action}:{" "}
+          <UntrustedText value={requirement.decision.reason} maxLength={400} />
+        </p>
+      ) : null}
       {requirement.reason ? (
         <p>
           Why it was derived: <UntrustedText value={requirement.reason} maxLength={400} />

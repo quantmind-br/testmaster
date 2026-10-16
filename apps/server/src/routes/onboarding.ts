@@ -3,6 +3,7 @@ import type {
   NormalizationInput,
   OnboardingStateInput,
   PrerequisiteInput,
+  RequirementApprovalInput,
   RequirementRejectionInput,
 } from "@testmaster/contracts";
 import { holdConnectionOpen } from "./authoring.js";
@@ -46,7 +47,11 @@ export const onboardingRoutes: RouteModule = {
       return context.service.requirements.review(id(context));
     },
     "POST /requirements/{id}/approve": (context) =>
-      context.service.requirements.approve(id(context), context.ifMatch()),
+      context.service.requirements.approve(
+        id(context),
+        context.ifMatch(),
+        (context.body as RequirementApprovalInput | undefined)?.reason,
+      ),
     "POST /requirements/{id}/reject": (context) =>
       context.service.requirements.reject(
         id(context),

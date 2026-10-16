@@ -21,7 +21,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_generate_plan:
     "Generate plan proposals (not tests) from the approved snapshot (sourceSnapshotId from testmaster_review_requirements); provider/model pick the model. Sees only existing secrets, auth profiles and API-spec sources (operations, schema pointers): add them first. Next: testmaster_review_plan.",
   testmaster_review_plan:
-    "Accept or reject proposals at expectedVersion = the batch version (plan-batches resource batch.version, or batchVersion of an edit); an optional reason is kept on each decided proposal. Unselected stay pending. A stale version: details.diff or details.staleProposals. Next: testmaster_generate_tests.",
+    "Accept or reject proposals at expectedVersion = the batch version (batch.version, or batchVersion of an edit); an optional reason is kept on each decided one. Returns acceptedProposals {proposalId, testId, revisionId}. Stale version: details.diff or staleProposals. Next: testmaster_generate_tests.",
   testmaster_generate_tests:
     "Generate executable candidates from accepted proposals (proposalIds) or revisions (revisionIds), one project per call; provider/model pick the model; a model call has no deadline. Each candidate names its testId, testName and proposalId. Refused ones go to validationErrors. Not execution evidence.",
   testmaster_run_tests:
@@ -59,11 +59,11 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_add_source:
     "Import a PRD, OpenAPI, GraphQL, Postman or text file inside an approved root as a source revision; returns its status and diagnostics. An invalid source (e.g. unsupported OpenAPI) is an error with its diagnostics. Next: testmaster_normalize_requirements.",
   testmaster_review_requirements:
-    "Edit, adjudicate conflicts, reject (reason required; final, never planned) and approve requirements at the snapshot expectedVersion, applied in that order; an audited decision of the caller. Returns per-item results and the new sourceSnapshotId. Next: testmaster_generate_plan.",
+    "Edit, adjudicate conflicts, reject (reason required; final) and approve requirements at the snapshot expectedVersion, in that order; an optional reason is kept on each edited or approved one. Returns per-item results and the new sourceSnapshotId. Next: testmaster_generate_plan.",
   testmaster_set_secret:
     "Register a secret from valueFile or fromEnv (never an argument; one trailing newline trimmed) with its allowedOrigins; returns metadata only. Secrets and auth profiles must exist before testmaster_generate_plan. Next: testmaster_save_auth_profile.",
   testmaster_save_auth_profile:
-    "Create (projectId, name, kind, originBindings, secrets, config) or update (profileId, expectedVersion, patch) an auth profile from secret ids; returns the view, never credentials. Next: testmaster_update_environment authRefs.",
+    "Create (projectId, name, kind, originBindings, secrets, config) or update (profileId, expectedVersion, patch) an auth profile from secret ids; config keys per kind are in the input schema. Returns the view, never credentials. Next: testmaster_update_environment authRefs.",
   testmaster_update_environment:
     "Patch an environment at expectedVersion: authRefs (profiles bound to the target origin), additionalOrigins, baseUrl, networkProfile, locale, timezone, production, name. Returns the environment and its new active revision.",
   testmaster_test_auth_login:

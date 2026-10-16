@@ -196,7 +196,11 @@ const supplemental = {
     featureIds: Type.Array(P.id("fea")),
     inputsFingerprint: Type.Optional(P.ContentDigest),
   }),
-  RequirementsInput: P.Obj({ requirements: Type.Array(Entities.entities.Requirement) }),
+  RequirementsInput: P.Obj({
+    requirements: Type.Array(Entities.entities.Requirement),
+    /** Why the edits are made; recorded on each edited requirement with the reviewer and time. */
+    reason: Type.Optional(P.DecisionReason),
+  }),
   GenerationInput: P.Obj({ inputRefs: Type.Array(P.EvidenceRef), scope: names }),
   ProposalDecisionInput: P.Obj({
     proposalIds: Type.Array(P.id("pro")),
@@ -208,6 +212,10 @@ const supplemental = {
   }),
   ProposalDecisionReceipt: P.Obj({
     accepted: Type.Array(P.id("tst")),
+    /** The test and candidate revision each accepted proposal produced. */
+    acceptedProposals: Type.Array(
+      P.Obj({ proposalId: P.id("pro"), testId: P.id("tst"), revisionId: P.id("rev") }),
+    ),
     retained: Type.Array(P.id("pro")),
     rejected: Type.Array(P.id("pro")),
   }),

@@ -1,6 +1,7 @@
 import { type Static, type TSchema, Type } from "@sinclair/typebox";
 import {
   ContentDigest,
+  DecisionReason,
   Description,
   Enum,
   id,
@@ -220,6 +221,10 @@ export const sourceInsightContracts = {
   RequirementRejectionInput: Obj({
     reason: Type.String({ minLength: 1, maxLength: 2000 }),
   }),
+  /** A reviewer's approval of a requirement; the reason is optional. */
+  RequirementApprovalInput: Obj({
+    reason: Type.Optional(DecisionReason),
+  }),
   RequirementReview: Obj({
     id: id("prj"),
     projectId: id("prj"),
@@ -239,6 +244,15 @@ export const sourceInsightContracts = {
         /** Set when a reviewer rejected the requirement: it is not pending and is never planned. */
         rejection: nullable(
           Obj({ reason: Type.String({ maxLength: 2000 }), actorId: Name, rejectedAt: Timestamp }),
+        ),
+        /** The reason given with the latest approval or edit; null when that decision gave none. */
+        decision: nullable(
+          Obj({
+            action: Enum(["approved", "edited"]),
+            reason: DecisionReason,
+            actorId: Name,
+            decidedAt: Timestamp,
+          }),
         ),
         reason: nullable(Description),
         origins: Type.Array(Origin, { maxItems: 50 }),
@@ -325,6 +339,9 @@ export type SourceHistory = Static<typeof sourceInsightContracts.SourceHistory>;
 export type DiscoverySummary = Static<typeof sourceInsightContracts.DiscoverySummary>;
 export type NormalizationInput = Static<typeof sourceInsightContracts.NormalizationInput>;
 export type ConflictDecisionInput = Static<typeof sourceInsightContracts.ConflictDecisionInput>;
+export type RequirementApprovalInput = Static<
+  typeof sourceInsightContracts.RequirementApprovalInput
+>;
 export type RequirementRejectionInput = Static<
   typeof sourceInsightContracts.RequirementRejectionInput
 >;

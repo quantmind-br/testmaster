@@ -102,7 +102,6 @@ export interface CodeSummary {
 export interface CodeSummaryOptions {
   excludes?: string[];
   maxFileBytes?: number;
-  maxTotalBytes?: number;
   maxFiles?: number;
   /** Symbols kept per file (default 200); the rest are dropped and declared by `symbols_truncated`. */
   maxSymbolsPerFile?: number;

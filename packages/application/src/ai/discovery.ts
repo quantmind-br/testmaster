@@ -514,7 +514,6 @@ export class DiscoveryService {
     const options = {
       excludes: input.excludes ?? [],
       maxFileBytes: 1024 * 1024,
-      maxTotalBytes: 64 * 1024 * 1024,
       maxFiles: 20000,
       maxSymbolsPerFile: 200,
       maxSymbols: 20000,

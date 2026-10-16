@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { ExecutablePlan } from "./plans.js";
+import { type ExecutablePlan, terminalPredicateNames } from "./plans.js";
 import { ContractError } from "./registries.js";
-import { validate } from "./validation.js";
+import { jsonSchema, validate } from "./validation.js";
 
 type Step = Record<string, unknown>;
 const run: Step = {
@@ -264,5 +264,53 @@ describe("model-facing proposal schema", () => {
       ],
     } as ExecutablePlan;
     expect(() => validate("AIProposalsOutput", proposals(http))).not.toThrow();
+  });
+  it("never offers a predicate only the terminal runner executes", () => {
+    const get: Step = {
+      id: "get",
+      kind: "action",
+      operation: "request",
+      description: "Get",
+      input: { method: "GET", pathSegments: [{ literal: "health" }] },
+    };
+    const proposal = (expectation: unknown) => ({
+      proposals: [
+        {
+          plan: {
+            schemaVersion: "1.0.0",
+            kind: "executable",
+            name: "Health",
+            type: "backend",
+            runner: "http",
+            requirementRefs: [],
+            steps: [
+              get,
+              assertion({ responseStepId: "get" }, { predicate: "statusIn", values: [200] }),
+              assertion({ responseStepId: "get" }, expectation, "terminal"),
+            ],
+          },
+          requirementRefs: ["req_01a13b0d-462d-77e2-9885-2b45a89305f9"],
+          evidenceIds: ["E1"],
+          warnings: [],
+        },
+      ],
+    });
+    const offered = JSON.stringify(jsonSchema("AIProposalsOutput"));
+    const refusals = terminalPredicateNames.map((predicate) => {
+      expect(offered, predicate).not.toContain(`"${predicate}"`);
+      try {
+        validate(
+          "AIProposalsOutput",
+          proposal({ predicate, values: [0], value: { literal: "x" } }),
+        );
+      } catch (error) {
+        if (!(error instanceof ContractError)) throw error;
+        return error.issues.map((issue) => `${issue.rule}:${issue.path}`);
+      }
+      return [];
+    });
+    // The schema refuses each one at the predicate, naming the allowed predicates, not the plan rule.
+    for (const rules of refusals)
+      expect(rules).toContain("enum:/proposals/0/plan/steps/2/expectation/predicate");
   });
 });

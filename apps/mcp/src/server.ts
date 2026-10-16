@@ -1495,6 +1495,8 @@ export class TestMasterMcp {
         });
       return requirement;
     };
+    // One reason covers the call's edits and approvals; rejections and conflict decisions carry their own.
+    const reason = typeof args.reason === "string" ? args.reason : undefined;
     for (const item of (args.update ?? []) as {
       requirementId: string;
       text?: string;
@@ -1504,7 +1506,7 @@ export class TestMasterMcp {
         const { requirementId, ...patch } = item;
         if (!Object.keys(patch).length)
           throw new ContractError("INVALID_ARGUMENT", "An edit needs text or acceptanceCriteria");
-        service.update(requirementId, patch, Number(current(requirementId).version));
+        service.update(requirementId, patch, Number(current(requirementId).version), reason);
       });
     for (const item of (args.adjudicate ?? []) as {
       conflictId: string;
@@ -1527,7 +1529,7 @@ export class TestMasterMcp {
       attempt("approve", id, () => {
         const requirement = current(id);
         // Approving twice would only issue a second approval and change the fingerprint again.
-        if (!requirement.approval) service.approve(id, Number(requirement.version));
+        if (!requirement.approval) service.approve(id, Number(requirement.version), reason);
       });
     const after = service.snapshot(projectId);
     return {

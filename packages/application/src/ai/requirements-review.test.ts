@@ -338,3 +338,61 @@ it("UX-012 rejecting a requirement records who and why, is audited, and is final
     expect(attempt).toThrow(expect.objectContaining({ code: "PRECONDITION_FAILED" }));
   expect(f.app.requirements.approve(kept.id, kept.version).approval).not.toBeNull();
 });
+
+it("an approval or edit reason is stored on the requirement with the reviewer and time, shown by the review and kept out of the audit trail", async () => {
+  const f = await fixture();
+  await writeFile(join(f.root, "prd.md"), "# Health\nThe health endpoint must report ok.");
+  const source = await f.app.sources.add({
+    projectId: f.projectId,
+    role: "prd",
+    path: "prd.md",
+    format: "markdown",
+  });
+  const handle = source.chunks.length;
+  f.setOutput(
+    output(
+      statement("health", "Health reports ok", handle),
+      statement("billing", "Invoices are paid in 30 days", handle),
+    ),
+  );
+  await f.app.requirements.normalize({
+    projectId: f.projectId,
+    sourceRevisionIds: [source.revision.id],
+  });
+  const before = f.app.requirements.review(f.projectId);
+  const health = before.requirements.find((item) => item.key === "health");
+  const billing = before.requirements.find((item) => item.key === "billing");
+  if (!health || !billing) throw new Error("Missing requirements");
+  const decisionOf = (id: string) =>
+    f.app.requirements.review(f.projectId).requirements.find((item) => item.id === id)?.decision;
+
+  // A blank reason is refused and changes nothing; no reason still approves and records none.
+  expect(() => f.app.requirements.approve(health.id, health.version, "   ")).toThrow(
+    expect.objectContaining({ code: "INVALID_ARGUMENT" }),
+  );
+  expect(f.app.requirements.get(health.id).approval).toBeNull();
+  expect(f.app.requirements.approve(billing.id, billing.version).approval).not.toBeNull();
+  expect(decisionOf(billing.id)).toBeNull();
+
+  const reason = "canary-requirement-reason-stays-on-the-requirement";
+  const approved = f.app.requirements.approve(health.id, health.version, ` ${reason} `);
+  expect(approved.approval).not.toBeNull();
+  expect(decisionOf(health.id)).toEqual({
+    action: "approved",
+    reason,
+    actorId: f.app.context.principalId,
+    decidedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+  });
+  expect(JSON.stringify(f.app.database.all("SELECT * FROM audit_events"))).not.toContain(reason);
+
+  // An edit clears the approval and with it the approval's reason; an edit reason replaces it.
+  const edited = f.app.requirements.update(
+    health.id,
+    { text: "Health reports fine" },
+    Number(approved.version),
+    "Clarified wording",
+  );
+  expect(decisionOf(health.id)).toMatchObject({ action: "edited", reason: "Clarified wording" });
+  f.app.requirements.update(health.id, { text: "Health reports ok" }, Number(edited.version));
+  expect(decisionOf(health.id)).toBeNull();
+});

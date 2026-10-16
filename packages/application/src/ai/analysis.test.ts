@@ -2309,7 +2309,7 @@ it("a failed jsonSchema step names the schema violations and hands them to the m
     },
   });
 });
-it("a jsonSchema check that could not be evaluated is reported as such, not as a contract violation", async () => {
+it("a jsonSchema check refused for an uncompilable source schema is a supported test-side cause", async () => {
   const f = await fixture({
     schema: true,
     step: {
@@ -2324,10 +2324,44 @@ it("a jsonSchema check that could not be evaluated is reported as such, not as a
     },
   });
   const analysis = await f.service.analyze(f.run.id, {});
-  expect(analysis.failureKind).toBe("unknown");
+  expect(analysis).toMatchObject({ failureKind: "test_fragility", recommendedAction: "fix_test" });
   expect(analysis.facts.map((fact) => fact.text)).toContain(
     `Step price (jsonSchema) could not evaluate the response: Source schema ${SCHEMA_SOURCE} cannot be used for validation: strict mode: unknown keyword: "bogus"`,
   );
+  const diagnosis = analysis.diagnosis!;
+  expect(diagnosis.conclusion.status).toBe("cause_supported");
+  expect(diagnosis.conclusion.text).toContain(
+    `source schema ${SCHEMA_SOURCE} cannot be compiled (strict mode: unknown keyword: "bogus")`,
+  );
+  expect(diagnosis.conclusion.text).toContain("not in the product");
+  expect(diagnosis.nextSteps[0]?.text).toContain("Fix the source schema in a new source revision");
+  expect(diagnosis.nextSteps[0]?.evidenceRefs).toEqual([
+    expect.objectContaining({ stepId: f.step.id }),
+  ]);
+  expect(diagnosis.healing.advice).toBe("not_indicated");
+});
+it("a code test that threw on an uncompilable source schema names the schema, not the throw", async () => {
+  const key = `${SCHEMA_SOURCE}/paths/~1v1~1agents/get/responses/401/content/application~1json/schema`;
+  const f = await fixture({
+    code: true,
+    step: {
+      planStepId: "imported-test-0",
+      status: "inconclusive",
+      reasonCode: "insufficient_evidence",
+      expected: null,
+      observed: null,
+      error: {
+        code: "Error",
+        message: `Error: Source schema ${JSON.stringify(key)} cannot be used for validation: strict mode: unknown keyword: "bogus"\n    at generated.spec.ts:14:19`,
+      },
+    },
+  });
+  const diagnosis = (await f.service.analyze(f.run.id, {})).diagnosis!;
+  expect(diagnosis.conclusion.status).toBe("cause_supported");
+  expect(diagnosis.conclusion.text).toContain(
+    `source schema ${key} cannot be compiled (strict mode: unknown keyword: "bogus")`,
+  );
+  expect(diagnosis.nextSteps[0]?.text).toContain("Fix the source schema in a new source revision");
 });
 it("a failed urlEquals step reports the observed and expected URLs instead of an unknown cause", async () => {
   const f = await fixture({

@@ -82,35 +82,422 @@
       "description": "Role to secret id (testmaster_set_secret): form username, password, totpSeed; basic username, password; bearer token; api-key key; cookie cookie"
     },
     "config": {
-      "anyOf": [
-        {
-          "type": "null"
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "http": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "loginUrl",
+            "contentType",
+            "fields",
+            "success"
+          ],
+          "properties": {
+            "loginUrl": {
+              "format": "uri",
+              "maxLength": 2048,
+              "description": "Login endpoint; its origin must be one of the profile's originBindings",
+              "type": "string"
+            },
+            "contentType": {
+              "description": "Request body encoding: form (urlencoded) or json",
+              "anyOf": [
+                {
+                  "const": "form",
+                  "type": "string"
+                },
+                {
+                  "const": "json",
+                  "type": "string"
+                }
+              ]
+            },
+            "fields": {
+              "additionalProperties": false,
+              "description": "Request field names that receive the vault values (username, password, optional otp); never the values",
+              "type": "object",
+              "required": [
+                "username",
+                "password"
+              ],
+              "properties": {
+                "username": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "password": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "otp": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                }
+              }
+            },
+            "staticFields": {
+              "description": "Constant extra request fields (for example a client id)",
+              "type": "object",
+              "patternProperties": {
+                "^(.*)$": {
+                  "maxLength": 500,
+                  "type": "string"
+                }
+              }
+            },
+            "success": {
+              "additionalProperties": false,
+              "description": "How a successful login is recognised and which credential it yields",
+              "type": "object",
+              "required": [
+                "statusIn"
+              ],
+              "properties": {
+                "statusIn": {
+                  "minItems": 1,
+                  "maxItems": 8,
+                  "description": "Response statuses that mean the login succeeded",
+                  "type": "array",
+                  "items": {
+                    "minimum": 100,
+                    "maximum": 599,
+                    "type": "integer"
+                  }
+                },
+                "cookieNames": {
+                  "minItems": 1,
+                  "maxItems": 16,
+                  "description": "Cookies kept as the session credential; omitted keeps every cookie set",
+                  "type": "array",
+                  "items": {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  }
+                },
+                "tokenPointer": {
+                  "description": "JSON pointer of a token in the response body, kept as the token credential",
+                  "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                  "type": "string"
+                },
+                "tokenScheme": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                }
+              }
+            },
+            "challenge": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "kind"
+              ],
+              "properties": {
+                "statusIn": {
+                  "maxItems": 8,
+                  "type": "array",
+                  "items": {
+                    "minimum": 100,
+                    "maximum": 599,
+                    "type": "integer"
+                  }
+                },
+                "bodyContains": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "kind": {
+                  "anyOf": [
+                    {
+                      "const": "captcha",
+                      "type": "string"
+                    },
+                    {
+                      "const": "webauthn",
+                      "type": "string"
+                    },
+                    {
+                      "const": "push",
+                      "type": "string"
+                    },
+                    {
+                      "const": "email-otp",
+                      "type": "string"
+                    }
+                  ]
+                }
+              }
+            },
+            "ttlSeconds": {
+              "minimum": 60,
+              "maximum": 86400,
+              "type": "integer"
+            }
+          },
+          "description": "form: login by HTTP request; give exactly one of http and browser"
         },
-        {
-          "type": "boolean"
+        "browser": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "steps"
+          ],
+          "properties": {
+            "steps": {
+              "minItems": 1,
+              "maxItems": 24,
+              "type": "array",
+              "items": {
+                "additionalProperties": true,
+                "type": "object",
+                "properties": {}
+              }
+            },
+            "ttlSeconds": {
+              "minimum": 60,
+              "maximum": 86400,
+              "type": "integer"
+            }
+          },
+          "description": "form: login in the browser; steps are plan action steps (contract PlanStep) that may reference this profile's secrets only; give exactly one of http and browser"
         },
-        {
-          "type": "number"
+        "challenge": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "kind",
+            "resolution"
+          ],
+          "properties": {
+            "kind": {
+              "anyOf": [
+                {
+                  "const": "captcha",
+                  "type": "string"
+                },
+                {
+                  "const": "webauthn",
+                  "type": "string"
+                },
+                {
+                  "const": "push",
+                  "type": "string"
+                },
+                {
+                  "const": "email-otp",
+                  "type": "string"
+                }
+              ]
+            },
+            "resolution": {
+              "anyOf": [
+                {
+                  "const": "storage-state",
+                  "type": "string"
+                },
+                {
+                  "const": "otp",
+                  "type": "string"
+                },
+                {
+                  "const": "retry",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "description": "form (optional) or manual (required): the human-only challenge and how it is resolved"
         },
-        {
-          "type": "string"
+        "otp": {
+          "additionalProperties": false,
+          "type": "object",
+          "properties": {
+            "algorithm": {
+              "anyOf": [
+                {
+                  "const": "SHA1",
+                  "type": "string"
+                },
+                {
+                  "const": "SHA256",
+                  "type": "string"
+                },
+                {
+                  "const": "SHA512",
+                  "type": "string"
+                }
+              ]
+            },
+            "digits": {
+              "minimum": 6,
+              "maximum": 8,
+              "type": "integer"
+            },
+            "periodSeconds": {
+              "minimum": 15,
+              "maximum": 120,
+              "type": "integer"
+            },
+            "maxFailures": {
+              "minimum": 1,
+              "maximum": 10,
+              "type": "integer"
+            },
+            "windowSeconds": {
+              "minimum": 60,
+              "maximum": 3600,
+              "type": "integer"
+            }
+          },
+          "description": "form or oauth/oidc: one-time-code settings; needs the totpSeed secret role"
         },
-        {
+        "header": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string",
+          "description": "bearer, api-key or cookie: header or cookie the credential is meant for (documentation)"
+        },
+        "adapter": {
+          "anyOf": [
+            {
+              "const": "generic",
+              "type": "string"
+            },
+            {
+              "const": "cognito",
+              "type": "string"
+            }
+          ],
+          "description": "oauth/oidc (required): generic or cognito; cognito needs the cognito key"
+        },
+        "issuer": {
+          "format": "uri",
+          "maxLength": 2048,
+          "type": "string",
+          "description": "oauth/oidc (required): issuer URL"
+        },
+        "clientId": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string",
+          "description": "oauth/oidc (required): client id"
+        },
+        "audience": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string",
+          "description": "oauth/oidc: expected audience"
+        },
+        "scopes": {
+          "maxItems": 32,
           "type": "array",
           "items": {
-            "$ref": "#/$defs/T0"
-          }
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "description": "oauth/oidc (required): requested scopes; each must be in allowedScopes; oidc needs openid"
         },
-        {
+        "allowedScopes": {
+          "maxItems": 32,
+          "type": "array",
+          "items": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "description": "oauth/oidc (required): scopes the profile may ever request"
+        },
+        "redirectUris": {
+          "minItems": 1,
+          "maxItems": 8,
+          "type": "array",
+          "items": {
+            "format": "uri",
+            "maxLength": 2048,
+            "type": "string"
+          },
+          "description": "oauth/oidc (required): registered redirect URIs"
+        },
+        "redirectUri": {
+          "format": "uri",
+          "maxLength": 2048,
+          "type": "string",
+          "description": "oauth/oidc (required): the redirect URI in use; one of redirectUris"
+        },
+        "endpoints": {
+          "additionalProperties": false,
           "type": "object",
-          "patternProperties": {
-            "^(.*)$": {
-              "$ref": "#/$defs/T0"
+          "properties": {
+            "authorization": {
+              "format": "uri",
+              "maxLength": 2048,
+              "type": "string"
+            },
+            "token": {
+              "format": "uri",
+              "maxLength": 2048,
+              "type": "string"
+            },
+            "jwks": {
+              "format": "uri",
+              "maxLength": 2048,
+              "type": "string"
+            },
+            "revocation": {
+              "format": "uri",
+              "maxLength": 2048,
+              "type": "string"
             }
-          }
+          },
+          "description": "oauth/oidc: explicit authorization, token, jwks and revocation endpoints"
+        },
+        "cognito": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "region"
+          ],
+          "properties": {
+            "region": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "endpoint": {
+              "format": "uri",
+              "maxLength": 2048,
+              "type": "string"
+            },
+            "userPoolId": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          "description": "oauth/oidc with adapter cognito: region, endpoint and user pool"
+        },
+        "tokenScheme": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string",
+          "description": "oauth/oidc: prefix of the stored access token, default Bearer"
+        },
+        "ttlSeconds": {
+          "minimum": 60,
+          "maximum": 86400,
+          "type": "integer",
+          "description": "manual: lifetime of the supplied session in seconds"
         }
-      ],
-      "description": "Kind-specific configuration (contract AuthFormConfig, AuthBasicConfig, AuthStaticConfig, AuthOAuthConfig or AuthManualConfig); {} for basic, bearer, api-key and cookie"
+      },
+      "description": "Keys of the kind: form {http|browser}; basic, bearer, api-key, cookie: {} (header optional for the last three); oauth/oidc adapter, issuer, clientId, scopes, allowedScopes, redirectUris, redirectUri; manual challenge. Each key names its kinds"
     },
     "refreshPolicy": {
       "additionalProperties": false,
@@ -145,39 +532,7 @@
       "description": "Session refresh limits; absent fields keep their defaults"
     }
   },
-  "$defs": {
-    "T0": {
-      "anyOf": [
-        {
-          "type": "null"
-        },
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "number"
-        },
-        {
-          "type": "string"
-        },
-        {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/T0"
-          }
-        },
-        {
-          "type": "object",
-          "patternProperties": {
-            "^(.*)$": {
-              "$ref": "#/$defs/T0"
-            }
-          }
-        }
-      ],
-      "description": "Kind-specific configuration (contract AuthFormConfig, AuthBasicConfig, AuthStaticConfig, AuthOAuthConfig or AuthManualConfig); {} for basic, bearer, api-key and cookie"
-    }
-  },
+  "$defs": {},
   "$id": "urn:testmaster:Mcp_testmaster_save_auth_profile",
   "$schema": "https://json-schema.org/draft/2020-12/schema"
 }

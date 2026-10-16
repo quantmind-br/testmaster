@@ -193,6 +193,41 @@ it("UX-017 provenance tells model output from human edits and carries it to the 
   expect(history(testB)?.modelCallId).toBe(touched?.authorship.generatedBy);
 });
 
+it("the accept receipt names the test and revision each accepted proposal produced", async () => {
+  const f = await open();
+  const { batch, proposals } = await f.generatedBatch(["A", "B", "C"]);
+  const [a, b, c] = proposals;
+  if (!a || !b || !c) throw new Error("Missing proposals");
+  const input = {
+    proposalIds: [b.id, a.id],
+    expectedVersion: batch.version ?? 1,
+    idempotencyKey: "receipt-names-tests-key",
+  };
+  const receipt = f.app.proposals.accept(batch.id, input);
+  expect(receipt.acceptedProposals.map((item) => item.proposalId).sort()).toEqual(
+    [a.id, b.id].sort(),
+  );
+  expect(receipt.acceptedProposals.map((item) => item.testId)).toEqual(receipt.accepted);
+  const stored = f.app.proposals.detail(batch.id).proposals;
+  for (const item of receipt.acceptedProposals) {
+    expect(f.app.tests.get(item.testId).activeRevisionId).toBe(item.revisionId);
+    expect(stored.find((proposal) => proposal.id === item.proposalId)?.extensions).toMatchObject({
+      "testmaster:testId": item.testId,
+      "testmaster:candidateRevisionId": item.revisionId,
+    });
+  }
+  // The mapping survives an identical replay; a rejection produces no tests.
+  expect(f.app.proposals.accept(batch.id, input).acceptedProposals).toEqual(
+    receipt.acceptedProposals,
+  );
+  const rejection = f.app.proposals.reject(batch.id, {
+    proposalIds: [c.id],
+    expectedVersion: f.app.proposals.get(batch.id).version ?? 1,
+    idempotencyKey: "receipt-names-tests-reject",
+  });
+  expect(rejection.acceptedProposals).toEqual([]);
+});
+
 it("UX-017 an exact duplicate needs an explicit decision while a merely similar plan only warns", async () => {
   const f = await open();
   const { batch, proposals, requirements } = await f.generatedBatch(["A"]);

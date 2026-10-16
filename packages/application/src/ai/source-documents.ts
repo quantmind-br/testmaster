@@ -1,4 +1,9 @@
-import type { ExecutablePlan } from "@testmaster/contracts";
+import {
+  assertSourceSchemaCompiles,
+  ContractError,
+  type ExecutablePlan,
+  SourceSchemaError,
+} from "@testmaster/contracts";
 import { allEntities, type ServiceContext } from "../context.js";
 import { flattenSteps } from "../plan-analysis.js";
 
@@ -247,6 +252,55 @@ export function unresolvedSchemaPointers(ctx: ServiceContext, plan: ExecutablePl
   return schemaCitations(plan)
     .filter(({ sourceRevisionId, pointer }) => !(`${sourceRevisionId}${pointer}` in schemas))
     .map(({ sourceRevisionId, pointer }) => `${sourceRevisionId}#${pointer}`);
+}
+
+/** A `jsonSchema` assertion whose cited schema resolves but the source-schema validator cannot compile. */
+export interface UnusableSchema extends SchemaCitation {
+  problem: string;
+}
+/** Cited schemas (as `sourceSchemasFor` resolved them) that cannot be compiled, one per citing step. */
+export function unusableSchemas(
+  citations: readonly SchemaCitation[],
+  schemas: Record<string, unknown>,
+): UnusableSchema[] {
+  return citations.flatMap((citation) => {
+    const schema = schemas[`${citation.sourceRevisionId}${citation.pointer}`];
+    if (schema === undefined) return [];
+    try {
+      assertSourceSchemaCompiles(schema as Record<string, unknown>);
+      return [];
+    } catch (error) {
+      if (!(error instanceof SourceSchemaError)) throw error;
+      return [{ ...citation, problem: error.problem }];
+    }
+  });
+}
+/** What a refusal says about an uncompilable cited schema: the step, the pointer and the compile error. */
+export function unusableSchemaText(item: UnusableSchema): string {
+  return `Step ${JSON.stringify(item.stepId)} cites source schema ${item.sourceRevisionId}#${item.pointer}, which cannot be compiled: ${item.problem}`;
+}
+/**
+ * Refuses a plan that cites a schema the source-schema validator cannot compile: its `jsonSchema`
+ * step could only end inconclusive at run time, so it is reported where the plan is saved.
+ */
+export function assertCitedSchemasCompile(ctx: ServiceContext, plan: ExecutablePlan): void {
+  const citations = schemaCitations(plan);
+  if (!citations.length) return;
+  const unusable = unusableSchemas(citations, sourceSchemasFor(ctx, plan));
+  if (unusable.length)
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      `${unusable.map(unusableSchemaText).join("; ")}; fix the schema in a new source revision or cite another pointer`,
+      {
+        reasonCode: "source_schema_uncompilable",
+        schemas: unusable.map(({ stepId, sourceRevisionId, pointer, problem }) => ({
+          stepId,
+          sourceRevisionId,
+          pointer,
+          problem,
+        })),
+      },
+    );
 }
 
 /** One operation of an offered API specification and where its JSON response schemas live. */

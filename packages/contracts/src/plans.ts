@@ -64,18 +64,21 @@ export const InvalidCredential = Obj({
 const HeaderValue = Type.Union([Value, InvalidCredential]);
 const valuePredicate = <P extends string>(predicate: P) =>
   Obj({ predicate: Type.Literal(predicate), value: Value });
-export const Expectation = Type.Union([
-  ...(
-    [
-      "visible",
-      "hidden",
-      "enabled",
-      "disabled",
-      "noLingeringProcesses",
-      "fileExists",
-      "fileAbsent",
-    ] as const
-  ).map((predicate) => Obj({ predicate: Type.Literal(predicate) })),
+/**
+ * Predicates only the terminal runner executes. The plan validator refuses them in HTTP and
+ * browser plans, so `ModelExpectation` leaves them out and a model is never offered one.
+ */
+export const terminalPredicateNames = [
+  "textNotContains",
+  "exitCodeIn",
+  "noLingeringProcesses",
+  "fileExists",
+  "fileAbsent",
+] as const;
+const terminalExpectations = [
+  ...(["noLingeringProcesses", "fileExists", "fileAbsent"] as const).map((predicate) =>
+    Obj({ predicate: Type.Literal(predicate) }),
+  ),
   Obj({
     predicate: Type.Literal("exitCodeIn"),
     values: Type.Array(Type.Integer({ minimum: 0, maximum: 255 }), {
@@ -83,16 +86,15 @@ export const Expectation = Type.Union([
       uniqueItems: true,
     }),
   }),
-  ...(
-    [
-      "textEquals",
-      "textContains",
-      "textNotContains",
-      "valueEquals",
-      "urlEquals",
-      "jsonEquals",
-    ] as const
-  ).map(valuePredicate),
+  valuePredicate("textNotContains"),
+];
+const httpAndBrowserExpectations = [
+  ...(["visible", "hidden", "enabled", "disabled"] as const).map((predicate) =>
+    Obj({ predicate: Type.Literal(predicate) }),
+  ),
+  ...(["textEquals", "textContains", "valueEquals", "urlEquals", "jsonEquals"] as const).map(
+    valuePredicate,
+  ),
   Obj({ predicate: Type.Literal("countEquals"), value: Nonnegative }),
   Obj({
     predicate: Type.Literal("statusIn"),
@@ -124,7 +126,10 @@ export const Expectation = Type.Union([
     threshold: Type.Optional(Type.Number({ minimum: 0, maximum: 1 })),
   }),
   Obj({ predicate: Type.Literal("accessibilityViolations"), maximum: Nonnegative }),
-]);
+];
+export const Expectation = Type.Union([...httpAndBrowserExpectations, ...terminalExpectations]);
+/** The expectations a model may propose: those an HTTP or browser plan can execute. */
+export const ModelExpectation = Type.Union(httpAndBrowserExpectations);
 export const Capture = Type.Union([
   Obj({
     name: Name,
@@ -385,13 +390,13 @@ const buildStep = (withTerminal: boolean) =>
               ]
             : []),
         ]),
-        expectation: Expectation,
+        expectation: withTerminal ? Expectation : ModelExpectation,
       }),
     ]),
   );
 /** Every step the runners execute. */
 export const Step = buildStep(true);
-/** The steps a model may propose: terminal tests are authored by people, so their schema stays out of prompts. */
+/** The steps a model may propose: terminal tests are authored by people, so neither their operations, inputs nor predicates are in prompts. */
 export const ModelStep = buildStep(false);
 export const DependencyBinding = Obj({
   producerTestId: id("tst"),
@@ -405,14 +410,18 @@ export const DependencyBinding = Obj({
   maximumAge: Positive,
   permittedEnvironment: id("env"),
 });
-export const Cleanup = Obj({
-  resourceRef: Name,
-  operation: Type.Literal("request"),
-  input: RequestInput,
-  successPredicate: Expectation,
-  deadlineMs: Positive,
-  required: Type.Boolean(),
-});
+const buildCleanup = <E extends TSchema>(expectation: E) =>
+  Obj({
+    resourceRef: Name,
+    operation: Type.Literal("request"),
+    input: RequestInput,
+    successPredicate: expectation,
+    deadlineMs: Positive,
+    required: Type.Boolean(),
+  });
+export const Cleanup = buildCleanup(Expectation);
+/** The cleanup requests a model may propose: their success predicate is an HTTP/browser one. */
+const ModelCleanup = buildCleanup(ModelExpectation);
 export const ExecutablePlan = Obj({
   schemaVersion: Type.Literal("1.0.0"),
   kind: Type.Literal("executable"),
@@ -426,7 +435,7 @@ export const ExecutablePlan = Obj({
   tags: Type.Optional(Type.Array(Name)),
   priority: Type.Optional(Priority),
 });
-/** An ExecutablePlan as a model may propose it: no terminal tests, so their schema is not in prompts. */
+/** An ExecutablePlan as a model may propose it: no terminal tests, so their operations and predicates are not in prompts. */
 export const ModelExecutablePlan = Obj({
   schemaVersion: Type.Literal("1.0.0"),
   kind: Type.Literal("executable"),
@@ -436,7 +445,7 @@ export const ModelExecutablePlan = Obj({
   requirementRefs: Type.Array(id("req")),
   steps: Type.Array(ModelStep, { minItems: 1, maxItems: 200 }),
   dependsOn: Type.Optional(Type.Array(DependencyBinding, { maxItems: 100 })),
-  cleanup: Type.Optional(Type.Array(Cleanup)),
+  cleanup: Type.Optional(Type.Array(ModelCleanup)),
   tags: Type.Optional(Type.Array(Name)),
   priority: Type.Optional(Priority),
 });

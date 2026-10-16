@@ -155,10 +155,10 @@ const RequirementConflictRecord = P.Obj({
 
 const DiscoveryStatus = P.Enum(["partial", "needs_input", "unreachable"]);
 const CodeRef = P.Obj({ path: filled, contentHash: P.ContentDigest, line: P.Positive });
-/** Page/route facts: Next.js page files (`GET`) and Node `path === "/x"` comparisons in HTTP server files (`UNKNOWN` unless the same condition compares the method). */
+/** Page/route facts: Next.js page files (`GET`), React Router `<Route>` elements (`GET`) and Node `path === "/x"` comparisons in HTTP server files (`UNKNOWN` unless the same condition compares the method). */
 const CodeRoute = P.Obj({
-  framework: P.Enum(["node-http", "next"]),
-  /** `GET` for Next pages; the compared method for Node comparisons, else `UNKNOWN`. */
+  framework: P.Enum(["node-http", "next", "react-router"]),
+  /** `GET` for Next pages and React Router routes; the compared method for Node comparisons, else `UNKNOWN`. */
   method: filled,
   path: text,
   ref: CodeRef,
@@ -317,7 +317,10 @@ const ProposalBatchRecord = P.Obj({
           }),
         ),
       ),
-      /** Proposals refused by the semantic checks in a `partialGeneration` batch; never stored. */
+      /**
+       * Proposals refused by the semantic checks in a `partialGeneration` batch; never stored.
+       * `planName`, `stepIds` and `predicates` say what was refused, `regenerate` how to ask again.
+       */
       "testmaster:refusedProposals": Type.Optional(
         Type.Array(
           P.Obj({
@@ -325,6 +328,10 @@ const ProposalBatchRecord = P.Obj({
             reasonCode: filled,
             message: filled,
             pointers: Type.Optional(Type.Array(text)),
+            planName: Type.Optional(filled),
+            stepIds: Type.Optional(Type.Array(filled)),
+            predicates: Type.Optional(Type.Array(filled)),
+            regenerate: Type.Optional(filled),
           }),
         ),
       ),

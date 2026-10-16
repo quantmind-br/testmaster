@@ -1,4 +1,4 @@
-import { type Static, type TSchema, Type } from "@sinclair/typebox";
+import { CloneType, type Static, type TSchema, Type } from "@sinclair/typebox";
 import { Step } from "../plans.js";
 import * as P from "../primitives.js";
 
@@ -53,24 +53,52 @@ const Challenge = P.Obj({
 });
 const Ttl = Type.Integer({ minimum: 60, maximum: 86400 });
 const HttpLogin = P.Obj({
-  loginUrl: Url,
-  contentType: P.Enum(["form", "json"]),
-  /** Request field names that receive the vault values; the values themselves never appear here. */
-  fields: P.Obj({ username: P.Name, password: P.Name, otp: Type.Optional(P.Name) }),
-  staticFields: Type.Optional(
-    Type.Record(Type.String({ maxLength: 100 }), Type.String({ maxLength: 500 })),
-  ),
-  success: P.Obj({
-    statusIn: Type.Array(Type.Integer({ minimum: 100, maximum: 599 }), {
-      minItems: 1,
-      maxItems: 8,
-    }),
-    /** Cookies copied into the managed `session` credential (header form); omitted copies all. */
-    cookieNames: Type.Optional(Type.Array(P.Name, { minItems: 1, maxItems: 16 })),
-    /** JSON pointer of a response token stored as the managed `token` credential. */
-    tokenPointer: Type.Optional(P.JsonPointer),
-    tokenScheme: Type.Optional(P.Name),
+  loginUrl: Type.String({
+    format: "uri",
+    maxLength: 2048,
+    description: "Login endpoint; its origin must be one of the profile's originBindings",
   }),
+  contentType: Type.Union([Type.Literal("form"), Type.Literal("json")], {
+    description: "Request body encoding: form (urlencoded) or json",
+  }),
+  /** Request field names that receive the vault values; the values themselves never appear here. */
+  fields: P.Obj(
+    { username: P.Name, password: P.Name, otp: Type.Optional(P.Name) },
+    {
+      description:
+        "Request field names that receive the vault values (username, password, optional otp); never the values",
+    },
+  ),
+  staticFields: Type.Optional(
+    Type.Record(Type.String({ maxLength: 100 }), Type.String({ maxLength: 500 }), {
+      description: "Constant extra request fields (for example a client id)",
+    }),
+  ),
+  success: P.Obj(
+    {
+      statusIn: Type.Array(Type.Integer({ minimum: 100, maximum: 599 }), {
+        minItems: 1,
+        maxItems: 8,
+        description: "Response statuses that mean the login succeeded",
+      }),
+      /** Cookies copied into the managed `session` credential (header form); omitted copies all. */
+      cookieNames: Type.Optional(
+        Type.Array(P.Name, {
+          minItems: 1,
+          maxItems: 16,
+          description: "Cookies kept as the session credential; omitted keeps every cookie set",
+        }),
+      ),
+      /** JSON pointer of a response token stored as the managed `token` credential. */
+      tokenPointer: Type.Optional(
+        CloneType(P.JsonPointer, {
+          description: "JSON pointer of a token in the response body, kept as the token credential",
+        }),
+      ),
+      tokenScheme: Type.Optional(P.Name),
+    },
+    { description: "How a successful login is recognised and which credential it yields" },
+  ),
   /** A response that matches is a human-only challenge (for example a CAPTCHA), never retried. */
   challenge: Type.Optional(
     P.Obj({
@@ -141,6 +169,61 @@ export const authConfigContracts = {
     ttlSeconds: Type.Optional(Ttl),
   }),
 };
+
+const configProperties = {
+  ...authConfigContracts.AuthFormConfig.properties,
+  // A browser login's steps are full plan steps: that schema alone is over half a megabyte, so a
+  // tool listing carries them as objects and the save checks each step against the plan contract.
+  browser: Type.Optional(
+    P.Obj({
+      steps: Type.Array(Type.Object({}, { additionalProperties: true }), {
+        minItems: 1,
+        maxItems: 24,
+      }),
+      ttlSeconds: Type.Optional(Ttl),
+    }),
+  ),
+  ...authConfigContracts.AuthStaticConfig.properties,
+  ...authConfigContracts.AuthOAuthConfig.properties,
+  ...authConfigContracts.AuthManualConfig.properties,
+};
+const configNotes: Record<keyof typeof configProperties, string> = {
+  http: "form: login by HTTP request; give exactly one of http and browser",
+  browser:
+    "form: login in the browser; steps are plan action steps (contract PlanStep) that may reference this profile's secrets only; give exactly one of http and browser",
+  challenge:
+    "form (optional) or manual (required): the human-only challenge and how it is resolved",
+  otp: "form or oauth/oidc: one-time-code settings; needs the totpSeed secret role",
+  header: "bearer, api-key or cookie: header or cookie the credential is meant for (documentation)",
+  adapter: "oauth/oidc (required): generic or cognito; cognito needs the cognito key",
+  issuer: "oauth/oidc (required): issuer URL",
+  clientId: "oauth/oidc (required): client id",
+  audience: "oauth/oidc: expected audience",
+  scopes:
+    "oauth/oidc (required): requested scopes; each must be in allowedScopes; oidc needs openid",
+  allowedScopes: "oauth/oidc (required): scopes the profile may ever request",
+  redirectUris: "oauth/oidc (required): registered redirect URIs",
+  redirectUri: "oauth/oidc (required): the redirect URI in use; one of redirectUris",
+  endpoints: "oauth/oidc: explicit authorization, token, jwks and revocation endpoints",
+  cognito: "oauth/oidc with adapter cognito: region, endpoint and user pool",
+  tokenScheme: "oauth/oidc: prefix of the stored access token, default Bearer",
+  ttlSeconds: "manual: lifetime of the supplied session in seconds",
+};
+/**
+ * The `config` an agent sends, as one object that lists every key of every kind with the kinds it
+ * belongs to. A sibling `kind` picks the schema that must hold (the tool input cannot branch on
+ * it), so required keys are enforced by the save, which names the failing fields.
+ */
+export const AuthConfigInput = Type.Partial(
+  P.Obj(
+    Object.fromEntries(
+      Object.entries(configProperties).map(([key, schema]) => [
+        key,
+        { ...schema, description: configNotes[key as keyof typeof configProperties] },
+      ]),
+    ) as Record<string, TSchema>,
+  ),
+);
 
 export const AuthRefreshPolicy = P.Obj({
   /** A credential this close to expiry is refreshed before use. */

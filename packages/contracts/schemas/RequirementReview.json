@@ -43,6 +43,7 @@
           "confidence",
           "approval",
           "rejection",
+          "decision",
           "reason",
           "origins",
           "conflictIds",
@@ -144,6 +145,52 @@
                     "type": "string"
                   },
                   "rejectedAt": {
+                    "format": "date-time",
+                    "pattern": "Z$",
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "decision": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "action",
+                  "reason",
+                  "actorId",
+                  "decidedAt"
+                ],
+                "properties": {
+                  "action": {
+                    "anyOf": [
+                      {
+                        "const": "approved",
+                        "type": "string"
+                      },
+                      {
+                        "const": "edited",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "reason": {
+                    "minLength": 1,
+                    "maxLength": 2000,
+                    "type": "string"
+                  },
+                  "actorId": {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  "decidedAt": {
                     "format": "date-time",
                     "pattern": "Z$",
                     "type": "string"

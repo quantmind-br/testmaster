@@ -2,7 +2,7 @@ import { ContractError, type Requirement, type RequirementReview } from "@testma
 import { canonicalJson, semanticHash } from "@testmaster/domain";
 import { AuditRepository, type EntityDocument } from "@testmaster/persistence";
 import type { SourceEvidenceRef } from "@testmaster/planner";
-import { authoringTransaction } from "../authoring.js";
+import { authoringTransaction, decisionReason } from "../authoring.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "../context.js";
 import type { ModelService } from "./model.js";
 import { type NormalizeProgress, normalizeSources } from "./normalization.js";
@@ -48,7 +48,34 @@ export function requirementRejection(value: Requirement): RequirementRejection |
     ? (stored as unknown as RequirementRejection)
     : null;
 }
-const MAX_APPROVAL_REASON = 200;
+const DECISION_EXTENSION = "testmaster:decision";
+/**
+ * The reason a reviewer gave when approving or editing a requirement, with the reviewer and time
+ * (kept in the entity extensions, never in the audit trail). The latest approval or edit replaces it.
+ */
+// A type alias (not an interface) so it is assignable to the JSON-valued extensions map.
+export type RequirementDecision = {
+  action: "approved" | "edited";
+  reason: string;
+  actorId: string;
+  decidedAt: string;
+};
+/** The reason recorded with the latest approval or edit, or null when that decision gave none. */
+export function requirementDecision(value: Requirement): RequirementDecision | null {
+  const stored = value.extensions?.[DECISION_EXTENSION];
+  return stored && typeof stored === "object" && !Array.isArray(stored)
+    ? (stored as unknown as RequirementDecision)
+    : null;
+}
+/** The extensions with the decision replaced (or removed when the new decision gave no reason). */
+function withDecision(
+  extensions: Requirement["extensions"],
+  decision: RequirementDecision | null,
+): NonNullable<Requirement["extensions"]> {
+  if (!decision && !extensions?.[DECISION_EXTENSION]) return extensions ?? {};
+  const kept = Object.entries(extensions ?? {}).filter(([key]) => key !== DECISION_EXTENSION);
+  return Object.fromEntries(decision ? [...kept, [DECISION_EXTENSION, { ...decision }]] : kept);
+}
 const MAX_REJECTION_REASON = 2000;
 /** Refuses a decision on a requirement a reviewer already rejected. */
 export function refuseRejected(value: Requirement, action: string): void {
@@ -409,22 +436,40 @@ export class RequirementsService {
       return next;
     });
   }
+  /** The record of an approval or edit that gave a reason; null when it gave none. */
+  private decision(
+    action: RequirementDecision["action"],
+    reason: string | null,
+  ): RequirementDecision | null {
+    return reason
+      ? { action, reason, actorId: this.ctx.principalId, decidedAt: new Date().toISOString() }
+      : null;
+  }
   update(
     id: string,
     patch: { text?: string; acceptanceCriteria?: string[] },
     expectedVersion: number,
+    reason?: string,
   ): StoredRequirement {
     if (Object.keys(patch).some((key) => !["text", "acceptanceCriteria"].includes(key)))
       throw new ContractError("INVALID_ARGUMENT", "Unknown requirement patch field");
+    const text = decisionReason(reason);
     return this.mutate(id, expectedVersion, (current) => {
       refuseRejected(current, "edited");
-      return { ...current, ...patch, approval: null, version: expectedVersion + 1 };
+      return {
+        ...current,
+        ...patch,
+        approval: null,
+        extensions: withDecision(current.extensions, this.decision("edited", text)),
+        version: expectedVersion + 1,
+      };
     });
   }
   apply(
     projectId: string,
     requirements: Requirement[],
     expectedVersion: number,
+    reason?: string,
   ): RequirementSnapshot {
     this.ctx.authorize("W", projectId);
     return authoringTransaction(this.ctx, () => {
@@ -458,18 +503,14 @@ export class RequirementsService {
           current.id,
           { text: submitted.text, acceptanceCriteria: submitted.acceptanceCriteria },
           current.version ?? 1,
+          reason,
         );
       }
       return this.snapshot(projectId);
     });
   }
   approve(id: string, expectedVersion: number, reason?: string): StoredRequirement {
-    const approvalReason = reason?.trim() || `Approve requirement ${id}`;
-    if (approvalReason.length > MAX_APPROVAL_REASON)
-      throw new ContractError(
-        "INVALID_ARGUMENT",
-        `An approval reason is at most ${MAX_APPROVAL_REASON} characters`,
-      );
+    const text = decisionReason(reason);
     return this.mutate(id, expectedVersion, (current) => {
       refuseRejected(current, "approved");
       const projectId = this.project(current);
@@ -493,11 +534,16 @@ export class RequirementsService {
         expiresAt: "9999-12-31T23:59:59.000Z",
         revokedAt: null,
         policyHash: this.model.config.effectiveConfig.policyHash,
-        reason: approvalReason,
+        reason: `Approve requirement ${id}`,
       });
       this.ctx.entities.insert("Approval", approval);
       this.audit("requirement.approved", id, current, approval);
-      return { ...current, approval: approval.id, version: expectedVersion + 1 };
+      return {
+        ...current,
+        approval: approval.id,
+        extensions: withDecision(current.extensions, this.decision("approved", text)),
+        version: expectedVersion + 1,
+      };
     });
   }
   /**
@@ -532,7 +578,10 @@ export class RequirementsService {
         return {
           ...current,
           approval: null,
-          extensions: { ...current.extensions, [REJECTION_EXTENSION]: { ...rejection } },
+          extensions: withDecision(
+            { ...current.extensions, [REJECTION_EXTENSION]: { ...rejection } },
+            null,
+          ),
           version: expectedVersion + 1,
         };
       },
@@ -633,6 +682,7 @@ export class RequirementsService {
           approval: item.approval,
           reason: typeof reason === "string" ? reason : null,
           rejection: requirementRejection(item),
+          decision: requirementDecision(item),
           origins,
           conflictIds: snapshot.conflicts
             .filter((conflict) => conflict.requirementIds.includes(item.id))

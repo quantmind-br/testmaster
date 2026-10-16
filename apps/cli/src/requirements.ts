@@ -77,12 +77,17 @@ export function requirementCommands(program: Command, runtime: Runtime): void {
       .option("--text <text>")
       .option("--criterion <text>", "Replacement criterion (repeatable)", collect)
       .option("--file <path>")
+      .option(
+        "--reason <text>",
+        "Why it is edited (1-2000 characters), recorded with the reviewer and time",
+      )
       .requiredOption("--expected-version <version>", "Current version", integer),
     async (rt, args, options) => ({
       data: await (await rt.app()).requirements.update(
         String(args[0]),
         await patch(rt, options),
         version(options),
+        string(options, "reason"),
       ),
     }),
     async (rt, _args, options) => {
@@ -94,7 +99,10 @@ export function requirementCommands(program: Command, runtime: Runtime): void {
   runtime.bind(
     group
       .command("approve <id>")
-      .option("--reason <text>", "Why it is approved (at most 200 characters)")
+      .option(
+        "--reason <text>",
+        "Why it is approved (1-2000 characters), recorded with the reviewer and time",
+      )
       .requiredOption("--expected-version <version>", "Current version", integer),
     async (rt, args, options) => ({
       data: await (await rt.app()).requirements.approve(

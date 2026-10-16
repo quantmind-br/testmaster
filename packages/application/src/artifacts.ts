@@ -37,7 +37,7 @@ import type { AnalysisService } from "./ai/analysis.js";
 import { auditedOperation, auditSecurity } from "./audit.js";
 import type { ResolvedConfig } from "./config.js";
 import { requireEntity, type ServiceContext } from "./context.js";
-import { reportCoverage } from "./coverage.js";
+import { reportCoverage, verifiedRequirementCoverage } from "./coverage.js";
 import {
   type FixtureImportInput,
   type FixtureImportReceipt,
@@ -746,13 +746,10 @@ export class ReportsService {
     snapshot.coverage = reportCoverage(this.ctx, snapshot);
     snapshot.executionMetrics.rates.requirementMappingCoverage = snapshot.coverage.requirement;
     snapshot.executionMetrics.rates.endpointContractCoverage = snapshot.coverage.operation;
-    snapshot.executionMetrics.rates.verifiedRequirementCoverage = {
-      ...snapshot.coverage.requirement,
-      numerator: 0,
-      value: snapshot.coverage.requirement.denominator ? 0 : null,
-      definition:
-        "N_inScopeRequirementsWithIndependentOracleAndFreshPassingEvidence / N_inScopeRequirements; no independent-oracle attestations recorded by current authoring surfaces",
-    };
+    snapshot.executionMetrics.rates.verifiedRequirementCoverage = verifiedRequirementCoverage(
+      this.ctx,
+      snapshot,
+    );
     return snapshot;
   }
   async export(

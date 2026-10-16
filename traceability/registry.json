@@ -21289,7 +21289,7 @@
           },
           {
             "path": "packages/application/src/approvals.test.ts",
-            "assertion": "expect(window).toBeLessThanOrEqual(30 * 60_000);"
+            "assertion": "expect(Date.parse(approval.expiresAt) - before).toBe(30 * 60_000);"
           },
           {
             "path": "packages/application/src/approvals.test.ts",

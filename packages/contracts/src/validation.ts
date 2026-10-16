@@ -8,6 +8,7 @@ import {
   type Expectation,
   invalidCredentialHeaders,
   type PlanStep,
+  terminalPredicateNames,
 } from "./plans.js";
 import type { JsonValue } from "./primitives.js";
 import type { RunnerEvent } from "./protocol.js";
@@ -92,8 +93,12 @@ function assertNfc(value: unknown, path = ""): void {
 /**
  * The rules of the source-schema validator. Admitted source schemas come from third-party documents
  * (OpenAPI, JSON Schema). They get their own Ajv instance so TestMaster's strict contract validator
- * (`ajv`) stays untouched: keywords remain strict, but type-union and tuple conventions of real
- * documents are accepted and the OpenAPI numeric/binary formats are declared. The generated
+ * (`ajv`) stays untouched: keywords remain strict (an unknown keyword or an ignored `if` is a typo
+ * that would silently weaken the oracle), but type-union and tuple conventions of real documents
+ * are accepted and the OpenAPI numeric/binary formats are declared. `strictRequired` is off: a
+ * `required` entry that this schema object does not declare under `properties` is valid JSON
+ * Schema (`not`/`anyOf`/`oneOf` branches that only list `required`, `allOf` parts, `then`), and
+ * the keyword still validates. The generated
  * JavaScript validator that code tests run (`@testmaster/domain` `sourceSchemaValidatorSource`) is
  * built from this same table, so a plan step and its generated code judge a body identically.
  */
@@ -102,6 +107,7 @@ export const SOURCE_SCHEMA_RULES = {
     strict: true,
     strictTypes: false,
     strictTuples: false,
+    strictRequired: false,
     allowUnionTypes: true,
     allErrors: true,
     validateFormats: true,
@@ -207,6 +213,10 @@ function compileSourceSchema(schema: Record<string, unknown>): ValidateFunction 
   }
   sourceValidators.set(key, validator);
   return validator;
+}
+/** Throws `SourceSchemaError` when the schema cannot be compiled by the source-schema validator. */
+export function assertSourceSchemaCompiles(schema: Record<string, unknown>): void {
+  compileSourceSchema(schema);
 }
 /**
  * Validate an admitted source-revision JSON Schema with the shared validator. An unusable schema
@@ -491,7 +501,8 @@ export function validateDocument(
       limit: 1048576,
       sizeBytes,
     });
-  validate(schema, document);
+  const checked = validate(schema, document);
+  if (schema === "ExecutablePlan") assertNoNegativeBeforeRender(checked as ExecutablePlan);
   return { validated: true, schema };
 }
 export function validatePlanSemantics(plan: ExecutablePlan): void {
@@ -671,6 +682,137 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
       issues,
     );
 }
+/** Observes content on the page, not its URL or the absence of earlier elements. */
+export function observesRenderedContent(expectation: Expectation): boolean {
+  switch (expectation.predicate) {
+    case "visible":
+    case "enabled":
+    case "disabled":
+    case "textEquals":
+    case "textContains":
+    case "valueEquals":
+    case "visualMatches":
+    case "downloadMatches":
+      return true;
+    case "countEquals":
+      return expectation.value > 0;
+    default:
+      return false;
+  }
+}
+/** A browser check that an element is absent: it also holds on a page that has not rendered yet. */
+function isNegativeBrowserCheck(step: PlanStep): boolean {
+  if (step.operation === "waitFor")
+    return "locator" in step.input && ["hidden", "detached"].includes(step.input.state);
+  if (step.kind !== "assertion" || !("locator" in step.input)) return false;
+  const expectation = step.expectation;
+  return (
+    expectation.predicate === "hidden" ||
+    (expectation.predicate === "countEquals" && expectation.value === 0)
+  );
+}
+/** Actions that put a value into a form: a later click or key press on the same page submits it. */
+const formInputOperations: Record<string, true> = {
+  fill: true,
+  select: true,
+  check: true,
+  uncheck: true,
+  upload: true,
+};
+/** Actions that find an element on the page, so the page had rendered when they ran. */
+const locatingOperations: Record<string, true> = {
+  ...formInputOperations,
+  hover: true,
+  drag: true,
+};
+/**
+ * A browser check that an element is absent (`hidden`, `countEquals` 0, a `waitFor` hidden or
+ * detached) passes on a page that has not rendered yet, because the element is not there. When
+ * such a check follows a page load without a positive check of the destination in between, it can
+ * pass without testing anything. A page load is a `navigate`, or a click or key press that submits
+ * a form (it follows a fill) or is followed by a `urlEquals` assertion, which declares that the URL
+ * changed. A required positive assertion or `waitFor` on rendered content, or an action that must
+ * find an element, settles the page. A click that neither follows a fill nor is followed by a
+ * `urlEquals` assertion is not known to navigate and is not treated as a page load.
+ */
+export function findNegativeBeforeRender(plan: ExecutablePlan): ValidationIssue[] {
+  if (plan.runner !== "playwright") return [];
+  const issues: ValidationIssue[] = [];
+  // The action that loaded a page whose content no step has observed yet.
+  let unsettled: string | null = null;
+  // The last action that can navigate since the last positive observation.
+  let lastNavigating: string | null = null;
+  let formFilled = false;
+  const visit = (steps: readonly PlanStep[], path: string): void => {
+    steps.forEach((step, index) => {
+      const here = `${path}/${index}`;
+      if (step.operation === "frame") {
+        visit(step.input.childSteps, `${here}/input/childSteps`);
+        return;
+      }
+      const required = step.required !== false;
+      if (isNegativeBrowserCheck(step)) {
+        if (required && unsettled !== null)
+          issues.push({
+            path: step.kind === "assertion" ? `${here}/expectation` : `${here}/input`,
+            rule: "negativeBeforeRender",
+            message: `Negative check "${step.id}" follows "${unsettled}" with no positive check of the page in between, so it also passes while that page is still blank. Add a required visible, textContains, textEquals, valueEquals or countEquals (above 0) assertion on content that exists only after "${unsettled}", before "${step.id}"`,
+          });
+        return;
+      }
+      if (step.kind === "assertion") {
+        if (required && observesRenderedContent(step.expectation)) {
+          unsettled = null;
+          lastNavigating = null;
+          formFilled = false;
+        } else if (step.expectation.predicate === "urlEquals" && lastNavigating !== null)
+          unsettled ??= lastNavigating;
+        return;
+      }
+      if (step.operation === "navigate") {
+        unsettled = step.id;
+        lastNavigating = step.id;
+        formFilled = false;
+      } else if (step.operation === "click" || step.operation === "press") {
+        unsettled = formFilled ? step.id : null;
+        lastNavigating = step.id;
+        formFilled = false;
+      } else if (step.operation === "waitFor") {
+        if (
+          required &&
+          "locator" in step.input &&
+          (step.input.state === "visible" || step.input.state === "attached")
+        ) {
+          unsettled = null;
+          lastNavigating = null;
+          formFilled = false;
+        }
+      } else if (Object.hasOwn(locatingOperations, step.operation)) {
+        unsettled = null;
+        formFilled = Object.hasOwn(formInputOperations, step.operation);
+      }
+    });
+  };
+  visit(plan.steps, "/steps");
+  return issues;
+}
+/**
+ * Authoring check, not run when a stored plan executes: a plan saved before the rule existed keeps
+ * running; one written, edited or generated now cannot pass on a page that has not rendered.
+ */
+export function assertNoNegativeBeforeRender(plan: ExecutablePlan): void {
+  const issues = findNegativeBeforeRender(plan);
+  if (issues.length)
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      `A negative check runs before the page it checks has rendered: ${issues
+        .slice(0, 5)
+        .map(({ message }) => message)
+        .join("; ")}`,
+      { reasonCode: "negative_before_render", issues },
+      issues,
+    );
+}
 function validateHeaders(
   headers: Record<string, unknown>,
   path: string,
@@ -784,13 +926,7 @@ const sessionOperations: ReadonlySet<string> = new Set([
   "waitForText",
   "waitForExit",
 ]);
-const terminalPredicates: ReadonlySet<string> = new Set([
-  "textNotContains",
-  "exitCodeIn",
-  "noLingeringProcesses",
-  "fileExists",
-  "fileAbsent",
-]);
+const terminalPredicates: ReadonlySet<string> = new Set(terminalPredicateNames);
 const reservedEnvironment: ReadonlySet<string> = new Set(["HOME", "TMPDIR", "PWD"]);
 const proxyEnvironment: ReadonlySet<string> = new Set([
   "HTTP_PROXY",

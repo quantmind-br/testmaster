@@ -129,7 +129,12 @@ export function exportImportedCode(input: ImportedCodeExportInput): CodeExport {
     entrypoint: input.entrypoint,
     planHash: input.contentHash,
     assertionIds: [],
-    requiredInputs: { secrets: [], variables: [], artifacts: [], popupAliases: [] },
+    requiredInputs: {
+      secrets: [...(input.secrets ?? [])],
+      variables: [],
+      artifacts: [],
+      popupAliases: [],
+    },
     ...(environment.length > 0 ? { environment } : {}),
     setupCommands,
     runCommand,

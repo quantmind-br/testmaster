@@ -8,7 +8,7 @@ import {
   validate,
 } from "@testmaster/contracts";
 import { validateProposalPlan } from "@testmaster/planner";
-import { sourceSchemasFor } from "./ai/source-documents.js";
+import { schemaCitations, sourceSchemasFor, unusableSchemas } from "./ai/source-documents.js";
 import { requireEntity, type ServiceContext } from "./context.js";
 import { captureDeclarations } from "./runs.js";
 
@@ -107,13 +107,11 @@ export class PlanValidationService {
       } catch (error) {
         if (!(error instanceof ContractError)) throw error;
         const reasonCode = error.details.reasonCode;
-        push(
-          "assertions",
-          typeof reasonCode === "string" ? reasonCode : "trivial_assertion",
-          "/steps",
-          error.message,
-          null,
-        );
+        const code = typeof reasonCode === "string" ? reasonCode : "trivial_assertion";
+        // An error that locates its causes reports each at its step; the others speak for the plan.
+        if (error.issues.length)
+          for (const { path, message } of error.issues) push("assertions", code, path, message);
+        else push("assertions", code, "/steps", error.message, null);
       }
       checked.add("dependencies");
       checked.add("secrets");
@@ -231,7 +229,10 @@ export class PlanValidationService {
     }
   }
 
-  /** Each `jsonSchema` pointer must reach a schema exactly as the runner input is built. */
+  /**
+   * Each `jsonSchema` pointer must reach a schema exactly as the runner input is built, and that
+   * schema must compile in the source-schema validator the run uses.
+   */
   private schemaPointers(
     plan: ExecutablePlan,
     push: (
@@ -243,13 +244,26 @@ export class PlanValidationService {
     ) => void,
   ): void {
     const resolved = sourceSchemasFor(this.ctx, plan);
+    const unusable = new Map(
+      unusableSchemas(schemaCitations(plan), resolved).map((item) => [item.stepId, item]),
+    );
     const visit = (steps: readonly PlanStep[], base: string): void => {
       for (const [index, step] of steps.entries()) {
         const path = `${base}/${index}`;
         if (step.operation === "frame") visit(step.input.childSteps, `${path}/input/childSteps`);
         if (step.operation !== "assert" || step.expectation.predicate !== "jsonSchema") continue;
         const { sourceRevisionId, pointer } = step.expectation;
-        if (`${sourceRevisionId}${pointer}` in resolved) continue;
+        if (`${sourceRevisionId}${pointer}` in resolved) {
+          const problem = unusable.get(step.id)?.problem;
+          if (problem !== undefined)
+            push(
+              "references",
+              "schema_uncompilable",
+              `${path}/expectation/pointer`,
+              `The schema at "${pointer}" of source revision ${sourceRevisionId} cannot be compiled, so the step could never judge a response: ${problem}. Fix the schema in a new source revision or cite another pointer.`,
+            );
+          continue;
+        }
         push(
           "references",
           "schema_pointer_unresolved",

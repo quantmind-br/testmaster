@@ -1,5 +1,6 @@
 import { isIP } from "node:net";
 import {
+  assertNoNegativeBeforeRender,
   ContractError,
   type Environment,
   type EnvironmentRevision,
@@ -14,6 +15,7 @@ import {
 import { materializePlanDefaults, semanticHash } from "@testmaster/domain";
 import { AuditRepository, type EntityDocument } from "@testmaster/persistence";
 import { type CanonicalTarget, canonicalUrl, classifyIp, PolicyDenied } from "@testmaster/sandbox";
+import { assertCitedSchemasCompile } from "./ai/source-documents.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "./context.js";
 
 type Stored<T> = T & EntityDocument;
@@ -247,7 +249,9 @@ export function attemptAdditionalOrigins(
 
 /** Strict, bounded parsing and shared structural/semantic validation; no effects. */
 export function lintPlan(bytes: Uint8Array | string): ExecutablePlan {
-  return materializePlanDefaults(parseAndValidate<ExecutablePlan>("ExecutablePlan", bytes));
+  const plan = materializePlanDefaults(parseAndValidate<ExecutablePlan>("ExecutablePlan", bytes));
+  assertNoNegativeBeforeRender(plan);
+  return plan;
 }
 export function scaffoldPlan(type: "frontend" | "backend" | "cli"): ExecutablePlan {
   if (type === "frontend")
@@ -869,6 +873,7 @@ export class RevisionsService {
   ): Stored<TestRevision> {
     this.ctx.authorize("W");
     const plan = lintPlan(JSON.stringify(input));
+    assertCitedSchemasCompile(this.ctx, plan);
     return authoringTransaction(this.ctx, () => {
       const owner = requireEntity(this.ctx, "TestCase", testId) as Stored<TestCase>;
       this.ctx.authorize("W", owner.projectId);

@@ -144,7 +144,8 @@ const CodeExportMetadata = P.Obj({
   /** Ids of assert steps of a generated plan; empty for imported code. */
   assertionIds: Type.Array(P.Name),
   requiredInputs: P.Obj({
-    secrets: Type.Array(P.id("sec")),
+    /** Secret ids a generated plan references; names read through `secrets.get` for imported code. Each is the `SECRET_` suffix. */
+    secrets: Type.Array(P.Name),
     variables: Type.Array(P.Name),
     artifacts: Type.Array(P.id("art")),
     popupAliases: Type.Array(P.Name),

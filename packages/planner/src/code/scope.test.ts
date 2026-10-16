@@ -136,7 +136,7 @@ describe("diff-scoped code analysis", () => {
         repoRoot: root,
         base,
         head,
-        summary: { maxTotalBytes: 64 * 1024 * 1024, maxFiles: 20000 },
+        summary: { maxFiles: 20000 },
         stagingDir: staging,
       });
       expect(result.summary.scannedFiles).toEqual(["server.ts"]);

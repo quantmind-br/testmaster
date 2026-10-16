@@ -9,7 +9,7 @@ import ignore from "ignore";
 import { resolvePythonRoutes } from "./python-routes.js";
 import type { CodeRef, CodeSummary, CodeSummaryOptions, CodeSymbol } from "./types.js";
 
-export const CODE_DETECTOR_VERSION = "1.6.0";
+export const CODE_DETECTOR_VERSION = "1.7.0";
 const DEFAULT_MAX_SYMBOLS_PER_FILE = 200;
 const DEFAULT_MAX_SYMBOLS = 20_000;
 const utf8 = new TextDecoder("utf-8", { fatal: true });
@@ -36,7 +36,6 @@ export const MAX_RETAINED_IMPORTS = 20_000;
 export const CODE_SUMMARY_DEFAULT_LIMITS = {
   maxFiles: 10_000,
   maxFileBytes: 1024 * 1024,
-  maxTotalBytes: 25 * 1024 * 1024,
 } as const;
 const ROUTE_METHODS: Record<string, true> = {
   GET: true,
@@ -254,6 +253,131 @@ export function nextRouteTarget(
         : "page";
   return { kind, path: `/${segments.join("/")}` };
 }
+/** Modules whose `Route` component declares client routes. */
+const REACT_ROUTER_MODULE = /^react-router(?:-dom|\/dom)?$/u;
+/** Test and Storybook files render `<Route>` inside memory routers: fixtures, not application routes. */
+const ROUTE_FIXTURE_FILE = /\.stories\.[cm]?[jt]sx?$/u;
+function templateText(quasi: unknown): string {
+  if (!astNode(quasi) || !quasi.value || typeof quasi.value !== "object") return "";
+  const { cooked, raw } = quasi.value as { cooked?: unknown; raw?: unknown };
+  return String(cooked ?? raw ?? "");
+}
+/**
+ * The literal values a `<Route path>` expression can take, or undefined when it cannot be resolved
+ * statically. A leading identifier is the mount prefix of an embedded app (`${prefix}/login`,
+ * `prefix || "/"`); it is empty when the app is served from the root, so it is dropped. A
+ * conditional yields both branches only when both resolve.
+ */
+function routePathValues(node: unknown): string[] | undefined {
+  if (!astNode(node)) return undefined;
+  if (node.type === "StringLiteral") return [String(node.value)];
+  if (node.type === "JSXExpressionContainer") return routePathValues(node.expression);
+  if (node.type === "TemplateLiteral") {
+    const quasis = Array.isArray(node.quasis) ? node.quasis : [];
+    const expressions = Array.isArray(node.expressions) ? node.expressions : [];
+    if (!expressions.length) return [quasis.map(templateText).join("")];
+    const [prefix] = expressions;
+    if (expressions.length === 1 && templateText(quasis[0]) === "" && astNode(prefix))
+      return prefix.type === "Identifier" ? [templateText(quasis[1])] : undefined;
+    return undefined;
+  }
+  if (node.type === "LogicalExpression" && ["||", "??"].includes(String(node.operator)))
+    return astNode(node.left) && node.left.type === "Identifier"
+      ? routePathValues(node.right)
+      : undefined;
+  if (node.type === "ConditionalExpression") {
+    const branches = [routePathValues(node.consequent), routePathValues(node.alternate)];
+    return branches.every((branch) => branch !== undefined)
+      ? [...new Set(branches.flat() as string[])]
+      : undefined;
+  }
+  return undefined;
+}
+/** A child `path` under its parent's full path: absolute when it starts with `/`. */
+function joinRoutePath(parent: string, child: string): string {
+  if (child.startsWith("/")) return child;
+  return parent.endsWith("/") ? `${parent}${child}` : `${parent}/${child}`;
+}
+/**
+ * Templated URL paths of a React Router pattern, as OpenAPI templating like the Next detector:
+ * `:id` -> `{id}`, a splat `*` -> `{splat}`, an optional segment (`:id?`) yields the path with and
+ * without it. The catch-all `*` that renders a not-found page is not a route and yields none.
+ */
+function reactRoutePatterns(pattern: string): string[] {
+  const segments = pattern.split("/").filter(Boolean);
+  if (segments.length === 1 && segments[0] === "*") return [];
+  let paths: string[][] = [[]];
+  for (const segment of segments) {
+    const optional = segment.endsWith("?");
+    const name = optional ? segment.slice(0, -1) : segment;
+    const text = name === "*" ? "{splat}" : name.startsWith(":") ? `{${name.slice(1)}}` : name;
+    paths = paths.flatMap((path) => (optional ? [path, [...path, text]] : [[...path, text]]));
+  }
+  return paths.map((path) => `/${path.join("/")}`);
+}
+/**
+ * `<Route>` elements of React Router (JSX route tables, `<Routes>`/`createRoutesFromElements`) with
+ * their full paths: a relative `path` extends its parent route's, a `path`-less `<Route element>`
+ * is a layout, `index` serves the parent's path. A route is recorded when it renders something
+ * (`element`, `Component`, `lazy`, `index`) or has no nested route. `unresolved` lists the lines of
+ * routes whose `path` is not a statically known string; they and their nested routes are not
+ * recorded. Route tables a component renders under another file's route are not followed.
+ */
+function reactRouterRoutes(
+  program: AstNode,
+  routeNames: ReadonlySet<string>,
+): { routes: { path: string; line: number }[]; unresolved: number[] } {
+  const routes: { path: string; line: number }[] = [];
+  const unresolved: number[] = [];
+  const isRoute = (node: AstNode): boolean =>
+    node.type === "JSXElement" &&
+    astNode(node.openingElement) &&
+    routeNames.has(literal(node.openingElement.name) ?? "");
+  const attribute = (opening: AstNode, name: string): AstNode | undefined =>
+    (Array.isArray(opening.attributes) ? opening.attributes : []).find(
+      (item): item is AstNode =>
+        astNode(item) && item.type === "JSXAttribute" && literal(item.name) === name,
+    );
+  let elements = 0;
+  const walk = (node: AstNode, parents: string[]): void => {
+    if (!isRoute(node)) {
+      for (const [key, value] of Object.entries(node)) {
+        if (["loc", "tokens", "comments"].includes(key)) continue;
+        if (Array.isArray(value)) {
+          for (const child of value) if (astNode(child)) walk(child, parents);
+        } else if (astNode(value)) walk(value, parents);
+      }
+      return;
+    }
+    elements += 1;
+    const opening = node.openingElement as AstNode;
+    const line = node.loc?.start.line ?? 1;
+    const pathAttribute = attribute(opening, "path");
+    const own = pathAttribute ? routePathValues(pathAttribute.value) : undefined;
+    if (pathAttribute && !own) unresolved.push(line);
+    const paths = own
+      ? parents.flatMap((parent) => own.map((child) => joinRoutePath(parent, child)))
+      : pathAttribute
+        ? []
+        : parents;
+    const before = elements;
+    for (const child of Array.isArray(node.children) ? node.children : [])
+      if (astNode(child)) walk(child, paths);
+    const index = attribute(opening, "index") !== undefined;
+    const renders = ["element", "Component", "lazy"].some((name) => attribute(opening, name));
+    if ((pathAttribute || index) && (index || renders || elements === before))
+      for (const path of paths.flatMap(reactRoutePatterns)) routes.push({ path, line });
+  };
+  walk(program, ["/"]);
+  // A layout route and its index route serve the same URL: the first (outermost) one is kept.
+  const sorted = routes.sort((a, b) => a.line - b.line);
+  return {
+    routes: sorted.filter(
+      (route, at) => sorted.findIndex((item) => item.path === route.path) === at,
+    ),
+    unresolved,
+  };
+}
 interface ExportScan {
   /** Exported top-level function declarations and declarators, by node identity. */
   nodes: Set<AstNode>;
@@ -283,7 +407,7 @@ const CLIENT_ROUTE_FILE = /(?:^|\/)(?:app|pages)\/|\.[jt]sx$/u;
  * Test files (`*.test.*`, `*.spec.*`, or anywhere under `__tests__/`, `test/`, `tests/`): a stub
  * `node:http` server there is a fixture, not a route of the application.
  */
-const TEST_FILE = /(?:^|\/)(?:__tests__|tests?)\/|\.(?:test|spec)\.[cm]?[jt]sx?$/u;
+export const TEST_FILE = /(?:^|\/)(?:__tests__|tests?)\/|\.(?:test|spec)\.[cm]?[jt]sx?$/u;
 const ROUTE_IDENTIFIER = /^(?:path|pathname|route)$/u;
 /**
  * The request path a `===` operand reads: a bare `path`/`pathname`/`route`, any `<object>.pathname`
@@ -458,7 +582,6 @@ export async function summarizeCode(
     symbolsPerFile.set(symbol.ref.path, kept + 1);
     summary.symbols.push(symbol);
   };
-  let total = 0;
   let files = 0;
   const inspect = (
     path: string,
@@ -484,6 +607,8 @@ export async function summarizeCode(
     /** Method named by the `&&` chain a comparison sits in, keyed by the chain's operands. */
     const conditionMethods = new Map<AstNode, string>();
     const groupedLogicals = new Set<AstNode>();
+    /** Local names `Route` of react-router is imported as: a `<Route>` is a client route only then. */
+    const routeComponents = new Set<string>();
     const visit = (node: AstNode) => {
       const evidence = ref(node.loc?.start.line ?? 1);
       if (node.type === "ImportDeclaration") {
@@ -498,6 +623,20 @@ export async function summarizeCode(
               ref: evidence,
             });
         }
+        if (
+          source &&
+          REACT_ROUTER_MODULE.test(source) &&
+          node.importKind !== "type" &&
+          Array.isArray(node.specifiers)
+        )
+          for (const specifier of node.specifiers)
+            if (
+              astNode(specifier) &&
+              specifier.type === "ImportSpecifier" &&
+              specifier.importKind !== "type" &&
+              literal(specifier.imported) === "Route"
+            )
+              routeComponents.add(literal(specifier.local) ?? "Route");
       }
       if (["FunctionDeclaration", "ClassDeclaration", "VariableDeclarator"].includes(node.type)) {
         const name = literal(node.id);
@@ -620,6 +759,22 @@ export async function summarizeCode(
     visit(ast as unknown as AstNode);
     if (importsNodeHttp && createsServer && !CLIENT_ROUTE_FILE.test(path) && !TEST_FILE.test(path))
       for (const route of comparedRoutes) summary.routes.push({ framework: "node-http", ...route });
+    if (routeComponents.size && !TEST_FILE.test(path) && !ROUTE_FIXTURE_FILE.test(path)) {
+      const client = reactRouterRoutes(program, routeComponents);
+      for (const route of client.routes)
+        summary.routes.push({
+          framework: "react-router",
+          method: "GET",
+          path: route.path,
+          ref: ref(route.line),
+        });
+      if (client.unresolved.length)
+        summary.warnings.push({
+          path,
+          code: "route_path_unresolved",
+          message: `React Router <Route> at line ${client.unresolved.join(", ")} has a path that is not a static string; that route and the routes nested in it are not recorded.`,
+        });
+    }
     if (routePath !== undefined) {
       const served = new Set<string>();
       for (const item of exported.methods) {
@@ -718,14 +873,6 @@ export async function summarizeCode(
           path,
           options.maxFileBytes ?? CODE_SUMMARY_DEFAULT_LIMITS.maxFileBytes,
         );
-        if (
-          total + bytes.length >
-          (options.maxTotalBytes ?? CODE_SUMMARY_DEFAULT_LIMITS.maxTotalBytes)
-        ) {
-          summary.skippedFiles.push({ path, reason: "total_byte_limit" });
-          continue;
-        }
-        total += bytes.length;
         const text = sourceText(bytes);
         if (text === null) {
           summary.skippedFiles.push({ path, reason: "binary" });

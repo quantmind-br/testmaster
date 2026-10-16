@@ -241,6 +241,7 @@ const handlers: Record<string, RouteHandler> = {
       id,
       body.requirements as Parameters<typeof app.requirements.apply>[1],
       ifMatch(),
+      typeof body.reason === "string" ? body.reason : undefined,
     ),
   ),
   "POST /projects/{id}/discovery": h(({ app, id, body, key }) => {

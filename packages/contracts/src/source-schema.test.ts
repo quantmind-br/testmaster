@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { ContractError } from "./registries.js";
-import { ajv, SourceSchemaError, validateAgainstSchema } from "./validation.js";
+import {
+  ajv,
+  assertSourceSchemaCompiles,
+  SourceSchemaError,
+  validateAgainstSchema,
+} from "./validation.js";
 
 const openApiModels: Record<string, unknown> = {
   type: "object",
@@ -81,6 +86,39 @@ describe("admitted source schemas", () => {
       expect((error as SourceSchemaError).problem.length).toBeGreaterThan(0);
     }
     expect(() => validateAgainstSchema(dangling, {})).toThrow(/Missing/u);
+  });
+  it("accept a required entry the schema object does not declare and still validate it", () => {
+    // `required` inside not/anyOf and then, with no `properties` beside it: valid JSON Schema.
+    const rejection = {
+      type: "object",
+      required: ["error"],
+      properties: { error: { type: "object" } },
+      not: { anyOf: [{ required: ["data"] }, { required: ["object"] }] },
+    };
+    const body = { error: { code: "unauthorized" } };
+    expect(validateAgainstSchema(rejection, body)).toBe(body);
+    for (const leaked of [
+      { ...body, data: [] },
+      { ...body, object: "list" },
+    ])
+      expect(() => validateAgainstSchema(rejection, leaked)).toThrow(
+        "Response does not match source schema",
+      );
+    const conditional = {
+      type: "object",
+      properties: { kind: { type: "string" } },
+      if: { properties: { kind: { const: "a" } } },
+      // biome-ignore lint/suspicious/noThenProperty: `then` is the JSON Schema keyword under test, never a thenable.
+      then: { required: ["a"] },
+    };
+    expect(validateAgainstSchema(conditional, { kind: "b" })).toEqual({ kind: "b" });
+    expect(() => validateAgainstSchema(conditional, { kind: "a" })).toThrow(
+      "Response does not match source schema",
+    );
+    expect(() => assertSourceSchemaCompiles(rejection)).not.toThrow();
+    expect(() => assertSourceSchemaCompiles({ type: "object", bogusKeyword: 1 })).toThrow(
+      SourceSchemaError,
+    );
   });
   it("reuse a compiled schema and let different content replace a repeated $id", () => {
     const first = { $id: "urn:test:source-schema", type: "string" };

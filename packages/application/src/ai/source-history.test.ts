@@ -25,7 +25,16 @@ const byId = {
 const api = (paths: Record<string, unknown>) =>
   JSON.stringify({ openapi: "3.0.3", info: { title: "Shop", version: "1" }, paths });
 const V1 = api({
-  "/orders": { get: ok },
+  "/orders": {
+    get: {
+      responses: {
+        "200": {
+          description: "ok",
+          content: { "application/json": { schema: { type: "object" } } },
+        },
+      },
+    },
+  },
   "/orders/{id}": byId,
   "/legacy": { get: ok },
 });
@@ -156,7 +165,7 @@ it("UX-044 lists only tests that rest on a changed, removed or superseded declar
     expectation: {
       predicate: "jsonSchema",
       sourceRevisionId: first.revision.id,
-      pointer: "/paths/~1orders/get",
+      pointer: "/paths/~1orders/get/responses/200/content/application~1json/schema",
     },
   });
   const superseded = create(pinned);

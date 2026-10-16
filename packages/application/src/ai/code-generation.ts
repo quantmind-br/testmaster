@@ -5,7 +5,13 @@ import type { ResolvedConfig } from "../config.js";
 import { allEntities, requireEntity, type ServiceContext } from "../context.js";
 import { CodeImportService, type CodeSecretBinding } from "./code-import.js";
 import { ModelService } from "./model.js";
-import { type SchemaCitation, schemaCitations, sourceSchemasFor } from "./source-documents.js";
+import {
+  type SchemaCitation,
+  schemaCitations,
+  sourceSchemasFor,
+  unusableSchemas,
+  unusableSchemaText,
+} from "./source-documents.js";
 
 /** What the model must obey; the importer enforces the same constants (planner `CODE_IMPORT_RULES`). */
 const generationInstructions = `Return standalone Playwright test code importing only @playwright/test. Preserve every deterministic plan assertion and action. Use page.goto relative URLs and runner-configured baseURL. No shell, dependency installs, eval, filesystem or empty assertions. Do not use TestMaster APIs. A plan value {"secretRef": <id>} is a credential: read it with secrets.get(NAME), where NAME is the entry of the data "secrets" list (name, id, allowedOrigins; never values) whose id matches. A plan request step with "auth": "profile" is sent with the environment's logged-in auth profile session: send it with the profileRequest fixture (destructure it in the test callback, async ({ profileRequest }) => { ... }), an APIRequestContext with the session applied, and use the profilePage fixture the same way for a browser flow that needs that session. The plain request and page fixtures are never authenticated: use them for steps without "auth" (for example a request that must answer 401), and never copy cookies, tokens or other session values into the code. A profileRequest does not follow redirects when the profile sends a header credential. A plan assertion with predicate "jsonSchema" checks a JSON value of the response against the source schema it cites (sourceRevisionId and pointer): the data "sourceSchemas" list names each cited schema with the plan steps that use it. The schema documents are frozen into the test and cannot be read, so check each one with the sourceSchemas fixture, never with hand-written structural assertions, and never skip it. The code is machine-checked before it is accepted and any violation is refused, so obey every rule: ${CODE_IMPORT_RULES.join(" ")}`;
@@ -49,6 +55,9 @@ function schemaRefusal(
   );
   if (missing.length)
     return `Step ${missing.map((item) => `${JSON.stringify(item.stepId)} cites source schema ${item.sourceRevisionId}#${item.pointer}`).join(", ")}, which its source revision no longer provides: the generated code cannot check it, so no model call was made`;
+  const unusable = unusableSchemas(citations, schemas);
+  if (unusable.length)
+    return `${unusable.map(unusableSchemaText).join("; ")}; fix the schema in a new source revision or cite another pointer. No model call was made`;
   if (Buffer.byteLength(JSON.stringify(schemas)) > SCHEMAS_MAX_BYTES)
     return `The source schemas cited by the plan exceed ${SCHEMAS_MAX_BYTES} bytes and cannot be frozen into the code bundle, so no model call was made`;
   return undefined;

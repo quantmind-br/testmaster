@@ -678,4 +678,14 @@ describe("imported Playwright export runner fixtures", () => {
       }),
     ).toThrow(/conflicts with export project metadata/u);
   });
+  it("lists the secret names the code reads in requiredInputs, one per SECRET_ variable", () => {
+    const result = exported({ secrets: ["omnigent-root-password", "API_KEY"] });
+    expect(result.metadata.requiredInputs.secrets).toEqual(["omnigent-root-password", "API_KEY"]);
+    expect(result.metadata.environment).toEqual([
+      "SECRET_omnigent-root-password",
+      "SECRET_API_KEY",
+    ]);
+    expect(() => validate("CodeExportMetadata", result.metadata)).not.toThrow();
+    expect(exported().metadata.requiredInputs.secrets).toEqual([]);
+  });
 });
