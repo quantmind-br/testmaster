@@ -471,12 +471,17 @@ it. `testmaster_run_tests` with `revisionId` replays that exact revision of one 
 `testmaster_promote_revision` (at the test's `expectedVersion`) makes it active; a generated candidate needs a
 passing replay first. `testmaster_archive_test` archives a test at its `expectedVersion` (history and evidence
 stay; there is no unarchive) with an optional `reason`, kept on the test with the actor and the time
-(`test archive --reason`, `DELETE /v1/tests/{id}` with a `{reason}` body). `testmaster_save_suite` creates a list or adds and removes members at its
+(`test archive --reason`, `DELETE /v1/tests/{id}` with a `{reason}` body). `testmaster_archive_source` archives a
+source at its `expectedVersion` like `source archive`: an archived API specification is no longer offered to plan
+generation nor counted in operation coverage, and a new revision of it through `testmaster_add_source` reactivates
+it. `testmaster_save_suite` creates a list or adds and removes members at its
 `expectedVersion`. When a production run is refused with `approval_required`, copy `details.binding` into
 `testmaster_approve_execution`, add a reason and repeat the run: the approval is single use and recorded with
 the acting principal. `testmaster_get_evidence` reports `staleReasons` next to `freshness`; a candidate
-revision's own run is current until it is superseded. A generated candidate still counts only after a passing
-deterministic replay.
+revision's own run is current until it is superseded. A generated candidate verifies requirements only after a
+passing deterministic replay and its promotion to the test's active revision (reports list it as a candidate
+until then); a test has one active revision, so a promoted code revision is repaired with `testmaster_save_test`,
+not healing.
 
 `testmaster_generate_plan` returns the batch without its proposals plus `resource`
 (`testmaster://plan-batches/{batchId}`): read the proposals there. A healing proposal is decided with

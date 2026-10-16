@@ -1,0 +1,23 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "sourceId",
+    "expectedVersion"
+  ],
+  "properties": {
+    "sourceId": {
+      "pattern": "^src_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string",
+      "description": "Source to archive"
+    },
+    "expectedVersion": {
+      "minimum": 1,
+      "type": "integer",
+      "description": "Current version of the source (testmaster://projects/{projectId}/sources)"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:Mcp_testmaster_archive_source",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

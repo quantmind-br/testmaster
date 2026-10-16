@@ -1215,6 +1215,17 @@ export const mcpTools = {
     }),
     output: "McpSourceReceipt",
   },
+  testmaster_archive_source: {
+    milestone: "M2",
+    input: Obj({
+      sourceId: d(id("src"), "Source to archive"),
+      expectedVersion: d(
+        Version,
+        "Current version of the source (testmaster://projects/{projectId}/sources)",
+      ),
+    }),
+    output: "Source",
+  },
   testmaster_review_requirements: {
     milestone: "M4",
     input: Obj({

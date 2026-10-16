@@ -111,6 +111,7 @@ it("the pipeline tools are listed with schemas, annotations and no inline secret
     destructiveHint: false,
   });
   for (const name of [
+    "testmaster_archive_source",
     "testmaster_review_requirements",
     "testmaster_save_auth_profile",
     "testmaster_update_environment",
@@ -140,6 +141,12 @@ it("the pipeline tools are listed with schemas, annotations and no inline secret
 
 it("every pipeline tool needs the write scope", async () => {
   const f = await fixture(["R"]);
+  await writeFile(join(f.cwd, "prd.md"), "# Health\nThe health endpoint must report ok.\n");
+  const { source } = await f.app.sources.add({
+    projectId: f.init.projectId,
+    path: "prd.md",
+    role: "prd",
+  });
   const calls: [string, Record<string, unknown>][] = [
     ["testmaster_add_source", { projectId: f.init.projectId, path: "prd.md", role: "prd" }],
     ["testmaster_review_requirements", { projectId: f.init.projectId, expectedVersion: 1 }],
@@ -152,12 +159,15 @@ it("every pipeline tool needs the write scope", async () => {
       "testmaster_update_environment",
       { environmentId: f.init.environmentId, expectedVersion: 1, name: "n" },
     ],
+    ["testmaster_archive_source", { sourceId: source.id, expectedVersion: source.version }],
   ];
   for (const [name, args] of calls) {
     const denied = await f.call(name, args);
     expect(denied.isError, name).toBe(true);
     expect(denied.error?.code, name).toBe("FORBIDDEN");
   }
+  // A reader cannot archive a source: it keeps its active revision.
+  expect(f.app.sources.get(String(source.id)).source.activeRevisionId).not.toBeNull();
 });
 
 it("add_source imports a file, versions it and returns an invalid source as an error with its diagnostics", async () => {

@@ -20,6 +20,16 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 - The REST routes that run a model (proposal generation and refinement, `POST /runs/{id}/analysis`, `POST /runs/{id}/healing-proposals`, requirement normalization) and `POST /mcp` turn off the server's 30 s socket idle timeout for their connection; other routes keep it (`ServerOptions.connectionTimeoutMs`).
 - The eval runner never kills a model command; its trial wall time only stops commands that do no model work and keeps later commands from starting. The development smoke forwarder relays model calls without a timeout.
 
+### Fifteenth Omnigent agent run
+
+Found when an omp agent drove the pipeline on Omnigent a fifteenth time (every suite run passed 9/9; the 2 failures were deliberate drills).
+
+- `testmaster_archive_source` archives a source at its `expectedVersion`, like `source archive` and `DELETE /sources/{id}`: an archived API specification is no longer offered to plan generation nor counted in operation coverage, and a new revision through `testmaster_add_source` reactivates it. Before, an agent that registered a project's full OpenAPI document next to a scoped one saw operation coverage of 5/226 and had no MCP way to narrow it. The tool is destructive and needs scope `W`.
+- An analysis whose `failureKind` is `unknown` reports `confidence: null`, from the rules and from a model reading alike; each hypothesis keeps its own confidence. Before, a model reading that the rules lowered to `unknown` kept its hypothesis's 0.97, so the analysis read "cause unknown, confidence 0.97".
+- `testmaster_review_healing` and `heal review` explain the automation decision: `not_eligible (already approved by a reviewer, so automatic application no longer applies)`, or that its verification did not pass, instead of a bare label that replaced `manual_review_required` after approval and read like a refusal.
+- The MCP server instructions say where a result's JSON is (`structuredContent`, and the last text block after any readable summary) and that a refusal has `isError` with a JSON error body, and that a generated candidate verifies requirements only once promoted to the test's active revision; they had said it counts after a passing replay, which reports contradicted.
+- The agent skill says masking never rewrites step ids (a step id holding a secret value keeps its results and evidence paths), that screenshots always black out images, that operation coverage counts every active API specification, and when storage refuses a run: only when the free bytes cannot hold the worst-case evidence of every run in progress, never on a disk-use percentage.
+
 ### Fourteenth Omnigent agent run
 
 Found when an omp agent drove the pipeline on Omnigent a fourteenth time (every suite run passed 9/9; the 2 failures were deliberate drills).

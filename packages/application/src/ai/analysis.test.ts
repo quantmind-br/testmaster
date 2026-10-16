@@ -3565,6 +3565,8 @@ it.each(lowerFixtures)(
       "Model abstained; the evidenced rules-derived cause is retained.",
     );
     expect(analysis.hypotheses.map((item) => item.confidence)).toEqual([0.9]);
+    // The cause is unknown, so the analysis reports no confidence of its own.
+    expect(analysis.confidence).toBeNull();
   },
 );
 it("a requirement agreement is not recorded when its requirement is pending, and the rules cause stays", async () => {

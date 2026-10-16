@@ -303,6 +303,25 @@ export function formatReviewDecision(
   if (decision.decidedAt) parts.push(`at ${decision.decidedAt}`);
   return `${parts.join(" ")}${decision.reason ? `: ${decision.reason}` : ""}`;
 }
+/**
+ * `not_eligible (already approved by a reviewer, so ...)`, the automation decision with what it
+ * means for this proposal now, so a decided proposal does not read like a refusal.
+ */
+export function formatReviewAutomation(
+  review: Pick<HealingReview, "automation" | "approval" | "verification">,
+): string {
+  const { decision } = review.automation;
+  if (decision === "applied_by_policy")
+    return `${decision} (an authorized project policy applied it; a new revision and a verification run were still created)`;
+  if (decision === "manual_review_required")
+    return `${decision} (policy does not apply it automatically; a reviewer, person or agent, approves or rejects it)`;
+  const decided = review.approval.decision;
+  if (decided)
+    return `${decision} (already ${decided.status} by ${decided.status === "approved" && decided.mode === "policy" ? "policy" : "a reviewer"}, so automatic application no longer applies)`;
+  if (review.verification && review.verification.outcome !== "passed")
+    return `${decision} (its verification did not pass, so it can no longer be approved)`;
+  return `${decision} (no longer eligible for automatic application)`;
+}
 export class HealingService {
   constructor(
     readonly ctx: ServiceContext,

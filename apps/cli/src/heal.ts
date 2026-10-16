@@ -1,4 +1,5 @@
 import {
+  formatReviewAutomation,
   formatReviewDecision,
   formatReviewRisk,
   isHealingAbstention,
@@ -14,7 +15,7 @@ export function healingReviewText(review: HealingReview): string {
   const lines = [
     `Healing review: ${review.approval.proposalId}`,
     `Candidate revision: ${review.approval.candidateRevisionId}`,
-    `Automation: ${review.automation.decision}`,
+    `Automation: ${formatReviewAutomation(review)}`,
     ...review.automation.reasons.map((reason) => `- ${reason}`),
     `Risk: ${formatReviewRisk(review)}`,
     "",

@@ -2940,7 +2940,8 @@ export class AnalysisService {
             ]
           : [],
         failureKind,
-        confidence: hypothesis ? 0.5 : null,
+        // An unknown cause has no confidence to report; a hypothesis keeps its own.
+        confidence: hypothesis && failureKind !== "unknown" ? 0.5 : null,
         modelCallId: null,
         limitations: [...new Set(collected.limitations)],
         recommendedAction,
@@ -3549,7 +3550,11 @@ export class AnalysisService {
             ]),
           ].slice(0, 20),
         },
-        confidence: recorded.length ? Math.max(...recorded.map((item) => item.confidence)) : null,
+        // An unknown cause has no confidence to report; each hypothesis keeps its own.
+        confidence:
+          finalKind !== "unknown" && recorded.length
+            ? Math.max(...recorded.map((item) => item.confidence))
+            : null,
         limitations: [
           ...new Set([
             ...data.limitations,

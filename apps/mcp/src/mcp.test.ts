@@ -320,6 +320,10 @@ it("MCP analysis emits readable layers and unchanged JSON while reads need no ex
       `Decision: approved (manual) by ${approver} at 2026-10-16T12:00:00.000Z`,
     );
     expect(decidedText).not.toContain("Approval: not available");
+    // The automation line says the proposal was decided instead of reading like a refusal.
+    expect(decidedText).toContain(
+      "Automation: not_eligible (already approved by a reviewer, so automatic application no longer applies)",
+    );
     expect(decidedText).not.toContain("testmaster_reject_healing");
     expect(decided.structuredContent).toMatchObject({
       approval: {

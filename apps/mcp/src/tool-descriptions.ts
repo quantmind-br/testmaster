@@ -62,6 +62,8 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
     "Return the location of a committed report: runId for one run, batchId (the run_tests batchId/jobId) for all its member runs. Read it as a paged text resource (JSON by default, ?format=junit|markdown|html); follow _meta next, concatenate the pages, then parse.",
   testmaster_add_source:
     "Import a PRD, OpenAPI, GraphQL, Postman or text file inside an approved root as a source revision; returns status and diagnostics (invalid source: an error). A revision whose cited text changed lists the reset requirements in requirementsReset. Next: testmaster_normalize_requirements.",
+  testmaster_archive_source:
+    "Archive a source at expectedVersion (testmaster://projects/{projectId}/sources lists it): with no active revision, plan generation stops offering its API operations and coverage stops counting them. Its revisions, requirements and tests stay; testmaster_add_source with sourceId reactivates it.",
   testmaster_review_requirements:
     "Edit, adjudicate conflicts, reject (reason required; final) and approve requirements at the snapshot expectedVersion, in that order; an optional reason is kept on each edited or approved one. Returns per-item results and the new sourceSnapshotId. Next: testmaster_generate_plan.",
   testmaster_set_secret:

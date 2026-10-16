@@ -136,7 +136,7 @@ Pipeline rules-first: preflight/worker/network/auth → failing assertion/call �
 
 - `facts[]` com evidenceRef e texto factual;
 - `hypotheses[]` com `support` (`supported|partially_supported`), confidence não calibrada e supporting/contradicting refs; confidence numérica nunca é exibida como probabilidade de causa;
-- `failureKind`, `affectedRequirementIds`, `recommendedAction` (`fix_product|fix_test|fix_environment|review_contract|collect_more_evidence`);
+- `failureKind`, `affectedRequirementIds`, `recommendedAction` (`fix_product|fix_test|fix_environment|review_contract|collect_more_evidence`); the analysis-level `confidence` is the highest confidence among the hypotheses of a recorded cause and `null` when `failureKind` is `unknown`, so a cause the analysis did not establish never carries a score;
 - `recommendedFixTarget` só path/symbol se grounded em CodeSnapshot; sem arquivo inventado;
 - `limitations`, `modelCallId`, `snapshotId`.
 - `diagnosis` com observação direta (`expected`, `observed`, ausência classificada e refs), cadeia relacional de até 64 passos (`verifies` referencia o passo HTTP lido; baseline `same|different|unavailable`), até 10 alternativas não estabelecidas, conclusão (`no_failure|cause_supported|cause_partially_supported|cause_unknown`), até 10 próximos passos com origem `rules|model`, até 20 lacunas e conselho de cura (`not_indicated|proposal_possible|manual_review_only`).
