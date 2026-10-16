@@ -20,6 +20,13 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 - The REST routes that run a model (proposal generation and refinement, `POST /runs/{id}/analysis`, `POST /runs/{id}/healing-proposals`, requirement normalization) and `POST /mcp` turn off the server's 30 s socket idle timeout for their connection; other routes keep it (`ServerOptions.connectionTimeoutMs`).
 - The eval runner never kills a model command; its trial wall time only stops commands that do no model work and keeps later commands from starting. The development smoke forwarder relays model calls without a timeout.
 
+### Sixteenth Omnigent agent run
+
+Found when an omp agent drove the pipeline on Omnigent a sixteenth time (every suite run passed 8/8; the 2 failures were deliberate drills).
+
+- MCP resource `testmaster://projects/{projectId}/environments{?cursor}` lists a project's environments like `env list`: id, name, `version` (the `expectedVersion` of `testmaster_update_environment`), `default`, and the active revision's origins, network profile, auth profile references, locale, timezone and production flag; revision variables stay out. Before, an agent that asked for it got an unknown-resource error and had to keep the environment id from `testmaster_bootstrap`.
+- The `testmaster_approve_healing` description and the agent skill say what a passing verification does: the proposal becomes `verified` and its candidate the test's active revision. An agent had looked for a `promotedRevisionId` field that does not exist.
+
 ### Fifteenth Omnigent agent run
 
 Found when an omp agent drove the pipeline on Omnigent a fifteenth time (every suite run passed 9/9; the 2 failures were deliberate drills).

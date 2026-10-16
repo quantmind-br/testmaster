@@ -1674,6 +1674,63 @@ it("the source resources list a project's sources and read one without its chunk
   ).rejects.toMatchObject({ code: -32002 });
 });
 
+it("the environment resource lists a project's environments with the default and what each active revision targets", async () => {
+  const f = await fixture();
+  const staging = f.app.environments.create({
+    projectId: f.init.projectId,
+    name: "staging",
+    baseUrl: "http://127.0.0.1:4100",
+    additionalOrigins: ["http://127.0.0.1:4200"],
+  });
+  const moved = f.app.environments.update(staging.id, { locale: "pt-BR" }, Number(staging.version));
+  const elsewhere = f.app.projects.create({ name: "elsewhere" });
+  f.app.environments.create({
+    projectId: elsewhere.id,
+    name: "other",
+    baseUrl: "http://127.0.0.1:4300",
+  });
+  type Listed = {
+    total: number;
+    next: string | null;
+    environments: {
+      id: string;
+      version: number;
+      default: boolean;
+      activeRevision: {
+        id: string;
+        targetOrigins: string[];
+        additionalOrigins: string[];
+        locale: string;
+      };
+    }[];
+  };
+  const listed = await readJson<Listed>(
+    f,
+    `testmaster://projects/${f.init.projectId}/environments`,
+  );
+  // Another project's environment is not listed.
+  expect(listed).toMatchObject({ total: 2, next: null });
+  const byId = new Map(listed.environments.map((item) => [item.id, item]));
+  expect(byId.get(f.init.environmentId)?.default).toBe(true);
+  // The active revision is the updated one, and version is what an update expects next.
+  expect(byId.get(staging.id)).toMatchObject({
+    default: false,
+    version: moved.version,
+    activeRevision: {
+      id: moved.activeRevisionId,
+      targetOrigins: ["http://127.0.0.1:4100"],
+      additionalOrigins: ["http://127.0.0.1:4200"],
+      locale: "pt-BR",
+    },
+  });
+  expect(JSON.stringify(listed)).not.toContain("variables");
+  await expect(
+    f.client.readResource({
+      uri: "testmaster://projects/prj_019bf434-20c0-7000-8000-000000000001/environments",
+    }),
+  ).rejects.toMatchObject({ code: -32002 });
+});
+
 it("the plan batch resources list a project's batches and page the proposals of one", async () => {
   const f = await fixture();
   const batchOf = (projectId: string) => {
@@ -1752,6 +1809,7 @@ it("the list and document resources refuse a caller without the read scope", asy
   const uris = [
     `testmaster://projects/${f.init.projectId}/tests`,
     `testmaster://projects/${f.init.projectId}/sources`,
+    `testmaster://projects/${f.init.projectId}/environments`,
     `testmaster://projects/${f.init.projectId}/plan-batches`,
     `testmaster://tests/${test.id}`,
     `testmaster://tests/${test.id}/revisions`,

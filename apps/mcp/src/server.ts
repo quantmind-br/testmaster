@@ -145,7 +145,7 @@ const RESOURCE_NOT_FOUND = -32002;
 /** Templates that read each resource collection, named in the error of an unknown resource. */
 const RESOURCE_COLLECTIONS: Readonly<Record<string, string>> = {
   projects:
-    "testmaster://projects/{id}, testmaster://projects/{id}/features, /tests, /sources and /plan-batches",
+    "testmaster://projects/{id}, testmaster://projects/{id}/features, /tests, /sources, /environments and /plan-batches",
   tests: "testmaster://tests/{id} and testmaster://tests/{id}/revisions",
   revisions:
     "testmaster://revisions/{id}, testmaster://revisions/{id}/plan and testmaster://revisions/{id}/code",
@@ -538,6 +538,11 @@ export class TestMasterMcp {
           "testmaster://projects/{projectId}/sources{?cursor}",
           "Project sources",
           "Sources of a project (not archived), paged 100 at a time; read one at testmaster://sources/{id}",
+        ],
+        [
+          "testmaster://projects/{projectId}/environments{?cursor}",
+          "Project environments",
+          "Environments of a project (archived ones included, with archivedAt), paged 100 at a time: id, name, version (the expectedVersion of testmaster_update_environment) and the active revision's target and additional origins, network profile and auth profile references. The project's default environment is marked default",
         ],
         [
           "testmaster://sources/{id}",
@@ -1974,6 +1979,8 @@ export class TestMasterMcp {
         if (parts.length === 2 && parts[1] === "tests") return { json: this.projectTests(id, url) };
         if (parts.length === 2 && parts[1] === "sources")
           return { json: this.projectSources(id, url) };
+        if (parts.length === 2 && parts[1] === "environments")
+          return { json: this.projectEnvironments(id, url) };
         if (parts.length === 2 && parts[1] === "plan-batches")
           return { json: this.projectPlanBatches(id, url) };
         break;
@@ -2342,6 +2349,31 @@ export class TestMasterMcp {
         resource: `testmaster://sources/${source.id}`,
       })),
       next: this.pageLink(`testmaster://projects/${projectId}/sources`, {}, page.cursor),
+    };
+  }
+  /** Environments of a project with what their active revision targets; variables stay out. */
+  private projectEnvironments(projectId: string, url: URL) {
+    const app = this.options.application;
+    const project = app.projects.get(projectId);
+    const page = this.listPage(
+      app.environments.list(projectId),
+      LIST_PAGE,
+      `environments:${projectId}`,
+      url.searchParams.get("cursor"),
+    );
+    return {
+      projectId,
+      total: page.total,
+      returned: page.items.length,
+      environments: page.items.map((environment) => ({
+        ...environment,
+        default: project.defaultEnvironmentId === environment.id,
+        activeRevision:
+          app.environments
+            .revisions(environment.id)
+            .find((revision) => revision.id === environment.activeRevisionId) ?? null,
+      })),
+      next: this.pageLink(`testmaster://projects/${projectId}/environments`, {}, page.cursor),
     };
   }
   /** A source with its active revision, without the chunks (the receipt of testmaster_add_source). */
