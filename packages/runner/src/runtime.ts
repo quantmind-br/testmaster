@@ -34,7 +34,13 @@ export interface RunnerInput {
     httpBodies?: boolean;
   };
   timeoutMs?: number;
+  /** Default timeout of a step that declares none (the merged project/profile/run limit). */
   stepTimeoutMs?: number;
+  /**
+   * Maximum for every step, set only when the run request asked for `limits.stepTimeoutMs`. It
+   * shortens a step's own timeout and never lengthens it.
+   */
+  stepTimeoutCapMs?: number;
   bodyBytes?: number;
   /**
    * `secrets` are the names the code may read through the harness `secrets` fixture. `profile` is set
@@ -90,6 +96,16 @@ export class RuntimeError extends Error {
   ) {
     super(message);
   }
+}
+/** A step's timeout: its own (or the default), never above the per-run cap. */
+export function stepTimeoutMs(
+  step: Pick<PlanStep, "timeoutMs">,
+  input: Pick<RunnerInput, "stepTimeoutMs" | "stepTimeoutCapMs">,
+): number {
+  return Math.min(
+    step.timeoutMs ?? input.stepTimeoutMs ?? 30_000,
+    input.stepTimeoutCapMs ?? Infinity,
+  );
 }
 /**
  * Browser storage state import is not implemented before M4 (ROADMAP M4-03). Input that

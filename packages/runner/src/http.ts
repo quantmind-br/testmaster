@@ -19,7 +19,13 @@ import {
 import { type Stopwatch, uuidV7IdGenerator } from "@testmaster/domain";
 import { type Dispatcher, ProxyAgent, request } from "undici";
 import { matchingCookies, parseStorageCookies, type StoredCookie } from "./profile-session.js";
-import { type RunnerResult, type Runtime, RuntimeError, storageStateRefusal } from "./runtime.js";
+import {
+  type RunnerResult,
+  type Runtime,
+  RuntimeError,
+  stepTimeoutMs,
+  storageStateRefusal,
+} from "./runtime.js";
 
 /** Shared with the sandbox egress proxy (packages/sandbox/src/egress/proxy.ts). */
 const EGRESS_DIAGNOSTICS_HEADER = "x-testmaster-egress-diagnostics";
@@ -802,7 +808,7 @@ export class HttpEngine {
       const response = await this.send(
         step.id,
         step.input,
-        step.timeoutMs ?? this.runtime.input.stepTimeoutMs ?? 30000,
+        stepTimeoutMs(step, this.runtime.input),
         this.runtime.signal,
         true,
       );

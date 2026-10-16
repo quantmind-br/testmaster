@@ -20,6 +20,18 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 - The REST routes that run a model (proposal generation and refinement, `POST /runs/{id}/analysis`, `POST /runs/{id}/healing-proposals`, requirement normalization) and `POST /mcp` turn off the server's 30 s socket idle timeout for their connection; other routes keep it (`ServerOptions.connectionTimeoutMs`).
 - The eval runner never kills a model command; its trial wall time only stops commands that do no model work and keeps later commands from starting. The development smoke forwarder relays model calls without a timeout.
 
+### Eleventh Omnigent agent run
+
+Found when an omp agent drove the pipeline on Omnigent an eleventh time (46 of 49 runs passed, including a 9/9 gating suite; a healing drill on a candidate revision that was never promoted paid for a model call and was then refused).
+
+- Healing refuses a failed run of a revision that is not the test's active revision before any model call, job or reservation: `PRECONDITION_FAILED` with `reason: "revision_not_active"`, both revision ids and the CLI and MCP steps (save a corrected revision, replay it, promote it). The `REVISION_CONFLICT` raised when the active revision changes while the model call runs now says so (`reason: "active_revision_changed"`) and carries both revision ids.
+- When a failed step differs from the same step of a parent revision that passed in the same environment revision, the rules analysis reports `test_fragility` / `fix_test`: the failure follows the test change, not a product change. It names the parent, how many runs it passed and which step fields changed (never their values). The two stored plans are compared with their defaults filled, so a step that only spells out `required` or `timeoutMs` is unchanged, and descriptions are not compared. Without such a change, the manual-review healing reason mentions the passing parent.
+- An explicit per-run step limit (`limits.stepTimeoutMs`, CLI `--step-timeout`) caps every step of that run: a step stops at the lesser of its own timeout and the limit, so the limit shortens steps and never lengthens one. Before, the 30 s that saving a plan writes into each step always won. The project's `execution.stepTimeoutMs` stays the default for steps without a timeout. The cap is frozen with the run, inherited by its healing verification, and shown with the applied limits in the evidence manifest's execution snapshot. The runner image is rebuilt.
+- When a recorded locator candidate list was cut (`truncated`), on either the passing or the failing side, the equivalence and readiness checks say that uniqueness cannot be proved, instead of a generic reason, and the healing proposal stays manual. They already refused the proof.
+- Requirement normalization tells the model that a requirement describes observable product behavior; statements about how the tests are written, run, configured or given credentials are no longer extracted as requirements.
+- The JSON report (`report export --format json`, `testmaster://runs|batches/{id}/report`) writes `coverage`, `executionMetrics`, `selection`, `completeness` and `gate` before `runs`, so the first resource page carries the verdict and the metrics. No field was removed or renamed.
+- The `testmaster_run_tests` description says that `revisionId` pins one test's revision and that several pinned revisions run as a `testmaster_save_suite` list.
+
 ### Tenth Omnigent agent run
 
 Found when an omp agent drove the pipeline on Omnigent a tenth time (8 plan tests and 8 generated Playwright tests passed; a suite holding both revisions of each test reported 16/16 passed but 0/8 requirements verified; a stale-locator drill was healed and verified).

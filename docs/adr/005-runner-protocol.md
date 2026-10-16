@@ -24,6 +24,8 @@ Playwright replay emits model-free `locator-evidence` JSON artifacts before and 
 
 Consumers obtain a Run's authorized committed bundle with `ArtifactsService.get`, select available manifest entries of kind `locator-evidence`, and load each bounded JSON record using `ArtifactsService.read(runId, relativePath, { attemptId, maxBytes: 262144 })`. Lower-level consumers use `verifyBundle` then `streamBundleArtifact`; authorization and privacy tombstones remain application responsibilities. The worker publishes these entries through the existing manifest/Artifact path, and step completion lists their evidence paths. Missing/truncated evidence never authorizes safe healing. Planner `assessLocatorEquivalence` proves a unique stable semantic identity with original absence and a provable recorded replacement selector; `waitStateEquivalence` requires the same readiness control and an observed in-deadline visible-to-hidden transition replacing baseline detachment. Scoped/complex selectors, text-only matches, duplicate controls and uncertain readiness remain manual review.
 
+A record whose candidate list was cut (`truncated: true`, on the baseline or the failure side) can hide a second equivalent control past the 100-candidate budget, so `assessLocatorEquivalence` and `waitStateEquivalence` refuse to prove uniqueness from it, say so in their reasons, and the healing proposal stays manual.
+
 ## Authority
 
 [SPEC](../../SPEC.md), [architecture](../../specs/02-architecture.md), [security](../../specs/07-security.md), [roadmap](../../ROADMAP.md). These records describe decisions, not proof that controls have already passed acceptance.

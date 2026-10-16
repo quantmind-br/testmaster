@@ -38,6 +38,7 @@ import {
   type RunnerResult,
   type Runtime,
   RuntimeError,
+  stepTimeoutMs,
   storageStateRefusal,
 } from "./runtime.js";
 
@@ -235,11 +236,7 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       throw new RuntimeError("execution_deadline", "Attempt deadline expired", "inconclusive");
     return Math.max(
       1,
-      Math.min(
-        step.timeoutMs ?? runtime.input.stepTimeoutMs ?? 30_000,
-        override ?? Infinity,
-        remaining,
-      ),
+      Math.min(stepTimeoutMs(step, runtime.input), override ?? Infinity, remaining),
     );
   }
   function pageFor(alias?: string): Page {
@@ -1113,10 +1110,7 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
         step.operation === "waitFor" && "locator" in step.input
           ? {
               requested: step.input.state,
-              deadlineMs: Math.min(
-                step.input.deadlineMs,
-                step.timeoutMs ?? runtime.input.stepTimeoutMs ?? 30_000,
-              ),
+              deadlineMs: Math.min(step.input.deadlineMs, stepTimeoutMs(step, runtime.input)),
               transitions: transitions.slice(),
             }
           : null;

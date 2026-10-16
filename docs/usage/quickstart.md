@@ -96,6 +96,11 @@ testmaster test rerun "$TEST_ID" --wait --output json
 - `test run --wait` without a running worker makes the CLI the ephemeral owner; Ctrl-C cancels durably.
   With `testmaster worker start` running, the CLI only waits and Ctrl-C detaches unless
   `--cancel-on-interrupt` is given. Without a worker and without `--wait`, admission is refused.
+- `test run --step-timeout <seconds>` (MCP `limits.stepTimeoutMs`, REST `limits.stepTimeoutMs`) caps every step of
+  that run: a step stops at the least of its own `timeoutMs` and the requested value, so the flag shortens
+  steps and never lengthens one. Without it, `execution.stepTimeoutMs` of the project config only fills steps
+  that declare no timeout (saved plans stamp it on every step). The applied limits are recorded on the run
+  (`matrixCell.limits`, `matrixCell.stepTimeoutCapMs`) and in the evidence manifest's `executionSnapshot`.
 - Secrets are references: `testmaster secret set API_TOKEN --from-env API_TOKEN` (or `--file`); values never
   go on argv and are released to the sandbox only on demand.
 
@@ -249,7 +254,11 @@ Heal with a specific model using
 `testmaster heal propose "$RUN_ID" --provider quantforge --model <id>`; without them the first
 allowed provider's first structured-output model is used. `heal propose` refuses a failed Run
 whose analysis says healing is not indicated (`healing_not_indicated`) before calling any model;
-act on the analysis next step instead. When the model finds no safe test-only repair it prints
+act on the analysis next step instead. It also refuses a failed Run of a revision that is not the
+test's active revision (`revision_not_active`) before calling any model: healing derives its
+candidate from the active revision, so save a corrected revision and replay it
+(`test revision create`, `test run --revision`), or promote that revision and heal a failed Run of
+the active one. When the model finds no safe test-only repair it prints
 `Healing abstained (...)` and exits 0: that is a normal result, not a failure.
 
 Exact flags: `testmaster <group> <command> --help`.

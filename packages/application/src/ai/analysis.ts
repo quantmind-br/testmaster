@@ -15,6 +15,7 @@ import {
 import {
   canonicalJson,
   environmentSecretValues,
+  materializePlanDefaults,
   scrubEvidenceText,
   semanticHash,
 } from "@testmaster/domain";
@@ -143,14 +144,29 @@ function stepReference(location: string | null): string {
   return location === null ? "the step that stopped the Run" : `step ${location}`;
 }
 /**
+ * Passing runs of the parent of the failed Run's test revision in the same environment revision.
+ * `changedStep` is set when the failed step differs from the parent's step with the same id; the
+ * fields name what differs, never their values.
+ */
+type ParentRevisionPass = {
+  revisionId: string;
+  passedRuns: number;
+  latestRunId: string;
+  changedStep: { stepId: string; fields: string[] } | null;
+};
+/**
  * Why locator candidates cannot prove the identity of a replacement control. `baselineRuns` is the
  * number of passing runs of this test revision in this environment revision found by the baseline
- * search, or null when that search did not cover the failed step.
+ * search, or null when that search did not cover the failed step. `parent` is the passing parent
+ * revision, which the identity proof does not use because it compares runs of the same revision only.
  */
-function manualReviewReason(baselineRuns: number | null): string {
+function manualReviewReason(
+  baselineRuns: number | null,
+  parent: ParentRevisionPass | null,
+): string {
   const fact =
     baselineRuns === 0
-      ? "No passing run of this test revision exists in this environment revision, so there is no recorded control to compare the observed candidates with and automatic identity proof is unavailable."
+      ? `No passing run of this test revision exists in this environment revision, so there is no recorded control to compare the observed candidates with and automatic identity proof is unavailable.${parent ? ` Its parent revision ${parent.revisionId} passed ${parent.passedRuns} run${parent.passedRuns === 1 ? "" : "s"} in this environment revision, but identity proof compares only runs of the same revision, so those runs are not used.` : ""}`
       : baselineRuns === null
         ? "The observed candidates were not compared with a passing run for this step, so automatic identity proof is unavailable."
         : "Passing runs of this test revision exist in this environment revision, but no single observed candidate matches the control they recorded, so automatic identity proof is unavailable.";
@@ -1178,6 +1194,31 @@ function planSteps(plan: ExecutablePlan | null): PlanStep[] {
   if (plan) visit(plan.steps);
   return result;
 }
+/**
+ * Names, never values, of the fields in which two definitions of one plan step differ. The
+ * description is prose that never changes what the step does, so it is not compared.
+ */
+function changedStepFields(current: PlanStep, previous: PlanStep): string[] {
+  const left = current as unknown as Record<string, unknown>;
+  const right = previous as unknown as Record<string, unknown>;
+  const differ = (a: unknown, b: unknown) => canonicalJson(a ?? null) !== canonicalJson(b ?? null);
+  const fields: string[] = [];
+  for (const key of new Set([...Object.keys(left), ...Object.keys(right)])) {
+    if (key === "description" || !differ(left[key], right[key])) continue;
+    const a = left[key];
+    const b = right[key];
+    const nested = key === "input" || key === "expectation";
+    if (nested && typeof a === "object" && a !== null && typeof b === "object" && b !== null) {
+      const inner = a as Record<string, unknown>;
+      const other = b as Record<string, unknown>;
+      for (const name of new Set([...Object.keys(inner), ...Object.keys(other)]))
+        if (differ(inner[name], other[name])) fields.push(`${key}.${name}`);
+    } else {
+      fields.push(key);
+    }
+  }
+  return fields.sort();
+}
 function authorizedRun(ctx: ServiceContext, runId: string, scope: "R" | "X" = "R"): Run {
   ctx.authorize(scope);
   const run = requireEntity(ctx, "Run", runId) as unknown as Run;
@@ -1794,6 +1835,49 @@ export class AnalysisService {
       return typeof name === "string" ? [name] : [];
     });
   }
+  /**
+   * The passing runs of the parent of the Run's revision, under the same eligibility as the baseline
+   * search (Run and gate passed, same test and environment revision), with what changed in the failed
+   * step between the two stored plans. Both plans get their defaults filled first, so a step that only
+   * spells out a default (`required`, `timeoutMs`) is unchanged. A step the parent lacks counts as
+   * changed. Null when the revision has no parent or the parent has no eligible passing run.
+   */
+  private parentRevisionPass(
+    run: Run,
+    failedStep: PlanStep | undefined,
+  ): ParentRevisionPass | null {
+    const revision = requireEntity(this.ctx, "TestRevision", run.revisionId);
+    const parentId = revision.parentId;
+    if (typeof parentId !== "string") return null;
+    const parent = requireEntity(this.ctx, "TestRevision", parentId);
+    if (parent.testId !== run.testId) return null;
+    const eligible =
+      "FROM runs WHERE workspace_id=? AND test_id=? AND revision_id=? AND environment_revision_id=? AND outcome='passed' AND gate='passed'";
+    const scope = [this.ctx.workspaceId, run.testId, parentId, run.environmentRevisionId];
+    const passedRuns = Number(
+      this.ctx.database.get(`SELECT COUNT(*) AS n ${eligible}`, ...scope)?.n,
+    );
+    const latest = this.ctx.database.get(
+      `SELECT id ${eligible} ORDER BY created_at DESC,id DESC LIMIT 1`,
+      ...scope,
+    );
+    if (!passedRuns || !latest) return null;
+    const stepOf = (plan: unknown): PlanStep | undefined =>
+      plan
+        ? planSteps(materializePlanDefaults(plan as ExecutablePlan)).find(
+            (step) => step.id === failedStep?.id,
+          )
+        : undefined;
+    const current = failedStep && stepOf(revision.plan);
+    const before = stepOf(parent.plan);
+    const fields = !current ? [] : before ? changedStepFields(current, before) : ["step"];
+    return {
+      revisionId: parentId,
+      passedRuns,
+      latestRunId: String(latest.id),
+      changedStep: current && fields.length ? { stepId: current.id, fields } : null,
+    };
+  }
   private async layered(
     run: Run,
     collected: CollectedEvidence,
@@ -1801,6 +1885,7 @@ export class AnalysisService {
     supports: AnalysisEvidenceRef[],
     statusRejection: RejectedStatus | undefined,
     baselineRuns: number | null,
+    parent: ParentRevisionPass | null,
   ): Promise<Diagnosis> {
     const secrets = environmentSecretValues();
     const steps = collected.evidence.filter((item) => item.step);
@@ -2235,6 +2320,24 @@ export class AnalysisService {
         reason:
           'Healing proposes locator changes only; the repair is to set redirect "manual" on the request step.',
       };
+    } else if (failureKind === "test_fragility" && parent?.changedStep) {
+      const { stepId, fields } = parent.changedStep;
+      const passed = `${parent.passedRuns} run${parent.passedRuns === 1 ? "" : "s"}`;
+      conclusion = {
+        status: "cause_partially_supported",
+        text: `Step ${stepId} was changed in this revision relative to its parent revision ${parent.revisionId} (${fields[0] === "step" ? "the parent has no step with this id" : `changed: ${fields.join(", ")}`}), which passed ${passed} in this environment revision (latest ${parent.latestRunId}); the failure follows the test change and is not evidence of a product change.`,
+      };
+      alternative(
+        "The product may also have changed since the parent revision's runs; replaying the parent revision in this environment shows whether it still passes.",
+        "product_bug",
+      );
+      next(
+        `Compare step ${stepId} with the same step of revision ${parent.revisionId}, then save a corrected revision (testmaster_save_test with testId; CLI: test revision create) and replay it (testmaster_run_tests with revisionId; CLI: test run --revision). For a failed Run of the active revision, a healing proposal (testmaster_propose_healing; CLI: heal propose) is the alternative.`,
+      );
+      healing = {
+        advice: "manual_review_only",
+        reason: `The failure follows a change of step ${stepId} made after the passing parent revision ${parent.revisionId}; the repair is to compare that step with the parent's, and a reviewer decides whether a healing proposal applies.`,
+      };
     } else if (failureKind === "test_fragility") {
       conclusion = {
         status: "cause_partially_supported",
@@ -2273,7 +2376,7 @@ export class AnalysisService {
         alternative("The target may be changed, removed, or ambiguous.", "unknown");
         healing = {
           advice: "manual_review_only",
-          reason: manualReviewReason(baselineRuns),
+          reason: manualReviewReason(baselineRuns, parent),
         };
       } else {
         if (
@@ -2324,6 +2427,8 @@ export class AnalysisService {
     // Most passing runs of this revision in this environment revision seen while looking for a
     // baseline control; null when no baseline search ran.
     let baselineRuns: number | null = null;
+    // Passing parent revision of the failed Run's revision; set only when no stronger cause applied.
+    let parent: ParentRevisionPass | null = null;
     const reasons = (codes: string[]) =>
       evidence.filter((item) => item.reason && codes.includes(item.reason));
     const protocolFailure = run.outcome === "passed" ? undefined : runnerProtocolFailure(evidence);
@@ -2582,10 +2687,28 @@ export class AnalysisService {
         hypothesis =
           "The original locator was absent while exactly one semantically equivalent control from a passing baseline was observed; selector fragility is possible.";
         supports = locatorSupport;
-      } else
-        collected.limitations.push(
-          "Available evidence does not establish a failure cause; timeout or HTTP response alone is not a diagnosis.",
-        );
+      } else {
+        const failed = evidence.find((item) => item.step?.status === "failed");
+        parent = this.parentRevisionPass(run, failed?.planStep);
+        if (failed && parent?.changedStep) {
+          failureKind = "test_fragility";
+          recommendedAction = "fix_test";
+          hypothesis = `Step ${parent.changedStep.stepId} differs from the same step of the parent revision ${parent.revisionId}, which passed ${parent.passedRuns} run${parent.passedRuns === 1 ? "" : "s"} in this environment revision; the failure follows the test change, not a product change.`;
+          supports = [
+            failed.ref,
+            ...evidence
+              .filter(
+                (item) =>
+                  (item.value as Partial<LocatorEvidence>)?.schemaVersion === "1.0.0" &&
+                  (item.value as Partial<LocatorEvidence>)?.stepId === failed.step!.planStepId,
+              )
+              .map((item) => item.ref),
+          ];
+        } else
+          collected.limitations.push(
+            "Available evidence does not establish a failure cause; timeout or HTTP response alone is not a diagnosis.",
+          );
+      }
       if (reasons(["storage_unavailable"]).length)
         collected.limitations.push(
           "Evidence collection failed; persisted execution observations remain available.",
@@ -2650,6 +2773,7 @@ export class AnalysisService {
           supports,
           diagnosedRejection,
           baselineRuns,
+          parent,
         ),
       },
       fence,

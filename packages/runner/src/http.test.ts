@@ -752,6 +752,23 @@ it("bounds response bodies and deadlines without converting transport absence in
   ).rejects.toMatchObject({ outcome: "inconclusive" });
 });
 
+it("times a request out at the per-run step cap even when the step declares a longer timeout", async () => {
+  const base = await serve(() => undefined);
+  const { engine } = fixture(base, { stepTimeoutCapMs: 20 });
+  // The saved step carries the project default of 30 s; the hanging request must end at 20 ms.
+  await expect(
+    engine.perform({ ...requestStep("capped", ["hang"]), timeoutMs: 30_000 }),
+  ).rejects.toMatchObject({ outcome: "inconclusive" });
+});
+
+it("does not lengthen a request's own timeout to a higher per-run step cap", async () => {
+  const base = await serve(() => undefined);
+  const { engine } = fixture(base, { stepTimeoutCapMs: 30_000 });
+  await expect(
+    engine.perform({ ...requestStep("own", ["hang"]), timeoutMs: 20 }),
+  ).rejects.toMatchObject({ outcome: "inconclusive" });
+});
+
 it("does not charge the wait for a host model answer to the attempt deadline", async () => {
   vi.useFakeTimers({ toFake: ["performance"] });
   try {

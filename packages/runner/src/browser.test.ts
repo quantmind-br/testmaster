@@ -140,7 +140,11 @@ let context: ContextStub;
 let closeBrowser = vi.fn(async () => undefined);
 let events: RunnerEvent[];
 let artifacts: { path: string; kind: string; bytes: Buffer }[];
-function runtime(steps: PlanStep[], policy: RunnerInput["policy"] = {}): Runtime {
+function runtime(
+  steps: PlanStep[],
+  policy: RunnerInput["policy"] = {},
+  limits: Pick<RunnerInput, "stepTimeoutMs" | "stepTimeoutCapMs"> = {},
+): Runtime {
   const protocol = new ProtocolClient("att_01900000-0000-7000-8000-000000000001", "n".repeat(32));
   let seq = 0;
   vi.spyOn(protocol, "emit").mockImplementation(async (type, payload) => {
@@ -166,6 +170,7 @@ function runtime(steps: PlanStep[], policy: RunnerInput["policy"] = {}): Runtime
       networkPolicy: { allowedOrigins: ["http://fixture.test"], networkProfile: "public" },
       secrets: [],
       policy,
+      ...limits,
       plan: {
         schemaVersion: "1.0.0",
         kind: "executable",
@@ -433,6 +438,35 @@ it("captures asynchronously attached action identity before acting and spends on
   );
   expect(before.cardinality).toBe(1);
   expect(before.candidates[0].matched).toBe(true);
+  expect(target.click).toHaveBeenCalledWith(expect.objectContaining({ timeout: 125 }));
+});
+it("caps a step's own timeout at the per-run limit", async () => {
+  let now = 0;
+  vi.spyOn(performance, "now").mockImplementation(() => now);
+  const target = context.page.locator("submit");
+  target.countValue = 0;
+  target.waitFor.mockImplementation(async () => {
+    now += 75;
+    target.countValue = 1;
+  });
+  // The saved step carries the project default of 30 s; the run asked for 200 ms at most.
+  expect(
+    await runBrowser(runtime([{ ...click, timeoutMs: 30_000 }], {}, { stepTimeoutCapMs: 200 })),
+  ).toMatchObject({ outcome: "passed" });
+  expect(target.click).toHaveBeenCalledWith(expect.objectContaining({ timeout: 125 }));
+});
+it("never lengthens a step's own timeout to a higher per-run limit", async () => {
+  let now = 0;
+  vi.spyOn(performance, "now").mockImplementation(() => now);
+  const target = context.page.locator("submit");
+  target.countValue = 0;
+  target.waitFor.mockImplementation(async () => {
+    now += 75;
+    target.countValue = 1;
+  });
+  expect(
+    await runBrowser(runtime([{ ...click, timeoutMs: 200 }], {}, { stepTimeoutCapMs: 60_000 })),
+  ).toMatchObject({ outcome: "passed" });
   expect(target.click).toHaveBeenCalledWith(expect.objectContaining({ timeout: 125 }));
 });
 it("captures missing action targets once without restarting their attachment deadline", async () => {

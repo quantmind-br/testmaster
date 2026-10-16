@@ -488,7 +488,7 @@ export class TestMasterMcp {
         [
           "testmaster://batches/{id}/report{?format,cursor}",
           "Batch report",
-          "One report over every member run of a run_tests batch (its batchId/jobId): runs[], executionMetrics counts and rates, coverage. Same text paging and formats as a run report; _meta testmaster:batch lists the member runs",
+          "One report over every member run of a run_tests batch (its batchId/jobId). JSON puts the summary (selection, completeness, executionMetrics counts and rates, coverage, gate) before runs[], so the first page carries the verdict. Same text paging and formats as a run report; _meta testmaster:batch lists the member runs",
         ],
         [
           "testmaster://runs/{id}/steps{?attemptId,cursor}",

@@ -1,5 +1,5 @@
 import { type Static, type TSchema, Type } from "@sinclair/typebox";
-import { ExecutionLimits } from "../operations.js";
+import { RunLimits } from "../operations.js";
 import * as P from "../primitives.js";
 import { reasonCodes } from "../registries.js";
 
@@ -111,7 +111,7 @@ export const listContracts = {
     mode: Type.Optional(Type.Literal("replay")),
     healingPolicy: Type.Optional(P.Enum(["off", "propose"])),
     seed: Type.Optional(Type.Integer()),
-    limits: Type.Optional(ExecutionLimits),
+    limits: Type.Optional(RunLimits),
   }),
 };
 export type SuiteSelection = Static<typeof SuiteSelection>;

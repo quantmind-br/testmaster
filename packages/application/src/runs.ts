@@ -72,6 +72,17 @@ export interface HealingApprovalWrite {
   mode: "manual" | "policy";
   write(): void;
 }
+/**
+ * Limits a healing verification inherits from the failed run: the frozen ones, one attempt, and a
+ * step timeout only when the failed run explicitly capped steps (the merged project default is not
+ * a request and must not become a cap).
+ */
+function verificationLimits(cell: Record<string, unknown>): NonNullable<RunRequest["limits"]> {
+  const limits = { ...(cell.limits as NonNullable<RunRequest["limits"]>), maxAttempts: 1 };
+  delete limits.stepTimeoutMs;
+  if (typeof cell.stepTimeoutCapMs === "number") limits.stepTimeoutMs = cell.stepTimeoutCapMs;
+  return limits;
+}
 function configurationLeaves(value: unknown, prefix = "", out = new Map<string, unknown>()) {
   if (value && typeof value === "object" && !Array.isArray(value))
     for (const [key, child] of Object.entries(value))
@@ -397,6 +408,11 @@ export class RunsService {
         baseUrl,
         effectiveConfig: withUsedEnvironment(this.host.config.effectiveConfig, env, baseUrl),
         limits,
+        // Only an explicit per-run request caps steps (after the operator ceiling); the project
+        // default stays a default that a step's own timeout overrides.
+        ...(request.limits?.stepTimeoutMs === undefined
+          ? {}
+          : { stepTimeoutCapMs: limits.stepTimeoutMs }),
         healingPolicy: request.healingPolicy ?? "off",
         ...(request.origin === "verification" &&
         request.extensions?.["testmaster:healingProposalId"]
@@ -876,7 +892,7 @@ export class RunsService {
         healingPolicy: "off",
         origin: "verification",
         seed: Number(cell.seed ?? 0),
-        limits: { ...(cell.limits as RunRequest["limits"]), maxAttempts: 1 },
+        limits: verificationLimits(cell),
         extensions: {
           "testmaster:targetUrl": String(cell.baseUrl),
           "testmaster:executor": String(cell.executor ?? "docker"),

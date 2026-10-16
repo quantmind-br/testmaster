@@ -203,9 +203,16 @@ function missing(item: ReportRun): string[] {
         `${entry.relativePath}: ${entry.state} (${entry.omissionReason ?? "reason unavailable"})`,
     );
 }
+/**
+ * The report as JSON text. The batch-level summary (selection, completeness, metrics, coverage, gate) comes
+ * before `runs`, because a reader that pages the text sees the verdict on the first page and every run
+ * (each tens of KB) after it. Nothing hashes this text: the CI envelope and the delivery hash use
+ * `semanticHash(snapshot)`, which sorts keys, so the key order is free to choose.
+ */
 export function exportJson(snapshot: ReportSnapshot): string {
   validateSnapshot(snapshot);
-  return JSON.stringify({ ...snapshot, gate: reportGate(snapshot) }, null, 2);
+  const { runs, ...summary } = snapshot;
+  return JSON.stringify({ ...summary, gate: reportGate(snapshot), runs }, null, 2);
 }
 export function exportMarkdown(snapshot: ReportSnapshot): string {
   validateSnapshot(snapshot);

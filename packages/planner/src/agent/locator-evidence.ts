@@ -123,6 +123,12 @@ export function hasNamedIdentity(element: LocatorEvidence["candidates"][number])
     !element.name.includes("[REDACTED]")
   );
 }
+/**
+ * A record whose candidate list was cut at the recorder's budget (`truncated`) can hide a second
+ * equivalent control, so no proof of uniqueness is drawn from it; `validLocatorEvidence` refuses it.
+ */
+const truncatedCandidatesReason =
+  "The recorded locator candidate list was cut, so uniqueness of the equivalent control cannot be proved; manual review required";
 export function assessLocatorEquivalence(
   baseline: LocatorEvidence[],
   failed: LocatorEvidence[],
@@ -181,10 +187,13 @@ export function assessLocatorEquivalence(
         };
     }
   }
+  const cut = [...bases, ...failures].some((record) => record.truncated);
   return {
     equivalent: false,
     reasons: [
-      "Missing complete unique semantic identity, original absence, or provable replacement selection",
+      cut
+        ? truncatedCandidatesReason
+        : "Missing complete unique semantic identity, original absence, or provable replacement selection",
     ],
   };
 }
@@ -290,8 +299,16 @@ export function waitStateEquivalence(
           ],
         };
     }
+  const cut = [
+    ...baseline.filter((record) => record.stepId === stepId),
+    ...failed.filter((record) => record.stepId === stepId && record.phase === "after"),
+  ].some((record) => record.truncated);
   return {
     equivalent: false,
-    reasons: ["No recorded equivalent readiness transition within an unchanged deadline"],
+    reasons: [
+      cut
+        ? truncatedCandidatesReason
+        : "No recorded equivalent readiness transition within an unchanged deadline",
+    ],
   };
 }

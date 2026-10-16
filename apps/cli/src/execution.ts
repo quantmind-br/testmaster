@@ -17,7 +17,11 @@ export function executionOptions(command: Command): Command {
     .option("--heal <policy>", "Healing policy", "off")
     .option("--execution-timeout <seconds>", "Execution limit", seconds)
     .option("--attempt-timeout <seconds>", "Attempt limit", seconds)
-    .option("--step-timeout <seconds>", "Step limit", seconds)
+    .option(
+      "--step-timeout <seconds>",
+      "Cap on every step of this run; shortens a step's own timeout, never lengthens it",
+      seconds,
+    )
     .option("--max-attempts <count>");
 }
 export async function environmentId(

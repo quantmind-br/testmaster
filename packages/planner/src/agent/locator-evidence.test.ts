@@ -149,6 +149,21 @@ describe("recorded locator equivalence", () => {
       ).equivalent,
     ).toBe(false);
   });
+  it("cannot prove a unique replacement from a cut candidate list on either side and says why", () => {
+    const proven = assessLocatorEquivalence([evidence()], [drift()], "checkout", replacement);
+    expect(proven.equivalent).toBe(true);
+    expect(proven.reasons.join(" ")).not.toContain("was cut");
+    // A page beyond the candidate budget can hide a second equivalent control past the cut.
+    const cases: { baseline: LocatorEvidence[]; failed: LocatorEvidence[] }[] = [
+      { baseline: [evidence()], failed: [evidence({ ...drift(), truncated: true })] },
+      { baseline: [evidence({ truncated: true })], failed: [drift()] },
+    ];
+    for (const { baseline, failed } of cases) {
+      const assessment = assessLocatorEquivalence(baseline, failed, "checkout", replacement);
+      expect(assessment.equivalent).toBe(false);
+      expect(assessment.reasons.join(" ")).toContain("candidate list was cut");
+    }
+  });
   it("refuses missing baseline, incomplete pools, tampering and still-matching originals", () => {
     expect(assessLocatorEquivalence([], [drift()], "checkout", replacement).equivalent).toBe(false);
     expect(
@@ -316,5 +331,20 @@ describe("recorded wait readiness equivalence", () => {
         "hidden",
       ).equivalent,
     ).toBe(false);
+  });
+  it("refuses readiness proof from a cut candidate list on either side and says why", () => {
+    const { baseline, failed } = waits();
+    const proven = waitStateEquivalence(baseline, failed, "checkout", "hidden");
+    expect(proven.equivalent).toBe(true);
+    expect(proven.reasons.join(" ")).not.toContain("was cut");
+    const cutFailure = [evidence({ ...failed[0], truncated: true })];
+    const cutBaseline = [evidence({ ...baseline[0], truncated: true }), baseline[1]!];
+    for (const assessment of [
+      waitStateEquivalence(baseline, cutFailure, "checkout", "hidden"),
+      waitStateEquivalence(cutBaseline, failed, "checkout", "hidden"),
+    ]) {
+      expect(assessment.equivalent).toBe(false);
+      expect(assessment.reasons.join(" ")).toContain("candidate list was cut");
+    }
   });
 });

@@ -4,6 +4,7 @@ import { XMLValidator } from "fast-xml-parser";
 import { describe, expect, it } from "vitest";
 import {
   diagnosisSummary,
+  executionMetrics,
   exportAllure,
   exportHtml,
   exportJson,
@@ -136,6 +137,19 @@ describe("snapshot reporters", () => {
     expect(exportHtml(input)).toContain("not_applicable");
     expect(exportJunit(input)).toContain('<error type="incomplete_selection"');
     expect(JSON.parse(exportAllure(input)["selection-result.json"] ?? "{}").status).toBe("broken");
+  });
+  it("writes the batch summary before the runs so the first page of a paged read carries the verdict", () => {
+    const input = snapshot();
+    input.executionMetrics = executionMetrics(input);
+    const text = exportJson(input);
+    const keys = Object.keys(JSON.parse(text));
+    for (const summary of ["selection", "completeness", "executionMetrics", "gate"])
+      expect(keys.indexOf(summary), summary).toBeGreaterThanOrEqual(0);
+    const runsAt = keys.indexOf("runs");
+    expect(runsAt).toBeGreaterThanOrEqual(0);
+    for (const summary of ["selection", "completeness", "executionMetrics", "gate"])
+      expect(keys.indexOf(summary), summary).toBeLessThan(runsAt);
+    expect(text.indexOf('"executionMetrics"')).toBeLessThan(text.indexOf('"runs"'));
   });
   it("maps assertion failure, infra and cancellation without approving partial results", () => {
     const input = snapshot();

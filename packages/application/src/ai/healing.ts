@@ -564,6 +564,20 @@ export class HealingService {
         "Healing is not available for terminal tests; fix the plan or the program under test",
         { capability: "healing", runner: "terminal", reason: "terminal_runner" },
       );
+    // Healing derives its candidate from the test's active revision. A Run of any other revision
+    // can only fail the same check after the paid call, so it is refused before any model call.
+    if (test.activeRevisionId !== revision.id)
+      throw new ContractError(
+        "PRECONDITION_FAILED",
+        "Healing derives a new revision from the test's active revision, and this Run replayed a different revision",
+        {
+          reason: "revision_not_active",
+          revisionId: revision.id,
+          activeRevisionId: test.activeRevisionId ?? null,
+          nextAction:
+            "Nothing was sent to the model. To fix this revision, save a corrected revision (testmaster_save_test with testId; CLI: test revision create), replay it with testmaster_run_tests revisionId (CLI: test run --revision), then promote it (testmaster_promote_revision; CLI: test revision promote); or promote this revision first and heal a failed Run of the active revision",
+        },
+      );
     // An explicit choice is validated before any job exists and never falls back to another model.
     const selection = this.model.select(input, "Healing");
     const facts = this.analysis.get(failedRunId) ?? (await this.analysis.analyze(failedRunId, {}));
@@ -782,7 +796,15 @@ export class HealingService {
         if (raced) return raced;
         const owner = requireEntity(this.ctx, "TestCase", run.testId);
         if (owner.activeRevisionId !== run.revisionId)
-          throw new ContractError("REVISION_CONFLICT", "Healing base is no longer active");
+          throw new ContractError(
+            "REVISION_CONFLICT",
+            "The test's active revision changed while the healing call was running, so the proposal was not stored",
+            {
+              reason: "active_revision_changed",
+              revisionId: run.revisionId,
+              activeRevisionId: owner.activeRevisionId ?? null,
+            },
+          );
         const proposalId = entity(this.ctx, "hea", {}).id;
         const ordinal = Number(
           this.ctx.database.get(

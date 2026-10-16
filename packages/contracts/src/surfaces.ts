@@ -1,7 +1,7 @@
 import { type TSchema, Type } from "@sinclair/typebox";
 import { AuthConfigInput, authContracts } from "./m4/auth.js";
 import { SuiteFixedMember, SuiteSelection } from "./m4/lists.js";
-import { ExecutionLimits } from "./operations.js";
+import { RunLimits } from "./operations.js";
 import {
   ContentDigest,
   DecisionReason,
@@ -908,7 +908,7 @@ export const mcpTools = {
           "Lists only: exclusion keys accepted so the rest runs",
         ),
       ),
-      limits: Type.Optional(d(ExecutionLimits, "Per-run execution limits")),
+      limits: Type.Optional(d(RunLimits, "Per-run execution limits")),
       jobId: Type.Optional(
         d(id("bat"), "Existing batch to re-read or wait on instead of admitting"),
       ),

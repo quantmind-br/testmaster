@@ -110,6 +110,20 @@ export const ExecutionLimits = Obj({
   attemptArtifactBytes: Type.Optional(Positive),
   logBytes: Type.Optional(Positive),
 });
+/**
+ * The limits one run request carries. They are `ExecutionLimits`, except that `stepTimeoutMs` is a
+ * cap here (a step's own timeout is never lengthened); in a project config it is only a default.
+ */
+export const RunLimits = Obj({
+  ...ExecutionLimits.properties,
+  stepTimeoutMs: Type.Optional(
+    Type.Integer({
+      minimum: 1,
+      description:
+        "Maximum ms for every step of this run: caps each step's own timeout and never lengthens it",
+    }),
+  ),
+});
 export const NetworkPolicy = Obj({
   allowedOrigins: Type.Array(Type.String({ format: "uri" })),
   /** Subset of `allowedOrigins` admitted only for page subrequests; never a credential, cookie or target scope. */
@@ -183,7 +197,7 @@ export const RunRequest = Obj({
     Enum(["cli", "api", "mcp", "schedule", "webhook", "github", "verification"]),
   ),
   seed: Type.Optional(Type.Integer()),
-  limits: Type.Optional(ExecutionLimits),
+  limits: Type.Optional(RunLimits),
   provenance: Type.Optional(
     Obj({
       commitSha: Type.Optional(Type.Union([Type.String(), Type.Null()])),

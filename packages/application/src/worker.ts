@@ -643,6 +643,11 @@ export class WorkerService {
         revisionId: run.revisionId,
         environmentRevisionId: run.environmentRevisionId,
         effectiveConfig: cell.effectiveConfig,
+        // The limits this run applied (the project defaults live in effectiveConfig).
+        limits,
+        ...(typeof cell.stepTimeoutCapMs === "number"
+          ? { stepTimeoutCapMs: cell.stepTimeoutCapMs }
+          : {}),
         baseUrl: cell.baseUrl,
         seed: cell.seed,
         sealedAt: new Date().toISOString(),
@@ -842,6 +847,9 @@ export class WorkerService {
             timezone: env.timezone,
             browser: config.browser,
             stepTimeoutMs: limits.stepTimeoutMs ?? 30000,
+            ...(typeof cell.stepTimeoutCapMs === "number"
+              ? { stepTimeoutCapMs: cell.stepTimeoutCapMs }
+              : {}),
             timeoutMs: attemptDeadlineMs,
             policy: {
               ...planRunnerPolicy(plan),

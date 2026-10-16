@@ -38,7 +38,7 @@ Os valores abaixo são defaults de produto a implementar e calibrar, não tuning
 | BatchRun seleção de testes/células | 500 | Teto default de admission; distinto de create/import batch ≤100 casos/10 MiB por request | Recusar seleção grande com diagnóstico |
 | Run deadline | 1.800 s | Teto padrão do serviço 7.200 s | Interromper novas ações; preservar evidence |
 | Attempt deadline | 300 s | Teto padrão 900 s e deadline restante do Run | `attempt_timeout`; não marcar passed |
-| Step/action timeout | 30 s | Menor que deadline restante | Evidência de timeout/classificação |
+| Step/action timeout | 30 s | Menor que deadline restante; um `limits.stepTimeoutMs` explícito no pedido do Run (`--step-timeout`) é teto de todo step desse Run: vale o menor entre o `timeoutMs` do step, o pedido, o teto do operador e o deadline restante, nunca alonga o do step; o default do projeto não é teto | Evidência de timeout/classificação |
 | Network request timeout | 30 s | Body timeout e bytes também limitados | Fechar stream com reason code |
 | Preparation timeout | 120 s | Dentro do Run deadline | Infrastructure/preparation outcome |
 | Collect/analyze grace | 60 s cada | Sem aumentar deadline de ação; finalizar evidência parcial | Marcar coleta/análise incompleta |

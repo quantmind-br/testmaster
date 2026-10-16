@@ -19,7 +19,7 @@ import { isDeepStrictEqual } from "node:util";
 import type { Expectation, PlanStep } from "@testmaster/contracts";
 import type { Stopwatch } from "@testmaster/domain";
 import { jsonPointerValue } from "./http.js";
-import { type RunnerResult, type Runtime, RuntimeError } from "./runtime.js";
+import { type RunnerResult, type Runtime, RuntimeError, stepTimeoutMs } from "./runtime.js";
 import {
   reapSurvivors,
   type SweepScope,
@@ -165,7 +165,7 @@ class TerminalEngine {
     };
   }
   private stepBudget(step: PlanStep): { ms: number; attemptLimited: boolean } {
-    return this.budget(step.timeoutMs ?? this.runtime.input.stepTimeoutMs ?? 30000);
+    return this.budget(stepTimeoutMs(step, this.runtime.input));
   }
   private expired(attemptLimited: boolean, message: string): RuntimeError {
     return attemptLimited

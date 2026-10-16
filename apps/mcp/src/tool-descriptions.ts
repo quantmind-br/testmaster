@@ -25,7 +25,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_generate_tests:
     "Generate executable candidates from accepted proposals (proposalIds) or revisions (revisionIds), one project per call; provider/model pick the model; a model call has no deadline. Each candidate names its testId, testName and proposalId. Refused ones go to validationErrors. Not execution evidence.",
   testmaster_run_tests:
-    "Run testIds with environmentId (revisionId: exact candidate or healed revision) or a list (suiteId) in the sandbox; mode defaults to replay (lists: replay only). jobId re-reads a batch. wait=true blocks until timeoutMs (runs continue), or poll testmaster_get_run. idempotencyKey makes retries safe.",
+    "Run testIds with environmentId, or a list (suiteId, replay only), in the sandbox; revisionId pins one test's revision (pin several in a testmaster_save_suite list). Mode defaults to replay. jobId re-reads a batch. wait=true blocks until timeoutMs (runs go on), or poll testmaster_get_run.",
   testmaster_get_run:
     "Get phase, outcome, gate, analysisStatus and the run test, revision, environment revision, mode and origin. Summary only: a run that did not pass, or whose gate failed, needs testmaster_get_evidence then testmaster_analyze_run to name a cause; executionError names an error after the steps.",
   testmaster_get_evidence:
@@ -39,7 +39,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_compare_runs:
     "Compare two runs, paged by cursor and limit. Example: a failed run against a green baseline, to tell regression from drift.",
   testmaster_propose_healing:
-    "Propose a locator-only candidate revision for a failed declarative-plan run; assertions never change, nothing is applied. Next: testmaster_review_healing. abstained: true (reasonCode, reason) = no safe repair. Refused before a model call as PRECONDITION_FAILED: healing_not_indicated, code_revision.",
+    "Propose a locator-only candidate for a failed Run of the active plan revision; assertions never change. Next: testmaster_review_healing. abstained: true (reasonCode) = no safe repair. Refused before a model call (PRECONDITION_FAILED): healing_not_indicated, code_revision, revision_not_active.",
   testmaster_review_healing:
     "Read the healing diff, risk, assertions-intact check, verification and approval. Next: testmaster_approve_healing with approval.expectedVersion, only after review.",
   testmaster_approve_healing:

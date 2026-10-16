@@ -685,6 +685,8 @@ export function admissionInputHash(cell: Record<string, unknown>): string {
     effectiveConfig: cell.effectiveConfig,
     baseUrl: cell.baseUrl,
     limits: cell.limits,
+    // Present only when the request capped steps, so the hash of a run without a cap is unchanged.
+    ...(cell.stepTimeoutCapMs === undefined ? {} : { stepTimeoutCapMs: cell.stepTimeoutCapMs }),
     seed: cell.seed,
     executor: cell.executor,
     repetitionIndex: cell.repetitionIndex ?? null,

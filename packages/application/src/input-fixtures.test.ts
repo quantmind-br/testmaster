@@ -518,6 +518,52 @@ it("worker dispatch carries frozen capabilities and fixture hashes into the seal
     executionSnapshot: { inputFixtureHashes: { [imported.id]: imported.contentHash } },
   });
 });
+it("freezes an explicit per-run step timeout as a cap for the runner and leaves a run without one uncapped", async () => {
+  const { app, init } = await fixture();
+  const test = app.tests.create({ projectId: init.projectId, plan: scaffoldPlan("frontend") });
+  const lock = await readImageLock(
+    new URL("../../../containers/images.lock.json", import.meta.url).pathname,
+  );
+  vi.spyOn(app, "preflight").mockResolvedValue();
+  vi.spyOn(app, "images").mockResolvedValue(lock);
+  vi.spyOn(app.runs.host, "admittedImages").mockReturnValue(lock);
+  const seen: { runnerInput?: Record<string, unknown>; executionSnapshot?: unknown }[] = [];
+  vi.spyOn(AttemptExecutor.prototype, "execute").mockImplementation(async (input) => {
+    seen.push({
+      ...(input.runnerInput ? { runnerInput: input.runnerInput } : {}),
+      ...(input.executionSnapshot ? { executionSnapshot: input.executionSnapshot } : {}),
+    });
+    return {
+      outcome: "blocked",
+      reasonCode: "security_precondition_failed",
+      logDropped: 0,
+      events: [],
+    };
+  });
+  const base = { testId: test.id, environmentId: init.environmentId };
+  const capped = await app.runs.admit(
+    { ...base, limits: { maxAttempts: 1, stepTimeoutMs: 500 } },
+    { wait: true },
+  );
+  const uncapped = await app.runs.admit({ ...base, limits: { maxAttempts: 1 } }, { wait: true });
+  expect(app.runs.get(capped.runId).matrixCell).toMatchObject({
+    stepTimeoutCapMs: 500,
+    limits: { stepTimeoutMs: 500 },
+  });
+  expect(app.runs.get(uncapped.runId).matrixCell).not.toHaveProperty("stepTimeoutCapMs");
+  await app.worker.run({ ephemeral: true, runIds: [capped.runId] });
+  await app.worker.run({ ephemeral: true, runIds: [uncapped.runId] });
+  expect(seen).toHaveLength(2);
+  expect(seen[0]?.runnerInput).toMatchObject({ stepTimeoutMs: 500, stepTimeoutCapMs: 500 });
+  expect(seen[0]?.executionSnapshot).toMatchObject({
+    limits: { stepTimeoutMs: 500 },
+    stepTimeoutCapMs: 500,
+  });
+  // The project default only fills steps that declare no timeout; it is not a cap.
+  expect(seen[1]?.runnerInput).toMatchObject({ stepTimeoutMs: defaults.stepTimeoutMs });
+  expect(seen[1]?.runnerInput).not.toHaveProperty("stepTimeoutCapMs");
+  expect(seen[1]?.executionSnapshot).not.toHaveProperty("stepTimeoutCapMs");
+});
 it("worker refuses a fixture revoked after admission before invoking the executor", async () => {
   const { app, init } = await fixture();
   const imported = await app.artifacts.importFixtureInput({

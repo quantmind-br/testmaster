@@ -1193,6 +1193,28 @@ it("healing is refused before any job or model call when the stored analysis say
   });
   expect(f.complete).toHaveBeenCalledTimes(1);
 });
+it("a failed Run of a revision that is not the active one is refused before any job or model call", async () => {
+  const f = await generationFixture(abstention);
+  const other = f.app.runs.resolve({
+    testId: f.test.id,
+    environmentId: String((f.failed.matrixCell as Record<string, unknown>).environmentId),
+    revisionId: f.candidate.id,
+  });
+  Object.assign(other, { phase: "completed", status: "failed", outcome: "failed", gate: "failed" });
+  f.app.context.entities.insert("Run", other);
+  await expect(f.service.propose(other.id)).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+    details: {
+      reason: "revision_not_active",
+      revisionId: f.candidate.id,
+      activeRevisionId: f.test.activeRevisionId,
+      nextAction: expect.stringContaining("test revision create"),
+    },
+  });
+  expect(f.complete).not.toHaveBeenCalled();
+  expect(f.jobs.forTarget(f.app.context.workspaceId, "healing", other.id)).toHaveLength(0);
+  expect(f.app.database.all("SELECT id FROM healing_proposals")).toHaveLength(0);
+});
 it("a failure the rules classify as a product defect abstains without a model call and keeps the attempt", async () => {
   const f = await generationFixture(abstention);
   const current = f.service.analysis.get(f.failed.id)!;
@@ -1746,6 +1768,42 @@ it("a refused approval admission leaves the proposal untouched and names the CI 
   const approved = await f.app.healing.approve(f.proposal.id, 1);
   expect(approved.status).toBe("approved");
   expect(approved.verificationRunId).toMatch(/^run_/);
+});
+it("a healing verification inherits the step cap the failed Run asked for, never the project default", async () => {
+  const f = await proposedFixture();
+  vi.spyOn(f.app, "preflight").mockResolvedValue();
+  const failed = f.app.runs.get(f.failed.id);
+  expect(failed.matrixCell).not.toHaveProperty("stepTimeoutCapMs");
+  const approved = await f.app.healing.approve(f.proposal.id, 1);
+  // The failed Run froze the project default (30 s) as its merged limit, but nobody asked for a cap.
+  expect(f.app.runs.get(String(approved.verificationRunId)).matrixCell).not.toHaveProperty(
+    "stepTimeoutCapMs",
+  );
+
+  const capped = await proposedFixture();
+  vi.spyOn(capped.app, "preflight").mockResolvedValue();
+  const original = capped.app.runs.get(capped.failed.id);
+  const frozen = {
+    ...original,
+    matrixCell: {
+      ...original.matrixCell,
+      limits: { ...(original.matrixCell.limits as object), stepTimeoutMs: 500 },
+      stepTimeoutCapMs: 500,
+    },
+  };
+  vi.spyOn(capped.app.runs, "get").mockImplementation((id) =>
+    id === original.id
+      ? frozen
+      : capped.app.context.entities.get("Run", capped.app.context.workspaceId, id)!,
+  );
+  const verified = await capped.app.healing.approve(capped.proposal.id, 1);
+  expect(
+    capped.app.context.entities.get(
+      "Run",
+      capped.app.context.workspaceId,
+      String(verified.verificationRunId),
+    )!.matrixCell,
+  ).toMatchObject({ stepTimeoutCapMs: 500, limits: { stepTimeoutMs: 500, maxAttempts: 1 } });
 });
 it("approval ignores a project environment section the failed Run never used", async () => {
   const f = await proposedFixture();

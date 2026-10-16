@@ -5,7 +5,7 @@ import {
   type Run,
   type StepResult,
 } from "@testmaster/contracts";
-import { canonicalJson, semanticHash } from "@testmaster/domain";
+import { canonicalJson, materializePlanDefaults, semanticHash } from "@testmaster/domain";
 import { EntityRepository, PersistenceDatabase } from "@testmaster/persistence";
 import { type LocatorEvidence, locatorFingerprint } from "@testmaster/planner";
 import { afterEach, expect, it, vi } from "vitest";
@@ -34,6 +34,8 @@ async function fixture(
     source?: boolean;
     unbound?: boolean;
     plan?: ExecutablePlan;
+    /** Plan of a parent revision of the frozen one (set: the frozen revision is its child). */
+    parentPlan?: ExecutablePlan;
     /** The frozen revision is imported code: no plan, a Playwright runner. */
     code?: boolean;
     /** Name of an auth profile bound to the Run's environment revision. */
@@ -116,6 +118,34 @@ async function fixture(
   if (options.code) revision.dto.runnerKind = "playwright";
   revision.dto.contentHash = semanticHash(plan);
   revision.row.content_hash = revision.dto.contentHash as string;
+  // A parent revision (ordinal 1) of the frozen one, inserted with it: revisions are immutable, so
+  // the link cannot be added afterwards.
+  const parentRevisionId = "rev_00000000-0000-4000-8000-0000000000a1";
+  const parentRevision = options.parentPlan
+    ? {
+        ...revision,
+        dto: {
+          ...revision.dto,
+          id: parentRevisionId,
+          ordinal: 1,
+          parentId: null,
+          plan: options.parentPlan,
+          contentHash: semanticHash(options.parentPlan),
+        },
+        row: {
+          ...revision.row,
+          id: parentRevisionId,
+          ordinal: 1,
+          parent_id: null,
+          content_hash: semanticHash(options.parentPlan),
+        },
+      }
+    : null;
+  if (parentRevision) {
+    Object.assign(revision.dto, { ordinal: 2, parentId: parentRevisionId });
+    Object.assign(revision.row, { ordinal: 2, parent_id: parentRevisionId });
+    parentRevision.row.data_json = canonicalJson(parentRevision.dto);
+  }
   revision.row.data_json = canonicalJson(revision.dto);
   const runFixture = get("Run");
   const terminal = options.outcome ?? (options.passed ? "passed" : "failed");
@@ -169,6 +199,10 @@ async function fixture(
           new Date().toISOString(),
           "{}",
         );
+      if (kind === "TestRevision" && parentRevision) {
+        const parentInsert = fixtureInsert(parentRevision);
+        db.run(parentInsert.sql, ...parentInsert.values);
+      }
       const item = get(kind);
       const insert = fixtureInsert(item);
       db.run(insert.sql, ...insert.values);
@@ -2034,6 +2068,99 @@ it("manual-only advice with a passing baseline that matches no control says so i
   expect(healing?.reason).toContain("Passing runs of this test revision exist");
   expect(healing?.reason).not.toContain("No passing run");
   expect(healing?.reason).toContain("A healing proposal can still be requested");
+});
+
+function clickPlan(name: string, stepId = "price"): ExecutablePlan {
+  return {
+    ...persistencePlan,
+    type: "frontend",
+    runner: "playwright",
+    steps: [
+      {
+        id: stepId,
+        description: `Click ${name}.`,
+        kind: "action",
+        operation: "click",
+        input: { locator: { by: "role", role: "button", name, exact: true } },
+      },
+      {
+        id: "landed",
+        kind: "assertion",
+        operation: "assert",
+        required: true,
+        description: "Lands on the dashboard",
+        input: { pageAlias: "main" },
+        expectation: { predicate: "urlEquals", value: { literal: "/dashboard" } },
+      },
+    ],
+  };
+}
+/** A failed click of a child revision whose parent revision passed two runs in this environment. */
+async function childOfPassingParentFixture(parentPlan: ExecutablePlan) {
+  const f = await fixture({
+    plan: clickPlan("Log in"),
+    parentPlan,
+    step: { reasonCode: "assertion_timeout", observed: null, expected: null },
+  });
+  await attachLocatorEvidence(f, 2);
+  for (const suffix of ["81", "82"])
+    f.ctx.entities.insert("Run", {
+      ...f.run,
+      workspaceId: f.ctx.workspaceId,
+      id: `run_00000000-0000-4000-8000-0000000000${suffix}`,
+      createdAt: `2026-10-02T00:00:0${suffix.slice(1)}.000Z`,
+      revisionId: "rev_00000000-0000-4000-8000-0000000000a1",
+      outcome: "passed",
+      status: "passed",
+      gate: "passed",
+    });
+  return f;
+}
+
+it("a failed step changed from a parent revision that passed here is attributed to the test change", async () => {
+  // The parent spells out the plan defaults (required, timeoutMs) the child leaves implicit; only the locator differs.
+  const f = await childOfPassingParentFixture(materializePlanDefaults(clickPlan("Sign in")));
+  const analysis = await f.service.analyze(f.run.id);
+  expect(analysis).toMatchObject({ failureKind: "test_fragility", recommendedAction: "fix_test" });
+  const diagnosis = analysis.diagnosis!;
+  expect(diagnosis.conclusion.status).toBe("cause_partially_supported");
+  expect(diagnosis.conclusion.text).toContain("Step price was changed in this revision");
+  expect(diagnosis.conclusion.text).toContain("rev_00000000-0000-4000-8000-0000000000a1");
+  expect(diagnosis.conclusion.text).toContain("(changed: input.locator)");
+  expect(diagnosis.conclusion.text).toContain("passed 2 runs");
+  expect(diagnosis.conclusion.text).toContain("not evidence of a product change");
+  expect(diagnosis.nextSteps[0]?.text).toContain("save a corrected revision");
+  expect(diagnosis.nextSteps[0]?.text).toContain("CLI: test revision create");
+  expect(diagnosis.healing.advice).toBe("manual_review_only");
+  // Evidence references stay bound to the analyzed Run; the parent's runs are named in the text.
+  expect(
+    analysis.hypotheses[0]?.supports.every(
+      (ref) => ref.runId === undefined || ref.runId === f.run.id,
+    ),
+  ).toBe(true);
+  expect(analysis.hypotheses[0]?.supports.length).toBeGreaterThan(0);
+});
+
+it("a failed step the parent revision does not have counts as changed", async () => {
+  const f = await childOfPassingParentFixture(clickPlan("Log in", "other"));
+  const diagnosis = (await f.service.analyze(f.run.id)).diagnosis!;
+  expect(diagnosis.conclusion.text).toContain("the parent has no step with this id");
+});
+
+it("a failed step identical to the passing parent revision's keeps the unknown cause and cites the parent only in the healing reason", async () => {
+  // Spelled-out defaults are not a change.
+  const f = await childOfPassingParentFixture(materializePlanDefaults(clickPlan("Log in")));
+  const analysis = await f.service.analyze(f.run.id);
+  expect(analysis.failureKind).toBe("unknown");
+  expect(analysis.diagnosis?.conclusion.status).toBe("cause_unknown");
+  expect(analysis.diagnosis?.conclusion.text).not.toContain("parent revision");
+  expect(analysis.diagnosis?.nextSteps[0]?.text).toContain("Inspect locator candidates");
+  const healing = analysis.diagnosis?.healing;
+  expect(healing?.advice).toBe("manual_review_only");
+  expect(healing?.reason).toContain("No passing run of this test revision exists");
+  expect(healing?.reason).toContain(
+    "Its parent revision rev_00000000-0000-4000-8000-0000000000a1 passed 2 runs",
+  );
 });
 
 it("a click that timed out on a locator matching nothing reports the locator and the visible candidates, not a null value", async () => {

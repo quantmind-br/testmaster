@@ -58,7 +58,8 @@ export function runComparability(
   );
   if (
     configs[0] !== configs[1] ||
-    semanticHash(leftCell.limits ?? null) !== semanticHash(rightCell.limits ?? null)
+    semanticHash([leftCell.limits ?? null, leftCell.stepTimeoutCapMs ?? null]) !==
+      semanticHash([rightCell.limits ?? null, rightCell.stepTimeoutCapMs ?? null])
   )
     reasons.push("execution-config-changed");
   if (!l || !r) reasons.push("admission-provenance-unavailable");

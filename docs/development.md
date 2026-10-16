@@ -601,7 +601,11 @@ computes when none exists) says `healing.advice: "not_indicated"` is refused wit
 `PRECONDITION_FAILED`, `details.reasonCode: "healing_not_indicated"`, `analysisReason` and
 `nextStep`; the healing request is not spent, so a later `propose` after a new analysis can still
 run, and there is no force option. `test run --heal propose` reports that refusal under
-`healing.refused` next to the finished Run instead of failing the command. The healing prompt carries the
+`healing.refused` next to the finished Run instead of failing the command. A Run of a revision
+that is not the test's active revision is refused the same way (before any job, reservation or model call) with
+`details.reason: "revision_not_active"`, `revisionId`, `activeRevisionId` and a `nextAction`;
+an active revision that changes while the model call runs fails with `REVISION_CONFLICT`,
+`details.reason: "active_revision_changed"`. The healing prompt carries the
 sanitized plan, factual statements cited by `E` handles, locator evidence only for steps that
 did not pass (candidate lists bounded with their original count and truncation flag) and, per
 step, the exact `allowedReplacements` derived from the same contract `applyHealingPatch` admits:
