@@ -600,7 +600,16 @@ const supplemental = {
     projectId: P.id("prj"),
     config: Ops.ProjectConfig,
     preflight: Type.Array(P.Obj({ check: P.Name, passed: Type.Boolean() })),
-    nextActions: names,
+    /** The environment that targets the given origin: found, or created because the project had none. */
+    environment: Type.Optional(
+      P.Obj({
+        id: P.id("env"),
+        name: P.Name,
+        version: P.Version,
+        created: Type.Boolean(),
+      }),
+    ),
+    nextActions: Type.Array(P.Description),
   }),
   RequirementSnapshot: P.Obj({
     requirements: Type.Array(Entities.entities.Requirement),

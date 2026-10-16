@@ -32,12 +32,15 @@ import { estimateDuration, flattenSteps, planSimilarity } from "../plan-analysis
 import { stepIdAt } from "../plan-validation.js";
 import type { ModelService } from "./model.js";
 import {
+  type ConflictDecision,
   type RequirementSnapshot,
   type RequirementsService,
+  refuseConflicted,
   refuseRejected,
   requirementContentHash,
   requirementContentHashes,
   requirementRejection,
+  supersedingConflict,
 } from "./requirements.js";
 import { applyServerBasePath, unresolvedSchemaPointers } from "./source-documents.js";
 
@@ -264,10 +267,13 @@ export class ProposalsService {
         "sourceSnapshotId must be the current requirement snapshot fingerprint returned by testmaster_normalize_requirements and readable at testmaster://requirements/{projectId}; the supplied value does not match (the snapshot changed since it was read, or the value is not a fingerprint)",
         { reasonCode: "requirement_snapshot_mismatch" },
       );
-    // Without an explicit selection every requirement that was not rejected is planned; an
-    // explicitly selected rejected requirement is refused by requireApproved below.
+    // Without an explicit selection every requirement still in scope is planned: rejected ones and
+    // the ones a conflict decision superseded are left out. An explicit selection of either is
+    // refused by requireApproved below, like a requirement whose conflict is still undecided.
     const requirements = snapshot.requirements.filter((item) =>
-      input.requirementIds ? input.requirementIds.includes(item.id) : !requirementRejection(item),
+      input.requirementIds
+        ? input.requirementIds.includes(item.id)
+        : !requirementRejection(item) && !supersedingConflict(item.id, snapshot.conflicts),
     );
     if (
       !requirements.length ||
@@ -282,7 +288,7 @@ export class ProposalsService {
     const allowed = type === "auto" ? (["backend", "frontend"] as const) : [type];
     const typeInstruction =
       type === "auto"
-        ? 'Choose each plan\'s type from the requirement: "backend" with runner "http" when it is observable through HTTP API status, headers or JSON; "frontend" with runner "playwright" when it is observable only in the browser UI.'
+        ? 'Choose each plan\'s type from the requirement: "backend" with runner "http" when it is observable through HTTP API status, headers or JSON; "frontend" with runner "playwright" when it is observable only in the browser UI. Where a user visiting a web page ends up (a redirect to a login page, a return_to parameter) is a browser outcome: single-page applications redirect in the browser after a 200 HTML answer, so assert the final URL in a frontend plan, and assert an HTTP 3xx status and Location header only when a source states the server answers that way.'
         : `Every plan must have type "${type}" and runner "${planRunners[type]}".${type === "integration" ? ' Build an HTTP workflow with at least two request steps: capture a value from an earlier response and use its "stepId.captureName" variableRef in a later request pathSegments, query, headers or body. Include a required deterministic business assertion referencing that later request through responseStepId. A single request, unused capture, or assertion only over the initial response is not an integration workflow.' : ""}`;
     const secrets = this.offeredSecrets();
     const authProfiles = this.offeredAuthProfiles(input.projectId);
@@ -422,7 +428,7 @@ export class ProposalsService {
           // Names and kinds only: each environment binds one of them, and the runner applies its session.
           ...(authProfiles.length ? { authProfiles } : {}),
         },
-        instructions: `Return exactly one independent executable proposal per supplied requirement that an HTTP or browser plan can observe, not an intent. ${declineInstruction} ${typeInstruction} Copy requirement IDs exactly and cite only the evidenceId values supplied with that requirement. Use deterministic business assertions deriving expected values only from approved requirements. Include an assertion that would fail if the required feature were broken; body/html visibility and broad all-status checks are trivial and rejected, and an HTTP 200 status check alone is trivial too: add a body, schema or header assertion. HTTP paths are relative pathSegments of literal values, written as the source document's paths (a declared server path prefix such as /v1 is added to the request automatically). A jsonSchema assertion's pointer must be a non-empty JSON pointer into the cited source document that reaches the response schema: either inside the operation, for example /paths/~1items/get/responses/200/content/application~1json/schema, or a document-level schema such as /components/schemas/Item; an empty pointer is rejected. When a secrets entry fits the target API, send its credential as a header whose value is {"secretRef": <entry id>} (for example authorization) on every request unless the source explicitly declares the operation public (security: []): specifications often omit security, and a request without a needed credential only proves the 401. Use only secretRef ids from the supplied secrets and never invent secret values. ${AUTH_PROFILE_INSTRUCTION} ${JSON_BODY_SET_INSTRUCTION} Frontend locators use testId/role/label. ${BROWSER_POSTCONDITION_INSTRUCTION} Do not invent absolute destinations or secret values.`,
+        instructions: `Return exactly one independent executable proposal per supplied requirement that an HTTP or browser plan can observe, not an intent. ${declineInstruction} ${typeInstruction} Copy requirement IDs exactly and cite only the evidenceId values supplied with that requirement. Use deterministic business assertions deriving expected values only from approved requirements. Include an assertion that would fail if the required feature were broken; body/html visibility and broad all-status checks are trivial and rejected, and an HTTP 200 status check alone is trivial too: add a body, schema or header assertion. HTTP paths are relative pathSegments of literal values, written as the source document's paths (a declared server path prefix such as /v1 is added to the request automatically). A jsonSchema assertion's pointer must be a non-empty JSON pointer into the cited source document that reaches the response schema: either inside the operation, for example /paths/~1items/get/responses/200/content/application~1json/schema, or a document-level schema such as /components/schemas/Item; an empty pointer is rejected. When a secrets entry fits the target API, send its credential as a header whose value is {"secretRef": <entry id>} (for example authorization) on every request unless the source explicitly declares the operation public (security: []): specifications often omit security, and a request without a needed credential only proves the 401. Use only secretRef ids from the supplied secrets and never invent secret values. Secrets entries are valid credentials: a negative case (wrong password, unknown user, invalid or missing token) sends literal values that are visibly fake, such as "not-a-real-password", and never a secrets entry, so a refusal proves the check and no real credential is spent on it. ${AUTH_PROFILE_INSTRUCTION} ${JSON_BODY_SET_INSTRUCTION} Frontend locators use testId/role/label. ${BROWSER_POSTCONDITION_INSTRUCTION} Do not invent absolute destinations or secret values.`,
         sourceRevisionIds: [...new Set(catalog.refs.map((ref) => ref.sourceRevisionId))],
         dataClasses: ["requirements"],
         ...(input.provider ? { provider: input.provider } : {}),
@@ -505,29 +511,19 @@ export class ProposalsService {
     }
     return authoringTransaction(this.ctx, commit);
   }
-  private requireApproved(
-    requirement: Requirement,
-    conflicts: { requirementIds: string[]; resolution: { selectedRequirementId: string } | null }[],
-  ): void {
+  private requireApproved(requirement: Requirement, conflicts: readonly ConflictDecision[]): void {
+    // Rejected and superseded requirements are refused first: approving them cannot help.
     refuseRejected(requirement, "planned");
+    refuseConflicted(requirement.id, conflicts, "planned");
     if (!requirement.approval)
       throw new ContractError("PRECONDITION_FAILED", "Requirements need explicit approval", {
         requirementId: requirement.id,
       });
     const approval = requireEntity(this.ctx, "Approval", requirement.approval);
     if (approval.revokedAt || Date.parse(String(approval.expiresAt)) <= Date.now())
-      throw new ContractError("PRECONDITION_FAILED", "Requirement approval is no longer valid");
-    if (
-      conflicts.some(
-        (conflict) =>
-          conflict.requirementIds.includes(requirement.id) &&
-          conflict.resolution?.selectedRequirementId !== requirement.id,
-      )
-    )
-      throw new ContractError(
-        "PRECONDITION_FAILED",
-        "Requirement is unresolved or superseded by conflict adjudication",
-      );
+      throw new ContractError("PRECONDITION_FAILED", "Requirement approval is no longer valid", {
+        requirementId: requirement.id,
+      });
   }
   /**
    * The requirements a proposal cites that differ from the ones it was generated from: changed, or

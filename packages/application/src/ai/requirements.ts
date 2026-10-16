@@ -60,6 +60,55 @@ export function refuseRejected(value: Requirement, action: string): void {
       { reasonCode: "requirement_rejected", requirementId: value.id },
     );
 }
+/** The part of a requirement conflict that decides whether its requirements may be approved and planned. */
+export interface ConflictDecision {
+  id: string;
+  requirementIds: string[];
+  resolution: { selectedRequirementId: string } | null;
+}
+/** The decided conflict that selected another requirement over this one: the requirement is superseded. */
+export function supersedingConflict(
+  requirementId: string,
+  conflicts: readonly ConflictDecision[],
+): ConflictDecision | undefined {
+  return conflicts.find(
+    (conflict) =>
+      conflict.requirementIds.includes(requirementId) &&
+      conflict.resolution !== null &&
+      conflict.resolution.selectedRequirementId !== requirementId,
+  );
+}
+/**
+ * Refuses a decision on a requirement whose conflict is not decided yet, or that a decided conflict
+ * superseded: the requirement a conflict decision did not select is never approved nor planned.
+ */
+export function refuseConflicted(
+  requirementId: string,
+  conflicts: readonly ConflictDecision[],
+  action: string,
+): void {
+  const undecided = conflicts.find(
+    (conflict) => conflict.requirementIds.includes(requirementId) && !conflict.resolution,
+  );
+  if (undecided)
+    throw new ContractError(
+      "PRECONDITION_FAILED",
+      `Requirement ${requirementId} is in conflict ${undecided.id}, which is not decided yet: adjudicate it before the requirement can be ${action}`,
+      { reasonCode: "requirement_conflict_unresolved", requirementId, conflictId: undecided.id },
+    );
+  const superseding = supersedingConflict(requirementId, conflicts);
+  if (superseding)
+    throw new ContractError(
+      "PRECONDITION_FAILED",
+      `Requirement ${requirementId} was superseded when conflict ${superseding.id} was decided for ${superseding.resolution?.selectedRequirementId}; it cannot be ${action}`,
+      {
+        reasonCode: "requirement_superseded",
+        requirementId,
+        conflictId: superseding.id,
+        selectedRequirementId: superseding.resolution?.selectedRequirementId,
+      },
+    );
+}
 /** Stable identity of a requirement across normalizations: the model-assigned key, else its ID. */
 export function requirementKey(value: Requirement): string {
   return String(value.extensions?.["testmaster:key"] ?? value.id);
@@ -385,15 +434,7 @@ export class RequirementsService {
       refuseRejected(current, "approved");
       const projectId = this.project(current);
       const snapshot = this.snapshot(projectId);
-      if (
-        snapshot.conflicts.some(
-          (conflict) => conflict.requirementIds.includes(id) && !conflict.resolution,
-        )
-      )
-        throw new ContractError(
-          "PRECONDITION_FAILED",
-          "Adjudicate requirement conflicts before approval",
-        );
+      refuseConflicted(id, snapshot.conflicts, "approved");
       const environment = allEntities(this.ctx, "Environment").find(
         (item) => item.projectId === projectId,
       );

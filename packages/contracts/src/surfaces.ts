@@ -882,7 +882,9 @@ export const mcpTools = {
       suiteId: Type.Optional(d(id("sui"), "List to run (replay only) instead of testIds")),
       /** Required with testIds; a list (suiteId) carries an explicit environment per project. */
       environmentId: Type.Optional(d(id("env"), "Environment for testIds; lists carry their own")),
-      mode: d(Mode, "replay (deterministic) or agent; lists run in replay only"),
+      mode: Type.Optional(
+        d(Mode, "replay (deterministic, default) or agent; lists run in replay only"),
+      ),
       /** Lists only: exclusion keys the caller accepts so the dispatchable subset runs. */
       confirmedExclusions: Type.Optional(
         d(
@@ -1180,7 +1182,10 @@ export const mcpTools = {
           Type.Array(
             Obj({
               conflictId: d(Name, "Conflict id from testmaster_normalize_requirements"),
-              selectedRequirementId: d(id("req"), "Requirement the conflict resolves to"),
+              selectedRequirementId: d(
+                id("req"),
+                "Requirement the conflict resolves to; the conflict's other requirements are superseded and never planned",
+              ),
               reason: d(Type.String({ minLength: 1, maxLength: 2000 }), "Why this one"),
             }),
             { minItems: 1, maxItems: 100 },

@@ -204,6 +204,86 @@ it("bootstrap binds each root to one project and refuses clashes and bad targets
   expect(f.app.projects.list()).toHaveLength(4);
 });
 
+it("bootstrap reports an environment aimed at another origin with the exact update call and never retargets it", async () => {
+  const f = await fixture();
+  const target = "http://127.0.0.1:20311";
+  const bootstrap = (url: string) =>
+    f.call("testmaster_bootstrap", {
+      projectRoot: f.cwd,
+      target: url,
+      scope: ["codebase"],
+      mode: "replay",
+    });
+  const environment = f.app.environments.get(f.init.environmentId);
+  const moved = await bootstrap(target);
+  expect(moved.isError).toBe(false);
+  expect(moved.body.preflight).toContainEqual({
+    check: "environment_targets_target",
+    passed: false,
+  });
+  expect(moved.body).not.toHaveProperty("environment");
+  expect(JSON.stringify(moved.body.nextActions)).toContain(
+    `testmaster_update_environment {environmentId: ${environment.id}, expectedVersion: ${environment.version}, baseUrl: ${target}}`,
+  );
+  const revisions = f.app.environments.revisions(environment.id);
+  expect(revisions).toHaveLength(1);
+  expect(revisions[0]?.targetOrigins).toEqual(["http://127.0.0.1:3000"]);
+  expect(f.app.environments.list(f.init.projectId)).toHaveLength(1);
+  // Control: the origin the environment does target passes and names that environment.
+  const same = await bootstrap("http://127.0.0.1:3000");
+  expect(same.body.preflight).toContainEqual({
+    check: "environment_targets_target",
+    passed: true,
+  });
+  expect(same.body.environment).toMatchObject({ id: environment.id, created: false });
+});
+
+it("bootstrap gives a project without an environment one for the target, once", async () => {
+  const f = await fixture();
+  const target = "http://127.0.0.1:20311";
+  await mkdir(join(f.cwd, "bare"));
+  const bootstrap = () =>
+    f.call("testmaster_bootstrap", {
+      projectRoot: join(f.cwd, "bare"),
+      target,
+      scope: ["codebase"],
+      mode: "replay",
+    });
+  const first = await bootstrap();
+  expect(first.isError).toBe(false);
+  const projectId = String(first.body.projectId);
+  const [created] = f.app.environments.list(projectId);
+  expect(created).toBeDefined();
+  expect(first.body.environment).toMatchObject({ id: created?.id, name: "local", created: true });
+  expect(first.body.preflight).toContainEqual({
+    check: "environment_targets_target",
+    passed: true,
+  });
+  expect(f.app.environments.revisions(String(created?.id))[0]?.targetOrigins).toEqual([target]);
+  expect(f.app.projects.get(projectId).defaultEnvironmentId).toBe(created?.id);
+  const second = await bootstrap();
+  expect(second.body.environment).toMatchObject({ id: created?.id, created: false });
+  expect(f.app.environments.list(projectId)).toHaveLength(1);
+});
+
+it("an unknown resource names the URI and the template that reads what was meant", async () => {
+  const f = await fixture();
+  const guessed =
+    "testmaster://tests/tst_019bf434-20c0-7000-8000-000000000001/revisions/rev_019bf434-20c0-7000-8000-000000000001";
+  await expect(f.client.readResource({ uri: guessed })).rejects.toMatchObject({
+    code: -32002,
+    message: expect.stringContaining(guessed),
+  });
+  await expect(f.client.readResource({ uri: guessed })).rejects.toMatchObject({
+    message: expect.stringContaining("testmaster://revisions/{id}"),
+  });
+  // The echoed URI is bounded.
+  const long = `testmaster://nowhere/${"x".repeat(5000)}`;
+  const error = await f.client.readResource({ uri: long }).catch((caught: Error) => caught);
+  expect(error).toMatchObject({ code: -32002 });
+  expect((error as Error).message.length).toBeLessThan(800);
+});
+
 it("report resources are text pages with the paging in _meta", async () => {
   const f = await fixture();
   const test = f.app.tests.create({ projectId: f.init.projectId, plan: scaffoldPlan("backend") });

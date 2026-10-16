@@ -571,7 +571,7 @@ it("healing refuses passed runs before creating a healing job", async () => {
   const f = await fixture("passed", false);
   await expect(f.app.healing.propose(f.verification.id, {})).rejects.toMatchObject({
     code: "PRECONDITION_FAILED",
-    details: { reason: "not_failed" },
+    details: { reason: "not_failed", outcome: "passed" },
   });
   expect(f.app.database.all("SELECT id FROM job_leases WHERE queue='healing'")).toHaveLength(0);
 });

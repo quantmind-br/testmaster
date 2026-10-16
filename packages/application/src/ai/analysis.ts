@@ -532,6 +532,29 @@ function terminalProcessEvidence(value: unknown): value is TerminalProcessEviden
   );
 }
 
+/** The runner's own record of an evidence-protocol failure (`logs/protocol.json`). */
+type RunnerProtocolEvidence = { kind: "protocol"; reasonCode: string; error: string };
+function runnerProtocolEvidence(value: unknown): value is RunnerProtocolEvidence {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "kind" in value &&
+    value.kind === "protocol" &&
+    "reasonCode" in value &&
+    typeof value.reasonCode === "string" &&
+    "error" in value &&
+    typeof value.error === "string"
+  );
+}
+/** The protocol failure of an attempt, when its artifact was collected. */
+function runnerProtocolFailure(
+  evidence: readonly Evidence[],
+): (Evidence & { value: RunnerProtocolEvidence }) | undefined {
+  return evidence.find((item): item is Evidence & { value: RunnerProtocolEvidence } =>
+    runnerProtocolEvidence(item.value),
+  );
+}
+
 /** Code-composed description of a process that hit its time limit; no external text enters it. */
 function terminalObserved(process: TerminalProcessEvidence): string {
   const parts = [
@@ -1415,6 +1438,36 @@ export class AnalysisService {
             );
           }
         }
+        if (
+          entry.kind === "protocol" &&
+          entry.relativePath === "logs/protocol.json" &&
+          entry.sizeBytes <= 262144
+        ) {
+          const page = await this.artifacts.read(run.id, entry.relativePath, {
+            attemptId: bundle.manifest.attemptId,
+            maxBytes: 262144,
+          });
+          try {
+            // Only the reason code and a bounded one-line error are kept; the executor wrote the
+            // file and already scrubbed it, and the error is scrubbed again before any prose.
+            const record: unknown = JSON.parse(Buffer.from(page.bytes).toString("utf8"));
+            const { reasonCode, error } =
+              record && typeof record === "object" ? (record as Record<string, unknown>) : {};
+            if (typeof reasonCode === "string" && /^[a-z][a-z0-9_]{0,63}$/u.test(reasonCode))
+              value = {
+                kind: "protocol",
+                reasonCode,
+                error:
+                  scrubEvidenceText(
+                    typeof error === "string" ? error.replace(/\s+/gu, " ").trim() : "",
+                    environmentSecretValues(),
+                  ).text.slice(0, 200) || "no detail recorded",
+              } satisfies RunnerProtocolEvidence;
+            else limitations.push(`Runner protocol record ${entry.artifactId} is unavailable.`);
+          } catch {
+            limitations.push(`Malformed runner protocol record ${entry.artifactId} was excluded.`);
+          }
+        }
         evidence.push({
           ref,
           value,
@@ -1609,6 +1662,10 @@ export class AnalysisService {
     const location = localized?.step?.planStepId ?? null;
     const redirected =
       failureKind === "test_fragility" ? followedRedirects(collected.evidence)[0] : undefined;
+    // The rules choose this cause only for an otherwise unexplained failure, so any other kind
+    // means a cause the protocol failure did not outrank.
+    const protocolFailure =
+      failureKind === "unknown" ? runnerProtocolFailure(collected.evidence) : undefined;
     const alternatives: Diagnosis["alternatives"] = [];
     const nextSteps: Diagnosis["nextSteps"] = [];
     let conclusion: Diagnosis["conclusion"] = {
@@ -1660,6 +1717,17 @@ export class AnalysisService {
           denied.length ? denied.map((item) => item.ref) : supports,
         );
       healing.reason = "Changing the test would bypass the refused precondition.";
+    } else if (protocolFailure) {
+      conclusion = {
+        status: "cause_supported",
+        text: `The runner's evidence protocol failed (${protocolFailure.value.error}), so the attempt's step results were discarded and the test was not judged; this is not a product or assertion failure.`,
+      };
+      next(
+        "Rerun the unchanged test; if the same protocol error repeats, it is a TestMaster defect: report it with logs/protocol.json.",
+        [protocolFailure.ref],
+      );
+      healing.reason =
+        "The test was not judged: no assertion or locator failed, so there is nothing to repair.";
     } else if (statusRejection) {
       const { meaning, status, expected, target, item, http, request } = statusRejection;
       conclusion = {
@@ -1842,6 +1910,7 @@ export class AnalysisService {
     let diagnosedRejection: RejectedStatus | undefined;
     const reasons = (codes: string[]) =>
       evidence.filter((item) => item.reason && codes.includes(item.reason));
+    const protocolFailure = run.outcome === "passed" ? undefined : runnerProtocolFailure(evidence);
     if (run.outcome !== "passed") {
       const security = reasons([
         "security_precondition_failed",
@@ -1951,7 +2020,8 @@ export class AnalysisService {
         !shapeMismatch &&
         !successfulStatusMismatch &&
         !statusRejection &&
-        !redirectFollowed
+        !redirectFollowed &&
+        !protocolFailure
       ) {
         const failedActions = evidence.filter(
           (item) =>
@@ -2022,6 +2092,11 @@ export class AnalysisService {
         hypothesis =
           "Observed credentials, worker, preflight or network conditions prevented reliable execution.";
         supports = [...environment, ...network].map((item) => item.ref);
+      } else if (protocolFailure) {
+        supports = [protocolFailure.ref];
+        collected.limitations.push(
+          "The runner's evidence protocol failed and its step results were discarded; no product, contract or locator cause can be derived from this Run.",
+        );
       } else if (schema) {
         failureKind = "contract_violation";
         recommendedAction = "review_contract";
@@ -2095,6 +2170,14 @@ export class AnalysisService {
           ...artifactAvailabilityFacts(evidence),
           ...assertionMismatchFacts(evidence, secrets, run.outcome !== "passed"),
           ...denialFacts.facts,
+          ...(protocolFailure
+            ? [
+                {
+                  text: `The runner's evidence protocol failed (${protocolFailure.value.error}); the attempt's step results were discarded and the test was not judged.`,
+                  evidenceRefs: [protocolFailure.ref],
+                },
+              ]
+            : []),
         ],
         hypotheses: hypothesis
           ? [
@@ -2353,6 +2436,12 @@ export class AnalysisService {
               ? { redirectStatuses: record.redirects.map((hop) => hop.status) }
               : {}),
           });
+        } else if (runnerProtocolEvidence(record)) {
+          Object.assign(entry, {
+            kind: "protocol",
+            reasonCode: record.reasonCode,
+            error: boundedEvidence(record.error, secrets),
+          });
         } else if (terminalProcessEvidence(record)) {
           Object.assign(entry, {
             kind: "terminal",
@@ -2565,8 +2654,18 @@ export class AnalysisService {
     // Enrichment may refine or contradict-check a rules-derived cause, but an abstention must not
     // erase a cause the frozen rules established from observed evidence.
     const modelAbstained = output.failureKind === "unknown" && factual.failureKind !== "unknown";
-    const keepFactual = modelAbstained || causeUnsupported;
-    const recorded = keepFactual ? [...factual.hypotheses, ...hypotheses] : hypotheses;
+    // A protocol failure means the test was not judged: the rules cause is code-owned, so no
+    // model cause or hypothesis may turn it into a product, contract or locator claim.
+    const causeFixed =
+      run.outcome !== "passed" &&
+      factual.failureKind === "unknown" &&
+      runnerProtocolFailure(collected.evidence) !== undefined;
+    const keepFactual = modelAbstained || causeUnsupported || causeFixed;
+    const recorded = causeFixed
+      ? factual.hypotheses
+      : keepFactual
+        ? [...factual.hypotheses, ...hypotheses]
+        : hypotheses;
     const {
       id: _id,
       workspaceId: _ws,
@@ -2598,7 +2697,8 @@ export class AnalysisService {
           layered.healing.advice === "proposal_possible") &&
         (step.action !== "inspect_locator_candidates" ||
           layered.healing.advice !== "proposal_possible") &&
-        (step.action === "collect_more_evidence" || !rulesActionable || rulesAdvise(step.action));
+        (step.action === "collect_more_evidence" ||
+          (!causeFixed && (!rulesActionable || rulesAdvise(step.action))));
       if (!fits) droppedSteps++;
       else if (
         ![...layered.nextSteps, ...modelSteps].some((had) => had.text.startsWith(entry.prefix))
@@ -2616,7 +2716,7 @@ export class AnalysisService {
     return this.persist(
       {
         ...fields,
-        ...(fixTarget && !causeUnsupported ? { fixTarget } : {}),
+        ...(fixTarget && !causeUnsupported && !causeFixed ? { fixTarget } : {}),
         source: "model",
         parentId: factual.id,
         modelCallId: result.modelCallId,
@@ -2643,6 +2743,11 @@ export class AnalysisService {
             ...(causeUnsupported
               ? [
                   "A model cause without a hypothesis supported by execution observation was not recorded.",
+                ]
+              : []),
+            ...(causeFixed && (output.failureKind !== "unknown" || output.hypotheses.length)
+              ? [
+                  "The runner's evidence protocol failed and the test was not judged; model causes were not recorded.",
                 ]
               : []),
             ...(droppedSteps

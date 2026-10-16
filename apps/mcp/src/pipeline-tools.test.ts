@@ -329,7 +329,8 @@ it("review_requirements decides at the snapshot version and returns the fingerpr
     unresolvedConflictIds: ["conflict-1"],
     pendingApprovalIds: [seeded.first, seeded.second],
   });
-  // generate_plan refuses the requirement that is not approved yet.
+  // generate_plan refuses the requirement whose conflict is not decided yet, naming the conflict
+  // (approving it is blocked until then too).
   const premature = await f.call("testmaster_generate_plan", {
     ...base,
     sourceSnapshotId: "seed-fingerprint",
@@ -337,7 +338,11 @@ it("review_requirements decides at the snapshot version and returns the fingerpr
     requirementIds: [seeded.first],
   });
   expect(premature.error?.code).toBe("PRECONDITION_FAILED");
-  expect(premature.error?.message).toContain("explicit approval");
+  expect(premature.error?.details).toMatchObject({
+    reasonCode: "requirement_conflict_unresolved",
+    requirementId: seeded.first,
+    conflictId: "conflict-1",
+  });
 
   const reviewed = await f.call("testmaster_review_requirements", {
     ...base,

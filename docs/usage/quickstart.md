@@ -343,6 +343,14 @@ Exported projects pin their dependencies and do not call TestMaster. Imported co
 (import allowlist, no runtime installs, no disabled timeouts, no empty assertions) and only ever executes
 inside the sandbox.
 
+An exported imported or generated Playwright project runs with `npm ci && npx playwright install chromium &&
+BASE_URL=<target> npm test`: its `testmaster-fixtures/` package keeps the authored `@playwright/test` import
+working and provides the `secrets`, `profileRequest` and `profilePage` fixtures. `secrets.get("NAME")` reads
+the environment variable `SECRET_NAME`. The auth profile session of `profileRequest`/`profilePage` comes from
+`TESTMASTER_PROFILE_STORAGE_STATE` (path of a Playwright storage-state file) and, for header credentials,
+`TESTMASTER_PROFILE_HEADERS` (a JSON object such as `{"x-api-key":"..."}`); it is sent only to the `BASE_URL`
+origin. `SETUP.txt` and `export-metadata.json` (`environment`) list the variables a given project reads.
+
 An imported or generated Playwright test reads secrets only through the `secrets` fixture, for example
 `headers: { authorization: secrets.get("API_KEY") }`, with a literal name. `process.env` and every other way
 of reaching a value is refused when the code is imported. `test import` accepts the names of secrets you

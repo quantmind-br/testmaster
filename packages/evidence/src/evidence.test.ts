@@ -96,6 +96,31 @@ describe("evidence integrity boundaries", () => {
     await writeFile(join(result.bundleDir, "manifest.json"), JSON.stringify(manifest));
     await expect(verifyBundle(result.bundleDir, ids)).rejects.toThrow();
   });
+  it("reserves bundle bookkeeping names only at the attempt root", async () => {
+    const { rootDir, ids } = await fixture();
+    const stage = await new FileEvidenceStore({ rootDir }).openAttempt(ids);
+    const input = { kind: "log", mimeType: "text/plain" };
+    for (const relativePath of ["http/manifest.json", "browser/meta.json", "step/.partial"]) {
+      const writer = await stage.beginArtifact({ relativePath, ...input });
+      await writer.write(Buffer.from("{}"));
+      await writer.end();
+    }
+    const refused = ["manifest.json", "meta.json", ".partial", "http/.tm-x", ".tm-manifest"];
+    for (const relativePath of refused)
+      await expect(stage.beginArtifact({ relativePath, ...input })).rejects.toThrow(
+        "Reserved artifact path",
+      );
+    const result = await stage.commit({ redactionPolicyHash: "0".repeat(64) });
+    const bundle = await verifyBundle(result.bundleDir, {
+      ...ids,
+      manifestSha256: result.manifestSha256,
+    });
+    expect(bundle.manifest.entries.map((entry) => entry.relativePath).sort()).toEqual([
+      "browser/meta.json",
+      "http/manifest.json",
+      "step/.partial",
+    ]);
+  });
   it("withholds canary and typed quota failures, never raw fallback", async () => {
     const { rootDir, ids } = await fixture();
     const stage = await new FileEvidenceStore({

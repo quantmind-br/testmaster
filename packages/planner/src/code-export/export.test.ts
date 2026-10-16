@@ -1,4 +1,9 @@
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { parse } from "@babel/parser";
 import {
   type ExecutablePlan,
@@ -6,7 +11,7 @@ import {
   type PlanStep,
   validate,
 } from "@testmaster/contracts";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { exportCode, exportImportedCode } from "./index.js";
 
 async function fixture(name: string): Promise<ExecutablePlan> {
@@ -363,5 +368,207 @@ describe("standalone deterministic code export", () => {
     };
     for (const format of ["playwright", "pytest"] as const)
       expect(() => exportCode(plan, { format })).toThrow(/JSON body set entries/u);
+  });
+});
+
+describe("imported Playwright export runner fixtures", () => {
+  const directories: string[] = [];
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    for (const directory of directories.splice(0))
+      rmSync(directory, { recursive: true, force: true });
+  });
+  const spec = "import { test } from '@playwright/test';\ntest('x', async ({ secrets }) => {});\n";
+  const exported = (extra: { secrets?: string[]; profile?: boolean } = {}) =>
+    exportImportedCode({
+      format: "playwright",
+      entrypoint: "generated.spec.ts",
+      files: { "generated.spec.ts": spec },
+      contentHash: "a".repeat(64),
+      dependencyLock: { runtimeInstalls: false },
+      ...extra,
+    });
+  /** Lays the project out as `npm ci` would, with a recording stand-in for the stock package. */
+  function installed(files: Record<string, string>): string {
+    const root = mkdtempSync(join(tmpdir(), "tm-export-"));
+    directories.push(root);
+    for (const [path, content] of Object.entries(files)) {
+      mkdirSync(dirname(join(root, path)), { recursive: true });
+      writeFileSync(join(root, path), content);
+    }
+    const stock = join(root, "node_modules", "playwright-test-stock");
+    mkdirSync(stock, { recursive: true });
+    writeFileSync(
+      join(stock, "package.json"),
+      JSON.stringify({ name: "stock", exports: { import: "./index.mjs", require: "./index.js" } }),
+    );
+    writeFileSync(
+      join(stock, "index.js"),
+      "module.exports = { defineConfig: (config) => config, extend(fixtures) { const test = () => {}; test.fixtures = fixtures; return test; } };\n",
+    );
+    writeFileSync(join(stock, "index.mjs"), "export const defineConfig = (config) => config;\n");
+    const link = JSON.parse(files["package.json"] ?? "").devDependencies["@playwright/test"];
+    expect(link).toMatch(/^file:/u);
+    mkdirSync(join(root, "node_modules", "@playwright"), { recursive: true });
+    symlinkSync(
+      join(root, link.slice("file:".length)),
+      join(root, "node_modules", "@playwright", "test"),
+    );
+    return root;
+  }
+  type Fixture = (deps: object, use: (value: unknown) => Promise<void>) => Promise<void>;
+  /** The value a fixture of the extended `test` hands to a test (setup runs, teardown after `use`). */
+  async function provided<T>(root: string, name: string, deps: object): Promise<T> {
+    const test = createRequire(join(root, "generated.spec.ts"))("@playwright/test");
+    const fixture: Fixture = test.fixtures[name];
+    const { promise, resolve } = Promise.withResolvers<T>();
+    const done = fixture(deps, async (value) => {
+      resolve(value as T);
+    });
+    return Promise.race([promise, done.then(() => Promise.reject(new Error("no value provided")))]);
+  }
+  interface Requester {
+    get(target: string, options?: Record<string, unknown>): Promise<unknown>;
+  }
+
+  it("resolves the authored @playwright/test import to the stock package extended with the fixtures", () => {
+    const root = installed(exported().files);
+    const probe = "console.log(JSON.stringify([Object.keys(test.fixtures), typeof defineConfig]))";
+    const commonjs = execFileSync(
+      process.execPath,
+      ["-e", `const test = require('@playwright/test'); const { defineConfig } = test; ${probe}`],
+      { cwd: root, encoding: "utf8" },
+    );
+    const module = execFileSync(
+      process.execPath,
+      [
+        "--input-type=module",
+        "-e",
+        `import { test, defineConfig } from '@playwright/test'; ${probe}`,
+      ],
+      { cwd: root, encoding: "utf8" },
+    );
+    for (const output of [commonjs, module])
+      expect(JSON.parse(output)).toEqual([
+        ["secrets", "profileRequest", "profilePage"],
+        "function",
+      ]);
+  });
+  it("pins every dependency of the project and of the fixtures package in the lock", () => {
+    const { files } = exported();
+    const lock = JSON.parse(files["package-lock.json"] ?? "");
+    const manifest = JSON.parse(files["package.json"] ?? "");
+    expect(lock.packages[""].devDependencies).toEqual(manifest.devDependencies);
+    const harness = JSON.parse(files["testmaster-fixtures/package.json"] ?? "");
+    for (const [name, wanted] of Object.entries({
+      ...manifest.devDependencies,
+      ...harness.dependencies,
+    }) as [string, string][]) {
+      const entry = lock.packages[`node_modules/${name}`];
+      if (wanted.startsWith("file:")) {
+        expect(entry).toEqual({ resolved: wanted.slice("file:".length), link: true });
+        expect(lock.packages[entry.resolved]).toMatchObject({
+          name: harness.name,
+          dependencies: harness.dependencies,
+        });
+      } else if (wanted.startsWith("npm:")) {
+        expect(wanted).toBe(`npm:${entry.name}@${entry.version}`);
+        expect(entry.integrity).toMatch(/^sha512-/u);
+      } else expect(entry.version).toBe(wanted);
+    }
+  });
+  it("reads secrets.get(name) from the SECRET_<name> environment variable", async () => {
+    const root = installed(exported({ secrets: ["API_KEY"] }).files);
+    const secrets = await provided<{ get(name: unknown): string }>(root, "secrets", {});
+    vi.stubEnv("SECRET_API_KEY", "fake-secret-value");
+    expect(secrets.get("API_KEY")).toBe("fake-secret-value");
+    expect(() => secrets.get("MISSING")).toThrow(/SECRET_MISSING/u);
+    expect(() => secrets.get(7)).toThrow(/must be a string/u);
+  });
+  it("gives profileRequest the storage state of the BASE_URL origin and its header credentials only", async () => {
+    const state = {
+      cookies: [
+        { name: "sid", value: "one", domain: "app.test", path: "/" },
+        { name: "sub", value: "two", domain: ".app.test", path: "/" },
+        { name: "foreign", value: "three", domain: "other.test", path: "/" },
+      ],
+      origins: [
+        { origin: "http://app.test", localStorage: [] },
+        { origin: "http://other.test", localStorage: [] },
+      ],
+    };
+    const root = installed(exported({ profile: true }).files);
+    const stateFile = join(root, "state.json");
+    writeFileSync(stateFile, JSON.stringify(state));
+    vi.stubEnv("TESTMASTER_PROFILE_STORAGE_STATE", stateFile);
+    vi.stubEnv("TESTMASTER_PROFILE_HEADERS", JSON.stringify({ "X-Api-Key": "fake-header" }));
+    const contexts: unknown[] = [];
+    const sent: { target: string; options: Record<string, unknown> }[] = [];
+    const playwright = {
+      request: {
+        newContext: async (options: unknown) => {
+          contexts.push(options);
+          return {
+            get: async (target: string, options: Record<string, unknown>) => {
+              sent.push({ target, options });
+              return { status: () => 200 };
+            },
+            dispose: async () => {},
+          };
+        },
+      },
+    };
+    const request = await provided<Requester>(root, "profileRequest", {
+      playwright,
+      baseURL: "http://app.test",
+    });
+    expect(contexts).toEqual([
+      {
+        storageState: {
+          cookies: [state.cookies[0], state.cookies[1]],
+          origins: [state.origins[0]],
+        },
+      },
+    ]);
+    await request.get("/me");
+    expect(sent).toEqual([
+      { target: "/me", options: { headers: { "x-api-key": "fake-header" }, maxRedirects: 0 } },
+    ]);
+    await expect(request.get("http://other.test/me")).rejects.toThrow(/only sent to/u);
+    await expect(request.get("/me", { headers: { "X-API-KEY": "x" } })).rejects.toThrow(
+      /conflicts with the auth profile credential/u,
+    );
+    expect(sent).toHaveLength(1);
+  });
+  it("fails a profile fixture without a session, and profilePage without a browser session", async () => {
+    const root = installed(exported({ profile: true }).files);
+    const deps = { baseURL: "http://app.test" };
+    await expect(provided(root, "profileRequest", deps)).rejects.toThrow(
+      /TESTMASTER_PROFILE_STORAGE_STATE/u,
+    );
+    vi.stubEnv("TESTMASTER_PROFILE_HEADERS", JSON.stringify({ authorization: "Bearer fake" }));
+    await expect(provided(root, "profilePage", deps)).rejects.toThrow(
+      /only has header credentials/u,
+    );
+  });
+  it("states the environment the fixtures read and refuses source that shadows the fixtures package", () => {
+    const result = exported({ secrets: ["API_KEY"], profile: true });
+    expect(result.metadata.environment).toEqual([
+      "SECRET_API_KEY",
+      "TESTMASTER_PROFILE_STORAGE_STATE",
+      "TESTMASTER_PROFILE_HEADERS",
+    ]);
+    for (const name of result.metadata.environment ?? [])
+      expect(result.files["SETUP.txt"]).toContain(name);
+    expect(exported().metadata.environment).toBeUndefined();
+    expect(() =>
+      exportImportedCode({
+        format: "playwright",
+        entrypoint: "generated.spec.ts",
+        files: { "generated.spec.ts": spec, "testmaster-fixtures/index.js": "" },
+        contentHash: "a".repeat(64),
+        dependencyLock: {},
+      }),
+    ).toThrow(/conflicts with export project metadata/u);
   });
 });

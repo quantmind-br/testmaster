@@ -38,6 +38,8 @@ async function fixture(
     code?: boolean;
     /** Name of an auth profile bound to the Run's environment revision. */
     authProfile?: string;
+    /** A completed Run and its attempt that ended inconclusive instead of passed/failed. */
+    outcome?: "inconclusive";
     step?: Partial<StepResult>;
   } = {},
 ) {
@@ -114,11 +116,12 @@ async function fixture(
   revision.row.content_hash = revision.dto.contentHash as string;
   revision.row.data_json = canonicalJson(revision.dto);
   const runFixture = get("Run");
+  const terminal = options.outcome ?? (options.passed ? "passed" : "failed");
   const run = {
     ...runFixture.dto,
     phase: options.queued ? "queued" : "completed",
-    status: options.queued ? "queued" : options.passed ? "passed" : "failed",
-    outcome: options.queued ? null : options.passed ? "passed" : "failed",
+    status: options.queued ? "queued" : terminal,
+    outcome: options.queued ? null : terminal,
     gate: options.queued ? "pending" : options.passed ? "passed" : "failed",
     analysisStatus: "not_requested",
   } as unknown as Run;
@@ -143,10 +146,10 @@ async function fixture(
     data_json: canonicalJson(run),
   });
   const attempt = get("Attempt");
-  Object.assign(attempt.dto, { phase: "completed", outcome: options.passed ? "passed" : "failed" });
+  Object.assign(attempt.dto, { phase: "completed", outcome: terminal });
   Object.assign(attempt.row, {
     phase: "completed",
-    outcome: options.passed ? "passed" : "failed",
+    outcome: terminal,
     data_json: canonicalJson(attempt.dto),
   });
   const jobId = String(attempt.row.job_id);
@@ -2441,6 +2444,37 @@ it("an optional statusIn assertion answered with a 4xx gets no rejection diagnos
   expect(await f.service.analyze(f.run.id, {})).toMatchObject({
     failureKind: "unknown",
     hypotheses: [],
+  });
+});
+it("an inconclusive run whose runner protocol failed names that error instead of an unknown cause", async () => {
+  const f = await fixture({ outcome: "inconclusive" });
+  // The executor discards every step result when the evidence protocol fails.
+  f.db.run("DELETE FROM steps WHERE id=?", f.step.id);
+  const { artifactId } = await attachTerminalProcess(
+    f,
+    { reasonCode: "insufficient_evidence", error: "Reserved artifact path" },
+    { relativePath: "logs/protocol.json", kind: "protocol" },
+  );
+  const analysis = await f.service.analyze(f.run.id, { model: true });
+  const { conclusion, nextSteps, healing } = analysis.diagnosis!;
+  expect(conclusion.status).toBe("cause_supported");
+  expect(conclusion.text).toContain("Reserved artifact path");
+  expect(conclusion.text).toContain("not a product or assertion failure");
+  expect(nextSteps[0]?.text).toContain("Rerun the unchanged test");
+  expect(nextSteps[0]?.evidenceRefs).toContainEqual(
+    expect.objectContaining({ artifactId, relativePath: "logs/protocol.json" }),
+  );
+  expect(healing.advice).toBe("not_indicated");
+  expect(analysis.failureKind).toBe("unknown");
+  const request = f.complete.mock.calls[0]![0] as {
+    data: { facts: { text: string }[]; measurements: Record<string, unknown>[] };
+  };
+  expect(request.data.facts.map((fact) => fact.text).join("\n")).toContain(
+    "Reserved artifact path",
+  );
+  expect(request.data.measurements.find((item) => item.kind === "protocol")).toMatchObject({
+    reasonCode: "insufficient_evidence",
+    error: "Reserved artifact path",
   });
 });
 it("a failure localizes to the first inconclusive step and never prints a placeholder", async () => {

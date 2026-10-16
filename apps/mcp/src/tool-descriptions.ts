@@ -11,7 +11,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_validate_document:
     "Validate an ExecutablePlan, ProjectConfig or RunRequest without storing or running it. Use before creating or running one.",
   testmaster_bootstrap:
-    "Create or find the project for an approved root; returns projectId, proposed config, preflight and missing actions. Idempotent per root; never installs or runs the app. Next: testmaster_analyze_code.",
+    "Create or find the project for an approved root; returns projectId, config, environment, preflight, next actions. Adds an environment for the target origin when none exists; never retargets one (preflight says). Idempotent per root; never installs or runs the app. Next: testmaster_analyze_code.",
   testmaster_analyze_code:
     "Snapshot the code: whole codebase (no base), base..head, or base..working tree (dirty=true, needs base). Bounded receipt: counts, first 50 skipped files, first 100 features {id, stableKey}, diff impact. All features by key: testmaster://projects/{projectId}/features?match=. Not a plan source.",
   testmaster_normalize_requirements:
@@ -25,7 +25,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_generate_tests:
     "Generate executable candidates from accepted proposals (proposalIds) or revisions (revisionIds), at least one, one project per call; provider/model pick the model; a model call has no deadline. Refused revisions go to validationErrors. Not execution evidence; review before testmaster_run_tests.",
   testmaster_run_tests:
-    "Run testIds with environmentId (revisionId: one exact candidate or healed revision), or a list (suiteId, replay only), in the sandbox; returns the batch receipt. wait=true blocks until timeoutMs (runs continue), else poll testmaster_get_run. idempotencyKey makes retries safe.",
+    "Run testIds with environmentId (revisionId: exact candidate or healed revision) or a list (suiteId) in the sandbox; mode defaults to replay (lists: replay only). jobId re-reads a batch. wait=true blocks until timeoutMs (runs continue), or poll testmaster_get_run. idempotencyKey makes retries safe.",
   testmaster_get_run:
     "Get phase, outcome, gate and analysisStatus. Summary only: if the run did not pass, call testmaster_get_evidence then testmaster_analyze_run before naming a cause.",
   testmaster_get_evidence:

@@ -29,6 +29,7 @@ import {
   runVerdict,
   SignedCursorCodec,
   type SourceAddInput,
+  supersedingConflict,
 } from "@testmaster/application";
 import {
   type Analysis,
@@ -132,6 +133,18 @@ const LARGE_TEXT_BYTES = 32768;
 const RESOURCE_LINK_PROTOCOL = "2025-06-18";
 /** JSON-RPC code of an unknown resource (MCP specification). */
 const RESOURCE_NOT_FOUND = -32002;
+/** Templates that read each resource collection, named in the error of an unknown resource. */
+const RESOURCE_COLLECTIONS: Readonly<Record<string, string>> = {
+  projects:
+    "testmaster://projects/{id}, testmaster://projects/{id}/features, /tests, /sources and /plan-batches",
+  tests: "testmaster://tests/{id} and testmaster://tests/{id}/revisions",
+  revisions:
+    "testmaster://revisions/{id}, testmaster://revisions/{id}/plan and testmaster://revisions/{id}/code",
+  sources: "testmaster://sources/{id}",
+  "plan-batches": "testmaster://plan-batches/{id}",
+  runs: "testmaster://runs/{id}/result, /manifest, /steps, /report and /artifacts/{path}",
+  requirements: "testmaster://requirements/{projectId or requirementId}",
+};
 const RESOURCE_PAGE_BYTES = 65536;
 /** Entries of a project-features resource page. */
 const FEATURE_PAGE = 100;
@@ -885,7 +898,7 @@ export class TestMasterMcp {
                 "INVALID_ARGUMENT",
                 "revisionId applies to testIds, not suiteId",
               );
-            if (args.mode !== "replay")
+            if ((args.mode ?? "replay") !== "replay")
               throw new ContractError("INVALID_ARGUMENT", "Lists run in replay mode only");
             receipt = await app.suites.run(
               String(args.suiteId),
@@ -914,7 +927,7 @@ export class TestMasterMcp {
                 testId,
                 environmentId: args.environmentId,
                 ...(args.revisionId ? { revisionId: args.revisionId } : {}),
-                mode: args.mode,
+                mode: args.mode ?? "replay",
                 origin: "mcp",
                 ...(args.limits ? { limits: args.limits } : {}),
               })),
@@ -1459,22 +1472,18 @@ export class TestMasterMcp {
         if (!requirement.approval) service.approve(id, Number(requirement.version));
       });
     const after = service.snapshot(projectId);
-    // A requirement that lost a conflict decision is superseded: it is never approved nor planned.
-    const superseded = new Set(
-      after.conflicts.flatMap((conflict) =>
-        conflict.resolution
-          ? conflict.requirementIds.filter(
-              (id) => id !== conflict.resolution?.selectedRequirementId,
-            )
-          : [],
-      ),
-    );
     return {
       results,
       sourceSnapshotId: after.fingerprint,
       version: after.version,
+      // A requirement that lost a conflict decision is superseded: it is never approved nor planned.
       pendingApprovalIds: after.requirements
-        .filter((item) => !item.approval && !requirementRejection(item) && !superseded.has(item.id))
+        .filter(
+          (item) =>
+            !item.approval &&
+            !requirementRejection(item) &&
+            !supersedingConflict(item.id, after.conflicts),
+        )
         .map((item) => item.id),
       unresolvedConflictIds: after.conflicts
         .filter((item) => !item.resolution)
@@ -1638,7 +1647,17 @@ export class TestMasterMcp {
       target.hostname === "[::1]" ||
       /^127\./.test(target.hostname);
     const scope = args.scope as string[];
-    const environments = app.environments.list(project.id);
+    const environmentConfig = {
+      ...base.environment,
+      baseUrl: String(args.target),
+      networkProfile: loopback ? ("local-loopback" as const) : ("public" as const),
+    };
+    const { match, stale, created } = this.bootstrapEnvironment(
+      app,
+      project.id,
+      target.origin,
+      environmentConfig,
+    );
     const isOrigin = target.pathname === "/" && !target.search && !target.hash;
     const bound = configuredId === project.id;
     return {
@@ -1646,13 +1665,19 @@ export class TestMasterMcp {
       config: {
         ...base,
         project: { name: String(project.name), id: project.id },
-        environment: {
-          ...base.environment,
-          baseUrl: String(args.target),
-          networkProfile: loopback ? "local-loopback" : "public",
-        },
+        environment: environmentConfig,
         execution: { ...base.execution, mode: args.mode },
       },
+      ...(match
+        ? {
+            environment: {
+              id: match.id,
+              name: match.name,
+              version: Number(match.version),
+              created,
+            },
+          }
+        : {}),
       preflight: [
         { check: "approved_root", passed: true },
         { check: "target_is_http_url", passed: true },
@@ -1660,16 +1685,80 @@ export class TestMasterMcp {
         { check: "target_is_origin", passed: isOrigin },
         { check: "config_file_present", passed: configPresent },
         { check: "config_matches_project", passed: bound },
+        { check: "environment_targets_target", passed: Boolean(match) },
       ],
       nextActions: [
-        ...(environments.length
-          ? []
-          : [`Create an environment for ${target.origin.slice(0, 120)} (CLI)`]),
+        ...(stale
+          ? [
+              `Environment ${stale.name} targets ${stale.origins.join(", ")}, not ${target.origin}; bootstrap never retargets one. Retarget it with testmaster_update_environment {environmentId: ${stale.id}, expectedVersion: ${Number(stale.version)}, baseUrl: ${target.origin}}`,
+            ]
+          : []),
         ...(bound ? [] : [`Set project.id to ${project.id} in testmaster.config.json (CLI init)`]),
-        "Add sources (CLI)",
+        "Add sources with testmaster_add_source",
         `Run testmaster_analyze_code on this root (${scope.join(", ")})`,
       ],
     };
+  }
+  /**
+   * The active environment of a project that targets `origin`. A project with no active environment gets
+   * one named like `testmaster init` names it (`local`) and becomes its default; an environment aimed at
+   * another origin is reported as `stale` and never changed.
+   */
+  private bootstrapEnvironment(
+    app: Application,
+    projectId: string,
+    origin: string,
+    settings: {
+      networkProfile: "local-loopback" | "public";
+      locale?: string | undefined;
+      timezone?: string | undefined;
+    },
+  ) {
+    return app.database.withTx(() => {
+      const all = app.environments.list(projectId);
+      const active = all
+        .filter((environment) => !environment.archivedAt)
+        .map((environment) => ({
+          environment,
+          origins:
+            app.environments
+              .revisions(environment.id)
+              .find((revision) => revision.id === environment.activeRevisionId)?.targetOrigins ??
+            [],
+        }));
+      const found = active.find((item) => item.origins.includes(origin));
+      if (found) return { match: found.environment, stale: undefined, created: false };
+      const first = active[0];
+      if (first) {
+        const project = app.projects.get(projectId);
+        const chosen =
+          active.find((item) => item.environment.id === project.defaultEnvironmentId) ?? first;
+        return {
+          match: undefined,
+          stale: {
+            id: chosen.environment.id,
+            name: chosen.environment.name,
+            version: chosen.environment.version,
+            origins: chosen.origins,
+          },
+          created: false,
+        };
+      }
+      const taken = new Set(all.map((environment) => environment.name));
+      let name = "local";
+      for (let n = 2; taken.has(name); n++) name = `local-${n}`;
+      const environment = app.environments.create({
+        projectId,
+        name,
+        baseUrl: origin,
+        networkProfile: settings.networkProfile,
+        ...(settings.locale ? { locale: settings.locale } : {}),
+        ...(settings.timezone ? { timezone: settings.timezone } : {}),
+      });
+      const { version } = app.projects.get(projectId);
+      app.environments.setDefault(projectId, environment.id, version ?? 1);
+      return { match: environment, stale: undefined, created: true };
+    });
   }
   private async evidence(args: Arguments) {
     const bundle = await this.options.application.artifacts.get(String(args.runId), {
@@ -1855,7 +1944,21 @@ export class TestMasterMcp {
           };
         break;
     }
-    throw new ContractError("NOT_FOUND", "Unknown resource");
+    throw new ContractError("NOT_FOUND", this.unknownResourceMessage(uri, url.hostname, parts));
+  }
+  /** Names the requested URI and the templates that read the collection it started in, so a guess can be corrected. */
+  private unknownResourceMessage(uri: string, collection: string, parts: string[]): string {
+    const shown = uri.length > 200 ? `${uri.slice(0, 200)}...` : uri;
+    const reads = Object.hasOwn(RESOURCE_COLLECTIONS, collection)
+      ? RESOURCE_COLLECTIONS[collection]
+      : undefined;
+    const hint =
+      collection === "tests" && parts[1] === "revisions" && parts.length > 2
+        ? "a test revision is read at testmaster://revisions/{id}, the revisions of a test at testmaster://tests/{id}/revisions"
+        : reads
+          ? `this collection is read at ${reads}`
+          : `no such collection; the collections are ${Object.keys(RESOURCE_COLLECTIONS).join(", ")}`;
+    return `Unknown resource ${shown}: ${hint}. List every readable template with resources/templates/list`;
   }
   /** One page of an ordered list; its cursor is bound to the list it pages, so another list refuses it. */
   private listPage<T>(items: readonly T[], size: number, binding: string, cursor: string | null) {

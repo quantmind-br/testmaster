@@ -160,8 +160,11 @@ export function requirementCommands(program: Command, runtime: Runtime): void {
   runtime.bind(
     group
       .command("adjudicate <conflict-id>")
-      .requiredOption("--selected-requirement <id>")
-      .requiredOption("--reason <text>")
+      .requiredOption(
+        "--selected-requirement <id>",
+        "Requirement that stands; the conflict's other requirements are superseded and never planned",
+      )
+      .requiredOption("--reason <text>", "Why this requirement stands (recorded)")
       .requiredOption("--expected-version <version>", "Normalization version", integer),
     async (rt, args, options) => ({
       data: await (await rt.app()).requirements.adjudicate(await rt.project(options), {

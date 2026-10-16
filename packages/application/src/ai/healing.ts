@@ -454,6 +454,10 @@ export class HealingService {
     if (run.phase !== "completed" || run.outcome !== "failed")
       throw new ContractError("PRECONDITION_FAILED", "Healing requires a terminal failed Run", {
         reason: "not_failed",
+        phase: run.phase,
+        outcome: run.outcome ?? null,
+        nextAction:
+          "Only a failed Run is healed; an inconclusive or blocked Run is not. Read its analysis and evidence; for a test-only fix save a new revision (testmaster_save_test with testId; CLI: test revision create), replay it with testmaster_run_tests revisionId (CLI: test run --revision), then promote it (testmaster_promote_revision; CLI: test revision promote)",
       });
     const existing = this.latest(failedRunId);
     if (existing) return existing;

@@ -149,6 +149,8 @@ const CodeExportMetadata = P.Obj({
     artifacts: Type.Array(P.id("art")),
     popupAliases: Type.Array(P.Name),
   }),
+  /** Environment variables the project reads besides BASE_URL (imported Playwright code fixtures). */
+  environment: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
   setupCommands: Type.Array(Type.String({ minLength: 1 })),
   runCommand: Type.String({ minLength: 1 }),
   runtime: P.Obj({

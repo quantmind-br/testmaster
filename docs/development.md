@@ -480,6 +480,10 @@ MCP `reject`, REST `POST /requirements/{id}/reject`; audited as `requirement.rej
 planned and can be neither approved nor edited, so a statement is proposed anew only by normalizing the
 sources again. It raises the snapshot version but keeps its fingerprint, so approved snapshots and
 proposal batches stay valid; a proposal citing the rejected requirement is refused when accepted.
+A conflict decision keeps the selected requirement and supersedes the conflict's other requirements:
+they are not pending, are skipped by planning without an explicit selection, and approving or planning
+one is refused with `requirement_superseded`. Until its conflict is decided a requirement can be neither
+approved nor planned (`requirement_conflict_unresolved`, naming the conflict).
 Generated executable proposals need typed nontrivial assertions and grounded
 refs, and must match the requested `--type` (`backend` → `http`, `frontend` → `playwright`;
 absent means `backend`). `--type auto` (MCP `type: "auto"`, REST `scope: ["frontend","backend"]`)
@@ -818,7 +822,16 @@ unchanged: with separation of duties the requester cannot approve its own execut
   assertions are retained, including independent assertions after navigation/reload. Producer
   outputs are supplied explicitly; export never queries earlier runs for convenient bindings.
   Imported code exports preserve authored bytes and the admitted `runtime-lock.json`; format
-  translation is refused, and authored harness-specific fixtures still require that harness.
+  translation is refused. An imported or generated Playwright export also ships
+  `testmaster-fixtures/`, a local package installed as `@playwright/test` that re-exports the pinned
+  stock package (installed as the alias `playwright-test-stock`) and adds the runner's `secrets`,
+  `profileRequest` and `profilePage` fixtures, so the authored import runs unchanged with
+  `npm ci && npx playwright install chromium && BASE_URL=... npm test`. `secrets.get("NAME")` reads
+  `SECRET_NAME`; the auth profile session comes from `TESTMASTER_PROFILE_STORAGE_STATE` (a Playwright
+  storage-state file) and `TESTMASTER_PROFILE_HEADERS` (a JSON object of header credentials), is
+  sent to the `BASE_URL` origin only and never along a redirect; `export-metadata.json` lists the
+  variables in `environment`. Export-side secrets use `SECRET_<name>`, not secret ids. pytest imports
+  have no runner fixtures.
   Standalone projects do not implement supervisor grants/approval/egress/redaction: use an
   authorized target and external isolation. `validation/journeys/export-standalone.docker.test.ts`
   invokes the real CLI export, then directly runs `npx --no-install playwright test` or

@@ -25,6 +25,26 @@ export interface EgressDecision {
   decision: "allow" | "deny";
   reason: string;
   pinnedIp?: string;
+  /** Names, never values, of request headers the proxy dropped before forwarding. */
+  removedHeaders?: string[];
+}
+/**
+ * Request headers that could redirect or chain a request towards another destination
+ * (`X-Forwarded-*`, `Forwarded`, `Via`, `Proxy-*`). Chromium's `Proxy-Connection: keep-alive|close`
+ * hint is not one of them.
+ */
+function forwardingHeaders(request: http.IncomingMessage): string[] {
+  return Object.keys(request.headers).filter(
+    (name) =>
+      (name.startsWith("proxy-") &&
+        !(
+          name === "proxy-connection" &&
+          ["keep-alive", "close"].includes(String(request.headers[name]).toLowerCase())
+        )) ||
+      name.startsWith("x-forwarded-") ||
+      name === "forwarded" ||
+      name === "via",
+  );
 }
 /**
  * The trusted HTTP runner opts in with DIAGNOSTICS_HEADER; for such requests a connection
@@ -54,21 +74,6 @@ function validateHeaders(
     (_header, i) => i % 2 === 0 && request.rawHeaders[i]?.toLowerCase() === "host",
   );
   if (hosts.length !== 1 || !request.headers.host) throw new PolicyDenied("host_mismatch");
-  for (const name of Object.keys(request.headers)) {
-    // Chromium sends this hop-by-hop hint; never forward it or allow arbitrary tokens.
-    if (
-      name === "proxy-connection" &&
-      ["keep-alive", "close"].includes(String(request.headers[name]).toLowerCase())
-    )
-      continue;
-    if (
-      name.startsWith("proxy-") ||
-      name.startsWith("x-forwarded-") ||
-      name === "forwarded" ||
-      name === "via"
-    )
-      throw new PolicyDenied("header_override");
-  }
   if (
     request.headers.connection
       ?.split(",")
@@ -155,6 +160,8 @@ export class EgressProxy {
         host: request.headers.host,
         connection: "close",
       };
+      const removedHeaders = forwardingHeaders(request);
+      for (const name of removedHeaders) delete headers[name];
       delete headers["proxy-connection"];
       const diagnostics = request.headers[DIAGNOSTICS_HEADER] === "1";
       delete headers[DIAGNOSTICS_HEADER];
@@ -204,7 +211,13 @@ export class EgressProxy {
         response.destroy();
       });
       request.pipe(limiter).pipe(upstream);
-      this.log({ origin, decision: "allow", reason: "allowed", pinnedIp: target.pinnedIp });
+      this.log({
+        origin,
+        decision: "allow",
+        reason: "allowed",
+        pinnedIp: target.pinnedIp,
+        ...(removedHeaders.length ? { removedHeaders } : {}),
+      });
     } catch (error) {
       this.log({
         origin,
@@ -221,6 +234,7 @@ export class EgressProxy {
       const parsed = this.options.policy.connectTarget(request.url ?? "");
       origin = parsed.origin;
       validateHeaders(request, parsed as AuthorizedTarget);
+      if (forwardingHeaders(request).length) throw new PolicyDenied("header_override");
       if (request.headers["content-length"] || request.headers["transfer-encoding"])
         throw new PolicyDenied("invalid_connect");
       const target = await this.authorize(parsed.url);

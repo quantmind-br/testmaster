@@ -6,6 +6,17 @@ import {
   validatePlanSemantics,
 } from "@testmaster/contracts";
 import { semanticHash, sha256 } from "@testmaster/domain";
+import {
+  FIXTURES_DIRECTORY,
+  fixturesCommonjs,
+  fixturesModule,
+  fixturesPackageJson,
+  PLAYWRIGHT_VERSION,
+  PROFILE_HEADERS_ENV,
+  PROFILE_STORAGE_STATE_ENV,
+  SECRET_ENV_PREFIX,
+  STOCK_PACKAGE,
+} from "./playwright-fixtures.js";
 import { pythonRuntime } from "./python.js";
 import { pythonLock } from "./python-lock.js";
 import { typescriptRuntime } from "./typescript.js";
@@ -27,6 +38,8 @@ export interface CodeExportMetadata {
     artifacts: string[];
     popupAliases: string[];
   };
+  /** Environment variables the project reads besides BASE_URL; absent when it reads none. */
+  environment?: string[];
   setupCommands: string[];
   runCommand: string;
   runtime: { node?: string; python?: string; playwright: string };
@@ -44,6 +57,10 @@ export interface ImportedCodeExportInput {
   contentHash: string;
   dependencyLock: Record<string, unknown>;
   limitations?: string[];
+  /** Secret names the code reads through the `secrets` fixture. */
+  secrets?: string[];
+  /** True when the code uses the `profileRequest` or `profilePage` fixtures. */
+  profile?: boolean;
 }
 
 /** Preserves authored source bytes and its admitted runtime lock without translation. */
@@ -60,14 +77,23 @@ export function exportImportedCode(input: ImportedCodeExportInput): CodeExport {
     "export-metadata.json",
     "SETUP.txt",
   ];
-  if (reserved.some((name) => Object.hasOwn(files, name)))
+  if (
+    reserved.some((name) => Object.hasOwn(files, name)) ||
+    Object.keys(files).some(
+      (path) => path === FIXTURES_DIRECTORY || path.startsWith(`${FIXTURES_DIRECTORY}/`),
+    )
+  )
     throw new ContractError(
       "INVALID_ARGUMENT",
       "Imported source conflicts with export project metadata",
     );
   if (input.format === "playwright") {
-    files["package.json"] = `${JSON.stringify(playwrightPackage, null, 2)}\n`;
-    files["package-lock.json"] = `${JSON.stringify(playwrightLock, null, 2)}\n`;
+    files["package.json"] = `${JSON.stringify(importedPlaywrightPackage, null, 2)}\n`;
+    files["package-lock.json"] = `${JSON.stringify(importedPlaywrightLock, null, 2)}\n`;
+    files[`${FIXTURES_DIRECTORY}/package.json`] =
+      `${JSON.stringify(fixturesPackageJson, null, 2)}\n`;
+    files[`${FIXTURES_DIRECTORY}/index.js`] = fixturesCommonjs;
+    files[`${FIXTURES_DIRECTORY}/index.mjs`] = fixturesModule;
     files["playwright.config.ts"] =
       `import { defineConfig } from '@playwright/test';\nif(!process.env.BASE_URL) throw new Error('Set BASE_URL');\nexport default defineConfig({testDir:'.',testMatch:${JSON.stringify(input.entrypoint)},timeout:30000,workers:1,retries:0,use:{baseURL:process.env.BASE_URL,headless:true,launchOptions:{chromiumSandbox:true}}});\n`;
   } else {
@@ -82,8 +108,9 @@ export function exportImportedCode(input: ImportedCodeExportInput): CodeExport {
       ? ["npm ci", "npx playwright install chromium"]
       : ["uv sync --frozen", "uv run playwright install chromium"];
   const runCommand = input.format === "playwright" ? "npm test" : "uv run --frozen pytest";
+  const environment = input.format === "playwright" ? fixtureEnvironment(input) : [];
   files["SETUP.txt"] =
-    `Authored source files are unchanged. No model or backend is contacted by export.\nSetup:\n${setupCommands.join("\n")}\nRun: BASE_URL=<authorized-target> ${runCommand}\n\nThe admitted hardened image digest and build-input hash are in runtime-lock.json.\nImported tests using runner-specific fixtures require that pinned runner harness; plain authored tests run standalone.\nExport does not translate or remove authored harness imports or fixtures.\nLimitations:\n${(input.limitations ?? []).join("\n")}\n`;
+    `Authored source files are unchanged. No model or backend is contacted by export.\nSetup:\n${setupCommands.join("\n")}\nRun: BASE_URL=<authorized-target> ${runCommand}\n\nThe admitted hardened image digest and build-input hash are in runtime-lock.json.\n${input.format === "playwright" ? playwrightFixturesSetup(input) : "Export does not translate or remove authored source."}\nLimitations:\n${(input.limitations ?? []).join("\n")}\n`;
   const metadata: CodeExportMetadata = {
     version: "1.0.0",
     format: input.format,
@@ -92,11 +119,12 @@ export function exportImportedCode(input: ImportedCodeExportInput): CodeExport {
     planHash: input.contentHash,
     assertionIds: [],
     requiredInputs: { secrets: [], variables: [], artifacts: [], popupAliases: [] },
+    ...(environment.length > 0 ? { environment } : {}),
     setupCommands,
     runCommand,
     runtime: {
       ...(input.format === "playwright" ? { node: ">=20" } : { python: "3.12" }),
-      playwright: "1.63.0",
+      playwright: PLAYWRIGHT_VERSION,
     },
     files: Object.entries(files).map(([path, content]) => ({
       path,
@@ -157,7 +185,7 @@ const playwrightPackage = {
   type: "module",
   scripts: { test: "playwright test" },
   engines: { node: ">=20" },
-  devDependencies: { "@playwright/test": "1.63.0" },
+  devDependencies: { "@playwright/test": PLAYWRIGHT_VERSION },
 };
 const playwrightLock = {
   name: "exported-tests",
@@ -168,32 +196,32 @@ const playwrightLock = {
     "": {
       name: "exported-tests",
       version: "0.1.0",
-      devDependencies: { "@playwright/test": "1.63.0" },
+      devDependencies: { "@playwright/test": PLAYWRIGHT_VERSION },
       engines: { node: ">=20" },
     },
     "node_modules/@playwright/test": {
-      version: "1.63.0",
-      resolved: "https://registry.npmjs.org/@playwright/test/-/test-1.63.0.tgz",
+      version: PLAYWRIGHT_VERSION,
+      resolved: `https://registry.npmjs.org/@playwright/test/-/test-${PLAYWRIGHT_VERSION}.tgz`,
       integrity:
         "sha512-oxMK4vllB9RK5NQ2l1pq1IfOf2AvnEuj/vYGDj0H2nMtmtZpKtCwt/l00GEO6xjGfpBNAvjovvYdCm50dRQkpQ==",
       dev: true,
-      dependencies: { playwright: "1.63.0" },
+      dependencies: { playwright: PLAYWRIGHT_VERSION },
       bin: { playwright: "cli.js" },
       engines: { node: ">=20" },
     },
     "node_modules/playwright": {
-      version: "1.63.0",
-      resolved: "https://registry.npmjs.org/playwright/-/playwright-1.63.0.tgz",
+      version: PLAYWRIGHT_VERSION,
+      resolved: `https://registry.npmjs.org/playwright/-/playwright-${PLAYWRIGHT_VERSION}.tgz`,
       integrity:
         "sha512-+7ziBLidS4NaNCdt57SUDT+wYmmd5fmiQejUic/kb+YsYSCPyOOE9sebzMjNmQrsnNpDJqd4WHvV/8lfKfUDUg==",
       dev: true,
-      dependencies: { "playwright-core": "1.63.0" },
+      dependencies: { "playwright-core": PLAYWRIGHT_VERSION },
       bin: { playwright: "cli.js" },
       engines: { node: ">=20" },
     },
     "node_modules/playwright-core": {
-      version: "1.63.0",
-      resolved: "https://registry.npmjs.org/playwright-core/-/playwright-core-1.63.0.tgz",
+      version: PLAYWRIGHT_VERSION,
+      resolved: `https://registry.npmjs.org/playwright-core/-/playwright-core-${PLAYWRIGHT_VERSION}.tgz`,
       integrity:
         "sha512-rYCsBF/M5HjUch52bbtVONEFjv6Xu8sm8h72dNlR5bzIE1fvC/bxgspzkjSfU+MweEMmPM8KJebG6nnyxo5mCg==",
       dev: true,
@@ -202,6 +230,58 @@ const playwrightLock = {
     },
   },
 };
+
+/**
+ * Imported Playwright code keeps its `@playwright/test` import, which resolves to the local fixtures
+ * package (see playwright-fixtures.ts); the stock package is installed under an npm alias. The
+ * `playwright` dependency supplies the `playwright` binary of `npm test` and `npx playwright install`.
+ */
+const importedDevDependencies = {
+  "@playwright/test": `file:${FIXTURES_DIRECTORY}`,
+  playwright: PLAYWRIGHT_VERSION,
+};
+const importedPlaywrightPackage = {
+  ...playwrightPackage,
+  devDependencies: importedDevDependencies,
+};
+const importedPlaywrightLock = {
+  ...playwrightLock,
+  packages: {
+    "": { ...playwrightLock.packages[""], devDependencies: importedDevDependencies },
+    "node_modules/@playwright/test": { resolved: FIXTURES_DIRECTORY, link: true },
+    "node_modules/playwright": playwrightLock.packages["node_modules/playwright"],
+    "node_modules/playwright-core": playwrightLock.packages["node_modules/playwright-core"],
+    [`node_modules/${STOCK_PACKAGE}`]: {
+      name: "@playwright/test",
+      ...playwrightLock.packages["node_modules/@playwright/test"],
+    },
+    [FIXTURES_DIRECTORY]: {
+      name: fixturesPackageJson.name,
+      version: fixturesPackageJson.version,
+      dev: true,
+      dependencies: fixturesPackageJson.dependencies,
+    },
+  },
+};
+
+/** Environment variables the fixtures of imported Playwright code read (besides BASE_URL). */
+function fixtureEnvironment(input: ImportedCodeExportInput): string[] {
+  return [
+    ...(input.secrets ?? []).map((name) => `${SECRET_ENV_PREFIX}${name}`),
+    ...(input.profile ? [PROFILE_STORAGE_STATE_ENV, PROFILE_HEADERS_ENV] : []),
+  ];
+}
+function playwrightFixturesSetup(input: ImportedCodeExportInput): string {
+  const secrets = input.secrets ?? [];
+  return [
+    `The authored "@playwright/test" import resolves to ./${FIXTURES_DIRECTORY}, which adds the runner fixtures to the pinned Playwright ${PLAYWRIGHT_VERSION}; tests that use none of them behave as under stock Playwright. Export does not translate or remove authored imports or fixtures.`,
+    `secrets.get("NAME") reads the environment variable ${SECRET_ENV_PREFIX}NAME${secrets.length > 0 ? `; this code reads: ${secrets.map((name) => `${SECRET_ENV_PREFIX}${name}`).join(", ")}` : ""}.`,
+    `profileRequest and profilePage carry the auth profile session; the stock request and page stay unauthenticated. The session is sent to the BASE_URL origin only${input.profile ? " and this code needs it" : ""}:`,
+    `  ${PROFILE_STORAGE_STATE_ENV}=<file>  Playwright storage-state JSON (cookies and web storage; entries for other origins are ignored)`,
+    `  ${PROFILE_HEADERS_ENV}='{"x-api-key":"..."}'  header credentials of the profile, JSON object (profileRequest only; never sent along a redirect)`,
+    "Without either, a test that uses these fixtures fails.",
+  ].join("\n");
+}
 
 /** Exports deterministic, model-free projects; external inputs remain explicit runtime references. */
 export function exportCode(input: ExecutablePlan, options: CodeExportOptions): CodeExport {
@@ -417,7 +497,7 @@ export function exportCode(input: ExecutablePlan, options: CodeExportOptions): C
     runCommand,
     runtime: {
       ...(options.format === "playwright" ? { node: ">=20" } : { python: "3.12" }),
-      playwright: "1.63.0",
+      playwright: PLAYWRIGHT_VERSION,
     },
     files: Object.entries(files).map(([path, content]) => ({
       path,

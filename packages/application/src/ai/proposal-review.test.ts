@@ -380,6 +380,93 @@ it("UX-012 a rejected requirement is left out of planning and does not make its 
   expect(planned.sort()).toEqual([reqA.id, reqB.id].sort());
 });
 
+it("UX-012 the requirement a conflict decision did not select is never approved and is left out of planning", async () => {
+  const f = await open();
+  await writeFile(join(f.root, "prd.md"), "Over HTTP the session cookie is ap_session.");
+  await writeFile(join(f.root, "api.md"), "The session cookie is __Host-ap_session.");
+  const prd = await f.app.sources.add({
+    projectId: f.projectId,
+    role: "prd",
+    path: join(f.root, "prd.md"),
+  });
+  const api = await f.app.sources.add({
+    projectId: f.projectId,
+    role: "prd",
+    path: join(f.root, "api.md"),
+  });
+  const handles = [1, prd.chunks.length + 1];
+  const texts = ["The cookie is ap_session", "The cookie is __Host-ap_session"];
+  f.setOutput({
+    requirements: handles.map((handle, index) => ({
+      key: `r${index}`,
+      text: texts[index],
+      acceptanceCriteria: [texts[index]],
+      evidenceIds: [`E${handle}`],
+      originKind: "explicit",
+      confidence: null,
+      reason: "Stated by the source",
+    })),
+    conflicts: [
+      {
+        keys: ["r0", "r1"],
+        reason: "The sources name the session cookie differently",
+        evidenceIds: handles.map((handle) => `E${handle}`),
+      },
+    ],
+    openQuestions: [],
+  });
+  await f.app.requirements.normalize({
+    projectId: f.projectId,
+    sourceRevisionIds: [prd.revision.id, api.revision.id],
+  });
+  const review = f.app.requirements.review(f.projectId);
+  const [conflict] = review.conflicts;
+  const kept = review.requirements.find((item) => item.text === texts[0]);
+  const lost = review.requirements.find((item) => item.text === texts[1]);
+  if (!conflict || !kept || !lost) throw new Error("Missing conflict fixture");
+  // Undecided: neither side can be approved, and the refusal names the conflict.
+  expect(() => f.app.requirements.approve(kept.id, kept.version)).toThrow(
+    expect.objectContaining({
+      code: "PRECONDITION_FAILED",
+      details: expect.objectContaining({
+        reasonCode: "requirement_conflict_unresolved",
+        conflictId: conflict.id,
+      }),
+    }),
+  );
+  f.app.requirements.adjudicate(f.projectId, {
+    conflictId: conflict.id,
+    selectedRequirementId: kept.id,
+    reason: "The PRD states the intended behavior",
+    expectedVersion: review.version,
+  });
+  // Decided: the requirement that lost is superseded, so approving it is refused.
+  expect(() => f.app.requirements.approve(lost.id, lost.version)).toThrow(
+    expect.objectContaining({
+      details: expect.objectContaining({
+        reasonCode: "requirement_superseded",
+        conflictId: conflict.id,
+        selectedRequirementId: kept.id,
+      }),
+    }),
+  );
+  f.app.requirements.approve(kept.id, kept.version);
+  // Without a selection only the selected requirement is planned; naming the superseded one is
+  // refused before any model call.
+  const calls = f.completions;
+  await expect(
+    f.app.proposals.generate({ projectId: f.projectId, requirementIds: [lost.id] }),
+  ).rejects.toMatchObject({
+    details: expect.objectContaining({ reasonCode: "requirement_superseded" }),
+  });
+  expect(f.completions).toBe(calls);
+  f.setOutput({ proposals: [f.planFor(kept.id, "Healthy")] });
+  const batch = await f.app.proposals.generate({ projectId: f.projectId });
+  expect(
+    f.app.proposals.detail(batch.id).proposals.flatMap((proposal) => proposal.requirementRefs),
+  ).toEqual([kept.id]);
+});
+
 it("UX-019 an API credential, a service account agent and a session each accept a proposal and the revision records who", async () => {
   const f = await open();
   const { batch, proposals } = await f.generatedBatch();

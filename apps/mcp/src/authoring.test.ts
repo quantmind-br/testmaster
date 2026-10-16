@@ -264,6 +264,22 @@ it("run_tests with revisionId runs that exact revision and refuses it with sever
   expect(f.app.runs.list()).toHaveLength(2);
 });
 
+it("run_tests without mode replays and a jobId re-read needs no mode", async () => {
+  const f = await fixture();
+  const { call } = await f.connect();
+  const test = f.app.tests.create({ projectId: f.init.projectId, plan: scaffoldPlan("backend") });
+  const started = await call("testmaster_run_tests", {
+    testIds: [test.id],
+    environmentId: f.init.environmentId,
+  });
+  expect(started.isError).toBe(false);
+  expect(f.app.runs.get(String(started.data?.memberRuns[0].runId)).mode).toBe("replay");
+  const reread = await call("testmaster_run_tests", { jobId: started.data?.jobId });
+  expect(reread.isError).toBe(false);
+  expect(reread.data?.jobId).toBe(started.data?.jobId);
+  expect(f.app.runs.list()).toHaveLength(1);
+});
+
 it("save_suite creates a fixed list, adds and removes members at the expected version and refuses misuse", async () => {
   const f = await fixture();
   const { call } = await f.connect();

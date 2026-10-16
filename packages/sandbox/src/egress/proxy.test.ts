@@ -118,14 +118,7 @@ it.each([
   "CONNECT forbidden.test:443 HTTP/1.1\r\nHost: forbidden.test:443\r\n\r\n",
   "GET http://allowed.test/ HTTP/1.1\r\nHost: attacker.test\r\n\r\n",
   "GET / HTTP/1.1\r\nHost: allowed.test\r\n\r\n",
-  ...[
-    "Proxy-Authorization: Basic canary",
-    "Proxy-Connection: host",
-    "X-Forwarded-Host: attacker.test",
-    "Forwarded: host=attacker.test",
-    "Via: nested",
-    "Connection: host",
-  ].map((header) => `GET http://allowed.test/ HTTP/1.1\r\nHost: allowed.test\r\n${header}\r\n\r\n`),
+  "GET http://allowed.test/ HTTP/1.1\r\nHost: allowed.test\r\nConnection: host\r\n\r\n",
 ])("rejects destination overrides/chaining before DNS", async (message) => {
   let dns = 0;
   const { socketPath } = await setup(
@@ -137,6 +130,86 @@ it.each([
   );
   expect(await raw(socketPath, message)).toContain("403");
   expect(dns).toBe(0);
+});
+it("refuses forwarding headers on a CONNECT request before DNS", async () => {
+  let dns = 0;
+  const { socketPath } = await setup(
+    new EgressPolicy(config(["https://allowed.test"])),
+    async () => {
+      dns++;
+      return ["127.0.0.1"];
+    },
+  );
+  expect(
+    await raw(
+      socketPath,
+      "CONNECT allowed.test:443 HTTP/1.1\r\nHost: allowed.test:443\r\nX-Forwarded-Host: attacker.test\r\n\r\n",
+    ),
+  ).toContain("403");
+  expect(dns).toBe(0);
+});
+it("drops forwarding headers from a forwarded request instead of refusing it, and logs only their names", async () => {
+  const seen: http.IncomingHttpHeaders[] = [];
+  const server = http.createServer((request, response) => {
+    seen.push(request.headers);
+    response.writeHead(200, { connection: "close" });
+    response.end("upstream-body");
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  resources.push(() => new Promise<void>((resolve) => server.close(() => resolve())));
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("address");
+  const url = `http://fixture.test:${address.port}`;
+  const policy = config([url]);
+  policy.privateTargets = [{ hostname: "fixture.test", cidr: "127.0.0.1/32", port: address.port }];
+  const proxy = await setup(new EgressPolicy(policy), async () => ["127.0.0.1"]);
+  const response = await raw(
+    proxy.socketPath,
+    [
+      `GET ${url}/api HTTP/1.1`,
+      `Host: fixture.test:${address.port}`,
+      "X-Forwarded-Email: user@example.test",
+      "X-Forwarded-Host: attacker.test",
+      "Forwarded: host=attacker.test",
+      "Via: nested",
+      "Proxy-Authorization: Basic canary",
+      "Proxy-Connection: host",
+      "X-Request-Id: keep-me",
+      "Connection: close",
+      "",
+      "",
+    ].join("\r\n"),
+  );
+  expect(response).toContain("200");
+  expect(response).toContain("upstream-body");
+  expect(seen).toHaveLength(1);
+  const received = seen[0] ?? {};
+  expect(Object.keys(received).filter((name) => /^(?:x-forwarded-|proxy-)/u.test(name))).toEqual(
+    [],
+  );
+  expect(received.forwarded).toBeUndefined();
+  expect(received.via).toBeUndefined();
+  expect(received["x-request-id"]).toBe("keep-me");
+  expect(received.host).toBe(`fixture.test:${address.port}`);
+  await proxy.proxy.close();
+  resources.pop();
+  const log = await readFile(proxy.logPath, "utf8");
+  const decisions = log
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line) as Record<string, unknown>);
+  expect(decisions).toHaveLength(1);
+  expect(decisions[0]).toMatchObject({ decision: "allow", reason: "allowed" });
+  expect([...((decisions[0]?.removedHeaders as string[] | undefined) ?? [])].sort()).toEqual([
+    "forwarded",
+    "proxy-authorization",
+    "proxy-connection",
+    "via",
+    "x-forwarded-email",
+    "x-forwarded-host",
+  ]);
+  for (const leaked of ["canary", "attacker.test", "user@example.test", "nested"])
+    expect(log).not.toContain(leaked);
 });
 it("closes live CONNECT tunnels immediately on revocation", async () => {
   const upstream = await target();

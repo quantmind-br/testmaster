@@ -51,14 +51,15 @@ export class EvidenceQuotaError extends Error {
     this.name = "EvidenceQuotaError";
   }
 }
-const reserved: Record<string, true> = {
+// Bundle bookkeeping files live at the attempt root only; nested files may share their names.
+const reservedRootPaths: Record<string, true> = {
   "meta.json": true,
   "manifest.json": true,
   ".partial": true,
 };
 function artifactPath(path: string): string {
   validateRelativePath(path);
-  if (path.split("/").some((part) => reserved[part] || part.startsWith(".tm-")))
+  if (reservedRootPaths[path] || path.split("/").some((part) => part.startsWith(".tm-")))
     throw new Error("Reserved artifact path");
   return path;
 }
