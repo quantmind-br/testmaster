@@ -23,6 +23,7 @@ import {
   correlationId,
   type EnvironmentPatch,
   entity,
+  formatReviewDecision,
   formatReviewRisk,
   type PlanGenerationType,
   refuseInvalidSource,
@@ -44,12 +45,12 @@ import {
   type HealingAbstention,
   type HealingReview,
   jsonSchema,
+  type McpRunResult,
   mcpToolCatalog,
   type PlanStep,
   parseStrictJson,
   RUNNER_VERSION,
   type Run,
-  type RunResult,
   SCHEMA_VERSION,
   type SuiteInput,
   type SuitePatchInput,
@@ -127,6 +128,7 @@ const annotations: Record<ToolName, Annotations> = {
   testmaster_edit_plan: DESTRUCTIVE,
   testmaster_save_test: ADDITIVE,
   testmaster_promote_revision: DESTRUCTIVE,
+  testmaster_archive_test: DESTRUCTIVE,
   testmaster_save_suite: DESTRUCTIVE,
   testmaster_approve_execution: ADDITIVE,
   testmaster_cancel_run: { ...DESTRUCTIVE, idempotentHint: true },
@@ -147,6 +149,7 @@ const RESOURCE_COLLECTIONS: Readonly<Record<string, string>> = {
   sources: "testmaster://sources/{id}",
   "plan-batches": "testmaster://plan-batches/{id}",
   runs: "testmaster://runs/{id}/result, /manifest, /steps, /report and /artifacts/{path}",
+  batches: "testmaster://batches/{id}/report",
   requirements: "testmaster://requirements/{projectId or requirementId}",
 };
 const RESOURCE_PAGE_BYTES = 65536;
@@ -400,11 +403,13 @@ export class TestMasterMcp {
                           ...review.automation.reasons.map((reason) => `Reason: ${reason}`),
                           `Risk: ${formatReviewRisk(review)}; assertions intact: ${review.preservedAssertions.intact}`,
                           `Verification: ${review.verification ? `${review.verification.runId}: ${review.verification.outcome}; gate ${review.verification.gate}` : "not recorded"}`,
-                          review.automation.decision === "manual_review_required"
-                            ? `Approval: testmaster_approve_healing proposalId=${review.approval.proposalId} expectedVersion=${review.approval.expectedVersion}, once the diff, risk and verification above are acceptable`
-                            : review.verification && review.verification.outcome !== "passed"
-                              ? "Approval: not available, this proposal's verification did not pass; repair the test with testmaster_save_test (testId) and replay it, or propose healing for a new failed run"
-                              : `Approval: not available (${review.automation.decision})`,
+                          review.approval.decision
+                            ? `Decision: ${formatReviewDecision(review.approval.decision)}`
+                            : review.automation.decision === "manual_review_required"
+                              ? `Approval: testmaster_approve_healing proposalId=${review.approval.proposalId} expectedVersion=${review.approval.expectedVersion}, once the diff, risk and verification above are acceptable`
+                              : review.verification && review.verification.outcome !== "passed"
+                                ? "Approval: not available, this proposal's verification did not pass; repair the test with testmaster_save_test (testId) and replay it, or propose healing for a new failed run"
+                                : `Approval: not available (${review.automation.decision})`,
                         ].join("\n");
                       })()
                     : null;
@@ -479,6 +484,11 @@ export class TestMasterMcp {
           "testmaster://runs/{id}/report{?format,cursor}",
           "Committed report",
           "Committed report as text pages (cut on UTF-8 character boundaries); concatenate the pages, then parse. format: json (default), junit, markdown or html; Allure needs the CLI. _meta carries next, offset and sizeBytes",
+        ],
+        [
+          "testmaster://batches/{id}/report{?format,cursor}",
+          "Batch report",
+          "One report over every member run of a run_tests batch (its batchId/jobId): runs[], executionMetrics counts and rates, coverage. Same text paging and formats as a run report; _meta testmaster:batch lists the member runs",
         ],
         [
           "testmaster://runs/{id}/steps{?attemptId,cursor}",
@@ -732,7 +742,7 @@ export class TestMasterMcp {
       throw new ContractError("INVALID_ARGUMENT", "Invalid cursor offset");
     return offset;
   }
-  private result(runId: string): RunResult {
+  private result(runId: string): McpRunResult {
     const app = this.options.application;
     const run = app.runs.get(runId);
     const events = app.runs.events(runId);
@@ -748,7 +758,12 @@ export class TestMasterMcp {
       analysisStatus: run.analysisStatus,
       passedOnRetry: Boolean(reduced.passedOnRetry),
       firstAttemptOutcome: (reduced.firstAttemptOutcome ??
-        null) as RunResult["firstAttemptOutcome"],
+        null) as McpRunResult["firstAttemptOutcome"],
+      testId: run.testId,
+      revisionId: run.revisionId,
+      environmentRevisionId: run.environmentRevisionId,
+      mode: run.mode,
+      origin: run.origin,
       ...verdict,
     };
   }
@@ -968,6 +983,14 @@ export class TestMasterMcp {
       case "testmaster_get_evidence":
         return this.evidence(args);
       case "testmaster_open_report": {
+        if ((args.runId === undefined) === (args.batchId === undefined))
+          throw new ContractError("INVALID_ARGUMENT", "Send exactly one of runId or batchId", {
+            fields: ["runId", "batchId"],
+          });
+        if (args.batchId !== undefined) {
+          app.batches.get(String(args.batchId));
+          return { location: `testmaster://batches/${args.batchId}/report` };
+        }
         app.runs.get(String(args.runId));
         return { location: `testmaster://runs/${args.runId}/report` };
       }
@@ -1226,6 +1249,12 @@ export class TestMasterMcp {
       case "testmaster_promote_revision":
         return app.revisions.promote(
           String(args.revisionId),
+          Number(args.expectedVersion),
+          typeof args.reason === "string" ? args.reason : undefined,
+        );
+      case "testmaster_archive_test":
+        return app.tests.archive(
+          String(args.testId),
           Number(args.expectedVersion),
           typeof args.reason === "string" ? args.reason : undefined,
         );
@@ -1967,7 +1996,7 @@ export class TestMasterMcp {
             }),
           };
         if (parts.length === 2 && parts[1] === "steps") return { json: this.runSteps(id, url) };
-        if (parts.length === 2 && parts[1] === "report") return this.report(id, url);
+        if (parts.length === 2 && parts[1] === "report") return this.report("runs", id, url);
         if (parts.length === 3 && parts[1] === "artifacts") {
           const offset = Number(url.searchParams.get("offset") ?? 0);
           const page = await app.artifacts.read(id, decodeURIComponent(String(parts[2])), {
@@ -1996,6 +2025,9 @@ export class TestMasterMcp {
             },
           };
         }
+        break;
+      case "batches":
+        if (parts.length === 2 && parts[1] === "report") return this.report("batches", id, url);
         break;
       case "requirements":
         if (parts.length === 1) return { json: this.requirementResource(id) };
@@ -2063,8 +2095,13 @@ export class TestMasterMcp {
       },
     };
   }
-  /** The committed report of a run in one of the formats a text resource can carry. */
-  private async report(runId: string, url: URL): Promise<ResourcePayload> {
+  /** The committed report of a run or of a batch's member runs in one of the formats a text resource can carry. */
+  private async report(
+    collection: "runs" | "batches",
+    id: string,
+    url: URL,
+  ): Promise<ResourcePayload> {
+    const app = this.options.application;
     const format = url.searchParams.get("format") ?? "json";
     if (!Object.hasOwn(REPORT_MEDIA_TYPES, format))
       throw new ContractError(
@@ -2072,12 +2109,14 @@ export class TestMasterMcp {
         `Unsupported report format; use ${Object.keys(REPORT_MEDIA_TYPES).join(", ")} (Allure needs the CLI with --out)`,
         { field: "format", allowed: Object.keys(REPORT_MEDIA_TYPES) },
       );
-    const report = await this.options.application.reports.export(runId, format as ReportFormat);
+    // A batch id is checked before anything is read, so a run id never opens a batch report.
+    const batch = collection === "batches" ? app.batches.get(id) : null;
+    const report = await app.reports.export(id, format as ReportFormat);
     const serialized = Buffer.from(
       typeof report.content === "string" ? report.content : JSON.stringify(report.content),
     );
     // JSON keeps the cursor binding it always had; another format is another document.
-    const binding = format === "json" ? `report:${runId}` : `report:${runId}:${format}`;
+    const binding = format === "json" ? `report:${id}` : `report:${id}:${format}`;
     const offset = this.decodeCursor(url.searchParams.get("cursor") ?? undefined, binding);
     // A page ends on a character boundary: clients concatenate the pages, then parse.
     return this.textPage(
@@ -2087,9 +2126,17 @@ export class TestMasterMcp {
       (end) => {
         const query = new URLSearchParams(format === "json" ? {} : { format });
         query.set("cursor", this.cursor(end, binding));
-        return `testmaster://runs/${runId}/report?${query}`;
+        return `testmaster://${collection}/${id}/report?${query}`;
       },
-      { "testmaster:result": this.result(runId) },
+      batch
+        ? {
+            "testmaster:batch": {
+              batchId: id,
+              requested: batch.requestedCount,
+              memberRuns: batch.memberRuns,
+            },
+          }
+        : { "testmaster:result": this.result(id) },
     );
   }
   /** Recorded steps of a run, every attempt or one, in execution order. */

@@ -74,7 +74,7 @@ Não retry de 401/403, validation, policy, crédito/orçamento esgotado, produce
 | POST `/proposal-batches/{id}/accept` | proposalIds + expectedVersion; accepted e retained | tests:W | M2 |
 | POST `/proposal-batches/{id}/reject` | proposalIds/reason; não descarta implícito | plans:W | M2 |
 | GET/POST `/projects/{id}/tests` | filters/type/priority/tags; plan ou codeRef | tests:R/W | M1 |
-| GET/PATCH/DELETE `/tests/{id}` | metadata/archive | tests:R/W | M1 |
+| GET/PATCH/DELETE `/tests/{id}` | metadata/archive; DELETE takes an optional JSON body `{reason}` (1-2000 characters), recorded on the test with the actor and time | tests:R/W | M1 |
 | GET/POST `/tests/{id}/revisions` | plan/code/dependencies; cria candidata immutable | tests:R/W | M1 |
 | POST `/tests/{id}/promote` | revisionId, expected active revision, approval | tests:W | M2 |
 | GET `/revisions/{id}/code` | language/framework/contentHash/downloadRef | tests:R | M2 |

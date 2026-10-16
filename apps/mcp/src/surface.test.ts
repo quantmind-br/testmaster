@@ -1032,6 +1032,32 @@ it("drain resolves immediately when idle and only after in-flight calls answered
   expect(answered.isError).toBe(true);
 });
 
+it("get_run names the test, revision, environment revision, mode and origin of the run it summarizes", async () => {
+  const f = await fixture();
+  const test = f.app.tests.create({ projectId: f.init.projectId, plan: scaffoldPlan("backend") });
+  const prepared = f.app.runs.prepare({
+    testId: test.id,
+    environmentId: f.init.environmentId,
+    mode: "replay",
+    origin: "verification",
+  });
+  const receipt = f.app.database.withTx(() =>
+    f.app.runs.insert(prepared, "get-run-identity-key-01"),
+  );
+  const recorded = f.app.runs.get(receipt.runId);
+  const summary = await f.call("testmaster_get_run", { runId: receipt.runId });
+  expect(summary.isError).toBe(false);
+  expect(summary.body).toMatchObject({
+    runId: receipt.runId,
+    testId: test.id,
+    revisionId: recorded.revisionId,
+    environmentRevisionId: recorded.environmentRevisionId,
+    mode: "replay",
+    origin: "verification",
+  });
+  expect(summary.body).not.toHaveProperty("steps");
+});
+
 it("propose_healing names its run runId and no longer accepts failedRunId", async () => {
   const f = await fixture();
   const old = await f.call("testmaster_propose_healing", { failedRunId: missingRun });

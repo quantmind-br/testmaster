@@ -16,6 +16,7 @@ import {
   CODE_SUMMARY_DEFAULT_LIMITS,
   computeManifestHash,
   createPathAdmission,
+  nextProjectFiles,
   summarizeCode,
   TEST_FILE,
 } from "./summary.js";
@@ -494,7 +495,11 @@ export async function summarizeDiffScope(
       ].filter((path) => present.has(path)),
     );
     // Non-code files (a changed README, a binary asset) are selected by the diff but never read.
-    const code = [...keep].filter(analyzableCodeType).sort();
+    const selectedCode = [...keep].filter(analyzableCodeType).sort();
+    // The manifests above a Next.js route candidate decide whether it is a route, so they are read too.
+    const code = [
+      ...new Set([...selectedCode, ...nextProjectFiles(selectedCode, source.files)]),
+    ].sort();
     // A pinned head is staged from git objects, so excluded files are recorded instead of staged;
     // the working-tree walk records its own exclusions.
     const excluded = options.workingTree

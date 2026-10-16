@@ -254,6 +254,53 @@ it("save_test stores a new test as active, keeps a new revision a candidate and 
   expect(f.app.tests.get(test.id).activeRevisionId).toBe(candidate.data?.revision.id);
 });
 
+it("archive_test archives at the expected version and records the reason with the actor, outside the audit trail", async () => {
+  const f = await fixture();
+  const { call } = await f.connect();
+  const test = f.app.tests.create({ projectId: f.init.projectId, plan: scaffoldPlan("backend") });
+  const stale = await call("testmaster_archive_test", {
+    testId: test.id,
+    expectedVersion: Number(test.version) + 1,
+    reason: "Drill finished",
+  });
+  expect(stale.error?.code).toBe("REVISION_CONFLICT");
+  expect(f.app.tests.get(test.id).archivedAt).toBeNull();
+  const blank = await call("testmaster_archive_test", {
+    testId: test.id,
+    expectedVersion: test.version,
+    reason: "   ",
+  });
+  expect(blank.error?.code).toBe("INVALID_ARGUMENT");
+  expect(f.app.tests.get(test.id).archivedAt).toBeNull();
+
+  const archived = await call("testmaster_archive_test", {
+    testId: test.id,
+    expectedVersion: test.version,
+    reason: "  Drill finished  ",
+  });
+  expect(archived.isError).toBe(false);
+  expect(archived.data).toMatchObject({
+    id: test.id,
+    version: Number(test.version) + 1,
+    archivedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+  });
+  expect(archived.data?.extensions?.["testmaster:archive"]).toEqual({
+    reason: "Drill finished",
+    actorId: f.app.context.principalId,
+    archivedAt: archived.data?.archivedAt,
+  });
+  expect(f.app.tests.get(test.id).archivedAt).toBe(archived.data?.archivedAt);
+  const audit = f.app.context.database.all("SELECT * FROM audit_events");
+  expect(JSON.stringify(audit)).not.toContain("Drill finished");
+
+  const reader = await f.connect(f.init.principalId, ["R"]);
+  const denied = await reader.call("testmaster_archive_test", {
+    testId: test.id,
+    expectedVersion: archived.data?.version,
+  });
+  expect(denied.error?.code).toBe("FORBIDDEN");
+});
+
 it("save_test needs exactly one of projectId and testId and keeps test fields off revisions", async () => {
   const f = await fixture();
   const { call } = await f.connect();

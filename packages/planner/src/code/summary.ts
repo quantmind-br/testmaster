@@ -9,7 +9,7 @@ import ignore from "ignore";
 import { resolvePythonRoutes } from "./python-routes.js";
 import type { CodeRef, CodeSummary, CodeSummaryOptions, CodeSymbol } from "./types.js";
 
-export const CODE_DETECTOR_VERSION = "1.7.0";
+export const CODE_DETECTOR_VERSION = "1.8.0";
 const DEFAULT_MAX_SYMBOLS_PER_FILE = 200;
 const DEFAULT_MAX_SYMBOLS = 20_000;
 const utf8 = new TextDecoder("utf-8", { fatal: true });
@@ -227,11 +227,17 @@ function literal(value: unknown): string | undefined {
       .join("");
   return undefined;
 }
-/** Next.js file-router target of a source path: a page, an App Router handler or a Pages API file. */
-export function nextRouteTarget(
-  path: string,
-): { kind: "page" | "route" | "api"; path: string } | null {
-  const next = /(?:^|\/)(?:src\/)?(pages|app)\/(.*)\.[jt]sx?$/u.exec(path);
+type NextRouteTarget = { kind: "page" | "route" | "api"; path: string };
+/** `next.config.*` marks a Next.js project even where no manifest lists `next`. */
+const NEXT_CONFIG_FILE = /^next\.config\.[cm]?[jt]s$/u;
+/** Cheap prefilter: a source file under some `pages/` or `app/` directory. */
+const NEXT_ROUTE_DIRECTORY = /(?:^|\/)(?:pages|app)\/.*\.[jt]sx?$/u;
+/**
+ * Next.js file-router target of a source path relative to its project root: a page, an App Router
+ * handler or a Pages API file. `pages/` and `app/` count only at the project root or under `src/`.
+ */
+export function nextRouteTarget(path: string): NextRouteTarget | null {
+  const next = /^(?:src\/)?(pages|app)\/(.*)\.[jt]sx?$/u.exec(path);
   if (!next?.[1] || !next[2]) return null;
   const route = next[2];
   if (next[1] === "pages" && /(?:^|\/)(?:_app|_document|_error)$/u.test(route)) return null;
@@ -255,8 +261,11 @@ export function nextRouteTarget(
 }
 /** Modules whose `Route` component declares client routes. */
 const REACT_ROUTER_MODULE = /^react-router(?:-dom|\/dom)?$/u;
-/** Test and Storybook files render `<Route>` inside memory routers: fixtures, not application routes. */
-const ROUTE_FIXTURE_FILE = /\.stories\.[cm]?[jt]sx?$/u;
+/**
+ * Test, spec and Storybook files (and anything under `__tests__/`) render pages inside memory
+ * routers or beside the component they cover: fixtures, never application routes.
+ */
+const ROUTE_FIXTURE_FILE = /(?:^|\/)__tests__\/|\.(?:test|spec|stories)\.[cm]?[jt]sx?$/u;
 function templateText(quasi: unknown): string {
   if (!astNode(quasi) || !quasi.value || typeof quasi.value !== "object") return "";
   const { cooked, raw } = quasi.value as { cooked?: unknown; raw?: unknown };
@@ -408,6 +417,47 @@ const CLIENT_ROUTE_FILE = /(?:^|\/)(?:app|pages)\/|\.[jt]sx$/u;
  * `node:http` server there is a fixture, not a route of the application.
  */
 export const TEST_FILE = /(?:^|\/)(?:__tests__|tests?)\/|\.(?:test|spec)\.[cm]?[jt]sx?$/u;
+/** Python test modules: `test_*.py`, `*_test.py`, `conftest.py`, or anything under `tests/`. */
+const PYTHON_TEST_FILE = /(?:^|\/)(?:tests?\/|(?:test_[^/]*|[^/]*_test|conftest)\.py$)/u;
+/** Directories that hold test servers and mocks (`e2e/`, `fixtures/`, `__fixtures__/`, `__mocks__/`). */
+const FIXTURE_DIRECTORY = /(?:^|\/)(?:e2e|fixtures?|__fixtures__|__mocks__)\//u;
+/**
+ * Test, spec, story and Python test files, and files under fixture directories: routes and
+ * endpoints declared there are fixtures.
+ */
+function isFixtureFile(path: string): boolean {
+  return (
+    TEST_FILE.test(path) ||
+    ROUTE_FIXTURE_FILE.test(path) ||
+    PYTHON_TEST_FILE.test(path) ||
+    FIXTURE_DIRECTORY.test(path)
+  );
+}
+/**
+ * Manifests and `next.config.*` files of `files` that decide whether the Next.js route candidates
+ * among `paths` are file routes. A scoped scan must read them too: without them every such file
+ * would silently stop being a route.
+ */
+export function nextProjectFiles(paths: readonly string[], files: readonly string[]): string[] {
+  const directories = new Set<string>();
+  for (const path of paths) {
+    if (ROUTE_FIXTURE_FILE.test(path) || !NEXT_ROUTE_DIRECTORY.test(path)) continue;
+    let directory = path.slice(0, Math.max(path.lastIndexOf("/"), 0));
+    for (;;) {
+      directories.add(directory);
+      if (!directory) break;
+      directory = directory.slice(0, Math.max(directory.lastIndexOf("/"), 0));
+    }
+  }
+  return files.filter((file) => {
+    const slash = file.lastIndexOf("/");
+    const name = file.slice(slash + 1);
+    return (
+      directories.has(slash < 0 ? "" : file.slice(0, slash)) &&
+      (name === "package.json" || NEXT_CONFIG_FILE.test(name))
+    );
+  });
+}
 const ROUTE_IDENTIFIER = /^(?:path|pathname|route)$/u;
 /**
  * The request path a `===` operand reads: a bare `path`/`pathname`/`route`, any `<object>.pathname`
@@ -583,6 +633,52 @@ export async function summarizeCode(
     summary.symbols.push(symbol);
   };
   let files = 0;
+  const maxFileBytes = options.maxFileBytes ?? CODE_SUMMARY_DEFAULT_LIMITS.maxFileBytes;
+  /** Per directory: `undefined` without a manifest, else whether it is the root of a Next.js project. */
+  const projectRoots = new Map<string, Promise<boolean | undefined>>();
+  const readProjectRoot = async (directory: string): Promise<boolean | undefined> => {
+    const names = await readdir(resolve(root, directory)).catch(() => [] as string[]);
+    const present = (name: string) =>
+      names.includes(name) && !admit(directory ? `${directory}/${name}` : name);
+    if (names.some((name) => NEXT_CONFIG_FILE.test(name) && present(name))) return true;
+    if (!present("package.json")) return undefined;
+    try {
+      const manifest = JSON.parse(
+        (
+          await readConfinedCodeFile(
+            root,
+            directory ? `${directory}/package.json` : "package.json",
+            maxFileBytes,
+          )
+        ).toString("utf8"),
+      ) as { dependencies?: Record<string, unknown>; devDependencies?: Record<string, unknown> };
+      return "next" in { ...manifest.dependencies, ...manifest.devDependencies };
+    } catch {
+      return false;
+    }
+  };
+  /** The directory of the nearest manifest (or `next.config.*`) above `path` when it is a Next.js project. */
+  const nextProjectDirectory = async (path: string): Promise<string | undefined> => {
+    let directory = path.slice(0, Math.max(path.lastIndexOf("/"), 0));
+    for (;;) {
+      let known = projectRoots.get(directory);
+      if (!known) {
+        known = readProjectRoot(directory);
+        projectRoots.set(directory, known);
+      }
+      const isNext = await known;
+      if (isNext !== undefined) return isNext ? directory : undefined;
+      if (!directory) return undefined;
+      directory = directory.slice(0, Math.max(directory.lastIndexOf("/"), 0));
+    }
+  };
+  /** The Next.js file route of `path`, only when it is not a fixture and belongs to a Next.js project. */
+  const nextFileRoute = async (path: string): Promise<NextRouteTarget | null> => {
+    if (ROUTE_FIXTURE_FILE.test(path) || !NEXT_ROUTE_DIRECTORY.test(path)) return null;
+    const project = await nextProjectDirectory(path);
+    if (project === undefined) return null;
+    return nextRouteTarget(project ? path.slice(project.length + 1) : path);
+  };
   const inspect = (
     path: string,
     text: string,
@@ -718,7 +814,8 @@ export async function summarizeCode(
             ) &&
             target?.startsWith("/") &&
             receiver &&
-            /app|router|server/iu.test(receiver)
+            /app|router|server/iu.test(receiver) &&
+            !isFixtureFile(path)
           )
             summary.endpoints.push({
               framework: "express",
@@ -757,9 +854,9 @@ export async function summarizeCode(
       }
     };
     visit(ast as unknown as AstNode);
-    if (importsNodeHttp && createsServer && !CLIENT_ROUTE_FILE.test(path) && !TEST_FILE.test(path))
+    if (importsNodeHttp && createsServer && !CLIENT_ROUTE_FILE.test(path) && !isFixtureFile(path))
       for (const route of comparedRoutes) summary.routes.push({ framework: "node-http", ...route });
-    if (routeComponents.size && !TEST_FILE.test(path) && !ROUTE_FIXTURE_FILE.test(path)) {
+    if (routeComponents.size && !isFixtureFile(path)) {
       const client = reactRouterRoutes(program, routeComponents);
       for (const route of client.routes)
         summary.routes.push({
@@ -879,7 +976,7 @@ export async function summarizeCode(
           continue;
         }
         const hash = sha256(bytes);
-        const target = nextRouteTarget(path);
+        const target = await nextFileRoute(path);
         summary.scannedFiles.push(path);
         summary.fileRefs.push({ path, contentHash: hash, line: 1 });
         if (path.endsWith(".py")) {
@@ -965,7 +1062,7 @@ export async function summarizeCode(
         if (!admitted.has(file.path) || !sources.has(file.path))
           throw new ContractError("POLICY_DENIED", "Python summary referenced an unadmitted file");
       const routes = resolvePythonRoutes(result.summary.files);
-      for (const route of routes.endpoints)
+      for (const route of routes.endpoints.filter((item) => !isFixtureFile(item.file)))
         summary.endpoints.push({
           framework: route.framework,
           method: route.method,

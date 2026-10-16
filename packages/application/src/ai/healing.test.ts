@@ -18,6 +18,7 @@ import { entity } from "../context.js";
 import { issueLocalToken } from "../local-auth.js";
 import type { AnalysisService } from "./analysis.js";
 import {
+  formatReviewDecision,
   formatReviewRisk,
   type HealingOutcome,
   HealingService,
@@ -1870,6 +1871,43 @@ it("an approval reason is stored on the proposal with the approver and time, sho
     approvedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
   };
   expect(approved.extensions?.["testmaster:approval"]).toEqual(recorded);
-  expect((await f.app.healing.review(f.proposal.id)).approval.decision).toEqual(recorded);
+  expect((await f.app.healing.review(f.proposal.id)).approval.decision).toEqual({
+    status: "approved",
+    mode: "manual",
+    actorId: f.app.context.principalId,
+    decidedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+    reason,
+  });
   expect(JSON.stringify(f.app.database.all("SELECT * FROM audit_events"))).not.toContain(reason);
+});
+it("a review of an approval given without a reason still shows who approved, how and when", async () => {
+  const f = await proposedFixture();
+  vi.spyOn(f.app, "preflight").mockResolvedValue();
+  expect((await f.app.healing.review(f.proposal.id)).approval.decision).toBeUndefined();
+  await f.app.healing.approve(f.proposal.id, 1);
+  const review = await f.app.healing.review(f.proposal.id);
+  expect(review.approval.decision).toEqual({
+    status: "approved",
+    mode: "manual",
+    actorId: f.app.context.principalId,
+    decidedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+  });
+  expect(formatReviewDecision(review.approval.decision!)).toBe(
+    `approved (manual) by ${f.app.context.principalId} at ${review.approval.decision!.decidedAt}`,
+  );
+});
+it("a review of a rejected proposal shows the rejection with its reviewer, time and reason", async () => {
+  const f = await proposedFixture();
+  const reason = "The selector change hides a real regression";
+  f.app.healing.reject(f.proposal.id, reason);
+  const review = await f.app.healing.review(f.proposal.id);
+  expect(review.approval.decision).toEqual({
+    status: "rejected",
+    actorId: f.app.context.principalId,
+    decidedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+    reason,
+  });
+  expect(formatReviewDecision(review.approval.decision!)).toBe(
+    `rejected by ${f.app.context.principalId} at ${review.approval.decision!.decidedAt}: ${reason}`,
+  );
 });

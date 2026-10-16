@@ -124,6 +124,8 @@ class PlanRuntime:
 
     def invalid_credential(self, spec):
         token = "testmaster-invalid-" + secrets.token_hex(16)
+        if "cookie" in spec:
+            return spec["cookie"] + "=" + token
         return token if "scheme" not in spec else spec["scheme"] + " " + token
 
     def string(self, ref):

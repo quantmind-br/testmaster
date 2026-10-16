@@ -153,9 +153,17 @@ export function testCommands(program: Command, runtime: Runtime): void {
   runtime.bind(
     group
       .command("archive <id>")
-      .requiredOption("--expected-version <version>", "Current version", integer),
+      .requiredOption("--expected-version <version>", "Current version", integer)
+      .option(
+        "--reason <text>",
+        "Why you archive (1-2000 characters), recorded on the test with the actor and time",
+      ),
     async (rt, args, options) => ({
-      data: await (await rt.app()).tests.archive(String(args[0]), version(options)),
+      data: await (await rt.app()).tests.archive(
+        String(args[0]),
+        version(options),
+        string(options, "reason"),
+      ),
     }),
   );
   runtime.bind(

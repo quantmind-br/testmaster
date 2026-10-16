@@ -187,3 +187,54 @@ it("run_tests wait deadline is UPSTREAM_TIMEOUT with resume details and the rece
   expect(after.resources.result).toBe(`testmaster://runs/${runIds[0]}/result`);
   expect(after.resources.report).toBe(`testmaster://runs/${runIds[0]}/report`);
 });
+
+it("open_report with a batchId serves one report over both member runs with the aggregate counts", async () => {
+  const f = await fixture();
+  const client = await f.connect(["R", "W", "X"]);
+  const admitted = await f.call(client, { suiteId: f.suite.id, mode: "replay" });
+  expect(admitted.isError).toBe(false);
+  const batchId = String(admitted.body.batchId);
+  const runIds = f.app.database.all("SELECT id FROM runs").map((row) => String(row.id));
+  expect(runIds).toHaveLength(2);
+  for (const runId of runIds)
+    f.app.database.run(
+      "UPDATE runs SET phase='completed',status='passed',outcome='passed',gate='passed' WHERE workspace_id=? AND id=?",
+      f.app.context.workspaceId,
+      runId,
+    );
+  const open = async (args: Record<string, unknown>) => {
+    const result = await client.callTool({ name: "testmaster_open_report", arguments: args });
+    return {
+      isError: result.isError === true,
+      body: JSON.parse(String((result.content as { text: string }[])[0]?.text)),
+    };
+  };
+  const opened = await open({ batchId });
+  expect(opened.isError).toBe(false);
+  expect(opened.body).toEqual({ location: `testmaster://batches/${batchId}/report` });
+  const content = (await client.readResource({ uri: opened.body.location })).contents[0] as Record<
+    string,
+    unknown
+  >;
+  const report = JSON.parse(String(content.text));
+  expect(report.runs.map((entry: { run: { id: string } }) => entry.run.id).sort()).toEqual(
+    [...runIds].sort(),
+  );
+  expect(report.executionMetrics.counts).toMatchObject({ requested: 2, accepted: 2, passed: 2 });
+  expect((content._meta as Record<string, unknown>)["testmaster:batch"]).toMatchObject({
+    batchId,
+    memberRuns: expect.arrayContaining(runIds),
+  });
+  // Control: a run report covers that run alone.
+  const single = (await client.readResource({ uri: `testmaster://runs/${runIds[0]}/report` }))
+    .contents[0] as Record<string, unknown>;
+  expect(JSON.parse(String(single.text)).runs).toHaveLength(1);
+  // Exactly one id is accepted, and a run id never opens a batch report.
+  expect((await open({ batchId, runId: runIds[0] })).body).toMatchObject({
+    error: { code: "INVALID_ARGUMENT" },
+  });
+  expect((await open({})).body).toMatchObject({ error: { code: "INVALID_ARGUMENT" } });
+  await expect(
+    client.readResource({ uri: `testmaster://batches/${runIds[0]}/report` }),
+  ).rejects.toMatchObject({ code: -32002 });
+});

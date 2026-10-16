@@ -231,4 +231,36 @@ describe("authoring endpoints", () => {
     });
     expect(unknown.statusCode).toBe(404);
   });
+
+  it("DELETE /tests/{id} archives with an optional reason stored on the test and refuses a blank or unknown field", async () => {
+    const test = application.tests.create({ projectId, plan: scaffoldPlan("backend") });
+    const blank = await call("DELETE", `/tests/${test.id}`, {
+      body: { reason: "  " },
+      ifMatch: Number(test.version),
+    });
+    expect(blank.statusCode, blank.body).toBe(400);
+    const unknown = await call("DELETE", `/tests/${test.id}`, {
+      body: { note: "x" },
+      ifMatch: Number(test.version),
+    });
+    expect(unknown.statusCode, unknown.body).toBe(400);
+    expect(application.tests.get(test.id).archivedAt).toBeNull();
+
+    const archived = await call("DELETE", `/tests/${test.id}`, {
+      body: { reason: "Superseded by the generated suite" },
+      ifMatch: Number(test.version),
+    });
+    expect(archived.statusCode, archived.body).toBe(200);
+    expect(archived.json().data.extensions["testmaster:archive"]).toMatchObject({
+      reason: "Superseded by the generated suite",
+      archivedAt: archived.json().data.archivedAt,
+    });
+
+    const plain = application.tests.create({ projectId, plan: scaffoldPlan("backend") });
+    const withoutBody = await call("DELETE", `/tests/${plain.id}`, {
+      ifMatch: Number(plain.version),
+    });
+    expect(withoutBody.statusCode, withoutBody.body).toBe(200);
+    expect(withoutBody.json().data.extensions?.["testmaster:archive"]).toBeUndefined();
+  });
 });

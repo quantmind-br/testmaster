@@ -118,7 +118,9 @@ const handlers: Record<string, RouteHandler> = {
   }),
   "GET /tests/{id}": h(({ app, id }) => app.tests.get(id)),
   "PATCH /tests/{id}": h(({ app, id, body, ifMatch }) => app.tests.update(id, body, ifMatch())),
-  "DELETE /tests/{id}": h(({ app, id, ifMatch }) => app.tests.archive(id, ifMatch())),
+  "DELETE /tests/{id}": h(({ app, id, body, ifMatch }) =>
+    app.tests.archive(id, ifMatch(), typeof body.reason === "string" ? body.reason : undefined),
+  ),
   "GET /tests/{id}/revisions": h(({ app, id, page }) => page(app.revisions.list(id))),
   "POST /tests/{id}/revisions": h(({ app, id, body, key }) => {
     const input = body as TestRevisionInput;

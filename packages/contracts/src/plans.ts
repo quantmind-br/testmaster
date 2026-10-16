@@ -45,20 +45,20 @@ export const Locator = Type.Recursive((Self) => {
 export const headerPatternMaxLength = 512;
 /** RFC 6265 cookie-name token. */
 const CookieName = Type.String({ pattern: "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$", maxLength: 200 });
-/** Request headers whose value may be a deliberately invalid credential. */
-export const invalidCredentialHeaders = [
-  "authorization",
-  "cookie",
-  "x-api-key",
-  "api-key",
-] as const;
+/** Request headers that take the token form of an invalid credential (`scheme` optional). */
+export const invalidCredentialTokenHeaders = ["authorization", "x-api-key", "api-key"] as const;
+/** The one request header that takes the cookie form of an invalid credential. */
+export const invalidCredentialCookieHeader = "cookie";
 /**
  * A credential the target must reject, for negative authentication tests: the runner sends a
- * fresh random token, so no real secret is needed. Only request header values accept it.
+ * fresh random value, so no real secret is needed. Only request header values accept it, in one
+ * form: `scheme` (token form, `<scheme> <random>` or the bare random token when empty;
+ * `Authorization`, `X-Api-Key`, `Api-Key`) or `cookie` (`<name>=<random>`; `Cookie` only).
  */
 export const InvalidCredential = Obj({
   invalidCredential: Obj({
     scheme: Type.Optional(Type.String({ pattern: "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$", maxLength: 64 })),
+    cookie: Type.Optional(CookieName),
   }),
 });
 const HeaderValue = Type.Union([Value, InvalidCredential]);

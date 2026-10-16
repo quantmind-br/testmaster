@@ -7,7 +7,7 @@ import {
   ContractError,
   type Expectation,
   headerPatternMaxLength,
-  invalidCredentialHeaders,
+  invalidCredentialRefusal,
   JsonSetError,
   type JsonValue,
   type PlanStep,
@@ -575,8 +575,22 @@ export async function readAuthorizedArtifact(
     }
   }
 }
-function isInvalidCredential(value: unknown): value is { invalidCredential: { scheme?: string } } {
+interface InvalidCredentialSpec {
+  scheme?: string;
+  cookie?: string;
+}
+function isInvalidCredential(
+  value: unknown,
+): value is { invalidCredential: InvalidCredentialSpec } {
   return typeof value === "object" && value !== null && "invalidCredential" in value;
+}
+/** The invalid credentials a request sends, by lower-cased header: what was sent, never its value. */
+function invalidCredentialsOf(
+  headers: Record<string, unknown> | undefined,
+): ({ header: string } & InvalidCredentialSpec)[] {
+  return Object.entries(headers ?? {}).flatMap(([name, value]) =>
+    isInvalidCredential(value) ? [{ header: name.toLowerCase(), ...value.invalidCredential }] : [],
+  );
 }
 /**
  * Names of the cookies a `Set-Cookie` header sets; a value is never kept. A header that removes
@@ -629,6 +643,9 @@ export async function loadProfileHeaders(runtime: Runtime): Promise<Record<strin
   }
   return headers;
 }
+/** The artifacts a request step writes for its response; assertions that read it cite them too. */
+const httpEvidencePath = (stepId: string): string => `http/${stepId}.json`;
+const httpBodiesPath = (stepId: string): string => `http/${stepId}-bodies.json`;
 /** What a credential-header assertion records in place of the header value. */
 const REDACTED_VALUE = "[REDACTED]";
 /** Shorter issued values are flags and counters, never credentials; scrubbing them would corrupt evidence. */
@@ -754,6 +771,14 @@ export class HttpEngine {
     if (step.kind === "assertion" && "responseStepId" in step.input) {
       const response = this.responses.get(step.input.responseStepId);
       if (!response) throw new RuntimeError("upstream_failed", "Response binding is unavailable");
+      // The response is what this step judges: cite its artifacts whether the assertion passes or
+      // fails, so the step points at the evidence its request step produced.
+      this.runtime.reference([
+        httpEvidencePath(step.input.responseStepId),
+        ...(this.runtime.input.policy?.httpBodies === true
+          ? [httpBodiesPath(step.input.responseStepId)]
+          : []),
+      ]);
       await assertResponse(this.runtime, response, step.expectation, step.input.jsonPointer);
       return;
     }
@@ -874,14 +899,21 @@ export class HttpEngine {
         deny("Forbidden or duplicate request header");
       let resolved: string;
       if (isInvalidCredential(value)) {
-        if (!(invalidCredentialHeaders as readonly string[]).includes(lower))
-          deny("invalidCredential is only valid on credential headers");
-        const scheme = value.invalidCredential.scheme;
-        if (scheme !== undefined && !/^[!#$%&'*+.^_`|~0-9A-Za-z-]{1,64}$/u.test(scheme))
+        const spec = value.invalidCredential;
+        const refusal = invalidCredentialRefusal(lower, spec);
+        if (refusal) deny(refusal);
+        if (spec.scheme !== undefined && !/^[!#$%&'*+.^_`|~0-9A-Za-z-]{1,64}$/u.test(spec.scheme))
           deny("Invalid credential scheme");
+        if (spec.cookie !== undefined && !/^[!#$%&'*+.^_`|~0-9A-Za-z-]{1,200}$/u.test(spec.cookie))
+          deny("Invalid credential cookie name");
         // Fresh per request: the target can only reject it, and no run reuses another's value.
         const token = `testmaster-invalid-${randomBytes(16).toString("hex")}`;
-        resolved = scheme === undefined ? token : `${scheme} ${token}`;
+        resolved =
+          spec.cookie !== undefined
+            ? `${spec.cookie}=${token}`
+            : spec.scheme === undefined
+              ? token
+              : `${spec.scheme} ${token}`;
       } else {
         if (CREDENTIAL_HEADER[lower] && !sensitiveInput(runtime, value))
           deny("Credentials require a sensitive reference");
@@ -993,11 +1025,8 @@ export class HttpEngine {
       const hops: RedirectHop[] = [];
       const cookieNames: string[] = [];
       let profileSent = false;
-      const fakeCredentials = new Set(
-        Object.entries(input.headers ?? {}).flatMap(([name, value]) =>
-          isInvalidCredential(value) ? [name.toLowerCase()] : [],
-        ),
-      );
+      const invalidCredentials = invalidCredentialsOf(input.headers);
+      const fakeCredentials = new Set(invalidCredentials.map(({ header }) => header));
       for (let redirects = 0; ; redirects++) {
         url = authorizeUrl(runtime, url.href);
         deadline.throwIfAborted();
@@ -1182,6 +1211,7 @@ export class HttpEngine {
               contentType: prepared.headers["content-type"] ?? null,
             },
             bindings,
+            ...(invalidCredentials.length ? { invalidCredentials } : {}),
           },
           captures: (input.capture ?? []).map((capture) => {
             const variable = runtime.variables.get(`${stepId}.${capture.name}`);
@@ -1209,14 +1239,14 @@ export class HttpEngine {
           },
         };
         await runtime.artifact(
-          `http/${stepId}.json`,
+          httpEvidencePath(stepId),
           "http",
           "application/json",
           Buffer.from(runtime.scrub(JSON.stringify(evidence))),
         );
         if (runtime.input.policy?.httpBodies === true)
           await runtime.artifact(
-            `http/${stepId}-bodies.json`,
+            httpBodiesPath(stepId),
             "restrictedRaw.http",
             "application/json",
             Buffer.from(

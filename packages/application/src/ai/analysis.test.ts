@@ -2934,3 +2934,139 @@ it("names the plan steps that have no recorded result when no recorded step fail
     ]),
   );
 });
+type ModelRequestData = {
+  data: {
+    requirements: Record<string, unknown>[];
+    measurements: Record<string, unknown>[];
+    limitations: string[];
+  };
+};
+function storeRequirements(
+  f: Awaited<ReturnType<typeof fixture>>,
+  requirements: Record<string, unknown>[],
+  conflicts: Record<string, unknown>[] = [],
+) {
+  const projectId = String(
+    f.ctx.entities.get("TestCase", f.ctx.workspaceId, f.run.testId)!.projectId,
+  );
+  f.db.run(
+    "INSERT INTO operational_state(key,value) VALUES(?,?)",
+    `requirements:${f.ctx.workspaceId}:${projectId}`,
+    canonicalJson({ requirements, conflicts, openQuestions: [], version: 1, fingerprint: "f" }),
+  );
+}
+const requirementId = (n: number) => `req_00000000-0000-4000-8000-00000000000${n}`;
+function storedRequirement(n: number, fields: Record<string, unknown> = {}) {
+  return {
+    id: requirementId(n),
+    text: `Requirement ${n} text`,
+    acceptanceCriteria: [`Criterion ${n}`],
+    sourceRefs: [],
+    originKind: "explicit",
+    confidence: null,
+    approval: "apr_00000000-0000-4000-8000-000000000001",
+    ...fields,
+  };
+}
+it("the model reading of a failed HTTP assertion carries the mapped requirement and the response the assertion read, without secrets", async () => {
+  const f = await fixture({
+    plan: requestStatusPlan([201]),
+    step: { expected: [201], observed: 200 },
+  });
+  storeRequirements(f, [
+    storedRequirement(3, {
+      text: "GET /legacy returns HTTP 200; ask admin@example.com about it.",
+      acceptanceCriteria: ["Without a session, GET /legacy returns HTTP 200 with a JSON object."],
+    }),
+  ]);
+  await attachTerminalProcess(
+    f,
+    {
+      response: {
+        status: 200,
+        headers: { "content-type": "application/json" },
+        bodyMetadata: { sizeBytes: 20, contentType: "application/json" },
+        failureExcerpt: null,
+      },
+    },
+    { relativePath: "http/request.json", kind: "http" },
+  );
+  await f.service.analyze(f.run.id, { model: true });
+  const { data } = f.complete.mock.calls[0]![0] as ModelRequestData;
+  expect(data.requirements).toEqual([
+    {
+      id: requirementId(3),
+      reviewState: "approved",
+      text: "GET /legacy returns HTTP 200; ask [REDACTED] about it.",
+      acceptanceCriteria: ["Without a session, GET /legacy returns HTTP 200 with a JSON object."],
+      omittedCriteria: 0,
+    },
+  ]);
+  expect(data.measurements.find((item) => item.kind === "http")).toMatchObject({
+    stepId: "request",
+    status: 200,
+    contentType: "application/json",
+    bodyBytes: 20,
+  });
+  expect(JSON.stringify(data)).not.toContain("admin@example.com");
+});
+it("mapped requirements keep their review state, are bounded, and disclose what is missing", async () => {
+  const refs = [3, 4, 5, 6, 7, 8].map(requirementId);
+  const f = await fixture({ plan: { ...requestStatusPlan([201]), requirementRefs: refs } });
+  storeRequirements(
+    f,
+    [
+      storedRequirement(3, {
+        text: "x".repeat(2000),
+        acceptanceCriteria: ["a", "b", "c", "d", "e", "f", "g", "h"],
+      }),
+      storedRequirement(4, {
+        approval: null,
+        extensions: {
+          "testmaster:rejection": { reason: "out of scope", actorId: "a", rejectedAt: "t" },
+        },
+      }),
+      storedRequirement(5),
+      storedRequirement(6, {
+        approval: null,
+        extensions: {
+          "testmaster:decision": { action: "edited", reason: "r", actorId: "a", decidedAt: "t" },
+        },
+      }),
+      storedRequirement(7, { approval: null }),
+    ],
+    [
+      {
+        id: "cfl_1",
+        requirementIds: [requirementId(5), requirementId(7)],
+        reason: "r",
+        sourceRefs: [],
+        resolution: { selectedRequirementId: requirementId(7), reason: "r", actorId: "a" },
+      },
+    ],
+  );
+  await f.service.analyze(f.run.id, { model: true });
+  const { data } = f.complete.mock.calls[0]![0] as ModelRequestData;
+  expect(data.requirements.map((item) => [item.id, item.reviewState])).toEqual([
+    [requirementId(3), "approved"],
+    [requirementId(4), "rejected"],
+    [requirementId(5), "superseded"],
+    [requirementId(6), "edited"],
+    [requirementId(7), "pending"],
+  ]);
+  expect(String(data.requirements[0]!.text)).toHaveLength(800);
+  expect(data.requirements[0]).toMatchObject({
+    acceptanceCriteria: ["a", "b", "c", "d", "e", "f"],
+    omittedCriteria: 2,
+  });
+  expect(data.limitations).toContain(
+    "Mapped requirements missing from the project's current requirement snapshot: 1.",
+  );
+});
+it("a failed test that maps to no requirement tells the model so instead of implying one", async () => {
+  const f = await fixture({ plan: { ...requestStatusPlan([201]), requirementRefs: [] } });
+  await f.service.analyze(f.run.id, { model: true });
+  const { data } = f.complete.mock.calls[0]![0] as ModelRequestData;
+  expect(data.requirements).toEqual([]);
+  expect(data.limitations.join(" ")).toContain("maps to no requirement");
+});

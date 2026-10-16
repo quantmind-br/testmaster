@@ -20,6 +20,19 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 - The REST routes that run a model (proposal generation and refinement, `POST /runs/{id}/analysis`, `POST /runs/{id}/healing-proposals`, requirement normalization) and `POST /mcp` turn off the server's 30 s socket idle timeout for their connection; other routes keep it (`ServerOptions.connectionTimeoutMs`).
 - The eval runner never kills a model command; its trial wall time only stops commands that do no model work and keeps later commands from starting. The development smoke forwarder relays model calls without a timeout.
 
+### Eighth Omnigent agent run
+
+Found when an omp agent drove the pipeline on Omnigent an eighth time (6/6 plan tests and 6/6 generated Playwright tests passed, both suites 12/12 twice; a stale-locator drill was diagnosed, healed and verified).
+
+- The model reading of `analyze_run` receives the text, acceptance criteria and review state of the requirements the failed test maps to, and the prompt has it compare the observation with them before naming a product or test cause; the HTTP evidence it reads also carries the response content type and body size (prompt `analyze-8-requirement-comparison`).
+- HTTP assertion steps, including those the browser runner delegates, cite the evidence artifact of the response they judge, whether they pass or fail, so a failed status check points at its response directly. The runner image is rebuilt.
+- `invalidCredential` has a cookie form, `{"invalidCredential": {"cookie": "<name>"}}`, valid on `Cookie` only: the HTTP runner and the Playwright and pytest exports send `<name>=testmaster-invalid-<random>`, fresh for every request, so a forged session cookie is a negative test that needs no registered secret. `scheme` and `cookie` never combine, `Cookie` no longer takes the scheme or bare-token form (it never produced a cookie), `http/<stepId>.json` records `request.invalidCredentials` without the value, and the plan-generation prompt teaches the three forms.
+- `testmaster_review_healing` and `heal review` show who decided a healing proposal, how, when and why (approved or rejected) instead of `Approval: not available`; a rejection now records its reviewer and time. `testmaster_get_run` returns the run's `testId`, `revisionId`, `environmentRevisionId`, `mode` and `origin`, so a verification run names the candidate revision it ran.
+- New MCP tool `testmaster_archive_test`; it, `test archive --reason` and `DELETE /v1/tests/{id}` with a `{reason}` body archive a test with an optional reason (1–2000 characters), stored on the test with the actor and time and kept out of the audit trail.
+- `testmaster_open_report` also accepts `batchId` (the batch of a `run_tests` receipt) and returns `testmaster://batches/{id}/report`, one report over every member run with the aggregate metrics, like `report export <batchId>` on the CLI.
+- `testmaster_analyze_code` derives Next.js file routes only inside a Next.js project (the nearest `package.json` lists `next`, or a `next.config.*` is present) and never derives routes or endpoints from test, spec or story files or from `e2e/`, `fixtures/`, `__fixtures__/` and `__mocks__/` directories, so a Vite SPA's `src/pages/LoginPage.tsx` and `LoginPage.test.tsx` no longer become `route:GET:/LoginPage` features, nor an e2e fixture server's paths routes. `CODE_DETECTOR_VERSION` is 1.8.0.
+- The `run_tests` `idempotencyKey` description states its 16–128 character length.
+
 ### Seventh Omnigent agent run
 
 Found when an omp agent drove the pipeline on Omnigent a seventh time.

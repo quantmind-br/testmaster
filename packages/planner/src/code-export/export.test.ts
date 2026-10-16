@@ -346,6 +346,17 @@ describe("standalone deterministic code export", () => {
     expect(() => exportCode(plan, { format: "pytest" })).toThrow(/ECMAScript construct/);
     expect(() => exportCode(plan, { format: "playwright" })).not.toThrow();
   });
+  it("exports a forged session cookie as name=random in both formats", async () => {
+    const plan = await fixture("backend");
+    const request = plan.steps[0];
+    if (request?.operation !== "request") throw new Error("Bad fixture");
+    request.input.headers = { Cookie: { invalidCredential: { cookie: "ap_session" } } };
+    const helpers = exportCode(plan, { format: "playwright" }).files["helpers/standalone.ts"] ?? "";
+    expect(() => parse(helpers, { sourceType: "module", plugins: ["typescript"] })).not.toThrow();
+    expect(helpers).toContain("spec.cookie + '=' + token");
+    const python = exportCode(plan, { format: "pytest" }).files["standalone.py"] ?? "";
+    expect(python).toContain('spec["cookie"] + "=" + token');
+  });
   it("exports a disabled assertion with the Playwright disabled semantics in both formats", async () => {
     const plan = await fixture("frontend");
     plan.steps = [

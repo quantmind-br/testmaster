@@ -516,24 +516,46 @@
           "additionalProperties": false,
           "type": "object",
           "required": [
-            "reason",
-            "actorId",
-            "approvedAt"
+            "status"
           ],
           "properties": {
-            "reason": {
-              "minLength": 1,
-              "maxLength": 2000,
-              "type": "string"
+            "status": {
+              "anyOf": [
+                {
+                  "const": "approved",
+                  "type": "string"
+                },
+                {
+                  "const": "rejected",
+                  "type": "string"
+                }
+              ]
+            },
+            "mode": {
+              "anyOf": [
+                {
+                  "const": "manual",
+                  "type": "string"
+                },
+                {
+                  "const": "policy",
+                  "type": "string"
+                }
+              ]
             },
             "actorId": {
               "minLength": 1,
               "maxLength": 200,
               "type": "string"
             },
-            "approvedAt": {
+            "decidedAt": {
               "format": "date-time",
               "pattern": "Z$",
+              "type": "string"
+            },
+            "reason": {
+              "minLength": 1,
+              "maxLength": 2000,
               "type": "string"
             }
           }

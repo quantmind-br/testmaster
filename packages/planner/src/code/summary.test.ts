@@ -32,6 +32,8 @@ function pythonFile(path: string, facts: Partial<PythonFile> = {}): PythonFile {
     ...facts,
   };
 }
+/** A manifest that makes the repository root a Next.js project. */
+const NEXT_MANIFEST = '{"dependencies":{"next":"15.0.0"}}\n';
 describe("confined AST code summary", () => {
   it("summarizes reference-shop route logic and test hooks without executing it", async () => {
     const summary = await summarizeCode(join(process.cwd(), "fixtures/reference-shop"));
@@ -68,6 +70,7 @@ describe("confined AST code summary", () => {
   it("finds Express, React and Next routes and respects configured excludes", async () => {
     const root = await repo();
     try {
+      await writeFile(join(root, "package.json"), NEXT_MANIFEST);
       await mkdir(join(root, "app", "(shop)", "products"), { recursive: true });
       await writeFile(
         join(root, "server.ts"),
@@ -447,6 +450,7 @@ describe("confined AST code summary", () => {
   it("reads App Router route handlers per exported HTTP method", async () => {
     const root = await repo();
     try {
+      await writeFile(join(root, "package.json"), NEXT_MANIFEST);
       await mkdir(join(root, "app", "api", "items"), { recursive: true });
       await mkdir(join(root, "lib"), { recursive: true });
       await writeFile(
@@ -499,6 +503,7 @@ describe("confined AST code summary", () => {
   it("resolves re-exported route methods and warns instead of guessing for export *", async () => {
     const root = await repo();
     try {
+      await writeFile(join(root, "package.json"), NEXT_MANIFEST);
       await mkdir(join(root, "app", "a"), { recursive: true });
       await mkdir(join(root, "app", "b"), { recursive: true });
       await mkdir(join(root, "app", "c"), { recursive: true });
@@ -663,6 +668,7 @@ describe("confined AST code summary", () => {
   it("resolves destructured route exports by the names they bind and warns only when none resolves", async () => {
     const root = await repo();
     try {
+      await writeFile(join(root, "package.json"), NEXT_MANIFEST);
       for (const name of ["search", "rename", "rest", "all"])
         await mkdir(join(root, "app", name), { recursive: true });
       await writeFile(
@@ -699,6 +705,7 @@ describe("confined AST code summary", () => {
   it("normalizes dynamic Next segments and does not invent a method for Pages API files", async () => {
     const root = await repo();
     try {
+      await writeFile(join(root, "package.json"), NEXT_MANIFEST);
       await mkdir(join(root, "app", "products", "[id]"), { recursive: true });
       await mkdir(join(root, "app", "docs", "[...slug]"), { recursive: true });
       await mkdir(join(root, "app", "shop", "[[...rest]]"), { recursive: true });
@@ -810,6 +817,115 @@ describe("confined AST code summary", () => {
           message: expect.stringContaining("line 23"),
         }),
       );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+  it("derives file routes only inside Next.js projects and never from test, spec or story files", async () => {
+    const root = await repo();
+    try {
+      // A Vite SPA: `pages/` holds components and their tests, and `next` is not a dependency.
+      await mkdir(join(root, "web", "src", "pages"), { recursive: true });
+      await writeFile(
+        join(root, "web", "package.json"),
+        '{"dependencies":{"react":"19.0.0","react-router-dom":"7.0.0"}}\n',
+      );
+      for (const name of ["LoginPage.tsx", "LoginPage.test.tsx"])
+        await writeFile(
+          join(root, "web", "src", "pages", name),
+          "export default function LoginPage() { return null; }\n",
+        );
+      // A Next.js project: pages and an App Router page are routes, their tests and stories are not.
+      await mkdir(join(root, "site", "pages", "__tests__"), { recursive: true });
+      await mkdir(join(root, "site", "app", "dashboard"), { recursive: true });
+      await mkdir(join(root, "site", "components", "pages"), { recursive: true });
+      await writeFile(join(root, "site", "package.json"), NEXT_MANIFEST);
+      for (const path of [
+        "pages/login.tsx",
+        "pages/login.test.tsx",
+        "pages/login.spec.tsx",
+        "pages/login.stories.tsx",
+        "pages/__tests__/login.tsx",
+        "app/dashboard/page.tsx",
+        "app/dashboard/page.test.tsx",
+        "components/pages/Widget.tsx",
+      ])
+        await writeFile(
+          join(root, "site", path),
+          "export default function Page() { return null; }\n",
+        );
+      // `next.config.*` marks a project without a manifest; no signal at all marks none.
+      await mkdir(join(root, "config", "pages"), { recursive: true });
+      await mkdir(join(root, "loose", "pages"), { recursive: true });
+      await writeFile(join(root, "config", "next.config.js"), "module.exports = {};\n");
+      await writeFile(
+        join(root, "config", "pages", "about.tsx"),
+        "export default function About() { return null; }\n",
+      );
+      await writeFile(
+        join(root, "loose", "pages", "about.tsx"),
+        "export default function About() { return null; }\n",
+      );
+      const summary = await summarizeCode(root);
+      expect(
+        summary.routes.map((route) => `${route.framework} ${route.path} ${route.ref.path}`).sort(),
+      ).toEqual([
+        "next /about config/pages/about.tsx",
+        "next /dashboard site/app/dashboard/page.tsx",
+        "next /login site/pages/login.tsx",
+      ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+  it("records no Express or Python endpoint declared in a test file", async () => {
+    const root = await repo();
+    try {
+      await mkdir(join(root, "tests"), { recursive: true });
+      await mkdir(join(root, "e2e", "fixtures"), { recursive: true });
+      await mkdir(join(root, "fixtures"), { recursive: true });
+      const express =
+        "import express from 'express'; const app = express(); app.get('/stub', () => 1);\n";
+      await writeFile(join(root, "server.ts"), express.replace("/stub", "/health"));
+      await writeFile(join(root, "server.test.ts"), express);
+      await writeFile(join(root, "fixtures", "api.ts"), express.replace("/stub", "/fixture-api"));
+      const httpServer = (path: string) =>
+        `import { createServer } from 'node:http';\ncreateServer((req, res) => { if (req.url === '${path}') res.end(); });\n`;
+      await writeFile(join(root, "status.ts"), httpServer("/status"));
+      // An e2e fixture server, like Omnigent's web/electron/e2e/fixtures/designModalFixture.js.
+      await writeFile(join(root, "e2e", "fixtures", "modal.js"), httpServer("/modal"));
+      await writeFile(join(root, "api.py"), "# FastAPI app\n");
+      await writeFile(join(root, "tests", "test_api.py"), "# FastAPI app used by a test\n");
+      const route = (path: string) => ({
+        framework: "fastapi" as const,
+        method: "GET",
+        path,
+        handler: "handler",
+        line: 1,
+        router: null,
+      });
+      const summary = await summarizeCode(root, {
+        pythonRunner: {
+          async summarize() {
+            return {
+              available: true,
+              summary: {
+                version: "1.1.0",
+                files: [
+                  pythonFile("api.py", { routes: [route("/python")] }),
+                  pythonFile("tests/test_api.py", { routes: [route("/python-fixture")] }),
+                ],
+                diagnostics: [],
+              },
+            };
+          },
+        },
+      });
+      expect(summary.endpoints.map((endpoint) => endpoint.path).sort()).toEqual([
+        "/health",
+        "/python",
+      ]);
+      expect(summary.routes.map((route) => route.path)).toEqual(["/status"]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

@@ -46,6 +46,7 @@ export async function executePlan(plan: Data, initialPage: Page, request: APIReq
   };
   const invalidCredential = (spec: Data): string => {
     const token = 'testmaster-invalid-' + randomBytes(16).toString('hex');
+    if (spec.cookie !== undefined) return spec.cookie + '=' + token;
     return spec.scheme === undefined ? token : spec.scheme + ' ' + token;
   };
   const string = (ref: Data): string => {

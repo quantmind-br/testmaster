@@ -176,7 +176,7 @@ describe("HTTP plan expressiveness", () => {
     ]);
   });
   it("allows an invalid credential only on credential headers and keeps literal credentials refused", () => {
-    for (const name of ["Authorization", "cookie", "X-Api-Key", "api-key"])
+    for (const name of ["Authorization", "X-Api-Key", "api-key"])
       expect(
         rules(
           plan([
@@ -206,6 +206,29 @@ describe("HTTP plan expressiveness", () => {
     expect(
       rules(plan([request({ pathSegments: [{ invalidCredential: {} }] }), status])).length,
     ).toBeGreaterThan(0);
+  });
+  it("takes a forged session cookie as an invalid credential on Cookie only", () => {
+    const cookie = (headers: Json) => rules(plan([request({ headers }), status]));
+    expect(cookie({ Cookie: { invalidCredential: { cookie: "ap_session" } } })).toEqual([]);
+    // A scheme or a bare token is not a cookie pair, so it never fits Cookie.
+    expect(cookie({ Cookie: { invalidCredential: { scheme: "Bearer" } } })).toEqual([
+      "header:/steps/0/input/headers/Cookie",
+    ]);
+    expect(cookie({ Cookie: { invalidCredential: {} } })).toEqual([
+      "header:/steps/0/input/headers/Cookie",
+    ]);
+    // The cookie form fits no other header, and the two forms never combine.
+    expect(cookie({ Authorization: { invalidCredential: { cookie: "ap_session" } } })).toEqual([
+      "header:/steps/0/input/headers/Authorization",
+    ]);
+    expect(
+      cookie({ Cookie: { invalidCredential: { cookie: "ap_session", scheme: "Bearer" } } }),
+    ).toEqual(["header:/steps/0/input/headers/Cookie"]);
+    // The name is an RFC 6265 token: no separator, space or empty name.
+    for (const name of ["bad name", "a;b", "a=b", ""])
+      expect(cookie({ Cookie: { invalidCredential: { cookie: name } } })).toEqual([
+        "pattern:/steps/0/input/headers/Cookie/invalidCredential/cookie",
+      ]);
   });
 });
 

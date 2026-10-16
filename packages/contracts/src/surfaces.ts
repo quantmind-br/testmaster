@@ -666,7 +666,7 @@ export const routeCatalog: readonly RouteDefinition[] = routeRows.flatMap(
         auth: scope === "public" ? "public" : scope === "signature" ? "signature" : "token",
         milestone,
         requestSchema:
-          method === "GET" || method === "DELETE"
+          method === "GET" || (method === "DELETE" && path !== "/tests/{id}")
             ? "Empty"
             : method === "PATCH" && path === "/projects/{id}"
               ? "ProjectPatchInput"
@@ -674,7 +674,9 @@ export const routeCatalog: readonly RouteDefinition[] = routeRows.flatMap(
                 ? "EnvironmentPatchInput"
                 : method === "POST" && path === "/approvals"
                   ? "ApprovalInput"
-                  : requestSchema,
+                  : method === "DELETE"
+                    ? "TestArchiveInput"
+                    : requestSchema,
         response: responseFor(`${method} ${path}`, responseSchema),
       };
     }),
@@ -913,7 +915,7 @@ export const mcpTools = {
       idempotencyKey: Type.Optional(
         d(
           Type.String({ minLength: 16, maxLength: 128 }),
-          "Makes a retried admission return the same batch",
+          "16-128 characters; a retried admission with the same key returns the same batch",
         ),
       ),
       wait: Type.Optional(d(Type.Boolean(), "Block until every run completes")),
@@ -938,7 +940,7 @@ export const mcpTools = {
         ),
       ),
     }),
-    output: "RunResult",
+    output: "McpRunResult",
   },
   testmaster_get_analysis: {
     milestone: "M3",
@@ -1088,6 +1090,20 @@ export const mcpTools = {
     }),
     output: "TestCase",
   },
+  testmaster_archive_test: {
+    milestone: "M1",
+    input: Obj({
+      testId: d(id("tst"), "Test to archive"),
+      expectedVersion: d(Version, "Current version of the test (testmaster://tests/{id})"),
+      reason: Type.Optional(
+        d(
+          DecisionReason,
+          "Why you archive; recorded on the test with the actor and time, not in the audit trail",
+        ),
+      ),
+    }),
+    output: "TestCase",
+  },
   testmaster_save_suite: {
     milestone: "M2",
     input: Obj({
@@ -1149,7 +1165,15 @@ export const mcpTools = {
   },
   testmaster_open_report: {
     milestone: "M1",
-    input: Obj({ runId: runId() }),
+    input: Obj({
+      runId: Type.Optional(runId("Run id; send runId or batchId")),
+      batchId: Type.Optional(
+        d(
+          id("bat"),
+          "Batch id (the batchId/jobId of a run_tests receipt): one report over its member runs; send runId or batchId",
+        ),
+      ),
+    }),
     output: "ReportLocation",
   },
   testmaster_add_source: {

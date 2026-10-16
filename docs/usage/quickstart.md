@@ -125,7 +125,8 @@ command exits 0 even when the analyzed Run failed.
 Optional enrichment is explicit: use
 `testmaster run analyze "$RUN_ID" --model` with a provider the operator policy
 allows; a model reading has no deadline and runs until the provider answers. Only sanitized execution
-summaries and bounded measurements cross that boundary, not raw
+summaries and bounded measurements cross that boundary, including the text, acceptance criteria and
+review state of the requirements the failed test maps to, not raw
 trace/video or sensitive captures. Choose the model with `--provider ID --model-id ID`; an unknown
 choice is refused before any work. Model refusal/failure retains the factual predecessor and records a
 limitation in a separate immutable analysis that stays `source: "rules"` (it never claims to be model
@@ -422,7 +423,9 @@ edit raises it); `testmaster_save_test` stores a plan as a new test (`projectId`
 revision (`testId`), and its receipt says that the candidate is not active yet and which calls replay and promote
 it. `testmaster_run_tests` with `revisionId` replays that exact revision of one test, and
 `testmaster_promote_revision` (at the test's `expectedVersion`) makes it active; a generated candidate needs a
-passing replay first. `testmaster_save_suite` creates a list or adds and removes members at its
+passing replay first. `testmaster_archive_test` archives a test at its `expectedVersion` (history and evidence
+stay; there is no unarchive) with an optional `reason`, kept on the test with the actor and the time
+(`test archive --reason`, `DELETE /v1/tests/{id}` with a `{reason}` body). `testmaster_save_suite` creates a list or adds and removes members at its
 `expectedVersion`. When a production run is refused with `approval_required`, copy `details.binding` into
 `testmaster_approve_execution`, add a reason and repeat the run: the approval is single use and recorded with
 the acting principal. `testmaster_get_evidence` reports `staleReasons` next to `freshness`; a candidate

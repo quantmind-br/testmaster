@@ -53,6 +53,7 @@ export function decisionReason(reason: string | undefined): string | null {
   return text;
 }
 const PROMOTIONS_EXTENSION = "testmaster:promotions";
+const ARCHIVE_EXTENSION = "testmaster:archive";
 // A type alias (not an interface) so it is assignable to the JSON-valued extensions map.
 export type PromotionRecord = {
   revisionId: string;
@@ -770,15 +771,29 @@ export class TestsService {
       return next;
     });
   }
-  archive(id: string, expectedVersion: number): Stored<TestCase> {
+  /**
+   * A reason is kept on the test with the actor and the time (`extensions['testmaster:archive']`), never in the
+   * audit trail. Archiving an archived test keeps its first archive record.
+   */
+  archive(id: string, expectedVersion: number, reason?: string): Stored<TestCase> {
     this.ctx.authorize("W");
+    const text = decisionReason(reason);
     return authoringTransaction(this.ctx, () => {
       const current = requireEntity(this.ctx, "TestCase", id) as Stored<TestCase>;
       this.ctx.authorize("W", current.projectId);
       expected(current, expectedVersion);
+      const archivedAt = current.archivedAt ?? new Date().toISOString();
       const next = {
         ...current,
-        archivedAt: current.archivedAt ?? new Date().toISOString(),
+        ...(text && !current.archivedAt
+          ? {
+              extensions: {
+                ...current.extensions,
+                [ARCHIVE_EXTENSION]: { reason: text, actorId: this.ctx.principalId, archivedAt },
+              },
+            }
+          : {}),
+        archivedAt,
         version: expectedVersion + 1,
       };
       this.ctx.entities.update("TestCase", this.ctx.workspaceId, id, expectedVersion, next);

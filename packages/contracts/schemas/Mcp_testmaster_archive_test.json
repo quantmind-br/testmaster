@@ -1,0 +1,29 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "testId",
+    "expectedVersion"
+  ],
+  "properties": {
+    "testId": {
+      "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string",
+      "description": "Test to archive"
+    },
+    "expectedVersion": {
+      "minimum": 1,
+      "type": "integer",
+      "description": "Current version of the test (testmaster://tests/{id})"
+    },
+    "reason": {
+      "minLength": 1,
+      "maxLength": 2000,
+      "type": "string",
+      "description": "Why you archive; recorded on the test with the actor and time, not in the audit trail"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:Mcp_testmaster_archive_test",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -88,6 +88,44 @@ it("heal review renders recorded changes, candidates, blockers and the exact ver
   }
 });
 
+it("heal review of a decided proposal shows the decision and no approval command or unavailable line", async () => {
+  let stdout = "";
+  const output = new Writable({
+    write(chunk, _encoding, done) {
+      stdout += String(chunk);
+      done();
+    },
+  });
+  const runtime = new Runtime(output, output);
+  const decided: HealingReview = {
+    ...review,
+    automation: { decision: "not_eligible", reasons: [] },
+    verification: { runId: review.verification!.runId, outcome: "passed", gate: "passed" },
+    approval: {
+      ...review.approval,
+      decision: {
+        status: "approved",
+        mode: "manual",
+        actorId: "prn_00000000-0000-4000-8000-000000000001",
+        decidedAt: "2026-10-16T12:00:00.000Z",
+      },
+    },
+  };
+  runtime.app = async () =>
+    ({ healing: { review: async () => decided } }) as unknown as Application;
+  const exit = process.exitCode;
+  try {
+    await runCli(["heal", "review", review.approval.proposalId], runtime);
+    expect(stdout).toContain(
+      "Decision: approved (manual) by prn_00000000-0000-4000-8000-000000000001 at 2026-10-16T12:00:00.000Z",
+    );
+    expect(stdout).not.toContain("Approval: not available");
+    expect(stdout).not.toContain("testmaster heal approve");
+  } finally {
+    process.exitCode = exit;
+  }
+});
+
 it("heal review JSON preserves the structured response without presentation fields", async () => {
   let stdout = "";
   const output = new Writable({

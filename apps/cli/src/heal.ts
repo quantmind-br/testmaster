@@ -1,4 +1,8 @@
-import { formatReviewRisk, isHealingAbstention } from "@testmaster/application";
+import {
+  formatReviewDecision,
+  formatReviewRisk,
+  isHealingAbstention,
+} from "@testmaster/application";
 import { ContractError, type HealingAbstention, type HealingReview } from "@testmaster/contracts";
 import { exitCodeForRun } from "@testmaster/domain";
 import type { Command } from "commander";
@@ -67,22 +71,19 @@ export function healingReviewText(review: HealingReview): string {
     review.verification
       ? `Verification: ${review.verification.runId} — ${review.verification.outcome ?? "not finished"}/${review.verification.gate}`
       : "Verification: not recorded",
-    ...(review.approval.decision
-      ? [
-          `Approved by ${review.approval.decision.actorId} at ${review.approval.decision.approvedAt}: ${review.approval.decision.reason}`,
-        ]
-      : []),
     "",
-    ...(review.automation.decision === "manual_review_required"
-      ? [
-          "Approval is bound to this proposal, candidate revision and expected version:",
-          `testmaster heal approve ${review.approval.proposalId} --expected-version ${review.approval.expectedVersion}`,
-        ]
-      : review.verification && review.verification.outcome !== "passed"
+    ...(review.approval.decision
+      ? [`Decision: ${formatReviewDecision(review.approval.decision)}`]
+      : review.automation.decision === "manual_review_required"
         ? [
-            "Approval: not available, this proposal's verification did not pass; repair the test with `testmaster test revision create` and replay it, or propose healing for a new failed run",
+            "Approval is bound to this proposal, candidate revision and expected version:",
+            `testmaster heal approve ${review.approval.proposalId} --expected-version ${review.approval.expectedVersion}`,
           ]
-        : [`Approval: not available (${review.automation.decision})`]),
+        : review.verification && review.verification.outcome !== "passed"
+          ? [
+              "Approval: not available, this proposal's verification did not pass; repair the test with `testmaster test revision create` and replay it, or propose healing for a new failed run",
+            ]
+          : [`Approval: not available (${review.automation.decision})`]),
   );
   if (review.limitations.length)
     lines.push("", "Limitations:", ...review.limitations.map((limitation) => `- ${limitation}`));

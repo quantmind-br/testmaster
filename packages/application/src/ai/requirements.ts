@@ -127,6 +127,28 @@ export function withRequirementStatus(
 ): Requirement & { status: RequirementStatus } {
   return { ...value, status: requirementStatus(value, conflicts) };
 }
+/** `requirementStatus` plus the edit a reviewer recorded: an edited requirement waits for a new approval. */
+export type RequirementReviewState = RequirementStatus | "edited";
+export function requirementReviewState(
+  value: Requirement,
+  conflicts: readonly ConflictDecision[],
+): RequirementReviewState {
+  const status = requirementStatus(value, conflicts);
+  return status === "pending" && requirementDecision(value)?.action === "edited"
+    ? "edited"
+    : status;
+}
+/** The stored requirement snapshot of a project; null when its sources were never normalized. No authorization. */
+export function storedRequirementSnapshot(
+  ctx: ServiceContext,
+  projectId: string,
+): RequirementSnapshot | null {
+  const row = ctx.database.get(
+    "SELECT value FROM operational_state WHERE key=?",
+    `requirements:${ctx.workspaceId}:${projectId}`,
+  );
+  return row ? (JSON.parse(String(row.value)) as RequirementSnapshot) : null;
+}
 /** What a snapshot conflict reports about the snapshot another writer changed: identity and size, never the requirements. */
 export function snapshotDigest(snapshot: RequirementSnapshot): {
   version: number;

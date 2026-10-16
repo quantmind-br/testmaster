@@ -1,14 +1,16 @@
 {
   "additionalProperties": false,
   "type": "object",
-  "required": [
-    "runId"
-  ],
   "properties": {
     "runId": {
       "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
       "type": "string",
-      "description": "Run id"
+      "description": "Run id; send runId or batchId"
+    },
+    "batchId": {
+      "pattern": "^bat_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string",
+      "description": "Batch id (the batchId/jobId of a run_tests receipt): one report over its member runs; send runId or batchId"
     }
   },
   "$defs": {},

@@ -300,6 +300,35 @@ it("records value-free missing-pointer structure and distinguishes empty arrays 
     expect(payload.error.message).not.toContain("canary-secret");
   }
 });
+it("cites the response artifact of its request step on a failed and on a passed status assertion", async () => {
+  const base = await serve((_req, res) => res.end('{"status":"ok"}'));
+  const f = fixture(base);
+  const steps = [
+    requestStep("get_version", []),
+    assertStep("assert_status_ok", "get_version", { predicate: "statusIn", values: [200] }),
+    assertStep("assert_status_mismatch", "get_version", { predicate: "statusIn", values: [201] }),
+  ];
+  expect(await f.runtime.runSteps(steps, (step) => f.engine.perform(step))).toMatchObject({
+    outcome: "failed",
+    reasonCode: "assertion_mismatch",
+  });
+  const finished = (stepId: string) =>
+    f.events.find((event) => event.type === "step.finished" && event.payload.stepId === stepId)
+      ?.payload as { status: string; evidencePaths: string[] };
+  expect(finished("get_version")).toMatchObject({
+    status: "passed",
+    evidencePaths: ["http/get_version.json"],
+  });
+  expect(finished("assert_status_ok")).toMatchObject({
+    status: "passed",
+    evidencePaths: ["http/get_version.json"],
+  });
+  expect(finished("assert_status_mismatch")).toMatchObject({
+    status: "failed",
+    evidencePaths: ["http/get_version.json"],
+  });
+  expect(f.artifacts.has("http/get_version.json")).toBe(true);
+});
 it("bounds structural keys and records no missing diagnostic for a resolved null", async () => {
   const product = Object.fromEntries(
     Array.from({ length: 40 }, (_, i) => [`k${String(i).padStart(2, "0")}`, "private-value"]),
@@ -1616,6 +1645,43 @@ it("sends a fresh invalid credential per request without turning a rejection int
       requestStep("misplaced", [], { headers: { "X-Test": { invalidCredential: {} } } }),
     ),
   ).rejects.toMatchObject({ reasonCode: "security_precondition_failed" });
+  expect(seen).toHaveLength(sent);
+});
+
+it("sends a forged session cookie as name=random, records that a forged credential was sent and refuses misplaced forms", async () => {
+  const seen: string[] = [];
+  const base = await serve((req, res) => {
+    seen.push(String(req.headers.cookie));
+    res.statusCode = 401;
+    res.end("{}");
+  });
+  const f = fixture(base);
+  const forged = { Cookie: { invalidCredential: { cookie: "ap_session" } } };
+  await f.engine.perform(requestStep("a", [], { headers: forged }));
+  await f.engine.perform(requestStep("b", [], { headers: forged }));
+  expect(seen[0]).toMatch(/^ap_session=testmaster-invalid-[0-9a-f]{32}$/u);
+  expect(seen[1]).toMatch(/^ap_session=testmaster-invalid-[0-9a-f]{32}$/u);
+  expect(seen[0]).not.toBe(seen[1]);
+  const evidence = JSON.parse(new TextDecoder().decode(f.artifacts.get("http/a.json"))) as {
+    request: { invalidCredentials: unknown[] };
+  };
+  expect(evidence.request.invalidCredentials).toEqual([{ header: "cookie", cookie: "ap_session" }]);
+  expect(JSON.stringify(evidence)).not.toContain("testmaster-invalid-");
+  // A rejection of a credential the plan made up is the expected answer, not a credential failure.
+  await expect(
+    assertResponse(f.runtime, responseOf(f.engine, "a"), { predicate: "statusIn", values: [200] }),
+  ).rejects.toMatchObject({ reasonCode: "assertion_mismatch" });
+  const sent = seen.length;
+  for (const headers of [
+    { Cookie: { invalidCredential: { scheme: "Bearer" } } },
+    { Cookie: { invalidCredential: {} } },
+    { Authorization: { invalidCredential: { cookie: "ap_session" } } },
+    { Cookie: { invalidCredential: { cookie: "ap_session", scheme: "Bearer" } } },
+    { Cookie: { invalidCredential: { cookie: "bad name" } } },
+  ])
+    await expect(f.engine.perform(requestStep("misplaced", [], { headers }))).rejects.toMatchObject(
+      { reasonCode: "security_precondition_failed" },
+    );
   expect(seen).toHaveLength(sent);
 });
 

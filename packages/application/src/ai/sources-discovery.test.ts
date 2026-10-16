@@ -399,6 +399,7 @@ describe("durable discovery", () => {
   it("creates no component features and maps route handlers to endpoint features", async () => {
     const { cwd, projectId, discovery } = await fixture();
     await mkdir(join(cwd, "components"));
+    await writeFile(join(cwd, "package.json"), '{"dependencies":{"next":"15.0.0"}}\n');
     await mkdir(join(cwd, "app", "api", "items", "[id]"), { recursive: true });
     await writeFile(
       join(cwd, "components", "Card.tsx"),

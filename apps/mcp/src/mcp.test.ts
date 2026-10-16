@@ -290,6 +290,43 @@ it("MCP analysis emits readable layers and unchanged JSON while reads need no ex
     expect(app.context.entities.get("HealingProposal", init.workspaceId, proposal.id)).toEqual(
       proposal,
     );
+    // A decided proposal shows its decision instead of an eligibility line.
+    const approver = app.context.principalId;
+    app.context.entities.update(
+      "HealingProposal",
+      init.workspaceId,
+      proposal.id,
+      Number(proposal.version),
+      {
+        ...proposal,
+        status: "approved",
+        approvalMode: "manual",
+        reviewerId: approver,
+        version: Number(proposal.version) + 1,
+        extensions: {
+          "testmaster:approval": { actorId: approver, approvedAt: "2026-10-16T12:00:00.000Z" },
+        },
+      },
+    );
+    const decided = await reader.callTool({
+      name: "testmaster_review_healing",
+      arguments: { proposalId: proposal.id },
+    });
+    const decidedText = (decided.content as { text: string }[])[0]?.text ?? "";
+    expect(decidedText).toContain(
+      `Decision: approved (manual) by ${approver} at 2026-10-16T12:00:00.000Z`,
+    );
+    expect(decidedText).not.toContain("Approval: not available");
+    expect(decided.structuredContent).toMatchObject({
+      approval: {
+        decision: {
+          status: "approved",
+          mode: "manual",
+          actorId: approver,
+          decidedAt: "2026-10-16T12:00:00.000Z",
+        },
+      },
+    });
     const tools = (await reader.listTools()).tools;
     expect(
       tools.find((tool) => tool.name === "testmaster_review_healing")?.annotations?.readOnlyHint,

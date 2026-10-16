@@ -133,7 +133,7 @@ export function openApiDocument(): JsonObject {
     if (route.response.kind === "unavailable") operation["x-unavailable"] = true;
     if (route.requestSchema !== "Empty")
       operation.requestBody = {
-        required: true,
+        required: route.method !== "DELETE",
         content: { "application/json": { schema: ref(route.requestSchema) } },
       };
     const pathItem = paths[route.path] ?? {};

@@ -201,13 +201,49 @@ function boundedRejectionReason(reason: string): string {
   const marker = " [truncated]";
   return text.length <= 200 ? text : `${text.slice(0, 200 - marker.length)}${marker}`;
 }
-/** The approver's reason, with the approver and time, kept in the proposal's extensions. */
+/** The approver, time and optional reason of an approval, kept in the proposal's extensions. */
 const APPROVAL_EXTENSION = "testmaster:approval";
+/** The rejecting reviewer and time; the reason itself is the proposal's last limitation. */
+const REJECTION_EXTENSION = "testmaster:rejection";
+type StoredDecision = {
+  reason?: string;
+  actorId?: string;
+  approvedAt?: string;
+  rejectedAt?: string;
+};
+function storedDecision(proposal: Stored, key: string): StoredDecision {
+  const value = proposal.extensions?.[key];
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as StoredDecision)
+    : {};
+}
+/**
+ * The decision recorded on a proposal, none while it awaits review. A proposal decided before
+ * the reviewer and time were stored yields the decision with only the fields the entity kept.
+ */
 function approvalDecision(proposal: Stored): HealingReview["approval"]["decision"] {
-  const stored = proposal.extensions?.[APPROVAL_EXTENSION];
-  return stored && typeof stored === "object" && !Array.isArray(stored)
-    ? (stored as unknown as NonNullable<HealingReview["approval"]["decision"]>)
-    : undefined;
+  if (proposal.status === "proposed") return undefined;
+  if (proposal.status === "rejected") {
+    const stored = storedDecision(proposal, REJECTION_EXTENSION);
+    const reason = proposal.limitations.at(-1);
+    return {
+      status: "rejected",
+      ...(stored.actorId ? { actorId: stored.actorId } : {}),
+      ...(stored.rejectedAt ? { decidedAt: stored.rejectedAt } : {}),
+      ...(reason ? { reason } : {}),
+    };
+  }
+  const stored = storedDecision(proposal, APPROVAL_EXTENSION);
+  const actorId = stored.actorId ?? proposal.reviewerId;
+  return {
+    status: "approved",
+    ...(proposal.approvalMode === "manual" || proposal.approvalMode === "policy"
+      ? { mode: proposal.approvalMode }
+      : {}),
+    ...(actorId ? { actorId } : {}),
+    ...(stored.approvedAt ? { decidedAt: stored.approvedAt } : {}),
+    ...(stored.reason ? { reason: stored.reason } : {}),
+  };
 }
 function planSteps(plan: ExecutablePlan) {
   const steps = [...plan.steps];
@@ -253,6 +289,19 @@ function reviewRiskBasis(
 export function formatReviewRisk(review: Pick<HealingReview, "risk" | "riskBasis">): string {
   if (!review.riskBasis.length) return review.risk;
   return `${review.risk} (${review.riskBasis.map((entry) => `${entry.stepId}: ${entry.basis}`).join("; ")})`;
+}
+/** `approved (manual) by prn_x at 2026-...: reason`, the recorded decision with what is known of it. */
+export function formatReviewDecision(
+  decision: NonNullable<HealingReview["approval"]["decision"]>,
+): string {
+  const parts = [
+    decision.status === "approved"
+      ? `approved${decision.mode ? ` (${decision.mode})` : ""}`
+      : "rejected",
+  ];
+  if (decision.actorId) parts.push(`by ${decision.actorId}`);
+  if (decision.decidedAt) parts.push(`at ${decision.decidedAt}`);
+  return `${parts.join(" ")}${decision.reason ? `: ${decision.reason}` : ""}`;
 }
 export class HealingService {
   constructor(
@@ -1192,15 +1241,11 @@ export class HealingService {
         extensions: {
           ...current.extensions,
           "testmaster:approvalActorId": this.ctx.principalId,
-          ...(reason
-            ? {
-                [APPROVAL_EXTENSION]: {
-                  reason,
-                  actorId: this.ctx.principalId,
-                  approvedAt: new Date().toISOString(),
-                },
-              }
-            : {}),
+          [APPROVAL_EXTENSION]: {
+            ...(reason ? { reason } : {}),
+            actorId: this.ctx.principalId,
+            approvedAt: new Date().toISOString(),
+          },
         },
       };
       this.ctx.entities.update(
@@ -1232,6 +1277,13 @@ export class HealingService {
         status: "rejected" as const,
         limitations: [...current.limitations, boundedRejectionReason(reason)],
         version: Number(current.version) + 1,
+        extensions: {
+          ...current.extensions,
+          [REJECTION_EXTENSION]: {
+            actorId: this.ctx.principalId,
+            rejectedAt: new Date().toISOString(),
+          },
+        },
       };
       this.ctx.entities.update(
         "HealingProposal",

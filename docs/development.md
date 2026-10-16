@@ -271,9 +271,19 @@ its parent's, a `path`-less `<Route>` is a layout, `index` serves the parent's p
 without it. A leading identifier is the mount prefix of an embedded app (`` `${prefix}/login` ``,
 `prefix || "/"`) and is dropped; the catch-all `*` not-found route is not a route. A `path` that is
 not a static string is reported by `route_path_unresolved` and skips that route and its nested
-routes. Test files and `*.stories.*` files are fixtures and yield none; object route tables
-(`createBrowserRouter([...])`) and routes rendered under another file's route are not followed.
-Bumping `CODE_DETECTOR_VERSION` (now 1.7.0) stops old discovery jobs from resuming.
+routes. Object route tables (`createBrowserRouter([...])`) and routes rendered under another file's
+route are not followed. File-system routes (`pages/`, App Router `app/`, `route.*` handlers and the
+`pages/api` warning) are read only for files that belong to a Next.js project: the nearest directory
+at or above the file with a `package.json` that lists `next` in `dependencies`/`devDependencies`, or
+with a `next.config.*`; a file whose nearest manifest does not list `next` (a Vite SPA keeping
+components in `src/pages/`) yields none. `pages/` and `app/` count at the project root or under its
+`src/`. A manifest the scan excludes is not read, and a scoped diff scan reads the manifests above
+its Next candidates too. No detector derives a route or endpoint from a fixture: `*.test.*`,
+`*.spec.*`, `*.stories.*` and `__tests__/` files. Every detector except the Next file routes (a
+`pages/test/` page is a real route) also skips `test/`, `tests/`, `e2e/`, `fixture/`, `fixtures/`,
+`__fixtures__/` and `__mocks__/` directories, and Python endpoints skip test modules (`test_*.py`,
+`*_test.py`, `conftest.py`).
+Bumping `CODE_DETECTOR_VERSION` (now 1.8.0) stops old discovery jobs from resuming.
 A file is skipped as `binary` only when its bytes are not valid UTF-8 or more than a tenth of them
 are NUL (UTF-16 text, zero-filled data); a literal NUL inside a source string, even near the start
 of the file, does not exclude it. A full scan reads files one at a time and keeps only derived data,

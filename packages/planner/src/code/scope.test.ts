@@ -150,6 +150,37 @@ describe("diff-scoped code analysis", () => {
     }
   });
 
+  it("keeps the file routes of a changed Next.js page by reading the manifest above it", async () => {
+    const root = await repo();
+    const staging = await mkdtemp(join(tmpdir(), "testmaster-scope-staging-"));
+    try {
+      await put(root, {
+        "web/package.json": '{"dependencies":{"next":"15.0.0"}}\n',
+        "web/pages/login.tsx": "export default function Login() { return null; }\n",
+      });
+      const base = commit(root, "base");
+      await put(root, {
+        "web/pages/login.tsx": "export default function Login() { return 1; }\n",
+      });
+      const head = commit(root, "head");
+      for (const workingTree of [false, true]) {
+        const result = await summarizeDiffScope({
+          repoRoot: root,
+          base,
+          head,
+          ...(workingTree ? { workingTree } : {}),
+          summary: {},
+          stagingDir: staging,
+        });
+        expect(result.summary.routes.map((route) => route.path)).toEqual(["/login"]);
+        expect(result.diff.impact.routes.map((route) => route.path)).toEqual(["/login"]);
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+      await rm(staging, { recursive: true, force: true });
+    }
+  });
+
   it("records an oversize closure member instead of staging it", async () => {
     const root = await repo();
     const staging = await mkdtemp(join(tmpdir(), "testmaster-scope-staging-"));

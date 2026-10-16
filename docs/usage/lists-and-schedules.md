@@ -71,6 +71,12 @@ Follow the batch with `plan get` or `run wait`.
 replay-only, uses the same checks as the API (`runs:X` on every project, the `confirmedExclusions` rule) and
 returns the batch receipt. Passing both, or `testIds` without `environmentId`, is `INVALID_ARGUMENT`.
 
+The report of a whole batch (a suite run or any `run_tests` receipt) is one document over its member runs:
+`testmaster report export <batchId> --format json|markdown|html|junit|allure` on the CLI, and on MCP
+`testmaster_open_report` with `batchId` (the receipt's `batchId`/`jobId`), which returns
+`testmaster://batches/{id}/report{?format,cursor}`. It lists every member run and carries the aggregate
+`executionMetrics` counts and rates and the coverage; its pages behave like a run report's.
+
 ## Schedules
 
 A schedule runs a list (or explicitly pinned revisions) on a timetable. Every change is a new **revision**; a

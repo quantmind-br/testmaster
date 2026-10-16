@@ -6,7 +6,8 @@ import { JsonSetError, nestedValueReference, setJsonPointer } from "./json-body.
 import {
   type ExecutablePlan,
   type Expectation,
-  invalidCredentialHeaders,
+  invalidCredentialCookieHeader,
+  invalidCredentialTokenHeaders,
   type PlanStep,
   terminalPredicateNames,
 } from "./plans.js";
@@ -813,6 +814,27 @@ export function assertNoNegativeBeforeRender(plan: ExecutablePlan): void {
       issues,
     );
 }
+/**
+ * Why `header` cannot carry this invalid credential, or undefined when it can. The cookie form
+ * (`<name>=<random>`) fits only `Cookie` and the token form only the token headers, so a value
+ * never lands where no server would read it as a credential.
+ */
+export function invalidCredentialRefusal(
+  header: string,
+  spec: { scheme?: unknown; cookie?: unknown },
+): string | undefined {
+  const lower = header.toLowerCase();
+  if (spec.scheme !== undefined && spec.cookie !== undefined)
+    return "invalidCredential takes scheme or cookie, not both";
+  if (spec.cookie !== undefined)
+    return lower === invalidCredentialCookieHeader
+      ? undefined
+      : `invalidCredential.cookie is only valid on the ${invalidCredentialCookieHeader} header`;
+  if ((invalidCredentialTokenHeaders as readonly string[]).includes(lower)) return undefined;
+  return lower === invalidCredentialCookieHeader
+    ? 'A Cookie header needs {"invalidCredential": {"cookie": "<cookie name>"}}: a scheme or a bare token is not a cookie pair'
+    : `invalidCredential without cookie is only valid on ${invalidCredentialTokenHeaders.join(", ")}`;
+}
 function validateHeaders(
   headers: Record<string, unknown>,
   path: string,
@@ -833,15 +855,11 @@ function validateHeaders(
       literal?: unknown;
       secretRef?: string;
       variableRef?: string;
-      invalidCredential?: unknown;
+      invalidCredential?: { scheme?: unknown; cookie?: unknown };
     };
     if ("invalidCredential" in object) {
-      if (!(invalidCredentialHeaders as readonly string[]).includes(lower))
-        reject(
-          `${path}/${name}`,
-          "header",
-          `invalidCredential is only valid on ${invalidCredentialHeaders.join(", ")}`,
-        );
+      const refusal = invalidCredentialRefusal(name, object.invalidCredential ?? {});
+      if (refusal) reject(`${path}/${name}`, "header", refusal);
       continue;
     }
     if (

@@ -27,7 +27,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_run_tests:
     "Run testIds with environmentId (revisionId: exact candidate or healed revision) or a list (suiteId) in the sandbox; mode defaults to replay (lists: replay only). jobId re-reads a batch. wait=true blocks until timeoutMs (runs continue), or poll testmaster_get_run. idempotencyKey makes retries safe.",
   testmaster_get_run:
-    "Get phase, outcome, gate and analysisStatus. Summary only: a run that did not pass, or whose gate failed, needs testmaster_get_evidence then testmaster_analyze_run before naming a cause; executionError names an error recorded after the steps.",
+    "Get phase, outcome, gate, analysisStatus and the run test, revision, environment revision, mode and origin. Summary only: a run that did not pass, or whose gate failed, needs testmaster_get_evidence then testmaster_analyze_run to name a cause; executionError names an error after the steps.",
   testmaster_get_evidence:
     "Page the evidence manifest (screenshots, DOM, console, network, logs) with resource links. Check integrity and freshness (staleReasons says why), follow nextCursor; failedOnly narrows. Unpublished evidence names the run executionError. Next: testmaster_analyze_run.",
   testmaster_analyze_run:
@@ -50,12 +50,14 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
     "Store a plan as a new test (projectId) or a new candidate revision of a test (testId). Returns test, revision, active and nextActions: a new revision is not active until testmaster_promote_revision.",
   testmaster_promote_revision:
     "Make a candidate revision the active one of its test at expectedVersion (test.version); an optional reason is recorded. A generated candidate needs a passing replay first: testmaster_run_tests with revisionId. Healed revisions go through testmaster_approve_healing.",
+  testmaster_archive_test:
+    "Archive a test at expectedVersion (test.version): it leaves active use, its history and evidence stay, and no unarchive exists. An optional reason is recorded on the test with the actor and time. Returns the archived test.",
   testmaster_save_suite:
     "Create a list, or change one at expectedVersion: replace the selection, addMembers or removeMembers of a fixed list. Run it with testmaster_run_tests suiteId (replay only).",
   testmaster_approve_execution:
     "Approve risky production actions your run was refused for (approval_required): copy details.binding, add a reason, then repeat testmaster_run_tests. Bound to that revision, environment revision, origins and policy; expires in 30 minutes; used once.",
   testmaster_open_report:
-    "Return the testmaster://runs/{id}/report location of the committed report; read it as a paged text resource (JSON by default, ?format=junit|markdown|html) and follow _meta next, then concatenate the pages and parse.",
+    "Return the location of a committed report: runId for one run, batchId (the run_tests batchId/jobId) for all its member runs. Read it as a paged text resource (JSON by default, ?format=junit|markdown|html); follow _meta next, concatenate the pages, then parse.",
   testmaster_add_source:
     "Import a PRD, OpenAPI, GraphQL, Postman or text file inside an approved root as a source revision; returns its status and diagnostics. An invalid source (e.g. unsupported OpenAPI) is an error with its diagnostics. Next: testmaster_normalize_requirements.",
   testmaster_review_requirements:

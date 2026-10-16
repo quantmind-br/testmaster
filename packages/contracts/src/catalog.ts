@@ -224,6 +224,10 @@ const supplemental = {
     tags: Type.Optional(names),
     priority: Type.Optional(P.Priority),
   }),
+  TestArchiveInput: P.Obj({
+    /** Why the test is archived; recorded on the test with the actor and time. */
+    reason: Type.Optional(P.DecisionReason),
+  }),
   PromoteInput: P.Obj({
     revisionId: P.id("rev"),
     expectedActiveRevisionId: P.id("rev"),
@@ -438,9 +442,20 @@ const supplemental = {
       expectedVersion: P.Version,
       proposalId: P.id("hea"),
       candidateRevisionId: P.id("rev"),
-      /** Present once an approver recorded a reason. */
+      /**
+       * Present once the proposal was approved (manually or by policy) or rejected. A decision
+       * recorded before who/when/reason were stored lacks those fields.
+       */
       decision: Type.Optional(
-        P.Obj({ reason: P.DecisionReason, actorId: P.Name, approvedAt: P.Timestamp }),
+        P.Obj({
+          status: P.Enum(["approved", "rejected"]),
+          /** How an approval was given; absent for a rejection. */
+          mode: Type.Optional(P.Enum(["manual", "policy"])),
+          actorId: Type.Optional(P.Name),
+          decidedAt: Type.Optional(P.Timestamp),
+          /** The reason the reviewer recorded, when one was given. */
+          reason: Type.Optional(P.DecisionReason),
+        }),
       ),
     }),
     evidenceRefs: Type.Array(P.EvidenceRef),
@@ -743,6 +758,16 @@ const supplemental = {
     batchVersion: P.Version,
   }),
   McpRunReceipt,
+  /** `RunResult` plus which test revision and environment revision the run executed, and why it ran. */
+  McpRunResult: P.Obj({
+    ...Ops.RunResult.properties,
+    testId: P.id("tst"),
+    revisionId: P.id("rev"),
+    environmentRevisionId: P.id("evr"),
+    mode: P.Mode,
+    /** What admitted the run, for example `mcp`, `cli` or `verification` (a healing verification). */
+    origin: P.Name,
+  }),
   McpBatchReceipt: P.Obj({
     ...Ops.BatchReceipt.properties,
     memberRuns: Type.Array(McpRunReceipt),
@@ -821,6 +846,7 @@ const supplemental = {
   }),
 };
 export type HealingReview = Static<typeof supplemental.HealingReview>;
+export type McpRunResult = Static<typeof supplemental.McpRunResult>;
 
 const httpInputs = {
   ProjectPatchInput: Type.Partial(supplemental.ProjectInput),
