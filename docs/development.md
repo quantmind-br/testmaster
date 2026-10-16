@@ -828,8 +828,13 @@ unchanged: with separation of duties the requester cannot approve its own execut
   `--job ID --retry-feature ID...` creates a new job/cost ledger for only eligible selected features,
   preserving all unselected results and the original job. `--video` is explicit restricted-raw opt-in,
   requires raw/admin permission, and is refused for production exploration. Default exploration has
-  no video. Updating a source or discovery fingerprint clears descendant requirement approvals and
-  makes retained proposal batches stale, without rewriting immutable revisions or pinned Runs.
+  no video. Adding a new revision of a source resets only the requirements whose cited chunks the
+  revision no longer holds (compared by chunk content hash): they lose their approval and take a
+  new version, the rest keep both, and the receipt (`requirementsReset`, CLI and MCP) names them.
+  Proposed batches whose proposals cite a reset requirement become stale. Discovery never resets
+  anything: requirements cite source revisions only, so a changed detector version, runtime,
+  prompt version, requested model or code manifest leaves approvals and versions alone. Immutable
+  revisions and pinned Runs are never rewritten.
   Code-role source inference cannot acquire explicit authority from model output; conflicting
   implementation versus desired PRD remains subject to reviewer adjudication. An inferred
   requirement the model did not link to a conflict gets a single-member reconciliation conflict

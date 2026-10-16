@@ -26,7 +26,7 @@ import {
 import { authoringTransaction } from "../authoring.js";
 import type { ResolvedConfig } from "../config.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "../context.js";
-import { invalidateAiDescendants } from "./invalidation.js";
+import { type RequirementResetReport, resetRequirementsForSourceRevision } from "./invalidation.js";
 import {
   diffOperations,
   operationFingerprints,
@@ -342,6 +342,8 @@ export interface SourceAddInput {
 export interface SourceDetail extends SourceParseResult {
   source: StoredSource;
   archivedAt: string | null;
+  /** Only on the receipt of `add` for a new revision, and only when it reset a requirement. */
+  requirementsReset?: RequirementResetReport;
 }
 /**
  * `source add` stores every revision, including one that did not parse, so its diagnostics stay
@@ -560,8 +562,19 @@ export class SourcesService {
               readAiState<SourceState>(this.ctx, `source:${source.id}`)?.ownerId ??
               this.ctx.principalId,
           } satisfies SourceState);
-          if (previous) invalidateAiDescendants(this.ctx, input.projectId, `source:${id}`);
-          return this.get(source.id);
+          // An invalid revision carries no chunks and no evidence: it changes nothing a requirement
+          // cites, so the reset waits for the next revision that parses.
+          const reset =
+            previous && result.revision.status !== "invalid"
+              ? resetRequirementsForSourceRevision(this.ctx, input.projectId, {
+                  revisionId: id,
+                  replacedRevisionIds: new Set(
+                    this.chainOf(previous.source).map((node) => node.id),
+                  ),
+                  chunkHashes: new Set(result.chunks.map((chunk) => chunk.contentHash)),
+                })
+              : null;
+          return { ...this.get(source.id), ...(reset ? { requirementsReset: reset } : {}) };
         },
       );
       if (admission.replayed) await rm(path, { force: true });

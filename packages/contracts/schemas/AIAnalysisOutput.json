@@ -191,6 +191,32 @@
         "maxLength": 200,
         "type": "string"
       }
+    },
+    "requirementAgreement": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "requirementId",
+            "criterionIndex"
+          ],
+          "properties": {
+            "requirementId": {
+              "pattern": "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "criterionIndex": {
+              "minimum": 0,
+              "maximum": 99,
+              "type": "integer"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   },
   "$defs": {},

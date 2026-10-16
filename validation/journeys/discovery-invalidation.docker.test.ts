@@ -1,6 +1,8 @@
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Application, entity } from "@testmaster/application";
+import type { Requirement } from "@testmaster/contracts";
+import { canonicalJson } from "@testmaster/domain";
 import { expect, it } from "vitest";
 import { controlledShop, healthPlan, journey } from "./harness.js";
 
@@ -25,12 +27,48 @@ it("source and code update supersede authoring descendants while admitted and st
         { wait: true },
       );
       const pinned = structuredClone(app.runs.get(admitted.runId));
+      const cited = source.chunks[0]?.evidenceRef;
+      if (!cited) throw new Error("The source produced no chunk");
+      // A requirement that cites the PRD chunk, and a proposed batch that cites the requirement.
+      const requirement = entity(app.context, "req", {
+        text: "Health reports healthy",
+        acceptanceCriteria: ["Health reports healthy=true"],
+        sourceRefs: [cited],
+        originKind: "explicit",
+        confidence: null,
+        approval: null,
+        extensions: { "testmaster:projectId": projectId, "testmaster:key": "health" },
+      }) as unknown as Requirement;
+      app.context.entities.insert("Requirement", requirement, { projectId });
+      app.context.database.run(
+        "INSERT INTO operational_state(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        `requirements:${app.context.workspaceId}:${projectId}`,
+        canonicalJson({
+          requirements: [requirement],
+          conflicts: [],
+          openQuestions: [],
+          version: 1,
+          fingerprint: "seeded",
+        }),
+      );
       const batch = entity(app.context, "pbt", {
         projectId,
         sourceSnapshotId: firstDiscovery.job.inputsFingerprint,
         state: "proposed",
       });
       app.context.entities.insert("ProposalBatch", batch);
+      app.context.entities.insert(
+        "Proposal",
+        entity(app.context, "pro", {
+          batchId: batch.id,
+          plan: healthPlan(),
+          requirementRefs: [requirement.id],
+          evidenceRefs: [],
+          warnings: [],
+          state: "proposed",
+          validation: "valid",
+        }),
+      );
       await writeFile(
         join(session.cwd, "prd.md"),
         "Health MUST report healthy=true and stable contract version.",

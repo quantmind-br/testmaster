@@ -476,7 +476,7 @@ export class TestMasterMcp {
         [
           "testmaster://projects/{projectId}/features{?match,cursor}",
           "Project features",
-          "Features of a project with their stable keys (route:GET:/login, endpoint:POST:/api/x), ordered by key and paged 100 at a time. match keeps the keys containing that text (case-insensitive); follow next for the following page. testmaster_explore featureIds come from here",
+          "Features of a project's current analysis with their stable keys (route:GET:/login, endpoint:POST:/api/x), ordered by key and paged 100 at a time. Features only an earlier analysis found are not listed. match keeps the keys containing that text (case-insensitive); follow next for the following page. testmaster_explore featureIds come from here",
         ],
         ["testmaster://runs/{id}/result", "Run result", "Phase, outcome and gate of a run"],
         ["testmaster://runs/{id}/manifest", "Evidence manifest", "Evidence manifest page of a run"],
@@ -1463,6 +1463,7 @@ export class TestMasterMcp {
       revision,
       chunkCount: chunks.length,
       diagnostics: detail.diagnostics,
+      ...(detail.requirementsReset ? { requirementsReset: detail.requirementsReset } : {}),
     };
   }
   /**
@@ -2378,7 +2379,12 @@ export class TestMasterMcp {
       next: this.pageLink(`testmaster://plan-batches/${id}`, {}, page.cursor),
     };
   }
-  /** One page of a project's features, ordered by stable key, optionally narrowed by key substring. */
+  /**
+   * One page of a project's current features, ordered by stable key, optionally narrowed by key
+   * substring. Features that only an earlier analysis found stay stored (requirements and
+   * explorations cite their ids) but are not listed: exploring them would spend budget on routes
+   * the code no longer has.
+   */
   private features(projectId: string, match: string | undefined, cursor: string | undefined) {
     const app = this.options.application;
     app.projects.get(projectId);
@@ -2392,20 +2398,18 @@ export class TestMasterMcp {
     const filter = match === undefined ? "" : " AND lower(stable_key) LIKE ? ESCAPE '\\'";
     const pattern =
       match === undefined ? [] : [`%${match.toLowerCase().replace(/[\\%_]/g, "\\$&")}%`];
-    const where = [app.context.workspaceId, projectId, ...pattern];
-    const total = Number(
-      app.database.get<{ n: number | string }>(
-        `SELECT COUNT(*) AS n FROM features WHERE workspace_id=? AND project_id=?${filter}`,
-        ...where,
-      )?.n ?? 0,
-    );
+    const stale = app.discovery.staleFeatureIds(projectId);
+    const listed = app.database
+      .all<{ id: string; stable_key: string }>(
+        `SELECT id, stable_key FROM features WHERE workspace_id=? AND project_id=?${filter} ORDER BY stable_key, id`,
+        app.context.workspaceId,
+        projectId,
+        ...pattern,
+      )
+      .filter((row) => !stale.has(row.id));
+    const total = listed.length;
     if (offset > total) throw new ContractError("INVALID_ARGUMENT", "Invalid features cursor");
-    const rows = app.database.all<{ id: string; stable_key: string }>(
-      `SELECT id, stable_key FROM features WHERE workspace_id=? AND project_id=?${filter} ORDER BY stable_key, id LIMIT ? OFFSET ?`,
-      ...where,
-      FEATURE_PAGE,
-      offset,
-    );
+    const rows = listed.slice(offset, offset + FEATURE_PAGE);
     const end = offset + rows.length;
     return {
       projectId,

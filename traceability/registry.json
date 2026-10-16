@@ -1965,7 +1965,7 @@
       "status": "verified",
       "scenario": [
         "Source update clears descendant approvals and makes retained proposal batches stale",
-        "Code/diff fingerprint changes supersede descendants; repeated unchanged fingerprint preserves new approvals",
+        "Code/diff analysis and detector, runtime, prompt or requested-model changes keep requirement approvals, versions and proposed batches; only a source revision whose cited chunks changed resets the requirements citing them",
         "Admitted old Run and strict rerun remain executable after updates",
         "Source revision and diff input refs invalidate model cache keys",
         "packages/application/src/ai/core.test.ts::source and code updates supersede descendants without mutating immutable test revisions",
@@ -1986,7 +1986,7 @@
         "packages/application/src/ai/discovery.ts",
         "packages/application/src/ai/proposals.ts"
       ],
-      "note": "Conservative project-level authoring invalidation; historical immutable revisions and admitted snapshots are intentionally untouched. Gateway source/diff cache segregation acceptance passed.",
+      "note": "Requirement-level authoring invalidation scoped to cited source chunks; code analysis never resets approvals because requirements only cite source revisions. Historical immutable revisions and admitted snapshots are intentionally untouched. Gateway source/diff cache segregation acceptance passed.",
       "coverage": {
         "positive": [
           "packages/application/src/ai/core.test.ts::source and code updates supersede descendants without mutating immutable test revisions"
@@ -2013,11 +2013,11 @@
           },
           {
             "path": "packages/application/src/ai/core.test.ts",
-            "assertion": "expect(f.app.requirements.get(updated.requirement.id).approval).toBeNull();"
+            "assertion": "expect(f.app.requirements.get(updated.requirement.id)).toEqual(approved);"
           },
           {
             "path": "packages/application/src/ai/core.test.ts",
-            "assertion": "expect(f.app.proposals.get(updated.batch.id).state).toBe(\"stale\");"
+            "assertion": "expect(f.app.proposals.get(updated.batch.id).state).toBe(\"proposed\");"
           },
           {
             "path": "packages/application/src/ai/core.test.ts",

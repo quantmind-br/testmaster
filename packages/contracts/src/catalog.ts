@@ -350,6 +350,21 @@ const supplemental = {
       maxItems: 5,
     }),
     evidenceGaps: Type.Array(P.Name, { maxItems: 20 }),
+    /**
+     * Set only when the observation agrees with an approved requirement the failed test maps to
+     * while the test's own expectation contradicts it. `criterionIndex` is the zero-based position
+     * in that requirement's supplied `acceptanceCriteria`. Code verifies the claim; it can only
+     * lower a rules `product_bug` to `unknown`, never change a cause to another one.
+     */
+    requirementAgreement: Type.Optional(
+      Type.Union([
+        P.Obj({
+          requirementId: P.id("req"),
+          criterionIndex: Type.Integer({ minimum: 0, maximum: 99 }),
+        }),
+        Type.Null(),
+      ]),
+    ),
   }),
   HealingInput: P.Obj({
     /** Explicit provider/model for the healing call; the first allowed structured model when absent. */
@@ -712,7 +727,7 @@ const supplemental = {
     omittedFeatures: P.Nonnegative,
     featuresResource: Type.String({
       description:
-        "testmaster://projects/{projectId}/features{?match,cursor}: every feature with its stable key, filterable by substring and paged; the ids testmaster_explore takes come from here",
+        "testmaster://projects/{projectId}/features{?match,cursor}: the current features with their stable key, filterable by substring and paged (features only an earlier analysis found are not listed); the ids testmaster_explore takes come from here",
     }),
     /** Present for diff scope only: changed paths, the files the change reaches and the analyzed files it does not. */
     diff: Type.Optional(
@@ -815,12 +830,13 @@ const supplemental = {
     nextCursor: Type.Union([Type.String(), Type.Null()]),
   }),
   ReportLocation: P.Obj({ location: Type.String() }),
-  /** What an added source revision came to; chunks and the inventory stay out, `diagnostics` is whole. */
+  /** What an added source revision came to; chunks and the inventory stay out, `diagnostics` is whole, `requirementsReset` only when it reset a requirement. */
   McpSourceReceipt: P.Obj({
     source: sourceResponseContracts.SourceDetail.properties.source,
     revision: Type.Omit(sourceResponseContracts.SourceDetail.properties.revision, ["chunks"]),
     chunkCount: P.Nonnegative,
     diagnostics: sourceResponseContracts.SourceDetail.properties.diagnostics,
+    requirementsReset: sourceResponseContracts.SourceDetail.properties.requirementsReset,
   }),
   /** Outcome of each requested decision, then where the snapshot stands. */
   McpRequirementsReview: P.Obj({

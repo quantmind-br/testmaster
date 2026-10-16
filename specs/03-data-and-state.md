@@ -21,7 +21,7 @@ Schema público `1.0.0`; IDs `<prefix>_<uuid>`; UUIDv7 preferido, v4 permitido n
 | Feature `fea` | projectId, stableKey, requirementRefs, routeRefs, endpointRefs | versão/map snapshot; deleted/renamed não perde provenance |
 | Requirement `req` | text, acceptanceCriteria, sourceRefs, originKind, confidence, approval | originKind explicit/user_spec/inferred/observed; inferred não vira approved sozinho |
 | DiscoveryJob `dsc` | inputsFingerprint, phase, perFeatureResults, limits, usage | resultados parciais por feature; resume por fingerprint |
-| ProposalBatch `pbt` | projectId, sourceSnapshotId, version, state | stale se inputs mudam; aceitar usa ETag |
+| ProposalBatch `pbt` | projectId, sourceSnapshotId, version, state | stale quando uma proposta ainda proposed cita requisito cuja evidência citada mudou numa nova revisão de source (o requisito perde a aprovação; os demais mantêm versão e aprovação); mudança de detector, runtime, prompt ou modelo não torna stale; aceitar usa ETag |
 | Proposal `pro` | batchId, plan, requirementRefs, evidenceRefs, warnings, state | proposed/accepted/rejected; resto preservado em subset |
 | TestCase `tst` | projectId, name, activeRevisionId, tags, priority, archivedAt | identidade lógica estável; lastResult é projeção, não autoridade |
 | TestRevision `rev` | testId, ordinal, contentHash, plan, codeArtifactId, runnerKind, author, parentId, origin | conteúdo e assertions imutáveis; origin manual/generated/healed/imported |

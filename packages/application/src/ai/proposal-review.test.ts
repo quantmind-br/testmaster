@@ -345,7 +345,11 @@ it("UX-018 a new source marks the previous generation stale and blocks accepting
     staleReason: null,
     counts: { proposed: 3, accepted: 0, rejected: 0 },
   });
-  await writeFile(join(f.root, "prd.md"), "# Health\nThe health endpoint must also report build.");
+  // The fixture's requirements cite the heading chunk, so the heading is what changes.
+  await writeFile(
+    join(f.root, "prd.md"),
+    "# Health status\nThe health endpoint must also report build.",
+  );
   await f.app.sources.add({
     projectId: f.projectId,
     role: "prd",

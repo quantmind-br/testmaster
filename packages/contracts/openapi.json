@@ -16167,6 +16167,32 @@
               "maxLength": 200,
               "type": "string"
             }
+          },
+          "requirementAgreement": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "requirementId",
+                  "criterionIndex"
+                ],
+                "properties": {
+                  "requirementId": {
+                    "pattern": "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "criterionIndex": {
+                    "minimum": 0,
+                    "maximum": 99,
+                    "type": "integer"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "$defs": {}
@@ -57872,7 +57898,7 @@
             "type": "integer"
           },
           "featuresResource": {
-            "description": "testmaster://projects/{projectId}/features{?match,cursor}: every feature with its stable key, filterable by substring and paged; the ids testmaster_explore takes come from here",
+            "description": "testmaster://projects/{projectId}/features{?match,cursor}: the current features with their stable key, filterable by substring and paged (features only an earlier analysis found are not listed); the ids testmaster_explore takes come from here",
             "type": "string"
           },
           "diff": {
@@ -132764,6 +132790,76 @@
                 }
               }
             }
+          },
+          "requirementsReset": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "count",
+              "requirements",
+              "staleProposalBatchCount",
+              "staleProposalBatchIds"
+            ],
+            "properties": {
+              "count": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "requirements": {
+                "maxItems": 50,
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "requirementId",
+                    "requirementKey",
+                    "reason",
+                    "sourceRevisionId",
+                    "approvalCleared"
+                  ],
+                  "properties": {
+                    "requirementId": {
+                      "pattern": "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "requirementKey": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "reason": {
+                      "const": "cited_evidence_changed",
+                      "type": "string"
+                    },
+                    "sourceRevisionId": {
+                      "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "approvalCleared": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              },
+              "staleProposalBatchCount": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "staleProposalBatchIds": {
+                "maxItems": 50,
+                "type": "array",
+                "items": {
+                  "pattern": "^pbt_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "$defs": {
@@ -193350,6 +193446,76 @@
                 "type": "null"
               }
             ]
+          },
+          "requirementsReset": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "count",
+              "requirements",
+              "staleProposalBatchCount",
+              "staleProposalBatchIds"
+            ],
+            "properties": {
+              "count": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "requirements": {
+                "maxItems": 50,
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "requirementId",
+                    "requirementKey",
+                    "reason",
+                    "sourceRevisionId",
+                    "approvalCleared"
+                  ],
+                  "properties": {
+                    "requirementId": {
+                      "pattern": "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "requirementKey": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "reason": {
+                      "const": "cited_evidence_changed",
+                      "type": "string"
+                    },
+                    "sourceRevisionId": {
+                      "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "approvalCleared": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              },
+              "staleProposalBatchCount": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "staleProposalBatchIds": {
+                "maxItems": 50,
+                "type": "array",
+                "items": {
+                  "pattern": "^pbt_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "$defs": {

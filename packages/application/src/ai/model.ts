@@ -36,7 +36,7 @@ export const promptVersions = {
   generate_code: "generate-code-3-source-schemas",
   summarize: "summarize-1",
   classify: "classify-1",
-  analyze: "analyze-8-requirement-comparison",
+  analyze: "analyze-9-requirement-agreement",
   heal: "heal-4-ranked-candidates",
 } as const;
 export interface ModelInput {

@@ -13,7 +13,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_bootstrap:
     "Create or find the project of an approved root; returns projectId, proposedConfig (a config file proposal, never written), environment, preflight, next actions. Adds an environment for the target origin if none exists; never retargets one. Idempotent. Next: testmaster_analyze_code.",
   testmaster_analyze_code:
-    "Snapshot the code: whole codebase (no base), base..head, or base..working tree (dirty=true, needs base). Bounded receipt: counts, first 50 skipped files, first 100 features {id, stableKey}, diff impact. All features by key: testmaster://projects/{projectId}/features?match=. Not a plan source.",
+    "Snapshot the code: whole codebase (no base), base..head, or base..working tree (dirty=true, needs base). Bounded receipt: counts, first 50 skipped files, first 100 features {id, stableKey}, diff impact. Current features by key: testmaster://projects/{projectId}/features?match=. Not a plan source.",
   testmaster_normalize_requirements:
     "Normalize source revisions into requirements (each with a status) and conflicts; returns sourceSnapshotId and version. A PRD section with its criteria is one requirement; API specs need no normalizing. Slow: _meta.progressToken notifies. Next: testmaster_review_requirements.",
   testmaster_explore:
@@ -59,7 +59,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_open_report:
     "Return the location of a committed report: runId for one run, batchId (the run_tests batchId/jobId) for all its member runs. Read it as a paged text resource (JSON by default, ?format=junit|markdown|html); follow _meta next, concatenate the pages, then parse.",
   testmaster_add_source:
-    "Import a PRD, OpenAPI, GraphQL, Postman or text file inside an approved root as a source revision; returns its status and diagnostics. An invalid source (e.g. unsupported OpenAPI) is an error with its diagnostics. Next: testmaster_normalize_requirements.",
+    "Import a PRD, OpenAPI, GraphQL, Postman or text file inside an approved root as a source revision; returns status and diagnostics (invalid source: an error). A revision whose cited text changed lists the reset requirements in requirementsReset. Next: testmaster_normalize_requirements.",
   testmaster_review_requirements:
     "Edit, adjudicate conflicts, reject (reason required; final) and approve requirements at the snapshot expectedVersion, in that order; an optional reason is kept on each edited or approved one. Returns per-item results and the new sourceSnapshotId. Next: testmaster_generate_plan.",
   testmaster_set_secret:

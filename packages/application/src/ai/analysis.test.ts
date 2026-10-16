@@ -3070,3 +3070,90 @@ it("a failed test that maps to no requirement tells the model so instead of impl
   expect(data.requirements).toEqual([]);
   expect(data.limitations.join(" ")).toContain("maps to no requirement");
 });
+
+const lowerFixtures = [
+  { name: "a value assertion", options: {} },
+  {
+    name: "a status assertion",
+    options: { plan: requestStatusPlan([201]), step: { expected: [201], observed: 200 } },
+  },
+];
+/** A model reading that disagrees with nothing but reports that the observation agrees with a requirement. */
+function agreementReading(
+  f: Awaited<ReturnType<typeof fixture>>,
+  requirementAgreement: { requirementId: string; criterionIndex: number },
+) {
+  f.complete.mockImplementationOnce(async () => ({
+    modelCallId: f.modelCallId,
+    output: {
+      failureKind: "unknown",
+      hypotheses: [
+        {
+          text: "The observed value agrees with the approved requirement; the expectation is stale.",
+          supports: ["E2"],
+          contradicts: [],
+          confidence: 0.9,
+        },
+      ],
+      recommendedAction: "collect_more_evidence",
+      fixTargetHandle: null,
+      limitations: [],
+      nextSteps: [],
+      evidenceGaps: [],
+      requirementAgreement,
+    },
+  }));
+}
+it.each(lowerFixtures)(
+  "an approved mapped requirement the observation agrees with lowers a product_bug cause from $name to unknown",
+  async ({ options }) => {
+    const f = await fixture(options);
+    storeRequirements(f, [storedRequirement(3)]);
+    const factual = await f.service.analyze(f.run.id);
+    expect(factual.failureKind).toBe("product_bug");
+    agreementReading(f, { requirementId: requirementId(3), criterionIndex: 0 });
+    const analysis = await f.service.analyze(f.run.id, { model: true });
+    expect(analysis).toMatchObject({
+      source: "model",
+      failureKind: "unknown",
+      recommendedAction: "collect_more_evidence",
+    });
+    expect(analysis.diagnosis?.conclusion.status).toBe("cause_unknown");
+    expect(analysis.diagnosis?.nextSteps).toHaveLength(1);
+    expect(analysis.diagnosis?.nextSteps[0]?.text).toContain(requirementId(3));
+    expect(analysis.diagnosis?.nextSteps[0]?.text).toContain('"Criterion 3"');
+    expect(analysis.diagnosis?.healing.advice).toBe("not_indicated");
+    expect(analysis.limitations).toContain(
+      `The observed value agrees with approved requirement ${requirementId(3)}, acceptance criterion 1, not with the test's expectation.`,
+    );
+    expect(analysis.limitations).not.toContain(
+      "Model abstained; the evidenced rules-derived cause is retained.",
+    );
+    expect(analysis.hypotheses.map((item) => item.confidence)).toEqual([0.9]);
+  },
+);
+it("a requirement agreement is not recorded when its requirement is pending, and the rules cause stays", async () => {
+  const f = await fixture();
+  storeRequirements(f, [storedRequirement(3, { approval: null })]);
+  const factual = await f.service.analyze(f.run.id);
+  agreementReading(f, { requirementId: requirementId(3), criterionIndex: 0 });
+  const analysis = await f.service.analyze(f.run.id, { model: true });
+  expect(analysis.failureKind).toBe("product_bug");
+  expect(analysis.diagnosis).toEqual(factual.diagnosis);
+  expect(analysis.limitations).toContain(
+    "A model-reported conflict with a requirement was not recorded: its requirement is pending, not approved.",
+  );
+});
+it("a requirement agreement naming a requirement the test does not map to is not recorded", async () => {
+  const f = await fixture();
+  // Requirement 4 is approved in the project but the test maps to requirement 3 only.
+  storeRequirements(f, [storedRequirement(3), storedRequirement(4)]);
+  const factual = await f.service.analyze(f.run.id);
+  agreementReading(f, { requirementId: requirementId(4), criterionIndex: 0 });
+  const analysis = await f.service.analyze(f.run.id, { model: true });
+  expect(analysis.failureKind).toBe("product_bug");
+  expect(analysis.diagnosis).toEqual(factual.diagnosis);
+  expect(analysis.limitations).toContain(
+    "A model-reported conflict with a requirement was not recorded: it names no requirement supplied for the failed test.",
+  );
+});

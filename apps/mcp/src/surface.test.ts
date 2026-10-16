@@ -543,6 +543,54 @@ it("the features resource maps stable keys to ids, filters by substring and page
   ).rejects.toMatchObject({ code: -32002 });
 });
 
+it("the features resource lists the features of the latest full analysis and keeps the others stored", async () => {
+  const f = await fixture();
+  const analyze = async (paths: string[]) => {
+    const routes = paths.map((path) => `app.get('${path}', () => {});`);
+    await writeFile(join(f.cwd, "server.ts"), `const app = {};\n${routes.join("\n")}\n`);
+    const analyzed = await f.call("testmaster_analyze_code", {
+      projectId: f.init.projectId,
+      root: f.cwd,
+    });
+    expect(analyzed.isError, JSON.stringify(analyzed.body)).toBe(false);
+    return analyzed.body as { features: { id: string; stableKey: string }[] };
+  };
+  const base = `testmaster://projects/${f.init.projectId}/features`;
+  const read = async (uri: string) =>
+    JSON.parse(String((await f.client.readResource({ uri })).contents[0]?.text)) as {
+      total: number;
+      features: { id: string; stableKey: string }[];
+    };
+  const keys = (page: { features: { stableKey: string }[] }) =>
+    page.features.map((feature) => feature.stableKey);
+
+  const first = await analyze(["/a", "/b"]);
+  const a = first.features.find((feature) => feature.stableKey === "endpoint:GET:/a");
+  expect(keys(await read(base))).toEqual(["endpoint:GET:/a", "endpoint:GET:/b"]);
+
+  // A later full analysis finds /b and /c: /a is no longer listed, /b keeps its id.
+  const second = await analyze(["/b", "/c"]);
+  const listed = await read(base);
+  expect(keys(listed)).toEqual(["endpoint:GET:/b", "endpoint:GET:/c"]);
+  expect(listed.total).toBe(2);
+  expect(listed.features).toEqual(
+    second.features.slice().sort((x, y) => x.stableKey.localeCompare(y.stableKey)),
+  );
+  expect(keys(await read(`${base}?match=endpoint:get:/b`))).toEqual(["endpoint:GET:/b"]);
+  expect(keys(await read(`${base}?match=/a`))).toEqual([]);
+
+  // The stale feature is hidden, not deleted: requirements and explorations still cite its id.
+  expect(a).toBeDefined();
+  expect(
+    f.app.context.entities.get("Feature", f.app.context.workspaceId, String(a?.id))?.stableKey,
+  ).toBe("endpoint:GET:/a");
+
+  // A feature that comes back is listed again under its original id.
+  const third = await analyze(["/a"]);
+  expect(third.features).toEqual([a]);
+  expect(keys(await read(base))).toEqual(["endpoint:GET:/a"]);
+});
+
 it("no tool input is a top-level combinator, generate_tests shows every property and normalize takes a provider", async () => {
   const f = await fixture();
   const tools = (await f.client.listTools()).tools;

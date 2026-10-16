@@ -133,6 +133,15 @@ limitation in a separate immutable analysis that stays `source: "rules"` (it nev
 output). Identical requests reuse their stored receipt;
 interrupted paid calls are not reissued.
 
+The model never changes a cause the rules derived from observed evidence. One exception only lowers it:
+when a failed assertion made the rules say `product_bug` and the model reports that the observation
+agrees with an approved requirement the test maps to (`requirementAgreement`: requirement id and
+acceptance criterion), TestMaster checks the claim against the supplied requirements and, if it holds,
+records `failureKind: unknown` instead, puts a "review the test's expectation against that requirement
+and criterion" step first, keeps healing not indicated and adds a limitation naming the requirement.
+A claim about an unmapped, not approved or out-of-range requirement, or about a cause that is not
+`product_bug`, is not recorded and the limitation says why.
+
 Reports preserve execution outcomes even when evidence is missing, expired or fails integrity:
 the affected member has `evidenceState: "unavailable"`, null snapshot/manifest and explicit
 `evidenceErrors`; report completeness becomes partial and cannot approve a strict CI gate.

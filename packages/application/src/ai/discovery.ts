@@ -33,7 +33,6 @@ import type { ResolvedConfig } from "../config.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "../context.js";
 import { type RepositoryProvenance, resolveRepositoryProvenance } from "../provenance.js";
 import { revokedImageIds } from "../release.js";
-import { invalidateAiDescendants } from "./invalidation.js";
 import { promptVersions } from "./model.js";
 import { readAiState, replayAiReceipt, type SourcesService, saveAiState } from "./sources.js";
 
@@ -426,6 +425,47 @@ export class DiscoveryService {
       })
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
   }
+  /**
+   * Ids of the project's features that an earlier analysis found and the current one no longer
+   * does. Features are a cumulative registry (requirements, explorations and feature maps cite
+   * their ids), so a feature is never deleted: this is the set the listing hides.
+   *
+   * The current analysis is the newest completed codebase-scope discovery plus every completed
+   * diff-scope discovery after it (a diff only sees the changed files, so it adds to the
+   * picture and retires nothing). A codebase discovery that could not read Python
+   * (`unreachable`) is incomplete evidence, so it adds its features without retiring older ones.
+   * A feature no discovery ever found (observed by exploration) is never stale; a project with no
+   * completed discovery has no stale features.
+   */
+  staleFeatureIds(projectId: string): Set<string> {
+    const found = new Set<string>();
+    const current = new Set<string>();
+    let retiring = true;
+    for (const { job, state } of this.jobsNewestFirst(projectId)) {
+      const ids = job.perFeatureResults.map((value) => value.featureId);
+      for (const id of ids) found.add(id);
+      if (!retiring || job.phase !== "completed") continue;
+      for (const id of ids) current.add(id);
+      const full = (state.request.scope ?? "codebase") === "codebase";
+      if (full && state.detail.status !== "unreachable") retiring = false;
+    }
+    for (const id of current) found.delete(id);
+    return found;
+  }
+  private jobsNewestFirst(projectId: string): { job: StoredJob; state: DiscoveryState }[] {
+    this.ctx.authorize("R", projectId);
+    requireEntity(this.ctx, "Project", projectId);
+    return allEntities(this.ctx, "DiscoveryJob")
+      .flatMap((job) => {
+        const state = readAiState<DiscoveryState>(this.ctx, `discovery:${job.id}`);
+        return state && state.projectId === projectId ? [{ job: job as StoredJob, state }] : [];
+      })
+      .sort(
+        (a, b) =>
+          String(b.job.createdAt).localeCompare(String(a.job.createdAt)) ||
+          b.job.id.localeCompare(a.job.id),
+      );
+  }
   events(id: string, afterSeq = -1): Record<string, unknown>[] {
     this.get(id);
     if (!Number.isSafeInteger(afterSeq) || afterSeq < -1)
@@ -767,11 +807,6 @@ export class DiscoveryService {
         body: input,
       },
       () => {
-        const cacheKey = `discovery-inputs:${input.projectId}:${root}:${scope}`;
-        const currentFingerprint = readAiState<string>(this.ctx, cacheKey);
-        if (currentFingerprint && currentFingerprint !== fingerprint)
-          invalidateAiDescendants(this.ctx, input.projectId, `code:${codeSnapshot.id}`);
-        saveAiState(this.ctx, cacheKey, fingerprint);
         this.ctx.entities.insert("CodeSnapshot", codeSnapshot, { projectId: input.projectId });
         for (const feature of features)
           if (!this.ctx.entities.get("Feature", this.ctx.workspaceId, feature.id))

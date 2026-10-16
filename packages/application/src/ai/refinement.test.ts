@@ -301,7 +301,7 @@ it("REQ-054 refinement replays by idempotency key and refuses viewers, stale bat
   ).rejects.toBeDefined();
   expect(f.app.refinements.thread({ kind: "proposal", id: proposal.id }).turns).toHaveLength(2);
 
-  await writeFile(join(f.root, "prd.md"), "# Health\nA different requirement text.");
+  await writeFile(join(f.root, "prd.md"), "# Health status\nA different requirement text.");
   await f.app.sources.add({
     projectId: f.projectId,
     role: "prd",

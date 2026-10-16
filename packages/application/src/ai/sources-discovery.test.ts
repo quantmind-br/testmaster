@@ -394,7 +394,8 @@ describe("durable discovery", () => {
     expect(working.summary.endpoints.map((value) => value.path)).toEqual(["/dirty-checkout"]);
     expect(working.codeSnapshot.dirtyHash).not.toBeNull();
     expect(working.job.inputsFingerprint).not.toBe(pinned.job.inputsFingerprint);
-    expect(ctx.entities.get("ProposalBatch", ctx.workspaceId, batch.id)?.state).toBe("stale");
+    // A code change cites nothing a requirement rests on, so the batch stays proposed.
+    expect(ctx.entities.get("ProposalBatch", ctx.workspaceId, batch.id)?.state).toBe("proposed");
   });
   it("creates no component features and maps route handlers to endpoint features", async () => {
     const { cwd, projectId, discovery } = await fixture();

@@ -1191,9 +1191,12 @@ it("source and code updates supersede descendants without mutating immutable tes
     join(f.root, "server.ts"),
     "const app={};app.get('/changed-health',()=>({ok:false}));",
   );
+  const approved = f.app.requirements.get(updated.requirement.id);
   await f.app.discovery.discover({ projectId: f.projectId });
-  expect(f.app.requirements.get(updated.requirement.id).approval).toBeNull();
-  expect(f.app.proposals.get(updated.batch.id).state).toBe("stale");
+  // Requirements cite source revisions only, so a code change resets no approval and no version.
+  expect(f.app.requirements.get(updated.requirement.id)).toEqual(approved);
+  expect(f.app.requirements.get(updated.requirement.id).approval).not.toBeNull();
+  expect(f.app.proposals.get(updated.batch.id).state).toBe("proposed");
   const current = await normalize(second);
   await f.app.discovery.discover({ projectId: f.projectId });
   expect(f.app.requirements.get(current.requirement.id).approval).not.toBeNull();

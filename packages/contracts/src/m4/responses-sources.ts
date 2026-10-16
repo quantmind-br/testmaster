@@ -117,6 +117,29 @@ const SourceInventory = Type.Union([
   /** prd-json */
   P.Obj({ product: P.Json }),
 ]);
+/**
+ * What a new source revision reset: the requirements whose cited evidence it no longer holds (they
+ * lose their approval and take a new version) and the proposed batches that cite one. The lists
+ * stop at 50; the counts are the totals.
+ */
+const RequirementResetReport = P.Obj({
+  count: P.Positive,
+  requirements: Type.Array(
+    P.Obj({
+      requirementId: P.id("req"),
+      /** The model-assigned key; null for a requirement without one. */
+      requirementKey: nullable(text),
+      reason: Type.Literal("cited_evidence_changed"),
+      /** The new revision that no longer holds what the requirement cited. */
+      sourceRevisionId: P.id("svr"),
+      /** False when the requirement was not approved: only its version moved. */
+      approvalCleared: Type.Boolean(),
+    }),
+    { maxItems: 50 },
+  ),
+  staleProposalBatchCount: P.Nonnegative,
+  staleProposalBatchIds: Type.Array(P.id("pbt"), { maxItems: 50 }),
+});
 
 // ---------------------------------------------------------------------------------------------
 // Requirements: GET/PATCH /projects/{id}/requirements
@@ -339,7 +362,7 @@ const ProposalBatchRecord = P.Obj({
       "testmaster:refinesTest": Type.Optional(
         P.Obj({ testId: P.id("tst"), baseRevisionId: P.id("rev") }),
       ),
-      /** Why the batch became stale (`source:<svr>` or `code:<csp>`). */
+      /** Why the batch became stale (`source:<svr>`: a revision that no longer holds what a cited requirement rested on). */
       "testmaster:invalidatedBy": Type.Optional(filled),
     }),
   ),
@@ -382,6 +405,8 @@ export const sourceResponseContracts = {
     diagnostics: Type.Array(SourceDiagnostic),
     inventory: SourceInventory,
     archivedAt: nullable(P.Timestamp),
+    /** Only on the receipt of a new revision, and only when it reset a requirement. */
+    requirementsReset: Type.Optional(RequirementResetReport),
   }),
   /** GET/PATCH /projects/{id}/requirements: the application's `RequirementSnapshot`. */
   RequirementSnapshotView: P.Obj({

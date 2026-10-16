@@ -43,6 +43,8 @@ owner and update status; `…/sources/:sourceId` shows the revision history.
   sources (OpenAPI, GraphQL) the page lists added, removed and changed operations against the parent
   revision. Tests whose requirements cite a superseded revision are flagged with the reason
   (`requirement_cites_superseded_revision`); tests that do not rest on the changed source are not.
+  Requirements whose cited text the new revision no longer holds lose their approval; the others
+  keep it, and the receipt lists the reset requirements.
 - **Concurrent updates.** An update made from an out-of-date page fails with `REVISION_CONFLICT`
   (HTTP 412) and changes nothing.
 - **Origin state.** A source imported from a repository file shows whether the file is unchanged,
