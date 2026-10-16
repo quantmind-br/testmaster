@@ -1060,6 +1060,12 @@ naming the step, revision and pointer). A cited schema that no longer resolves, 
 `ajv-formats` through the contracts dependency flatten (`containers/build.mjs`), so a change here
 rebuilds the runner image (`containers/images.lock.json`).
 
+A `jsonConforms` assertion carries its JSON Schema inline in the plan, so the generation prompt
+asks the model to check each constraint it states (type, required, const, enum, bounds, items)
+with `expect` on that value; there is no fixture for it. The plan runner judges it with the same
+source-schema validator as `jsonSchema` (`conformingValue` in `packages/runner/src/http.ts`), and
+the plan validator compiles it at save time, so a run never meets an uncompilable inline schema.
+
 A model call has no deadline anywhere: code generation, like every other purpose, runs until the
 provider answers, and only the caller's cancellation (an aborted signal) ends it. Generated code
 is long output and a refused first answer is followed by repairs, so a timer used to cut calls
@@ -1161,8 +1167,11 @@ below their proposed 0.9/0.8 pilot point targets; the M3 milestone gate stays re
 ### M3 layered utility and capability decisions
 
 New analyses require the layered diagnosis and hypothesis support at persistence. Rules own the
-conclusion and healing advice; model enrichment contributes evidence-bound next steps without
-changing either. `run analyze RUN` renders Failure / Expected / Observed / Conclusion / Next step /
+healing advice and the conclusion text; model enrichment contributes evidence-bound next steps.
+When enrichment records a cause the rules did not reach (or refines their tentative locator
+cause), the code-rendered conclusion names that cause as `cause_partially_supported`, so the text
+and the recorded `failureKind` agree; the model's own prose stays in its hypotheses. Otherwise
+the conclusion is unchanged. `run analyze RUN` renders Failure / Expected / Observed / Conclusion / Next step /
 Automatic healing in text mode, while `--output json` retains the structured response. Read a
 stored analysis without enrichment using `run analysis RUN`. Markdown/HTML reports and MCP
 include the same diagnosis summary; legacy records explicitly identify missing layered diagnosis.

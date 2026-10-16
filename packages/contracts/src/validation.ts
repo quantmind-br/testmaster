@@ -645,12 +645,14 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
       const responsePredicates = [
         "jsonEquals",
         "jsonSchema",
+        "jsonConforms",
         "statusIn",
         "headerEquals",
         "headerMatches",
         "cookieAbsent",
       ];
       validatePattern(step.expectation, `${path}/expectation`, reject);
+      validateInlineSchema(step.expectation, `${path}/expectation`, reject);
       if (
         locatorPredicates.includes(predicate) &&
         (!("locator" in input) || plan.runner !== "playwright")
@@ -728,6 +730,7 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
     validateHeaders(cleanup.input.headers ?? {}, `/cleanup/${index}/input/headers`, reject);
     validateRequestBody(cleanup.input, `/cleanup/${index}/input`, reject);
     validatePattern(cleanup.successPredicate, `/cleanup/${index}/successPredicate`, reject);
+    validateInlineSchema(cleanup.successPredicate, `/cleanup/${index}/successPredicate`, reject);
   }
   if (issues.length)
     throw new ContractError(
@@ -983,6 +986,16 @@ function validatePattern(expectation: Expectation, path: string, reject: Reject)
       "pattern",
       `Pattern is not a valid ECMAScript regular expression with the u flag: ${error instanceof Error ? error.message : "invalid"}`,
     );
+  }
+}
+/** A `jsonConforms` schema the runner could not compile is a plan error, never a runtime failure. */
+function validateInlineSchema(expectation: Expectation, path: string, reject: Reject): void {
+  if (expectation.predicate !== "jsonConforms") return;
+  try {
+    assertSourceSchemaCompiles(expectation.schema);
+  } catch (error) {
+    if (!(error instanceof SourceSchemaError)) throw error;
+    reject(`${path}/schema`, "schema", `Inline JSON Schema cannot be compiled: ${error.problem}`);
   }
 }
 const terminalOnlyOperations: ReadonlySet<string> = new Set([

@@ -352,6 +352,8 @@ it("bound passing verification atomically promotes candidate and is restart-idem
   const result = await f.app.healing.reconcile(f.verification.id);
   expect(result.status).toBe("verified");
   expect(f.app.tests.get(f.test.id).activeRevisionId).toBe(f.candidate.id);
+  // The review a reviewer reads after approval says the proposal is verified.
+  expect((await f.app.healing.review(result.id)).status).toBe("verified");
   expect(await f.app.healing.reconcile(f.verification.id)).toEqual(result);
   expect(f.app.runs.get(f.failed.id).outcome).toBe("failed");
 });
@@ -1988,8 +1990,10 @@ it("a review of an approval given without a reason still shows who approved, how
   const f = await proposedFixture();
   vi.spyOn(f.app, "preflight").mockResolvedValue();
   expect((await f.app.healing.review(f.proposal.id)).approval.decision).toBeUndefined();
+  expect((await f.app.healing.review(f.proposal.id)).status).toBe("proposed");
   await f.app.healing.approve(f.proposal.id, 1);
   const review = await f.app.healing.review(f.proposal.id);
+  expect(review.status).toBe("approved");
   expect(review.approval.decision).toEqual({
     status: "approved",
     mode: "manual",

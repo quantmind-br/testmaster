@@ -26,6 +26,7 @@ import {
   formatReviewAutomation,
   formatReviewDecision,
   formatReviewRisk,
+  formatReviewStatus,
   type PlanGenerationType,
   refuseInvalidSource,
   requirementRejection,
@@ -402,6 +403,7 @@ export class TestMasterMcp {
                         const review = data as unknown as HealingReview;
                         return [
                           "Healing review",
+                          `Status: ${formatReviewStatus(review.status)}`,
                           `Automation: ${formatReviewAutomation(review)}`,
                           ...review.automation.reasons.map((reason) => `Reason: ${reason}`),
                           `Risk: ${formatReviewRisk(review)}; assertions intact: ${review.preservedAssertions.intact}`,

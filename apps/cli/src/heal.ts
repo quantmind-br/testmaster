@@ -2,6 +2,7 @@ import {
   formatReviewAutomation,
   formatReviewDecision,
   formatReviewRisk,
+  formatReviewStatus,
   isHealingAbstention,
 } from "@testmaster/application";
 import { ContractError, type HealingAbstention, type HealingReview } from "@testmaster/contracts";
@@ -15,6 +16,7 @@ export function healingReviewText(review: HealingReview): string {
   const lines = [
     `Healing review: ${review.approval.proposalId}`,
     `Candidate revision: ${review.approval.candidateRevisionId}`,
+    `Status: ${formatReviewStatus(review.status)}`,
     `Automation: ${formatReviewAutomation(review)}`,
     ...review.automation.reasons.map((reason) => `- ${reason}`),
     `Risk: ${formatReviewRisk(review)}`,

@@ -125,6 +125,15 @@ const httpAndBrowserExpectations = [
   /** No response of the request step (redirect hops included) sets a cookie with this name. */
   Obj({ predicate: Type.Literal("cookieAbsent"), name: CookieName }),
   Obj({ predicate: Type.Literal("jsonSchema"), sourceRevisionId: id("svr"), pointer: JsonPointer }),
+  /**
+   * The JSON value conforms to an inline JSON Schema (draft 2020-12) written from the approved
+   * criteria: field types, value ranges, required fields, list item shape. The plan validator
+   * compiles it with the source-schema validator and refuses a schema that states no keyword.
+   */
+  Obj({
+    predicate: Type.Literal("jsonConforms"),
+    schema: Type.Record(Type.String(), Json, { minProperties: 1 }),
+  }),
   Obj({
     predicate: Type.Literal("downloadMatches"),
     outputName: Name,

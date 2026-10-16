@@ -241,6 +241,67 @@ function schemaObservation(
     keywords: [...new Set(violations.items.map((item) => item.keyword))].slice(0, 10),
   };
 }
+/** How a schema check names its schema: the recorded expectation and the failure wording. */
+interface SchemaCheck {
+  expected: unknown;
+  /** Completes "Response does not match ...". */
+  mismatch: string;
+  /** Starts "... cannot be used for validation". */
+  unusable: string;
+}
+/**
+ * The asserted JSON value of the response when it conforms to the schema. A mismatch records the
+ * violations and fails the step; a schema the validator cannot use leaves it inconclusive.
+ */
+function conformingValue(
+  runtime: Runtime,
+  response: HttpResponse,
+  pointer: string | undefined,
+  schema: Record<string, unknown>,
+  check: SchemaCheck,
+): unknown {
+  const target = assertedJsonValue(runtime, response, pointer);
+  if (!target.present) {
+    runtime.recordComparison(null, check.expected);
+    throw new RuntimeError(
+      "assertion_mismatch",
+      `Response does not match ${check.mismatch}${target.diagnostic ? `; missing JSON pointer: ${target.diagnostic}` : ""}`,
+      "failed",
+    );
+  }
+  try {
+    validateAgainstSchema(schema, target.value);
+    return target.value;
+  } catch (error) {
+    if (error instanceof RuntimeError) throw error;
+    // A schema that cannot be compiled says nothing about the response: the check could not be
+    // evaluated, which is not an assertion failure.
+    if (error instanceof SourceSchemaError)
+      throw new RuntimeError(
+        "oracle_uncertain",
+        `${check.unusable} cannot be used for validation: ${error.problem}`,
+        "inconclusive",
+      );
+    if (!(error instanceof ContractError))
+      throw new RuntimeError(
+        "oracle_uncertain",
+        `${check.unusable} could not be evaluated: ${error instanceof Error ? error.message.slice(0, 256) : "unknown error"}`,
+        "inconclusive",
+      );
+    const violations = schemaViolations(error);
+    runtime.recordComparison(schemaObservation(runtime, violations, target.value), check.expected);
+    const first = violations.items[0];
+    throw new RuntimeError(
+      "assertion_mismatch",
+      `Response does not match ${check.mismatch}${
+        first
+          ? `: ${violations.total} violation${violations.total === 1 ? "" : "s"}; first at ${first.path || "/"}${first.property ? ` (${first.property})` : ""}: ${first.message}`
+          : ""
+      }`,
+      "failed",
+    );
+  }
+}
 
 function deny(message: string): never {
   throw new RuntimeError("security_precondition_failed", message);
@@ -457,52 +518,25 @@ export async function assertResponse(
         );
       if (!schema || typeof schema !== "object" || Array.isArray(schema))
         deny("Invalid source schema");
-      const target = assertedJsonValue(runtime, response, pointer);
       // The schema document can be far larger than a step record; the failure names it instead.
       expected = { sourceRevisionId: expectation.sourceRevisionId, pointer: expectation.pointer };
-      if (!target.present) {
-        runtime.recordComparison(null, expected);
-        throw new RuntimeError(
-          "assertion_mismatch",
-          `Response does not match source schema${target.diagnostic ? `; missing JSON pointer: ${target.diagnostic}` : ""}`,
-          "failed",
-        );
-      }
-      observed = target.value;
-      try {
-        validateAgainstSchema(schema as Record<string, unknown>, target.value);
-        matches = true;
-      } catch (error) {
-        if (error instanceof RuntimeError) throw error;
-        // A schema that cannot be compiled says nothing about the response: the check could not be
-        // evaluated, which is not an assertion failure.
-        if (error instanceof SourceSchemaError)
-          throw new RuntimeError(
-            "oracle_uncertain",
-            `Source schema ${key} cannot be used for validation: ${error.problem}`,
-            "inconclusive",
-          );
-        if (!(error instanceof ContractError))
-          throw new RuntimeError(
-            "oracle_uncertain",
-            `Source schema ${key} could not be evaluated: ${error instanceof Error ? error.message.slice(0, 256) : "unknown error"}`,
-            "inconclusive",
-          );
-        const violations = schemaViolations(error);
-        runtime.recordComparison(schemaObservation(runtime, violations, target.value), expected);
-        const first = violations.items[0];
-        throw new RuntimeError(
-          "assertion_mismatch",
-          `Response does not match source schema${
-            first
-              ? `: ${violations.total} violation${violations.total === 1 ? "" : "s"}; first at ${first.path || "/"}${first.property ? ` (${first.property})` : ""}: ${first.message}`
-              : ""
-          }`,
-          "failed",
-        );
-      }
+      observed = conformingValue(runtime, response, pointer, schema as Record<string, unknown>, {
+        expected,
+        mismatch: "source schema",
+        unusable: `Source schema ${key}`,
+      });
+      matches = true;
       break;
     }
+    case "jsonConforms":
+      expected = expectation.schema;
+      observed = conformingValue(runtime, response, pointer, expectation.schema, {
+        expected,
+        mismatch: "inline schema",
+        unusable: "Inline schema",
+      });
+      matches = true;
+      break;
     default:
       throw new RuntimeError(
         "unsupported_capability",

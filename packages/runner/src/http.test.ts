@@ -1222,6 +1222,50 @@ it("reports a schema that cannot be compiled as inconclusive, not as an assertio
   expect(payload.error.message).toMatch(/^Source schema .*Broken cannot be used for validation: /u);
   expect(payload.error.message).toContain("Missing");
 });
+it("judges a value against an inline jsonConforms schema and records its violations", async () => {
+  const conforms = (jsonPointer?: string): PlanStep => ({
+    id: "check",
+    kind: "assertion",
+    operation: "assert",
+    description: "The manifest version is an integer of at least 1",
+    input: { responseStepId: "read", ...(jsonPointer ? { jsonPointer } : {}) },
+    expectation: {
+      predicate: "jsonConforms",
+      schema: { type: "integer", minimum: 1 },
+    },
+  });
+  const run = async (body: string, jsonPointer?: string) => {
+    const f = fixture(await serve((_req, res) => res.end(body)));
+    const result = await f.runtime.runSteps(
+      [requestStep("read", []), conforms(jsonPointer)],
+      (step) => f.engine.perform(step),
+    );
+    const payload = f.events.find(
+      (event) => event.type === "step.finished" && event.payload.stepId === "check",
+    )!.payload as {
+      error?: { message: string };
+      observed: unknown;
+      expected: unknown;
+    };
+    return { result, payload };
+  };
+  const passed = await run('{"manifest_version":1,"ui":{}}', "/manifest_version");
+  expect(passed.result).toMatchObject({ outcome: "passed" });
+  expect(passed.payload.expected).toEqual({ type: "integer", minimum: 1 });
+  const failed = await run('{"manifest_version":0}', "/manifest_version");
+  expect(failed.result).toMatchObject({ outcome: "failed", reasonCode: "assertion_mismatch" });
+  expect(failed.payload.error?.message).toBe(
+    "Response does not match inline schema: 1 violation; first at /: must be >= 1",
+  );
+  expect(failed.payload.observed).toMatchObject({
+    violations: [{ path: "", keyword: "minimum", message: "must be >= 1" }],
+  });
+  const absent = await run('{"ui":{}}', "/manifest_version");
+  expect(absent.result).toMatchObject({ outcome: "failed", reasonCode: "assertion_mismatch" });
+  expect(absent.payload.error?.message).toMatch(
+    /^Response does not match inline schema; missing JSON pointer: /u,
+  );
+});
 it("keeps a bounded excerpt of an oversized value when a JSON assertion fails", async () => {
   const items = Array.from({ length: 400 }, (_, index) => ({ id: `item-${index}`, price: index }));
   const base = await serve((_req, res) => res.end(JSON.stringify({ items })));

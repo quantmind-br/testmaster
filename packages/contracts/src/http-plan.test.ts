@@ -213,6 +213,51 @@ describe("HTTP plan expressiveness", () => {
       "pattern:/cleanup/0/successPredicate/pattern",
     ]);
   });
+  it("accepts a compilable jsonConforms schema over a response and refuses an empty or uncompilable one", () => {
+    const manifest = {
+      type: "object",
+      required: ["manifest_version"],
+      properties: { manifest_version: { type: "integer", minimum: 1 } },
+    };
+    expect(
+      rules(plan([request(), check({ predicate: "jsonConforms", schema: manifest })])),
+    ).toEqual([]);
+    expect(
+      rules(
+        plan([
+          request(),
+          check({ predicate: "jsonConforms", schema: manifest }, "check", { url: "/" }),
+        ]),
+      ),
+    ).toEqual(["predicateInput:/steps/1/input"]);
+    // A schema without a keyword accepts every value, so it cannot verify a criterion.
+    expect(
+      rules(plan([request(), check({ predicate: "jsonConforms", schema: {} }), status])),
+    ).toEqual(["minProperties:/steps/1/expectation/schema"]);
+    const broken = issues(
+      plan([
+        request(),
+        check({ predicate: "jsonConforms", schema: { type: "object", minimum: "one" } }),
+        status,
+      ]),
+    );
+    expect(broken).toHaveLength(1);
+    expect(broken[0]).toMatchObject({ path: "/steps/1/expectation/schema", rule: "schema" });
+    expect(broken[0]?.message).toMatch(/^Inline JSON Schema cannot be compiled: /u);
+    const cleanup = [
+      {
+        resourceRef: "go",
+        operation: "request",
+        input: { method: "DELETE", pathSegments: [{ literal: "x" }] },
+        successPredicate: { predicate: "jsonConforms", schema: { $ref: "#/$defs/Missing" } },
+        deadlineMs: 1000,
+        required: true,
+      },
+    ];
+    expect(rules(plan([request(), status], { cleanup }))).toEqual([
+      "schema:/cleanup/0/successPredicate/schema",
+    ]);
+  });
   it("allows an invalid credential only on credential headers and keeps literal credentials refused", () => {
     for (const name of ["Authorization", "X-Api-Key", "api-key"])
       expect(

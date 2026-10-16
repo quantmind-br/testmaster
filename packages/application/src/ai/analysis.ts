@@ -1145,9 +1145,9 @@ function schemaViolationText(violation: unknown): string | null {
   return `${where}${typeof property === "string" ? ` (${property})` : ""} ${keyword}: ${message}`;
 }
 /**
- * Facts naming what a failed jsonSchema, urlEquals or urlMatches assertion observed and expected,
- * and why a schema check could not be evaluated, so the diagnosis never reduces them to a null
- * value.
+ * Facts naming what a failed jsonSchema, jsonConforms, urlEquals or urlMatches assertion observed
+ * and expected, and why a schema check could not be evaluated, so the diagnosis never reduces them
+ * to a null value.
  */
 function assertionMismatchFacts(
   evidence: readonly Evidence[],
@@ -1191,7 +1191,8 @@ function assertionMismatchFacts(
       else if (planStep.expectation.predicate === "urlMatches" && typeof step.observed === "string")
         text = `${label} observed the page URL ${JSON.stringify(step.observed)}, which the pattern ${JSON.stringify(planStep.expectation.pattern)} does not match.`;
       else if (
-        planStep.expectation.predicate === "jsonSchema" &&
+        (planStep.expectation.predicate === "jsonSchema" ||
+          planStep.expectation.predicate === "jsonConforms") &&
         step.observed !== null &&
         typeof step.observed === "object" &&
         !Array.isArray(step.observed)
@@ -1206,11 +1207,16 @@ function assertionMismatchFacts(
         const first = listed
           .map(schemaViolationText)
           .filter((line): line is string => line !== null);
-        text = `${label} rejected the response against ${planStep.expectation.sourceRevisionId}${planStep.expectation.pointer}: ${total} schema violation${total === 1 ? "" : "s"}${first.length ? `; first: ${first.slice(0, 3).join("; ")}` : ""}.`;
+        const against =
+          planStep.expectation.predicate === "jsonSchema"
+            ? `${planStep.expectation.sourceRevisionId}${planStep.expectation.pointer}`
+            : "the step's inline schema";
+        text = `${label} rejected the response against ${against}: ${total} schema violation${total === 1 ? "" : "s"}${first.length ? `; first: ${first.slice(0, 3).join("; ")}` : ""}.`;
       }
     } else if (
       step.reasonCode === "oracle_uncertain" &&
-      step.error?.message.startsWith("Source schema ")
+      step.error &&
+      /^(?:Source|Inline) schema /u.test(step.error.message)
     )
       text = `${label} could not evaluate the response: ${step.error.message}`;
     if (text)
@@ -2633,7 +2639,7 @@ export class AnalysisService {
           item.step?.status === "failed" &&
           item.step.reasonCode === "assertion_mismatch" &&
           item.planStep?.kind === "assertion" &&
-          item.planStep.expectation.predicate === "jsonSchema",
+          ["jsonSchema", "jsonConforms"].includes(item.planStep.expectation.predicate),
       );
       const business = evidence.find(
         (item) =>
@@ -3485,7 +3491,17 @@ export class AnalysisService {
               "Healing proposes locator changes only; the test's expectation conflicts with an approved requirement and needs review.",
           },
         }
-      : layered;
+      : !keepFactual && finalKind !== factual.failureKind
+        ? {
+            // A recorded model cause the rules did not reach is what the analysis reports, so the
+            // code-owned conclusion names it; the model's own prose stays in its hypotheses.
+            ...layered,
+            conclusion: {
+              status: "cause_partially_supported",
+              text: `A model reading attributes the failure at ${stepReference(location)} to ${finalKind.replaceAll("_", " ")}, citing the execution evidence listed with its hypotheses; ${factual.failureKind === "unknown" ? "the rules alone did not establish a cause" : `it refines the rules' tentative ${factual.failureKind.replaceAll("_", " ")} reading`}, so this is a partially supported reading, not a proven cause.`,
+            },
+          }
+        : layered;
     let droppedSteps = 0;
     const modelSteps: Diagnosis["nextSteps"] = [];
     const rulesAdvise = (action: NextStepAction) =>

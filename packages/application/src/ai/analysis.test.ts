@@ -29,7 +29,8 @@ async function fixture(
     passed?: boolean;
     queued?: boolean;
     requestOnly?: boolean;
-    schema?: boolean;
+    /** The price step checks a schema: a cited source schema, or an inline jsonConforms one. */
+    schema?: boolean | "inline";
     status?: boolean;
     missing?: boolean;
     source?: boolean;
@@ -103,15 +104,18 @@ async function fixture(
         required: true,
         description: "Exact price",
         input: { responseStepId: "request" },
-        expectation: options.schema
-          ? {
-              predicate: "jsonSchema",
-              sourceRevisionId: "svr_00000000-0000-4000-8000-000000000001",
-              pointer: "",
-            }
-          : options.status
-            ? { predicate: "statusIn", values: [200] }
-            : { predicate: "jsonEquals", value: { literal: 10 } },
+        expectation:
+          options.schema === "inline"
+            ? { predicate: "jsonConforms", schema: { type: "integer", minimum: 1 } }
+            : options.schema
+              ? {
+                  predicate: "jsonSchema",
+                  sourceRevisionId: "svr_00000000-0000-4000-8000-000000000001",
+                  pointer: "",
+                }
+              : options.status
+                ? { predicate: "statusIn", values: [200] }
+                : { predicate: "jsonEquals", value: { literal: 10 } },
       },
     ],
   };
@@ -2071,6 +2075,33 @@ it("manual-only advice with a passing baseline that matches no control says so i
   expect(healing?.reason).toContain("A healing proposal can still be requested");
 });
 
+it("a model cause the rules did not reach becomes the conclusion, while the code-owned healing posture stays", async () => {
+  const f = await unmatchedClickFixture();
+  const factual = await f.service.analyze(f.run.id);
+  expect(factual.diagnosis?.conclusion.status).toBe("cause_unknown");
+  f.complete.mockImplementationOnce(async () => ({
+    modelCallId: f.modelCallId,
+    output: {
+      failureKind: "test_fragility",
+      hypotheses: [
+        { text: "The button was renamed", supports: ["E2"], contradicts: [], confidence: 0.9 },
+      ],
+      recommendedAction: "fix_test",
+      fixTargetHandle: null,
+      limitations: [],
+      nextSteps: [],
+      evidenceGaps: [],
+    },
+  }));
+  const analysis = await f.service.analyze(f.run.id, { model: true });
+  expect(analysis).toMatchObject({ source: "model", failureKind: "test_fragility" });
+  // The text reader sees the recorded cause, not the rules' "cause unknown".
+  expect(analysis.diagnosis?.conclusion.status).toBe("cause_partially_supported");
+  expect(analysis.diagnosis?.conclusion.text).toContain("test fragility");
+  expect(analysis.diagnosis?.healing).toEqual(factual.diagnosis?.healing);
+  expect(analysis.diagnosis?.nextSteps[0]).toEqual(factual.diagnosis?.nextSteps[0]);
+});
+
 function clickPlan(name: string, stepId = "price"): ExecutablePlan {
   return {
     ...persistencePlan,
@@ -2559,6 +2590,28 @@ it("a failed jsonSchema step names the schema violations and hands them to the m
       excerptTruncated: false,
     },
   });
+});
+it("a failed jsonConforms step is a contract violation that names the inline schema's violations", async () => {
+  const f = await fixture({
+    schema: "inline",
+    step: {
+      expected: { type: "integer", minimum: 1 },
+      observed: {
+        violations: [{ path: "", keyword: "minimum", message: "must be >= 1" }],
+        omittedViolations: 0,
+        excerpt: 0,
+      },
+      error: {
+        code: "Error",
+        message: "Response does not match inline schema: 1 violation; first at /: must be >= 1",
+      },
+    },
+  });
+  const analysis = await f.service.analyze(f.run.id);
+  expect(analysis.failureKind).toBe("contract_violation");
+  expect(analysis.facts.map((fact) => fact.text)).toContain(
+    "Step price (jsonConforms) rejected the response against the step's inline schema: 1 schema violation; first: / minimum: must be >= 1.",
+  );
 });
 it("a jsonSchema check refused for an uncompilable source schema is a supported test-side cause", async () => {
   const f = await fixture({

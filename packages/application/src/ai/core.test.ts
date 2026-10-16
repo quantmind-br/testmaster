@@ -2320,6 +2320,10 @@ it("generation offers the project's API specification to the model although no r
   ]);
   // Control: an archived specification is no longer offered.
   f.app.sources.archive(api.source.id, Number(api.source.version));
+  // Its revisions stay readable: a plan that already cites one keeps resolving the schema it runs.
+  expect(Object.keys(sourceSchemasFor(f.app.context, generated.plan))).toEqual([
+    `${api.revision.id}${pointer}`,
+  ]);
   f.setOutput({
     proposals: [{ plan, requirementRefs: [requirement.id], evidenceIds: ["E1"], warnings: [] }],
   });

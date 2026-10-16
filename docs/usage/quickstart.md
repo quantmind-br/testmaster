@@ -326,6 +326,36 @@ checks the contract only and does not resolve pointers.
 
 A pointer that resolves to a schema the validator cannot compile (for example an unknown keyword) is reported before the run: plan validation returns `schema_uncompilable` at the step with the compile error, and saving the plan is refused with `source_schema_uncompilable`. Schemas that list `required` names only inside `not`, `anyOf`, `oneOf`, `allOf` or `then` compile and validate normally.
 
+Archiving a source (`source archive`, `testmaster_archive_source`) removes it from plan generation and operation coverage, but its revisions stay readable: a `jsonSchema` assertion that cites one keeps resolving and running.
+
+### Inline schemas (`jsonConforms`)
+
+A `jsonSchema` assertion verifies only what the cited schema declares. When the specification leaves a field untyped (an
+object with `additionalProperties: true`, list items `{}`) or a criterion states a bound it does not, write the criterion
+as an inline JSON Schema (draft 2020-12) instead of adding a source:
+
+```json
+{
+  "id": "manifest_fields",
+  "kind": "assertion",
+  "operation": "assert",
+  "description": "manifest_version is an integer of at least 1 and ui is an object",
+  "input": { "responseStepId": "get_manifest" },
+  "expectation": {
+    "predicate": "jsonConforms",
+    "schema": {
+      "type": "object",
+      "required": ["manifest_version", "ui"],
+      "properties": { "manifest_version": { "type": "integer", "minimum": 1 }, "ui": { "type": "object" } }
+    }
+  }
+}
+```
+
+`input.jsonPointer` narrows the check to one value, like `jsonEquals`. Plan validation compiles the schema and refuses one
+that does not compile or is empty. Write only what the approved criteria say, never a shape copied from a response. The
+step does not count toward operation coverage, and `test export` refuses it (exported code has no JSON Schema validator).
+
 ## Third-party subresources and additional origins
 
 A browser run may reach only the environment target. When the page loads something from another origin (a CDN

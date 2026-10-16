@@ -22209,6 +22209,56 @@
                                     "type": "object",
                                     "required": [
                                       "predicate",
+                                      "schema"
+                                    ],
+                                    "properties": {
+                                      "predicate": {
+                                        "const": "jsonConforms",
+                                        "type": "string"
+                                      },
+                                      "schema": {
+                                        "minProperties": 1,
+                                        "type": "object",
+                                        "patternProperties": {
+                                          "^(.*)$": {
+                                            "anyOf": [
+                                              {
+                                                "type": "null"
+                                              },
+                                              {
+                                                "type": "boolean"
+                                              },
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "type": "string"
+                                              },
+                                              {
+                                                "type": "array",
+                                                "items": {
+                                                  "$ref": "#/components/schemas/AIProposalsOutput/$defs/T0"
+                                                }
+                                              },
+                                              {
+                                                "type": "object",
+                                                "patternProperties": {
+                                                  "^(.*)$": {
+                                                    "$ref": "#/components/schemas/AIProposalsOutput/$defs/T0"
+                                                  }
+                                                }
+                                              }
+                                            ]
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "type": "object",
+                                    "required": [
+                                      "predicate",
                                       "outputName"
                                     ],
                                     "properties": {
@@ -24392,6 +24442,56 @@
                                   "pointer": {
                                     "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                                     "type": "string"
+                                  }
+                                }
+                              },
+                              {
+                                "additionalProperties": false,
+                                "type": "object",
+                                "required": [
+                                  "predicate",
+                                  "schema"
+                                ],
+                                "properties": {
+                                  "predicate": {
+                                    "const": "jsonConforms",
+                                    "type": "string"
+                                  },
+                                  "schema": {
+                                    "minProperties": 1,
+                                    "type": "object",
+                                    "patternProperties": {
+                                      "^(.*)$": {
+                                        "anyOf": [
+                                          {
+                                            "type": "null"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "array",
+                                            "items": {
+                                              "$ref": "#/components/schemas/AIProposalsOutput/$defs/T0"
+                                            }
+                                          },
+                                          {
+                                            "type": "object",
+                                            "patternProperties": {
+                                              "^(.*)$": {
+                                                "$ref": "#/components/schemas/AIProposalsOutput/$defs/T0"
+                                              }
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    }
                                   }
                                 }
                               },
@@ -30298,6 +30398,56 @@
                           "pointer": {
                             "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                             "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "schema"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "jsonConforms",
+                            "type": "string"
+                          },
+                          "schema": {
+                            "minProperties": 1,
+                            "type": "object",
+                            "patternProperties": {
+                              "^(.*)$": {
+                                "anyOf": [
+                                  {
+                                    "type": "null"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "$ref": "#/components/schemas/AIProposalsOutput/$defs/T0"
+                                    }
+                                  },
+                                  {
+                                    "type": "object",
+                                    "patternProperties": {
+                                      "^(.*)$": {
+                                        "$ref": "#/components/schemas/AIProposalsOutput/$defs/T0"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            }
                           }
                         }
                       },
@@ -42797,6 +42947,56 @@
                               "type": "object",
                               "required": [
                                 "predicate",
+                                "schema"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "jsonConforms",
+                                  "type": "string"
+                                },
+                                "schema": {
+                                  "minProperties": 1,
+                                  "type": "object",
+                                  "patternProperties": {
+                                    "^(.*)$": {
+                                      "anyOf": [
+                                        {
+                                          "type": "null"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "$ref": "#/components/schemas/AuthFormConfig/$defs/T0"
+                                          }
+                                        },
+                                        {
+                                          "type": "object",
+                                          "patternProperties": {
+                                            "^(.*)$": {
+                                              "$ref": "#/components/schemas/AuthFormConfig/$defs/T0"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate",
                                 "outputName"
                               ],
                               "properties": {
@@ -50535,6 +50735,56 @@
                           "pointer": {
                             "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                             "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "schema"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "jsonConforms",
+                            "type": "string"
+                          },
+                          "schema": {
+                            "minProperties": 1,
+                            "type": "object",
+                            "patternProperties": {
+                              "^(.*)$": {
+                                "anyOf": [
+                                  {
+                                    "type": "null"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "$ref": "#/components/schemas/AuthFormConfig/$defs/T0"
+                                    }
+                                  },
+                                  {
+                                    "type": "object",
+                                    "patternProperties": {
+                                      "^(.*)$": {
+                                        "$ref": "#/components/schemas/AuthFormConfig/$defs/T0"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            }
                           }
                         }
                       },
@@ -74739,6 +74989,56 @@
                           "type": "object",
                           "required": [
                             "predicate",
+                            "schema"
+                          ],
+                          "properties": {
+                            "predicate": {
+                              "const": "jsonConforms",
+                              "type": "string"
+                            },
+                            "schema": {
+                              "minProperties": 1,
+                              "type": "object",
+                              "patternProperties": {
+                                "^(.*)$": {
+                                  "anyOf": [
+                                    {
+                                      "type": "null"
+                                    },
+                                    {
+                                      "type": "boolean"
+                                    },
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "$ref": "#/components/schemas/ExecutablePlan/$defs/T0"
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "patternProperties": {
+                                        "^(.*)$": {
+                                          "$ref": "#/components/schemas/ExecutablePlan/$defs/T0"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "predicate",
                             "outputName"
                           ],
                           "properties": {
@@ -77082,6 +77382,56 @@
                         "pointer": {
                           "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                           "type": "string"
+                        }
+                      }
+                    },
+                    {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "predicate",
+                        "schema"
+                      ],
+                      "properties": {
+                        "predicate": {
+                          "const": "jsonConforms",
+                          "type": "string"
+                        },
+                        "schema": {
+                          "minProperties": 1,
+                          "type": "object",
+                          "patternProperties": {
+                            "^(.*)$": {
+                              "anyOf": [
+                                {
+                                  "type": "null"
+                                },
+                                {
+                                  "type": "boolean"
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "$ref": "#/components/schemas/ExecutablePlan/$defs/T0"
+                                  }
+                                },
+                                {
+                                  "type": "object",
+                                  "patternProperties": {
+                                    "^(.*)$": {
+                                      "$ref": "#/components/schemas/ExecutablePlan/$defs/T0"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
                         }
                       }
                     },
@@ -84774,6 +85124,56 @@
                         "type": "object",
                         "required": [
                           "predicate",
+                          "schema"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "jsonConforms",
+                            "type": "string"
+                          },
+                          "schema": {
+                            "minProperties": 1,
+                            "type": "object",
+                            "patternProperties": {
+                              "^(.*)$": {
+                                "anyOf": [
+                                  {
+                                    "type": "null"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "$ref": "#/components/schemas/ExecutablePlan/$defs/T0"
+                                    }
+                                  },
+                                  {
+                                    "type": "object",
+                                    "patternProperties": {
+                                      "^(.*)$": {
+                                        "$ref": "#/components/schemas/ExecutablePlan/$defs/T0"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
                           "outputName"
                         ],
                         "properties": {
@@ -89717,6 +90117,7 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          "status",
           "changes",
           "identity",
           "automation",
@@ -89729,6 +90130,26 @@
           "limitations"
         ],
         "properties": {
+          "status": {
+            "anyOf": [
+              {
+                "const": "proposed",
+                "type": "string"
+              },
+              {
+                "const": "approved",
+                "type": "string"
+              },
+              {
+                "const": "rejected",
+                "type": "string"
+              },
+              {
+                "const": "verified",
+                "type": "string"
+              }
+            ]
+          },
           "changes": {
             "maxItems": 20,
             "type": "array",
@@ -103197,6 +103618,56 @@
                                   "type": "object",
                                   "required": [
                                     "predicate",
+                                    "schema"
+                                  ],
+                                  "properties": {
+                                    "predicate": {
+                                      "const": "jsonConforms",
+                                      "type": "string"
+                                    },
+                                    "schema": {
+                                      "minProperties": 1,
+                                      "type": "object",
+                                      "patternProperties": {
+                                        "^(.*)$": {
+                                          "anyOf": [
+                                            {
+                                              "type": "null"
+                                            },
+                                            {
+                                              "type": "boolean"
+                                            },
+                                            {
+                                              "type": "number"
+                                            },
+                                            {
+                                              "type": "string"
+                                            },
+                                            {
+                                              "type": "array",
+                                              "items": {
+                                                "$ref": "#/components/schemas/McpEditedPlan/$defs/T0"
+                                              }
+                                            },
+                                            {
+                                              "type": "object",
+                                              "patternProperties": {
+                                                "^(.*)$": {
+                                                  "$ref": "#/components/schemas/McpEditedPlan/$defs/T0"
+                                                }
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "predicate",
                                     "outputName"
                                   ],
                                   "properties": {
@@ -105540,6 +106011,56 @@
                                 "pointer": {
                                   "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                                   "type": "string"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate",
+                                "schema"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "jsonConforms",
+                                  "type": "string"
+                                },
+                                "schema": {
+                                  "minProperties": 1,
+                                  "type": "object",
+                                  "patternProperties": {
+                                    "^(.*)$": {
+                                      "anyOf": [
+                                        {
+                                          "type": "null"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "$ref": "#/components/schemas/McpEditedPlan/$defs/T0"
+                                          }
+                                        },
+                                        {
+                                          "type": "object",
+                                          "patternProperties": {
+                                            "^(.*)$": {
+                                              "$ref": "#/components/schemas/McpEditedPlan/$defs/T0"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
                                 }
                               }
                             },
@@ -113545,6 +114066,56 @@
                           "pointer": {
                             "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                             "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "schema"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "jsonConforms",
+                            "type": "string"
+                          },
+                          "schema": {
+                            "minProperties": 1,
+                            "type": "object",
+                            "patternProperties": {
+                              "^(.*)$": {
+                                "anyOf": [
+                                  {
+                                    "type": "null"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "$ref": "#/components/schemas/McpEditedPlan/$defs/T0"
+                                    }
+                                  },
+                                  {
+                                    "type": "object",
+                                    "patternProperties": {
+                                      "^(.*)$": {
+                                        "$ref": "#/components/schemas/McpEditedPlan/$defs/T0"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            }
                           }
                         }
                       },
@@ -122804,6 +123375,56 @@
                                       "type": "object",
                                       "required": [
                                         "predicate",
+                                        "schema"
+                                      ],
+                                      "properties": {
+                                        "predicate": {
+                                          "const": "jsonConforms",
+                                          "type": "string"
+                                        },
+                                        "schema": {
+                                          "minProperties": 1,
+                                          "type": "object",
+                                          "patternProperties": {
+                                            "^(.*)$": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "null"
+                                                },
+                                                {
+                                                  "type": "boolean"
+                                                },
+                                                {
+                                                  "type": "number"
+                                                },
+                                                {
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "type": "array",
+                                                  "items": {
+                                                    "$ref": "#/components/schemas/McpSavedTest/$defs/T0"
+                                                  }
+                                                },
+                                                {
+                                                  "type": "object",
+                                                  "patternProperties": {
+                                                    "^(.*)$": {
+                                                      "$ref": "#/components/schemas/McpSavedTest/$defs/T0"
+                                                    }
+                                                  }
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "type": "object",
+                                      "required": [
+                                        "predicate",
                                         "outputName"
                                       ],
                                       "properties": {
@@ -125147,6 +125768,56 @@
                                     "pointer": {
                                       "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                                       "type": "string"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "predicate",
+                                    "schema"
+                                  ],
+                                  "properties": {
+                                    "predicate": {
+                                      "const": "jsonConforms",
+                                      "type": "string"
+                                    },
+                                    "schema": {
+                                      "minProperties": 1,
+                                      "type": "object",
+                                      "patternProperties": {
+                                        "^(.*)$": {
+                                          "anyOf": [
+                                            {
+                                              "type": "null"
+                                            },
+                                            {
+                                              "type": "boolean"
+                                            },
+                                            {
+                                              "type": "number"
+                                            },
+                                            {
+                                              "type": "string"
+                                            },
+                                            {
+                                              "type": "array",
+                                              "items": {
+                                                "$ref": "#/components/schemas/McpSavedTest/$defs/T0"
+                                              }
+                                            },
+                                            {
+                                              "type": "object",
+                                              "patternProperties": {
+                                                "^(.*)$": {
+                                                  "$ref": "#/components/schemas/McpSavedTest/$defs/T0"
+                                                }
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      }
                                     }
                                   }
                                 },
@@ -133095,6 +133766,56 @@
                           "pointer": {
                             "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                             "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "schema"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "jsonConforms",
+                            "type": "string"
+                          },
+                          "schema": {
+                            "minProperties": 1,
+                            "type": "object",
+                            "patternProperties": {
+                              "^(.*)$": {
+                                "anyOf": [
+                                  {
+                                    "type": "null"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "$ref": "#/components/schemas/McpSavedTest/$defs/T0"
+                                    }
+                                  },
+                                  {
+                                    "type": "object",
+                                    "patternProperties": {
+                                      "^(.*)$": {
+                                        "$ref": "#/components/schemas/McpSavedTest/$defs/T0"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            }
                           }
                         }
                       },
@@ -150756,6 +151477,56 @@
                                   "type": "object",
                                   "required": [
                                     "predicate",
+                                    "schema"
+                                  ],
+                                  "properties": {
+                                    "predicate": {
+                                      "const": "jsonConforms",
+                                      "type": "string"
+                                    },
+                                    "schema": {
+                                      "minProperties": 1,
+                                      "type": "object",
+                                      "patternProperties": {
+                                        "^(.*)$": {
+                                          "anyOf": [
+                                            {
+                                              "type": "null"
+                                            },
+                                            {
+                                              "type": "boolean"
+                                            },
+                                            {
+                                              "type": "number"
+                                            },
+                                            {
+                                              "type": "string"
+                                            },
+                                            {
+                                              "type": "array",
+                                              "items": {
+                                                "$ref": "#/components/schemas/Proposal/$defs/T0"
+                                              }
+                                            },
+                                            {
+                                              "type": "object",
+                                              "patternProperties": {
+                                                "^(.*)$": {
+                                                  "$ref": "#/components/schemas/Proposal/$defs/T0"
+                                                }
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "predicate",
                                     "outputName"
                                   ],
                                   "properties": {
@@ -153099,6 +153870,56 @@
                                 "pointer": {
                                   "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                                   "type": "string"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate",
+                                "schema"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "jsonConforms",
+                                  "type": "string"
+                                },
+                                "schema": {
+                                  "minProperties": 1,
+                                  "type": "object",
+                                  "patternProperties": {
+                                    "^(.*)$": {
+                                      "anyOf": [
+                                        {
+                                          "type": "null"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "$ref": "#/components/schemas/Proposal/$defs/T0"
+                                          }
+                                        },
+                                        {
+                                          "type": "object",
+                                          "patternProperties": {
+                                            "^(.*)$": {
+                                              "$ref": "#/components/schemas/Proposal/$defs/T0"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
                                 }
                               }
                             },
@@ -161100,6 +161921,56 @@
                           "pointer": {
                             "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                             "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "schema"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "jsonConforms",
+                            "type": "string"
+                          },
+                          "schema": {
+                            "minProperties": 1,
+                            "type": "object",
+                            "patternProperties": {
+                              "^(.*)$": {
+                                "anyOf": [
+                                  {
+                                    "type": "null"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "$ref": "#/components/schemas/Proposal/$defs/T0"
+                                    }
+                                  },
+                                  {
+                                    "type": "object",
+                                    "patternProperties": {
+                                      "^(.*)$": {
+                                        "$ref": "#/components/schemas/Proposal/$defs/T0"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            }
                           }
                         }
                       },
@@ -169368,6 +170239,56 @@
                                         "type": "object",
                                         "required": [
                                           "predicate",
+                                          "schema"
+                                        ],
+                                        "properties": {
+                                          "predicate": {
+                                            "const": "jsonConforms",
+                                            "type": "string"
+                                          },
+                                          "schema": {
+                                            "minProperties": 1,
+                                            "type": "object",
+                                            "patternProperties": {
+                                              "^(.*)$": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "null"
+                                                  },
+                                                  {
+                                                    "type": "boolean"
+                                                  },
+                                                  {
+                                                    "type": "number"
+                                                  },
+                                                  {
+                                                    "type": "string"
+                                                  },
+                                                  {
+                                                    "type": "array",
+                                                    "items": {
+                                                      "$ref": "#/components/schemas/ProposalBatchDetail/$defs/T0"
+                                                    }
+                                                  },
+                                                  {
+                                                    "type": "object",
+                                                    "patternProperties": {
+                                                      "^(.*)$": {
+                                                        "$ref": "#/components/schemas/ProposalBatchDetail/$defs/T0"
+                                                      }
+                                                    }
+                                                  }
+                                                ]
+                                              }
+                                            }
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "type": "object",
+                                        "required": [
+                                          "predicate",
                                           "outputName"
                                         ],
                                         "properties": {
@@ -171711,6 +172632,56 @@
                                       "pointer": {
                                         "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                                         "type": "string"
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "type": "object",
+                                    "required": [
+                                      "predicate",
+                                      "schema"
+                                    ],
+                                    "properties": {
+                                      "predicate": {
+                                        "const": "jsonConforms",
+                                        "type": "string"
+                                      },
+                                      "schema": {
+                                        "minProperties": 1,
+                                        "type": "object",
+                                        "patternProperties": {
+                                          "^(.*)$": {
+                                            "anyOf": [
+                                              {
+                                                "type": "null"
+                                              },
+                                              {
+                                                "type": "boolean"
+                                              },
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "type": "string"
+                                              },
+                                              {
+                                                "type": "array",
+                                                "items": {
+                                                  "$ref": "#/components/schemas/ProposalBatchDetail/$defs/T0"
+                                                }
+                                              },
+                                              {
+                                                "type": "object",
+                                                "patternProperties": {
+                                                  "^(.*)$": {
+                                                    "$ref": "#/components/schemas/ProposalBatchDetail/$defs/T0"
+                                                  }
+                                                }
+                                              }
+                                            ]
+                                          }
+                                        }
                                       }
                                     }
                                   },
@@ -179748,6 +180719,56 @@
                           "pointer": {
                             "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                             "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "schema"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "jsonConforms",
+                            "type": "string"
+                          },
+                          "schema": {
+                            "minProperties": 1,
+                            "type": "object",
+                            "patternProperties": {
+                              "^(.*)$": {
+                                "anyOf": [
+                                  {
+                                    "type": "null"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "$ref": "#/components/schemas/ProposalBatchDetail/$defs/T0"
+                                    }
+                                  },
+                                  {
+                                    "type": "object",
+                                    "patternProperties": {
+                                      "^(.*)$": {
+                                        "$ref": "#/components/schemas/ProposalBatchDetail/$defs/T0"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            }
                           }
                         }
                       },
@@ -203996,6 +205017,56 @@
                     "type": "object",
                     "required": [
                       "predicate",
+                      "schema"
+                    ],
+                    "properties": {
+                      "predicate": {
+                        "const": "jsonConforms",
+                        "type": "string"
+                      },
+                      "schema": {
+                        "minProperties": 1,
+                        "type": "object",
+                        "patternProperties": {
+                          "^(.*)$": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "$ref": "#/components/schemas/Step/$defs/T0"
+                                }
+                              },
+                              {
+                                "type": "object",
+                                "patternProperties": {
+                                  "^(.*)$": {
+                                    "$ref": "#/components/schemas/Step/$defs/T0"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "predicate",
                       "outputName"
                     ],
                     "properties": {
@@ -211636,6 +212707,56 @@
                           "pointer": {
                             "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                             "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "schema"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "jsonConforms",
+                            "type": "string"
+                          },
+                          "schema": {
+                            "minProperties": 1,
+                            "type": "object",
+                            "patternProperties": {
+                              "^(.*)$": {
+                                "anyOf": [
+                                  {
+                                    "type": "null"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "$ref": "#/components/schemas/Step/$defs/T0"
+                                    }
+                                  },
+                                  {
+                                    "type": "object",
+                                    "patternProperties": {
+                                      "^(.*)$": {
+                                        "$ref": "#/components/schemas/Step/$defs/T0"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            }
                           }
                         }
                       },
@@ -221885,6 +223006,56 @@
                                     "type": "object",
                                     "required": [
                                       "predicate",
+                                      "schema"
+                                    ],
+                                    "properties": {
+                                      "predicate": {
+                                        "const": "jsonConforms",
+                                        "type": "string"
+                                      },
+                                      "schema": {
+                                        "minProperties": 1,
+                                        "type": "object",
+                                        "patternProperties": {
+                                          "^(.*)$": {
+                                            "anyOf": [
+                                              {
+                                                "type": "null"
+                                              },
+                                              {
+                                                "type": "boolean"
+                                              },
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "type": "string"
+                                              },
+                                              {
+                                                "type": "array",
+                                                "items": {
+                                                  "$ref": "#/components/schemas/SupervisorEvent/$defs/T0"
+                                                }
+                                              },
+                                              {
+                                                "type": "object",
+                                                "patternProperties": {
+                                                  "^(.*)$": {
+                                                    "$ref": "#/components/schemas/SupervisorEvent/$defs/T0"
+                                                  }
+                                                }
+                                              }
+                                            ]
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "type": "object",
+                                    "required": [
+                                      "predicate",
                                       "outputName"
                                     ],
                                     "properties": {
@@ -229536,6 +230707,56 @@
                           "pointer": {
                             "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                             "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "schema"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "jsonConforms",
+                            "type": "string"
+                          },
+                          "schema": {
+                            "minProperties": 1,
+                            "type": "object",
+                            "patternProperties": {
+                              "^(.*)$": {
+                                "anyOf": [
+                                  {
+                                    "type": "null"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "$ref": "#/components/schemas/SupervisorEvent/$defs/T0"
+                                    }
+                                  },
+                                  {
+                                    "type": "object",
+                                    "patternProperties": {
+                                      "^(.*)$": {
+                                        "$ref": "#/components/schemas/SupervisorEvent/$defs/T0"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            }
                           }
                         }
                       },
@@ -238417,6 +239638,56 @@
                                   "type": "object",
                                   "required": [
                                     "predicate",
+                                    "schema"
+                                  ],
+                                  "properties": {
+                                    "predicate": {
+                                      "const": "jsonConforms",
+                                      "type": "string"
+                                    },
+                                    "schema": {
+                                      "minProperties": 1,
+                                      "type": "object",
+                                      "patternProperties": {
+                                        "^(.*)$": {
+                                          "anyOf": [
+                                            {
+                                              "type": "null"
+                                            },
+                                            {
+                                              "type": "boolean"
+                                            },
+                                            {
+                                              "type": "number"
+                                            },
+                                            {
+                                              "type": "string"
+                                            },
+                                            {
+                                              "type": "array",
+                                              "items": {
+                                                "$ref": "#/components/schemas/TestRevision/$defs/T0"
+                                              }
+                                            },
+                                            {
+                                              "type": "object",
+                                              "patternProperties": {
+                                                "^(.*)$": {
+                                                  "$ref": "#/components/schemas/TestRevision/$defs/T0"
+                                                }
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "predicate",
                                     "outputName"
                                   ],
                                   "properties": {
@@ -240760,6 +242031,56 @@
                                 "pointer": {
                                   "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                                   "type": "string"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate",
+                                "schema"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "jsonConforms",
+                                  "type": "string"
+                                },
+                                "schema": {
+                                  "minProperties": 1,
+                                  "type": "object",
+                                  "patternProperties": {
+                                    "^(.*)$": {
+                                      "anyOf": [
+                                        {
+                                          "type": "null"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "$ref": "#/components/schemas/TestRevision/$defs/T0"
+                                          }
+                                        },
+                                        {
+                                          "type": "object",
+                                          "patternProperties": {
+                                            "^(.*)$": {
+                                              "$ref": "#/components/schemas/TestRevision/$defs/T0"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
                                 }
                               }
                             },
@@ -248666,6 +249987,56 @@
                           "pointer": {
                             "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                             "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "schema"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "jsonConforms",
+                            "type": "string"
+                          },
+                          "schema": {
+                            "minProperties": 1,
+                            "type": "object",
+                            "patternProperties": {
+                              "^(.*)$": {
+                                "anyOf": [
+                                  {
+                                    "type": "null"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "$ref": "#/components/schemas/TestRevision/$defs/T0"
+                                    }
+                                  },
+                                  {
+                                    "type": "object",
+                                    "patternProperties": {
+                                      "^(.*)$": {
+                                        "$ref": "#/components/schemas/TestRevision/$defs/T0"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            }
                           }
                         }
                       },
@@ -256584,6 +257955,56 @@
                                   "type": "object",
                                   "required": [
                                     "predicate",
+                                    "schema"
+                                  ],
+                                  "properties": {
+                                    "predicate": {
+                                      "const": "jsonConforms",
+                                      "type": "string"
+                                    },
+                                    "schema": {
+                                      "minProperties": 1,
+                                      "type": "object",
+                                      "patternProperties": {
+                                        "^(.*)$": {
+                                          "anyOf": [
+                                            {
+                                              "type": "null"
+                                            },
+                                            {
+                                              "type": "boolean"
+                                            },
+                                            {
+                                              "type": "number"
+                                            },
+                                            {
+                                              "type": "string"
+                                            },
+                                            {
+                                              "type": "array",
+                                              "items": {
+                                                "$ref": "#/components/schemas/TestRevisionInput/$defs/T0"
+                                              }
+                                            },
+                                            {
+                                              "type": "object",
+                                              "patternProperties": {
+                                                "^(.*)$": {
+                                                  "$ref": "#/components/schemas/TestRevisionInput/$defs/T0"
+                                                }
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "predicate",
                                     "outputName"
                                   ],
                                   "properties": {
@@ -258927,6 +260348,56 @@
                                 "pointer": {
                                   "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                                   "type": "string"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate",
+                                "schema"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "jsonConforms",
+                                  "type": "string"
+                                },
+                                "schema": {
+                                  "minProperties": 1,
+                                  "type": "object",
+                                  "patternProperties": {
+                                    "^(.*)$": {
+                                      "anyOf": [
+                                        {
+                                          "type": "null"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "$ref": "#/components/schemas/TestRevisionInput/$defs/T0"
+                                          }
+                                        },
+                                        {
+                                          "type": "object",
+                                          "patternProperties": {
+                                            "^(.*)$": {
+                                              "$ref": "#/components/schemas/TestRevisionInput/$defs/T0"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
                                 }
                               }
                             },
@@ -266790,6 +268261,56 @@
                           "pointer": {
                             "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                             "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "schema"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "jsonConforms",
+                            "type": "string"
+                          },
+                          "schema": {
+                            "minProperties": 1,
+                            "type": "object",
+                            "patternProperties": {
+                              "^(.*)$": {
+                                "anyOf": [
+                                  {
+                                    "type": "null"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "$ref": "#/components/schemas/TestRevisionInput/$defs/T0"
+                                    }
+                                  },
+                                  {
+                                    "type": "object",
+                                    "patternProperties": {
+                                      "^(.*)$": {
+                                        "$ref": "#/components/schemas/TestRevisionInput/$defs/T0"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            }
                           }
                         }
                       },

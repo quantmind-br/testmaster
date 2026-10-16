@@ -2,6 +2,7 @@
   "additionalProperties": false,
   "type": "object",
   "required": [
+    "status",
     "changes",
     "identity",
     "automation",
@@ -14,6 +15,26 @@
     "limitations"
   ],
   "properties": {
+    "status": {
+      "anyOf": [
+        {
+          "const": "proposed",
+          "type": "string"
+        },
+        {
+          "const": "approved",
+          "type": "string"
+        },
+        {
+          "const": "rejected",
+          "type": "string"
+        },
+        {
+          "const": "verified",
+          "type": "string"
+        }
+      ]
+    },
     "changes": {
       "maxItems": 20,
       "type": "array",

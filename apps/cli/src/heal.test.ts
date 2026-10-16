@@ -6,6 +6,7 @@ import { runCli } from "./cli.js";
 import { Runtime } from "./runtime.js";
 
 const review: HealingReview = {
+  status: "proposed",
   changes: [
     {
       stepId: "submit",
@@ -99,6 +100,7 @@ it("heal review of a decided proposal shows the decision and no approval command
   const runtime = new Runtime(output, output);
   const decided: HealingReview = {
     ...review,
+    status: "verified",
     automation: { decision: "not_eligible", reasons: [] },
     verification: { runId: review.verification!.runId, outcome: "passed", gate: "passed" },
     approval: {

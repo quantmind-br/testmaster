@@ -41,7 +41,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_propose_healing:
     "Propose a locator-only candidate for a failed Run of the active plan revision; assertions never change. Next: testmaster_review_healing. abstained: true (reasonCode) = no safe repair. Refused before a model call (PRECONDITION_FAILED): healing_not_indicated, code_revision, revision_not_active.",
   testmaster_review_healing:
-    "Read the healing diff, risk, assertions-intact check, verification and approval. Next: testmaster_approve_healing with approval.expectedVersion, or testmaster_reject_healing with a reason, only after review.",
+    "Read the proposal's status (proposed, approved, verified, rejected), healing diff, risk, assertions-intact check, verification and approval. Next: testmaster_approve_healing with approval.expectedVersion, or testmaster_reject_healing with a reason, only after review.",
   testmaster_approve_healing:
     "Approve at expectedVersion after testmaster_review_healing (reason optional): creates the candidate revision and a verification run, run here when no worker is live (testmaster_get_run wait=true). A pass makes the proposal verified and the candidate the active revision. Write scope; audited.",
   testmaster_reject_healing:

@@ -303,6 +303,14 @@ export function formatReviewDecision(
   if (decision.decidedAt) parts.push(`at ${decision.decidedAt}`);
   return `${parts.join(" ")}${decision.reason ? `: ${decision.reason}` : ""}`;
 }
+/** `verified (its verification run passed; ...)`, the proposal's status with what it means now. */
+export function formatReviewStatus(status: HealingReview["status"]): string {
+  if (status === "verified")
+    return `${status} (its verification run passed; the candidate is the test's active revision)`;
+  if (status === "approved") return `${status} (its verification run has not finished)`;
+  if (status === "rejected") return `${status} (nothing was applied)`;
+  return `${status} (awaiting approval or rejection)`;
+}
 /**
  * `not_eligible (already approved by a reviewer, so ...)`, the automation decision with what it
  * means for this proposal now, so a decided proposal does not read like a refusal.
@@ -499,6 +507,7 @@ export class HealingService {
       : null;
     const decision = approvalDecision(proposal);
     return validate<HealingReview>("HealingReview", {
+      status: proposal.status,
       changes,
       identity,
       automation: {

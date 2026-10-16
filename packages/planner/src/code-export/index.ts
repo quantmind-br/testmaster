@@ -418,7 +418,9 @@ export function exportCode(input: ExecutablePlan, options: CodeExportOptions): C
             predicate,
             predicate === "jsonSchema"
               ? "source schema revision is not available in the plan; resolve the schema before export"
-              : "predicate is unavailable for this assertion target",
+              : predicate === "jsonConforms"
+                ? "exported code ships no JSON Schema validator; the runner judges this assertion"
+                : "predicate is unavailable for this assertion target",
           );
         if (plan.runner === "http" && !response)
           unsupported(step.id, predicate, "HTTP assertions need responseStepId");

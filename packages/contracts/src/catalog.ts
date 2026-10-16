@@ -402,6 +402,12 @@ const supplemental = {
     }),
   ]),
   HealingReview: P.Obj({
+    /**
+     * The proposal's status: `proposed` awaits a decision (again after a verification that did
+     * not pass), `approved` has its verification Run pending, `verified` passed it and its
+     * candidate is the test's active revision, `rejected` was declined.
+     */
+    status: P.Enum(["proposed", "approved", "rejected", "verified"]),
     changes: Type.Array(
       P.Obj({ stepId: P.Name, path: P.JsonPointer, before: P.Json, after: P.Json }),
       { maxItems: 20 },

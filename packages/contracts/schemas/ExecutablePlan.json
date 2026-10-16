@@ -7485,6 +7485,56 @@
                     "type": "object",
                     "required": [
                       "predicate",
+                      "schema"
+                    ],
+                    "properties": {
+                      "predicate": {
+                        "const": "jsonConforms",
+                        "type": "string"
+                      },
+                      "schema": {
+                        "minProperties": 1,
+                        "type": "object",
+                        "patternProperties": {
+                          "^(.*)$": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "$ref": "#/$defs/T0"
+                                }
+                              },
+                              {
+                                "type": "object",
+                                "patternProperties": {
+                                  "^(.*)$": {
+                                    "$ref": "#/$defs/T0"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "predicate",
                       "outputName"
                     ],
                     "properties": {
@@ -9828,6 +9878,56 @@
                   "pointer": {
                     "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                     "type": "string"
+                  }
+                }
+              },
+              {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "predicate",
+                  "schema"
+                ],
+                "properties": {
+                  "predicate": {
+                    "const": "jsonConforms",
+                    "type": "string"
+                  },
+                  "schema": {
+                    "minProperties": 1,
+                    "type": "object",
+                    "patternProperties": {
+                      "^(.*)$": {
+                        "anyOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/$defs/T0"
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "patternProperties": {
+                              "^(.*)$": {
+                                "$ref": "#/$defs/T0"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
                   }
                 }
               },
@@ -17512,6 +17612,56 @@
                     "pointer": {
                       "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                       "type": "string"
+                    }
+                  }
+                },
+                {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "predicate",
+                    "schema"
+                  ],
+                  "properties": {
+                    "predicate": {
+                      "const": "jsonConforms",
+                      "type": "string"
+                    },
+                    "schema": {
+                      "minProperties": 1,
+                      "type": "object",
+                      "patternProperties": {
+                        "^(.*)$": {
+                          "anyOf": [
+                            {
+                              "type": "null"
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/$defs/T0"
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "patternProperties": {
+                                "^(.*)$": {
+                                  "$ref": "#/$defs/T0"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
                     }
                   }
                 },
