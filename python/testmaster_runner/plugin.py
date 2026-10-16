@@ -21,6 +21,10 @@ _current: contextvars.ContextVar["PythonPlugin | None"] = contextvars.ContextVar
 ASSERTION_ERRORS = (AssertionError, pytest.fail.Exception)
 
 
+# Longest title a step carries on the wire; the Playwright reporter cuts at the same length.
+STEP_TITLE_CHARS = 500
+
+
 def _step_id(value: str) -> str:
     result = "".join(char if char.isalnum() or char in "_.-" else "_" for char in value)
     return result[:200] or "step"
@@ -38,6 +42,7 @@ class PythonPlugin:
 
     def __post_init__(self) -> None:
         self._started: dict[str, float] = {}
+        self._titles: dict[str, str] = {}
         self._reports: dict[str, list[Any]] = {}
         self._indexes: dict[str, int] = {}
         self._next_index = 0
@@ -64,7 +69,9 @@ class PythonPlugin:
         self._used_step_ids.add(step_id)
         self._indexes[step_id] = index
         self._started[step_id] = time.monotonic()
-        self.protocol.emit("step.started", {"stepId": step_id, "index": index})
+        # The pytest node id (or the step name), unsanitized: the step id is only a safe form of it.
+        self._titles[step_id] = nodeid[:STEP_TITLE_CHARS]
+        self.protocol.emit("step.started", {"stepId": step_id, "index": index, "title": self._titles[step_id]})
         return step_id
 
     def emit_step_finish(self, step_id: str, status: str, error: str | None = None, code: str = "pytest_failure") -> None:
@@ -72,6 +79,7 @@ class PythonPlugin:
         payload: dict[str, Any] = {
             "stepId": step_id,
             "index": self._indexes.pop(step_id),
+            "title": self._titles.pop(step_id),
             "status": status,
             "durationMs": max(0, round((time.monotonic() - started) * 1000)),
             "evidencePaths": [],

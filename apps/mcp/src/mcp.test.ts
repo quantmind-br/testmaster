@@ -285,6 +285,9 @@ it("MCP analysis emits readable layers and unchanged JSON while reads need no ex
     expect(reviewContent[0]?.text).toContain("Healing review");
     expect(reviewContent[0]?.text).toContain("Multiple locator candidates require manual review");
     expect(reviewContent[0]?.text).toContain("testmaster_approve_healing proposalId=");
+    expect(reviewContent[0]?.text).toContain(
+      `testmaster_reject_healing proposalId=${proposal.id} reason=`,
+    );
     expect(JSON.parse(reviewContent[1]?.text ?? "null")).toEqual(review.structuredContent);
     expect(review.structuredContent).toEqual(await app.healing.review(proposal.id));
     expect(app.context.entities.get("HealingProposal", init.workspaceId, proposal.id)).toEqual(
@@ -317,6 +320,7 @@ it("MCP analysis emits readable layers and unchanged JSON while reads need no ex
       `Decision: approved (manual) by ${approver} at 2026-10-16T12:00:00.000Z`,
     );
     expect(decidedText).not.toContain("Approval: not available");
+    expect(decidedText).not.toContain("testmaster_reject_healing");
     expect(decided.structuredContent).toMatchObject({
       approval: {
         decision: {

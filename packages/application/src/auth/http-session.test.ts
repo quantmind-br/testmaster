@@ -1,5 +1,6 @@
 import type * as ChildProcess from "node:child_process";
 import type { PlanStep } from "@testmaster/contracts";
+import { scrubText } from "@testmaster/domain";
 import { afterEach, expect, it, vi } from "vitest";
 import { type AuthLab, openLab } from "../../test/auth-lab.js";
 import { httpCredentials } from "./http-session.js";
@@ -168,4 +169,63 @@ it("an HTTP attempt is blocked, not unauthenticated, when the browser login fail
       authFailure: "browser_login_unavailable",
     },
   });
+});
+
+it("SEC-033 a plain username is not a redaction value, a secret username is, and the password always is", async () => {
+  const lab = await serviceLab();
+  const password = await lab.current.secret("redact-pass", "pw-canary-value");
+  const secretUser = await lab.current.secret("redact-user", "root");
+  const fill = (id: string, value: Record<string, string>): PlanStep =>
+    ({
+      id,
+      kind: "action",
+      operation: "fill",
+      description: "Fill the field",
+      input: { locator: { by: "testId", value: id }, value },
+    }) as never;
+  const plain = await lab.current.profile({
+    name: "plain-username",
+    kind: "form",
+    username: "root",
+    secrets: { password },
+    config: {
+      browser: {
+        steps: [login, fill("user", { literal: "root" }), fill("pass", { secretRef: password })],
+      },
+    },
+  });
+  const masked = await lab.current.profile({
+    name: "secret-username",
+    kind: "form",
+    secrets: { username: secretUser, password },
+    config: {
+      browser: {
+        steps: [
+          login,
+          fill("user", { secretRef: secretUser }),
+          fill("pass", { secretRef: password }),
+        ],
+      },
+    },
+  });
+  /** What the Attempt would hand the redactor for an environment that uses `profileId`. */
+  const redactionValues = async (name: string, profileId: string): Promise<string[]> => {
+    const prepared = await lab.prepare(lab.current.environment(name, [profileId]).id, "playwright");
+    return await Promise.all(
+      prepared.secretIds.map(async (id) => (await lab.current.app.secrets.release(id)).resolve()),
+    );
+  };
+  const dom = '<div id="root">Signed in as root with pw-canary-value</div>';
+  const plainValues = await redactionValues("plain-env", plain.id);
+  expect(plainValues).toContain("pw-canary-value");
+  expect(plainValues).not.toContain("root");
+  expect(scrubText(dom, plainValues).text).toBe(
+    '<div id="root">Signed in as root with [REDACTED]</div>',
+  );
+  // Negative control: the same page with the username kept as a secret loses every `root`.
+  const maskedValues = await redactionValues("secret-env", masked.id);
+  expect(maskedValues).toEqual(expect.arrayContaining(["root", "pw-canary-value"]));
+  expect(scrubText(dom, maskedValues).text).toBe(
+    '<div id="[REDACTED]">Signed in as [REDACTED] with [REDACTED]</div>',
+  );
 });

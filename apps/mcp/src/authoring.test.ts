@@ -83,6 +83,7 @@ it("MCP authoring tools are annotated by what they change", async () => {
     "testmaster_edit_plan",
     "testmaster_promote_revision",
     "testmaster_save_suite",
+    "testmaster_reject_healing",
   ])
     expect(annotations(name), name).toMatchObject({ readOnlyHint: false, destructiveHint: true });
 });
@@ -646,6 +647,17 @@ it("get_evidence says why a run is stale and treats the run of a candidate revis
   expect(moved.data?.staleReasons.map((reason: { code: string }) => reason.code)).toEqual([
     "environment_revision_changed",
   ]);
+
+  // A rollback replaces the promoted newer revision: its run is stale, like the report says.
+  f.app.revisions.promote(first, Number(f.app.tests.get(test.id).version));
+  const rolledBack = await call("testmaster_get_evidence", { runId: underTest });
+  expect(rolledBack.data?.staleReasons).toEqual([
+    {
+      code: "revision_superseded",
+      message: expect.stringContaining(`now ${first} (#1)`),
+    },
+    expect.objectContaining({ code: "environment_revision_changed" }),
+  ]);
 });
 
 it.each(["ephemeral", "worker"] as const)(
@@ -695,3 +707,74 @@ it.each(["ephemeral", "worker"] as const)(
     else expect(workerRun).not.toHaveBeenCalled();
   },
 );
+
+it("reject_healing rejects a proposed healing with its reason, applies nothing and refuses a blank reason", async () => {
+  const f = await fixture();
+  const test = f.app.tests.create({ projectId: f.init.projectId, plan: scaffoldPlan("backend") });
+  const run = f.app.runs.resolve({ testId: test.id, environmentId: f.init.environmentId });
+  f.app.context.entities.insert("Run", run);
+  const revision = f.app.revisions.get(String(run.revisionId));
+  if (!revision.plan) throw new Error("Missing fixture plan");
+  const proposal = entity(f.app.context, "hea", {
+    failedRunId: run.id,
+    testId: test.id,
+    analysisId: null,
+    baseRevisionId: revision.id,
+    candidateRevisionId: revision.id,
+    diff: "Locator change",
+    changes: [],
+    evidenceRefs: [],
+    preservedAssertionsHash: assertionsHash(revision.plan),
+    risk: "read",
+    status: "proposed",
+    approvalMode: null,
+    reviewerId: null,
+    policyHash: null,
+    verificationRunId: null,
+    modelCallId: null,
+    limitations: [],
+  });
+  f.app.context.entities.insert("HealingProposal", proposal);
+  const { call } = await f.connect();
+
+  const blank = await call("testmaster_reject_healing", { proposalId: proposal.id, reason: "" });
+  expect(blank.error?.code).toBe("INVALID_ARGUMENT");
+  const missing = await call("testmaster_reject_healing", { proposalId: proposal.id });
+  expect(missing.error?.code).toBe("INVALID_ARGUMENT");
+  expect(f.app.healing.get(proposal.id)).toMatchObject({ status: "proposed", version: 1 });
+
+  const rejected = await call("testmaster_reject_healing", {
+    proposalId: proposal.id,
+    reason: "The locator change hides a real regression",
+  });
+  expect(rejected.error).toBeUndefined();
+  expect(rejected.data).toMatchObject({ id: proposal.id, status: "rejected", version: 2 });
+  expect(rejected.data?.limitations).toContain("The locator change hides a real regression");
+  expect(rejected.data?.extensions["testmaster:rejection"]).toMatchObject({
+    actorId: f.init.principalId,
+  });
+  // The decision is stored, and nothing was approved or run.
+  expect(f.app.healing.get(proposal.id)).toMatchObject({
+    status: "rejected",
+    verificationRunId: null,
+  });
+
+  // An approved proposal is no longer reviewable.
+  const { id: _id, ...fields } = proposal;
+  const otherRun = f.app.runs.resolve({ testId: test.id, environmentId: f.init.environmentId });
+  f.app.context.entities.insert("Run", otherRun);
+  const approved = entity(f.app.context, "hea", {
+    ...fields,
+    failedRunId: otherRun.id,
+    candidateRevisionId: f.app.revisions.create(test.id, revision.plan, revision.id).id,
+    status: "approved",
+    approvalMode: "manual",
+    reviewerId: f.init.principalId,
+  });
+  f.app.context.entities.insert("HealingProposal", approved);
+  const late = await call("testmaster_reject_healing", {
+    proposalId: approved.id,
+    reason: "Too late",
+  });
+  expect(late.error?.code).toBe("PRECONDITION_FAILED");
+});

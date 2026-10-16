@@ -68,6 +68,15 @@ needing any argument. Credentials never appear in the file: `secrets` maps each 
 the ID of a vault secret registered earlier with `testmaster secret set --allowed-origin <origin>` (a `form`
 profile needs `username` and `password`; `totpSeed` is optional).
 
+The username is the one role that may instead be a plain value, in the profile's `username` field (and then
+left out of `secrets`; giving both is refused). A plain username is not a secret: the profile view returns it
+as written and evidence never masks it, so an account such as `root` stays readable in the DOM, step ids and
+analysis text. A username kept in `secrets.username` is a secret and is masked everywhere it appears. Choose
+the vault secret when the name itself must stay hidden (an e-mail address, for example). `password`,
+`totpSeed`, `token`, `key`, `cookie` and `clientSecret` are always secrets: a plain value for any of them is
+refused with `INVALID_ARGUMENT` naming the role. A plan or browser login step that needs the plain username
+writes it as a literal; a secret username is passed as `{ "secretRef": … }`.
+
 A form login that posts a JSON body and keeps the session cookie:
 
 ```json
@@ -119,7 +128,8 @@ A form login that posts a JSON body and keeps the session cookie:
 - Use `config.browser.steps` instead of `config.http` for a login that needs the browser, and
   `refreshPolicy` to tune refresh (every field is optional).
 - `testmaster auth-profile update <id> --file <patch.json> --expected-version <n>` takes any subset of
-  `name`, `originBindings`, `secrets`, `config` (replaced whole) and `refreshPolicy`.
+  `name`, `originBindings`, `secrets`, `username`, `config` (replaced whole) and `refreshPolicy`. Sending
+  `username` replaces `secrets.username`, and sending `secrets` with a username replaces the plain one.
 - `testmaster --dry-run auth-profile create --file <path>` validates the file locally; nothing is stored.
 - Bind the profile to an environment (`testmaster env update <env id> --auth-ref <profile id> --expected-version <n>`), then
   `auth-profile test-login <id> --environment <env id>` signs in once without storing anything else.

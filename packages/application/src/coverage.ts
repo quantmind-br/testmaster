@@ -215,7 +215,7 @@ function requestMatchesPath(segments: readonly unknown[], template: string): boo
   );
 }
 
-/** A Run counts as fresh passing evidence when it settled green on its own, not through a diagnostic retry. */
+/** A Run counts as fresh passing evidence when it settled green on its own, not through a diagnostic retry; the caller has already narrowed the freshness state. */
 function freshPassingRun(item: ReportRun): boolean {
   const first =
     item.attempts.find((value) => value.number === 1)?.outcome ?? item.result.firstAttemptOutcome;
@@ -224,7 +224,6 @@ function freshPassingRun(item: ReportRun): boolean {
     item.result.outcome === "passed" &&
     item.result.gate === "passed" &&
     item.evidenceState === "committed" &&
-    item.freshness?.state === "current" &&
     !item.result.passedOnRetry &&
     first !== "failed"
   );
@@ -249,45 +248,98 @@ function latestRunPerTest(ctx: ServiceContext, runs: readonly ReportRun[]): Repo
 }
 
 /**
+ * Requirement ids whose mapped test passed in the latest replay of the report among the runs in the
+ * given freshness state. A `current` run verifies through the required business assertions of its
+ * own plan. A `candidate` run (a revision never promoted, newer than the active one) maps to the
+ * requirements of the nearest plan in its revision ancestry: generated code carries no plan, and
+ * its Run and gate passing is the assertion.
+ */
+function passedRequirementIds(
+  ctx: ServiceContext,
+  snapshot: ReportSnapshot,
+  state: "current" | "candidate",
+): Set<string> {
+  const requested = new Set(
+    snapshot.selection.requestedRunIds ?? snapshot.runs.map((item) => item.run.id),
+  );
+  const verified = new Set<string>();
+  for (const item of latestRunPerTest(
+    ctx,
+    snapshot.runs.filter(
+      (value) => requested.has(value.run.id) && value.freshness?.state === state,
+    ),
+  )) {
+    if (!freshPassingRun(item)) continue;
+    let revision = ctx.entities.get("TestRevision", ctx.workspaceId, item.run.revisionId);
+    const own = revision?.plan as ExecutablePlan | null | undefined;
+    let plan = own ?? null;
+    if (state === "candidate") {
+      const seen = new Set<string>();
+      while (!plan && revision?.parentId && !seen.has(String(revision.id))) {
+        seen.add(String(revision.id));
+        revision = ctx.entities.get("TestRevision", ctx.workspaceId, String(revision.parentId));
+        plan = (revision?.plan as ExecutablePlan | null | undefined) ?? null;
+      }
+    }
+    if (!plan) continue;
+    const assertedBusiness =
+      state === "candidate" && !own
+        ? true
+        : planSteps(plan).some(
+            (step) =>
+              step.kind === "assertion" &&
+              step.required !== false &&
+              item.steps.some(
+                (result) => result.planStepId === step.id && result.status === "passed",
+              ),
+          );
+    if (assertedBusiness) for (const id of plan.requirementRefs ?? []) verified.add(id);
+  }
+  return verified;
+}
+
+/**
  * `verifiedRequirementCoverage`: in-scope requirements whose mapped test passed a required business
  * assertion in the latest replay of the report for the test's current revision and environment
  * (Run and gate passed, committed evidence, no diagnostic retry). A run of another revision of the
- * same test (a suite that pins a code revision next to the active plan) is stale for the test and
- * never hides the current revision's run. Derived from recorded Run facts only.
+ * same test is stale when that revision was replaced and a `candidate` when it was never promoted;
+ * neither hides the current revision's run, and neither verifies anything. Derived from recorded Run
+ * facts only.
  */
 export function verifiedRequirementCoverage(
   ctx: ServiceContext,
   snapshot: ReportSnapshot,
 ): RatioMetric {
-  const requested = new Set(
-    snapshot.selection.requestedRunIds ?? snapshot.runs.map((item) => item.run.id),
-  );
-  const projects = new Set(snapshot.runs.map((item) => item.projectId));
-  const declared = inScopeRequirementIds(ctx, projects);
-  const verified = new Set<string>();
-  for (const item of latestRunPerTest(
-    ctx,
-    snapshot.runs.filter(
-      (value) => requested.has(value.run.id) && value.freshness?.state === "current",
-    ),
-  )) {
-    if (!freshPassingRun(item)) continue;
-    const plan = ctx.entities.get("TestRevision", ctx.workspaceId, item.run.revisionId)
-      ?.plan as ExecutablePlan | null;
-    if (!plan) continue;
-    const assertedBusiness = planSteps(plan).some(
-      (step) =>
-        step.kind === "assertion" &&
-        step.required !== false &&
-        item.steps.some((result) => result.planStepId === step.id && result.status === "passed"),
-    );
-    if (assertedBusiness) for (const id of plan.requirementRefs ?? []) verified.add(id);
-  }
+  const declared = inScopeRequirementIds(ctx, new Set(snapshot.runs.map((item) => item.projectId)));
+  const verified = passedRequirementIds(ctx, snapshot, "current");
   const inScope = declared ? new Set(declared) : null;
   return ratioMetric(
     inScope ? [...verified].filter((id) => inScope.has(id)).length : verified.size,
     inScope?.size ?? null,
     "Distinct in-scope requirements with a passed required assertion in the latest fresh passing replay of a mapped active test / declared in-scope requirements",
-    "Runs of this report only: latest replay per test among runs of its current test and environment revision, Run and gate passed, committed evidence, no diagnostic retry; runs of other revisions are stale and ignored; a requirement without such a Run is uncovered",
+    "Runs of this report only: latest replay per test among runs of its current test and environment revision, Run and gate passed, committed evidence, no diagnostic retry; runs of other revisions (superseded, or candidates never promoted) are ignored; a requirement without such a Run is uncovered",
+  );
+}
+
+/**
+ * `candidateRequirementCoverage`: in-scope requirements, not verified by an active revision in the
+ * report, that the passing candidate runs of the report would verify once their revision is
+ * promoted. Not verification: it never adds to `verifiedRequirementCoverage`.
+ */
+export function candidateRequirementCoverage(
+  ctx: ServiceContext,
+  snapshot: ReportSnapshot,
+): RatioMetric {
+  const declared = inScopeRequirementIds(ctx, new Set(snapshot.runs.map((item) => item.projectId)));
+  const verified = passedRequirementIds(ctx, snapshot, "current");
+  const pending = [...passedRequirementIds(ctx, snapshot, "candidate")].filter(
+    (id) => !verified.has(id),
+  );
+  const inScope = declared ? new Set(declared) : null;
+  return ratioMetric(
+    inScope ? pending.filter((id) => inScope.has(id)).length : pending.length,
+    inScope?.size ?? null,
+    "Distinct in-scope requirements mapped to a passing candidate run (a revision never promoted, newer than the active one) and not verified by an active revision / declared in-scope requirements; not verification",
+    "Runs of this report only: latest replay per test among candidate runs, Run and gate passed, committed evidence, no diagnostic retry; they do not count as stale evidence and do not count toward verifiedRequirementCoverage until the revision is promoted and replayed as the active one",
   );
 }

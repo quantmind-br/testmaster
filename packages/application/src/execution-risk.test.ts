@@ -10,10 +10,15 @@ import {
   LeaseRepository,
   StaleFenceError,
 } from "@testmaster/persistence";
-import { DockerExecutor } from "@testmaster/sandbox";
+import { AttemptExecutor, DockerExecutor } from "@testmaster/sandbox";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Application, type PermissionGrant } from "./application.js";
 import { scaffoldPlan } from "./authoring.js";
+import {
+  type EvidenceLimits,
+  runEvidenceBytes,
+  storageMetadataReserveBytes,
+} from "./storage-admission.js";
 
 vi.mock("node:fs/promises", async (importOriginal) => ({
   ...(await importOriginal<typeof fs>()),
@@ -474,11 +479,20 @@ describe("admission risk boundaries", () => {
 
   it("a Run leased before storage pressure still finalizes while admission is suspended", async () => {
     const { app, receipt, fence, execution } = await claimed();
-    vi.spyOn(fs, "statfs").mockResolvedValue({ blocks: 100, bavail: 5 } as StatsFs);
+    const cell = app.runs.get(receipt.runId).matrixCell as { limits?: EvidenceLimits };
+    const leased = runEvidenceBytes(cell.limits);
+    // The free space holds the leased run's worst-case evidence and the reserve, not one more run.
+    vi.spyOn(fs, "statfs").mockResolvedValue({
+      blocks: 100,
+      bavail: 1,
+      bsize: leased + storageMetadataReserveBytes,
+    } as StatsFs);
     await app.worker.reconcile();
-    expect(
-      app.database.get("SELECT value FROM operational_state WHERE key='admission'")?.value,
-    ).toBe("suspended_storage");
+    // The fixture stubs admission's preflight; the storage gate is the real one.
+    await expect(Application.prototype.preflight.call(app)).rejects.toMatchObject({
+      code: "QUOTA_EXCEEDED",
+      details: { reasonCode: "storage_reserve_insufficient", inFlightRunBytes: leased },
+    });
     expect(
       app.database.get("SELECT state FROM job_leases WHERE resource_id=?", receipt.runId)?.state,
     ).toBe("leased");
@@ -506,14 +520,59 @@ describe("admission risk boundaries", () => {
         state: "created",
       },
     });
-    vi.spyOn(fs, "statfs").mockResolvedValue({ blocks: 100, bavail: 5 } as StatsFs);
+    vi.spyOn(fs, "statfs").mockResolvedValue({ blocks: 100, bavail: 5, bsize: 4096 } as StatsFs);
     expire(app, fence);
     const result = await app.worker.reconcile();
     expect(result.expired).toEqual([fence.jobId]);
-    expect(
-      app.database.get("SELECT value FROM operational_state WHERE key='admission'")?.value,
-    ).toBe("suspended_storage");
+    await expect(Application.prototype.preflight.call(app)).rejects.toMatchObject({
+      code: "QUOTA_EXCEEDED",
+      details: { reasonCode: "storage_reserve_insufficient", inFlightRunBytes: 0 },
+    });
     expectTerminal(app, receipt.runId, "inconclusive");
+  });
+
+  it("a queued Run starts only once the free space holds its worst-case evidence", async () => {
+    const { app, request } = await fixture();
+    const receipt = await app.runs.admit(
+      { ...request, extensions: { "testmaster:executor": "process" } },
+      { wait: true },
+    );
+    const cell = app.runs.get(receipt.runId).matrixCell as { limits?: EvidenceLimits };
+    const needed = runEvidenceBytes(cell.limits) + storageMetadataReserveBytes;
+    const seen: unknown[] = [];
+    // The first ten looks (worker start, maintenance and several dispatch passes) find one byte too
+    // few; from the eleventh on the space has returned.
+    vi.spyOn(fs, "statfs").mockImplementation(async () => {
+      seen.push(
+        app.database.get("SELECT state FROM job_leases WHERE resource_id=?", receipt.runId)?.state,
+      );
+      return { blocks: 100, bavail: 1, bsize: seen.length > 10 ? needed : needed - 1 } as StatsFs;
+    });
+    const execute = vi.spyOn(AttemptExecutor.prototype, "execute").mockImplementation(async () => {
+      seen.push("execute");
+      return {
+        outcome: "blocked",
+        reasonCode: "security_precondition_failed",
+        logDropped: 0,
+        events: [],
+      };
+    });
+    // Declared pools and budgets keep the worker's startup disk snapshot out of this check.
+    await app.worker.run({
+      ephemeral: true,
+      runIds: [receipt.runId],
+      capacity: {
+        cpu: 8,
+        memoryBytes: 16 * 1024 ** 3,
+        pids: 1024,
+        diskBytes: 1024 ** 4,
+        pools: { browser: 1, http: 1, python: 1, terminal: 1 },
+      },
+    });
+    expect(seen.slice(0, 10)).toEqual(Array(10).fill("queued"));
+    expect(seen.indexOf("execute")).toBeGreaterThanOrEqual(11);
+    expect(execute).toHaveBeenCalledOnce();
+    expect(app.runs.get(receipt.runId).phase).toBe("completed");
   });
 
   it.each([false, true])(

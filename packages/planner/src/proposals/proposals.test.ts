@@ -91,6 +91,7 @@ it("accepts a browser plan whose last action is followed by a positive assertion
       { predicate: "textContains", value: { literal: "Dashboard" } },
     ),
     assertion("rows", { locator: heading }, { predicate: "countEquals", value: 1 }),
+    assertion("at-least", { locator: heading }, { predicate: "countAtLeast", value: 1 }),
   ])
     expect(
       validateProposalPlan(await loginPlan([...urlOnly.slice(0, 1), positive, ...urlOnly.slice(1)]))
@@ -111,6 +112,10 @@ it("accepts a browser plan whose last action is followed by a positive assertion
     await loginPlan([
       ...urlOnly,
       assertion("none", { locator: heading }, { predicate: "countEquals", value: 0 }),
+    ]),
+    await loginPlan([
+      ...urlOnly,
+      assertion("at-most", { locator: heading }, { predicate: "countAtMost", value: 0 }),
     ]),
   ])
     expect(() => validateProposalPlan(weak)).toThrow(

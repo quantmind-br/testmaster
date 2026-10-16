@@ -135,3 +135,32 @@ it("labels first-attempt, terminal, conditional and end-to-end rates and keeps e
     duplicateSelections: 2,
   });
 });
+it("a candidate run is not stale evidence and is counted apart", () => {
+  const withFreshness = (
+    id: string,
+    state: "current" | "stale" | "candidate",
+    reasons: string[],
+  ): ReportRun => ({ ...run(id, "passed"), freshness: { state, reasons } }) as unknown as ReportRun;
+  const candidates = executionMetrics(
+    snapshot([
+      withFreshness("one", "candidate", ["revision_not_active"]),
+      withFreshness("two", "candidate", ["revision_not_active"]),
+    ]),
+  );
+  expect(candidates.rates.staleEvidenceRate).toMatchObject({
+    numerator: 0,
+    denominator: 2,
+    value: 0,
+  });
+  expect(candidates.counts.candidateRuns).toBe(2);
+
+  // Controls: a replaced revision is stale, and a current run is neither stale nor a candidate.
+  const mixed = executionMetrics(
+    snapshot([
+      withFreshness("old", "stale", ["test_revision_changed"]),
+      withFreshness("active", "current", []),
+    ]),
+  );
+  expect(mixed.rates.staleEvidenceRate).toMatchObject({ numerator: 1, denominator: 2 });
+  expect(mixed.counts.candidateRuns).toBe(0);
+});

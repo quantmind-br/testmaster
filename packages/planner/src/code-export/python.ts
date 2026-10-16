@@ -209,9 +209,15 @@ class PlanRuntime:
             assert expectation["name"] not in response.testmaster_cookies
         elif predicate == "jsonEquals":
             assert equal(pointer(response.json(), path), self.value(expectation["value"]))
-        elif predicate == "countEquals":
+        elif predicate in ("countEquals", "countAtLeast", "countAtMost"):
             value = pointer(response.json(), path)
-            assert isinstance(value, list) and len(value) == expectation["value"]
+            assert isinstance(value, list)
+            if predicate == "countEquals":
+                assert len(value) == expectation["value"]
+            elif predicate == "countAtLeast":
+                assert len(value) >= expectation["value"]
+            else:
+                assert len(value) <= expectation["value"]
         else:
             raise ValueError("Unsupported HTTP predicate: " + predicate)
 
@@ -339,14 +345,20 @@ class PlanRuntime:
                         assert download[key] == expectation[key]
                 return
             locator = await self.locate(input["locator"], timeout)
-            if predicate == "countEquals":
+            if predicate in ("countEquals", "countAtLeast", "countAtMost"):
                 expires = time.monotonic() + timeout / 1000
                 while True:
                     observed = await locator.count()
-                    if observed == expectation["value"]:
+                    if predicate == "countEquals":
+                        holds, bound = observed == expectation["value"], ""
+                    elif predicate == "countAtLeast":
+                        holds, bound = observed >= expectation["value"], "at least "
+                    else:
+                        holds, bound = observed <= expectation["value"], "at most "
+                    if holds:
                         break
                     remaining = expires - time.monotonic()
-                    assert remaining > 0, f"Expected count {expectation['value']}, observed {observed}"
+                    assert remaining > 0, f"Expected count {bound}{expectation['value']}, observed {observed}"
                     await asyncio.sleep(min(0.05, remaining))
                 return
             if predicate == "hidden":

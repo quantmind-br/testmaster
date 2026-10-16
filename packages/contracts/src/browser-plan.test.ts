@@ -125,6 +125,56 @@ describe("negative browser checks before the page has rendered", () => {
     ).toBe(2);
   });
 
+  it("treats countAtMost 0 as an absence check and countAtLeast above 0 as a positive check", () => {
+    const atMost = (value: number, id = "none") =>
+      check(id, { locator: field("Username") }, { predicate: "countAtMost", value });
+    const atLeastOne = check(
+      "some",
+      { locator: field("Home") },
+      { predicate: "countAtLeast", value: 1 },
+    );
+    expect(flagged([navigate(), atMost(0), visible()]).map(({ path }) => path)).toEqual([
+      "/steps/1/expectation",
+    ]);
+    // An upper bound above 0 also passes on a blank page but is not an absence check.
+    expect(flagged([navigate(), atMost(2), visible()])).toEqual([]);
+    expect(flagged([navigate(), atLeastOne, atMost(0)])).toEqual([]);
+    // Like an empty countEquals, an empty countAtMost settles nothing for the next check.
+    expect(flagged([navigate(), atMost(0, "a"), atMost(0, "b"), visible()]).length).toBe(2);
+    expect(flagged([navigate(), atMost(2), hidden()]).length).toBe(1);
+  });
+
+  it("accepts the count predicates on a browser locator and refuses countAtLeast 0", () => {
+    const count = (predicate: string, value: number): Json =>
+      check("count", { locator: field("Home") }, { predicate, value });
+    for (const predicate of ["countEquals", "countAtLeast", "countAtMost"])
+      expect(() =>
+        validate("ExecutablePlan", plan([navigate(), count(predicate, 2)])),
+      ).not.toThrow();
+    expect(() =>
+      validate("ExecutablePlan", plan([navigate(), count("countAtMost", 0)])),
+    ).not.toThrow();
+    expect(() => validate("ExecutablePlan", plan([navigate(), count("countAtLeast", 0)]))).toThrow(
+      expect.objectContaining({
+        code: "INVALID_ARGUMENT",
+        issues: [
+          expect.objectContaining({
+            rule: "vacuousCount",
+            path: "/steps/1/expectation/value",
+            message: expect.stringContaining("always passes"),
+          }),
+        ],
+      }),
+    );
+    // A count over a url input names neither a locator nor a response.
+    expect(() =>
+      validate(
+        "ExecutablePlan",
+        plan([navigate(), check("count", { url: "/" }, { predicate: "countAtMost", value: 1 })]),
+      ),
+    ).toThrow(expect.objectContaining({ code: "INVALID_ARGUMENT" }));
+  });
+
   it("does not flag a click that is not known to navigate or an optional negative check", () => {
     expect(flagged([navigate(), click("open_menu"), hidden()])).toEqual([]);
     const optional = hidden("gone", "Username", { required: false });

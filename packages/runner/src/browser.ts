@@ -455,14 +455,25 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       throw new RuntimeError("security_precondition_failed", "UI assertion requires a locator");
     const assertsAbsence =
       expectation.predicate === "hidden" ||
-      (expectation.predicate === "countEquals" && expectation.value === 0);
+      ((expectation.predicate === "countEquals" || expectation.predicate === "countAtMost") &&
+        expectation.value === 0);
     const locator = await locate(input.locator, timeout, scope, assertsAbsence ? "lazy" : "wait");
-    if (expectation.predicate === "countEquals") {
+    if (
+      expectation.predicate === "countEquals" ||
+      expectation.predicate === "countAtLeast" ||
+      expectation.predicate === "countAtMost"
+    ) {
       const count = await locator.count();
-      if (count !== expectation.value)
+      const [holds, bound] =
+        expectation.predicate === "countEquals"
+          ? [count === expectation.value, ""]
+          : expectation.predicate === "countAtLeast"
+            ? [count >= expectation.value, "at least "]
+            : [count <= expectation.value, "at most "];
+      if (!holds)
         throw new RuntimeError(
           "assertion_mismatch",
-          `Expected ${expectation.value} elements, observed ${count}`,
+          `Expected ${bound}${expectation.value} elements, observed ${count}`,
           "failed",
         );
       return;

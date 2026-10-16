@@ -1,7 +1,7 @@
-import type { StatsFs } from "node:fs";
+import { existsSync, type StatsFs } from "node:fs";
 import * as fs from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { uuidV7IdGenerator } from "@testmaster/domain";
 import {
   type AttemptIds,
@@ -367,12 +367,12 @@ describe("artifact retention maintenance", () => {
       new Date(Date.now() - 45 * 86400000).toISOString(),
       f.artifactId,
     );
-    vi.spyOn(fs, "statfs").mockResolvedValue({ blocks: 100, bavail: 5 } as StatsFs);
+    vi.spyOn(fs, "statfs").mockResolvedValue({ blocks: 100, bavail: 5, bsize: 4096 } as StatsFs);
     expect(await f.service.maintenance()).toMatchObject({
       expiredArtifacts: 0,
       removed: [],
       usedFraction: 0.95,
-      admissionSuspended: true,
+      admissionSuspended: false,
     });
     expect(artifact(f)?.state).toBe("available");
   });
@@ -510,37 +510,39 @@ describe("artifact retention maintenance", () => {
     expect(await fs.stat(join(f.committed.bundleDir, "manifest.json"))).toBeDefined();
   });
 
-  it("suspends at 90%, resumes only its own pressure suspension, and preserves independent maintenance", async () => {
+  it("storage pressure never suspends admission, lifts a pressure suspension and keeps the reserve while bytes remain", async () => {
     const f = await fixture({ completed: false });
     const storage = vi.spyOn(fs, "statfs");
-    storage.mockResolvedValue({ blocks: 100, bavail: 20 } as StatsFs);
-    expect(await f.service.maintenance()).toMatchObject({
-      usedFraction: 0.8,
-      admissionSuspended: false,
-    });
-    storage.mockResolvedValue({ blocks: 100, bavail: 10 } as StatsFs);
+    const reserve = join(dirname(f.ctx.database.path), ".control-plane.reserve");
+    const admission = () =>
+      f.ctx.database.get("SELECT value FROM operational_state WHERE key='admission'")?.value;
+    expect(existsSync(reserve)).toBe(true);
+    // 90 % used of a large volume still leaves gigabytes: admission stays open, the reserve stays.
+    storage.mockResolvedValue({ blocks: 100, bavail: 10, bsize: 1024 ** 3 } as StatsFs);
     expect(await f.service.maintenance()).toMatchObject({
       usedFraction: 0.9,
-      admissionSuspended: true,
-    });
-    storage.mockResolvedValue({ blocks: 100, bavail: 30 } as StatsFs);
-    expect(await f.service.maintenance()).toMatchObject({
-      usedFraction: 0.7,
       admissionSuspended: false,
     });
-    storage.mockResolvedValue({ blocks: 100, bavail: 5 } as StatsFs);
+    expect(existsSync(reserve)).toBe(true);
+    // A suspension the share-based guard recorded is lifted on the next pass.
+    f.ctx.database.run(
+      "UPDATE operational_state SET value='suspended_storage' WHERE key='admission'",
+    );
+    f.ctx.database.run(
+      "INSERT INTO operational_state(key,value) VALUES('retention:storage-pressure','suspended')",
+    );
+    expect(await f.service.maintenance()).toMatchObject({ admissionSuspended: false });
+    expect(admission()).toBe("enabled");
+    // Restore and operator suspensions are not the pressure guard's to lift.
+    for (const value of ["suspended", "maintenance"]) {
+      f.ctx.database.run("UPDATE operational_state SET value=? WHERE key='admission'", value);
+      expect(await f.service.maintenance()).toMatchObject({ admissionSuspended: true });
+      expect(admission()).toBe(value);
+    }
+    // Free bytes below the metadata reserve release the preallocated control-plane blocks.
+    storage.mockResolvedValue({ blocks: 100, bavail: 10, bsize: 4096 } as StatsFs);
     await f.service.maintenance();
-    f.ctx.database.run("UPDATE operational_state SET value='suspended' WHERE key='admission'");
-    storage.mockResolvedValue({ blocks: 100, bavail: 30 } as StatsFs);
-    expect(await f.service.maintenance()).toMatchObject({ admissionSuspended: true });
-    expect(
-      f.ctx.database.get("SELECT value FROM operational_state WHERE key='admission'")?.value,
-    ).toBe("suspended");
-    f.ctx.database.run("UPDATE operational_state SET value='maintenance' WHERE key='admission'");
-    expect(await f.service.maintenance()).toMatchObject({ admissionSuspended: true });
-    expect(
-      f.ctx.database.get("SELECT value FROM operational_state WHERE key='admission'")?.value,
-    ).toBe("maintenance");
+    expect(existsSync(reserve)).toBe(false);
   });
 
   it("warns once at 80 percent and clears the warning below 80 percent", async () => {

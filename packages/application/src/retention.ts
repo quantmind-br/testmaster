@@ -20,6 +20,7 @@ import { auditSecurity } from "./audit.js";
 import type { ResolvedConfig } from "./config.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "./context.js";
 import { type FixtureInput, fixtureRecord, fixtureRevoked } from "./input-fixtures.js";
+import { storageMetadataReserveBytes } from "./storage-admission.js";
 
 interface RetentionRecord {
   stage: "marked" | "tombstoned" | "deleted";
@@ -32,8 +33,6 @@ interface RetentionRecord {
 
 /** Fraction of used storage at which one warning event is emitted. */
 const storageWarningFraction = 0.8;
-/** Fraction of used storage at which admission is suspended. */
-const storageSuspendFraction = 0.9;
 /** Errno codes meaning the storage backend, not the artifact, failed to remove an object. */
 const storageUnavailableCodes: Record<string, true> = {
   EIO: true,
@@ -603,7 +602,8 @@ export class RetentionService {
     const usedFraction =
       total > 0 ? Math.min(1, Math.max(0, 1 - Number(storage.bavail) / total)) : 1;
     const database = this.ctx.database;
-    if (usedFraction >= storageSuspendFraction) releaseControlPlaneReserve(database.path);
+    if (Number(storage.bavail) * Number(storage.bsize) < storageMetadataReserveBytes)
+      releaseControlPlaneReserve(database.path);
     database.withTx(() => {
       const warningKey = "storage:high-watermark";
       const warned = database.get("SELECT 1 FROM operational_state WHERE key=?", warningKey);
@@ -627,22 +627,14 @@ export class RetentionService {
       } else if (usedFraction < storageWarningFraction && warned) {
         database.run("DELETE FROM operational_state WHERE key=?", warningKey);
       }
+      // Admission is gated by free bytes at preflight (assertStorageRoom), never suspended by the
+      // used share. A suspension recorded by an earlier version's pressure guard is lifted here;
+      // restore and operator suspensions are left alone.
       const pressureKey = "retention:storage-pressure";
-      const admission = database.get(
-        "SELECT value FROM operational_state WHERE key='admission'",
-      )?.value;
       const owned =
         database.get("SELECT value FROM operational_state WHERE key=?", pressureKey)?.value ===
         "suspended";
-      if (usedFraction >= storageSuspendFraction && admission === "enabled") {
-        database.run(
-          "UPDATE operational_state SET value='suspended_storage' WHERE key='admission' AND value='enabled'",
-        );
-        database.run(
-          "INSERT INTO operational_state(key,value) VALUES(?,'suspended') ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-          pressureKey,
-        );
-      } else if (usedFraction < storageSuspendFraction && owned) {
+      if (owned) {
         database.run(
           "UPDATE operational_state SET value='enabled' WHERE key='admission' AND value='suspended_storage'",
         );

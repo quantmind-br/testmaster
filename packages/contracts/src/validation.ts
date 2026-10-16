@@ -638,7 +638,7 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
         "valueEquals",
         "enabled",
         "disabled",
-        // countEquals accepts either a browser locator or an HTTP JSON array.
+        // The count predicates accept either a browser locator or an HTTP JSON array.
         "visualMatches",
         "accessibilityViolations",
       ];
@@ -659,7 +659,7 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
       if (responsePredicates.includes(predicate) && !("responseStepId" in input))
         reject(`${path}/input`, "predicateInput", "Predicate requires responseStepId");
       if (
-        predicate === "countEquals" &&
+        ["countEquals", "countAtLeast", "countAtMost"].includes(predicate) &&
         !("responseStepId" in input) &&
         !("locator" in input && plan.runner === "playwright")
       )
@@ -667,6 +667,12 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
           `${path}/input`,
           "predicateInput",
           "Count requires browser locator or responseStepId",
+        );
+      if (step.expectation.predicate === "countAtLeast" && step.expectation.value === 0)
+        reject(
+          `${path}/expectation/value`,
+          "vacuousCount",
+          "countAtLeast 0 always passes because a count is never negative: use a positive minimum, or countEquals 0 or countAtMost 0 to assert absence",
         );
       if (
         "responseStepId" in input &&
@@ -735,6 +741,7 @@ export function observesRenderedContent(expectation: Expectation): boolean {
     case "downloadMatches":
       return true;
     case "countEquals":
+    case "countAtLeast":
       return expectation.value > 0;
     default:
       return false;
@@ -748,7 +755,8 @@ function isNegativeBrowserCheck(step: PlanStep): boolean {
   const expectation = step.expectation;
   return (
     expectation.predicate === "hidden" ||
-    (expectation.predicate === "countEquals" && expectation.value === 0)
+    ((expectation.predicate === "countEquals" || expectation.predicate === "countAtMost") &&
+      expectation.value === 0)
   );
 }
 /** Actions that put a value into a form: a later click or key press on the same page submits it. */
@@ -766,7 +774,7 @@ const locatingOperations: Record<string, true> = {
   drag: true,
 };
 /**
- * A browser check that an element is absent (`hidden`, `countEquals` 0, a `waitFor` hidden or
+ * A browser check that an element is absent (`hidden`, `countEquals` or `countAtMost` 0, a `waitFor` hidden or
  * detached) passes on a page that has not rendered yet, because the element is not there. When
  * such a check follows a page load without a positive check of the destination in between, it can
  * pass without testing anything. A page load is a `navigate`, or a click or key press that submits
@@ -796,7 +804,7 @@ export function findNegativeBeforeRender(plan: ExecutablePlan): ValidationIssue[
           issues.push({
             path: step.kind === "assertion" ? `${here}/expectation` : `${here}/input`,
             rule: "negativeBeforeRender",
-            message: `Negative check "${step.id}" follows "${unsettled}" with no positive check of the page in between, so it also passes while that page is still blank. Add a required visible, textContains, textEquals, valueEquals or countEquals (above 0) assertion on content that exists only after "${unsettled}", before "${step.id}"`,
+            message: `Negative check "${step.id}" follows "${unsettled}" with no positive check of the page in between, so it also passes while that page is still blank. Add a required visible, textContains, textEquals, valueEquals, countEquals or countAtLeast (above 0) assertion on content that exists only after "${unsettled}", before "${step.id}"`,
           });
         return;
       }

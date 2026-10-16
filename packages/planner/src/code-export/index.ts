@@ -179,6 +179,8 @@ const uiPredicates: Record<string, true> = {
   enabled: true,
   disabled: true,
   countEquals: true,
+  countAtLeast: true,
+  countAtMost: true,
   urlEquals: true,
   downloadMatches: true,
 };
@@ -189,6 +191,8 @@ const httpPredicates: Record<string, true> = {
   cookieAbsent: true,
   jsonEquals: true,
   countEquals: true,
+  countAtLeast: true,
+  countAtMost: true,
 };
 /** ECMAScript pattern syntax that has no identical Python `re` meaning. */
 const pythonIncompatiblePattern = /\(\?<|\\[pPkuc]|\[\^?\]/u;

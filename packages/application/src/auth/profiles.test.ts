@@ -486,3 +486,161 @@ it("SEC-022 binding an auth profile to an environment needs no approval and is a
   expect(after.map((event) => event.resource_id)).toEqual([bound.id, bound.id]);
   expect(new Set(after.map((event) => event.after_hash)).size).toBe(2);
 });
+
+it("SEC-022 stores and returns a plain username and signs in with it while the password stays a secret", async () => {
+  const current = await lab();
+  const pass = await current.secret("plain-pass", defaults.password);
+  const form = await current.profile({
+    name: "plain-form",
+    kind: "form",
+    config: httpFormConfig(current.site),
+    secrets: { password: pass },
+    username: defaults.username,
+  });
+  expect(form.username).toBe(defaults.username);
+  expect(form.secrets).toEqual({ password: pass });
+  expect(stored(current, form.id).secretRefs).toEqual([pass]);
+  expect(current.app.authProfiles.get(form.id).username).toBe(defaults.username);
+  expect(current.app.authProfiles.list(current.projectId).map((view) => view.username)).toEqual([
+    defaults.username,
+  ]);
+  const env = current.environment("plain-form-env", [form.id]);
+  expect(await current.app.authProfiles.testLogin(form.id, env.id)).toMatchObject({
+    outcome: "authenticated",
+  });
+  const login = current.site.requests.find((request) => request.path === "/api/login");
+  expect(JSON.parse(login?.body ?? "{}")).toEqual({
+    username: defaults.username,
+    password: defaults.password,
+  });
+  // Basic derives its header from the plain value too.
+  const basic = await current.profile({
+    name: "plain-basic",
+    kind: "basic",
+    config: {},
+    secrets: { password: pass },
+    username: defaults.username,
+  });
+  const basicEnv = current.environment("plain-basic-env", [basic.id]);
+  expect(await current.app.authProfiles.testLogin(basic.id, basicEnv.id)).toMatchObject({
+    outcome: "authenticated",
+    credentialRoles: ["authorization"],
+  });
+  const header = await reveal(current, basic.managedSecrets.authorization as string);
+  expect(Buffer.from(header.replace("Basic ", ""), "base64").toString()).toBe(
+    `${defaults.username}:${defaults.password}`,
+  );
+  expect(
+    (await fetch(`${current.site.url}/api/basic`, { headers: { authorization: header } })).status,
+  ).toBe(200);
+});
+
+it("SEC-022 switches a profile between a plain and a secret username on update", async () => {
+  const current = await lab();
+  const pass = await current.secret("switch-pass", defaults.password);
+  const user = await current.secret("switch-user", defaults.username);
+  const service = current.app.authProfiles;
+  const created = await current.profile({
+    name: "switch",
+    kind: "basic",
+    config: {},
+    secrets: { username: user, password: pass },
+  });
+  expect(created.username).toBeUndefined();
+  // A plain username replaces the secret one and the secret reference is dropped.
+  const plain = await service.update(created.id, { username: "someone" }, created.version);
+  expect(plain.username).toBe("someone");
+  expect(plain.secrets).toEqual({ password: pass });
+  expect(stored(current, created.id).secretRefs).toEqual([pass]);
+  // Unrelated edits keep it.
+  const renamed = await service.update(created.id, { name: "switch-renamed" }, plain.version);
+  expect(renamed.username).toBe("someone");
+  // Sending a secret username replaces the plain one.
+  const secret = await service.update(
+    created.id,
+    { secrets: { username: user, password: pass } },
+    renamed.version,
+  );
+  expect(secret.username).toBeUndefined();
+  expect(secret.secrets).toEqual({ username: user, password: pass });
+  // Both at once is ambiguous and refused without changing the profile.
+  await expect(
+    service.update(
+      created.id,
+      { username: "both", secrets: { username: user, password: pass } },
+      secret.version,
+    ),
+  ).rejects.toMatchObject({ code: "INVALID_ARGUMENT", details: { role: "username" } });
+  expect(service.get(created.id)).toMatchObject({
+    version: secret.version,
+    secrets: { username: user },
+  });
+});
+
+it("SEC-022 refuses a plain value for every secret-only role and names the role", async () => {
+  const current = await lab();
+  const pass = await current.secret("refuse-pass", defaults.password);
+  const user = await current.secret("refuse-user", defaults.username);
+  const refuse = async (input: Parameters<AuthLab["profile"]>[0], role: string, message?: RegExp) =>
+    await expect(current.profile(input)).rejects.toMatchObject({
+      code: "INVALID_ARGUMENT",
+      details: { role },
+      ...(message ? { message: expect.stringMatching(message) } : {}),
+    });
+  type Input = Parameters<AuthLab["profile"]>[0];
+  const form = (name: string, secrets: Record<string, string>, username?: string): Input => ({
+    name,
+    kind: "form",
+    config: httpFormConfig(current.site),
+    secrets,
+    ...(username === undefined ? {} : { username }),
+  });
+  const basic = (name: string, secrets: Record<string, string>, username?: string): Input => ({
+    name,
+    kind: "basic",
+    config: {},
+    secrets,
+    ...(username === undefined ? {} : { username }),
+  });
+  await refuse(
+    form("plain-password", { password: "hunter2-plain" }, "root"),
+    "password",
+    /plain value/u,
+  );
+  await refuse(
+    form("plain-totp", { password: pass, totpSeed: "JBSWY3DPEHPK3PXP" }, "root"),
+    "totpSeed",
+  );
+  await refuse(
+    { name: "plain-token", kind: "bearer", config: {}, secrets: { token: "plain-bearer-0001" } },
+    "token",
+  );
+  // The username belongs in its own field, never as a plain value inside `secrets`.
+  await refuse(
+    basic("plain-in-secrets", { username: "root", password: pass }),
+    "username",
+    /username field/u,
+  );
+  // The two shapes never combine, and a kind without a username role has no plain username.
+  await refuse(basic("both", { username: user, password: pass }, "root"), "username", /not both/u);
+  await refuse(
+    { name: "bearer-user", kind: "bearer", config: {}, secrets: { token: pass }, username: "root" },
+    "username",
+    /not valid for this auth kind/u,
+  );
+  await expect(current.profile(basic("padded", { password: pass }, " root"))).rejects.toMatchObject(
+    { code: "INVALID_ARGUMENT" },
+  );
+  // Updates are held to the same rule, and nothing above was stored.
+  const ok = await current.profile({
+    name: "ok",
+    kind: "basic",
+    config: {},
+    secrets: { password: pass },
+    username: "root",
+  });
+  await expect(
+    current.app.authProfiles.update(ok.id, { secrets: { password: "plain-again" } }, ok.version),
+  ).rejects.toMatchObject({ code: "INVALID_ARGUMENT", details: { role: "password" } });
+  expect(current.app.authProfiles.list(current.projectId).map((view) => view.name)).toEqual(["ok"]);
+});

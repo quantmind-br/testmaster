@@ -96,6 +96,10 @@ const httpAndBrowserExpectations = [
     valuePredicate,
   ),
   Obj({ predicate: Type.Literal("countEquals"), value: Nonnegative }),
+  /** The observed count is at least `value`; `0` always passes, so the plan validator refuses it. */
+  Obj({ predicate: Type.Literal("countAtLeast"), value: Nonnegative }),
+  /** The observed count is at most `value`; `0` is an absence check, like `countEquals` 0. */
+  Obj({ predicate: Type.Literal("countAtMost"), value: Nonnegative }),
   Obj({
     predicate: Type.Literal("statusIn"),
     values: Type.Array(Type.Integer({ minimum: 100, maximum: 599 }), {

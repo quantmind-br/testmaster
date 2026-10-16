@@ -4,6 +4,7 @@ import {
   type ExecutablePlan,
   type Run,
   type StepResult,
+  validate,
 } from "@testmaster/contracts";
 import { canonicalJson, materializePlanDefaults, semanticHash } from "@testmaster/domain";
 import { EntityRepository, PersistenceDatabase } from "@testmaster/persistence";
@@ -2226,7 +2227,9 @@ const containedLocator = {
   container: { by: "role" as const, role: "main" },
 };
 const locatorAssertionPlan = (
-  expectation: { predicate: "hidden" } | { predicate: "countEquals"; value: number },
+  expectation:
+    | { predicate: "hidden" }
+    | { predicate: "countEquals" | "countAtLeast" | "countAtMost"; value: number },
 ) => ({
   ...persistencePlan,
   type: "frontend" as const,
@@ -2247,6 +2250,8 @@ const locatorAssertionPlan = (
 it.each([
   [{ predicate: "hidden" as const }, "No visible element matching locator"],
   [{ predicate: "countEquals" as const, value: 2 }, "2 elements matching locator"],
+  [{ predicate: "countAtLeast" as const, value: 2 }, "At least 2 elements matching locator"],
+  [{ predicate: "countAtMost" as const, value: 1 }, "At most 1 element matching locator"],
 ])(
   "a failed %j locator assertion states its own expectation, not one element",
   async (expectation, wanted) => {
@@ -2988,6 +2993,34 @@ it("a failed code run maps its steps to what the reporter named and keeps expect
   expect(fact?.text).toContain("at health.spec.ts:4:38");
   expect(fact?.evidenceRefs[0]?.stepId).toBe(f.step.id);
   expect(JSON.stringify(analysis)).not.toContain("unmapped");
+});
+it("a failed code step names the title the test framework gave it in the fact and the step summary", async () => {
+  const message =
+    "expect(received).toBe(expected)\n\nExpected: 200\nReceived: 404\n    at health.spec.ts:4:38";
+  const f = await fixture({
+    code: true,
+    step: {
+      planStepId: "imported-step-3",
+      title: "expect.toHaveURL\n  (/dashboard)",
+      expected: 200,
+      observed: 404,
+      error: { code: "assertion_mismatch", message },
+    },
+  });
+  const analysis = await f.service.analyze(f.run.id, {});
+  const fact = analysis.facts.find((item) => item.text.includes("Received: 404"));
+  expect(fact?.text).toContain(
+    "Step imported-step-3 (playwright_step: expect.toHaveURL (/dashboard)) failed:",
+  );
+  expect(analysis.diagnosis?.observation?.summary).toContain(
+    "Step imported-step-3 (playwright_step: expect.toHaveURL (/dashboard)) was failed",
+  );
+  // The operation stays the structured field; the title is only text for the reader.
+  expect(analysis.diagnosis?.observation?.operation).toBe("playwright_step");
+  // The stored step result keeps the title as recorded, newline included, and validates.
+  const stored = f.ctx.entities.get("StepResult", f.ctx.workspaceId, f.step.id);
+  expect(stored).toMatchObject({ title: "expect.toHaveURL\n  (/dashboard)" });
+  expect(() => validate("StepResult", f.step)).not.toThrow();
 });
 it("a code test that threw instead of asserting is a test defect and the diagnosis quotes the thrown error", async () => {
   const message =

@@ -113,6 +113,8 @@ export async function executePlan(plan: Data, initialPage: Page, request: APIReq
       case 'cookieAbsent': expect(response.cookies).not.toContain(e.name); break;
       case 'jsonEquals': expect(pointer(JSON.parse(response.body), p)).toStrictEqual(value(e.value)); break;
       case 'countEquals': { const v = pointer(JSON.parse(response.body), p); expect(Array.isArray(v)).toBe(true); expect(v.length).toBe(e.value); break; }
+      case 'countAtLeast': { const v = pointer(JSON.parse(response.body), p); expect(Array.isArray(v)).toBe(true); expect(v.length).toBeGreaterThanOrEqual(e.value); break; }
+      case 'countAtMost': { const v = pointer(JSON.parse(response.body), p); expect(Array.isArray(v)).toBe(true); expect(v.length).toBeLessThanOrEqual(e.value); break; }
       default: throw new Error('Unsupported HTTP predicate: ' + e.predicate);
     }
   }
@@ -188,6 +190,8 @@ export async function executePlan(plan: Data, initialPage: Page, request: APIReq
       if(e.predicate === 'downloadMatches') { expect(i.outputName).toBe(e.outputName); const d = downloads.get(i.outputName); if(!d) throw new Error('Missing named download'); for(const key of ['sha256','mimeType','sizeBytes']) if(e[key] !== undefined) expect(d[key]).toBe(e[key]); return; }
       const l = await locate(i.locator,timeout);
       if(e.predicate === 'countEquals') { await expect(l).toHaveCount(e.value,{timeout}); return; }
+      if(e.predicate === 'countAtLeast') { await expect.poll(() => l.count(),{timeout}).toBeGreaterThanOrEqual(e.value); return; }
+      if(e.predicate === 'countAtMost') { await expect.poll(() => l.count(),{timeout}).toBeLessThanOrEqual(e.value); return; }
       if(e.predicate === 'hidden') { expect(await l.count()).toBeLessThanOrEqual(1); await l.waitFor({state:'hidden',timeout}); return; }
       await unique(l,timeout);
       switch(e.predicate) {

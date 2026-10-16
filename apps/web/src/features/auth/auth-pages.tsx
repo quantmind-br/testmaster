@@ -310,6 +310,7 @@ export function AuthProfileCreatePage(): ReactNode {
   const [kind, setKind] = useState("form");
   const [origins, setOrigins] = useState("");
   const [secrets, setSecrets] = useState<Record<string, string>>({});
+  const [username, setUsername] = useState("");
   const [config, setConfig] = useState("{}");
   const [issues, setIssues] = useState<FieldIssue[]>([]);
   const [attempt, setAttempt] = useState(0);
@@ -345,6 +346,7 @@ export function AuthProfileCreatePage(): ReactNode {
         .map((role) => [role, (secrets[role] ?? "").trim()] as const)
         .filter(([, value]) => value !== ""),
     );
+    const plainUsername = username.trim();
     const created = await action.run(
       () =>
         api<{ id: string }>("POST", "/auth-profiles", {
@@ -354,6 +356,7 @@ export function AuthProfileCreatePage(): ReactNode {
             kind,
             originBindings: originList,
             secrets: roles,
+            ...(plainUsername ? { username: plainUsername } : {}),
             config: parsed,
           },
         }),
@@ -411,6 +414,7 @@ export function AuthProfileCreatePage(): ReactNode {
                 onChange={(event) => {
                   setKind(event.target.value);
                   setSecrets({});
+                  setUsername("");
                 }}
               >
                 {kinds.map((option) => (
@@ -436,6 +440,20 @@ export function AuthProfileCreatePage(): ReactNode {
               />
             )}
           </FormField>
+          {(staticRoles[kind] ?? []).includes("username") && (
+            <FormField
+              label="Plain username"
+              hint="Optional alternative to a username secret: stored and shown as written and not masked in evidence. Fill this or the username secret ID, not both."
+            >
+              {(control) => (
+                <input
+                  {...control}
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                />
+              )}
+            </FormField>
+          )}
           {(staticRoles[kind] ?? []).map((role) => (
             <FormField
               key={role}

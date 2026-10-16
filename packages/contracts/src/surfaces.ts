@@ -1,5 +1,5 @@
 import { type TSchema, Type } from "@sinclair/typebox";
-import { AuthConfigInput, authContracts } from "./m4/auth.js";
+import { AuthConfigInput, AuthPlainUsername, authContracts } from "./m4/auth.js";
 import { SuiteFixedMember, SuiteSelection } from "./m4/lists.js";
 import { RunLimits } from "./operations.js";
 import {
@@ -828,7 +828,7 @@ export const mcpTools = {
         ),
       ),
     }),
-    output: "ProposalBatch",
+    output: "McpProposalBatch",
   },
   testmaster_review_plan: {
     milestone: "M2",
@@ -1023,6 +1023,17 @@ export const mcpTools = {
           DecisionReason,
           "Why you approve; recorded on the proposal with the reviewer and time (testmaster_review_healing shows it)",
         ),
+      ),
+    }),
+    output: "HealingProposal",
+  },
+  testmaster_reject_healing: {
+    milestone: "M3",
+    input: Obj({
+      proposalId: d(id("hea"), "Healing proposal id"),
+      reason: d(
+        Type.String({ minLength: 1, maxLength: 8000 }),
+        "Why you reject; recorded on the proposal with the reviewer and time (testmaster_review_healing shows it)",
       ),
     }),
     output: "HealingProposal",
@@ -1322,7 +1333,13 @@ export const mcpTools = {
       secrets: Type.Optional(
         d(
           authContracts.AuthProfileInput.properties.secrets,
-          "Role to secret id (testmaster_set_secret): form username, password, totpSeed; basic username, password; bearer token; api-key key; cookie cookie",
+          "Role to secret id (testmaster_set_secret): form password, totpSeed (username too when it is a secret); basic password; bearer token; api-key key; cookie cookie. Every role except username must be a secret; a plain value is refused",
+        ),
+      ),
+      username: Type.Optional(
+        d(
+          AuthPlainUsername,
+          "Username as a plain value (form, basic, oauth, oidc): stored and shown as written and NOT masked in evidence, so a username like root stays readable in DOM and logs. Use secrets.username instead to mask it (an e-mail, for example). Never both. On update, setting it replaces secrets.username",
         ),
       ),
       config: Type.Optional(

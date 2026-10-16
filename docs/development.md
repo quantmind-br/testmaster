@@ -412,8 +412,14 @@ mark/tombstone/delete, leaving sealed metadata and historical verdicts immutable
 tombstones produce an expired/partial evidence view. `operational_state` keys
 `retention:artifact:<workspaceId>:<artifactId>` record GC stages; legal holds use
 `retention:legal-hold:<workspaceId>[:<runId>|:<artifactId>]` (any value except `released` holds).
-Storage use at 80% warns; at 90% new admission suspends. Only the pressure-owned
-`suspended_storage` state is automatically recovered; restore/manual suspensions are not.
+Storage use at 80% warns and at 90% raises a critical alert; neither suspends admission. Preflight
+(`storage-admission.ts`) refuses a new Run only when the free bytes cannot hold the worst-case
+evidence (`attemptArtifactBytes × maxAttempts`) of every Run in progress (started and not
+completed, or claimed by a worker) plus the incoming one and a 256 MiB metadata reserve. Queued
+Runs do not count: before it claims a queued Run, the worker repeats the check for that Run and
+leaves it queued, with no deadline, until the free bytes hold it; a cancelled Run is claimed anyway
+to finalize. A `suspended_storage` state left by the former share-based guard is lifted by worker
+maintenance; restore/manual suspensions are not.
 SEC-025 requires ephemeral browser profiles and containers to be torn down cleanly on Attempt exit.
 If container teardown or browser-profile removal fails, the business verdict of the Run is preserved,
 the run gate and cleanup outcome evaluate to `failed`, and the worker/runner-slot enters persistent
@@ -425,9 +431,16 @@ The clear operation audits the action (`worker.quarantine.clear`), verifies that
 or profiles are removed (or safely removes them), and refuses unsafe clear while leftovers remain.
 
 
-Report entries expose `freshness.state` (`current` or `stale`) by comparing the admitted test
-and environment revisions against their current active revisions. Reasons and current IDs
-make changed test source and environment context explicit. This is a read-time view, separate
+Report entries expose `freshness.state` (`current`, `stale` or `candidate`) by comparing the admitted
+test and environment revisions against their current active revisions. A Run of a revision that
+was replaced (or that is older than the active one) is `stale` with `test_revision_changed`; a Run
+of a revision that was never promoted and is newer than the active one is a `candidate` with
+`revision_not_active`: nothing superseded it, so it never counts in `staleEvidenceRate`, but it
+verifies no requirement either (`verifiedRequirementCoverage` judges active revisions). Batch
+reports show `executionMetrics.counts.candidateRuns` and, when it is not zero,
+`candidateRequirementCoverage`, the requirements the passing candidates would verify once promoted.
+Reasons and current IDs make changed test source and environment context explicit. This is a
+read-time view, separate
 from artifact completeness: expiry may make a bundle partial while its original Run outcome,
 snapshot hashes and historical audit remain unchanged. JSON, Markdown and HTML expose freshness.
 The J17 evidence-history Docker journey advances only its maintenance subprocess clock, exercises

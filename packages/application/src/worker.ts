@@ -67,6 +67,14 @@ import { reproduction, verifyAdmission } from "./provenance.js";
 import { assertArtifactPublishable } from "./retention.js";
 import { captureDeclarations, type ResolvedDependency, type RunsService } from "./runs.js";
 import type { SecretsService } from "./secrets.js";
+import {
+  type EvidenceLimits,
+  freeDataBytes,
+  hasStorageRoom,
+  inFlightEvidenceBytes,
+  runEvidenceBytes,
+  type StorageRoom,
+} from "./storage-admission.js";
 import { RuntimeTimer } from "./timing.js";
 import { UnsafeRuntime } from "./unsafe-runtime.js";
 import { fitsCapacity, validateCapacity, type WorkerCapacity } from "./worker-capacity.js";
@@ -1063,6 +1071,7 @@ export class WorkerService {
                   attemptId: fence.attemptId,
                   planStepId: payload.stepId,
                   index: payload.index,
+                  ...(payload.title ? { title: payload.title } : {}),
                   status: payload.status,
                   ...(payload.reasonCode ? { reasonCode: payload.reasonCode } : {}),
                   expected: payload.expected ?? null,
@@ -1832,6 +1841,16 @@ export class WorkerService {
       availableBytes: Number(storage.bavail) * Number(storage.bsize),
     };
   }
+  /** Free bytes and the worst-case evidence of the runs in progress, read before a claim. */
+  private async storageRoom(): Promise<Omit<StorageRoom, "incomingBytes">> {
+    return {
+      freeBytes: await freeDataBytes(this.host.config.dataDir),
+      inFlightBytes: inFlightEvidenceBytes(this.ctx.database),
+    };
+  }
+  private worstCaseEvidence(runId: string): number {
+    return runEvidenceBytes(runMatrixCell(this.host.runs.get(runId)).limits as EvidenceLimits);
+  }
   /**
    * Turns the enrolled placeholder into this process's worker: declared capabilities and image
    * digests replace the empty ones and the worker becomes ready. A revoked worker never starts,
@@ -2066,6 +2085,9 @@ export class WorkerService {
           continue;
         }
         if (!this.drainRequested && !done && tasks.size < concurrency) {
+          // Read before the claim transaction: statfs is asynchronous and the in-flight runs of
+          // every workspace are read with the controller scope.
+          const room = next ? await this.storageRoom() : null;
           // Selection, actor revocation and the claim repeat as a unit while the writer is contended.
           const fence = await contended(() => {
             const candidates = database
@@ -2122,8 +2144,15 @@ export class WorkerService {
                   `SELECT resource_id FROM job_leases WHERE state='leased' AND dispatchable=1 AND ${runJobFilter}`,
                 )
                 .map((row) => kindOf(String(row.resource_id)));
-              const eligible = candidates.filter((id) =>
-                fitsCapacity(capacity, reserved, kindOf(id)),
+              // A run starts only when the free space holds its worst-case evidence next to the
+              // runs in progress; otherwise it stays queued, with no deadline, until room returns.
+              // A cancelled run still claims, to finalize without writing evidence.
+              const eligible = candidates.filter(
+                (id) =>
+                  fitsCapacity(capacity, reserved, kindOf(id)) &&
+                  (room === null ||
+                    this.cancelled(id) ||
+                    hasStorageRoom({ ...room, incomingBytes: this.worstCaseEvidence(id) })),
               );
               return leases.claim({
                 workspaceId: this.ctx.workspaceId,

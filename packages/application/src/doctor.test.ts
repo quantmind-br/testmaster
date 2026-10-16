@@ -5,6 +5,7 @@ import { join } from "node:path";
 import * as sandbox from "@testmaster/sandbox";
 import { afterEach, expect, it, vi } from "vitest";
 import { Application, type ApplicationOptions } from "./application.js";
+import { runEvidenceBytes, storageMetadataReserveBytes } from "./storage-admission.js";
 
 vi.mock("node:fs/promises", async (importOriginal) => ({
   ...(await importOriginal<typeof fs>()),
@@ -129,24 +130,34 @@ it("admission refuses a Run when the data directory is not writable before any c
   expect(app.database.all("SELECT * FROM runs")).toEqual([]);
 });
 
-it("at 90 percent refuses admission with redacted recovery options", async () => {
+it("refuses admission by free bytes, never by used share, with redacted recovery options", async () => {
   const app = await fixture();
   const storage = vi.spyOn(fs, "statfs");
-  storage.mockResolvedValue({ blocks: 100, bavail: 5 } as StatsFs);
+  const run = runEvidenceBytes(app.config.effectiveConfig.config.execution);
+  const needed = run + storageMetadataReserveBytes;
+  // 99 % used, yet the free bytes hold one run's worst-case evidence and the reserve: the storage
+  // gate passes and the unrelated executor policy stops the request.
+  storage.mockResolvedValue({ blocks: 100, bavail: 1, bsize: needed } as StatsFs);
+  await expect(app.preflight(false, "process")).rejects.toMatchObject({ code: "POLICY_DENIED" });
+  storage.mockResolvedValue({ blocks: 100, bavail: 1, bsize: needed - 1 } as StatsFs);
   const refused = await app.preflight().catch((error: unknown) => error);
   expect(refused).toMatchObject({
     code: "QUOTA_EXCEEDED",
     details: {
-      reasonCode: "storage_high_watermark",
-      usedPercent: 95,
+      reasonCode: "storage_reserve_insufficient",
+      freeBytes: needed - 1,
+      requiredBytes: needed,
+      incomingRunBytes: run,
       path: "<data-dir>",
-      options: expect.arrayContaining([expect.stringContaining("worker reconcile")]),
+      options: expect.arrayContaining([
+        expect.stringContaining("worker reconcile"),
+        expect.stringContaining("never delete or move files outside TestMaster"),
+      ]),
     },
   });
   expect(JSON.stringify(refused)).not.toContain(app.config.dataDir);
-  storage.mockResolvedValue({ blocks: 100, bavail: 10 } as StatsFs);
-  await expect(app.preflight()).rejects.toMatchObject({ code: "QUOTA_EXCEEDED" });
-  // 89 % passes the storage gate and is stopped later by the unrelated executor policy.
-  storage.mockResolvedValue({ blocks: 100, bavail: 11 } as StatsFs);
-  await expect(app.preflight(false, "process")).rejects.toMatchObject({ code: "POLICY_DENIED" });
+  // A run with smaller limits fits in the same free space.
+  await expect(app.preflight(false, "process", run - 1)).rejects.toMatchObject({
+    code: "POLICY_DENIED",
+  });
 });

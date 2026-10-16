@@ -796,6 +796,55 @@ it("save_auth_profile creates and updates a profile and update_environment binds
   });
 });
 
+it("save_auth_profile takes the username as a plain value, says it is not masked and refuses a plain password", async () => {
+  const f = await fixture();
+  const [target] = f.app.environments.revisions(f.init.environmentId)[0]?.targetOrigins ?? [];
+  if (!target) throw new Error("Missing target origin");
+  await writeFile(join(f.cwd, "password.txt"), "pw-value\n");
+  const secret = await f.call("testmaster_set_secret", {
+    name: "PASSWORD",
+    valueFile: "password.txt",
+    allowedOrigins: [target],
+  });
+  const passwordId = String(secret.body.id);
+  const tool = (await f.client.listTools()).tools.find(
+    (item) => item.name === "testmaster_save_auth_profile",
+  );
+  const schema = tool?.inputSchema as
+    | { properties?: Record<string, { description?: string }> }
+    | undefined;
+  expect(schema?.properties?.username?.description).toContain("NOT masked");
+  expect(tool?.description).toContain("unmasked");
+
+  const created = await f.call("testmaster_save_auth_profile", {
+    projectId: f.init.projectId,
+    name: "basic-plain",
+    kind: "basic",
+    originBindings: [target],
+    secrets: { password: passwordId },
+    username: "root",
+    config: {},
+  });
+  expect(created.isError, created.text).toBe(false);
+  expect(created.body).toMatchObject({ username: "root", secrets: { password: passwordId } });
+
+  // A plain value in `secrets` is refused, and the refusal names the role.
+  const refused = await f.call("testmaster_save_auth_profile", {
+    projectId: f.init.projectId,
+    name: "basic-plain-password",
+    kind: "basic",
+    originBindings: [target],
+    secrets: { password: "hunter2-plain" },
+    username: "root",
+    config: {},
+  });
+  expect(refused.error?.code).toBe("INVALID_ARGUMENT");
+  expect(refused.text).toContain("password");
+  expect(f.app.authProfiles.list(f.init.projectId).map((item) => item.name)).toEqual([
+    "basic-plain",
+  ]);
+});
+
 it("save_auth_profile advertises the config keys per kind and rejects a malformed config naming its fields", async () => {
   const f = await fixture();
   type Node = { properties?: Record<string, Node>; required?: string[] };

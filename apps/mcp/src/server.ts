@@ -125,6 +125,7 @@ const annotations: Record<ToolName, Annotations> = {
   testmaster_run_tests: DESTRUCTIVE,
   testmaster_review_plan: DESTRUCTIVE,
   testmaster_approve_healing: DESTRUCTIVE,
+  testmaster_reject_healing: DESTRUCTIVE,
   testmaster_edit_plan: DESTRUCTIVE,
   testmaster_save_test: ADDITIVE,
   testmaster_promote_revision: DESTRUCTIVE,
@@ -148,7 +149,7 @@ const RESOURCE_COLLECTIONS: Readonly<Record<string, string>> = {
     "testmaster://revisions/{id}, testmaster://revisions/{id}/plan and testmaster://revisions/{id}/code",
   sources: "testmaster://sources/{id}",
   "plan-batches": "testmaster://plan-batches/{id}",
-  runs: "testmaster://runs/{id}/result, /manifest, /steps, /report and /artifacts/{path}",
+  runs: "testmaster://runs/{id}/result, /manifest, /steps, /report and /artifacts/{+path}",
   batches: "testmaster://batches/{id}/report",
   requirements: "testmaster://requirements/{projectId or requirementId}",
 };
@@ -410,6 +411,11 @@ export class TestMasterMcp {
                               : review.verification && review.verification.outcome !== "passed"
                                 ? "Approval: not available, this proposal's verification did not pass; repair the test with testmaster_save_test (testId) and replay it, or propose healing for a new failed run"
                                 : `Approval: not available (${review.automation.decision})`,
+                          ...(review.approval.decision
+                            ? []
+                            : [
+                                `Rejection: testmaster_reject_healing proposalId=${review.approval.proposalId} reason=<why>, to decline this proposal; nothing is applied`,
+                              ]),
                         ].join("\n");
                       })()
                     : null;
@@ -493,7 +499,7 @@ export class TestMasterMcp {
         [
           "testmaster://runs/{id}/steps{?attemptId,cursor}",
           "Run steps",
-          "Recorded step results of a run (every attempt, or one attemptId) in execution order, paged 50 at a time; follow next",
+          "Recorded step results of a run (every attempt, or one attemptId) in execution order, paged 50 at a time; follow next. A code run's steps (imported-test-N, imported-step-N, pytest node ids) carry a title with what the test framework called them (expect.toHaveURL, a test.step name, the test title)",
         ],
         [
           "testmaster://revisions/{id}",
@@ -507,9 +513,9 @@ export class TestMasterMcp {
           "Files of the code of a revision (generated code, imported code, or the export of a plan): path, size, sha256, resource and content. Text up to inlineLimitBytes (64 KiB) in total is inline; a file past that has content null, read it at its resource. format: playwright (default) or pytest; imported code keeps its own",
         ],
         [
-          "testmaster://revisions/{id}/code/{path}{?format,offset}",
+          "testmaster://revisions/{id}/code/{+path}{?format,offset}",
           "Revision code file",
-          "One file of a revision's code as text pages (cut on UTF-8 character boundaries); _meta carries next, offset and sizeBytes",
+          "One file of a revision's code as text pages (cut on UTF-8 character boundaries); the path may be written with plain slashes or with each slash encoded as %2F; _meta carries next, offset and sizeBytes",
         ],
         [
           "testmaster://tests/{id}",
@@ -552,9 +558,9 @@ export class TestMasterMcp {
           "Requirement snapshot of a project id, with its fingerprint and version; a requirement id returns one requirement. Each requirement carries status: pending, approved, rejected or superseded",
         ],
         [
-          "testmaster://runs/{id}/artifacts/{path}{?attemptId,offset}",
+          "testmaster://runs/{id}/artifacts/{+path}{?attemptId,offset}",
           "Verified artifact page",
-          "Bytes of a verified artifact with the artifact's own mimeType: text for JSON, text and other textual types (cut on UTF-8 character boundaries), blob (base64) for binary types; _meta carries next, offset and sizeBytes",
+          "Bytes of a verified artifact with the artifact's own mimeType: text for JSON, text and other textual types (cut on UTF-8 character boundaries), blob (base64) for binary types; the path may be written with plain slashes (browser/steps/x.json) or with each slash encoded as %2F; _meta carries next, offset and sizeBytes",
         ],
       ].map(([uriTemplate, name, description]) => ({
         uriTemplate: String(uriTemplate),
@@ -1054,8 +1060,8 @@ export class TestMasterMcp {
           resource: `testmaster://requirements/${String(args.projectId)}`,
         };
       }
-      case "testmaster_generate_plan":
-        return app.proposals.generate({
+      case "testmaster_generate_plan": {
+        const batch = await app.proposals.generate({
           projectId: String(args.projectId),
           sourceSnapshotId: String(args.sourceSnapshotId),
           type: args.type as PlanGenerationType,
@@ -1067,6 +1073,9 @@ export class TestMasterMcp {
           ...(args.partialGeneration === true ? { partialGeneration: true } : {}),
           signal,
         });
+        // The batch holds no proposals; the resource lists them.
+        return { ...batch, resource: `testmaster://plan-batches/${batch.id}` };
+      }
       case "testmaster_review_plan":
         return app.proposals.review(String(args.batchId), {
           acceptIds: args.acceptIds as string[],
@@ -1235,6 +1244,8 @@ export class TestMasterMcp {
           this.executeWithoutWorker(app, [run.id]);
         return proposal;
       }
+      case "testmaster_reject_healing":
+        return app.healing.reject(String(args.proposalId), String(args.reason));
       case "testmaster_edit_plan": {
         const proposal = app.proposals.edit(
           String(args.proposalId),
@@ -1908,20 +1919,20 @@ export class TestMasterMcp {
   }
   /**
    * Why the evidence of a run no longer describes the test as it stands. A run of a candidate
-   * revision (newer than the active one, not promoted yet) is the run under test, not a stale one.
+   * revision (never promoted and newer than the active one) is the run under test, not a stale one;
+   * a revision that was replaced, by a newer active one or by a rollback, is stale.
    */
   private staleReasons(run: Run, activeEnvironmentRevisionId: string | null): StaleReason[] {
     const app = this.options.application;
     const reasons: StaleReason[] = [];
-    const activeRevisionId = app.tests.get(run.testId).activeRevisionId;
-    if (activeRevisionId && activeRevisionId !== run.revisionId) {
+    if (app.revisions.standing(run.revisionId) === "replaced") {
+      // A replaced revision always has an active successor: a newer active one or a rollback target.
       const ran = app.revisions.get(run.revisionId);
-      const active = app.revisions.get(activeRevisionId);
-      if (ran.ordinal < active.ordinal)
-        reasons.push({
-          code: "revision_superseded",
-          message: `The run used revision ${ran.id} (#${ran.ordinal}); the test's active revision is now ${active.id} (#${active.ordinal})`,
-        });
+      const active = app.revisions.get(String(app.tests.get(run.testId).activeRevisionId));
+      reasons.push({
+        code: "revision_superseded",
+        message: `The run used revision ${ran.id} (#${ran.ordinal}); the test's active revision is now ${active.id} (#${active.ordinal})`,
+      });
     }
     if (activeEnvironmentRevisionId !== run.environmentRevisionId)
       reasons.push({
@@ -1973,8 +1984,14 @@ export class TestMasterMcp {
         }
         if (parts.length === 2 && parts[1] === "code")
           return { json: await this.revisionCode(id, url) };
-        if (parts.length === 3 && parts[1] === "code")
-          return this.revisionCodeFile(id, decodeURIComponent(String(parts[2])), url);
+        if (parts.length >= 3 && parts[1] === "code")
+          // The path is one encoded segment or several plain ones (RFC 6570 `{+path}`); the lookup
+          // is an exact match on the revision's file names, so no other path can be read.
+          return this.revisionCodeFile(
+            id,
+            url.pathname.split("/").slice(3).map(decodeURIComponent).join("/"),
+            url,
+          );
         break;
       case "tests":
         if (parts.length === 1) return { json: app.tests.get(id) };
@@ -1998,9 +2015,12 @@ export class TestMasterMcp {
           };
         if (parts.length === 2 && parts[1] === "steps") return { json: this.runSteps(id, url) };
         if (parts.length === 2 && parts[1] === "report") return this.report("runs", id, url);
-        if (parts.length === 3 && parts[1] === "artifacts") {
+        if (parts.length >= 3 && parts[1] === "artifacts") {
           const offset = Number(url.searchParams.get("offset") ?? 0);
-          const page = await app.artifacts.read(id, decodeURIComponent(String(parts[2])), {
+          // One encoded segment or several plain ones (RFC 6570 `{+path}`); the manifest lookup
+          // is an exact match on relativePath, so no other path can be read.
+          const artifactPath = url.pathname.split("/").slice(3).map(decodeURIComponent).join("/");
+          const page = await app.artifacts.read(id, artifactPath, {
             ...(url.searchParams.has("attemptId")
               ? { attemptId: String(url.searchParams.get("attemptId")) }
               : {}),
@@ -2022,7 +2042,7 @@ export class TestMasterMcp {
               "testmaster:next":
                 next === null
                   ? null
-                  : `testmaster://runs/${id}/artifacts/${parts[2]}?attemptId=${url.searchParams.get("attemptId") ?? ""}&offset=${next}`,
+                  : `testmaster://runs/${id}/artifacts/${encodeURIComponent(artifactPath)}?attemptId=${url.searchParams.get("attemptId") ?? ""}&offset=${next}`,
             },
           };
         }

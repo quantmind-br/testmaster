@@ -487,6 +487,8 @@ export const entities = {
     /** Static secret ids (the values of `secrets`); managed credentials are not part of an approval binding. */
     secretRefs: Type.Array(id("sec")),
     secrets: Type.Record(Type.String(), id("sec")),
+    /** Plain (unmasked) username; absent when the username is a secret in `secrets` or the kind has none. Rows stored before this field existed carry none. */
+    username: Type.Optional(Type.String({ minLength: 1, maxLength: 320 })),
     /** Role → vault reference the engine writes (access token, storage state, …). */
     managedSecrets: Type.Record(Type.String(), id("sec")),
     config: Json,

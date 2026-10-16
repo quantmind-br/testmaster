@@ -261,6 +261,28 @@ it("summarizes nonempty excludes and reasons without adding excluded members to 
   expect(exportMarkdown(input)).toContain("excluded: 1");
 });
 
+it("Markdown says why candidate runs are not stale and verify nothing", () => {
+  const input = snapshot();
+  const item = input.runs[0];
+  if (!item) throw new Error("Missing fixture");
+  item.freshness = {
+    state: "candidate",
+    reasons: ["revision_not_active"],
+    currentRevisionId: uuidV7IdGenerator.next("rev"),
+    currentEnvironmentRevisionId: uuidV7IdGenerator.next("evr"),
+  };
+  input.executionMetrics = executionMetrics(input);
+  const output = exportMarkdown(input);
+  expect(input.executionMetrics.counts.candidateRuns).toBe(1);
+  expect(output).toContain("Context: candidate (revision_not_active)");
+  expect(output).toContain("Candidate runs: 1 of 1 ran a revision that was never promoted");
+  expect(output).toContain("not stale evidence");
+  // Control: a current run adds no candidate line.
+  item.freshness = { ...item.freshness, state: "current", reasons: [] };
+  input.executionMetrics = executionMetrics(input);
+  expect(exportMarkdown(input)).not.toContain("Candidate runs:");
+});
+
 it("renders layered conclusion and next action in Markdown and HTML without probability claims", () => {
   const input = snapshot();
   const item = input.runs[0];

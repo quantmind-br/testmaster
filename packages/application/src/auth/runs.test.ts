@@ -39,7 +39,7 @@ function planWith(secretRef: string): ExecutablePlan {
   return plan;
 }
 async function runLab(
-  options: { wrongPassword?: boolean; kind?: "token" | "session" } = {},
+  options: { wrongPassword?: boolean; kind?: "token" | "session"; plainUsername?: boolean } = {},
 ): Promise<{
   current: AuthLab;
   site: ReferenceAuth;
@@ -56,7 +56,9 @@ async function runLab(
   labs.push(current);
   const app = current.app;
   app.preflight = async () => {};
-  const username = await current.secret("run-user", defaults.username);
+  const username = options.plainUsername
+    ? undefined
+    : await current.secret("run-user", defaults.username);
   const password = await current.secret(
     "run-pass",
     options.wrongPassword ? "not-the-password" : defaults.password,
@@ -67,7 +69,9 @@ async function runLab(
     config: httpFormConfig(current.site, {
       success: { statusIn: [200], tokenPointer: "/token" },
     }),
-    secrets: { username, password },
+    ...(username === undefined
+      ? { username: defaults.username, secrets: { password } }
+      : { secrets: { username, password } }),
   });
   const secretId = profile.managedSecrets.token as string;
   const env = current.environment("run-env", [profile.id]);
@@ -141,6 +145,24 @@ it("M4-03 REQ-018 SEC-023 a Run signs in before any credential is released and h
   // Negative control: an explicit login is a new login, so the count above is not a constant.
   await lab.current.app.authProfiles.testLogin(lab.profileId, lab.environmentId);
   expect(lab.site.counters.logins).toBe(2);
+});
+
+it("SEC-022 a Run signs in with a plain username and the Attempt receives no secret holding it", async () => {
+  const lab = await runLab({ plainUsername: true });
+  await lab.run();
+  const logins = lab.site.requests.filter((request) => request.path === "/api/login");
+  expect(logins).toHaveLength(1);
+  expect(JSON.parse(logins[0]?.body ?? "{}")).toMatchObject({
+    username: defaults.username,
+    password: defaults.password,
+  });
+  // The Attempt resolves the managed session only: nothing it can redact equals the username.
+  const released = await Promise.all(
+    (lab.executions[0]?.secretRefs ?? []).map((release) => release.resolve()),
+  );
+  expect(released.some((value) => String(value).startsWith("Bearer "))).toBe(true);
+  expect(released).not.toContain(defaults.username);
+  expect(released).not.toContain(defaults.password);
 });
 
 it("M4-03 SEC-023 a rejected login blocks the Run before the Attempt starts and is not an assertion failure", async () => {

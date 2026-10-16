@@ -31,7 +31,7 @@ async function report(run: (reporter: TestMasterReporter) => void): Promise<Sent
   return sent;
 }
 const failedTest = (errors: unknown[], status = "failed") => ({
-  test: { expectedStatus: "passed" },
+  test: { expectedStatus: "passed", title: "health" },
   result: { status, errors, duration: 12, attachments: [] },
 });
 
@@ -85,10 +85,10 @@ it("reports an error the test code threw as inconclusive with its message, not a
 
 it("keeps the verdict of the innermost failure on the steps around it", async () => {
   const thrown = { message: "Error: boom", location };
-  const test = { expectedStatus: "passed" };
+  const test = { expectedStatus: "passed", title: "health" };
   const result = { status: "failed", errors: [thrown], duration: 12, attachments: [] };
-  const outer = { category: "test.step", error: thrown };
-  const inner = { category: "test.step", parent: outer, error: thrown };
+  const outer = { category: "test.step", title: "log in", error: thrown };
+  const inner = { category: "test.step", title: "submit", parent: outer, error: thrown };
   const sent = await report((reporter) => {
     reporter.onTestBegin(test as never);
     reporter.onStepBegin(test as never, result as never, outer as never);
@@ -108,7 +108,7 @@ it("keeps the verdict of the innermost failure on the steps around it", async ()
     message: "Error: manifest must be served\n\nExpected: 200\nReceived: 500",
     location,
   };
-  const expectStep = { category: "expect", error: custom };
+  const expectStep = { category: "expect", title: "expect.toBe", error: custom };
   const asserted = await report((reporter) => {
     reporter.onTestBegin(test as never);
     reporter.onStepBegin(test as never, result as never, expectStep as never);
@@ -150,9 +150,13 @@ it("reports a timed out test with its error and no invented comparison", async (
 it("reports a failed expect step with the same error mapping and a passed test without one", async () => {
   const step = {
     category: "expect",
+    title: "expect.toBe",
     error: { message: matcherMessage('"OK"', '"Gone"'), location },
   };
-  const passed = { test: { expectedStatus: "passed" }, result: { status: "passed", errors: [] } };
+  const passed = {
+    test: { expectedStatus: "passed", title: "health" },
+    result: { status: "passed", errors: [] },
+  };
   const sent = await report((reporter) => {
     reporter.onTestBegin(passed.test as never);
     reporter.onStepBegin({} as never, {} as never, step as never);
@@ -172,10 +176,10 @@ it("reports a failed expect step with the same error mapping and a passed test w
 
 it("reports a failure once, on the innermost step, and not again on the test.step and the test around it", async () => {
   const error = { message: matcherMessage("200", "401"), location };
-  const test = { expectedStatus: "passed" };
+  const test = { expectedStatus: "passed", title: "health" };
   const result = { status: "failed", errors: [error], duration: 12, attachments: [] };
-  const outer = { category: "test.step", error };
-  const inner = { category: "expect", parent: outer, error };
+  const outer = { category: "test.step", title: "log in", error };
+  const inner = { category: "expect", title: "expect.toHaveURL", parent: outer, error };
   const sent = await report((reporter) => {
     reporter.onTestBegin(test as never);
     reporter.onStepBegin(test as never, result as never, outer as never);
@@ -202,8 +206,8 @@ it("reports a failure once, on the innermost step, and not again on the test.ste
       expect(finished[stepId], `${stepId} ${field}`).not.toHaveProperty(field);
   }
   // A different failure on the enclosing step is its own: only an equal message is a repeat.
-  const other = { category: "test.step", error: { message: "boom", location } };
-  const caught = { category: "expect", parent: other, error };
+  const other = { category: "test.step", title: "log in", error: { message: "boom", location } };
+  const caught = { category: "expect", title: "expect.toHaveURL", parent: other, error };
   const own = await report((reporter) => {
     reporter.onTestBegin(test as never);
     reporter.onStepBegin(test as never, result as never, other as never);
@@ -215,6 +219,37 @@ it("reports a failure once, on the innermost step, and not again on the test.ste
     stepId: "imported-step-1",
     error: { message: expect.stringContaining("boom") },
   });
+});
+
+it("sends the title of a test and of its steps with each start and finish, cut at 500 characters", async () => {
+  const test = { expectedStatus: "passed", title: "logs in" };
+  const result = { status: "passed", errors: [], duration: 1, attachments: [] };
+  const named = { category: "test.step", title: "open the login page" };
+  const assertion = { category: "expect", title: "expect.toHaveURL", parent: named };
+  const long = { category: "test.step", title: "x".repeat(600) };
+  const sent = await report((reporter) => {
+    reporter.onTestBegin(test as never);
+    reporter.onStepBegin(test as never, result as never, named as never);
+    reporter.onStepBegin(test as never, result as never, assertion as never);
+    reporter.onStepEnd(test as never, result as never, assertion as never);
+    reporter.onStepEnd(test as never, result as never, named as never);
+    reporter.onStepBegin(test as never, result as never, long as never);
+    reporter.onStepEnd(test as never, result as never, long as never);
+    reporter.onTestEnd(test as never, result as never);
+  });
+  const pairs = (type: string) =>
+    sent
+      .filter((message) => message.type === type)
+      .map(({ payload }) => [payload.stepId, payload.title]);
+  const expected = [
+    ["imported-test-0", "logs in"],
+    ["imported-step-1", "open the login page"],
+    ["imported-step-2", "expect.toHaveURL"],
+    ["imported-step-3", "x".repeat(500)],
+  ];
+  expect(pairs("step.started")).toEqual(expected);
+  // The finish carries the title too: it is the event the step result is stored from.
+  expect(pairs("step.finished")).toEqual([expected[2], expected[1], expected[3], expected[0]]);
 });
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);

@@ -1209,6 +1209,18 @@ const absenceChecks: [string, PlanStep][] = [
       timeoutMs: 300,
     },
   ],
+  [
+    "a countAtMost 0 assertion",
+    {
+      id: "check",
+      kind: "assertion",
+      operation: "assert",
+      description: "Gone",
+      input: { locator: inPanel("gone") },
+      expectation: { predicate: "countAtMost", value: 0 },
+      timeoutMs: 300,
+    },
+  ],
   ...(["hidden", "detached"] as const).map((state): [string, PlanStep] => [
     `a ${state} wait`,
     {
@@ -1245,6 +1257,35 @@ it.each(absenceChecks)(
       outcome: "failed",
       reasonCode: "assertion_mismatch",
     });
+  },
+);
+it.each([
+  ["countEquals", 3, [2, 4], [3]],
+  ["countAtLeast", 3, [2], [3, 4]],
+  ["countAtMost", 3, [4], [2, 3]],
+] as const)(
+  "a %s %i assertion fails and passes at the boundary of the observed count",
+  async (predicate, value, failing, passing) => {
+    const rows: PlanStep = {
+      id: "check",
+      kind: "assertion",
+      operation: "assert",
+      description: "Rows",
+      input: { locator: { by: "testId", value: "rows" } },
+      expectation: { predicate, value },
+      timeoutMs: 300,
+    };
+    for (const count of failing) {
+      context.page.locator("rows").countValue = count;
+      expect(await runBrowser(runtime([rows]))).toMatchObject({
+        outcome: "failed",
+        reasonCode: "assertion_mismatch",
+      });
+    }
+    for (const count of passing) {
+      context.page.locator("rows").countValue = count;
+      expect(await runBrowser(runtime([rows]))).toMatchObject({ outcome: "passed" });
+    }
   },
 );
 it("a visible assertion on a target in an absent container fails as an attachment timeout", async () => {

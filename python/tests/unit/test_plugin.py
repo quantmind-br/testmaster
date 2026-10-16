@@ -149,6 +149,29 @@ def test_colliding_and_nested_step_names_keep_their_original_failures():
     assert [event["error"]["message"] for event in finishes[:2]] == ["business mismatch", "business mismatch"]
 
 
+def test_steps_carry_the_pytest_node_id_or_step_name_as_title_cut_at_500_characters(tmp_path):
+    import pytest
+
+    source = tmp_path / "test_titles.py"
+    source.write_text("import pytest\n\n@pytest.mark.parametrize('value', ['a/b', 'c d'])\ndef test_value(value):\n    assert value\n")
+    protocol = Protocol()
+    plugin = PythonPlugin(protocol, {})
+    pytest.main([str(source), "-q", "--noconftest", "-o", "addopts="], plugins=[plugin])
+    with plugin.step("open the login page"):
+        pass
+    with plugin.step("x" * 600):
+        pass
+    starts = [payload for kind, payload in protocol.events if kind == "step.started"]
+    finishes = [payload for kind, payload in protocol.events if kind == "step.finished"]
+    titles = [event["title"] for event in starts]
+    # The title is the original text, where the step id is only a sanitized form of it.
+    assert titles[0].endswith("test_titles.py::test_value[a/b]")
+    assert titles[1].endswith("test_titles.py::test_value[c d]")
+    assert starts[0]["stepId"] != titles[0]
+    assert titles[2:] == ["open the login page", "x" * 500]
+    assert [event["title"] for event in finishes] == titles
+
+
 def finished_steps(protocol):
     return {payload["stepId"]: payload for kind, payload in protocol.events if kind == "step.finished"}
 

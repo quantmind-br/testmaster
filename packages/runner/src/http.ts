@@ -422,12 +422,25 @@ export async function assertResponse(
       matches = target.present && isDeepStrictEqual(observed, expected);
       break;
     }
-    case "countEquals": {
+    case "countEquals":
+    case "countAtLeast":
+    case "countAtMost": {
       const { value, diagnostic } = assertedJsonValue(runtime, response, pointer);
       missingDiagnostic = diagnostic;
       observed = Array.isArray(value) ? value.length : value;
-      expected = expectation.value;
-      matches = Array.isArray(value) && value.length === expectation.value;
+      expected =
+        expectation.predicate === "countEquals"
+          ? expectation.value
+          : expectation.predicate === "countAtLeast"
+            ? { atLeast: expectation.value }
+            : { atMost: expectation.value };
+      matches =
+        Array.isArray(value) &&
+        (expectation.predicate === "countEquals"
+          ? value.length === expectation.value
+          : expectation.predicate === "countAtLeast"
+            ? value.length >= expectation.value
+            : value.length <= expectation.value);
       break;
     }
     case "jsonSchema": {

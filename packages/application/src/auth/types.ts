@@ -62,6 +62,8 @@ export interface StoredAuthProfile extends EntityDocument {
   originBindings: string[];
   secretRefs: string[];
   secrets: Record<string, string>;
+  /** Plain username, never a secret and never redacted; mutually exclusive with `secrets.username`. */
+  username?: string;
   managedSecrets: Record<string, string>;
   config: Record<string, unknown>;
   refreshPolicy: AuthRefreshPolicy;

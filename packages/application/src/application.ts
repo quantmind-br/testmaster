@@ -123,6 +123,12 @@ import { SelectionService } from "./selection.js";
 import type { ServerConfig } from "./server-config.js";
 import { filesystemRoot } from "./server-config.js";
 import { serverReadiness } from "./server-profile.js";
+import {
+  assertStorageRoom,
+  freeDataBytes,
+  inFlightEvidenceBytes,
+  runEvidenceBytes,
+} from "./storage-admission.js";
 import { SuitesService } from "./suites.js";
 import {
   hasSystemPrincipal,
@@ -425,7 +431,8 @@ export class Application {
       verifyEvidence: async (id) => {
         await this.artifacts.get(id);
       },
-      preflight: (unsafe, executor) => this.preflight(unsafe, executor),
+      preflight: (unsafe, executor, incomingBytes) =>
+        this.preflight(unsafe, executor, incomingBytes),
       liveWorker: () => this.worker.live(),
       analysisStatus: (runId) => this.analysis.analysisStatus(runId),
       verifyApproval: (run, test, env) =>
@@ -1099,9 +1106,16 @@ export class Application {
       ...(sessionOnly ? { notice: "User profile cannot be persisted; session-only setup" } : {}),
     };
   }
+  /**
+   * Admission checks before a run is created. `incomingBytes` is the worst-case evidence of the
+   * largest run being admitted (`runEvidenceBytes`); the default is one run at the configured
+   * limits. Only the runs in progress count against the free space: the worker repeats the check
+   * before it starts each queued run.
+   */
   async preflight(
     unsafeLocal = false,
     executor: string = this.config.effectiveConfig.config.execution?.executor ?? "docker",
+    incomingBytes: number = runEvidenceBytes(this.config.effectiveConfig.config.execution),
   ): Promise<void> {
     if (
       this.database.get("SELECT value FROM operational_state WHERE key='admission'")?.value !==
@@ -1119,20 +1133,11 @@ export class Application {
         reasonCode: "storage_not_writable",
       });
     }
-    const storage = await statfs(this.config.dataDir);
-    const used = 1 - Number(storage.bavail) / Number(storage.blocks);
-    if (used >= 0.9)
-      throw new ContractError("QUOTA_EXCEEDED", "Storage admission suspended at high watermark", {
-        reasonCode: "storage_high_watermark",
-        usedFraction: used,
-        usedPercent: Math.floor(used * 100 + 1e-9),
-        path: "<data-dir>",
-        options: [
-          "testmaster worker reconcile runs eligible retention GC",
-          "free space on the data-directory volume outside TestMaster",
-          "expand the volume; retention is not shortened automatically",
-        ],
-      });
+    assertStorageRoom({
+      freeBytes: await freeDataBytes(this.config.dataDir),
+      inFlightBytes: inFlightEvidenceBytes(this.database),
+      incomingBytes,
+    });
     if (executor === "process") {
       if (!unsafeLocal || !this.config.profilePolicy.security.allowUnsafeProcessExecution)
         throw new ContractError(

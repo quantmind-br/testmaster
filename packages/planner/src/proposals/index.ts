@@ -66,7 +66,7 @@ function requireBrowserPostCondition(plan: ExecutablePlan): void {
   if (!observed)
     throw new ContractError(
       "INVALID_ARGUMENT",
-      "A browser plan that ends after a state-changing action (login, navigation, click, submit) needs a required positive assertion on rendered content after its last such action: visible, textContains, textEquals, valueEquals or countEquals above 0 on a locator for content that exists only when the action worked. A URL check and the absence of earlier elements also hold on a blank page",
+      "A browser plan that ends after a state-changing action (login, navigation, click, submit) needs a required positive assertion on rendered content after its last such action: visible, textContains, textEquals, valueEquals, countEquals or countAtLeast above 0 on a locator for content that exists only when the action worked. A URL check and the absence of earlier elements also hold on a blank page",
       { reasonCode: "browser_postcondition_missing" },
     );
 }

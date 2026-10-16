@@ -9,11 +9,13 @@ import {
   type AuthStateExport,
   type AuthTestLoginReceipt,
   authManagedRoles,
+  authPlainRoles,
   authStaticRoles,
   ContractError,
   type EnvironmentRevision,
   type ExecutablePlan,
   type PlanStep,
+  uuidPattern,
   validate,
 } from "@testmaster/contracts";
 import type { EntityDocument } from "@testmaster/persistence";
@@ -122,6 +124,20 @@ function collectSecretRefs(value: unknown, into: Set<string>): void {
     else collectSecretRefs(item, into);
   }
 }
+const secretIdPattern = new RegExp(`^sec_${uuidPattern}$`, "u");
+/** Only the `authPlainRoles` accept a plain value; every other role must name a vault secret. */
+function assertSecretOnlyRoles(secrets: Record<string, unknown> | undefined): void {
+  for (const [role, value] of Object.entries(secrets ?? {})) {
+    if (typeof value === "string" && secretIdPattern.test(value)) continue;
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      (authPlainRoles as readonly string[]).includes(role)
+        ? "A plain username goes in the username field, not in secrets"
+        : "Only the username accepts a plain value; this role must be a vault secret id",
+      { role },
+    );
+  }
+}
 function canonicalOrigins(values: readonly string[]): string[] {
   return [
     ...new Set(
@@ -188,6 +204,7 @@ export class AuthProfilesService {
       kind: profile.kind,
       originBindings: profile.originBindings,
       secrets: profile.secrets,
+      ...(profile.username === undefined ? {} : { username: profile.username }),
       managedSecrets: profile.managedSecrets,
       config: profile.config as AuthProfileView["config"],
       refreshPolicy: profile.refreshPolicy,
@@ -318,12 +335,25 @@ export class AuthProfilesService {
           role,
           kind: draft.kind,
         });
+    if (draft.username !== undefined) {
+      if (!roles.includes("username"))
+        throw new ContractError("INVALID_ARGUMENT", "Username is not valid for this auth kind", {
+          role: "username",
+          kind: draft.kind,
+        });
+      if (draft.secrets.username)
+        throw new ContractError(
+          "INVALID_ARGUMENT",
+          "Give the username either as a plain value or as a secret, not both",
+          { role: "username" },
+        );
+    }
     const required: readonly string[] =
       draft.kind === "form" && form?.http
         ? ["username", "password"]
         : ((requiredRoles as Record<string, readonly string[]>)[draft.kind] ?? []);
     for (const role of required)
-      if (!draft.secrets[role])
+      if (!draft.secrets[role] && !(role === "username" && draft.username !== undefined))
         throw new ContractError("INVALID_ARGUMENT", "Required secret role is missing", { role });
     const destinations =
       draft.kind === "oauth" || draft.kind === "oidc" || (form?.http ?? false)
@@ -402,9 +432,11 @@ export class AuthProfilesService {
       "kind",
       "originBindings",
       "secrets",
+      "username",
       "config",
       "refreshPolicy",
     ]);
+    assertSecretOnlyRoles(input.secrets);
     validate("AuthProfileInput", input);
     const project = requireEntity(this.ctx, "Project", input.projectId);
     if (project.archivedAt) throw new ContractError("PRECONDITION_FAILED", "Project is archived");
@@ -416,6 +448,7 @@ export class AuthProfilesService {
       originBindings: canonicalOrigins(input.originBindings),
       secretRefs: [...new Set(Object.values(input.secrets))].sort(),
       secrets: input.secrets,
+      ...(input.username === undefined ? {} : { username: input.username }),
       managedSecrets: {},
       config: input.config,
       refreshPolicy: this.resolvePolicy(input.refreshPolicy),
@@ -454,7 +487,8 @@ export class AuthProfilesService {
     const current = requireEntity(this.ctx, "AuthProfile", id) as StoredAuthProfile;
     this.ctx.authorize("W", current.projectId);
     this.ctx.authorizeColumn("secret", current.projectId);
-    keys(patch, ["name", "originBindings", "secrets", "config", "refreshPolicy"]);
+    keys(patch, ["name", "originBindings", "secrets", "username", "config", "refreshPolicy"]);
+    assertSecretOnlyRoles(patch.secrets);
     validate("AuthProfilePatch", patch);
     if (current.version !== expectedVersion)
       throw new ContractError("REVISION_CONFLICT", "Auth profile changed since it was read", {
@@ -462,16 +496,20 @@ export class AuthProfilesService {
         currentVersion: current.version,
       });
     if (patch.name !== undefined) this.assertName(current.projectId, patch.name, id);
+    const { username: currentUsername, ...base } = current;
+    const username = patch.username ?? (patch.secrets?.username ? undefined : currentUsername);
+    const { username: _replaced, ...secretsWithoutUsername } = current.secrets;
+    const secrets =
+      patch.secrets ?? (patch.username === undefined ? current.secrets : secretsWithoutUsername);
     const draft: StoredAuthProfile = {
-      ...current,
+      ...base,
       name: patch.name ?? current.name,
       originBindings: patch.originBindings
         ? canonicalOrigins(patch.originBindings)
         : current.originBindings,
-      secrets: patch.secrets ?? current.secrets,
-      secretRefs: patch.secrets
-        ? [...new Set(Object.values(patch.secrets))].sort()
-        : current.secretRefs,
+      secrets,
+      secretRefs: [...new Set(Object.values(secrets))].sort(),
+      ...(username === undefined ? {} : { username }),
       config: (patch.config as Record<string, unknown> | undefined) ?? current.config,
       refreshPolicy: this.resolvePolicy({
         ...current.refreshPolicy,
@@ -494,6 +532,7 @@ export class AuthProfilesService {
     }
     const credentialsChanged =
       patch.secrets !== undefined ||
+      patch.username !== undefined ||
       patch.config !== undefined ||
       patch.originBindings !== undefined;
     if (patch.originBindings) {

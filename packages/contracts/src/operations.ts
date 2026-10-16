@@ -369,6 +369,12 @@ export const StepResult = Obj({
   id: id("stp"),
   attemptId: id("att"),
   planStepId: Name,
+  /**
+   * What the test framework called the step of a code run (the Playwright step or test title, the
+   * pytest node id or step name); absent on plan steps, whose description is in the plan. The
+   * runners cut it at 500 characters and it passes through the same redaction as every event.
+   */
+  title: Type.Optional(Description),
   index: Nonnegative,
   status: StepStatus,
   reasonCode: Type.Optional(Enum(reasonCodes)),

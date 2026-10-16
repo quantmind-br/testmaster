@@ -34,12 +34,17 @@ export const RunnerEvent = Type.Union([
       capabilities: Type.Optional(Type.Array(Name)),
     }),
   ),
-  event("step.started", Obj({ stepId: Name, index: Nonnegative })),
+  event(
+    "step.started",
+    Obj({ stepId: Name, index: Nonnegative, title: Type.Optional(Description) }),
+  ),
   event(
     "step.finished",
     Obj({
       stepId: Name,
       index: Nonnegative,
+      /** What the test framework called the step; the runners cut it at 500 characters. */
+      title: Type.Optional(Description),
       status: StepStatus,
       reasonCode: Type.Optional(Enum(reasonCodes)),
       expected: Type.Optional(Json),

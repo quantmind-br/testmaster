@@ -30,6 +30,8 @@ function failedVerdict(assertion: boolean, timedOut: boolean) {
     ? { status: "failed", reasonCode: "assertion_mismatch" }
     : { status: "inconclusive", reasonCode: "insufficient_evidence" };
 }
+/** Longest title a step or test carries on the wire; the Python runner cuts at the same length. */
+const STEP_TITLE_CHARS = 500;
 /** The harness owns the authenticated socket; this adapter uses child-process IPC only. */
 export default class TestMasterReporter implements Reporter {
   private index = 0;
@@ -62,7 +64,11 @@ export default class TestMasterReporter implements Reporter {
   }
   onTestBegin(test: TestCase): void {
     const index = this.index++;
-    const data = { stepId: `imported-test-${index}`, index };
+    const data = {
+      stepId: `imported-test-${index}`,
+      index,
+      title: test.title.slice(0, STEP_TITLE_CHARS),
+    };
     this.tests.set(test, data);
     this.send("step.started", data);
   }
@@ -127,7 +133,11 @@ export default class TestMasterReporter implements Reporter {
     // assertion has an oracle verdict after its bounded retry deadline.
     if (step.parent?.category === "expect") return;
     const index = this.index++;
-    const data = { stepId: `imported-step-${index}`, index };
+    const data = {
+      stepId: `imported-step-${index}`,
+      index,
+      title: step.title.slice(0, STEP_TITLE_CHARS),
+    };
     this.steps.set(step, data);
     this.send("step.started", data);
   }

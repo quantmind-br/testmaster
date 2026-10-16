@@ -111,6 +111,8 @@ type Evidence = {
   planStep?: PlanStep | undefined;
   /** Set on a code revision's step (no plan step): the operation the Playwright reporter named. */
   codeOperation?: string;
+  /** Set with `codeOperation`: the operation and, when the runner recorded one, the step's title. */
+  codeLabel?: string;
   /** Set on the `run.execution_error` observation: the error the Run recorded after its steps. */
   executionError?: RunExecutionError;
 };
@@ -1090,6 +1092,8 @@ function missingJsonPointer(step: StepResult, secrets: string[]): unknown {
   const prefixes = [
     "HTTP jsonEquals expectation was not satisfied; missing JSON pointer: ",
     "HTTP countEquals expectation was not satisfied; missing JSON pointer: ",
+    "HTTP countAtLeast expectation was not satisfied; missing JSON pointer: ",
+    "HTTP countAtMost expectation was not satisfied; missing JSON pointer: ",
     "Response does not match source schema; missing JSON pointer: ",
   ];
   const prefix = prefixes.find((value) => message?.startsWith(value));
@@ -1165,7 +1169,7 @@ function assertionMismatchFacts(
         reported.add(message);
         facts.push({
           text: scrubEvidenceText(
-            `Step ${step.planStepId} (${item.codeOperation}) ${step.status === "failed" ? "failed" : "threw an error"}: ${clipMessage(message, 900)}`,
+            `Step ${step.planStepId} (${item.codeLabel ?? item.codeOperation}) ${step.status === "failed" ? "failed" : "threw an error"}: ${clipMessage(message, 900)}`,
             secrets,
           ).text.slice(0, 1000),
           evidenceRefs: [item.ref],
@@ -1281,6 +1285,8 @@ function locatorExpectation(
   if (expectation?.predicate === "hidden") return `No visible element matching locator ${target}`;
   if (expectation?.predicate === "countEquals")
     return `${expectation.value} element${expectation.value === 1 ? "" : "s"} matching locator ${target}`;
+  if (expectation?.predicate === "countAtLeast" || expectation?.predicate === "countAtMost")
+    return `${expectation.predicate === "countAtLeast" ? "At least" : "At most"} ${expectation.value} element${expectation.value === 1 ? "" : "s"} matching locator ${target}`;
   return `One element matching locator ${target}`;
 }
 function locatorObservation(
@@ -1692,11 +1698,16 @@ export class AnalysisService {
       }
       const planStep = steps.find((item) => item.id === step.planStepId);
       const codeOperation = plan ? undefined : codeStepOperation(step.planStepId);
+      const codeLabel =
+        codeOperation && step.title
+          ? `${codeOperation}: ${step.title.replace(/\s+/gu, " ").slice(0, 200)}`
+          : codeOperation;
       evidence.push({
         value: step,
         step,
         planStep,
         ...(codeOperation ? { codeOperation } : {}),
+        ...(codeLabel ? { codeLabel } : {}),
         reason: step.reasonCode,
         ref: {
           runId: run.id,
@@ -1704,7 +1715,7 @@ export class AnalysisService {
           stepId: step.id,
           contentHash: semanticHash(step),
         },
-        text: `Step ${step.planStepId} (${planStep?.operation ?? codeOperation ?? "unmapped"}) was ${step.status}${step.reasonCode ? `: ${step.reasonCode}` : ""}.`,
+        text: `Step ${step.planStepId} (${planStep?.operation ?? codeLabel ?? "unmapped"}) was ${step.status}${step.reasonCode ? `: ${step.reasonCode}` : ""}.`,
       });
     }
     for (const row of this.ctx.database.all(
@@ -2636,6 +2647,8 @@ export class AnalysisService {
             // Non-success statuses and headers alone do not establish product causality.
             "downloadMatches",
             "countEquals",
+            "countAtLeast",
+            "countAtMost",
           ].includes(item.planStep.expectation.predicate) &&
           (item.step.observed !== null ||
             (missingJsonPointer(item.step, secrets) !== null &&
@@ -2659,7 +2672,9 @@ export class AnalysisService {
               item.step.reasonCode === "assertion_mismatch" &&
               item.planStep?.kind === "assertion" &&
               item.planStep.required !== false &&
-              ["jsonEquals", "countEquals"].includes(item.planStep.expectation.predicate) &&
+              ["jsonEquals", "countEquals", "countAtLeast", "countAtMost"].includes(
+                item.planStep.expectation.predicate,
+              ) &&
               missingPointerType(item.step, secrets) === "object" &&
               collected.evidence.some(
                 (candidate) =>

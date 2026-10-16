@@ -120,6 +120,8 @@ it("keeps a plan step id and the evidence path it names when the id contains a s
               stepId,
               index: 0,
               status: "passed",
+              // A code run's title is text the test framework produced, so it is redacted too.
+              title: "log in as root",
               observed: "logged in as root",
               expected: "logged in as root",
               durationMs: 1,
@@ -163,7 +165,8 @@ it("keeps a plan step id and the evidence path it names when the id contains a s
     expect(payloadOf("step.started", 0)).toMatchObject({ stepId });
     expect(payloadOf("step.finished", 0)).toMatchObject({
       stepId,
-      // Values observed from the target stay redacted.
+      // Values observed from the target, and the title a step was given, stay redacted.
+      title: "log in as [REDACTED]",
       observed: "logged in as [REDACTED]",
       expected: "logged in as [REDACTED]",
       evidencePaths: [evidencePath, "http/other-[REDACTED].json"],

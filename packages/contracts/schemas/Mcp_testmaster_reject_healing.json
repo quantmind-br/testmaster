@@ -1,0 +1,24 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "proposalId",
+    "reason"
+  ],
+  "properties": {
+    "proposalId": {
+      "pattern": "^hea_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string",
+      "description": "Healing proposal id"
+    },
+    "reason": {
+      "minLength": 1,
+      "maxLength": 8000,
+      "type": "string",
+      "description": "Why you reject; recorded on the proposal with the reviewer and time (testmaster_review_healing shows it)"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:Mcp_testmaster_reject_healing",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -144,6 +144,16 @@ export class AuthEngine {
       );
     return (await (await this.secrets.release(secretId)).resolve()).trim();
   }
+  /**
+   * The profile's username for a request to `url`: its plain value (never a secret, so no origin
+   * check applies; it only travels with the password the profile already restricts), or the secret
+   * it names. `null` when the profile has neither.
+   */
+  private async usernameFor(profile: StoredAuthProfile, url: string): Promise<string | null> {
+    if (profile.username !== undefined) return profile.username;
+    const secretId = profile.secrets.username;
+    return secretId ? await this.readFor(secretId, url) : null;
+  }
   private async readManaged(profile: StoredAuthProfile, role: string): Promise<string | null> {
     const id = profile.managedSecrets[role];
     if (!id) return null;
@@ -542,10 +552,16 @@ export class AuthEngine {
   ): Promise<EnsureResult> {
     const usernameId = profile.secrets.username;
     const passwordId = profile.secrets.password;
-    if (!usernameId || !passwordId)
+    if ((profile.username === undefined && !usernameId) || !passwordId)
       throw new AuthBlocked("missing_secret", "Basic profile has no credentials", "missing_secret");
+    // A plain username is part of the fingerprint by value: changing it must rebuild the header.
     const fingerprint = sha256Hex(
-      [usernameId, passwordId].map((id) => `${id}:${this.secrets.get(id).secretVersion}`).join("|"),
+      [
+        profile.username === undefined
+          ? `${usernameId}:${this.secrets.get(usernameId as string).secretVersion}`
+          : `plain:${profile.username}`,
+        `${passwordId}:${this.secrets.get(passwordId).secretVersion}`,
+      ].join("|"),
     );
     const state = this.store.get(profile.id);
     const authorizationId = profile.managedSecrets.authorization as string;
@@ -556,7 +572,7 @@ export class AuthEngine {
     )
       return { roles: ["authorization"], expiresAt: null, secretIds: [authorizationId] };
     const target = env.targetOrigins[0] ?? profile.originBindings[0] ?? "";
-    const username = await this.readFor(usernameId, target);
+    const username = (await this.usernameFor(profile, target)) as string;
     const password = await this.readFor(passwordId, target);
     await this.writeManaged(
       profile,
@@ -610,15 +626,14 @@ export class AuthEngine {
         const network = this.network(profile, env);
         const destination = login.loginUrl;
         network.assertAllowed(destination);
-        const usernameId = profile.secrets.username;
         const passwordId = profile.secrets.password;
-        if (!usernameId || !passwordId)
+        const username = await this.usernameFor(profile, destination);
+        if (username === null || !passwordId)
           throw new AuthBlocked(
             "missing_secret",
             "Form profile has no credentials",
             "missing_secret",
           );
-        const username = await this.readFor(usernameId, destination);
         const password = await this.readFor(passwordId, destination);
         let otp: { code: string; periodSeconds: number } | null = null;
         if (config.otp && login.fields.otp) {
@@ -896,7 +911,11 @@ export class AuthEngine {
             pending.human = { kind: "reauthorization", failure: "refresh_rejected" };
           }
         }
-        if (config.adapter === "cognito" && profile.secrets.username && profile.secrets.password) {
+        if (
+          config.adapter === "cognito" &&
+          (profile.username !== undefined || profile.secrets.username) &&
+          profile.secrets.password
+        ) {
           const outcome = await this.cognitoLogin(profile, config, network, lease, options);
           if (outcome === "ok") {
             pending.human = null;
@@ -959,9 +978,8 @@ export class AuthEngine {
     void options;
     if (config.adapter === "cognito") {
       const clientSecretId = profile.secrets.clientSecret;
-      const username = profile.secrets.username
-        ? await this.readFor(profile.secrets.username, config.cognito?.endpoint ?? config.issuer)
-        : "";
+      const username =
+        (await this.usernameFor(profile, config.cognito?.endpoint ?? config.issuer)) ?? "";
       const clientSecret = clientSecretId
         ? await this.readFor(clientSecretId, config.cognito?.endpoint ?? config.issuer)
         : undefined;
@@ -1009,7 +1027,7 @@ export class AuthEngine {
     options: EnsureOptions,
   ): Promise<"ok" | { kind: AuthCheckpointKind; failure: string }> {
     const destination = config.cognito?.endpoint ?? config.issuer;
-    const username = await this.readFor(profile.secrets.username as string, destination);
+    const username = (await this.usernameFor(profile, destination)) as string;
     const password = await this.readFor(profile.secrets.password as string, destination);
     const clientSecret = profile.secrets.clientSecret
       ? await this.readFor(profile.secrets.clientSecret, destination)

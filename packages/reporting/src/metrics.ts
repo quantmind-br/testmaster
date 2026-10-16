@@ -161,7 +161,7 @@ export function executionMetrics(snapshot: ReportSnapshot): ExecutionMetrics {
     "staleEvidenceRate",
     stale,
     runs.filter((item) => item.freshness !== undefined).length,
-    "N_consultedEvidenceUnitsStaleForRequestedContext / N_consultedEvidenceUnits (Run bundles)",
+    "N_consultedEvidenceUnitsStaleForRequestedContext / N_consultedEvidenceUnits (Run bundles); a run of a candidate revision (never promoted, newer than the active one) is not stale: nothing superseded it, so it is counted under counts.candidateRuns instead",
   );
   const blockedReasons: Record<string, number> = {};
   for (const item of runs.filter((item) => item.result.outcome === "blocked")) {
@@ -175,6 +175,7 @@ export function executionMetrics(snapshot: ReportSnapshot): ExecutionMetrics {
       notDispatched: snapshot.selection.notDispatched.length,
       expanded: snapshot.runs.length - runs.length,
       allMembers: snapshot.runs.length,
+      candidateRuns: count((item) => item.freshness?.state === "candidate"),
       executed: count((item) =>
         item.steps.some((step) => !["not_run", "skipped", "pending"].includes(step.status)),
       ),

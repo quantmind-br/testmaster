@@ -39,6 +39,7 @@ import {
 } from "./provenance.js";
 import { withUsedEnvironment } from "./run-config.js";
 import { runtimeIdentity } from "./runtime-identity.js";
+import { type EvidenceLimits, runEvidenceBytes } from "./storage-admission.js";
 import { clockDomain, timingBoundary } from "./timing.js";
 
 export interface BatchProvenance {
@@ -116,7 +117,7 @@ function configurationChanges(frozen: EffectiveConfig, current: EffectiveConfig)
 }
 export interface RunHost {
   config: ResolvedConfig;
-  preflight(unsafeLocal?: boolean, executor?: string): Promise<void>;
+  preflight(unsafeLocal?: boolean, executor?: string, incomingBytes?: number): Promise<void>;
   admittedImages(): ImageLock | null;
   verifyEvidence(id: string): Promise<void>;
   liveWorker(): boolean;
@@ -254,6 +255,20 @@ export class RunsService {
       false,
     );
   }
+  /** The execution limits a run request resolves to: project config, then request, then policy caps. */
+  limitsFor(requested: RunRequest["limits"]) {
+    const limits = { ...this.host.config.effectiveConfig.config.execution, ...requested };
+    delete limits.executor;
+    delete limits.mode;
+    delete limits.concurrency;
+    validate("ExecutionLimits", limits);
+    for (const [field, value] of Object.entries(this.host.config.profilePolicy.limits)) {
+      const key = field as keyof typeof limits;
+      if (typeof value === "number" && typeof limits[key] === "number")
+        Object.assign(limits, { [field]: Math.min(limits[key] as number, value) });
+    }
+    return limits;
+  }
   private prepareAuthorized(
     request: RunRequest,
     batchId: string | null,
@@ -331,16 +346,7 @@ export class RunsService {
         capability: config.browser.name,
         milestone: "M5",
       });
-    const limits = { ...config.execution, ...request.limits };
-    delete limits.executor;
-    delete limits.mode;
-    delete limits.concurrency;
-    validate("ExecutionLimits", limits);
-    for (const [field, value] of Object.entries(this.host.config.profilePolicy.limits)) {
-      const key = field as keyof typeof limits;
-      if (typeof value === "number" && typeof limits[key] === "number")
-        Object.assign(limits, { [field]: Math.min(limits[key] as number, value) });
-    }
+    const limits = this.limitsFor(request.limits);
     const originalUrl = (env.targetOrigins as string[])[0];
     const targetUrl = request.extensions?.["testmaster:targetUrl"];
     const baseUrl = typeof targetUrl === "string" ? new URL(targetUrl).origin : originalUrl;
@@ -878,7 +884,11 @@ export class RunsService {
     const environmentId = String(cell.environmentId);
     const mode = approval?.mode ?? proposal.approvalMode;
     const authorizeVerification = () => this.authorizeVerification(mode, failed, test);
-    await this.host.preflight(false, String(cell.executor ?? "docker"));
+    await this.host.preflight(
+      false,
+      String(cell.executor ?? "docker"),
+      runEvidenceBytes(verificationLimits(cell)),
+    );
     return this.ctx.database.withTx(() => {
       approval?.write();
       const current = requireEntity(this.ctx, "HealingProposal", proposalId);
@@ -1017,6 +1027,7 @@ export class RunsService {
             this.host.config.effectiveConfig.config.execution?.executor ??
             "docker",
         ),
+        runEvidenceBytes(this.limitsFor(request.limits)),
       );
     } catch (error) {
       if (
@@ -1176,7 +1187,11 @@ export class RunsService {
       );
     if (!options.wait && !this.host.liveWorker())
       throw new ContractError("PRECONDITION_FAILED", "No live worker; use --wait");
-    await this.host.preflight(options.unsafeLocal, String(cell.executor));
+    await this.host.preflight(
+      options.unsafeLocal,
+      String(cell.executor),
+      runEvidenceBytes(cell.limits as EvidenceLimits | undefined),
+    );
     const revision = requireEntity(this.ctx, "TestRevision", run.revisionId);
     const environment = requireEntity(this.ctx, "EnvironmentRevision", run.environmentRevisionId);
     const selectedEnvironment = requireEntity(this.ctx, "Environment", String(cell.environmentId));
@@ -1335,6 +1350,7 @@ export class BatchesService {
               this.runs.host.config.effectiveConfig.config.execution?.executor ??
               "docker",
           ),
+          runEvidenceBytes(this.runs.limitsFor(member.limits)),
         );
       } catch (error) {
         if (

@@ -13335,17 +13335,17 @@
       "ownerRole": "Operations",
       "status": "verified",
       "scenario": [
-        "packages/application/src/retention.test.ts::suspends at 90%, resumes only its own pressure suspension, and preserves independent maintenance",
+        "packages/application/src/retention.test.ts::storage pressure never suspends admission, lifts a pressure suspension and keeps the reserve while bytes remain",
         "packages/application/src/retention.test.ts::warns once at 80 percent and clears the warning below 80 percent",
         "packages/application/src/execution-risk.test.ts::a Run leased before storage pressure still finalizes while admission is suspended",
         "packages/application/src/execution-risk.test.ts::a lost Run is still terminalized by reconciliation while storage admission is suspended",
-        "packages/application/src/doctor.test.ts::at 90 percent refuses admission with redacted recovery options",
+        "packages/application/src/doctor.test.ts::refuses admission by free bytes, never by used share, with redacted recovery options",
         "packages/application/src/retention.test.ts::honors configured retention without shortening it under storage pressure",
         "packages/persistence/src/disk-pressure.docker.test.ts::OPS-023 physical tmpfs ENOSPC preserves SQLite integrity and reserves recovery space without fictitious artifacts",
         "packages/application/src/upload-outage.test.ts::OPS-023 storage outage keeps eight leased uploads bounded, emits alert and refuses further backlog"
       ],
       "oracle": [
-        "At 80 % exactly one storage.high_watermark warning per crossing; at 90 % admission is suspended and refused with a redacted reason code, path placeholder and recovery options while eligible GC still runs and retention is never shortened; a Run leased before the pressure still finalizes and a lost Run is still terminalized by reconciliation; on ENOSPC SQLite integrity holds and no fictitious artifact is published; the upload backlog stays bounded."
+        "At 80 % exactly one storage.high_watermark warning per crossing; the used share never suspends admission; admission is refused, with a redacted reason code, path placeholder and recovery options, only when the free bytes cannot hold the worst-case evidence of the admitted runs plus the incoming ones and the metadata reserve, while eligible GC still runs and retention is never shortened; a Run leased before the pressure still finalizes and a lost Run is still terminalized by reconciliation; on ENOSPC SQLite integrity holds and no fictitious artifact is published; the upload backlog stays bounded."
       ],
       "evidence": [
         "packages/application/src/retention.test.ts",
@@ -13358,19 +13358,20 @@
       "code": [
         "packages/application/src/retention.ts",
         "packages/application/src/application.ts",
+        "packages/application/src/storage-admission.ts",
         "packages/persistence/src/disk-reserve.ts",
         "packages/persistence/src/database.ts"
       ],
-      "note": "80 % warning (one event per crossing) and 90 % suspension are implemented; the 90 % refusal carries a redacted path placeholder and recovery options (proven by doctor.test.ts, written by the operations-runtime slice); finalization is not blocked by pressure. Remote object-store outage is not applicable to the local filesystem profile.",
+      "note": "80 % warning (one event per crossing) is implemented; admission is gated by free bytes against the declared worst-case evidence of admitted and incoming runs plus a 256 MiB metadata reserve (storage-admission.ts), never by the used share; the refusal carries a redacted path placeholder and recovery options that never tell the caller to touch data outside TestMaster (proven by doctor.test.ts); finalization is not blocked by pressure. Remote object-store outage is not applicable to the local filesystem profile.",
       "coverage": {
         "positive": [
-          "packages/application/src/retention.test.ts::suspends at 90%, resumes only its own pressure suspension, and preserves independent maintenance",
+          "packages/application/src/retention.test.ts::storage pressure never suspends admission, lifts a pressure suspension and keeps the reserve while bytes remain",
           "packages/application/src/retention.test.ts::warns once at 80 percent and clears the warning below 80 percent",
           "packages/application/src/execution-risk.test.ts::a Run leased before storage pressure still finalizes while admission is suspended",
           "packages/application/src/execution-risk.test.ts::a lost Run is still terminalized by reconciliation while storage admission is suspended"
         ],
         "negative": [
-          "packages/application/src/doctor.test.ts::at 90 percent refuses admission with redacted recovery options",
+          "packages/application/src/doctor.test.ts::refuses admission by free bytes, never by used share, with redacted recovery options",
           "packages/application/src/retention.test.ts::honors configured retention without shortening it under storage pressure",
           "packages/persistence/src/disk-pressure.docker.test.ts::OPS-023 physical tmpfs ENOSPC preserves SQLite integrity and reserves recovery space without fictitious artifacts",
           "packages/application/src/upload-outage.test.ts::OPS-023 storage outage keeps eight leased uploads bounded, emits alert and refuses further backlog"
@@ -13382,7 +13383,11 @@
           },
           {
             "path": "packages/application/src/retention.test.ts",
-            "assertion": "admissionSuspended: true,"
+            "assertion": "admissionSuspended: false,"
+          },
+          {
+            "path": "packages/application/src/doctor.test.ts",
+            "assertion": "reasonCode: \"storage_reserve_insufficient\","
           },
           {
             "path": "packages/application/src/retention.test.ts",

@@ -28,6 +28,20 @@ export const authManagedRoles = {
   oidc: ["accessToken", "refreshToken", "otp"],
   manual: ["storageState", "accessToken", "otp"],
 } as const satisfies Record<string, readonly string[]>;
+/**
+ * Roles that may be given as a plain value instead of a vault secret. Only `username`: it is an
+ * identifier, not a credential, so it is stored and returned as written and is never masked in
+ * evidence. Every other static role (password, totpSeed, token, key, cookie, clientSecret) is secret-only.
+ */
+export const authPlainRoles = ["username"] as const;
+/** A plain username: one visible line without leading or trailing whitespace. */
+export const AuthPlainUsername = Type.String({
+  minLength: 1,
+  maxLength: 320,
+  pattern: "^\\S(?:[^\\x00-\\x1f\\x7f]*\\S)?$",
+  description:
+    "Plain username, stored and shown as written and NOT masked in evidence; a secret username (secrets.username) is masked everywhere. Give one of the two, never both",
+});
 export type AuthKind = keyof typeof authStaticRoles;
 export const authKinds = Object.keys(authStaticRoles) as AuthKind[];
 export const authChallengeKinds = ["captcha", "webauthn", "push", "email-otp"] as const;
@@ -265,6 +279,8 @@ export const authContracts = {
     originBindings: Origins,
     /** Static role → existing vault SecretReference; managed roles are created by the server. */
     secrets: Type.Record(P.Name, P.id("sec")),
+    /** The username as a plain value; an alternative to `secrets.username`. */
+    username: Type.Optional(AuthPlainUsername),
     config: P.Json,
     refreshPolicy: Type.Optional(Type.Partial(AuthRefreshPolicy)),
   }),
@@ -273,6 +289,8 @@ export const authContracts = {
       name: P.Name,
       originBindings: Origins,
       secrets: Type.Record(P.Name, P.id("sec")),
+      /** Sets the plain username and drops `secrets.username`; to go back to a secret, send `secrets` with a username. */
+      username: AuthPlainUsername,
       config: P.Json,
       refreshPolicy: Type.Partial(AuthRefreshPolicy),
     }),
@@ -286,6 +304,8 @@ export const authContracts = {
     kind: P.Enum(authKinds),
     originBindings: Origins,
     secrets: Type.Record(P.Name, P.id("sec")),
+    /** Present only when the username is a plain value; a secret username is a reference in `secrets`. */
+    username: Type.Optional(AuthPlainUsername),
     managedSecrets: Type.Record(P.Name, P.id("sec")),
     config: P.Json,
     refreshPolicy: AuthRefreshPolicy,

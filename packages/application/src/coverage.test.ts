@@ -8,7 +8,11 @@ import { afterEach, expect, it } from "vitest";
 import { Application } from "./application.js";
 import { scaffoldPlan } from "./authoring.js";
 import { entity } from "./context.js";
-import { reportCoverage, verifiedRequirementCoverage } from "./coverage.js";
+import {
+  candidateRequirementCoverage,
+  reportCoverage,
+  verifiedRequirementCoverage,
+} from "./coverage.js";
 
 const apps: Application[] = [];
 const roots: string[] = [];
@@ -344,5 +348,77 @@ it("verifiedRequirementCoverage judges each test by its current revision's lates
   expect(verifiedRequirementCoverage(app.context, report)).toMatchObject({
     numerator: 1,
     denominator: 2,
+  });
+});
+
+it("a candidate run verifies nothing, but candidateRequirementCoverage lists what it would verify once promoted", async () => {
+  const { app, projectId, environmentId } = await openApp();
+  const planned = seed(app, projectId, "planned");
+  const generated = seed(app, projectId, "generated");
+  const superseded = seed(app, projectId, "superseded");
+  const active = seed(app, projectId, "active");
+  storeRequirements(app, projectId, [planned, generated, superseded, active]);
+  const testFor = (requirement: Requirement) => {
+    const plan = scaffoldPlan("backend");
+    plan.requirementRefs = [requirement.id];
+    return app.tests.create({ projectId, plan });
+  };
+  const prepare = (testId: string) => app.runs.prepare({ testId, environmentId });
+  // A candidate with its own plan verifies through the plan's required assertion.
+  const plannedRun = passedItem(projectId, prepare(testFor(planned).id), {
+    freshness: { state: "candidate", reasons: ["revision_not_active"] },
+  });
+  // A generated-code candidate has no plan: it maps to the requirements of its parent's plan.
+  const generatedTest = testFor(generated);
+  const codeRevision = entity(app.context, "rev", {
+    testId: generatedTest.id,
+    ordinal: 2,
+    contentHash: app.revisions.get(String(generatedTest.activeRevisionId)).contentHash,
+    plan: null,
+    codeArtifactId: null,
+    runnerKind: "playwright",
+    author: app.context.principalId,
+    parentId: generatedTest.activeRevisionId,
+    origin: "generated",
+  });
+  app.context.entities.insert("TestRevision", codeRevision);
+  const codeRun = passedItem(
+    projectId,
+    { ...prepare(generatedTest.id), revisionId: codeRevision.id } as unknown as ReportRun["run"],
+    {
+      steps: [{ planStepId: "imported-code", status: "passed" }],
+      freshness: { state: "candidate", reasons: ["revision_not_active"] },
+    },
+  );
+  // Controls: a superseded revision and a failed candidate verify nothing, and a requirement
+  // already verified by its active revision is not counted twice.
+  const supersededRun = passedItem(projectId, prepare(testFor(superseded).id), {
+    freshness: { state: "stale", reasons: ["test_revision_changed"] },
+  });
+  const activeTest = testFor(active);
+  const activeRun = passedItem(projectId, prepare(activeTest.id));
+  const failedCandidate = passedItem(projectId, prepare(activeTest.id), {
+    steps: [{ planStepId: "check-status", status: "failed" }],
+    result: {
+      outcome: "failed",
+      gate: "failed",
+      passedOnRetry: false,
+      firstAttemptOutcome: "failed",
+    },
+    freshness: { state: "candidate", reasons: ["revision_not_active"] },
+  });
+  const runs = [plannedRun, codeRun, supersededRun, activeRun, failedCandidate];
+  const report = {
+    runs,
+    selection: { requestedRunIds: runs.map((item) => item.run.id), notDispatched: [] },
+  } as unknown as ReportSnapshot;
+
+  expect(verifiedRequirementCoverage(app.context, report)).toMatchObject({
+    numerator: 1,
+    denominator: 4,
+  });
+  expect(candidateRequirementCoverage(app.context, report)).toMatchObject({
+    numerator: 2,
+    denominator: 4,
   });
 });

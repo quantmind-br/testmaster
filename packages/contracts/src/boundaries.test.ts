@@ -65,6 +65,48 @@ it("validates egress.denied events and refuses a malformed denial", () => {
       validate("RunnerEvent", { ...base, type: "egress.denied", payload: broken }),
     ).toThrow();
 });
+it("accepts a step title on step events and step results, bounded like a description", () => {
+  const base = { protocolVersion: "1.0.0", seq: 1, attemptId, occurredAt: "2026-10-05T00:00:00Z" };
+  const finished = {
+    stepId: "imported-step-1",
+    index: 1,
+    status: "passed",
+    durationMs: 3,
+    evidencePaths: [],
+  };
+  for (const title of ["expect.toHaveURL", "x".repeat(8000)]) {
+    const started = { stepId: "a", index: 1, title };
+    expect(() =>
+      validate("RunnerEvent", { ...base, type: "step.started", payload: started }),
+    ).not.toThrow();
+    expect(() =>
+      validate("RunnerEvent", { ...base, type: "step.finished", payload: { ...finished, title } }),
+    ).not.toThrow();
+  }
+  expect(() =>
+    validate("RunnerEvent", {
+      ...base,
+      type: "step.finished",
+      payload: { ...finished, title: "x".repeat(8001) },
+    }),
+  ).toThrow();
+  const result = {
+    id: "stp_01900000-0000-7000-8000-000000000002",
+    attemptId,
+    planStepId: "imported-step-1",
+    index: 1,
+    status: "passed",
+    expected: null,
+    observed: null,
+    error: null,
+    durationMs: 3,
+    evidenceRefs: [],
+  };
+  expect(() => validate("StepResult", { ...result, title: "expect.toHaveURL" })).not.toThrow();
+  // Plan steps and older rows carry no title.
+  expect(() => validate("StepResult", result)).not.toThrow();
+  expect(() => validate("StepResult", { ...result, title: 7 })).toThrow();
+});
 it("accepts additional origins on environment create and patch only as a bounded list of URIs", () => {
   const environment = {
     name: "staging",

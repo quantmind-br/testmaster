@@ -88,7 +88,7 @@ never change a Run's verdict to make a dashboard green, and never export secret 
 * **Owner:** platform-operator
 * **Severity:** medium
 * **Trigger:** disk use of the evidence or database volume is at least 80 %.
-* **Impact:** none yet; admission is suspended at 90 % (`storage_critical`).
+* **Impact:** none yet; admission is gated by free bytes, not by this share.
 * **First actions:**
   1. `df -h` on the evidence root and the PostgreSQL volume; find the growth source (evidence of
      recent Runs, WAL, backup destination if shared).
@@ -105,9 +105,11 @@ never change a Run's verdict to make a dashboard green, and never export secret 
 * **Owner:** platform-operator
 * **Severity:** critical
 * **Trigger:** disk use is at least 90 %.
-* **Impact:** new admission is suspended by the storage-pressure guard (the suspension recovers by
-  itself when use falls; only that automatic suspension does); evidence publication can fail; the
-  database and audit trail are at risk of full-disk failure.
+* **Impact:** admission still runs while the free bytes hold the worst-case evidence of the Runs in
+  progress plus a 256 MiB metadata reserve; once they do not, new Runs are refused with
+  `storage_reserve_insufficient` and queued Runs wait in the queue until space returns. Evidence
+  publication can fail and the database and audit trail are at risk of full-disk failure if growth
+  continues.
 * **First actions:**
   1. `testmaster ops drain --reason "storage critical"` if it is not already suspended, and
      let in-flight Attempts finish.
@@ -116,7 +118,7 @@ never change a Run's verdict to make a dashboard green, and never export secret 
   3. `testmaster artifact repair-references` (preview, then `--apply` after review) fixes counters only.
   4. `testmaster ops reconcile preview` before applying; then check readiness.
 * **Verification:** use below 90 % (ideally below 80 %), `/v1/health/ready` reports storage healthy,
-  admission returns to enabled, a healthy replay passes, the alert resolves.
+  a healthy replay is admitted and passes, the alert resolves.
 * **Escalation:** open an incident (`artifact_loss` if any artifact was lost, otherwise `outage`,
   high or critical). Stop and call the platform-operator lead if hashes disagree or the database
   cannot be checked.

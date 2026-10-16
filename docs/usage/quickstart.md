@@ -286,12 +286,12 @@ A secret, profile or specification created after generation is not retroactively
 regenerate or edit the plan.
 
 Generated browser plans must end with a positive check on rendered content (`visible`, `textContains`,
-`textEquals`, `valueEquals` or `countEquals` above 0) after the last state-changing action (login, navigation,
+`textEquals`, `valueEquals`, `countEquals` or `countAtLeast` above 0) after the last state-changing action (login, navigation,
 click, submit). A URL check and the absence of the earlier elements also hold on a blank page, so a proposal that
 stops there is refused as repair feedback (`browser_postcondition_missing`); the project-aware plan validation
 (REST `POST /projects/{id}/plan-validations`, used by the portal editor) reports the same rule for hand-written plans.
 
-A negative check (`hidden`, `countEquals` 0, `waitFor` hidden or detached) also passes while the page is still blank,
+A negative check (`hidden`, `countEquals` 0, `countAtMost` 0, `waitFor` hidden or detached) also passes while the page is still blank,
 so it may not directly follow a page load. After a `navigate`, or a click or key press that submits a form or is
 followed by a `urlEquals` assertion, put a required positive assertion on content of the destination page (or a
 `waitFor` visible) before it; for a login: submit, URL check, a visible element of the authenticated page, then the
@@ -403,7 +403,11 @@ received values, and the analysis names the failing test instead of `unmapped`. 
 `page` or `profilePage` fixture also leaves a screenshot and a DOM snapshot of its page in the run's evidence
 (`browser/code/imported-test-N-failure.png` and `.html`), protected like the declarative runner's: fields,
 images and every secret value are blacked out or removed. A passed test leaves none, and a capture that cannot
-be taken is a warning in the logs, never a change of verdict.
+be taken is a warning in the logs, never a change of verdict. Each step of a code run also records the title the
+test framework gave it (the test title for `imported-test-N`, `expect.toHaveURL` or the name of a `test.step`
+for `imported-step-N`, the pytest node id or step name for Python), cut at 500 characters and redacted like every
+runner event. `testmaster run steps <id>` and the MCP `testmaster://runs/{id}/steps` resource show it as `title`,
+and the analysis quotes it: `Step imported-step-3 (playwright_step: expect.toHaveURL) failed: ...`.
 
 An environment bound to an auth profile gives code its session only on request: destructure `profileRequest`
 (an authenticated `APIRequestContext`) or `profilePage` (a page with the profile's browser state) in the test
@@ -460,6 +464,14 @@ stay; there is no unarchive) with an optional `reason`, kept on the test with th
 the acting principal. `testmaster_get_evidence` reports `staleReasons` next to `freshness`; a candidate
 revision's own run is current until it is superseded. A generated candidate still counts only after a passing
 deterministic replay.
+
+`testmaster_generate_plan` returns the batch without its proposals plus `resource`
+(`testmaster://plan-batches/{batchId}`): read the proposals there. A healing proposal is decided with
+`testmaster_approve_healing` or `testmaster_reject_healing` (`proposalId` and a required `reason`, like
+`heal reject --reason`; nothing is applied and the reason stays on the proposal) after `testmaster_review_healing`.
+Artifact and code-file resources take the path with plain slashes
+(`testmaster://runs/{id}/artifacts/browser/steps/x.json`, `testmaster://revisions/{id}/code/tests/a.spec.ts`)
+or with each slash encoded as `%2F`; both read the same bytes.
 
 Agent skill files are written atomically inside managed markers, with backups under
 `.testmaster/agent-backups/`; edited managed blocks are reported as drift, never overwritten.

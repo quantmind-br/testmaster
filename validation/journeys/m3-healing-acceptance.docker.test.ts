@@ -1180,9 +1180,15 @@ it("HEAL-003 automated assisted review preserves semantic failures and refuses s
           expect(app.tests.get(test.id).activeRevisionId).toBe(proposal.baseRevisionId);
           const negativeRows = failureRows(app, negative.id);
           const negativeManifest = (await app.artifacts.get(negative.id)).manifest;
+          // A failed candidate replay is refused before any model call: healing starts from the
+          // active revision, and the candidate was never promoted.
           await expect(app.healing.propose(negative.id)).rejects.toMatchObject({
             code: "PRECONDITION_FAILED",
-            details: { reasonCode: "healing_not_indicated" },
+            details: {
+              reason: "revision_not_active",
+              revisionId: proposal.candidateRevisionId,
+              activeRevisionId: proposal.baseRevisionId,
+            },
           });
           expect(completions()).toBe(1);
           defect = false;

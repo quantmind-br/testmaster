@@ -17,6 +17,7 @@ import { AuditRepository, type EntityDocument } from "@testmaster/persistence";
 import { type CanonicalTarget, canonicalUrl, classifyIp, PolicyDenied } from "@testmaster/sandbox";
 import { assertCitedSchemasCompile } from "./ai/source-documents.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "./context.js";
+import { type RevisionStanding, revisionStanding } from "./revision-standing.js";
 
 type Stored<T> = T & EntityDocument;
 
@@ -938,6 +939,11 @@ export class RevisionsService {
     const owner = requireEntity(this.ctx, "TestCase", value.testId) as Stored<TestCase>;
     this.ctx.authorize("R", owner.projectId);
     return value;
+  }
+  /** Whether a revision is the active one, a candidate nothing replaced, or replaced. */
+  standing(id: string): RevisionStanding {
+    this.get(id);
+    return revisionStanding(this.ctx, id);
   }
   promote(id: string, expectedVersion: number, reason?: string): Stored<TestCase> {
     this.ctx.authorize("W");

@@ -152,7 +152,7 @@ export const alertRuleCatalog: Record<string, RuleDefinition> = {
     title: "Evidence storage above the warning watermark",
     severity: "medium",
     owner: "platform-operator",
-    description: "Used storage reached 80% but is below the 90% admission watermark.",
+    description: "Used storage reached 80% but is below the 90% critical watermark.",
     threshold: { fraction: storageWarningFraction },
     async find(environment) {
       const used = await storageUsed(environment);
@@ -162,10 +162,11 @@ export const alertRuleCatalog: Record<string, RuleDefinition> = {
     },
   },
   storage_critical: {
-    title: "Evidence storage at the admission watermark",
+    title: "Evidence storage above the critical watermark",
     severity: "critical",
     owner: "platform-operator",
-    description: "Used storage reached 90%; new Run admission is suspended.",
+    description:
+      "Used storage reached 90%. Runs are still admitted while the free space holds their worst-case evidence; plan more space before admission refuses them.",
     threshold: { fraction: storageCriticalFraction },
     async find(environment) {
       const used = await storageUsed(environment);

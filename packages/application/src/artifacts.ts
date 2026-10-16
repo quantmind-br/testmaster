@@ -30,6 +30,7 @@ import {
   exportJson,
   exportJunit,
   exportMarkdown,
+  type ReportFreshnessReason,
   type ReportRun,
   type ReportSnapshot,
 } from "@testmaster/reporting";
@@ -37,12 +38,17 @@ import type { AnalysisService } from "./ai/analysis.js";
 import { auditedOperation, auditSecurity } from "./audit.js";
 import type { ResolvedConfig } from "./config.js";
 import { requireEntity, type ServiceContext } from "./context.js";
-import { reportCoverage, verifiedRequirementCoverage } from "./coverage.js";
+import {
+  candidateRequirementCoverage,
+  reportCoverage,
+  verifiedRequirementCoverage,
+} from "./coverage.js";
 import {
   type FixtureImportInput,
   type FixtureImportReceipt,
   importFixtureInput,
 } from "./input-fixtures.js";
+import { revisionStanding } from "./revision-standing.js";
 import {
   describeExecutionError,
   type RunExecutionError,
@@ -557,8 +563,10 @@ export class ReportsService {
         "Environment",
         String(environmentRow?.environment_id),
       );
-      const freshnessReasons: ("test_revision_changed" | "environment_revision_changed")[] = [];
-      if (test.activeRevisionId !== run.revisionId) freshnessReasons.push("test_revision_changed");
+      const freshnessReasons: ReportFreshnessReason[] = [];
+      const standing = revisionStanding(this.ctx, run.revisionId);
+      if (standing === "candidate") freshnessReasons.push("revision_not_active");
+      if (standing === "replaced") freshnessReasons.push("test_revision_changed");
       if (environment.activeRevisionId !== run.environmentRevisionId)
         freshnessReasons.push("environment_revision_changed");
       this.ctx.authorize("R", String(test.projectId));
@@ -694,7 +702,11 @@ export class ReportsService {
         steps: this.runs.steps(runId) as unknown as StepResult[],
         attempts,
         freshness: {
-          state: freshnessReasons.length ? "stale" : "current",
+          state: freshnessReasons.some((reason) => reason !== "revision_not_active")
+            ? "stale"
+            : freshnessReasons.length
+              ? "candidate"
+              : "current",
           reasons: freshnessReasons,
           currentRevisionId: String(test.activeRevisionId),
           currentEnvironmentRevisionId: String(environment.activeRevisionId),
@@ -750,6 +762,11 @@ export class ReportsService {
       this.ctx,
       snapshot,
     );
+    if (snapshot.executionMetrics.counts.candidateRuns)
+      snapshot.executionMetrics.rates.candidateRequirementCoverage = candidateRequirementCoverage(
+        this.ctx,
+        snapshot,
+      );
     return snapshot;
   }
   async export(

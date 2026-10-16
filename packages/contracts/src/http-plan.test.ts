@@ -140,6 +140,44 @@ describe("HTTP plan expressiveness", () => {
       ),
     ).toEqual(["predicateInput:/steps/1/input", "predicateInput:/steps/2/input"]);
   });
+  it("accepts countAtLeast and countAtMost over a response and refuses them without one", () => {
+    const counts = (input: Json) => [
+      check({ predicate: "countEquals", value: 1 }, "a", input),
+      check({ predicate: "countAtLeast", value: 1 }, "b", input),
+      check({ predicate: "countAtMost", value: 0 }, "c", input),
+      check({ predicate: "countAtMost", value: 3 }, "d", input),
+    ];
+    expect(
+      rules(plan([request(), ...counts({ responseStepId: "go", jsonPointer: "/items" })])),
+    ).toEqual([]);
+    expect(rules(plan([request(), ...counts({ url: "/" })]))).toEqual([
+      "predicateInput:/steps/1/input",
+      "predicateInput:/steps/2/input",
+      "predicateInput:/steps/3/input",
+      "predicateInput:/steps/4/input",
+    ]);
+    // A browser locator needs a browser plan.
+    expect(rules(plan([request(), ...counts({ locator: { by: "css", value: "li" } })]))).toContain(
+      "predicateInput:/steps/1/input",
+    );
+  });
+  it("refuses countAtLeast 0 because it always passes, and negative or fractional counts", () => {
+    const refused = issues(
+      plan([
+        request(),
+        check({ predicate: "countAtLeast", value: 0 }, "a", {
+          responseStepId: "go",
+          jsonPointer: "/items",
+        }),
+      ]),
+    );
+    expect(refused).toHaveLength(1);
+    expect(refused[0]).toMatchObject({ path: "/steps/1/expectation/value", rule: "vacuousCount" });
+    expect(refused[0]?.message).toContain("always passes");
+    for (const predicate of ["countAtLeast", "countAtMost"])
+      for (const value of [-1, 1.5])
+        expect(rules(plan([request(), check({ predicate, value }, "a")]))).not.toEqual([]);
+  });
   it("refuses a headerMatches pattern that is not a valid ECMAScript expression", () => {
     const invalid = rules(
       plan([request(), check({ predicate: "headerMatches", header: "x", pattern: "(" }), status]),

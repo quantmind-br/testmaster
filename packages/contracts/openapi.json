@@ -21960,6 +21960,42 @@
                                     "type": "object",
                                     "required": [
                                       "predicate",
+                                      "value"
+                                    ],
+                                    "properties": {
+                                      "predicate": {
+                                        "const": "countAtLeast",
+                                        "type": "string"
+                                      },
+                                      "value": {
+                                        "minimum": 0,
+                                        "type": "integer"
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "type": "object",
+                                    "required": [
+                                      "predicate",
+                                      "value"
+                                    ],
+                                    "properties": {
+                                      "predicate": {
+                                        "const": "countAtMost",
+                                        "type": "string"
+                                      },
+                                      "value": {
+                                        "minimum": 0,
+                                        "type": "integer"
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "type": "object",
+                                    "required": [
+                                      "predicate",
                                       "values"
                                     ],
                                     "properties": {
@@ -24083,6 +24119,42 @@
                                 "properties": {
                                   "predicate": {
                                     "const": "countEquals",
+                                    "type": "string"
+                                  },
+                                  "value": {
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                }
+                              },
+                              {
+                                "additionalProperties": false,
+                                "type": "object",
+                                "required": [
+                                  "predicate",
+                                  "value"
+                                ],
+                                "properties": {
+                                  "predicate": {
+                                    "const": "countAtLeast",
+                                    "type": "string"
+                                  },
+                                  "value": {
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                }
+                              },
+                              {
+                                "additionalProperties": false,
+                                "type": "object",
+                                "required": [
+                                  "predicate",
+                                  "value"
+                                ],
+                                "properties": {
+                                  "predicate": {
+                                    "const": "countAtMost",
                                     "type": "string"
                                   },
                                   "value": {
@@ -29934,6 +30006,42 @@
                         "properties": {
                           "predicate": {
                             "const": "countEquals",
+                            "type": "string"
+                          },
+                          "value": {
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "value"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "countAtLeast",
+                            "type": "string"
+                          },
+                          "value": {
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "value"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "countAtMost",
                             "type": "string"
                           },
                           "value": {
@@ -42383,6 +42491,42 @@
                               "type": "object",
                               "required": [
                                 "predicate",
+                                "value"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "countAtLeast",
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate",
+                                "value"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "countAtMost",
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate",
                                 "values"
                               ],
                               "properties": {
@@ -50074,6 +50218,42 @@
                         "type": "object",
                         "required": [
                           "predicate",
+                          "value"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "countAtLeast",
+                            "type": "string"
+                          },
+                          "value": {
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "value"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "countAtMost",
+                            "type": "string"
+                          },
+                          "value": {
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
                           "values"
                         ],
                         "properties": {
@@ -51018,6 +51198,11 @@
               }
             }
           },
+          "username": {
+            "minLength": 1,
+            "maxLength": 320,
+            "type": "string"
+          },
           "managedSecrets": {
             "type": "object",
             "patternProperties": {
@@ -51232,6 +51417,13 @@
               }
             }
           },
+          "username": {
+            "minLength": 1,
+            "maxLength": 320,
+            "pattern": "^\\S(?:[^\\x00-\\x1f\\x7f]*\\S)?$",
+            "description": "Plain username, stored and shown as written and NOT masked in evidence; a secret username (secrets.username) is masked everywhere. Give one of the two, never both",
+            "type": "string"
+          },
           "config": {
             "anyOf": [
               {
@@ -51354,6 +51546,13 @@
                 "type": "string"
               }
             }
+          },
+          "username": {
+            "minLength": 1,
+            "maxLength": 320,
+            "pattern": "^\\S(?:[^\\x00-\\x1f\\x7f]*\\S)?$",
+            "description": "Plain username, stored and shown as written and NOT masked in evidence; a secret username (secrets.username) is masked everywhere. Give one of the two, never both",
+            "type": "string"
           },
           "config": {
             "anyOf": [
@@ -51540,6 +51739,13 @@
                 "type": "string"
               }
             }
+          },
+          "username": {
+            "minLength": 1,
+            "maxLength": 320,
+            "pattern": "^\\S(?:[^\\x00-\\x1f\\x7f]*\\S)?$",
+            "description": "Plain username, stored and shown as written and NOT masked in evidence; a secret username (secrets.username) is masked everywhere. Give one of the two, never both",
+            "type": "string"
           },
           "managedSecrets": {
             "type": "object",
@@ -74189,6 +74395,42 @@
                           "type": "object",
                           "required": [
                             "predicate",
+                            "value"
+                          ],
+                          "properties": {
+                            "predicate": {
+                              "const": "countAtLeast",
+                              "type": "string"
+                            },
+                            "value": {
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "predicate",
+                            "value"
+                          ],
+                          "properties": {
+                            "predicate": {
+                              "const": "countAtMost",
+                              "type": "string"
+                            },
+                            "value": {
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "predicate",
                             "values"
                           ],
                           "properties": {
@@ -76472,6 +76714,42 @@
                       "properties": {
                         "predicate": {
                           "const": "countEquals",
+                          "type": "string"
+                        },
+                        "value": {
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "predicate",
+                        "value"
+                      ],
+                      "properties": {
+                        "predicate": {
+                          "const": "countAtLeast",
+                          "type": "string"
+                        },
+                        "value": {
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "predicate",
+                        "value"
+                      ],
+                      "properties": {
+                        "predicate": {
+                          "const": "countAtMost",
                           "type": "string"
                         },
                         "value": {
@@ -84101,6 +84379,42 @@
                         "properties": {
                           "predicate": {
                             "const": "countEquals",
+                            "type": "string"
+                          },
+                          "value": {
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "value"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "countAtLeast",
+                            "type": "string"
+                          },
+                          "value": {
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "value"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "countAtMost",
                             "type": "string"
                           },
                           "value": {
@@ -102482,6 +102796,42 @@
                                   "type": "object",
                                   "required": [
                                     "predicate",
+                                    "value"
+                                  ],
+                                  "properties": {
+                                    "predicate": {
+                                      "const": "countAtLeast",
+                                      "type": "string"
+                                    },
+                                    "value": {
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "predicate",
+                                    "value"
+                                  ],
+                                  "properties": {
+                                    "predicate": {
+                                      "const": "countAtMost",
+                                      "type": "string"
+                                    },
+                                    "value": {
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "predicate",
                                     "values"
                                   ],
                                   "properties": {
@@ -104765,6 +105115,42 @@
                               "properties": {
                                 "predicate": {
                                   "const": "countEquals",
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate",
+                                "value"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "countAtLeast",
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate",
+                                "value"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "countAtMost",
                                   "type": "string"
                                 },
                                 "value": {
@@ -112728,6 +113114,42 @@
                         "type": "object",
                         "required": [
                           "predicate",
+                          "value"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "countAtLeast",
+                            "type": "string"
+                          },
+                          "value": {
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "value"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "countAtMost",
+                            "type": "string"
+                          },
+                          "value": {
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
                           "values"
                         ],
                         "properties": {
@@ -113538,6 +113960,137 @@
                 "patternProperties": {
                   "^(.*)$": {
                     "$ref": "#/components/schemas/McpEnvironmentUpdate/$defs/T0"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "McpProposalBatch": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "projectId",
+          "sourceSnapshotId",
+          "state",
+          "version",
+          "resource"
+        ],
+        "properties": {
+          "id": {
+            "pattern": "^pbt_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "workspaceId": {
+            "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "projectId": {
+            "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "sourceSnapshotId": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "const": "proposed",
+                "type": "string"
+              },
+              {
+                "const": "accepted",
+                "type": "string"
+              },
+              {
+                "const": "rejected",
+                "type": "string"
+              },
+              {
+                "const": "stale",
+                "type": "string"
+              }
+            ]
+          },
+          "extensions": {
+            "type": "object",
+            "patternProperties": {
+              "^[a-z][a-z0-9-]*:[A-Za-z0-9_-]+$": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/McpProposalBatch/$defs/T0"
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "patternProperties": {
+                      "^(.*)$": {
+                        "$ref": "#/components/schemas/McpProposalBatch/$defs/T0"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "version": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "resource": {
+            "description": "testmaster://plan-batches/{batchId}",
+            "type": "string"
+          }
+        },
+        "$defs": {
+          "T0": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/McpProposalBatch/$defs/T0"
+                }
+              },
+              {
+                "type": "object",
+                "patternProperties": {
+                  "^(.*)$": {
+                    "$ref": "#/components/schemas/McpProposalBatch/$defs/T0"
                   }
                 }
               }
@@ -121793,6 +122346,42 @@
                                       "type": "object",
                                       "required": [
                                         "predicate",
+                                        "value"
+                                      ],
+                                      "properties": {
+                                        "predicate": {
+                                          "const": "countAtLeast",
+                                          "type": "string"
+                                        },
+                                        "value": {
+                                          "minimum": 0,
+                                          "type": "integer"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "type": "object",
+                                      "required": [
+                                        "predicate",
+                                        "value"
+                                      ],
+                                      "properties": {
+                                        "predicate": {
+                                          "const": "countAtMost",
+                                          "type": "string"
+                                        },
+                                        "value": {
+                                          "minimum": 0,
+                                          "type": "integer"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "type": "object",
+                                      "required": [
+                                        "predicate",
                                         "values"
                                       ],
                                       "properties": {
@@ -124076,6 +124665,42 @@
                                   "properties": {
                                     "predicate": {
                                       "const": "countEquals",
+                                      "type": "string"
+                                    },
+                                    "value": {
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "predicate",
+                                    "value"
+                                  ],
+                                  "properties": {
+                                    "predicate": {
+                                      "const": "countAtLeast",
+                                      "type": "string"
+                                    },
+                                    "value": {
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "predicate",
+                                    "value"
+                                  ],
+                                  "properties": {
+                                    "predicate": {
+                                      "const": "countAtMost",
                                       "type": "string"
                                     },
                                     "value": {
@@ -131982,6 +132607,42 @@
                         "type": "object",
                         "required": [
                           "predicate",
+                          "value"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "countAtLeast",
+                            "type": "string"
+                          },
+                          "value": {
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "value"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "countAtMost",
+                            "type": "string"
+                          },
+                          "value": {
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
                           "values"
                         ],
                         "properties": {
@@ -133711,6 +134372,28 @@
         },
         "$defs": {}
       },
+      "Mcp_testmaster_reject_healing": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "proposalId",
+          "reason"
+        ],
+        "properties": {
+          "proposalId": {
+            "pattern": "^hea_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string",
+            "description": "Healing proposal id"
+          },
+          "reason": {
+            "minLength": 1,
+            "maxLength": 8000,
+            "type": "string",
+            "description": "Why you reject; recorded on the proposal with the reviewer and time (testmaster_review_healing shows it)"
+          }
+        },
+        "$defs": {}
+      },
       "Mcp_testmaster_review_healing": {
         "additionalProperties": false,
         "type": "object",
@@ -134119,7 +134802,14 @@
                 "type": "string"
               }
             },
-            "description": "Role to secret id (testmaster_set_secret): form username, password, totpSeed; basic username, password; bearer token; api-key key; cookie cookie"
+            "description": "Role to secret id (testmaster_set_secret): form password, totpSeed (username too when it is a secret); basic password; bearer token; api-key key; cookie cookie. Every role except username must be a secret; a plain value is refused"
+          },
+          "username": {
+            "minLength": 1,
+            "maxLength": 320,
+            "pattern": "^\\S(?:[^\\x00-\\x1f\\x7f]*\\S)?$",
+            "description": "Username as a plain value (form, basic, oauth, oidc): stored and shown as written and NOT masked in evidence, so a username like root stays readable in DOM and logs. Use secrets.username instead to mask it (an e-mail, for example). Never both. On update, setting it replaces secrets.username",
+            "type": "string"
           },
           "config": {
             "additionalProperties": false,
@@ -149530,6 +150220,42 @@
                                   "type": "object",
                                   "required": [
                                     "predicate",
+                                    "value"
+                                  ],
+                                  "properties": {
+                                    "predicate": {
+                                      "const": "countAtLeast",
+                                      "type": "string"
+                                    },
+                                    "value": {
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "predicate",
+                                    "value"
+                                  ],
+                                  "properties": {
+                                    "predicate": {
+                                      "const": "countAtMost",
+                                      "type": "string"
+                                    },
+                                    "value": {
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "predicate",
                                     "values"
                                   ],
                                   "properties": {
@@ -151813,6 +152539,42 @@
                               "properties": {
                                 "predicate": {
                                   "const": "countEquals",
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate",
+                                "value"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "countAtLeast",
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate",
+                                "value"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "countAtMost",
                                   "type": "string"
                                 },
                                 "value": {
@@ -159759,6 +160521,42 @@
                         "properties": {
                           "predicate": {
                             "const": "countEquals",
+                            "type": "string"
+                          },
+                          "value": {
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "value"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "countAtLeast",
+                            "type": "string"
+                          },
+                          "value": {
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "value"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "countAtMost",
                             "type": "string"
                           },
                           "value": {
@@ -167977,6 +168775,42 @@
                                         "type": "object",
                                         "required": [
                                           "predicate",
+                                          "value"
+                                        ],
+                                        "properties": {
+                                          "predicate": {
+                                            "const": "countAtLeast",
+                                            "type": "string"
+                                          },
+                                          "value": {
+                                            "minimum": 0,
+                                            "type": "integer"
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "type": "object",
+                                        "required": [
+                                          "predicate",
+                                          "value"
+                                        ],
+                                        "properties": {
+                                          "predicate": {
+                                            "const": "countAtMost",
+                                            "type": "string"
+                                          },
+                                          "value": {
+                                            "minimum": 0,
+                                            "type": "integer"
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "type": "object",
+                                        "required": [
+                                          "predicate",
                                           "values"
                                         ],
                                         "properties": {
@@ -170260,6 +171094,42 @@
                                     "properties": {
                                       "predicate": {
                                         "const": "countEquals",
+                                        "type": "string"
+                                      },
+                                      "value": {
+                                        "minimum": 0,
+                                        "type": "integer"
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "type": "object",
+                                    "required": [
+                                      "predicate",
+                                      "value"
+                                    ],
+                                    "properties": {
+                                      "predicate": {
+                                        "const": "countAtLeast",
+                                        "type": "string"
+                                      },
+                                      "value": {
+                                        "minimum": 0,
+                                        "type": "integer"
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "type": "object",
+                                    "required": [
+                                      "predicate",
+                                      "value"
+                                    ],
+                                    "properties": {
+                                      "predicate": {
+                                        "const": "countAtMost",
                                         "type": "string"
                                       },
                                       "value": {
@@ -178255,6 +179125,42 @@
                         "type": "object",
                         "required": [
                           "predicate",
+                          "value"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "countAtLeast",
+                            "type": "string"
+                          },
+                          "value": {
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "value"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "countAtMost",
+                            "type": "string"
+                          },
+                          "value": {
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
                           "values"
                         ],
                         "properties": {
@@ -185717,6 +186623,10 @@
                   "index": {
                     "minimum": 0,
                     "type": "integer"
+                  },
+                  "title": {
+                    "maxLength": 8000,
+                    "type": "string"
                   }
                 }
               }
@@ -185774,6 +186684,10 @@
                   "index": {
                     "minimum": 0,
                     "type": "integer"
+                  },
+                  "title": {
+                    "maxLength": 8000,
+                    "type": "string"
                   },
                   "status": {
                     "anyOf": [
@@ -202432,6 +203346,42 @@
                     "type": "object",
                     "required": [
                       "predicate",
+                      "value"
+                    ],
+                    "properties": {
+                      "predicate": {
+                        "const": "countAtLeast",
+                        "type": "string"
+                      },
+                      "value": {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  {
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "predicate",
+                      "value"
+                    ],
+                    "properties": {
+                      "predicate": {
+                        "const": "countAtMost",
+                        "type": "string"
+                      },
+                      "value": {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  {
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "predicate",
                       "values"
                     ],
                     "properties": {
@@ -210025,6 +210975,42 @@
                         "type": "object",
                         "required": [
                           "predicate",
+                          "value"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "countAtLeast",
+                            "type": "string"
+                          },
+                          "value": {
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "value"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "countAtMost",
+                            "type": "string"
+                          },
+                          "value": {
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
                           "values"
                         ],
                         "properties": {
@@ -210661,6 +211647,10 @@
             "maxLength": 200,
             "type": "string"
           },
+          "title": {
+            "maxLength": 8000,
+            "type": "string"
+          },
           "index": {
             "minimum": 0,
             "type": "integer"
@@ -211107,6 +212097,10 @@
           "planStepId": {
             "minLength": 1,
             "maxLength": 200,
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 8000,
             "type": "string"
           },
           "index": {
@@ -220203,6 +221197,42 @@
                                     "type": "object",
                                     "required": [
                                       "predicate",
+                                      "value"
+                                    ],
+                                    "properties": {
+                                      "predicate": {
+                                        "const": "countAtLeast",
+                                        "type": "string"
+                                      },
+                                      "value": {
+                                        "minimum": 0,
+                                        "type": "integer"
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "type": "object",
+                                    "required": [
+                                      "predicate",
+                                      "value"
+                                    ],
+                                    "properties": {
+                                      "predicate": {
+                                        "const": "countAtMost",
+                                        "type": "string"
+                                      },
+                                      "value": {
+                                        "minimum": 0,
+                                        "type": "integer"
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "type": "object",
+                                    "required": [
+                                      "predicate",
                                       "values"
                                     ],
                                     "properties": {
@@ -227794,6 +228824,42 @@
                         "properties": {
                           "predicate": {
                             "const": "countEquals",
+                            "type": "string"
+                          },
+                          "value": {
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "value"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "countAtLeast",
+                            "type": "string"
+                          },
+                          "value": {
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "value"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "countAtMost",
                             "type": "string"
                           },
                           "value": {
@@ -236625,6 +237691,42 @@
                                   "type": "object",
                                   "required": [
                                     "predicate",
+                                    "value"
+                                  ],
+                                  "properties": {
+                                    "predicate": {
+                                      "const": "countAtLeast",
+                                      "type": "string"
+                                    },
+                                    "value": {
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "predicate",
+                                    "value"
+                                  ],
+                                  "properties": {
+                                    "predicate": {
+                                      "const": "countAtMost",
+                                      "type": "string"
+                                    },
+                                    "value": {
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "predicate",
                                     "values"
                                   ],
                                   "properties": {
@@ -238908,6 +240010,42 @@
                               "properties": {
                                 "predicate": {
                                   "const": "countEquals",
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate",
+                                "value"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "countAtLeast",
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate",
+                                "value"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "countAtMost",
                                   "type": "string"
                                 },
                                 "value": {
@@ -246759,6 +247897,42 @@
                         "properties": {
                           "predicate": {
                             "const": "countEquals",
+                            "type": "string"
+                          },
+                          "value": {
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "value"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "countAtLeast",
+                            "type": "string"
+                          },
+                          "value": {
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "value"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "countAtMost",
                             "type": "string"
                           },
                           "value": {
@@ -254627,6 +255801,42 @@
                                   "type": "object",
                                   "required": [
                                     "predicate",
+                                    "value"
+                                  ],
+                                  "properties": {
+                                    "predicate": {
+                                      "const": "countAtLeast",
+                                      "type": "string"
+                                    },
+                                    "value": {
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "predicate",
+                                    "value"
+                                  ],
+                                  "properties": {
+                                    "predicate": {
+                                      "const": "countAtMost",
+                                      "type": "string"
+                                    },
+                                    "value": {
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "predicate",
                                     "values"
                                   ],
                                   "properties": {
@@ -256910,6 +258120,42 @@
                               "properties": {
                                 "predicate": {
                                   "const": "countEquals",
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate",
+                                "value"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "countAtLeast",
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "minimum": 0,
+                                  "type": "integer"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "predicate",
+                                "value"
+                              ],
+                              "properties": {
+                                "predicate": {
+                                  "const": "countAtMost",
                                   "type": "string"
                                 },
                                 "value": {
@@ -264718,6 +265964,42 @@
                         "properties": {
                           "predicate": {
                             "const": "countEquals",
+                            "type": "string"
+                          },
+                          "value": {
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "value"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "countAtLeast",
+                            "type": "string"
+                          },
+                          "value": {
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "predicate",
+                          "value"
+                        ],
+                        "properties": {
+                          "predicate": {
+                            "const": "countAtMost",
                             "type": "string"
                           },
                           "value": {

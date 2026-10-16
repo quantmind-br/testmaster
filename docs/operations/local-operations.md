@@ -65,8 +65,12 @@ required when the restored directory will be opened by an older release (see rol
 
 ## Storage pressure and retention
 
-Admission warns at 80 % disk use and suspends new admission at 90 %; only the pressure-owned suspension
-recovers automatically. Worker maintenance expires eligible evidence through mark → tombstone → delete.
+Disk use warns at 80 % and raises a critical alert at 90 %; neither suspends admission. A new Run is
+refused (`QUOTA_EXCEEDED`, `storage_reserve_insufficient`) only when the free bytes cannot hold the
+worst-case evidence (`attemptArtifactBytes × maxAttempts`) of every Run in progress plus the new one
+and a 256 MiB metadata reserve. Queued Runs do not count: the worker repeats the check before it
+starts each one and leaves it queued, with no deadline, until the free bytes hold it.
+Worker maintenance expires eligible evidence through mark → tombstone → delete.
 Expired evidence makes a bundle `partial` with an explicit reason; the Run's outcome, snapshot hashes and
 audit history never change. Legal holds are described in `docs/development.md`.
 Requested deletion status exposes a 24-hour active-data deadline separately from the latest
@@ -315,7 +319,7 @@ of the daemon section (R reads, W authors, X executes/cancels, A administers and
 - Secret/token exposure: A decides, after current revocations are merged and affected secrets rotated.
 - Compromised/unavailable model: A decides, after provider authorization and budgets are reviewed.
 - Worker loss or uncertain external mutation: A decides, after `worker reconcile` leaves no uncertain handle.
-- Disk pressure or artifact tampering: A decides, after hashes verify and usage is below the 90 % watermark.
+- Disk pressure or artifact tampering: A decides, after hashes verify and the free bytes hold the admitted Runs' worst-case evidence.
 - Migration/startup incompatibility: A decides, after the isolated restore review completes.
 
 ## JUnit consumer limitations

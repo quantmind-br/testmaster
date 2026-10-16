@@ -231,6 +231,48 @@ it("evaluates header/count/schema expectations against named snapshot schemas", 
     assertResponse(runtime, response, { predicate: "countEquals", value: 1 }, "/items"),
   ).rejects.toMatchObject({ reasonCode: "assertion_mismatch" });
 });
+it.each([
+  ["countEquals", 3, 3, "passed", 3],
+  ["countEquals", 2, 3, "failed", 2],
+  ["countAtMost", 3, 3, "passed", { atMost: 3 }],
+  ["countAtMost", 2, 3, "failed", { atMost: 2 }],
+  ["countAtMost", 4, 3, "passed", { atMost: 4 }],
+  ["countAtMost", 0, 0, "passed", { atMost: 0 }],
+  ["countAtMost", 0, 1, "failed", { atMost: 0 }],
+  ["countAtLeast", 3, 3, "passed", { atLeast: 3 }],
+  ["countAtLeast", 4, 3, "failed", { atLeast: 4 }],
+  ["countAtLeast", 2, 3, "passed", { atLeast: 2 }],
+] as const)(
+  "evaluates %s %i over an array of %i items: %s, recording the observed count",
+  async (predicate, value, items, status, expected) => {
+    const base = await serve((_req, res) =>
+      res.end(JSON.stringify({ items: [...Array(items).keys()] })),
+    );
+    const f = fixture(base);
+    const assertion = assertStep("count", "go", { predicate, value });
+    const outcome = await f.runtime.runSteps(
+      [
+        requestStep("go", []),
+        { ...assertion, input: { responseStepId: "go", jsonPointer: "/items" } },
+      ],
+      (step) => f.engine.perform(step),
+    );
+    if (status === "passed") expect(outcome).toMatchObject({ outcome: "passed" });
+    else expect(outcome).toMatchObject({ outcome: "failed", reasonCode: "assertion_mismatch" });
+    expect(stepPayload(f.events, "count")).toMatchObject({ status, observed: items, expected });
+  },
+);
+it.each(["countAtMost", "countAtLeast"] as const)(
+  "fails %s over a JSON value that is not an array",
+  async (predicate) => {
+    const base = await serve((_req, res) => res.end('{"items":[1,2,3],"name":"x"}'));
+    const { engine, runtime } = fixture(base);
+    await engine.perform(requestStep("read", []));
+    await expect(
+      assertResponse(runtime, responseOf(engine, "read"), { predicate, value: 1 }, "/name"),
+    ).rejects.toMatchObject({ reasonCode: "assertion_mismatch", outcome: "failed" });
+  },
+);
 it("fails assertions whose JSON target is absent from a complete response", async () => {
   const base = await serve((_req, res) => res.end('{"items":[],"product":{"price":125}}'));
   const { engine, runtime } = fixture(base);

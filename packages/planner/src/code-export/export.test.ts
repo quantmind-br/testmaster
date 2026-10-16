@@ -375,6 +375,61 @@ describe("standalone deterministic code export", () => {
     const python = exportCode(plan, { format: "pytest" }).files["standalone.py"] ?? "";
     expect(python).toContain("is_disabled");
   });
+  it("exports countAtLeast and countAtMost as bounds over a JSON array and over a locator in both formats", async () => {
+    const backend = await fixture("backend");
+    const request = backend.steps[0];
+    if (request?.operation !== "request") throw new Error("Bad fixture");
+    const count = (
+      id: string,
+      input: Extract<PlanStep, { operation: "assert" }>["input"],
+      expectation: Expectation,
+    ): PlanStep => ({
+      id,
+      kind: "assertion",
+      operation: "assert",
+      description: id,
+      input,
+      expectation,
+    });
+    const responseInput = { responseStepId: request.id, jsonPointer: "/items" };
+    backend.steps = [
+      request,
+      count("at-least", responseInput, { predicate: "countAtLeast", value: 1 }),
+      count("at-most", responseInput, { predicate: "countAtMost", value: 3 }),
+    ];
+    const playwright = exportCode(backend, { format: "playwright" });
+    expect(playwright.metadata.assertionIds).toEqual(["at-least", "at-most"]);
+    const helpers = playwright.files["helpers/standalone.ts"] ?? "";
+    expect(() => parse(helpers, { sourceType: "module", plugins: ["typescript"] })).not.toThrow();
+    expect(helpers).toContain("expect(v.length).toBeGreaterThanOrEqual(e.value)");
+    expect(helpers).toContain("expect(v.length).toBeLessThanOrEqual(e.value)");
+    const python = exportCode(backend, { format: "pytest" }).files["standalone.py"] ?? "";
+    expect(python).toContain('assert len(value) >= expectation["value"]');
+    expect(python).toContain('assert len(value) <= expectation["value"]');
+
+    const frontend = await fixture("frontend");
+    const rows = { locator: { by: "role" as const, role: "row", name: "Order", exact: true } };
+    frontend.steps = [
+      count("rows-at-least", rows, { predicate: "countAtLeast", value: 2 }),
+      count("rows-at-most", rows, { predicate: "countAtMost", value: 0 }),
+    ];
+    const browser = exportCode(frontend, { format: "playwright" });
+    expect(browser.metadata.assertionIds).toEqual(["rows-at-least", "rows-at-most"]);
+    const browserHelpers = browser.files["helpers/standalone.ts"] ?? "";
+    expect(() =>
+      parse(browserHelpers, { sourceType: "module", plugins: ["typescript"] }),
+    ).not.toThrow();
+    // A range cannot be expressed by toHaveCount: the count is polled until the step deadline.
+    expect(browserHelpers).toContain(
+      "expect.poll(() => l.count(),{timeout}).toBeGreaterThanOrEqual(e.value)",
+    );
+    expect(browserHelpers).toContain(
+      "expect.poll(() => l.count(),{timeout}).toBeLessThanOrEqual(e.value)",
+    );
+    const browserPython = exportCode(frontend, { format: "pytest" }).files["standalone.py"] ?? "";
+    expect(browserPython).toContain('observed >= expectation["value"]');
+    expect(browserPython).toContain('observed <= expectation["value"]');
+  });
   it("refuses auth profile sessions and JSON body set entries that exported code cannot reproduce", async () => {
     const plan = await fixture("backend");
     const request = plan.steps[0];

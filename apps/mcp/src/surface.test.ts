@@ -401,6 +401,68 @@ it("artifact pages are text for textual media types, cut on character boundaries
   }
 });
 
+it("an artifact resource reads the same bytes whether the path has plain slashes or encoded ones, and confines the lookup", async () => {
+  const f = await fixture();
+  const manifest: Record<string, Buffer> = {
+    "browser/steps/x.json": Buffer.from('{"k":"plain and encoded"}'),
+    "a.json": Buffer.from('{"top":true}'),
+  };
+  const asked: string[] = [];
+  vi.spyOn(Object.getPrototypeOf(f.app.artifacts), "read").mockImplementation((async (
+    _runId: string,
+    path: string,
+    options: { offset?: number } = {},
+  ) => {
+    asked.push(path);
+    // The service looks the path up by exact match in the manifest, so no other path reads anything.
+    const bytes = manifest[path];
+    if (!bytes) throw new ContractError("NOT_FOUND", "Artifact is unavailable");
+    const offset = options.offset ?? 0;
+    const page = bytes.subarray(offset, offset + 10);
+    return {
+      bytes: page,
+      entry: { relativePath: path, mimeType: "application/json", sizeBytes: bytes.length },
+      nextOffset: offset + page.length < bytes.length ? offset + page.length : null,
+    };
+  }) as never);
+  const base = `testmaster://runs/${missingRun}/artifacts`;
+  const read = async (uri: string) =>
+    (await f.client.readResource({ uri })).contents[0] as Record<string, unknown>;
+
+  const encoded = await read(`${base}/${encodeURIComponent("browser/steps/x.json")}`);
+  const plain = await read(`${base}/browser/steps/x.json`);
+  expect(plain.text).toBe(encoded.text);
+  expect(plain.text).toBe('{"k":"plai'); // the first 10 bytes: the mock serves 10-byte pages
+  expect(asked).toEqual(["browser/steps/x.json", "browser/steps/x.json"]);
+  // The page link keeps the encoded form whichever form was asked.
+  const link = (plain._meta as Record<string, string>)["testmaster:next"];
+  expect(link).toContain(`/artifacts/${encodeURIComponent("browser/steps/x.json")}?`);
+  expect(String((await read(String(link))).text)).toBe("n and enco");
+  // A one-segment path still reads.
+  expect((await read(`${base}/a.json`)).text).toBe('{"top":tru');
+
+  // Traversal and empty segments find nothing, in either form.
+  for (const refused of [
+    `${base}/browser%2F..%2F..%2Fa.json`,
+    `${base}/browser/steps/..%2Fsteps%2Fx.json`,
+    `${base}/browser//steps/x.json`,
+    `${base}/browser/steps/x.json/`,
+    `${base}/%2E%2E%2Fa.json`,
+  ])
+    await expect(read(refused), refused).rejects.toMatchObject({ code: -32002 });
+  // The bare collection is no resource.
+  await expect(read(base)).rejects.toMatchObject({ code: -32002 });
+});
+
+it("the artifact and code-file templates are advertised with reserved expansion", async () => {
+  const f = await fixture();
+  const templates = (await f.client.listResourceTemplates()).resourceTemplates.map(
+    (template) => template.uriTemplate,
+  );
+  expect(templates).toContain("testmaster://runs/{id}/artifacts/{+path}{?attemptId,offset}");
+  expect(templates).toContain("testmaster://revisions/{id}/code/{+path}{?format,offset}");
+});
+
 it("analyze_code returns the snapshot with its scan summary", async () => {
   const f = await fixture();
   await writeFile(join(f.cwd, "server.ts"), "const app = {}; app.get('/health', () => {});");
@@ -671,6 +733,45 @@ it("generate_plan advertises provider and forwards provider and model to the ser
   expect(generate).toHaveBeenCalledWith(
     expect.objectContaining({ provider: "gateway", model: "m1" }),
   );
+});
+
+it("generate_plan returns the location of the proposals next to the batch, and that location serves them", async () => {
+  const f = await fixture();
+  const batch = entity(f.app.context, "pbt", {
+    projectId: f.init.projectId,
+    sourceSnapshotId: "fingerprint-1",
+    version: 1,
+    state: "proposed",
+  });
+  f.app.context.entities.insert("ProposalBatch", batch);
+  const proposal = entity(f.app.context, "pro", {
+    batchId: batch.id,
+    plan: scaffoldPlan("backend"),
+    requirementRefs: [],
+    evidenceRefs: [],
+    warnings: [],
+    state: "proposed",
+  });
+  f.app.context.entities.insert("Proposal", proposal);
+  vi.spyOn(Object.getPrototypeOf(f.app.proposals), "generate").mockResolvedValue(batch as never);
+  const planned = await f.call("testmaster_generate_plan", {
+    projectId: f.init.projectId,
+    sourceSnapshotId: "fingerprint-1",
+    type: "backend",
+  });
+  expect(planned.isError, JSON.stringify(planned.body)).toBe(false);
+  expect(planned.body).toMatchObject({
+    id: batch.id,
+    version: 1,
+    state: "proposed",
+    resource: `testmaster://plan-batches/${batch.id}`,
+  });
+  const served = await readJson<{ proposals: { id: string }[] }>(f, String(planned.body.resource));
+  expect(served.proposals.map((item) => item.id)).toEqual([proposal.id]);
+  const description =
+    (await f.client.listTools()).tools.find((tool) => tool.name === "testmaster_generate_plan")
+      ?.description ?? "";
+  expect(description).toContain("testmaster://plan-batches/{batchId}");
 });
 
 async function commitRepo(cwd: string) {
@@ -1328,6 +1429,40 @@ it("the code listing carries file text only while it fits one resource page and 
     ["c.ts", 4],
   ]);
   expect(index.files[1]?.resource).toContain(encodeURIComponent("b.ts"));
+});
+
+it("a revision code file reads the same text whether the path has plain slashes or encoded ones, and confines the lookup", async () => {
+  const f = await fixture();
+  const test = f.app.tests.create({ projectId: f.init.projectId, plan: scaffoldPlan("backend") });
+  const revisionId = String(test.activeRevisionId);
+  vi.spyOn(Object.getPrototypeOf(f.app.codeExport), "export").mockResolvedValue({
+    testId: test.id,
+    revisionId,
+    format: "playwright",
+    files: { "tests/nested/a.spec.ts": "export const nested = 1;\n", "b.ts": "top" },
+    metadata: { entrypoint: "b.ts" },
+  } as never);
+  const read = async (uri: string) =>
+    (await f.client.readResource({ uri })).contents[0] as Record<string, unknown>;
+  const base = `testmaster://revisions/${revisionId}/code`;
+
+  const encoded = await read(`${base}/${encodeURIComponent("tests/nested/a.spec.ts")}`);
+  const plain = await read(`${base}/tests/nested/a.spec.ts`);
+  expect(plain.text).toBe("export const nested = 1;\n");
+  expect({ text: plain.text, mimeType: plain.mimeType, meta: plain._meta }).toEqual({
+    text: encoded.text,
+    mimeType: encoded.mimeType,
+    meta: encoded._meta,
+  });
+  expect((await read(`${base}/b.ts`)).text).toBe("top");
+
+  for (const refused of [
+    `${base}/tests%2F..%2Fb.ts`,
+    `${base}/tests/nested/..%2F..%2Fb.ts`,
+    `${base}/tests//nested/a.spec.ts`,
+    `${base}/tests/nested/a.spec.ts/`,
+  ])
+    await expect(read(refused), refused).rejects.toMatchObject({ code: -32002 });
 });
 
 it("the steps resource pages the steps of a run, narrows to one attempt and binds its cursor", async () => {

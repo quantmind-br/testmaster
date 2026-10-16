@@ -19,7 +19,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_explore:
     "Browser exploration. featureIds: testmaster://projects/{projectId}/features?match=. budget: steps 1..100, modelCalls 1..steps, timeMs 1000..300000 (browser time only; a model call is never cut). provider/model pick the model; mutationActions: form steps. Failure: testmaster:errorMessage.",
   testmaster_generate_plan:
-    "Generate plan proposals (not tests) from the approved snapshot (sourceSnapshotId from testmaster_review_requirements); provider/model pick the model. Sees only existing secrets, auth profiles and API-spec sources (operations, schema pointers): add them first. Next: testmaster_review_plan.",
+    "Generate plan proposals (not tests) from the approved snapshot (sourceSnapshotId); provider/model pick the model. Sees only existing secrets, auth profiles and API-spec sources: add them first. Proposals: read the returned resource (testmaster://plan-batches/{batchId}). Next: testmaster_review_plan.",
   testmaster_review_plan:
     "Accept or reject proposals at expectedVersion = the batch version (batch.version, or batchVersion of an edit); an optional reason is kept on each decided one. Returns acceptedProposals {proposalId, testId, revisionId}. Stale version: details.diff or staleProposals. Next: testmaster_generate_tests.",
   testmaster_generate_tests:
@@ -41,9 +41,11 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_propose_healing:
     "Propose a locator-only candidate for a failed Run of the active plan revision; assertions never change. Next: testmaster_review_healing. abstained: true (reasonCode) = no safe repair. Refused before a model call (PRECONDITION_FAILED): healing_not_indicated, code_revision, revision_not_active.",
   testmaster_review_healing:
-    "Read the healing diff, risk, assertions-intact check, verification and approval. Next: testmaster_approve_healing with approval.expectedVersion, only after review.",
+    "Read the healing diff, risk, assertions-intact check, verification and approval. Next: testmaster_approve_healing with approval.expectedVersion, or testmaster_reject_healing with a reason, only after review.",
   testmaster_approve_healing:
     "Approve at expectedVersion after testmaster_review_healing, with an optional reason; creates the candidate revision and a verification run, which this server executes when no worker is live (follow with testmaster_get_run wait=true); healed only when it passes. Needs write scope; audited.",
+  testmaster_reject_healing:
+    "Reject a healing proposal after testmaster_review_healing; reason is required and is recorded on the proposal with the reviewer and time. Nothing is applied: no revision or verification run is created. Needs write scope; audited.",
   testmaster_edit_plan:
     "Replace the plan of a still-proposed proposal at its expectedVersion (validated; requirement and evidence references kept). Returns the Proposal itself, not wrapped, plus batchVersion, which testmaster_review_plan takes: every edit raises it. Next: testmaster_review_plan.",
   testmaster_save_test:
@@ -53,7 +55,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_archive_test:
     "Archive a test at expectedVersion (test.version): it leaves active use, its history and evidence stay, and no unarchive exists. An optional reason is recorded on the test with the actor and time. Returns the archived test.",
   testmaster_save_suite:
-    "Create a list, or change one at expectedVersion: replace the selection, addMembers or removeMembers of a fixed list. Run it with testmaster_run_tests suiteId (replay only). Reports verify each test by its active revision; runs of other pinned revisions are stale.",
+    "Create a list, or change one at expectedVersion: replace the selection, addMembers or removeMembers of a fixed list. Run it with testmaster_run_tests suiteId (replay only). Reports verify by active revision: a never-promoted pinned revision is a candidate (not stale, verifies nothing).",
   testmaster_approve_execution:
     "Approve risky production actions your run was refused for (approval_required): copy details.binding, add a reason, then repeat testmaster_run_tests. Bound to that revision, environment revision, origins and policy; expires in 30 minutes; used once.",
   testmaster_open_report:
@@ -65,7 +67,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_set_secret:
     "Register a secret from valueFile or fromEnv (never an argument; one trailing newline trimmed) with its allowedOrigins; returns metadata only. Secrets and auth profiles must exist before testmaster_generate_plan. Next: testmaster_save_auth_profile.",
   testmaster_save_auth_profile:
-    "Create (projectId, name, kind, originBindings, secrets, config) or update (profileId, expectedVersion, patch) an auth profile from secret ids; config keys per kind are in the input schema. Returns the view, never credentials. Next: testmaster_update_environment authRefs.",
+    "Create (projectId, name, kind, originBindings, secrets, config) or update (profileId, expectedVersion, patch) an auth profile from secret ids (username may be plain, unmasked); config keys per kind: see input schema. Returns the view, no credentials. Next: testmaster_update_environment authRefs.",
   testmaster_update_environment:
     "Patch an environment at expectedVersion: authRefs (profiles bound to the target origin), additionalOrigins, baseUrl, networkProfile, locale, timezone, production, name. Returns the environment and its new active revision.",
   testmaster_test_auth_login:

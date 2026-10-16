@@ -82,6 +82,10 @@ const McpRequirement = P.Obj({
 });
 const { skippedFiles: _skipped, ...codeSnapshotProperties } =
   Entities.entities.CodeSnapshot.properties;
+// `ProposalBatch` redeclares the entity's optional `version` as required; spreading that
+// intersection into another object makes its declaration unnameable, so it is restated here.
+const { version: _batchVersion, ...proposalBatchProperties } =
+  Entities.entities.ProposalBatch.properties;
 const CodeSnapshotSummary = P.Obj(codeSnapshotProperties);
 const supplemental = {
   DocumentValidationInput: P.Obj({
@@ -772,6 +776,12 @@ const supplemental = {
   McpEditedPlan: P.Obj({
     ...Entities.entities.Proposal.properties,
     batchVersion: P.Version,
+  }),
+  /** The generated `ProposalBatch` plus where its proposals are read: the batch itself carries none. */
+  McpProposalBatch: P.Obj({
+    ...proposalBatchProperties,
+    version: P.Version,
+    resource: Type.String({ description: "testmaster://plan-batches/{batchId}" }),
   }),
   McpRunReceipt,
   /** `RunResult` plus which test revision and environment revision the run executed, and why it ran. */

@@ -17,6 +17,11 @@ export { type DiagnosisSummary, diagnosisSummary, formatDiagnosisSummary } from 
 
 export { coverageMetrics, executionMetrics, ratioMetric } from "./metrics.js";
 
+export type ReportFreshnessReason =
+  | "test_revision_changed"
+  | "revision_not_active"
+  | "environment_revision_changed";
+
 interface ReportRunCommon {
   run: Pick<
     Run,
@@ -53,10 +58,15 @@ interface ReportRunCommon {
     executionDegree: "strict-execution-replay" | "fresh-llm-regeneration";
     limitations: string[];
   };
-  /** Read-time context comparison; never modifies the committed verdict or evidence seal. */
+  /**
+   * Read-time context comparison; never modifies the committed verdict or evidence seal. `candidate`
+   * is a run of a revision that was never promoted and is newer than the active one
+   * (`revision_not_active`): nothing superseded it, so it is not stale, but the active revision is not
+   * what it verified.
+   */
   freshness?: {
-    state: "current" | "stale";
-    reasons: readonly ("test_revision_changed" | "environment_revision_changed")[];
+    state: "current" | "stale" | "candidate";
+    reasons: readonly ReportFreshnessReason[];
     currentRevisionId: string;
     currentEnvironmentRevisionId: string;
   };
@@ -239,6 +249,11 @@ export function exportMarkdown(snapshot: ReportSnapshot): string {
       ? [
           `Execution counts: ${JSON.stringify(snapshot.executionMetrics.counts)}`,
           `Exclusions: ${JSON.stringify(snapshot.executionMetrics.exclusions)}`,
+        ]
+      : []),
+    ...(snapshot.executionMetrics?.counts.candidateRuns
+      ? [
+          `Candidate runs: ${snapshot.executionMetrics.counts.candidateRuns} of ${snapshot.runs.length} ran a revision that was never promoted and is newer than the test's active revision. Nothing superseded them, so they are not stale evidence, but they verify no requirement yet: verifiedRequirementCoverage judges active revisions only. Promote the revision to make its evidence count (candidateRequirementCoverage lists what the passing ones would verify).`,
         ]
       : []),
   ];

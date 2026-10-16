@@ -20,6 +20,7 @@ const semanticChecks: Record<string, { check: Check; code: string }> = {
   predicateInput: { check: "types", code: "predicate_input" },
   runner: { check: "types", code: "runner_mismatch" },
   requiredAssertion: { check: "assertions", code: "required_assertion_missing" },
+  vacuousCount: { check: "assertions", code: "vacuous_count" },
 };
 
 /** The id of the innermost step a JSON pointer passes through, so an issue names a step, not just a path. */

@@ -7,6 +7,8 @@ import { commandPath } from "./remote.js";
  * Complete `--file` for `auth-profile create`: a form login that posts a JSON body and keeps the
  * session cookie. `secrets` maps each role the kind needs (`username`, `password`) to a vault
  * secret registered earlier with `testmaster secret set`; the project comes from `--project`.
+ * The username alone may instead be a plain `"username": "root"` value (and then not in `secrets`):
+ * it is shown as written and not masked in evidence, while a secret username is masked everywhere.
  */
 export const authProfileFileExample: Omit<AuthProfileInput, "projectId"> = {
   name: "app-form-login",

@@ -26,6 +26,13 @@
         }
       }
     },
+    "username": {
+      "minLength": 1,
+      "maxLength": 320,
+      "pattern": "^\\S(?:[^\\x00-\\x1f\\x7f]*\\S)?$",
+      "description": "Plain username, stored and shown as written and NOT masked in evidence; a secret username (secrets.username) is masked everywhere. Give one of the two, never both",
+      "type": "string"
+    },
     "config": {
       "anyOf": [
         {
