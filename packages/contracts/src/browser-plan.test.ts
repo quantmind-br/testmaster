@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ExecutablePlan } from "./plans.js";
+import { ContractError, type ValidationIssue } from "./registries.js";
 import { findNegativeBeforeRender, validate, validateDocument } from "./validation.js";
 
 type Json = Record<string, unknown>;
@@ -154,5 +155,79 @@ describe("negative browser checks before the page has rendered", () => {
       validated: true,
       schema: "ExecutablePlan",
     });
+  });
+});
+
+describe("a named role locator inside an identical container", () => {
+  const heading: Json = { by: "role", role: "heading", name: "Sign in", exact: true };
+  const form: Json = { by: "role", role: "form" };
+  const inside = (locator: Json, container: Json): Json => ({ ...locator, container });
+  const assertVisible = (locator: Json, id = "assert_sign_in_heading"): Json =>
+    check(id, { locator }, { predicate: "visible" });
+  const issues = (steps: Json[]): ValidationIssue[] => {
+    try {
+      validate("ExecutablePlan", plan(steps));
+      return [];
+    } catch (error) {
+      if (!(error instanceof ContractError)) throw error;
+      return [...error.issues];
+    }
+  };
+
+  it("refuses a heading located inside the identical heading, naming the step", () => {
+    const found = issues([navigate(), assertVisible(inside(heading, heading))]);
+    expect(found).toEqual([
+      expect.objectContaining({
+        rule: "locatorContainer",
+        path: "/steps/1/input/locator/container",
+        message: expect.stringContaining('"assert_sign_in_heading"'),
+      }),
+    ]);
+  });
+
+  it("compares the selectors regardless of key order and finds the match deeper in the chain", () => {
+    const reordered: Json = { exact: true, name: "Sign in", role: "heading", by: "role" };
+    const rules = issues([navigate(), assertVisible(inside(heading, reordered))]).map(
+      (issue) => issue.rule,
+    );
+    expect(rules).toEqual(["locatorContainer"]);
+    // Reported once for the chain, not once per link.
+    const chain = inside(heading, inside(form, heading));
+    expect(issues([navigate(), assertVisible(chain)]).map((issue) => issue.path)).toEqual([
+      "/steps/1/input/locator/container",
+    ]);
+  });
+
+  it("refuses it in an action and in a frame's child steps", () => {
+    const bad = inside(heading, heading);
+    const frame = action("frame", "inner", {
+      locator: field("Widget"),
+      childSteps: [action("click", "go", { locator: bad })],
+    });
+    expect(issues([navigate(), action("click", "press", { locator: bad }), visible()])).toEqual([
+      expect.objectContaining({
+        path: "/steps/1/input/locator/container",
+        rule: "locatorContainer",
+      }),
+    ]);
+    expect(issues([navigate(), frame, visible()])).toEqual([
+      expect.objectContaining({
+        path: "/steps/1/input/childSteps/0/input/locator/container",
+        message: expect.stringContaining('"go"'),
+      }),
+    ]);
+  });
+
+  it("accepts the same heading inside a different container, and a different locator inside a heading", () => {
+    expect(issues([navigate(), assertVisible(inside(heading, form))])).toEqual([]);
+    expect(issues([navigate(), assertVisible(inside(field("Username"), heading))])).toEqual([]);
+  });
+
+  it("accepts selectors that legitimately repeat in nested structures", () => {
+    const menu: Json = { by: "css", value: ".menu" };
+    const item: Json = { by: "role", role: "listitem" };
+    const component: Json = { by: "testId", value: "card" };
+    for (const nested of [inside(menu, menu), inside(item, item), inside(component, component)])
+      expect(issues([navigate(), assertVisible(nested)])).toEqual([]);
   });
 });

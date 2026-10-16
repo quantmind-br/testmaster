@@ -419,6 +419,38 @@ it("UX-012 a rejected requirement is left out of planning and does not make its 
   expect(planned.sort()).toEqual([reqA.id, reqB.id].sort());
 });
 
+it("a batch records the content hash of exactly the requirements the planner was given, not the rejected one", async () => {
+  const f = await open();
+  const { requirements } = await f.generatedBatch(["A", "B", "C"]);
+  const [reqA, reqB, reqC] = requirements;
+  if (!reqA || !reqB || !reqC) throw new Error("Missing fixtures");
+  const currentC = f.app.requirements
+    .snapshot(f.projectId)
+    .requirements.find((item) => item.id === reqC.id);
+  f.app.requirements.reject(reqC.id, "Out of scope for this release", currentC?.version ?? 1);
+  f.setOutput({ proposals: [f.planFor(reqA.id, "Only A"), f.planFor(reqB.id, "Only B")] });
+  const batch = await f.app.proposals.generate({ projectId: f.projectId });
+  const hashes = batch.extensions?.["testmaster:requirementHashes"] as Record<string, string>;
+  expect(Object.keys(hashes).sort()).toEqual([reqA.id, reqB.id].sort());
+  // A requirement the planner never saw cannot make a proposal stale, and a cited one still does.
+  const edited = f.app.requirements.update(
+    reqA.id,
+    { text: "Health requirement A, clarified" },
+    f.app.requirements.get(reqA.id).version ?? 1,
+  );
+  f.app.requirements.approve(reqA.id, edited.version ?? 1);
+  const [forA, forB] = f.app.proposals.detail(batch.id).proposals;
+  if (!forA || !forB) throw new Error("Missing proposals");
+  const [stale, fresh] = forA.requirementRefs.includes(reqA.id) ? [forA, forB] : [forB, forA];
+  const codes = f.app.proposals
+    .preview(batch.id, [stale.id, fresh.id])
+    .items.map((item) => [item.proposalId, item.validation.issues.map((issue) => issue.code)]);
+  expect(Object.fromEntries(codes)).toEqual({
+    [stale.id]: ["requirements_changed"],
+    [fresh.id]: [],
+  });
+});
+
 it("UX-012 the requirement a conflict decision did not select is never approved and is left out of planning", async () => {
   const f = await open();
   await writeFile(join(f.root, "prd.md"), "Over HTTP the session cookie is ap_session.");

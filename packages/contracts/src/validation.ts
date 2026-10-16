@@ -506,6 +506,31 @@ export function validateDocument(
   if (schema === "ExecutablePlan") assertNoNegativeBeforeRender(checked as ExecutablePlan);
   return { validated: true, schema };
 }
+/** Canonical JSON (keys sorted recursively) of a locator without its container: the element it selects. */
+function locatorSelector(locator: Record<string, unknown>): string {
+  const { container: _container, ...selector } = locator;
+  return JSON.stringify(selector, (_key, value: unknown) =>
+    value && typeof value === "object" && !Array.isArray(value)
+      ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => (a < b ? -1 : 1)))
+      : value,
+  );
+}
+/**
+ * A named role locator whose container chain holds an identical locator. Only named roles: HTML does
+ * not nest headings, buttons or links, while a css selector, an unnamed role or a test id can
+ * legitimately repeat in nested structures (submenus, nested lists, nested components).
+ */
+function selfContainedLocator(value: Record<string, unknown>): boolean {
+  if (value.by !== "role" || typeof value.name !== "string") return false;
+  const own = locatorSelector(value);
+  for (
+    let container = value.container;
+    container && typeof container === "object";
+    container = (container as Record<string, unknown>).container
+  )
+    if (locatorSelector(container as Record<string, unknown>) === own) return true;
+  return false;
+}
 export function validatePlanSemantics(plan: ExecutablePlan): void {
   const issues: ValidationIssue[] = [];
   const reject = (path: string, rule: string, message: string): void => {
@@ -657,7 +682,11 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
         reject(`${path}/input`, "predicateInput", "Download assertion requires outputName");
     }
   }
-  const walk = (value: unknown, path: string): void => {
+  const stepAt = (path: string): PlanStep | undefined =>
+    flat
+      .filter((item) => path === item.path || path.startsWith(`${item.path}/`))
+      .sort((a, b) => b.path.length - a.path.length)[0]?.step;
+  const walk = (value: unknown, path: string, inContainer = false): void => {
     if (Array.isArray(value))
       value.forEach((item, index) => {
         walk(item, `${path}/${index}`);
@@ -666,7 +695,17 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
       const object = value as Record<string, unknown>;
       if (typeof object.variableRef === "string" && !captures.has(object.variableRef))
         reject(`${path}/variableRef`, "binding", "Undeclared variable reference");
-      for (const [key, item] of Object.entries(object)) walk(item, `${path}/${key}`);
+      // A container chain is checked once, from the locator that starts it.
+      if (!inContainer && selfContainedLocator(object)) {
+        const owner = stepAt(path);
+        reject(
+          `${path}/container`,
+          "locatorContainer",
+          `${owner ? `Step "${owner.id}"` : "A step"} locates a named role element inside a container that is the identical named role element; it matches only an element nested inside an identical one (HTML does not nest headings, buttons or links), which is almost certainly a mistake: drop the container or name a different one (for example the form or dialog)`,
+        );
+      }
+      for (const [key, item] of Object.entries(object))
+        walk(item, `${path}/${key}`, key === "container");
     }
   };
   walk(plan, "");

@@ -2709,6 +2709,14 @@ function requestStatusPlan(values: number[]): ExecutablePlan {
     ],
   };
 }
+/** Sets fields on the input of the first (request) step of a `requestStatusPlan`. */
+function withRequestInput(plan: ExecutablePlan, input: Record<string, unknown>): ExecutablePlan {
+  const request = plan.steps[0]!;
+  if (request.kind !== "action" || request.operation !== "request")
+    throw new Error("request step expected");
+  Object.assign(request.input, input);
+  return plan;
+}
 const redirectHop = { url: "http://app.test/legacy", status: 307, location: "/current" };
 it("a statusIn expecting the redirect that the runner followed is a test defect, not a product bug", async () => {
   const f = await fixture({
@@ -2771,8 +2779,11 @@ it.each([
 ] as const)(
   "a statusIn mismatch where the target answered %i gets a rules diagnosis, not cause_unknown",
   async (status, failureKind, recommendedAction, nextStep) => {
+    const plan = requestStatusPlan([200]);
+    // A 401/403 to a request that sends the profile session; one that sends nothing is read apart.
+    if (status === 401 || status === 403) withRequestInput(plan, { auth: "profile" });
     const f = await fixture({
-      plan: requestStatusPlan([200]),
+      plan,
       step: { expected: 200, observed: status },
     });
     await attachTerminalProcess(
@@ -3308,6 +3319,113 @@ it("mapped requirements keep their review state, are bounded, and disclose what 
   expect(data.limitations).toContain(
     "Mapped requirements missing from the project's current requirement snapshot: 1.",
   );
+});
+const unauthenticatedCriterion = (status: number) =>
+  `Without credentials, the response status is ${status} and the JSON body's error.code is "unauthorized".`;
+async function rejectedWithoutCredentials(
+  criteria: string[] | null,
+  approval: string | null = "apr_00000000-0000-4000-8000-000000000001",
+  input: Record<string, unknown> = {},
+) {
+  const f = await fixture({
+    plan: withRequestInput(requestStatusPlan([403]), input),
+    step: { expected: [403], observed: 401 },
+  });
+  if (criteria)
+    storeRequirements(f, [storedRequirement(3, { acceptanceCriteria: criteria, approval })]);
+  await attachTerminalProcess(
+    f,
+    {
+      response: { status: 401, failureExcerpt: '{"error":{"code":"unauthorized"}}' },
+      redirects: [],
+    },
+    { relativePath: "http/request.json", kind: "http" },
+  );
+  const analysis = await f.service.analyze(f.run.id, {});
+  return { analysis, diagnosis: analysis.diagnosis! };
+}
+it("a 401 answer to a request that sent no credentials makes the expectation stale when an approved criterion states 401", async () => {
+  const { analysis, diagnosis } = await rejectedWithoutCredentials([unauthenticatedCriterion(401)]);
+  expect(analysis).toMatchObject({ failureKind: "test_fragility", recommendedAction: "fix_test" });
+  expect(diagnosis.conclusion.text).toContain("sends no valid credential by design");
+  expect(diagnosis.conclusion.text).toContain(
+    `approved requirement ${requirementId(3)}, acceptance criterion 1`,
+  );
+  expect(diagnosis.nextSteps[0]?.text).toContain("testmaster_save_test with testId");
+  expect(diagnosis.nextSteps[0]?.text).toContain("CLI: test revision create");
+  expect(JSON.stringify([analysis.hypotheses, diagnosis])).not.toContain(
+    "refused the credentials or session",
+  );
+  expect(JSON.stringify(diagnosis.nextSteps)).not.toContain("is valid and bound");
+  expect(diagnosis.healing.advice).toBe("not_indicated");
+  // Control: a criterion that states the expected status, not the observed one, blames the target.
+  const contradicted = await rejectedWithoutCredentials([unauthenticatedCriterion(403)]);
+  expect(contradicted.analysis).toMatchObject({
+    failureKind: "product_bug",
+    recommendedAction: "fix_product",
+  });
+  expect(contradicted.diagnosis.conclusion.text).toContain("acceptance criterion 1");
+  // Control: a criterion that names both statuses does not say which side is wrong.
+  const both = await rejectedWithoutCredentials([
+    `Without credentials the status is 401 or 403 depending on the gateway.`,
+  ]);
+  expect(both.analysis).toMatchObject({ failureKind: "unknown" });
+  // A literal or deliberately invalid credential is not one the environment supplied.
+  for (const headers of [
+    { cookie: { invalidCredential: { cookie: "ap_session" } } },
+    { authorization: { literal: "Bearer forged" } },
+  ]) {
+    const forged = await rejectedWithoutCredentials([unauthenticatedCriterion(401)], undefined, {
+      headers,
+    });
+    expect(forged.analysis).toMatchObject({ failureKind: "test_fragility" });
+    expect(JSON.stringify(forged.diagnosis.nextSteps)).not.toContain("is valid and bound");
+  }
+});
+it("a 401 answer to a request that sent no credentials keeps both alternatives and no auth profile hint when no approved criterion states a status", async () => {
+  for (const { criteria, approval } of [
+    { criteria: null, approval: undefined },
+    { criteria: ["The list is returned as a JSON array."], approval: undefined },
+    // An unapproved requirement establishes nothing, even when it states the observed status.
+    { criteria: [unauthenticatedCriterion(401)], approval: null },
+  ]) {
+    const { analysis, diagnosis } = await rejectedWithoutCredentials(criteria, approval);
+    expect(analysis).toMatchObject({
+      failureKind: "unknown",
+      recommendedAction: "review_contract",
+    });
+    expect(diagnosis.conclusion.status).toBe("cause_partially_supported");
+    expect(diagnosis.conclusion.text).toContain("sends no valid credential by design");
+    expect(diagnosis.alternatives.map((item) => item.failureKind).sort()).toEqual([
+      "product_bug",
+      "test_fragility",
+    ]);
+    expect(JSON.stringify([analysis.hypotheses, diagnosis])).not.toContain(
+      "refused the credentials or session",
+    );
+    expect(JSON.stringify(diagnosis.nextSteps)).not.toContain("is valid and bound");
+  }
+});
+it("a 401 answer to a request that sends the auth profile or a secret still points at the credentials", async () => {
+  for (const input of [
+    { auth: "profile" },
+    { headers: { "X-Api-Key": { secretRef: "sec_00000000-0000-4000-8000-000000000001" } } },
+  ]) {
+    const plan = withRequestInput(requestStatusPlan([200]), input);
+    const f = await fixture({ plan, step: { expected: [200], observed: 401 } });
+    storeRequirements(f, [
+      storedRequirement(3, { acceptanceCriteria: [unauthenticatedCriterion(401)] }),
+    ]);
+    const analysis = await f.service.analyze(f.run.id, {});
+    expect(analysis).toMatchObject({
+      failureKind: "environment",
+      recommendedAction: "fix_environment",
+    });
+    expect(analysis.diagnosis?.conclusion.text).toContain(
+      "the target refused the credentials or session of request step request",
+    );
+    expect(analysis.diagnosis?.nextSteps[0]?.text).toContain("auth profile or secret is valid");
+  }
 });
 it("a failed test that maps to no requirement tells the model so instead of implying one", async () => {
   const f = await fixture({ plan: { ...requestStatusPlan([201]), requirementRefs: [] } });

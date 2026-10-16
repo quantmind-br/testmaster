@@ -30,7 +30,7 @@ export const unsentModelReasons: ReadonlySet<string> = new Set([
   "model_not_in_inventory",
 ]);
 export const promptVersions = {
-  normalize: "normalize-3-evidence-handles",
+  normalize: "normalize-4-empty-batches",
   plan: "plan-4-integration-workflow",
   resolve_action: "resolve-action-1",
   generate_code: "generate-code-3-source-schemas",

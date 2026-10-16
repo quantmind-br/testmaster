@@ -89,6 +89,7 @@ const supplemental = {
     document: P.Json,
   }),
   DocumentValidationResult: P.Obj({ validated: Type.Literal(true), schema: P.Name }),
+  /** One extraction batch; a batch that states no requirement (a preamble, a title) returns none. */
   AIRequirementsOutput: P.Obj({
     requirements: Type.Array(
       P.Obj({
@@ -100,7 +101,7 @@ const supplemental = {
         confidence: Type.Union([Type.Number({ minimum: 0, maximum: 1 }), Type.Null()]),
         reason: P.Description,
       }),
-      { minItems: 1, maxItems: 100 },
+      { maxItems: 100 },
     ),
     conflicts: Type.Array(
       P.Obj({

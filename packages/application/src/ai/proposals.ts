@@ -580,7 +580,7 @@ export class ProposalsService {
         state: "proposed",
         extensions: {
           "testmaster:requirementVersion": snapshot.version,
-          "testmaster:requirementHashes": requirementContentHashes(snapshot.requirements),
+          "testmaster:requirementHashes": requirementContentHashes(requirements),
           "testmaster:modelCallId": output.modelCallId,
           ...(generated.unsupported.length
             ? { "testmaster:unsupportedRequirements": generated.unsupported }

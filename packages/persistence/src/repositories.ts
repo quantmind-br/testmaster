@@ -557,7 +557,7 @@ export class LeaseRepository {
     });
   }
 }
-export const auxiliaryQueues = ["analysis", "healing", "delivery"] as const;
+export const auxiliaryQueues = ["analysis", "healing", "delivery", "normalization"] as const;
 export type AuxiliaryQueue = (typeof auxiliaryQueues)[number];
 const auxiliaryQueueSql = auxiliaryQueues.map((queue) => `'${queue}'`).join(",");
 /** Validated, authorization-relevant job input; the actor is rechecked before dispatch. */
@@ -703,6 +703,49 @@ export class AuxiliaryLeaseRepository {
         targetId,
       )
       .map((row) => this.decode(row));
+  }
+  /**
+   * Takes the one exclusive hold on a target's job, a single-flight lock across processes. The job
+   * (identified by the payload) is created on first use and reused afterwards, so its `progress`
+   * survives from one holder to the next. The hold is granted when nobody has it, when the last
+   * holder finished, or when the last holder's lease expired (a dead process); `null` while a
+   * live holder keeps renewing it. Never for work that starts a paid call: such a job must be
+   * settled, not taken over.
+   */
+  claimExclusive(request: {
+    workspaceId: string;
+    owner: string;
+    queue: AuxiliaryQueue;
+    payload: AuxiliaryPayload;
+    leaseMs?: number;
+    now?: string;
+  }): (AuxiliaryFence & { job: AuxiliaryJob }) | null {
+    const apply = () => {
+      const now = request.now ?? new Date().toISOString();
+      const { job } = this.enqueue(request.workspaceId, request.queue, request.payload, now);
+      if (job.progress.paidCallStarted)
+        throw new ContractError("PRECONDITION_FAILED", "Paid call outcome must be settled");
+      const fence = job.fence + 1;
+      const changed = this.database.run(
+        "UPDATE job_leases SET state='leased',lease_owner=?,lease_expires_at=?,fence=?,attempts=attempts+1,dispatchable=1 WHERE workspace_id=? AND id=? AND fence=? AND (state<>'leased' OR lease_expires_at<=?)",
+        request.owner,
+        new Date(Date.parse(now) + (request.leaseMs ?? 60000)).toISOString(),
+        fence,
+        request.workspaceId,
+        job.jobId,
+        job.fence,
+        now,
+      );
+      if (!changed.changes) return null;
+      return {
+        workspaceId: request.workspaceId,
+        jobId: job.jobId,
+        owner: request.owner,
+        fence,
+        job: this.get(request.workspaceId, job.jobId) as AuxiliaryJob,
+      };
+    };
+    return this.database.inTransaction ? apply() : this.database.withTx(apply);
   }
   claim(request: {
     workspaceId: string;

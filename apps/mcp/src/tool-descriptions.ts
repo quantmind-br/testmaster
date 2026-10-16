@@ -23,7 +23,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_review_plan:
     "Accept or reject proposals at expectedVersion = the batch version (batch.version, or batchVersion of an edit); an optional reason is kept on each decided one. Returns acceptedProposals {proposalId, testId, revisionId}. Stale version: details.diff or staleProposals. Next: testmaster_generate_tests.",
   testmaster_generate_tests:
-    "Generate executable candidates from accepted proposals (proposalIds) or revisions (revisionIds), one project per call; provider/model pick the model; a model call has no deadline. Each candidate names its testId, testName and proposalId. Refused ones go to validationErrors. Not execution evidence.",
+    "Generate candidates from accepted proposals (proposalIds) or revisions (revisionIds), one project per call; provider/model pick the model; no model deadline. Each candidate: id (its revision; testmaster_run_tests revisionId), testId, testName, sourceRevisionId, proposalId. Refused: validationErrors.",
   testmaster_run_tests:
     "Run testIds with environmentId, or a list (suiteId, replay only), in the sandbox; revisionId pins one test's revision (pin several in a testmaster_save_suite list). Mode defaults to replay. jobId re-reads a batch. wait=true blocks until timeoutMs (runs go on), or poll testmaster_get_run.",
   testmaster_get_run:

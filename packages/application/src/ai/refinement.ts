@@ -235,7 +235,9 @@ export class RefinementService {
         state: "proposed",
         extensions: {
           "testmaster:requirementVersion": snapshot.version,
-          "testmaster:requirementHashes": requirementContentHashes(snapshot.requirements),
+          "testmaster:requirementHashes": requirementContentHashes(
+            snapshot.requirements.filter((item) => base.requirementRefs.includes(item.id)),
+          ),
           "testmaster:modelCallId": generated.modelCallId,
           "testmaster:refinesTest": { testId, baseRevisionId: revision.id },
         },

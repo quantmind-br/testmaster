@@ -1,11 +1,16 @@
 import { ContractError, type Requirement, type RequirementReview } from "@testmaster/contracts";
 import { canonicalJson, semanticHash } from "@testmaster/domain";
 import { AuditRepository, type EntityDocument } from "@testmaster/persistence";
-import type { SourceEvidenceRef } from "@testmaster/planner";
+import type { SourceEvidenceRef, SourceParseResult } from "@testmaster/planner";
 import { authoringTransaction, decisionReason } from "../authoring.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "../context.js";
 import type { ModelService } from "./model.js";
 import { type NormalizeProgress, normalizeSources } from "./normalization.js";
+import {
+  holdNormalization,
+  type NormalizationHold,
+  normalizationInputsKey,
+} from "./normalization-lock.js";
 import {
   appendRequirementLog,
   describeRequirement,
@@ -14,6 +19,16 @@ import {
   revisionIdsOf,
 } from "./requirement-log.js";
 import type { RevisionLocation, SourcesService } from "./sources.js";
+
+type NormalizeInput = {
+  projectId: string;
+  sourceRevisionIds: string[];
+  provider?: string;
+  model?: string;
+  signal?: AbortSignal;
+  /** Synchronous; called with completed 0..total as model batches finish. */
+  onProgress?: (progress: NormalizeProgress) => void;
+};
 
 const MAX_ORIGINS = 50;
 const MAX_EXCERPT = 600;
@@ -241,15 +256,26 @@ export class RequirementsService {
       canonicalJson(snapshot),
     );
   }
-  async normalize(input: {
-    projectId: string;
-    sourceRevisionIds: string[];
-    provider?: string;
-    model?: string;
-    signal?: AbortSignal;
-    /** Synchronous; called with completed 0..total as model batches finish. */
-    onProgress?: (progress: NormalizeProgress) => void;
-  }): Promise<RequirementSnapshot> {
+  async normalize(input: NormalizeInput): Promise<RequirementSnapshot> {
+    const sources = this.normalizableSources(input);
+    // The base this caller saw. A normalization of the same inputs that commits on it while this
+    // call waits for the project's lock is returned as is, instead of paying for a second one.
+    const seen = this.snapshot(input.projectId).version;
+    const inputs = normalizationInputsKey(input);
+    const hold = await holdNormalization(this.ctx, input.projectId, input.signal);
+    try {
+      const commit = hold.committed(seen, inputs);
+      if (commit) {
+        const current = this.snapshot(input.projectId);
+        if (current.version === commit.version && current.fingerprint === commit.fingerprint)
+          return current;
+      }
+      return await this.normalizeOnCurrentBase(input, sources, inputs, hold);
+    } finally {
+      hold.release();
+    }
+  }
+  private normalizableSources(input: NormalizeInput): SourceParseResult[] {
     this.ctx.authorize("W", input.projectId);
     if (!input.sourceRevisionIds.length)
       throw new ContractError("INVALID_ARGUMENT", "Source revisions are required");
@@ -263,6 +289,18 @@ export class RequirementsService {
         "PRECONDITION_FAILED",
         "Sources requiring input cannot be normalized",
       );
+    return sources;
+  }
+  /**
+   * Runs while holding the project's normalization lock, so only an edit that is not a
+   * normalization (a review, a rejection) can move the base during the model call.
+   */
+  private async normalizeOnCurrentBase(
+    input: NormalizeInput,
+    sources: SourceParseResult[],
+    inputs: string,
+    hold: NormalizationHold,
+  ): Promise<RequirementSnapshot> {
     const before = this.snapshot(input.projectId);
     const codeRevisionIds = new Set(
       input.sourceRevisionIds.filter((id) =>
@@ -281,7 +319,7 @@ export class RequirementsService {
       if (current.version !== before.version)
         throw new ContractError(
           "REVISION_CONFLICT",
-          "Requirement base changed during normalization",
+          `Requirement base changed during normalization: it was version ${before.version} when this call started and is now version ${current.version}. The requirements this call produced were not stored. Read testmaster://requirements/${input.projectId} (CLI: requirement list) to see the current ones, then normalize again.`,
           { diff: { before: snapshotDigest(before), current: snapshotDigest(current) } },
         );
       const byKey: Record<string, string> = {};
@@ -351,6 +389,12 @@ export class RequirementsService {
       };
       this.save(input.projectId, snapshot);
       this.audit("requirements.normalized", input.projectId, before, snapshot);
+      hold.record({
+        baseVersion: before.version,
+        version: snapshot.version,
+        fingerprint: snapshot.fingerprint,
+        inputs,
+      });
       const previousByKey = new Map(
         current.requirements.map((item) => [requirementKey(item), item]),
       );

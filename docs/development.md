@@ -983,8 +983,10 @@ scrubbed with the request's secrets. Model output text is never included.
 Model cache: `ModelService.complete` builds a new `ModelGateway` for every call without passing
 `cache`, so the gateway's `MemoryModelCache` (`model.ts`, `gateway.ts` constructor) is always
 empty and `cache_hit` is always 0, even within one process. No persistent cache store exists
-(`model_calls` keeps only `responseHash`). A retried normalization therefore pays for its model
-calls again. This is a documented limitation, not a behavior change.
+(`model_calls` keeps only `responseHash`). A normalization retried after the first one finished
+therefore pays for its model calls again; one retried while the first still runs waits for it and
+reuses its snapshot (single-flight lock `normalization` over `job_leases`, `ai/normalization-lock.ts`).
+This is a documented limitation, not a behavior change.
 
 Semantic checks in the repair loop: `ModelRequest.check(output)` (model-gateway `types.ts`) runs
 after schema validation, also on a cache hit (a cached output that fails it is a miss, so it is
@@ -1016,7 +1018,9 @@ tells the model to supply every credential a `secrets` entry holds, user names i
 `secretRef`, and to keep account names out of step ids.
 Accepting a proposal compares
 the requirements it cites with `extensions['testmaster:requirementHashes']` of its batch (content
-hashes taken at generation), not with the batch-wide snapshot fingerprint; a batch stored without
+hashes taken at generation, only of the requirements given to the planner: the selected ones, never a
+rejected or superseded one; a test refinement hashes the requirements its base plan cites), not with
+the batch-wide snapshot fingerprint; a batch stored without
 them counts every cited requirement as changed. `proposals.edit` clears the proposal's `warnings`
 (the model wrote them for its own plan; the audit event keeps the old list). Known gap:
 `proposals.edit` only re-runs the planner checks, not the secret, schema-pointer and status-only ones.
