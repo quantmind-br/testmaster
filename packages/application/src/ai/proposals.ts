@@ -40,6 +40,7 @@ import {
   requirementContentHash,
   requirementContentHashes,
   requirementRejection,
+  snapshotDigest,
   supersedingConflict,
 } from "./requirements.js";
 import { applyServerBasePath, unresolvedSchemaPointers } from "./source-documents.js";
@@ -460,7 +461,10 @@ export class ProposalsService {
     const commit = () => {
       if (this.requirements.snapshot(input.projectId).fingerprint !== snapshot.fingerprint)
         throw new ContractError("REVISION_CONFLICT", "Requirements changed during generation", {
-          diff: { before: snapshot, current: this.requirements.snapshot(input.projectId) },
+          diff: {
+            before: snapshotDigest(snapshot),
+            current: snapshotDigest(this.requirements.snapshot(input.projectId)),
+          },
         });
       const batch = entity(this.ctx, "pbt", {
         projectId: input.projectId,
@@ -597,10 +601,10 @@ export class ProposalsService {
       this.ctx.authorize("W", batch.projectId);
       if (current.version !== expectedVersion)
         throw new ContractError("REVISION_CONFLICT", "Proposal changed", {
+          // The caller's own plan is not echoed back; the current one is what a retry must start from.
           diff: {
             expectedVersion,
             currentVersion: current.version,
-            submitted: plan,
             current: current.plan,
           },
         });
@@ -724,11 +728,18 @@ export class ProposalsService {
           );
         if (current.version !== input.expectedVersion)
           throw new ContractError("REVISION_CONFLICT", "Proposal batch changed", {
+            // Ids, states and versions only: the agent re-reads the batch for the plans.
             diff: {
               expectedVersion: input.expectedVersion,
               currentVersion: current.version,
-              proposals,
+              batchState: current.state,
+              proposals: proposals.map(({ id: proposalId, state, version }) => ({
+                id: proposalId,
+                state,
+                version,
+              })),
             },
+            batchId: id,
           });
         if (
           [...input.acceptIds, ...input.rejectIds].some(

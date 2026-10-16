@@ -1,10 +1,15 @@
+import { sourceSchemaValidatorSource } from "./source-schema-validator.js";
+
 /**
  * `@playwright/test` as imported Playwright code sees it: the real module (same instance, so
- * Playwright's own bookkeeping holds) whose `test` also provides the `secrets`, `profileRequest` and
- * `profilePage` fixtures. The runner stages this module for imported code it executes, and a code
- * export ships the same source in a standalone project; only where the values come from differs,
- * which the caller supplies as a preamble. The stock `request` and `page` stay unauthenticated: code
- * that wants the auth profile session asks for it per test without ever reading its values.
+ * Playwright's own bookkeeping holds) whose `test` also provides the `secrets`, `profileRequest`,
+ * `profilePage` and `sourceSchemas` fixtures. The runner stages this module for imported code it
+ * executes, and a code export ships the same source in a standalone project; only where the values
+ * come from differs, which the caller supplies as a preamble. The stock `request` and `page` stay
+ * unauthenticated: code that wants the auth profile session asks for it per test without ever
+ * reading its values. `sourceSchemas.violations(sourceRevisionId, pointer, value)` checks a value
+ * against a source schema frozen into the test (`schemas.json` beside this module) exactly as the
+ * `jsonSchema` predicate of a plan does.
  */
 export interface PlaywrightFixturesOptions {
   /** Module specifier of the real `@playwright/test`, resolved by the generated module itself. */
@@ -37,6 +42,7 @@ const secrets = Object.freeze({
     return secretValue(name);
   },
 });
+${sourceSchemaValidatorSource()}
 const VERBS = ["get", "post", "put", "patch", "delete", "head", "fetch"];
 function withProfileHeaders(context, session, baseURL) {
   if (Object.keys(session.headers).length === 0) return context;
@@ -73,6 +79,9 @@ const extended = base.extend({
     const context = await browser.newContext({ storageState: session.storageState });
     await use(await context.newPage());
     await context.close();
+  },
+  sourceSchemas: async ({}, use) => {
+    await use(sourceSchemas);
   },
 });
 for (const key of Reflect.ownKeys(base)) {

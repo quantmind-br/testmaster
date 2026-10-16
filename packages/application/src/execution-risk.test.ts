@@ -389,6 +389,34 @@ describe("admission risk boundaries", () => {
     });
   });
 
+  it("records the retargeted environment as effective, never the project file default", async () => {
+    const { app, init, request } = await fixture();
+    const fileDefault = app.config.effectiveConfig.config.environment?.baseUrl;
+    const environment = app.environments.get(init.environmentId);
+    app.environments.update(
+      environment.id,
+      { baseUrl: "http://127.0.0.1:4100", locale: "pt-BR", timezone: "America/Sao_Paulo" },
+      environment.version ?? 1,
+    );
+    const receipt = await app.runs.admit(request, { wait: true });
+    const { matrixCell } = app.runs.get(receipt.runId);
+    expect(fileDefault).toBe("http://127.0.0.1:3000");
+    expect(matrixCell).toMatchObject({
+      baseUrl: "http://127.0.0.1:4100",
+      effectiveConfig: {
+        config: {
+          environment: {
+            baseUrl: "http://127.0.0.1:4100",
+            locale: "pt-BR",
+            timezone: "America/Sao_Paulo",
+          },
+        },
+        origins: { "environment.baseUrl": "environmentRevision" },
+      },
+    });
+    expect(JSON.stringify(matrixCell)).not.toContain(String(fileDefault));
+  });
+
   it("admits a single durable unit under overlapping idempotent requests and rolls back conflicting reuse", async () => {
     const { app, request } = await fixture();
     const options = { wait: true, idempotencyKey: "overlapping-admission-risk-key" };

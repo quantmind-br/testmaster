@@ -32,9 +32,15 @@ function sessionFor(fixture) {
 
 /**
  * Builds the `node_modules` the staged code resolves: every entry of the runner's own
- * `node_modules` is linked, except `@playwright/test`, which is the shared fixtures module.
+ * `node_modules` is linked, except `@playwright/test`, which is the shared fixtures module. The
+ * source schemas the code was generated against (`schemas`, keyed by source revision id + pointer)
+ * are written beside that module, where its `sourceSchemas` fixture reads them.
  */
-export async function stageImportedModules(source: string, target: string): Promise<void> {
+export async function stageImportedModules(
+  source: string,
+  target: string,
+  schemas: Record<string, unknown> = {},
+): Promise<void> {
   const scope = join(source, "@playwright");
   const shim = join(target, "@playwright", "test");
   await mkdir(shim, { recursive: true });
@@ -42,6 +48,7 @@ export async function stageImportedModules(source: string, target: string): Prom
     if (entry !== "@playwright") await symlink(join(source, entry), join(target, entry));
   for (const entry of await readdir(scope))
     if (entry !== "test") await symlink(join(scope, entry), join(target, "@playwright", entry));
+  await writeFile(join(shim, "schemas.json"), JSON.stringify(schemas));
   await writeFile(
     join(shim, "package.json"),
     JSON.stringify({

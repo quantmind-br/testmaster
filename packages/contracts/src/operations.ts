@@ -160,11 +160,16 @@ export const ProjectConfig = Obj({
   telemetry: Type.Optional(Obj({ enabled: Type.Boolean() })),
   extensions: Type.Optional(Extensions),
 });
+/**
+ * The configuration a Run was admitted under. `origins` names, for every leaf, where its value
+ * came from. `environment.*` leaves of a Run are copied from the EnvironmentRevision the Run
+ * executed against (origin `environmentRevision`), never from the project file.
+ */
 export const EffectiveConfig = Obj({
   config: ProjectConfig,
   origins: Type.Record(
     Type.String(),
-    Enum(["flag", "environment", "project", "profile", "default"]),
+    Enum(["flag", "environment", "environmentRevision", "project", "profile", "default"]),
   ),
   policyHash: ContentDigest,
 });

@@ -15,15 +15,15 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_analyze_code:
     "Snapshot the code: whole codebase (no base), base..head, or base..working tree (dirty=true, needs base). Bounded receipt: counts, first 50 skipped files, first 100 features {id, stableKey}, diff impact. All features by key: testmaster://projects/{projectId}/features?match=. Not a plan source.",
   testmaster_normalize_requirements:
-    "Normalize source revisions into requirements and conflicts (id, reason, requirementIds); returns sourceSnapshotId and version. provider/model pick the model. Slow: _meta.progressToken gets progress notifications. Next: testmaster_review_requirements.",
+    "Normalize source revisions into requirements (each with a status) and conflicts (id, reason, requirementIds); returns sourceSnapshotId and version. provider/model pick the model. Slow: _meta.progressToken gets progress notifications. Next: testmaster_review_requirements.",
   testmaster_explore:
     "Browser exploration. featureIds: testmaster://projects/{projectId}/features?match=. budget: steps 1..100, modelCalls 1..steps, timeMs 1000..300000 (browser time only; a model call is never cut). provider/model pick the model; mutationActions: form steps. Failure: testmaster:errorMessage.",
   testmaster_generate_plan:
     "Generate plan proposals (not tests) from the approved snapshot (sourceSnapshotId from testmaster_review_requirements); provider/model pick the model. The model sees only existing secrets and auth profiles (testmaster_set_secret, testmaster_save_auth_profile first). Next: testmaster_review_plan.",
   testmaster_review_plan:
-    "Record accept or reject decisions for a proposal batch at expectedVersion. Unselected proposals stay pending. Accepting refuses only the proposals whose cited requirements changed since generation (details.staleProposals). Next: testmaster_generate_tests.",
+    "Accept or reject proposals at expectedVersion = the batch version (plan-batches resource batch.version, or batchVersion of an edit). Unselected stay pending; stale requirements: details.staleProposals. A stale version returns each proposal's state in details.diff. Next: testmaster_generate_tests.",
   testmaster_generate_tests:
-    "Generate executable candidates from accepted proposals (proposalIds) or revisions (revisionIds), at least one, one project per call; provider/model pick the model; a model call has no deadline. Refused revisions go to validationErrors. Not execution evidence; review before testmaster_run_tests.",
+    "Generate executable candidates from accepted proposals (proposalIds) or revisions (revisionIds), one project per call; provider/model pick the model; a model call has no deadline. Each candidate names its testId, testName and proposalId. Refused ones go to validationErrors. Not execution evidence.",
   testmaster_run_tests:
     "Run testIds with environmentId (revisionId: exact candidate or healed revision) or a list (suiteId) in the sandbox; mode defaults to replay (lists: replay only). jobId re-reads a batch. wait=true blocks until timeoutMs (runs continue), or poll testmaster_get_run. idempotencyKey makes retries safe.",
   testmaster_get_run:
@@ -45,7 +45,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_approve_healing:
     "Approve at expectedVersion after testmaster_review_healing; creates the candidate revision and a verification run, healed only when it passes (testmaster_get_run). Needs write scope; the decision is recorded with your principal.",
   testmaster_edit_plan:
-    "Replace the plan of a still-proposed proposal at expectedVersion (validated; its requirement and evidence references are kept). Returns the proposal with its new version. Next: testmaster_review_plan.",
+    "Replace the plan of a still-proposed proposal at the proposal's expectedVersion (validated; its requirement and evidence references are kept). Returns the proposal and batchVersion, the version testmaster_review_plan wants: every edit raises it. Next: testmaster_review_plan.",
   testmaster_save_test:
     "Store a plan as a new test (projectId) or a new candidate revision of a test (testId). Returns test, revision, active and nextActions: a new revision is not active until testmaster_promote_revision.",
   testmaster_promote_revision:

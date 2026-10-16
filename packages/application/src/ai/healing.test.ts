@@ -1670,6 +1670,50 @@ it("a refused approval admission leaves the proposal untouched and names the CI 
   expect(approved.status).toBe("approved");
   expect(approved.verificationRunId).toMatch(/^run_/);
 });
+it("approval ignores a project environment section the failed Run never used", async () => {
+  const f = await proposedFixture();
+  const root = roots.at(-1)!;
+  const home = join(root, "home");
+  const open = async (env: Record<string, string>) => {
+    const app = await Application.open({ cwd: root, home, env: { HOME: home, ...env } });
+    apps.push(app);
+    return app;
+  };
+  // Admit the failed Run from the project file written by `testmaster init`, as every Run is.
+  const admitting = await open({});
+  const failed = admitting.runs.resolve({
+    testId: f.test.id,
+    environmentId: String(f.failed.matrixCell.environmentId),
+  });
+  Object.assign(failed, {
+    phase: "completed",
+    status: "failed",
+    outcome: "failed",
+    gate: "failed",
+  });
+  admitting.context.entities.insert("Run", failed);
+  const { id: _healed, ...healed } = admitting.revisions.get(f.proposal.candidateRevisionId);
+  const candidate = entity(admitting.context, "rev", { ...healed, ordinal: 4 });
+  admitting.context.entities.insert("TestRevision", candidate);
+  const proposal = {
+    ...f.proposal,
+    id: entity(admitting.context, "hea", {}).id,
+    failedRunId: failed.id,
+    candidateRevisionId: candidate.id,
+  };
+  admitting.context.entities.insert("HealingProposal", proposal);
+  // Executions use the Environment revision; this origin only changes the `testmaster init` default.
+  const moved = await open({ TESTMASTER_BASE_URL: "http://127.0.0.1:9" });
+  expect(moved.config.effectiveConfig.config.environment?.baseUrl).toBe("http://127.0.0.1:9");
+  vi.spyOn(moved, "preflight").mockResolvedValue();
+  const approved = await moved.healing.approve(proposal.id, 1);
+  expect(approved.status).toBe("approved");
+  const { matrixCell } = moved.runs.get(String(approved.verificationRunId));
+  expect(matrixCell).toMatchObject({
+    effectiveConfig: { origins: { "environment.baseUrl": "environmentRevision" } },
+  });
+  expect(JSON.stringify(matrixCell)).not.toContain("http://127.0.0.1:9");
+});
 function bearerIdentity(app: Application, scopes: ("R" | "W" | "X" | "A")[]) {
   return { principalId: app.context.principalId, scopes, grants: [] };
 }

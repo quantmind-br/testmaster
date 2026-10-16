@@ -75,6 +75,11 @@ const McpRunReceipt = P.Obj({
   ...Ops.RunReceipt.properties,
   resources: P.Obj({ result: Type.String(), manifest: Type.String(), report: Type.String() }),
 });
+/** A requirement with the state derived from its decision fields: nothing about it is stored twice. */
+const McpRequirement = P.Obj({
+  ...Entities.entities.Requirement.properties,
+  status: P.Enum(["pending", "approved", "rejected", "superseded"]),
+});
 const { skippedFiles: _skipped, ...codeSnapshotProperties } =
   Entities.entities.CodeSnapshot.properties;
 const CodeSnapshotSummary = P.Obj(codeSnapshotProperties);
@@ -616,7 +621,7 @@ const supplemental = {
     conflicts: Type.Array(P.Obj({ left: P.EvidenceRef, right: P.EvidenceRef })),
   }),
   NormalizedRequirements: P.Obj({
-    requirements: Type.Array(Entities.entities.Requirement),
+    requirements: Type.Array(McpRequirement),
     conflicts: Type.Array(
       P.Obj({
         id: P.Name,
@@ -697,6 +702,11 @@ const supplemental = {
       }),
     ),
   }),
+  /** The edited `Proposal` plus the version its batch has now, which `testmaster_review_plan` takes. */
+  McpEditedPlan: P.Obj({
+    ...Entities.entities.Proposal.properties,
+    batchVersion: P.Version,
+  }),
   McpRunReceipt,
   McpBatchReceipt: P.Obj({
     ...Ops.BatchReceipt.properties,
@@ -706,7 +716,18 @@ const supplemental = {
   GeneratedTestsReceipt: P.Obj({
     /** Revisions the call tried to generate code for; `candidates` plus failures show partial success. */
     requested: P.Nonnegative,
-    candidates: Type.Array(P.id("rev")),
+    /** One entry per candidate revision created: which test it belongs to and which proposal it came from. */
+    candidates: Type.Array(
+      P.Obj({
+        id: P.id("rev"),
+        testId: P.id("tst"),
+        testName: P.Name,
+        /** The revision the code was generated from (the accepted proposal's revision, or the one regenerated). */
+        sourceRevisionId: P.id("rev"),
+        /** Present when the candidate was generated from an accepted proposal. */
+        proposalId: Type.Optional(P.id("pro")),
+      }),
+    ),
     /** One entry per revision whose candidate the checks refused after every repair. */
     validationErrors: Type.Array(P.Obj({ path: P.Name, message: P.Description })),
   }),

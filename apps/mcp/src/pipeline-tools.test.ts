@@ -421,6 +421,47 @@ it("review_requirements decides at the snapshot version and returns the fingerpr
   expect(again.body.sourceSnapshotId).toBe(snapshot.fingerprint);
 });
 
+it("the requirements resource states each requirement's decision as one status", async () => {
+  const f = await fixture();
+  const seeded = await seedSnapshot(f);
+  const statuses = async () => {
+    const read = async (uri: string) =>
+      JSON.parse(String((await f.client.readResource({ uri })).contents[0]?.text));
+    const snapshot = (await read(`testmaster://requirements/${f.init.projectId}`)) as {
+      requirements: { id: string; status: string }[];
+    };
+    const byId = Object.fromEntries(snapshot.requirements.map((item) => [item.id, item.status]));
+    // One requirement read by id agrees with the snapshot.
+    const single = (await read(`testmaster://requirements/${seeded.second}`)) as { status: string };
+    expect(single.status).toBe(byId[seeded.second]);
+    return [byId[seeded.first], byId[seeded.second]];
+  };
+  const base = { projectId: f.init.projectId };
+
+  expect(await statuses()).toEqual(["pending", "pending"]);
+  // The conflict decision approves one requirement and supersedes the other.
+  await f.call("testmaster_review_requirements", {
+    ...base,
+    expectedVersion: 2,
+    adjudicate: [
+      { conflictId: "conflict-1", selectedRequirementId: seeded.first, reason: "First wins" },
+    ],
+    approve: [seeded.first],
+  });
+  expect(await statuses()).toEqual(["approved", "superseded"]);
+  // A rejection is final and outranks the supersession it came after.
+  const version = f.app.requirements.snapshot(f.init.projectId).version;
+  const rejected = await f.call("testmaster_review_requirements", {
+    ...base,
+    expectedVersion: version,
+    reject: [{ requirementId: seeded.second, reason: "Out of scope" }],
+  });
+  expect(rejected.body.results).toEqual([
+    { action: "reject", id: seeded.second, ok: true, error: null },
+  ]);
+  expect(await statuses()).toEqual(["approved", "rejected"]);
+});
+
 it("review_requirements rejects a requirement with a mandatory reason and keeps the snapshot fingerprint", async () => {
   const f = await fixture();
   const seeded = await seedSnapshot(f);

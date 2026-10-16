@@ -396,13 +396,39 @@ function codeFailure(steps: readonly Evidence[]): Evidence | undefined {
     (item) =>
       item.codeOperation &&
       item.codeOperation !== "playwright_run" &&
-      item.step?.status === "failed" &&
+      (item.step?.status === "failed" || item.step?.status === "inconclusive") &&
       item.step.error,
   );
   const first = carriers[0];
   return (
     first && carriers.findLast((item) => item.step!.error!.message === first.step!.error!.message)
   );
+}
+const NETWORK_ERRORS: readonly string[] = [
+  "ECONNREFUSED",
+  "ENOTFOUND",
+  "EHOSTUNREACH",
+  "ENETUNREACH",
+];
+/**
+ * The failed code step that is an error the test code threw: the reporter ends such a step
+ * `inconclusive` with `insufficient_evidence`, because no assertion judged the target.
+ */
+function codeThrow(steps: readonly Evidence[]): Evidence | undefined {
+  const item = codeFailure(steps);
+  return item?.step?.reasonCode === "insufficient_evidence" ? item : undefined;
+}
+/** The first line of a recorded error message, with the `at file:line[:column]` it ends on. */
+function errorHeadline(message: string): string {
+  const [first = "", ...rest] = message.split("\n");
+  const at = /^\s*at (\S+:\d+(?::\d+)?)\s*$/u.exec(rest.at(-1) ?? "")?.[1];
+  return `${first.trim().slice(0, 300)}${at ? ` (at ${at})` : ""}`;
+}
+/** A recorded message cut to `limit`, keeping the `at file:line[:column]` location it ends on. */
+function clipMessage(message: string, limit: number): string {
+  if (message.length <= limit) return message;
+  const at = /\n[ \t]*at \S+:\d+(?::\d+)?\s*$/u.exec(message)?.[0] ?? "";
+  return `${message.slice(0, limit - at.length - 1)}…${at}`;
 }
 /**
  * A failed code step that compared HTTP statuses (expected 200, received 401): the generated
@@ -655,7 +681,10 @@ function stepSummary(item: Evidence, secrets: string[]): string {
   } else if (step && "locator" in step.input) {
     context = ` Locator ${evidenceRendering(step.input.locator, secrets)}.`;
   }
-  return scrubEvidenceText(`${item.text}${context}`, secrets).text.slice(0, 2000);
+  // A code step has no plan step: what Playwright recorded for it is the message and its location.
+  const recorded =
+    item.codeOperation && item.step?.error ? ` ${clipMessage(item.step.error.message, 1500)}` : "";
+  return scrubEvidenceText(`${item.text}${context}${recorded}`, secrets).text.slice(0, 2000);
 }
 
 /** Bound structured observations without converting arbitrary captures to prompt text. */
@@ -784,13 +813,17 @@ function assertionMismatchFacts(
   for (const item of evidence) {
     const { step, planStep } = item;
     // A failed code step has no plan assertion; the runner recorded what Playwright reported.
-    if (step?.status === "failed" && item.codeOperation && step.error) {
+    if (
+      item.codeOperation &&
+      step?.error &&
+      (step.status === "failed" || step.status === "inconclusive")
+    ) {
       const message = step.error.message;
       if (!reported.has(message)) {
         reported.add(message);
         facts.push({
           text: scrubEvidenceText(
-            `Step ${step.planStepId} (${item.codeOperation}) failed: ${message}`,
+            `Step ${step.planStepId} (${item.codeOperation}) ${step.status === "failed" ? "failed" : "threw an error"}: ${clipMessage(message, 900)}`,
             secrets,
           ).text.slice(0, 1000),
           evidenceRefs: [item.ref],
@@ -890,8 +923,9 @@ function verifiedLocator(value: unknown): value is LocatorEvidence {
 }
 
 /**
- * A code revision has no plan steps: its steps are what the Playwright reporter emitted, named
- * after what produced them (`imported-test-N` is a test, `imported-step-N` one of its steps).
+ * A code revision has no plan steps: its steps are what the runner's reporter emitted, named
+ * after what produced them (`imported-test-N` is a test, `imported-step-N` one of its steps; the
+ * Python harness names pytest steps after their node id, which is `code_step`).
  */
 function codeStepOperation(planStepId: string): string {
   if (planStepId.startsWith("imported-test-")) return "playwright_test";
@@ -1297,8 +1331,7 @@ export class AnalysisService {
           ? value.reasonCode
           : undefined;
       const diagnostic =
-        typeof value.diagnosticCode === "string" &&
-        ["ECONNREFUSED", "ENOTFOUND", "EHOSTUNREACH", "ENETUNREACH"].includes(value.diagnosticCode)
+        typeof value.diagnosticCode === "string" && NETWORK_ERRORS.includes(value.diagnosticCode)
           ? value.diagnosticCode
           : null;
       // Admission refusals name the refused control (and, for runner images, why it failed).
@@ -1511,6 +1544,8 @@ export class AnalysisService {
     const secrets = environmentSecretValues();
     const steps = collected.evidence.filter((item) => item.step);
     const failed = codeFailure(steps) ?? steps.find((item) => item.step!.status === "failed");
+    // A code test that threw records no comparison: its expected and observed are not reported.
+    const codeThrown = codeThrow(steps);
     // A timed-out terminal process records no expected/observed values; its own artifact holds
     // the evidence, which is what the diagnosis reports instead of a null value.
     const processId = failed?.planStep
@@ -1645,12 +1680,16 @@ export class AnalysisService {
             expected: failed
               ? timedOut
                 ? `Process ${timedOut.processId} exits within its step time limit`
-                : evidenceRendering(failed.step!.expected, secrets)
+                : codeThrown
+                  ? null
+                  : evidenceRendering(failed.step!.expected, secrets)
               : null,
             observed: failed
               ? timedOut
                 ? terminalObserved(timedOut.process)
-                : evidenceRendering(failed.step!.observed, secrets)
+                : codeThrown
+                  ? null
+                  : evidenceRendering(failed.step!.observed, secrets)
               : null,
             absence,
             evidenceRefs: failed ? [failed.ref, ...(timedOut ? [timedOut.ref] : [])] : supports,
@@ -1728,6 +1767,28 @@ export class AnalysisService {
       );
       healing.reason =
         "The test was not judged: no assertion or locator failed, so there is nothing to repair.";
+    } else if (codeThrown && failureKind === "test_fragility") {
+      const thrown = scrubEvidenceText(
+        errorHeadline(codeThrown.step!.error!.message),
+        secrets,
+      ).text;
+      conclusion = {
+        status: "cause_partially_supported",
+        text: `Step ${location} ended on an error thrown by the test code, not on an assertion result: ${thrown}. No assertion judged the target, so this is a defect of the test code or its inputs, not an observed product behavior.`,
+      };
+      alternative(
+        "The target may have answered with something the test code did not anticipate, which made it throw; the recorded error names what failed.",
+        "unknown",
+      );
+      next(
+        `Fix the test code, or regenerate it, so that it no longer throws and reaches its assertions; the error and its location are recorded on step ${location}. Then rerun the test.`,
+        [codeThrown.ref],
+      );
+      healing = {
+        advice: "not_indicated",
+        reason:
+          "Healing proposes locator changes to a declarative plan; this code test threw before any assertion, so its code must be fixed or regenerated.",
+      };
     } else if (statusRejection) {
       const { meaning, status, expected, target, item, http, request } = statusRejection;
       conclusion = {
@@ -1931,10 +1992,17 @@ export class AnalysisService {
       ]);
       const network = evidence.filter((item) => {
         const error = item.step?.error?.code;
+        // A code step records the error class, so the connection error is named by its message.
+        const thrown =
+          item.codeOperation && item.step?.reasonCode === "insufficient_evidence"
+            ? item.step.error?.message
+            : undefined;
         return (
-          error && ["ECONNREFUSED", "ENOTFOUND", "EHOSTUNREACH", "ENETUNREACH"].includes(error)
+          (error && NETWORK_ERRORS.includes(error)) ||
+          (thrown !== undefined && NETWORK_ERRORS.some((code) => thrown.includes(code)))
         );
       });
+      const codeThrown = codeThrow(evidence);
       const schema = evidence.find(
         (item) =>
           item.step?.status === "failed" &&
@@ -2135,6 +2203,14 @@ export class AnalysisService {
         supports = [statusRejection.item, statusRejection.http, statusRejection.request].flatMap(
           (evidenceItem) => (evidenceItem ? [evidenceItem.ref] : []),
         );
+      } else if (codeThrown) {
+        failureKind = "test_fragility";
+        recommendedAction = "fix_test";
+        hypothesis = scrubEvidenceText(
+          `The test code threw an error before any assertion judged the target (${errorHeadline(codeThrown.step!.error!.message)}); the failure is in the test code or its inputs, and no product behavior was observed.`,
+          secrets,
+        ).text.slice(0, 1000);
+        supports = [codeThrown.ref];
       } else if (locatorSupport.length) {
         failureKind = "test_fragility";
         recommendedAction = "fix_test";

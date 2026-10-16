@@ -78,6 +78,42 @@ export function supersedingConflict(
       conflict.resolution.selectedRequirementId !== requirementId,
   );
 }
+/** Where a requirement stands: decided by a reviewer, superseded by a conflict decision, or still waiting. */
+export type RequirementStatus = "pending" | "approved" | "rejected" | "superseded";
+/**
+ * One state derived from the fields that hold the decisions (the rejection extension, the approval
+ * and the conflict resolutions); nothing is stored. A rejection is final and a superseded
+ * requirement is never planned, so both outrank an approval the requirement still carries.
+ */
+export function requirementStatus(
+  value: Requirement,
+  conflicts: readonly ConflictDecision[],
+): RequirementStatus {
+  if (requirementRejection(value)) return "rejected";
+  if (supersedingConflict(value.id, conflicts)) return "superseded";
+  return value.approval ? "approved" : "pending";
+}
+/** A requirement as the MCP surface shows it: the stored fields and its derived status. */
+export function withRequirementStatus(
+  value: Requirement,
+  conflicts: readonly ConflictDecision[],
+): Requirement & { status: RequirementStatus } {
+  return { ...value, status: requirementStatus(value, conflicts) };
+}
+/** What a snapshot conflict reports about the snapshot another writer changed: identity and size, never the requirements. */
+export function snapshotDigest(snapshot: RequirementSnapshot): {
+  version: number;
+  fingerprint: string;
+  requirementCount: number;
+  conflictCount: number;
+} {
+  return {
+    version: snapshot.version,
+    fingerprint: snapshot.fingerprint,
+    requirementCount: snapshot.requirements.length,
+    conflictCount: snapshot.conflicts.length,
+  };
+}
 /**
  * Refuses a decision on a requirement whose conflict is not decided yet, or that a decided conflict
  * superseded: the requirement a conflict decision did not select is never approved nor planned.
@@ -197,7 +233,7 @@ export class RequirementsService {
         throw new ContractError(
           "REVISION_CONFLICT",
           "Requirement base changed during normalization",
-          { diff: { before, current } },
+          { diff: { before: snapshotDigest(before), current: snapshotDigest(current) } },
         );
       const byKey: Record<string, string> = {};
       const requirements = normalized.requirements.map((item) => {
@@ -312,6 +348,10 @@ export class RequirementsService {
     this.ctx.authorize("R", this.project(value));
     return value;
   }
+  /** A requirement of this project with its derived status; the project's conflicts decide whether it is superseded. */
+  withStatus(value: Requirement): Requirement & { status: RequirementStatus } {
+    return withRequirementStatus(value, this.snapshot(this.project(value)).conflicts);
+  }
   private project(value: Requirement): string {
     return String(value.extensions?.["testmaster:projectId"] ?? "");
   }
@@ -391,7 +431,7 @@ export class RequirementsService {
       const snapshot = this.snapshot(projectId);
       if (snapshot.version !== expectedVersion)
         throw new ContractError("REVISION_CONFLICT", "Requirement snapshot changed", {
-          diff: { current: snapshot, submitted: requirements },
+          diff: { expectedVersion, current: snapshotDigest(snapshot) },
         });
       if (new Set(requirements.map((item) => item.id)).size !== requirements.length)
         throw new ContractError("INVALID_ARGUMENT", "Duplicate requirement IDs");
@@ -513,7 +553,7 @@ export class RequirementsService {
       const snapshot = this.snapshot(projectId);
       if (snapshot.version !== input.expectedVersion)
         throw new ContractError("REVISION_CONFLICT", "Requirement snapshot changed", {
-          diff: { current: snapshot },
+          diff: { expectedVersion: input.expectedVersion, current: snapshotDigest(snapshot) },
         });
       const conflict = snapshot.conflicts.find((item) => item.id === input.conflictId);
       if (!conflict?.requirementIds.includes(input.selectedRequirementId) || !input.reason.trim())

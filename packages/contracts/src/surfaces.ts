@@ -1020,7 +1020,7 @@ export const mcpTools = {
       ),
       expectedVersion: d(Version, "Proposal version being edited, for optimistic concurrency"),
     }),
-    output: "Proposal",
+    output: "McpEditedPlan",
   },
   testmaster_save_test: {
     milestone: "M2",

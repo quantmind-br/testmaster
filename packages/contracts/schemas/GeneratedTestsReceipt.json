@@ -14,8 +14,37 @@
     "candidates": {
       "type": "array",
       "items": {
-        "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-        "type": "string"
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "testId",
+          "testName",
+          "sourceRevisionId"
+        ],
+        "properties": {
+          "id": {
+            "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "testId": {
+            "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "testName": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "sourceRevisionId": {
+            "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "proposalId": {
+            "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          }
+        }
       }
     },
     "validationErrors": {

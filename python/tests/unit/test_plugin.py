@@ -147,3 +147,58 @@ def test_colliding_and_nested_step_names_keep_their_original_failures():
     assert {(event["stepId"], event["index"]) for event in finishes} == {(event["stepId"], event["index"]) for event in starts}
     assert [event["status"] for event in finishes] == ["failed", "failed", "passed", "passed"]
     assert [event["error"]["message"] for event in finishes[:2]] == ["business mismatch", "business mismatch"]
+
+
+def finished_steps(protocol):
+    return {payload["stepId"]: payload for kind, payload in protocol.events if kind == "step.finished"}
+
+
+def run_source(tmp_path, source):
+    import pytest
+
+    # Each source needs its own module name: pytest.main reuses this process's import cache.
+    path = tmp_path / f"test_kinds_{abs(hash(str(tmp_path)))}.py"
+    path.write_text(source)
+    protocol = Protocol()
+    plugin = PythonPlugin(protocol, {"codeRoot": str(tmp_path)})
+    pytest.main([str(path), "-q", "--noconftest", "-o", "addopts=", "-p", "no:cacheprovider"], plugins=[plugin])
+    # A pytest step is named after its node id; the test function is its last segment.
+    steps = {step_id.rsplit("__", 1)[-1]: step for step_id, step in finished_steps(protocol).items()}
+    return plugin, steps, path.name
+
+
+def test_only_an_assertion_is_a_verdict_and_other_exceptions_leave_the_test_inconclusive(tmp_path):
+    plugin, steps, filename = run_source(
+        tmp_path,
+        "import pytest\n\ndef test_asserts():\n    assert 1 == 2\n\ndef test_raises():\n    raise KeyError('paths')\n\ndef test_fails():\n    pytest.fail('explicit')\n",
+    )
+    assert (steps["test_asserts"]["status"], steps["test_asserts"]["reasonCode"]) == ("failed", "assertion_mismatch")
+    assert steps["test_asserts"]["error"]["code"] == "pytest_failure"
+    assert (steps["test_fails"]["status"], steps["test_fails"]["reasonCode"]) == ("failed", "assertion_mismatch")
+    raised = steps["test_raises"]
+    assert (raised["status"], raised["reasonCode"]) == ("inconclusive", "insufficient_evidence")
+    assert raised["error"] == {"code": "KeyError", "message": f"KeyError: 'paths'\n    at {filename}:7"}
+    assert plugin.failed is True
+
+
+def test_run_whose_tests_only_raised_has_no_assertion_failure(tmp_path):
+    plugin, steps, _ = run_source(tmp_path, "def test_raises():\n    raise ValueError('boom')\n")
+    step = steps["test_raises"]
+    assert (step["status"], step["reasonCode"], step["error"]["code"]) == ("inconclusive", "insufficient_evidence", "ValueError")
+    # The harness reports the aggregate failed only when `failed` is set; `incomplete` makes it inconclusive.
+    assert plugin.failed is False
+    assert plugin.incomplete is True
+
+
+def test_explicit_step_classifies_the_exception_it_wraps():
+    import pytest
+
+    plugin = PythonPlugin(Protocol(), {})
+    with pytest.raises(RuntimeError):
+        with plugin.step("lookup"):
+            raise RuntimeError("no manifest")
+    [finish] = [payload for kind, payload in plugin.protocol.events if kind == "step.finished"]
+    assert (finish["status"], finish["reasonCode"]) == ("inconclusive", "insufficient_evidence")
+    assert finish["error"] == {"code": "RuntimeError", "message": "RuntimeError: no manifest"}
+    assert plugin.failed is False
+    assert plugin.incomplete is True

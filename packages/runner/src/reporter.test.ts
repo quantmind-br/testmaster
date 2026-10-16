@@ -62,6 +62,72 @@ it("reports a failed test's message, location, expected and observed values inst
   expect(error.message).not.toContain("\u001b");
 });
 
+it("reports an error the test code threw as inconclusive with its message, not as an assertion mismatch", async () => {
+  const { test, result } = failedTest([
+    { message: "Error: Cannot complete check_manifest: no schema supplied", location },
+  ]);
+  const sent = await report((reporter) => {
+    reporter.onTestBegin(test as never);
+    reporter.onTestEnd(test as never, result as never);
+  });
+  const payload = sent[1]?.payload ?? {};
+  expect(payload).toMatchObject({
+    status: "inconclusive",
+    reasonCode: "insufficient_evidence",
+    error: { code: "Error", message: expect.stringContaining("Cannot complete check_manifest") },
+  });
+  // The payload is what the harness forwards; its error is `{ code, message }`.
+  const error = payload.error as { message: string };
+  expect(error.message).toMatch(/\n {4}at health\.spec\.ts:4:38$/u);
+  expect(payload).not.toHaveProperty("expected");
+  expect(payload).not.toHaveProperty("observed");
+});
+
+it("keeps the verdict of the innermost failure on the steps around it", async () => {
+  const thrown = { message: "Error: boom", location };
+  const test = { expectedStatus: "passed" };
+  const result = { status: "failed", errors: [thrown], duration: 12 };
+  const outer = { category: "test.step", error: thrown };
+  const inner = { category: "test.step", parent: outer, error: thrown };
+  const sent = await report((reporter) => {
+    reporter.onTestBegin(test as never);
+    reporter.onStepBegin(test as never, result as never, outer as never);
+    reporter.onStepBegin(test as never, result as never, inner as never);
+    reporter.onStepEnd(test as never, result as never, inner as never);
+    reporter.onStepEnd(test as never, result as never, outer as never);
+    reporter.onTestEnd(test as never, result as never);
+  });
+  const finished = sent.filter((message) => message.type === "step.finished");
+  expect(finished.map((message) => message.payload.reasonCode)).toEqual([
+    "insufficient_evidence",
+    "insufficient_evidence",
+    "insufficient_evidence",
+  ]);
+  // A failed expect is an assertion whatever message the test gave it.
+  const custom = {
+    message: "Error: manifest must be served\n\nExpected: 200\nReceived: 500",
+    location,
+  };
+  const expectStep = { category: "expect", error: custom };
+  const asserted = await report((reporter) => {
+    reporter.onTestBegin(test as never);
+    reporter.onStepBegin(test as never, result as never, expectStep as never);
+    reporter.onStepEnd(test as never, result as never, expectStep as never);
+    reporter.onTestEnd(test as never, { ...result, errors: [custom] } as never);
+  });
+  expect(asserted[2]?.payload).toMatchObject({
+    status: "failed",
+    reasonCode: "assertion_mismatch",
+    expected: 200,
+    observed: 500,
+    error: { code: "assertion_mismatch" },
+  });
+  expect(asserted[3]?.payload).toMatchObject({
+    status: "failed",
+    reasonCode: "assertion_mismatch",
+  });
+});
+
 it("reports a timed out test with its error and no invented comparison", async () => {
   const { test, result } = failedTest(
     [{ message: "Error: locator.click: Timeout 5000ms exceeded.", location }],

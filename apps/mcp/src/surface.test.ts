@@ -864,6 +864,75 @@ it("generate_tests forwards the chosen provider and model and refuses an unknown
   expect(f.app.database.get("SELECT COUNT(*) AS n FROM model_calls")?.n ?? 0).toBe(0);
 });
 
+it("generate_tests names the test and the proposal of every candidate it returns", async () => {
+  const f = await fixture();
+  const alpha = f.app.tests.create({
+    projectId: f.init.projectId,
+    plan: scaffoldPlan("backend"),
+    name: "Alpha",
+  });
+  const beta = f.app.tests.create({
+    projectId: f.init.projectId,
+    plan: scaffoldPlan("backend"),
+    name: "Beta",
+  });
+  const alphaRevision = String(alpha.activeRevisionId);
+  const betaRevision = String(beta.activeRevisionId);
+  const batch = entity(f.app.context, "pbt", {
+    projectId: f.init.projectId,
+    sourceSnapshotId: "snapshot-fingerprint",
+    version: 1,
+    state: "proposed",
+  });
+  f.app.context.entities.insert("ProposalBatch", batch);
+  const proposal = entity(f.app.context, "pro", {
+    batchId: batch.id,
+    plan: scaffoldPlan("backend"),
+    requirementRefs: [],
+    evidenceRefs: [{ relativePath: "spec.md" }],
+    warnings: [],
+    state: "accepted",
+    validation: "valid",
+    extensions: { "testmaster:candidateRevisionId": alphaRevision },
+  });
+  f.app.context.entities.insert("Proposal", proposal);
+  const created = (id: string, testId: string, parentId: string) => ({
+    id,
+    workspaceId: f.init.workspaceId,
+    testId,
+    parentId,
+  });
+  vi.spyOn(Object.getPrototypeOf(f.app.codeGeneration), "generate").mockResolvedValue({
+    requested: 2,
+    candidates: [
+      created("rev_019bf434-20c0-7000-8000-0000000000a1", alpha.id, alphaRevision),
+      created("rev_019bf434-20c0-7000-8000-0000000000b2", beta.id, betaRevision),
+    ],
+    validationErrors: [],
+  });
+  const generated = await f.call("testmaster_generate_tests", {
+    proposalIds: [proposal.id],
+    revisionIds: [betaRevision],
+  });
+  expect(generated.isError, generated.text).toBe(false);
+  // One entry per candidate: the test it belongs to and, when it came from one, the proposal.
+  expect(generated.body.candidates).toEqual([
+    {
+      id: "rev_019bf434-20c0-7000-8000-0000000000a1",
+      testId: alpha.id,
+      testName: "Alpha",
+      sourceRevisionId: alphaRevision,
+      proposalId: proposal.id,
+    },
+    {
+      id: "rev_019bf434-20c0-7000-8000-0000000000b2",
+      testId: beta.id,
+      testName: "Beta",
+      sourceRevisionId: betaRevision,
+    },
+  ]);
+});
+
 it("normalize returns the snapshot fingerprint, announces progress with a total and links a large snapshot", async () => {
   const f = await fixture();
   let count = 2;
@@ -1103,10 +1172,20 @@ it("the revision resources serve the revision and every file of its code as text
     testId: string;
     revisionId: string;
     format: string;
-    files: { path: string; sizeBytes: number; sha256: string; resource: string }[];
+    files: {
+      path: string;
+      sizeBytes: number;
+      sha256: string;
+      resource: string;
+      content: string | null;
+    }[];
+    inlineLimitBytes: number;
   }>(f, `testmaster://revisions/${revisionId}/code`);
   expect(index).toMatchObject({ testId: test.id, revisionId, format: "playwright" });
   expect(index.files.map((entry) => entry.path).sort()).toEqual(Object.keys(exported.files).sort());
+  // A small export is read in one call: every file carries its text, no per-file read needed.
+  for (const entry of index.files)
+    expect(entry.content, entry.path).toBe(exported.files[entry.path]);
   // Each listed file reads back, page by page, as exactly the bytes the export holds.
   for (const entry of index.files) {
     let text = "";
@@ -1145,6 +1224,32 @@ it("the revision resources serve the revision and every file of its code as text
       uri: "testmaster://revisions/rev_019bf434-20c0-7000-8000-000000000001/code",
     }),
   ).rejects.toMatchObject({ code: -32002 });
+});
+
+it("the code listing carries file text only while it fits one resource page and links the rest", async () => {
+  const f = await fixture();
+  const test = f.app.tests.create({ projectId: f.init.projectId, plan: scaffoldPlan("backend") });
+  const revisionId = String(test.activeRevisionId);
+  const files = { "a.ts": "a".repeat(40000), "b.ts": "b".repeat(40000), "c.ts": "tiny" };
+  vi.spyOn(Object.getPrototypeOf(f.app.codeExport), "export").mockResolvedValue({
+    testId: test.id,
+    revisionId,
+    format: "playwright",
+    files,
+    metadata: { entrypoint: "a.ts" },
+  } as never);
+  const index = await readJson<{
+    inlineLimitBytes: number;
+    files: { path: string; content: string | null; resource: string }[];
+  }>(f, `testmaster://revisions/${revisionId}/code`);
+  expect(index.inlineLimitBytes).toBe(65536);
+  // The second file would pass the budget: it is linked, and the small one after it still fits.
+  expect(index.files.map((entry) => [entry.path, entry.content?.length ?? null])).toEqual([
+    ["a.ts", 40000],
+    ["b.ts", null],
+    ["c.ts", 4],
+  ]);
+  expect(index.files[1]?.resource).toContain(encodeURIComponent("b.ts"));
 });
 
 it("the steps resource pages the steps of a run, narrows to one attempt and binds its cursor", async () => {
@@ -1397,12 +1502,18 @@ it("the plan batch resources list a project's batches and page the proposals of 
   type Page = {
     batch: { id: string; version: number };
     total: number;
+    returned: number;
     proposals: { id: string; version: number; plan: { name: string } }[];
     next: string | null;
   };
   const pages = await readPages<Page>(f, `testmaster://plan-batches/${batch.id}`);
   expect(pages.map((page) => page.proposals.length)).toEqual([10, 2]);
   expect(pages.every((page) => page.total === 12 && page.batch.version === 1)).toBe(true);
+  // Each page says how many of the 12 it holds and whether another follows.
+  expect(pages.map((page) => [page.returned, page.next === null])).toEqual([
+    [10, false],
+    [2, true],
+  ]);
   const proposals = pages.flatMap((page) => page.proposals);
   expect(new Set(proposals.map((proposal) => proposal.id)).size).toBe(12);
   expect(proposals.every((proposal) => proposal.version === 1)).toBe(true);

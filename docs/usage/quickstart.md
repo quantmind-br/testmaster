@@ -394,7 +394,8 @@ secrets and auth profiles before `testmaster_generate_plan`, because the model i
 Every decision is recorded with the acting principal.
 
 The same token covers authoring, execution and approvals. `testmaster_edit_plan` changes a still-proposed plan
-at its `expectedVersion`; `testmaster_save_test` stores a plan as a new test (`projectId`) or as a new candidate
+at the proposal's `expectedVersion` and reports `batchVersion`, the version `testmaster_review_plan` takes (every
+edit raises it); `testmaster_save_test` stores a plan as a new test (`projectId`) or as a new candidate
 revision (`testId`), and its receipt says that the candidate is not active yet and which calls replay and promote
 it. `testmaster_run_tests` with `revisionId` replays that exact revision of one test, and
 `testmaster_promote_revision` (at the test's `expectedVersion`) makes it active; a generated candidate needs a

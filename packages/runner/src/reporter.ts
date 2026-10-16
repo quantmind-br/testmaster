@@ -5,7 +5,24 @@ import type {
   TestResult,
   TestStep,
 } from "@playwright/test/reporter";
-import { describeFailure } from "./failure.js";
+import { describeFailure, isAssertionFailure } from "./failure.js";
+
+/** A failure already reported on a step, and whether it was a failed assertion. */
+interface NotedFailure {
+  message: string;
+  assertion: boolean;
+}
+/**
+ * What a failed test or step proves. An assertion that failed, or a test that ran out of time,
+ * is a verdict on the target. Any other error was thrown by the test code before an assertion
+ * judged anything: the evidence is insufficient, not a mismatch.
+ */
+function failedVerdict(assertion: boolean, timedOut: boolean) {
+  if (timedOut) return { status: "failed", reasonCode: "assertion_timeout" };
+  return assertion
+    ? { status: "failed", reasonCode: "assertion_mismatch" }
+    : { status: "inconclusive", reasonCode: "insufficient_evidence" };
+}
 /** The harness owns the authenticated socket; this adapter uses child-process IPC only. */
 export default class TestMasterReporter implements Reporter {
   private index = 0;
@@ -13,11 +30,11 @@ export default class TestMasterReporter implements Reporter {
   private readonly steps = new Map<TestStep, { stepId: string; index: number }>();
   /**
    * Playwright puts a failure on the failing expect and, with the same message, on every
-   * `test.step` and the test around it. This remembers the message of the innermost reported step
+   * `test.step` and the test around it. This remembers the failure of the innermost reported step
    * that failed, per enclosing step and test, so the enclosing ones are not reported as failures of
-   * their own.
+   * their own and keep its verdict.
    */
-  private readonly failedWithin = new Map<TestStep | TestCase, string>();
+  private readonly failedWithin = new Map<TestStep | TestCase, NotedFailure>();
   private pending: Promise<void> = Promise.resolve();
   private testDir = "";
   private send(type: string, payload: unknown): void {
@@ -48,19 +65,22 @@ export default class TestMasterReporter implements Reporter {
     const passed = result.status === test.expectedStatus;
     // The first error is the one that ended the test; Playwright lists any later ones after it.
     const first = result.errors[0];
-    const failure = passed
-      ? undefined
-      : describeFailure(first, this.testDir, `Test ${result.status}`);
+    const recorded = this.failedWithin.get(test);
     // A step that failed with the same message already carries the details.
-    const detailed = first?.message === undefined || this.failedWithin.get(test) !== first.message;
+    const repeat = recorded !== undefined && recorded.message === first?.message;
+    // A test that failed with no error at all failed its expectation of failing.
+    const assertion =
+      first === undefined || (repeat ? recorded.assertion : isAssertionFailure(first));
     this.send("step.finished", {
       ...data,
-      status: result.status === "skipped" ? "skipped" : passed ? "passed" : "failed",
       ...(passed
-        ? {}
+        ? { status: result.status === "skipped" ? "skipped" : "passed" }
         : {
-            reasonCode: result.status === "timedOut" ? "assertion_timeout" : "assertion_mismatch",
-            ...(detailed ? failure : {}),
+            ...failedVerdict(assertion, result.status === "timedOut"),
+            ...(result.status === "skipped" ? { status: "skipped" } : {}),
+            ...(repeat
+              ? {}
+              : describeFailure(first, this.testDir, `Test ${result.status}`, assertion)),
           }),
       durationMs: result.duration,
       evidencePaths: [],
@@ -79,26 +99,31 @@ export default class TestMasterReporter implements Reporter {
   onStepEnd(test: TestCase, _result: TestResult, step: TestStep): void {
     const data = this.steps.get(step);
     if (!data) return;
-    const message = step.error?.message;
-    const detailed = message === undefined || this.failedWithin.get(step) !== message;
+    const error = step.error;
+    const recorded = this.failedWithin.get(step);
+    // A failure the steps inside this one already reported is not reported again.
+    const repeat = recorded !== undefined && recorded.message === error?.message;
+    // An expect step is an assertion by construction, whatever its message says.
+    const assertion =
+      step.category === "expect" || (repeat ? recorded.assertion : isAssertionFailure(error));
+    if (error?.message !== undefined && !repeat)
+      this.noteFailure(test, step, { message: error.message, assertion });
     const failure =
-      step.error && detailed
-        ? describeFailure(step.error, this.testDir, "Imported assertion failed")
+      error && !repeat
+        ? describeFailure(error, this.testDir, "Imported assertion failed", assertion)
         : undefined;
-    if (message !== undefined && detailed) this.noteFailure(test, step, message);
     this.send("step.finished", {
       ...data,
-      status: step.error ? "failed" : "passed",
-      ...(step.error ? { reasonCode: "assertion_mismatch", ...failure } : {}),
+      ...(error ? { ...failedVerdict(assertion, false), ...failure } : { status: "passed" }),
       durationMs: step.duration,
       evidencePaths: [],
     });
   }
-  /** Records `message` as the failure inside every step around `step`, and inside its test. */
-  private noteFailure(test: TestCase, step: TestStep, message: string): void {
+  /** Records `failure` as the failure inside every step around `step`, and inside its test. */
+  private noteFailure(test: TestCase, step: TestStep, failure: NotedFailure): void {
     for (let outer = step.parent; outer; outer = outer.parent)
-      if (!this.failedWithin.has(outer)) this.failedWithin.set(outer, message);
-    if (!this.failedWithin.has(test)) this.failedWithin.set(test, message);
+      if (!this.failedWithin.has(outer)) this.failedWithin.set(outer, failure);
+    if (!this.failedWithin.has(test)) this.failedWithin.set(test, failure);
   }
   async onEnd(): Promise<void> {
     await this.pending;

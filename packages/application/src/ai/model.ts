@@ -33,7 +33,7 @@ export const promptVersions = {
   normalize: "normalize-3-evidence-handles",
   plan: "plan-4-integration-workflow",
   resolve_action: "resolve-action-1",
-  generate_code: "generate-code-2-importer-rules",
+  generate_code: "generate-code-3-source-schemas",
   summarize: "summarize-1",
   classify: "classify-1",
   analyze: "analyze-7-code-owned-advice",

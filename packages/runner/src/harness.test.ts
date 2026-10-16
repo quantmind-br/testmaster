@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ExecutablePlan, PlanStep } from "@testmaster/contracts";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { armAttemptDeadline, runHarness } from "./harness.js";
+import { armAttemptDeadline, importedResult, runHarness } from "./harness.js";
 import type { ProtocolClient } from "./protocol.js";
 import { type RunnerInput, Runtime } from "./runtime.js";
 
@@ -264,5 +264,32 @@ describe("attempt deadline while the host resolves a model request", () => {
     await vi.advanceTimersByTimeAsync(1000);
     expect(controller.signal.aborted).toBe(true);
     disarm();
+  });
+});
+
+describe("importedResult", () => {
+  const none = { steps: 2, failures: 0, assertionFailures: 0, exitCode: 0 };
+  it("fails only on an assertion; steps that threw leave the attempt inconclusive", () => {
+    const threw = { steps: 2, failures: 1, assertionFailures: 0, exitCode: 1 };
+    expect(importedResult(threw, undefined)).toEqual({
+      outcome: "inconclusive",
+      reasonCode: "insufficient_evidence",
+    });
+    expect(importedResult({ ...threw, assertionFailures: 1 }, undefined)).toEqual({
+      outcome: "failed",
+      reasonCode: "assertion_mismatch",
+    });
+    expect(importedResult(none, undefined)).toEqual({
+      outcome: "passed",
+      reasonCode: "assertions_satisfied",
+    });
+  });
+  it("keeps a failed assertion proven before a cancel and reports the cancel otherwise", () => {
+    const cancelled = { outcome: "cancelled", reasonCode: "user_cancelled" } as const;
+    expect(importedResult({ ...none, failures: 1, assertionFailures: 1 }, cancelled)).toEqual({
+      outcome: "failed",
+      reasonCode: "assertion_mismatch",
+    });
+    expect(importedResult({ ...none, failures: 1 }, cancelled)).toEqual(cancelled);
   });
 });

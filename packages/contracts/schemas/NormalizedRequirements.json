@@ -21,7 +21,8 @@
           "sourceRefs",
           "originKind",
           "confidence",
-          "approval"
+          "approval",
+          "status"
         ],
         "properties": {
           "id": {
@@ -213,6 +214,26 @@
                 ]
               }
             }
+          },
+          "status": {
+            "anyOf": [
+              {
+                "const": "pending",
+                "type": "string"
+              },
+              {
+                "const": "approved",
+                "type": "string"
+              },
+              {
+                "const": "rejected",
+                "type": "string"
+              },
+              {
+                "const": "superseded",
+                "type": "string"
+              }
+            ]
           }
         }
       }

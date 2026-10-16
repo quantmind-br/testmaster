@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
@@ -10,6 +10,7 @@ import {
   type Expectation,
   type PlanStep,
   validate,
+  validateAgainstSchema,
 } from "@testmaster/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { exportCode, exportImportedCode } from "./index.js";
@@ -379,7 +380,23 @@ describe("imported Playwright export runner fixtures", () => {
       rmSync(directory, { recursive: true, force: true });
   });
   const spec = "import { test } from '@playwright/test';\ntest('x', async ({ secrets }) => {});\n";
-  const exported = (extra: { secrets?: string[]; profile?: boolean } = {}) =>
+  const SCHEMA_REVISION = "svr_00000000-0000-4000-8000-000000000001";
+  const SCHEMA_POINTER = "/paths/~1items/get/responses/200/content/application~1json/schema";
+  /** An OpenAPI-flavoured schema: annotations, a vendor extension and a numeric format. */
+  const SCHEMA = {
+    type: "object",
+    required: ["id", "name"],
+    additionalProperties: false,
+    properties: {
+      id: { type: "integer", format: "int64", example: 3 },
+      name: { type: "string", "x-internal": true },
+      tags: { type: "array", items: { type: ["string", "null"] } },
+    },
+    "x-vendor": { anything: true },
+  };
+  const exported = (
+    extra: { secrets?: string[]; profile?: boolean; schemas?: Record<string, unknown> } = {},
+  ) =>
     exportImportedCode({
       format: "playwright",
       entrypoint: "generated.spec.ts",
@@ -450,7 +467,7 @@ describe("imported Playwright export runner fixtures", () => {
     );
     for (const output of [commonjs, module])
       expect(JSON.parse(output)).toEqual([
-        ["secrets", "profileRequest", "profilePage"],
+        ["secrets", "profileRequest", "profilePage", "sourceSchemas"],
         "function",
       ]);
   });
@@ -476,6 +493,78 @@ describe("imported Playwright export runner fixtures", () => {
         expect(entry.integrity).toMatch(/^sha512-/u);
       } else expect(entry.version).toBe(wanted);
     }
+  });
+  it("ships a source schema and pins its validator only for code that checks one", () => {
+    const key = `${SCHEMA_REVISION}${SCHEMA_POINTER}`;
+    const plain = exported();
+    expect(plain.files["testmaster-fixtures/schemas.json"]).toBeUndefined();
+    expect(plain.files["package-lock.json"]).not.toContain('"node_modules/ajv"');
+    const withSchema = exported({ schemas: { [key]: SCHEMA } });
+    expect(JSON.parse(withSchema.files["testmaster-fixtures/schemas.json"] ?? "")).toEqual({
+      [key]: SCHEMA,
+    });
+    const harness = JSON.parse(withSchema.files["testmaster-fixtures/package.json"] ?? "");
+    const lock = JSON.parse(withSchema.files["package-lock.json"] ?? "");
+    // The pinned validator is the one the contracts package ships: the plan's predicate and the
+    // exported check must judge a body with the same Ajv.
+    const contracts = JSON.parse(
+      readFileSync(new URL("../../../contracts/package.json", import.meta.url), "utf8"),
+    );
+    for (const name of ["ajv", "ajv-formats"]) {
+      expect(harness.dependencies[name]).toBe(contracts.dependencies[name]);
+      expect(lock.packages[`node_modules/${name}`].version).toBe(contracts.dependencies[name]);
+      expect(lock.packages[`node_modules/${name}`].integrity).toMatch(/^sha512-/u);
+    }
+    expect(lock.packages["testmaster-fixtures"].dependencies).toEqual(harness.dependencies);
+    for (const name of Object.keys(lock.packages["node_modules/ajv"].dependencies))
+      expect(lock.packages[`node_modules/${name}`].integrity).toMatch(/^sha512-/u);
+    expect(withSchema.files["SETUP.txt"]).toContain("sourceSchemas.violations");
+  });
+  it("checks a body against the frozen schema in the exported project exactly as the plan's jsonSchema predicate does", async () => {
+    const key = `${SCHEMA_REVISION}${SCHEMA_POINTER}`;
+    const root = installed(exported({ schemas: { [key]: SCHEMA } }).files);
+    // `npm ci` would install the pinned validator; the workspace copy stands in for it.
+    const contractsRequire = createRequire(
+      new URL("../../../contracts/package.json", import.meta.url),
+    );
+    for (const name of ["ajv", "ajv-formats"]) {
+      const entry = contractsRequire.resolve(name);
+      const marker = `node_modules/${name}/`;
+      symlinkSync(
+        entry.slice(0, entry.lastIndexOf(marker) + marker.length - 1),
+        join(root, "node_modules", name),
+      );
+    }
+    const { violations } = await provided<{
+      violations(revision: string, pointer: string, value: unknown): string[];
+    }>(root, "sourceSchemas", {});
+    const planAccepts = (body: unknown) => {
+      try {
+        validateAgainstSchema(SCHEMA, body);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    const bodies = [
+      { id: 7, name: "a" },
+      { id: "7", name: "a" },
+      { id: 7 },
+      { id: 7, name: "a", extra: 1 },
+      { id: 7, name: "a", tags: ["x", null] },
+      { id: 7, name: "a", tags: [3] },
+    ];
+    expect(bodies.filter(planAccepts)).toHaveLength(2);
+    for (const body of bodies)
+      expect(violations(SCHEMA_REVISION, SCHEMA_POINTER, body).length === 0).toBe(
+        planAccepts(body),
+      );
+    expect(violations(SCHEMA_REVISION, SCHEMA_POINTER, { id: "7", name: "a" })).toEqual([
+      "/id type: must be integer",
+    ]);
+    expect(() => violations(SCHEMA_REVISION, "/paths/other", {})).toThrow(
+      /is not part of this test/u,
+    );
   });
   it("reads secrets.get(name) from the SECRET_<name> environment variable", async () => {
     const root = installed(exported({ secrets: ["API_KEY"] }).files);

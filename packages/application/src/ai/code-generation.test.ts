@@ -99,6 +99,7 @@ async function fixture() {
     Number(app.database.get("SELECT COUNT(*) AS n FROM test_revisions")?.n ?? 0);
   return {
     app,
+    root,
     projectId: initialized.projectId,
     payloads,
     revisionOf,
@@ -371,6 +372,127 @@ it("accepts the repaired code that uses the profile session and leaves a plan wi
     revisionIds: [f.revisionOf()],
   });
   expect(plain.candidates).toHaveLength(1);
+});
+
+const SCHEMA_POINTER = "/paths/~1items/get/responses/200/content/application~1json/schema";
+const itemsSchema = {
+  type: "object",
+  required: ["items"],
+  additionalProperties: false,
+  properties: { items: { type: "array", items: { type: "string" } } },
+};
+
+/** A revision whose plan asserts the response of GET /items against its OpenAPI response schema. */
+async function schemaRevisionOf(app: Application, projectId: string, root: string) {
+  await writeFile(
+    join(root, "openapi.json"),
+    JSON.stringify({
+      openapi: "3.0.3",
+      info: { title: "Items", version: "1" },
+      paths: {
+        "/items": {
+          get: {
+            responses: {
+              "200": {
+                description: "ok",
+                content: { "application/json": { schema: { $ref: "#/components/schemas/Items" } } },
+              },
+            },
+          },
+        },
+      },
+      components: { schemas: { Items: itemsSchema } },
+    }),
+  );
+  const source = await app.sources.add({
+    projectId,
+    role: "api-spec",
+    path: join(root, "openapi.json"),
+    format: "openapi",
+  });
+  const plan = scaffoldPlan("backend");
+  const request = plan.steps.find((step) => step.operation === "request");
+  if (request?.operation !== "request") throw new Error("Missing request step");
+  plan.steps.push({
+    id: "items-schema",
+    kind: "assertion",
+    operation: "assert",
+    description: "The body matches the declared response schema",
+    input: { responseStepId: request.id },
+    expectation: {
+      predicate: "jsonSchema",
+      sourceRevisionId: source.revision.id,
+      pointer: SCHEMA_POINTER,
+    },
+  });
+  const revisionId = String(app.tests.create({ projectId, plan }).activeRevisionId);
+  const schemaCode = `import { test, expect } from '@playwright/test';\ntest('items', async ({ request, sourceSchemas }) => { const response = await request.get('/items'); expect(response.status()).toBe(200); expect(sourceSchemas.violations('${source.revision.id}', '${SCHEMA_POINTER}', await response.json())).toEqual([]); });\n`;
+  return { revisionId, sourceRevisionId: source.revision.id, schemaCode };
+}
+
+it("offers the cited source schemas by revision and pointer and freezes the checked schema into the code bundle and its export", async () => {
+  const f = await fixture();
+  const { revisionId, sourceRevisionId, schemaCode } = await schemaRevisionOf(
+    f.app,
+    f.projectId,
+    f.root,
+  );
+  f.setOutput(generated(schemaCode));
+  const receipt = await f.app.codeGeneration.generate({
+    projectId: f.projectId,
+    revisionIds: [revisionId],
+  });
+  const prompt = secretPrompt(f.payloads[0]);
+  expect(prompt).toContain('"sourceSchemas":[');
+  expect(prompt).toContain(sourceRevisionId);
+  expect(prompt).toContain(SCHEMA_POINTER);
+  // The schema document is frozen into the test, not sent to the model.
+  expect(prompt).not.toContain('"required":["items"]');
+  const [candidate] = receipt.candidates as unknown as { id: string; testId: string }[];
+  if (!candidate) throw new Error("Missing candidate");
+  const key = `${sourceRevisionId}${SCHEMA_POINTER}`;
+  const { bundle } = await f.app.codeImport.readBundle(candidate.id);
+  expect(Object.keys(bundle.schemas ?? {})).toEqual([key]);
+  // The $ref is resolved into the frozen document, so the check sees the real constraints.
+  expect(JSON.stringify(bundle.schemas)).toContain('"additionalProperties":false');
+  const exported = await f.app.codeExport.export(candidate.testId, {
+    format: "playwright",
+    revisionId: candidate.id,
+  });
+  expect(JSON.parse(exported.files["testmaster-fixtures/schemas.json"] ?? "")).toEqual(
+    bundle.schemas,
+  );
+});
+
+it("sends code that never checks a cited schema back to the model, and refuses a schema the plan does not cite", async () => {
+  const f = await fixture();
+  const { revisionId, sourceRevisionId, schemaCode } = await schemaRevisionOf(
+    f.app,
+    f.projectId,
+    f.root,
+  );
+  f.queueOutputs(generated(good));
+  f.setOutput(generated(schemaCode));
+  const receipt = await f.app.codeGeneration.generate({
+    projectId: f.projectId,
+    revisionIds: [revisionId],
+  });
+  expect(receipt.candidates).toHaveLength(1);
+  expect(f.counts().completions).toBe(2);
+  // The repair names the step and the schema, so the model can add the check it left out.
+  const repair = secretPrompt(f.payloads[1]);
+  expect(repair).toContain("against source schema");
+  expect(repair).toContain(sourceRevisionId);
+  // A schema outside the plan's citations is refused as repair feedback, never frozen in.
+  f.setOutput(generated(schemaCode.replace(SCHEMA_POINTER, "/components/schemas/Other")));
+  await expect(
+    f.app.codeGeneration.generate({ projectId: f.projectId, revisionIds: [revisionId] }),
+  ).rejects.toMatchObject({
+    code: "INVALID_ARGUMENT",
+    details: {
+      validationErrors: [{ message: expect.stringContaining("is not available to this test") }],
+    },
+  });
 });
 
 it("a generated code revision's admission snapshot names the generating call and its configuration hash", async () => {

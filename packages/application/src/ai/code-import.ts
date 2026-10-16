@@ -316,10 +316,13 @@ export class CodeImportService {
   /**
    * The importer's verdict on a generated candidate, without storing anything. The generation
    * loop runs it as the model response check, so a refusal reaches the model as repair feedback.
+   * `schemas` are the source schemas (keyed by source revision id + pointer) the code may check a
+   * body against; the bundle freezes the ones it uses.
    */
   async checkGeneratedCode(
     input: { code: string; format: CodeImportFormat },
     secrets: readonly string[] = [],
+    schemas: Readonly<Record<string, unknown>> = {},
   ): Promise<ImportedCodeBundle> {
     if (
       typeof input.code !== "string" ||
@@ -340,11 +343,13 @@ export class CodeImportService {
         limitations: [],
       },
       secrets,
+      schemas,
     );
   }
   /**
    * `checked` is the bundle `checkGeneratedCode` already accepted for this same candidate.
-   * `secretRefs` are the secrets that check declared; `modelCallId` is the call that wrote the code.
+   * `secretRefs` are the secrets that check declared, `schemas` the source schemas it offered, and
+   * `modelCallId` is the call that wrote the code.
    */
   async createGeneratedRevision(
     testId: string,
@@ -354,6 +359,7 @@ export class CodeImportService {
       parentId?: string;
       modelCallId?: string;
       secretRefs?: readonly CodeSecretBinding[];
+      schemas?: Readonly<Record<string, unknown>>;
     },
     checked?: ImportedCodeBundle,
   ): Promise<Stored<TestRevision>> {
@@ -365,6 +371,7 @@ export class CodeImportService {
       (await this.checkGeneratedCode(
         input,
         (input.secretRefs ?? []).map((secret) => secret.name),
+        input.schemas,
       ));
     const image = input.format === "pytest" ? "testmaster-runner-python" : "testmaster-runner";
     const images = JSON.parse(
@@ -407,6 +414,7 @@ export class CodeImportService {
   private async checkStoredCode(
     bundle: ImportedCodeBundle,
     secrets: readonly string[],
+    schemas: Readonly<Record<string, unknown>> = {},
   ): Promise<ImportedCodeBundle> {
     const root = await mkdtemp(join(tmpdir(), "testmaster-code-check-"));
     try {
@@ -421,7 +429,13 @@ export class CodeImportService {
         await mkdir(dirname(join(root, path)), { recursive: true, mode: 0o700 });
         await writeFile(join(root, path), text, { flag: "wx", mode: 0o600 });
       }
-      return await importCode({ root, path: bundle.entrypoint, format: bundle.format, secrets });
+      return await importCode({
+        root,
+        path: bundle.entrypoint,
+        format: bundle.format,
+        secrets,
+        schemas,
+      });
     } finally {
       await rm(root, { recursive: true, force: true });
     }

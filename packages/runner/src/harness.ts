@@ -164,6 +164,28 @@ async function readCodeSecrets(
     values[name] = String(await runtime.resolve({ secretRef }));
   return values;
 }
+/** What the reporter finished for an imported-code attempt, and how the Playwright process ended. */
+export interface ImportedTally {
+  steps: number;
+  failures: number;
+  assertionFailures: number;
+  exitCode: number | null;
+}
+/**
+ * The verdict on the whole imported code. Only a failed assertion (or a timeout) is a verdict on
+ * the target. When the steps that did not pass all ended on an error the test code threw, no
+ * assertion judged the target and the attempt is inconclusive, not a mismatch.
+ */
+export function importedResult(
+  tally: ImportedTally,
+  aborted: RunnerResult | undefined,
+): RunnerResult {
+  if (tally.assertionFailures > 0) return { outcome: "failed", reasonCode: "assertion_mismatch" };
+  if (aborted) return aborted;
+  return tally.steps > 0 && tally.failures === 0 && tally.exitCode === 0
+    ? { outcome: "passed", reasonCode: "assertions_satisfied" }
+    : { outcome: "inconclusive", reasonCode: "insufficient_evidence" };
+}
 async function runImported(runtime: Runtime): Promise<RunnerResult> {
   const imported = runtime.input.imported;
   if (!imported) throw new Error("imported_input_missing");
@@ -193,7 +215,11 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
     errorOnExist: true,
     force: false,
   });
-  await stageImportedModules("/opt/testmaster/runner/node_modules", "/tmp/imported/node_modules");
+  await stageImportedModules(
+    "/opt/testmaster/runner/node_modules",
+    "/tmp/imported/node_modules",
+    runtime.input.schemas ?? {},
+  );
   const config = {
     testDir: stagedRoot,
     testMatch: imported.files,
@@ -216,6 +242,7 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
   await writeFile("/tmp/imported/config.json", JSON.stringify(config));
   let count = 0;
   let failures = 0;
+  let assertionFailures = 0;
   let queue = Promise.resolve();
   const child = fork(
     resolve("/opt/testmaster/runner/node_modules/@playwright/test/cli.js"),
@@ -251,6 +278,12 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
       ) {
         count++;
         if (payload.status !== "passed") failures++;
+        if (
+          "reasonCode" in payload &&
+          (payload.reasonCode === "assertion_mismatch" ||
+            payload.reasonCode === "assertion_timeout")
+        )
+          assertionFailures++;
       }
       await runtime.emit(type, scrubDeep(runtime, payload));
     });
@@ -290,14 +323,10 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
       child.once("error", reject);
     });
     await queue;
-    const aborted = abortVerdict(runtime.signal);
-    if (aborted)
-      return failures ? { outcome: "failed", reasonCode: "assertion_mismatch" } : aborted;
-    return count === 0
-      ? { outcome: "inconclusive", reasonCode: "insufficient_evidence" }
-      : failures || code !== 0
-        ? { outcome: "failed", reasonCode: "assertion_mismatch" }
-        : { outcome: "passed", reasonCode: "assertions_satisfied" };
+    return importedResult(
+      { steps: count, failures, assertionFailures, exitCode: code },
+      abortVerdict(runtime.signal),
+    );
   } finally {
     runtime.signal.removeEventListener("abort", stop);
     if (child.exitCode === null) child.kill("SIGKILL");

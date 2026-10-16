@@ -6,7 +6,7 @@ import { ContractError } from "@testmaster/contracts";
 import { sha256 } from "@testmaster/domain";
 import { readConfinedCodeFile } from "../code/summary.js";
 
-export const CODE_IMPORT_VERSION = "1.1.0";
+export const CODE_IMPORT_VERSION = "1.2.0";
 export const CODE_IMPORT_MAX_BYTES = 1024 * 1024;
 /**
  * Names a TypeScript candidate may not reference: not as a variable, a property name or a string
@@ -48,6 +48,7 @@ export const CODE_IMPORT_RULES: readonly string[] = [
   `Every expect(...) takes a real observation (a response status, locator, text or url), never a literal or a constant bound to a literal; never compare a value with itself.`,
   `Include at least one named test and at least one matcher assertion such as toBe, toEqual, toContain or toBeVisible.`,
   `Read credentials only through the "secrets" fixture: destructure it in the test callback (async ({ page, secrets }) => { ... }) and call secrets.get("NAME") with exactly one literal NAME from the offered secrets list. Never read a secret from process.env, testInfo, files or literals, never alias, pass or destructure the fixture's methods, and never call secrets.get with a name that is not offered.`,
+  `Check a response body against an offered source schema only through the "sourceSchemas" fixture: destructure it in the test callback (async ({ request, sourceSchemas }) => { ... }) and call sourceSchemas.violations("<sourceRevisionId>", "<pointer>", body), which returns the list of schema violations and so is asserted as expect(sourceSchemas.violations(...)).toEqual([]). The first two arguments are literal strings copied from the plan's jsonSchema assertion and the third is the parsed JSON value the assertion checks. Never hand-write a substitute for the schema, never alias or destructure the fixture's methods, and never name a schema that is not offered.`,
 ];
 export type CodeImportFormat = "playwright" | "pytest";
 export interface ImportedCodeBundle {
@@ -60,6 +61,8 @@ export interface ImportedCodeBundle {
   tests: string[];
   /** Secret names read through `secrets.get`; absent on bundles stored before the fixture existed. */
   secrets?: string[];
+  /** Source schemas the code checks values against, keyed by source revision id + JSON pointer. */
+  schemas?: Record<string, unknown>;
   /** True when the code destructures `profileRequest` or `profilePage`: it needs the profile session. */
   profile?: boolean;
   limitations: string[];
@@ -70,6 +73,11 @@ export interface CodeImportOptions {
   format: CodeImportFormat;
   /** Secret names the code may read through the `secrets` fixture; any other name is refused. */
   secrets?: readonly string[];
+  /**
+   * Source schemas (dereferenced, keyed by source revision id + JSON pointer) the code may check
+   * values against through the `sourceSchemas` fixture; any other key is refused.
+   */
+  schemas?: Readonly<Record<string, unknown>>;
 }
 interface Node {
   type: string;
@@ -173,20 +181,26 @@ function usesProfileFixture(pattern: Node): boolean {
 const SECRETS_FIXTURE = "secrets";
 const SECRET_ACCESS_REFUSAL =
   'Secrets are read only through the harness fixture: secrets.get("NAME") with one literal name';
-interface SecretUse {
-  /** Identifier nodes that may mention the fixture; any other `secrets` identifier is refused. */
+const SCHEMAS_FIXTURE = "sourceSchemas";
+const SCHEMA_ACCESS_REFUSAL =
+  'Source schemas are checked only through the harness fixture: sourceSchemas.violations("<sourceRevisionId>", "<pointer>", value) with the revision id and the pointer as literal strings';
+/** A harness fixture whose only use is `fixture.method(literal arguments...)`. */
+interface FixtureUse {
+  fixture: string;
+  method: string;
+  refusal: string;
+  /** Identifier nodes that may mention the fixture; any other identifier of that name is refused. */
   allowed: Set<unknown>;
-  names: string[];
-  declared: ReadonlySet<string>;
+  /** Checks the arguments of one call and records what it names; refuses an unchecked call. */
+  call(item: Node, args: unknown[]): void;
 }
 function isIdentifier(value: unknown, identifier: string): value is Node {
   return node(value) && value.type === "Identifier" && value.name === identifier;
 }
-/** Applies the secret-fixture rules to one node; a parent is visited before its children. */
-function inspectSecretAccess(item: Node, use: SecretUse): void {
+/** Applies the fixture rules to one node; a parent is visited before its children. */
+function inspectFixtureAccess(item: Node, use: FixtureUse): void {
   if (item.type === "Identifier") {
-    if (item.name === SECRETS_FIXTURE && !use.allowed.has(item))
-      refuse(SECRET_ACCESS_REFUSAL, item);
+    if (item.name === use.fixture && !use.allowed.has(item)) refuse(use.refusal, item);
     return;
   }
   if (item.type === "MemberExpression" || item.type === "OptionalMemberExpression") {
@@ -200,13 +214,13 @@ function inspectSecretAccess(item: Node, use: SecretUse): void {
   if (item.type === "ObjectPattern") {
     for (const property of item.properties as Node[]) {
       if (property.type !== "ObjectProperty") continue;
-      if (isIdentifier(property.value, SECRETS_FIXTURE)) use.allowed.add(property.value);
+      if (isIdentifier(property.value, use.fixture)) use.allowed.add(property.value);
       if (
         !property.computed &&
-        isIdentifier(property.key, SECRETS_FIXTURE) &&
-        !isIdentifier(property.value, SECRETS_FIXTURE)
+        isIdentifier(property.key, use.fixture) &&
+        !isIdentifier(property.value, use.fixture)
       )
-        refuse(`The "${SECRETS_FIXTURE}" fixture cannot be renamed`, property);
+        refuse(`The "${use.fixture}" fixture cannot be renamed`, property);
     }
     return;
   }
@@ -216,26 +230,67 @@ function inspectSecretAccess(item: Node, use: SecretUse): void {
     !node(callee) ||
     (callee.type !== "MemberExpression" && callee.type !== "OptionalMemberExpression") ||
     callee.computed ||
-    !isIdentifier(callee.object, SECRETS_FIXTURE) ||
-    !isIdentifier(callee.property, "get")
+    !isIdentifier(callee.object, use.fixture) ||
+    !isIdentifier(callee.property, use.method)
   )
     return;
   use.allowed.add(callee.object);
-  const args = item.arguments as unknown[];
-  const secret = args.length === 1 ? literalKey(args[0]) : undefined;
-  if (secret === undefined) refuse(SECRET_ACCESS_REFUSAL, item);
-  if (!use.declared.has(secret))
-    refuse(`Secret ${JSON.stringify(secret.slice(0, 100))} is not declared for this test`, item);
-  if (!use.names.includes(secret)) use.names.push(secret);
+  use.call(item, item.arguments as unknown[]);
+}
+/** `secrets.get("NAME")`: one literal name, declared for this test. */
+function secretFixture(declared: ReadonlySet<string>, names: string[]): FixtureUse {
+  return {
+    fixture: SECRETS_FIXTURE,
+    method: "get",
+    refusal: SECRET_ACCESS_REFUSAL,
+    allowed: new Set(),
+    call(item, args) {
+      const secret = args.length === 1 ? literalKey(args[0]) : undefined;
+      if (secret === undefined) refuse(SECRET_ACCESS_REFUSAL, item);
+      if (!declared.has(secret))
+        refuse(
+          `Secret ${JSON.stringify(secret.slice(0, 100))} is not declared for this test`,
+          item,
+        );
+      if (!names.includes(secret)) names.push(secret);
+    },
+  };
+}
+/** `sourceSchemas.violations("<revision>", "<pointer>", value)`: a schema frozen into this test. */
+function schemaFixture(declared: Readonly<Record<string, unknown>>, keys: string[]): FixtureUse {
+  return {
+    fixture: SCHEMAS_FIXTURE,
+    method: "violations",
+    refusal: SCHEMA_ACCESS_REFUSAL,
+    allowed: new Set(),
+    call(item, args) {
+      const revision = args.length === 3 ? literalKey(args[0]) : undefined;
+      const pointer = args.length === 3 ? literalKey(args[1]) : undefined;
+      if (revision === undefined || pointer === undefined) refuse(SCHEMA_ACCESS_REFUSAL, item);
+      const key = `${revision}${pointer}`;
+      if (!Object.hasOwn(declared, key))
+        refuse(
+          `Source schema ${JSON.stringify(key.slice(0, 200))} is not available to this test`,
+          item,
+        );
+      if (!keys.includes(key)) keys.push(key);
+    },
+  };
 }
 interface Inspection {
   imports: string[];
   tests: string[];
   assertions: number;
   secrets?: string[];
+  /** Keys (source revision id + pointer) of the source schemas the code checks a value against. */
+  schemas?: string[];
   profile?: boolean;
 }
-function inspectTypescript(text: string, declared: ReadonlySet<string>): Inspection {
+function inspectTypescript(
+  text: string,
+  declared: ReadonlySet<string>,
+  declaredSchemas: Readonly<Record<string, unknown>>,
+): Inspection {
   let ast: unknown;
   try {
     ast = parse(text, { sourceType: "module", plugins: ["typescript"], errorRecovery: false });
@@ -249,7 +304,12 @@ function inspectTypescript(text: string, declared: ReadonlySet<string>): Inspect
     );
   }
   const result: Inspection = { imports: [], tests: [], assertions: 0 };
-  const secretUse: SecretUse = { allowed: new Set(), names: [], declared };
+  const secretNames: string[] = [];
+  const schemaKeys: string[] = [];
+  const fixtures = [
+    secretFixture(declared, secretNames),
+    schemaFixture(declaredSchemas, schemaKeys),
+  ];
   const testNames = new Set<string>();
   const expectNames = new Set<string>();
   const constants = new Set<string>();
@@ -274,7 +334,7 @@ function inspectTypescript(text: string, declared: ReadonlySet<string>): Inspect
     }
   });
   walk(ast, (item) => {
-    inspectSecretAccess(item, secretUse);
+    for (const use of fixtures) inspectFixtureAccess(item, use);
     if (item.type === "ObjectPattern" && usesProfileFixture(item)) result.profile = true;
     if (
       ["ImportExpression", "NewExpression"].includes(item.type) &&
@@ -367,7 +427,8 @@ function inspectTypescript(text: string, declared: ReadonlySet<string>): Inspect
       }
     }
   });
-  result.secrets = secretUse.names;
+  result.secrets = secretNames;
+  result.schemas = schemaKeys;
   return result;
 }
 
@@ -488,6 +549,8 @@ export async function importCode(options: CodeImportOptions): Promise<ImportedCo
   let assertions = 0;
   const declared: ReadonlySet<string> = new Set(options.secrets ?? []);
   const secrets = new Set<string>();
+  const declaredSchemas = options.schemas ?? {};
+  const usedSchemas = new Set<string>();
   let profile = false;
   const load = async (file: string): Promise<void> => {
     if (file in files) return;
@@ -514,9 +577,12 @@ export async function importCode(options: CodeImportOptions): Promise<ImportedCo
     files[file] = text;
     sourceHashes[file] = sha256(bytes);
     const result =
-      options.format === "pytest" ? await inspectPython(text) : inspectTypescript(text, declared);
+      options.format === "pytest"
+        ? await inspectPython(text)
+        : inspectTypescript(text, declared, declaredSchemas);
     if (file === entrypoint) tests.push(...result.tests);
     for (const secret of result.secrets ?? []) secrets.add(secret);
+    for (const key of result.schemas ?? []) usedSchemas.add(key);
     if (result.profile) profile = true;
     assertions += result.assertions;
     for (const source of result.imports) {
@@ -561,6 +627,13 @@ export async function importCode(options: CodeImportOptions): Promise<ImportedCo
     sourceHashes,
     tests,
     secrets: [...secrets].sort(),
+    ...(usedSchemas.size
+      ? {
+          schemas: Object.fromEntries(
+            [...usedSchemas].sort().map((key) => [key, declaredSchemas[key]]),
+          ),
+        }
+      : {}),
     ...(profile ? { profile: true } : {}),
     limitations: [
       "AST validation does not establish sandbox safety or passing behavior.",

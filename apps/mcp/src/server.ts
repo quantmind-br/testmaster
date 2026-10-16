@@ -30,6 +30,7 @@ import {
   SignedCursorCodec,
   type SourceAddInput,
   supersedingConflict,
+  withRequirementStatus,
 } from "@testmaster/application";
 import {
   type Analysis,
@@ -146,6 +147,8 @@ const RESOURCE_COLLECTIONS: Readonly<Record<string, string>> = {
   requirements: "testmaster://requirements/{projectId or requirementId}",
 };
 const RESOURCE_PAGE_BYTES = 65536;
+/** Text of a revision's code files a code listing carries inline; one resource page, shared by its files. */
+const INLINE_CODE_BYTES = RESOURCE_PAGE_BYTES;
 /** Entries of a project-features resource page. */
 const FEATURE_PAGE = 100;
 /** Entries of a list resource page (tests, sources, plan batches, revisions). */
@@ -484,7 +487,7 @@ export class TestMasterMcp {
         [
           "testmaster://revisions/{id}/code{?format}",
           "Revision code",
-          "Files of the code of a revision (generated code, imported code, or the export of a plan): path, size, sha256 and the resource of each file. format: playwright (default) or pytest; imported code keeps its own",
+          "Files of the code of a revision (generated code, imported code, or the export of a plan): path, size, sha256, resource and content. Text up to inlineLimitBytes (64 KiB) in total is inline; a file past that has content null, read it at its resource. format: playwright (default) or pytest; imported code keeps its own",
         ],
         [
           "testmaster://revisions/{id}/code/{path}{?format,offset}",
@@ -524,12 +527,12 @@ export class TestMasterMcp {
         [
           "testmaster://plan-batches/{id}{?cursor}",
           "Plan batch",
-          "A proposal batch with its proposals (plans, status, version), paged 10 at a time; the version is the expectedVersion of testmaster_review_plan and testmaster_edit_plan",
+          "A proposal batch with its proposals (plans, state, version), paged 10 at a time: total counts them all, returned the page, next the following page (null on the last). batch.version is the expectedVersion of testmaster_review_plan; each proposal's own version is that of testmaster_edit_plan",
         ],
         [
           "testmaster://requirements/{projectId}",
           "Requirements",
-          "Requirement snapshot of a project id, with its fingerprint and version; a requirement id returns one requirement",
+          "Requirement snapshot of a project id, with its fingerprint and version; a requirement id returns one requirement. Each requirement carries status: pending, approved, rejected or superseded",
         ],
         [
           "testmaster://runs/{id}/artifacts/{path}{?attemptId,offset}",
@@ -997,7 +1000,9 @@ export class TestMasterMcp {
         });
         await notifications;
         return {
-          requirements: result.requirements,
+          requirements: result.requirements.map((item) =>
+            withRequirementStatus(item, result.conflicts),
+          ),
           conflicts: result.conflicts.map((conflict) => {
             if (!conflict.sourceRefs[0] || !conflict.sourceRefs[1])
               throw new ContractError(
@@ -1078,9 +1083,30 @@ export class TestMasterMcp {
           },
           signal,
         );
+        // Candidates come back as revision ids only; name the test and the proposal each belongs to.
+        const proposalOfRevision = new Map<string, string>();
+        for (const proposalId of proposals ?? []) {
+          const extensions = app.context.entities.get(
+            "Proposal",
+            app.context.workspaceId,
+            proposalId,
+          )?.extensions as Record<string, unknown> | undefined;
+          const accepted =
+            extensions?.["testmaster:candidateRevisionId"] ?? extensions?.candidateRevisionId;
+          if (typeof accepted === "string") proposalOfRevision.set(accepted, proposalId);
+        }
         return {
           requested: result.requested,
-          candidates: result.candidates.map((candidate) => candidate.id),
+          candidates: result.candidates.map((candidate) => {
+            const proposalId = proposalOfRevision.get(String(candidate.parentId));
+            return {
+              id: candidate.id,
+              testId: candidate.testId,
+              testName: app.tests.get(String(candidate.testId)).name,
+              sourceRevisionId: candidate.parentId,
+              ...(proposalId ? { proposalId } : {}),
+            };
+          }),
           validationErrors: result.validationErrors,
         };
       }
@@ -1161,12 +1187,15 @@ export class TestMasterMcp {
         return app.healing.review(String(args.proposalId));
       case "testmaster_approve_healing":
         return app.healing.approve(String(args.proposalId), Number(args.expectedVersion));
-      case "testmaster_edit_plan":
-        return app.proposals.edit(
+      case "testmaster_edit_plan": {
+        const proposal = app.proposals.edit(
           String(args.proposalId),
           args.plan as ExecutablePlan,
           Number(args.expectedVersion),
         );
+        // Each edit bumps the batch too, and testmaster_review_plan wants the batch's version.
+        return { ...proposal, batchVersion: app.proposals.get(proposal.batchId).version ?? 1 };
+      }
       case "testmaster_save_test":
         return this.saveTest(args, app);
       case "testmaster_promote_revision":
@@ -1938,10 +1967,7 @@ export class TestMasterMcp {
         }
         break;
       case "requirements":
-        if (parts.length === 1)
-          return {
-            json: id.startsWith("prj_") ? app.requirements.snapshot(id) : app.requirements.get(id),
-          };
+        if (parts.length === 1) return { json: this.requirementResource(id) };
         break;
     }
     throw new ContractError("NOT_FOUND", this.unknownResourceMessage(uri, url.hostname, parts));
@@ -2049,6 +2075,7 @@ export class TestMasterMcp {
       runId,
       ...(attemptId === null ? {} : { attemptId }),
       total: page.total,
+      returned: page.items.length,
       steps: page.items,
       next: this.pageLink(`testmaster://runs/${runId}/steps`, { attemptId }, page.cursor),
     };
@@ -2084,6 +2111,7 @@ export class TestMasterMcp {
       testId,
       activeRevisionId: test.activeRevisionId,
       total: page.total,
+      returned: page.items.length,
       revisions: page.items,
       next: this.pageLink(`testmaster://tests/${testId}/revisions`, {}, page.cursor),
     };
@@ -2100,24 +2128,34 @@ export class TestMasterMcp {
     const exported = await app.codeExport.export(revision.testId, { format, revisionId: id });
     return { exported, format, origin: revision.origin };
   }
-  /** The files of a revision's code: path, size and hash of each, and where to read it. */
+  /** The files of a revision's code: path, size, hash, where to read it and its text while it fits the inline budget. */
   private async revisionCode(id: string, url: URL) {
     const { exported, format, origin } = await this.exportRevision(
       id,
       url.searchParams.get("format"),
     );
+    // Files fill one resource page between them, in order: a listing never costs more than reading
+    // one large file would, and a file past the budget is read at its own resource.
+    let remaining = INLINE_CODE_BYTES;
     return {
       testId: exported.testId,
       revisionId: exported.revisionId,
       origin,
       format,
       metadata: exported.metadata,
-      files: Object.entries(exported.files).map(([path, content]) => ({
-        path,
-        sizeBytes: Buffer.byteLength(content),
-        sha256: createHash("sha256").update(content).digest("hex"),
-        resource: `testmaster://revisions/${id}/code/${encodeURIComponent(path)}?format=${format}&offset=0`,
-      })),
+      files: Object.entries(exported.files).map(([path, content]) => {
+        const sizeBytes = Buffer.byteLength(content);
+        const inline = sizeBytes <= remaining;
+        if (inline) remaining -= sizeBytes;
+        return {
+          path,
+          sizeBytes,
+          sha256: createHash("sha256").update(content).digest("hex"),
+          resource: `testmaster://revisions/${id}/code/${encodeURIComponent(path)}?format=${format}&offset=0`,
+          content: inline ? content : null,
+        };
+      }),
+      inlineLimitBytes: INLINE_CODE_BYTES,
     };
   }
   /** One file of a revision's code, as text pages. */
@@ -2176,6 +2214,7 @@ export class TestMasterMcp {
     return {
       projectId,
       total: page.total,
+      returned: page.items.length,
       tests: page.items,
       next: this.pageLink(`testmaster://projects/${projectId}/tests`, filters, page.cursor),
     };
@@ -2191,6 +2230,7 @@ export class TestMasterMcp {
     return {
       projectId,
       total: page.total,
+      returned: page.items.length,
       sources: page.items.map((source) => ({
         ...source,
         resource: `testmaster://sources/${source.id}`,
@@ -2223,11 +2263,24 @@ export class TestMasterMcp {
     return {
       projectId,
       total: page.total,
+      returned: page.items.length,
       batches: page.items.map((batch) => ({
         ...batch,
         resource: `testmaster://plan-batches/${batch.id}`,
       })),
       next: this.pageLink(`testmaster://projects/${projectId}/plan-batches`, {}, page.cursor),
+    };
+  }
+  /** A project's requirement snapshot or one requirement, each requirement with its derived status. */
+  private requirementResource(id: string) {
+    const service = this.options.application.requirements;
+    if (!id.startsWith("prj_")) return service.withStatus(service.get(id));
+    const snapshot = service.snapshot(id);
+    return {
+      ...snapshot,
+      requirements: snapshot.requirements.map((item) =>
+        withRequirementStatus(item, snapshot.conflicts),
+      ),
     };
   }
   /** One proposal batch and a page of its proposals. */
@@ -2242,6 +2295,7 @@ export class TestMasterMcp {
     return {
       batch,
       total: page.total,
+      returned: page.items.length,
       proposals: page.items,
       next: this.pageLink(`testmaster://plan-batches/${id}`, {}, page.cursor),
     };
@@ -2279,6 +2333,7 @@ export class TestMasterMcp {
       projectId,
       ...(match === undefined ? {} : { match }),
       total,
+      returned: rows.length,
       features: rows.map((row) => ({ id: row.id, stableKey: row.stable_key })),
       next:
         end < total

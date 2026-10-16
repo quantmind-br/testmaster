@@ -1,8 +1,15 @@
-import { ContractError, type JsonValue, type Run, validate } from "@testmaster/contracts";
+import {
+  ContractError,
+  type EffectiveConfig,
+  type JsonValue,
+  type Run,
+  validate,
+} from "@testmaster/contracts";
 import { semanticHash } from "@testmaster/domain";
 import type { EntityDocument } from "@testmaster/persistence";
 import { allEntities, requireEntity, type ServiceContext } from "./context.js";
 import type { AdmissionSnapshot } from "./provenance.js";
+import { withoutEnvironment } from "./run-config.js";
 import type { BatchesService, RunsService } from "./runs.js";
 
 export interface ComparisonPage {
@@ -40,9 +47,17 @@ export function runComparability(
   if (left.revisionId !== right.revisionId) reasons.push("revision-changed");
   if (left.environmentRevisionId !== right.environmentRevisionId)
     reasons.push("environment-changed");
+  // The environment is compared through its revision and hash; the recorded `environment` section
+  // only restates that revision, so it must not report a second, execution-config difference.
+  const configs = [leftCell, rightCell].map((cell) =>
+    semanticHash(
+      cell.effectiveConfig
+        ? withoutEnvironment(cell.effectiveConfig as unknown as EffectiveConfig)
+        : null,
+    ),
+  );
   if (
-    semanticHash(leftCell.effectiveConfig ?? null) !==
-      semanticHash(rightCell.effectiveConfig ?? null) ||
+    configs[0] !== configs[1] ||
     semanticHash(leftCell.limits ?? null) !== semanticHash(rightCell.limits ?? null)
   )
     reasons.push("execution-config-changed");
@@ -198,9 +213,14 @@ function stepSummary(step: StepRecord | undefined) {
     error: typeof error?.message === "string" ? error.message : null,
   };
 }
-/** The step a failed Run is about: the first failed one that carries details, else the first failed. */
+/**
+ * The step a failed Run is about: the first failed one that carries details, else the first failed.
+ * A code step whose test threw before any assertion is inconclusive and carries its error.
+ */
 function failingStep(steps: readonly StepRecord[]): StepRecord | undefined {
-  const failed = steps.filter((step) => step.status === "failed");
+  const failed = steps.filter(
+    (step) => step.status === "failed" || (step.status === "inconclusive" && step.error),
+  );
   return (
     failed.find((step) => step.error || step.expected != null || step.observed != null) ?? failed[0]
   );

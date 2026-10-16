@@ -247,8 +247,22 @@ it("UX-012 shows a conflict with the spans on both sides and keeps approval bloc
   expect(() => decide({ reason: "  " })).toThrow(
     expect.objectContaining({ code: "INVALID_ARGUMENT" }),
   );
+  // A stale decision reports where the snapshot stands (identity and counts), not its requirements.
   expect(() => decide({ expectedVersion: review.version + 5 })).toThrow(
-    expect.objectContaining({ code: "REVISION_CONFLICT" }),
+    expect.objectContaining({
+      code: "REVISION_CONFLICT",
+      details: {
+        diff: {
+          expectedVersion: review.version + 5,
+          current: {
+            version: review.version,
+            fingerprint: review.fingerprint,
+            requirementCount: review.requirements.length,
+            conflictCount: review.conflicts.length,
+          },
+        },
+      },
+    }),
   );
   decide({});
   const decided = f.app.requirements.review(f.projectId);

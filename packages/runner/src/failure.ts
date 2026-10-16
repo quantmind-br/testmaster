@@ -6,6 +6,7 @@ const MESSAGE_LIMIT = 8000;
 const VALUE_LIMIT = 2000;
 const EXPECTED = /^\s*Expected\b[^:\n]*:[ \t]*(\S.*)$/mu;
 const RECEIVED = /^\s*Received\b[^:\n]*:[ \t]*(\S.*)$/mu;
+const ASSERTION = /^\s*(?:(?:Error: )?expect\(|AssertionError\b)/u;
 
 /** The parts of Playwright's `TestError` a failure report uses. */
 export interface PlaywrightFailure {
@@ -31,8 +32,17 @@ function comparedValue(printed: string | undefined): { value: unknown } | undefi
     return { value: text };
   }
 }
-function errorCode(message: string): string {
-  if (/^\s*(?:Error: )?expect\(/u.test(message)) return "assertion_mismatch";
+/**
+ * Whether Playwright's own message is that of a failed assertion: a matcher ("expect(received)
+ * .toBe(expected)") or a Node `assert` error. Any other message is an error the test code threw.
+ * A matcher given a custom message does not start this way; the reporter knows those from the
+ * failed `expect` step instead.
+ */
+export function isAssertionFailure(failure: PlaywrightFailure | undefined): boolean {
+  return ASSERTION.test(stripVTControlCharacters(failure?.message ?? failure?.value ?? ""));
+}
+function errorCode(message: string, assertion: boolean): string {
+  if (assertion) return "assertion_mismatch";
   return /^\s*([A-Za-z]*Error)\b/u.exec(message)?.[1] ?? "Error";
 }
 /**
@@ -45,6 +55,7 @@ export function describeFailure(
   failure: PlaywrightFailure | undefined,
   testDir: string,
   fallback: string,
+  assertion = isAssertionFailure(failure),
 ): FailureDetails {
   const text = stripVTControlCharacters(failure?.message ?? failure?.value ?? "").trim();
   const message = text || fallback;
@@ -54,7 +65,10 @@ export function describeFailure(
   const expected = comparedValue(EXPECTED.exec(message)?.[1]);
   const observed = comparedValue(RECEIVED.exec(message)?.[1]);
   return {
-    error: { code: errorCode(message), message: `${message}${location}`.slice(0, MESSAGE_LIMIT) },
+    error: {
+      code: errorCode(message, assertion),
+      message: `${message}${location}`.slice(0, MESSAGE_LIMIT),
+    },
     ...(expected ? { expected: expected.value } : {}),
     ...(observed ? { observed: observed.value } : {}),
   };

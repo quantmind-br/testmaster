@@ -5,6 +5,7 @@ import contextvars
 import time
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Iterator
 from urllib.parse import urljoin
 
@@ -14,6 +15,10 @@ import pytest_asyncio
 from .protocol import ProtocolClient
 
 _current: contextvars.ContextVar["PythonPlugin | None"] = contextvars.ContextVar("testmaster_plugin", default=None)
+
+
+# An assertion (or an explicit `pytest.fail`) is a verdict on the target; any other exception is not.
+ASSERTION_ERRORS = (AssertionError, pytest.fail.Exception)
 
 
 def _step_id(value: str) -> str:
@@ -39,6 +44,8 @@ class PythonPlugin:
         self._used_indexes: set[int] = {1000000}  # Reserved by the imported-code wrapper.
         self._used_step_ids: set[str] = {"imported-code"}
         self._pytest_steps: dict[str, str] = {}
+        self._assertions: set[str] = set()
+        self._thrown: dict[str, tuple[str, str]] = {}
 
     def emit_step_start(self, nodeid: str, index: int | None = None) -> str:
         if index is None:
@@ -60,7 +67,7 @@ class PythonPlugin:
         self.protocol.emit("step.started", {"stepId": step_id, "index": index})
         return step_id
 
-    def emit_step_finish(self, step_id: str, status: str, error: str | None = None) -> None:
+    def emit_step_finish(self, step_id: str, status: str, error: str | None = None, code: str = "pytest_failure") -> None:
         started = self._started.pop(step_id, time.monotonic())
         payload: dict[str, Any] = {
             "stepId": step_id,
@@ -71,7 +78,7 @@ class PythonPlugin:
             "reasonCode": {"passed": "assertions_satisfied", "failed": "assertion_mismatch", "blocked": "unsupported_capability", "inconclusive": "insufficient_evidence"}[status],
         }
         if error:
-            payload["error"] = {"code": "pytest_failure", "message": error[:8000]}
+            payload["error"] = {"code": code, "message": error[:8000]}
         self.protocol.emit("step.finished", payload)
 
     @contextmanager
@@ -80,8 +87,12 @@ class PythonPlugin:
         try:
             yield
         except BaseException as exc:
-            self.failed = True
-            self.emit_step_finish(step_id, "failed", str(exc))
+            if isinstance(exc, ASSERTION_ERRORS):
+                self.failed = True
+                self.emit_step_finish(step_id, "failed", str(exc))
+            else:
+                self.incomplete = True
+                self.emit_step_finish(step_id, "inconclusive", f"{type(exc).__name__}: {exc}", type(exc).__name__)
             raise
         else:
             self.emit_step_finish(step_id, "passed")
@@ -116,28 +127,60 @@ class PythonPlugin:
     def pytest_exception_interact(self, node: Any, call: Any, report: Any) -> None:
         # Collection reports may render a traceback without reprcrash. The exception
         # object retains its type, unlike unrelated import text in source listings.
-        if call.excinfo is not None and call.excinfo.errisinstance(ImportError):
+        if call.excinfo is None:
+            return
+        if isinstance(call.excinfo.value, ImportError):
             self.missing_package = True
             self.protocol.emit("log", {"level": "error", "message": "missing_package: runtime dependency downloads are forbidden"})
+        nodeid = getattr(node, "nodeid", None)
+        if nodeid is None:
+            return
+        if call.when == "call" and isinstance(call.excinfo.value, ASSERTION_ERRORS):
+            self._assertions.add(nodeid)
+        self._thrown.setdefault(nodeid, (call.excinfo.typename, self._thrown_message(call.excinfo, report)))
+
+    def _thrown_message(self, excinfo: Any, report: Any) -> str:
+        """The exception as `Class: message` with the `at file:line` it was raised on."""
+        crash = getattr(getattr(report, "longrepr", None), "reprcrash", None)
+        text = getattr(crash, "message", None) or f"{excinfo.typename}: {excinfo.value}"
+        path, line = getattr(crash, "path", None), getattr(crash, "lineno", None)
+        if not path or not line:
+            return text
+        root = Path(self.input_data.get("codeRoot", "/run/testmaster/input/code"))
+        try:
+            shown = Path(path).relative_to(root)
+        except ValueError:
+            shown = Path(path).name
+        return f"{text}\n    at {shown}:{line}"
 
     def pytest_runtest_logreport(self, report: Any) -> None:
         self._reports.setdefault(report.nodeid, []).append(report)
-        if report.failed and not self._diagnose(report) and report.when == "call":
-            self.failed = True
+        if report.failed:
+            self._diagnose(report)
 
     def pytest_runtest_logfinish(self, nodeid: str, location: tuple[str, int | None, str]) -> None:
         self.completed += 1
         reports = self._reports.pop(nodeid, [])
         failed = next((getattr(report, "longreprtext", "") for report in reports if report.failed), None)
         skipped = any(report.skipped for report in reports)
-        status = "failed" if failed else "inconclusive" if skipped else "passed"
-        if failed and self.missing_package:
+        assertion = nodeid in self._assertions
+        self._assertions.discard(nodeid)
+        thrown = self._thrown.pop(nodeid, None)
+        # Only an assertion is a verdict on the target: an exception the test code raised (or one
+        # raised while setting it up) leaves the test inconclusive, like any non-assertion step.
+        status = "passed"
+        if failed:
+            status = "failed" if assertion else "inconclusive"
+        elif skipped:
+            status = "inconclusive"
+        if failed and (self.missing_package or self.security_failure):
             status = "blocked"
-        if failed and self.security_failure:
-            status = "blocked"
-        if skipped or (failed and all(report.when != "call" for report in reports if report.failed)):
+        if status == "failed":
+            self.failed = True
+        if skipped or (failed and status == "inconclusive"):
             self.incomplete = True
-        self.emit_step_finish(self._pytest_steps.pop(nodeid), status, error=failed)
+        error, code = (failed, "pytest_failure") if assertion or thrown is None else (thrown[1], thrown[0])
+        self.emit_step_finish(self._pytest_steps.pop(nodeid), status, error=failed and error, code=code)
 
     def fixture_page(self) -> Any:
         from playwright.sync_api import sync_playwright

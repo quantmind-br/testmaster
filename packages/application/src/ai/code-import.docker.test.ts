@@ -116,6 +116,83 @@ it.each(["playwright", "pytest"] as const)(
     );
   },
 );
+it("checks a body against a frozen source schema in the hardened Docker runner: a matching body passes, a mismatching one fails", async () => {
+  // `<root>/runtime/testmaster/<attemptId>/protocol.sock` must fit a unix socket path (107 bytes).
+  const root = await mkdtemp(join(tmpdir(), "tm-import-schema-"));
+  cleanups.push(() => rm(root, { recursive: true, force: true }));
+  const target = http.createServer((_request, response) => {
+    response.setHeader("content-type", "application/json");
+    response.end('{"status":"ok","count":2}');
+  });
+  const listening = Promise.withResolvers<void>();
+  target.listen(0, "127.0.0.1", listening.resolve);
+  await listening.promise;
+  cleanups.push(async () => {
+    const closed = Promise.withResolvers<void>();
+    target.close(() => closed.resolve());
+    await closed.promise;
+  });
+  const address = target.address();
+  if (!address || typeof address === "string") throw new Error("fixture address");
+  const baseUrl = `http://127.0.0.1:${address.port}`;
+  const revision = "svr_00000000-0000-4000-8000-000000000001";
+  const pointer = "/paths/~1health/get/responses/200/content/application~1json/schema";
+  const path = "health.spec.ts";
+  await writeFile(
+    join(root, path),
+    `import {test,expect} from '@playwright/test';test('health schema',async({request,sourceSchemas})=>{const response=await request.get('/health');expect(response.status()).toBe(200);expect(sourceSchemas.violations('${revision}','${pointer}',await response.json())).toEqual([]);});`,
+  );
+  const lock = await readImageLock(resolve("containers/images.lock.json"));
+  const imageId = lock["testmaster-runner"].imageId;
+  let attempts = 0;
+  const run = async (schema: Record<string, unknown>) => {
+    const schemas = { [`${revision}${pointer}`]: schema };
+    const bundle = await importCode({ root, path, format: "playwright", schemas });
+    expect(bundle.schemas).toEqual(schemas);
+    const inputDir = join(root, `input-${attempts++}`);
+    await mkdir(join(inputDir, "code"), { recursive: true });
+    for (const [file, text] of Object.entries(bundle.files))
+      await writeFile(join(inputDir, "code", file), text);
+    await mkdir(join(root, "runtime"), { recursive: true, mode: 0o700 });
+    return new AttemptExecutor(
+      new FileEvidenceStore({ rootDir: join(root, "evidence") }),
+      undefined,
+      join(root, "runtime"),
+    ).execute({
+      workspaceId: uuidV7IdGenerator.next("ws"),
+      runId: uuidV7IdGenerator.next("run"),
+      attemptId: uuidV7IdGenerator.next("att"),
+      revisionId: uuidV7IdGenerator.next("rev"),
+      snapshotId: uuidV7IdGenerator.next("snp"),
+      kind: "http",
+      imageId,
+      inputDir,
+      seccompPath: resolve("containers/seccomp_profile.json"),
+      attemptTimeoutMs: 60000,
+      networkPolicy: { allowedOrigins: [baseUrl], networkProfile: "local-loopback", baseUrl },
+      runnerInput: {
+        baseUrl,
+        imageId,
+        timeoutMs: 60000,
+        stepTimeoutMs: 10000,
+        imported: { files: [path] },
+        schemas,
+      },
+    });
+  };
+  const matching = await run({
+    type: "object",
+    required: ["status", "count"],
+    properties: { status: { enum: ["ok"] }, count: { type: "integer", format: "int64" } },
+  });
+  expect(matching.outcome).toBe("passed");
+  const mismatching = await run({
+    type: "object",
+    required: ["status", "missing"],
+    properties: { status: { type: "integer" }, missing: { type: "string" } },
+  });
+  expect(mismatching.outcome).toBe("failed");
+});
 it.each(["playwright", "pytest"] as const)(
   "refuses unsafe %s source before any Docker dispatch",
   async (format) => {

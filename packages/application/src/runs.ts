@@ -37,6 +37,7 @@ import {
   admissionSnapshot,
   verifyAdmission,
 } from "./provenance.js";
+import { withUsedEnvironment } from "./run-config.js";
 import { runtimeIdentity } from "./runtime-identity.js";
 import { clockDomain, timingBoundary } from "./timing.js";
 
@@ -332,6 +333,8 @@ export class RunsService {
     const originalUrl = (env.targetOrigins as string[])[0];
     const targetUrl = request.extensions?.["testmaster:targetUrl"];
     const baseUrl = typeof targetUrl === "string" ? new URL(targetUrl).origin : originalUrl;
+    if (!baseUrl)
+      throw new ContractError("PRECONDITION_FAILED", "Environment revision has no target origin");
     if (this.host.config.profilePolicy.offline && env.networkProfile !== "local-loopback")
       throw new ContractError(
         "POLICY_DENIED",
@@ -392,7 +395,7 @@ export class RunsService {
         environmentName: environment.name,
         planHash: revision.contentHash,
         baseUrl,
-        effectiveConfig: structuredClone(this.host.config.effectiveConfig),
+        effectiveConfig: withUsedEnvironment(this.host.config.effectiveConfig, env, baseUrl),
         limits,
         healingPolicy: request.healingPolicy ?? "off",
         ...(request.origin === "verification" &&
@@ -788,8 +791,19 @@ export class RunsService {
     const environment = requireEntity(this.ctx, "Environment", environmentId);
     if (environment.activeRevisionId !== failed.environmentRevisionId)
       throw new ContractError("REVISION_CONFLICT", "Frozen healing environment changed");
-    const frozen = cell.effectiveConfig as EffectiveConfig;
-    const current = this.host.config.effectiveConfig;
+    // The `environment` section is the pinned revision's on both sides (see withUsedEnvironment).
+    const usedEnvironment = requireEntity(
+      this.ctx,
+      "EnvironmentRevision",
+      failed.environmentRevisionId,
+    );
+    const baseUrl = String(cell.baseUrl);
+    const frozen = withUsedEnvironment(
+      cell.effectiveConfig as EffectiveConfig,
+      usedEnvironment,
+      baseUrl,
+    );
+    const current = withUsedEnvironment(this.host.config.effectiveConfig, usedEnvironment, baseUrl);
     if (semanticHash(frozen) !== semanticHash(current)) {
       const overrides = this.host.config.overrides ?? [];
       // Process-level overrides lead, so the cause is never lost behind the key cap.

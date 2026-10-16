@@ -1,13 +1,14 @@
-import { ContractError } from "@testmaster/contracts";
+import { ContractError, type ExecutablePlan } from "@testmaster/contracts";
 import type { EntityDocument } from "@testmaster/persistence";
 import { CODE_IMPORT_RULES, type ImportedCodeBundle } from "@testmaster/planner";
 import type { ResolvedConfig } from "../config.js";
 import { allEntities, requireEntity, type ServiceContext } from "../context.js";
 import { CodeImportService, type CodeSecretBinding } from "./code-import.js";
 import { ModelService } from "./model.js";
+import { type SchemaCitation, schemaCitations, sourceSchemasFor } from "./source-documents.js";
 
 /** What the model must obey; the importer enforces the same constants (planner `CODE_IMPORT_RULES`). */
-const generationInstructions = `Return standalone Playwright test code importing only @playwright/test. Preserve every deterministic plan assertion and action. Use page.goto relative URLs and runner-configured baseURL. No shell, dependency installs, eval, filesystem or empty assertions. Do not use TestMaster APIs. A plan value {"secretRef": <id>} is a credential: read it with secrets.get(NAME), where NAME is the entry of the data "secrets" list (name, id, allowedOrigins; never values) whose id matches. A plan request step with "auth": "profile" is sent with the environment's logged-in auth profile session: send it with the profileRequest fixture (destructure it in the test callback, async ({ profileRequest }) => { ... }), an APIRequestContext with the session applied, and use the profilePage fixture the same way for a browser flow that needs that session. The plain request and page fixtures are never authenticated: use them for steps without "auth" (for example a request that must answer 401), and never copy cookies, tokens or other session values into the code. A profileRequest does not follow redirects when the profile sends a header credential. The code is machine-checked before it is accepted and any violation is refused, so obey every rule: ${CODE_IMPORT_RULES.join(" ")}`;
+const generationInstructions = `Return standalone Playwright test code importing only @playwright/test. Preserve every deterministic plan assertion and action. Use page.goto relative URLs and runner-configured baseURL. No shell, dependency installs, eval, filesystem or empty assertions. Do not use TestMaster APIs. A plan value {"secretRef": <id>} is a credential: read it with secrets.get(NAME), where NAME is the entry of the data "secrets" list (name, id, allowedOrigins; never values) whose id matches. A plan request step with "auth": "profile" is sent with the environment's logged-in auth profile session: send it with the profileRequest fixture (destructure it in the test callback, async ({ profileRequest }) => { ... }), an APIRequestContext with the session applied, and use the profilePage fixture the same way for a browser flow that needs that session. The plain request and page fixtures are never authenticated: use them for steps without "auth" (for example a request that must answer 401), and never copy cookies, tokens or other session values into the code. A profileRequest does not follow redirects when the profile sends a header credential. A plan assertion with predicate "jsonSchema" checks a JSON value of the response against the source schema it cites (sourceRevisionId and pointer): the data "sourceSchemas" list names each cited schema with the plan steps that use it. The schema documents are frozen into the test and cannot be read, so check each one with the sourceSchemas fixture, never with hand-written structural assertions, and never skip it. The code is machine-checked before it is accepted and any violation is refused, so obey every rule: ${CODE_IMPORT_RULES.join(" ")}`;
 /** Ids of the plan's request steps that ask for the environment's auth profile session. */
 function profileSteps(plan: unknown, found: string[] = []): string[] {
   if (Array.isArray(plan)) for (const item of plan) profileSteps(item, found);
@@ -17,6 +18,40 @@ function profileSteps(plan: unknown, found: string[] = []): string[] {
     for (const child of Object.values(plan)) profileSteps(child, found);
   }
   return found;
+}
+/** Largest source-schema set frozen into a code bundle; the stored bundle must stay readable (8 MiB cap). */
+const SCHEMAS_MAX_BYTES = 4 * 1024 * 1024;
+/** Source schemas the code must check, one entry per cited schema with the steps that use it. */
+function offeredSchemas(citations: readonly SchemaCitation[]) {
+  const offered = new Map<
+    string,
+    { sourceRevisionId: string; pointer: string; stepIds: string[] }
+  >();
+  for (const { stepId, sourceRevisionId, pointer } of citations) {
+    const entry = offered.get(`${sourceRevisionId}${pointer}`);
+    if (entry) entry.stepIds.push(stepId);
+    else
+      offered.set(`${sourceRevisionId}${pointer}`, {
+        sourceRevisionId,
+        pointer,
+        stepIds: [stepId],
+      });
+  }
+  return [...offered.values()];
+}
+/** Why code cannot check the plan's cited schemas, found before any model call; undefined when it can. */
+function schemaRefusal(
+  citations: readonly SchemaCitation[],
+  schemas: Record<string, unknown>,
+): string | undefined {
+  const missing = citations.filter(
+    ({ sourceRevisionId, pointer }) => !Object.hasOwn(schemas, `${sourceRevisionId}${pointer}`),
+  );
+  if (missing.length)
+    return `Step ${missing.map((item) => `${JSON.stringify(item.stepId)} cites source schema ${item.sourceRevisionId}#${item.pointer}`).join(", ")}, which its source revision no longer provides: the generated code cannot check it, so no model call was made`;
+  if (Buffer.byteLength(JSON.stringify(schemas)) > SCHEMAS_MAX_BYTES)
+    return `The source schemas cited by the plan exceed ${SCHEMAS_MAX_BYTES} bytes and cannot be frozen into the code bundle, so no model call was made`;
+  return undefined;
 }
 // A refused candidate is a per-revision result; any other failure (budget, provider) is not.
 const refusalCodes: readonly string[] = ["INVALID_ARGUMENT", "POLICY_DENIED", "PAYLOAD_TOO_LARGE"];
@@ -128,6 +163,17 @@ export class CodeGenerationService {
             "POLICY_DENIED",
             "Revision is outside the project or has no grounded plan",
           );
+        // The code checks the schemas the plan cites through the sourceSchemas fixture, so they are
+        // resolved now, exactly as the plan's runner input resolves them, and frozen into the bundle.
+        const citations = schemaCitations(revision.plan as ExecutablePlan);
+        const schemas = citations.length
+          ? sourceSchemasFor(this.ctx, revision.plan as ExecutablePlan)
+          : {};
+        const refusal = schemaRefusal(citations, schemas);
+        if (refusal) {
+          validationErrors.push({ path: id, message: refusal });
+          continue;
+        }
         // The importer is the response check: its refusal is repair feedback to the model, and the
         // bundle it accepted is the one stored, so the code is not imported twice.
         const accepted: { bundle?: ImportedCodeBundle } = {};
@@ -151,6 +197,7 @@ export class CodeGenerationService {
                     })),
                   }
                 : {}),
+              ...(citations.length ? { sourceSchemas: offeredSchemas(citations) } : {}),
             },
             dataClasses: ["plans"],
             instructions: generationInstructions,
@@ -164,7 +211,17 @@ export class CodeGenerationService {
               accepted.bundle = await importer.checkGeneratedCode(
                 output,
                 offered.map((secret) => secret.name),
+                schemas,
               );
+              const unchecked = citations.filter(
+                ({ sourceRevisionId, pointer }) =>
+                  !Object.hasOwn(accepted.bundle?.schemas ?? {}, `${sourceRevisionId}${pointer}`),
+              );
+              if (unchecked.length)
+                throw new ContractError(
+                  "INVALID_ARGUMENT",
+                  `The plan checks ${unchecked.map((item) => `step ${JSON.stringify(item.stepId)} against source schema ${JSON.stringify(item.sourceRevisionId)} ${JSON.stringify(item.pointer)}`).join(", ")} but the code never calls sourceSchemas.violations with that revision id and pointer: destructure sourceSchemas in the test callback and assert expect(sourceSchemas.violations(sourceRevisionId, pointer, body)).toEqual([]) for every cited schema`,
+                );
               const unauthenticated = profileSteps(revision.plan);
               if (unauthenticated.length && !accepted.bundle.profile)
                 throw new ContractError(

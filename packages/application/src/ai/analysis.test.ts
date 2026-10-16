@@ -2582,6 +2582,9 @@ it("a failed code run maps its steps to what the reporter named and keeps expect
     observed: expect.stringContaining("404"),
   });
   expect(analysis.diagnosis?.observation?.absence).not.toBe("null_value");
+  // The observation cites Playwright's own message with its location, not only the step's status.
+  expect(analysis.diagnosis?.observation?.summary).toContain("Received: 404");
+  expect(analysis.diagnosis?.observation?.summary).toContain("at health.spec.ts:4:38");
   expect(analysis.diagnosis?.chain.map((link) => link.operation)).toEqual(["playwright_test"]);
   // The facts carry Playwright's own message with its location, citing the persisted step.
   const fact = analysis.facts.find((item) => item.text.includes("Received: 404"));
@@ -2589,6 +2592,73 @@ it("a failed code run maps its steps to what the reporter named and keeps expect
   expect(fact?.text).toContain("at health.spec.ts:4:38");
   expect(fact?.evidenceRefs[0]?.stepId).toBe(f.step.id);
   expect(JSON.stringify(analysis)).not.toContain("unmapped");
+});
+it("a code test that threw instead of asserting is a test defect and the diagnosis quotes the thrown error", async () => {
+  const message =
+    "Error: Cannot complete check_manifest: the supplied data does not include that schema.\n    at generated.spec.ts:14:9";
+  const thrown = (error: string): Partial<StepResult> => ({
+    planStepId: "imported-test-0",
+    status: "inconclusive",
+    reasonCode: "insufficient_evidence",
+    expected: null,
+    observed: null,
+    error: { code: "Error", message: error },
+  });
+  const f = await fixture({ code: true, step: thrown(message) });
+  const analysis = await f.service.analyze(f.run.id, {});
+  expect(analysis).toMatchObject({ failureKind: "test_fragility", recommendedAction: "fix_test" });
+  const diagnosis = analysis.diagnosis!;
+  // The test recorded no comparison, so none is reported.
+  expect(diagnosis.observation).toMatchObject({
+    stepId: "imported-test-0",
+    operation: "playwright_test",
+    expected: null,
+    observed: null,
+  });
+  expect(diagnosis.observation?.summary).toContain("Cannot complete check_manifest");
+  expect(diagnosis.conclusion.status).toBe("cause_partially_supported");
+  expect(diagnosis.conclusion.text).toContain("thrown by the test code");
+  expect(diagnosis.conclusion.text).toContain("Cannot complete check_manifest");
+  expect(diagnosis.conclusion.text).toContain("at generated.spec.ts:14:9");
+  expect(diagnosis.nextSteps[0]?.text).toContain("Fix the test code, or regenerate it");
+  expect(diagnosis.nextSteps[0]?.evidenceRefs).toEqual([
+    expect.objectContaining({ stepId: f.step.id }),
+  ]);
+  expect(diagnosis.healing.advice).toBe("not_indicated");
+  const fact = analysis.facts.find((item) => item.text.includes("threw an error"));
+  expect(fact?.text).toContain("Step imported-test-0 (playwright_test) threw an error:");
+  expect(fact?.text).toContain("at generated.spec.ts:14:9");
+  // Control: a thrown connection error is an environment condition, not a defect of the code.
+  const down = await fixture({
+    code: true,
+    step: thrown("Error: apiRequestContext.get: connect ECONNREFUSED 127.0.0.1:20311"),
+  });
+  expect(await down.service.analyze(down.run.id, {})).toMatchObject({
+    failureKind: "environment",
+    recommendedAction: "fix_environment",
+  });
+});
+it("a pytest test that raised a non-assertion exception is read like a code test that threw", async () => {
+  // The Python harness names a step after its pytest node id and sends the exception's class.
+  const f = await fixture({
+    code: true,
+    step: {
+      planStepId: "test_health.py__test_manifest",
+      status: "inconclusive",
+      reasonCode: "insufficient_evidence",
+      expected: null,
+      observed: null,
+      error: {
+        code: "KeyError",
+        message: "KeyError: 'paths'\n    at test_health.py:9",
+      },
+    },
+  });
+  const analysis = await f.service.analyze(f.run.id, {});
+  expect(analysis).toMatchObject({ failureKind: "test_fragility", recommendedAction: "fix_test" });
+  expect(analysis.diagnosis?.conclusion.text).toContain("KeyError: 'paths'");
+  expect(analysis.diagnosis?.conclusion.text).toContain("at test_health.py:9");
+  expect(analysis.diagnosis?.nextSteps[0]?.text).toContain("Fix the test code, or regenerate it");
 });
 it("code steps are named by their reporter id, and a failed test and its failing expect state one fact", async () => {
   const f = await fixture({ code: true, step: { planStepId: "imported-test-0", error: null } });

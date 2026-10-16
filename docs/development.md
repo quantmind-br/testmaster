@@ -23,7 +23,8 @@
 Dependency direction (NFR-009): `contracts` ← `domain` ← `persistence`, `evidence` ← `sandbox`,
 `model-gateway`, `planner`, `reporting` ← `application` ← `apps/*`. `runner` imports only
 `contracts`, `domain`, `playwright-core`, `undici`, and, for the terminal runner (ADR-025),
-`@lydell/node-pty` and `@xterm/headless`.
+`@lydell/node-pty` and `@xterm/headless`; it declares `ajv` and `ajv-formats` only so the
+`sourceSchemas` fixture of imported Playwright code resolves them (same versions as contracts).
 
 ## Tests
 
@@ -825,12 +826,19 @@ unchanged: with separation of duties the requester cannot approve its own execut
   translation is refused. An imported or generated Playwright export also ships
   `testmaster-fixtures/`, a local package installed as `@playwright/test` that re-exports the pinned
   stock package (installed as the alias `playwright-test-stock`) and adds the runner's `secrets`,
-  `profileRequest` and `profilePage` fixtures, so the authored import runs unchanged with
+  `profileRequest`, `profilePage` and `sourceSchemas` fixtures, so the authored import runs unchanged with
   `npm ci && npx playwright install chromium && BASE_URL=... npm test`. `secrets.get("NAME")` reads
   `SECRET_NAME`; the auth profile session comes from `TESTMASTER_PROFILE_STORAGE_STATE` (a Playwright
   storage-state file) and `TESTMASTER_PROFILE_HEADERS` (a JSON object of header credentials), is
   sent to the `BASE_URL` origin only and never along a redirect; `export-metadata.json` lists the
-  variables in `environment`. Export-side secrets use `SECRET_<name>`, not secret ids. pytest imports
+  variables in `environment`. Export-side secrets use `SECRET_<name>`, not secret ids.
+  `sourceSchemas.violations(sourceRevisionId, pointer, value)` returns the violations of a value
+  against a source schema frozen into the revision (`ImportedCodeBundle.schemas`, keyed by revision
+  id plus pointer), judged by the runner's source-schema Ajv rules (`SOURCE_SCHEMA_RULES`,
+  contracts `validation.ts`: same options, OpenAPI formats and annotation stripping as the plan's
+  `jsonSchema` predicate). An export of code that uses it also ships
+  `testmaster-fixtures/schemas.json` and pins `ajv`/`ajv-formats` (same versions as contracts, with
+  lock entries) in the fixtures package; without schemas the export is unchanged. pytest imports
   have no runner fixtures.
   Standalone projects do not implement supervisor grants/approval/egress/redaction: use an
   authorized target and external isolation. `validation/journeys/export-standalone.docker.test.ts`
@@ -958,6 +966,19 @@ the forbidden names as string keys (`x['require']`), `module` and `?.constructor
 refused after the repairs is listed in `validationErrors`; when every candidate is refused the call
 fails `INVALID_ARGUMENT` (`reasonCode generated_code_refused`, `requested`, `validationErrors`,
 `modelCallIds`). The receipt carries `requested`.
+
+A plan assertion with the `jsonSchema` predicate has no counterpart in the model's vocabulary, so
+the generation prompt lists each cited schema as `sourceSchemas: [{sourceRevisionId, pointer,
+stepIds}]` (never the document) and tells the model to call `sourceSchemas.violations(rev, pointer,
+await response.json())` and expect `[]`. The importer accepts that call only with literal revision
+id and pointer that the plan cites (imported, authored code cannot use the fixture) and freezes the
+resolved documents (`sourceSchemasFor`, as the plan runner resolves them) into the bundle; the
+worker passes them as the runner input `schemas` and the harness stages `schemas.json` beside the
+fixtures shim. The check refuses code that never calls it for a cited schema (repair feedback
+naming the step, revision and pointer). A cited schema that no longer resolves, or documents above
+4 MiB together, refuse that revision before the paid call. The runner image bundles `ajv` and
+`ajv-formats` through the contracts dependency flatten (`containers/build.mjs`), so a change here
+rebuilds the runner image (`containers/images.lock.json`).
 
 A model call has no deadline anywhere: code generation, like every other purpose, runs until the
 provider answers, and only the caller's cancellation (an aborted signal) ends it. Generated code
@@ -1210,6 +1231,19 @@ the verification Run). Under `CI=true` the resolver forces `healing.mode` off wi
 shell with `CI=true` cannot approve a proposal whose failed Run was admitted without it: the
 `REVISION_CONFLICT` message and `details` (`reasonCode: execution_configuration_changed`,
 `changed`, `overrides`, `nextActions`) name the keys and their frozen/current origins, never values.
+The `environment` section of `testmaster.config.json` (and `TESTMASTER_BASE_URL`, `TESTMASTER_NETWORK_PROFILE`,
+`TESTMASTER_LOCALE`, `TESTMASTER_TIMEZONE`) only seeds the first Environment at `init`, the model request
+locale and the `doctor` timezone check; changing it after `init` retargets nothing, so
+`testmaster_update_environment` does not rewrite it. A Run never records those file values as
+effective: `matrixCell.effectiveConfig.config.environment` holds the values of the EnvironmentRevision
+the Run executed against (`baseUrl` is the origin actually targeted, a destination override included),
+with origin `environmentRevision` for each `environment.*` key. The frozen-configuration comparison
+above protects the execution configuration (limits, executor, browser, artifacts, healing mode,
+policy hash); it substitutes the pinned revision into the `environment` section on both sides, so
+a project-file or `TESTMASTER_*` environment change no longer refuses an approval (the environment
+itself stays pinned by the revision id check, `Frozen healing environment changed`), and Runs
+recorded before this change still compare. Run comparability reports an environment difference
+only as `environment-changed`, never also as `execution-config-changed`.
 An unauthorized caller is refused with a plain `FORBIDDEN` (`details.scope`); the refusals `approval_grant_required`,
 `approval_not_permitted` and `requiredGrant` no longer exist. The approval is recorded with the acting principal
 (human, token, service or agent) and stays version-bound, with assertions never changed.

@@ -130,6 +130,74 @@ it("edit_plan replaces a proposed plan at its expected version and refuses a sta
   expect(f.app.proposals.detail(batch.id).proposals[0]?.version).toBe(2);
 });
 
+it("edit_plan reports the batch version review_plan wants and a stale review answers with a compact conflict", async () => {
+  const f = await fixture();
+  const { call } = await f.connect();
+  const batch = entity(f.app.context, "pbt", {
+    projectId: f.init.projectId,
+    sourceSnapshotId: "snapshot-fingerprint",
+    version: 1,
+    state: "proposed",
+  });
+  f.app.context.entities.insert("ProposalBatch", batch);
+  const proposals = Array.from({ length: 12 }, (_, index) => {
+    const proposal = entity(f.app.context, "pro", {
+      batchId: batch.id,
+      plan: { ...scaffoldPlan("backend"), name: `Proposal ${index}` },
+      requirementRefs: [],
+      evidenceRefs: [{ relativePath: "spec.md" }],
+      warnings: [],
+      state: "proposed",
+      validation: "valid",
+    });
+    f.app.context.entities.insert("Proposal", proposal);
+    return proposal;
+  });
+  // Each edit moves the batch too: the receipt says where the batch stands, not only the proposal.
+  const first = await call("testmaster_edit_plan", {
+    proposalId: proposals[0]?.id,
+    plan: { ...scaffoldPlan("backend"), name: "Edited zero" },
+    expectedVersion: 1,
+  });
+  const second = await call("testmaster_edit_plan", {
+    proposalId: proposals[1]?.id,
+    plan: { ...scaffoldPlan("backend"), name: "Edited one" },
+    expectedVersion: 1,
+  });
+  expect(first.data).toMatchObject({ version: 2, batchVersion: 2 });
+  expect(second.data).toMatchObject({ version: 2, batchVersion: 3 });
+
+  // The batch version the agent held before the edits is stale: the conflict lists what is there
+  // (id, state, version) and never the plans.
+  const stale = await call("testmaster_review_plan", {
+    batchId: batch.id,
+    expectedVersion: 1,
+    acceptIds: [],
+    rejectIds: [proposals[2]?.id],
+  });
+  expect(stale.error?.code).toBe("REVISION_CONFLICT");
+  const diff = stale.error?.details?.diff as {
+    expectedVersion: number;
+    currentVersion: number;
+    proposals: Record<string, unknown>[];
+  };
+  expect(diff).toMatchObject({ expectedVersion: 1, currentVersion: 3 });
+  expect(diff.proposals).toHaveLength(12);
+  expect(
+    diff.proposals.every((item) => Object.keys(item).sort().join() === "id,state,version"),
+  ).toBe(true);
+  expect(JSON.stringify(stale.error)).not.toContain("Edited zero");
+
+  // The version the edit receipt reported is the one the review takes.
+  const reviewed = await call("testmaster_review_plan", {
+    batchId: batch.id,
+    expectedVersion: second.data?.batchVersion,
+    acceptIds: [],
+    rejectIds: [proposals[2]?.id],
+  });
+  expect(reviewed.isError, JSON.stringify(reviewed.error)).toBe(false);
+});
+
 it("save_test stores a new test as active, keeps a new revision a candidate and promote_revision activates it", async () => {
   const f = await fixture();
   const { call } = await f.connect();

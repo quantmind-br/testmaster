@@ -90,54 +90,65 @@ function assertNfc(value: unknown, path = ""): void {
     }
 }
 /**
- * Admitted source schemas come from third-party documents (OpenAPI, JSON Schema). They get their
- * own Ajv instance so TestMaster's strict contract validator (`ajv`) stays untouched: keywords
- * remain strict, but type-union and tuple conventions of real documents are accepted and the
- * OpenAPI numeric/binary formats are declared.
+ * The rules of the source-schema validator. Admitted source schemas come from third-party documents
+ * (OpenAPI, JSON Schema). They get their own Ajv instance so TestMaster's strict contract validator
+ * (`ajv`) stays untouched: keywords remain strict, but type-union and tuple conventions of real
+ * documents are accepted and the OpenAPI numeric/binary formats are declared. The generated
+ * JavaScript validator that code tests run (`@testmaster/domain` `sourceSchemaValidatorSource`) is
+ * built from this same table, so a plan step and its generated code judge a body identically.
  */
-const sourceAjv = new Ajv2020({
-  strict: true,
-  strictTypes: false,
-  strictTuples: false,
-  allowUnionTypes: true,
-  allErrors: true,
-  validateFormats: true,
-});
+export const SOURCE_SCHEMA_RULES = {
+  ajvOptions: {
+    strict: true,
+    strictTypes: false,
+    strictTuples: false,
+    allowUnionTypes: true,
+    allErrors: true,
+    validateFormats: true,
+  },
+  /** OpenAPI formats with no validation semantics, declared so `strict` mode accepts them. */
+  openApiFormats: ["int32", "int64", "float", "double", "byte", "binary", "password"],
+  /** OpenAPI annotations with no validation semantics; `x-*` vendor extensions are dropped too. */
+  annotations: ["example", "xml", "externalDocs", "discriminator"],
+  /** Keywords whose value is a schema or a list of schemas. */
+  schemaKeywords: [
+    "additionalProperties",
+    "items",
+    "additionalItems",
+    "contains",
+    "not",
+    "if",
+    "then",
+    "else",
+    "propertyNames",
+    "unevaluatedItems",
+    "unevaluatedProperties",
+    "contentSchema",
+    "allOf",
+    "anyOf",
+    "oneOf",
+    "prefixItems",
+  ],
+  /** Keywords whose value maps names to schemas. */
+  schemaMapKeywords: [
+    "properties",
+    "patternProperties",
+    "$defs",
+    "definitions",
+    "dependentSchemas",
+    "dependencies",
+  ],
+} as const;
+const sourceAjv = new Ajv2020({ ...SOURCE_SCHEMA_RULES.ajvOptions });
 addFormats.default(sourceAjv);
-for (const format of ["int32", "int64", "float", "double", "byte", "binary", "password"])
-  sourceAjv.addFormat(format, true);
+for (const format of SOURCE_SCHEMA_RULES.openApiFormats) sourceAjv.addFormat(format, true);
 const sourceValidators = new Map<string, ValidateFunction>();
 const SOURCE_VALIDATOR_LIMIT = 256;
-/** OpenAPI annotations with no validation semantics; `x-*` vendor extensions are dropped too. */
-const SOURCE_ANNOTATIONS = new Set(["example", "xml", "externalDocs", "discriminator"]);
-/** Keywords whose value is a schema or a list of schemas. */
-const SCHEMA_KEYWORDS = new Set([
-  "additionalProperties",
-  "items",
-  "additionalItems",
-  "contains",
-  "not",
-  "if",
-  "then",
-  "else",
-  "propertyNames",
-  "unevaluatedItems",
-  "unevaluatedProperties",
-  "contentSchema",
-  "allOf",
-  "anyOf",
-  "oneOf",
-  "prefixItems",
-]);
-/** Keywords whose value maps names to schemas. */
-const SCHEMA_MAP_KEYWORDS = new Set([
-  "properties",
-  "patternProperties",
-  "$defs",
-  "definitions",
-  "dependentSchemas",
-  "dependencies",
-]);
+const tableOf = (names: readonly string[]): Record<string, true> =>
+  Object.fromEntries(names.map((name) => [name, true]));
+const SOURCE_ANNOTATIONS = tableOf(SOURCE_SCHEMA_RULES.annotations);
+const SCHEMA_KEYWORDS = tableOf(SOURCE_SCHEMA_RULES.schemaKeywords);
+const SCHEMA_MAP_KEYWORDS = tableOf(SOURCE_SCHEMA_RULES.schemaMapKeywords);
 /**
  * Copy of `schema` without annotation keywords, walking only schema positions: a property that is
  * itself named `example` (a key of `properties`) or an `enum`/`const`/`default` value is data and
@@ -148,12 +159,12 @@ function withoutSourceAnnotations(schema: unknown): unknown {
   if (!schema || typeof schema !== "object") return schema;
   return Object.fromEntries(
     Object.entries(schema)
-      .filter(([key]) => !SOURCE_ANNOTATIONS.has(key) && !key.startsWith("x-"))
+      .filter(([key]) => !Object.hasOwn(SOURCE_ANNOTATIONS, key) && !key.startsWith("x-"))
       .map(([key, value]) => [
         key,
-        SCHEMA_KEYWORDS.has(key)
+        Object.hasOwn(SCHEMA_KEYWORDS, key)
           ? withoutSourceAnnotations(value)
-          : SCHEMA_MAP_KEYWORDS.has(key) && value && typeof value === "object"
+          : Object.hasOwn(SCHEMA_MAP_KEYWORDS, key) && value && typeof value === "object"
             ? Object.fromEntries(
                 Object.entries(value).map(([name, child]) => [
                   name,

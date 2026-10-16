@@ -834,7 +834,9 @@ export class WorkerService {
             ...(prepared?.runnerAuth ? { auth: prepared.runnerAuth } : {}),
             variables,
             artifacts: fixtureInputs.artifacts,
-            schemas: sourceSchemasFor(this.ctx, plan),
+            // Code revisions carry the schemas frozen into their bundle at generation; plans resolve
+            // theirs from the cited source revisions.
+            schemas: imported?.bundle.schemas ?? sourceSchemasFor(this.ctx, plan),
             bodyBytes: limits.bodyBytes ?? defaults.bodyBytes,
             locale: env.locale,
             timezone: env.timezone,

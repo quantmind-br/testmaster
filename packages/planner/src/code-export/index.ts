@@ -11,11 +11,15 @@ import {
   fixturesCommonjs,
   fixturesModule,
   fixturesPackageJson,
+  fixturesPackageJsonWithSchemas,
   PLAYWRIGHT_VERSION,
   PROFILE_HEADERS_ENV,
   PROFILE_STORAGE_STATE_ENV,
+  SCHEMA_VALIDATOR_DEPENDENCIES,
+  SCHEMAS_FILE,
   SECRET_ENV_PREFIX,
   STOCK_PACKAGE,
+  schemaValidatorLockPackages,
 } from "./playwright-fixtures.js";
 import { pythonRuntime } from "./python.js";
 import { pythonLock } from "./python-lock.js";
@@ -61,6 +65,8 @@ export interface ImportedCodeExportInput {
   secrets?: string[];
   /** True when the code uses the `profileRequest` or `profilePage` fixtures. */
   profile?: boolean;
+  /** Source schemas the code checks values against (`sourceSchemas`), keyed by revision id + pointer. */
+  schemas?: Record<string, unknown>;
 }
 
 /** Preserves authored source bytes and its admitted runtime lock without translation. */
@@ -88,10 +94,15 @@ export function exportImportedCode(input: ImportedCodeExportInput): CodeExport {
       "Imported source conflicts with export project metadata",
     );
   if (input.format === "playwright") {
+    const withSchemas = Object.keys(input.schemas ?? {}).length > 0;
     files["package.json"] = `${JSON.stringify(importedPlaywrightPackage, null, 2)}\n`;
-    files["package-lock.json"] = `${JSON.stringify(importedPlaywrightLock, null, 2)}\n`;
+    files["package-lock.json"] =
+      `${JSON.stringify(withSchemas ? importedPlaywrightLockWithSchemas : importedPlaywrightLock, null, 2)}\n`;
     files[`${FIXTURES_DIRECTORY}/package.json`] =
-      `${JSON.stringify(fixturesPackageJson, null, 2)}\n`;
+      `${JSON.stringify(withSchemas ? fixturesPackageJsonWithSchemas : fixturesPackageJson, null, 2)}\n`;
+    if (withSchemas)
+      files[`${FIXTURES_DIRECTORY}/${SCHEMAS_FILE}`] =
+        `${JSON.stringify(input.schemas, null, 2)}\n`;
     files[`${FIXTURES_DIRECTORY}/index.js`] = fixturesCommonjs;
     files[`${FIXTURES_DIRECTORY}/index.mjs`] = fixturesModule;
     files["playwright.config.ts"] =
@@ -263,6 +274,18 @@ const importedPlaywrightLock = {
     },
   },
 };
+/** The same lock for code that checks source schemas: the validator is pinned with the fixtures. */
+const importedPlaywrightLockWithSchemas = {
+  ...importedPlaywrightLock,
+  packages: {
+    ...importedPlaywrightLock.packages,
+    ...schemaValidatorLockPackages,
+    [FIXTURES_DIRECTORY]: {
+      ...importedPlaywrightLock.packages[FIXTURES_DIRECTORY],
+      dependencies: fixturesPackageJsonWithSchemas.dependencies,
+    },
+  },
+};
 
 /** Environment variables the fixtures of imported Playwright code read (besides BASE_URL). */
 function fixtureEnvironment(input: ImportedCodeExportInput): string[] {
@@ -273,6 +296,7 @@ function fixtureEnvironment(input: ImportedCodeExportInput): string[] {
 }
 function playwrightFixturesSetup(input: ImportedCodeExportInput): string {
   const secrets = input.secrets ?? [];
+  const schemaCount = Object.keys(input.schemas ?? {}).length;
   return [
     `The authored "@playwright/test" import resolves to ./${FIXTURES_DIRECTORY}, which adds the runner fixtures to the pinned Playwright ${PLAYWRIGHT_VERSION}; tests that use none of them behave as under stock Playwright. Export does not translate or remove authored imports or fixtures.`,
     `secrets.get("NAME") reads the environment variable ${SECRET_ENV_PREFIX}NAME${secrets.length > 0 ? `; this code reads: ${secrets.map((name) => `${SECRET_ENV_PREFIX}${name}`).join(", ")}` : ""}.`,
@@ -280,6 +304,11 @@ function playwrightFixturesSetup(input: ImportedCodeExportInput): string {
     `  ${PROFILE_STORAGE_STATE_ENV}=<file>  Playwright storage-state JSON (cookies and web storage; entries for other origins are ignored)`,
     `  ${PROFILE_HEADERS_ENV}='{"x-api-key":"..."}'  header credentials of the profile, JSON object (profileRequest only; never sent along a redirect)`,
     "Without either, a test that uses these fixtures fails.",
+    ...(schemaCount > 0
+      ? [
+          `sourceSchemas.violations(sourceRevisionId, pointer, value) checks a value against a source schema frozen into ./${FIXTURES_DIRECTORY}/${SCHEMAS_FILE} (${schemaCount} in this code) with ajv ${SCHEMA_VALIDATOR_DEPENDENCIES.ajv} and ajv-formats ${SCHEMA_VALIDATOR_DEPENDENCIES["ajv-formats"]}, the validator and options TestMaster's runner uses for a plan's jsonSchema assertion.`,
+        ]
+      : []),
   ].join("\n");
 }
 

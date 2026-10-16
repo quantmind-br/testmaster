@@ -225,3 +225,50 @@ it("refuses a renamed secrets fixture and environment access even when a secret 
     message: 'Runtime code, shell and host access are forbidden: "process" at line 2',
   });
 });
+const schemaRevision = "svr_00000000-0000-4000-8000-000000000001";
+const schemaPointer = "/paths/~1items/get/responses/200/content/application~1json/schema";
+const offeredSchemas = {
+  [`${schemaRevision}${schemaPointer}`]: { type: "object" },
+  [`${schemaRevision}/components/schemas/Unused`]: { type: "string" },
+};
+const schemaTest = (body: string) => secretTest(body, "{ request, sourceSchemas }");
+it("accepts sourceSchemas.violations for an offered schema and freezes only the schemas the code checks", async () => {
+  const options = await source(
+    schemaTest(
+      `const body = await (await request.get('/items')).json(); expect(sourceSchemas.violations('${schemaRevision}', '${schemaPointer}', body)).toEqual([]);`,
+    ),
+  );
+  const bundle = await importCode({ ...options, schemas: offeredSchemas });
+  expect(bundle.schemas).toEqual({
+    [`${schemaRevision}${schemaPointer}`]: offeredSchemas[`${schemaRevision}${schemaPointer}`],
+  });
+  expect(
+    await importCode({ ...(await source(typescript)), schemas: offeredSchemas }),
+  ).not.toHaveProperty("schemas");
+});
+it("refuses a schema the test was not offered, including every code that has no schemas at all", async () => {
+  const options = await source(
+    schemaTest(
+      `expect(sourceSchemas.violations('${schemaRevision}', '/paths/other', {})).toEqual([]);`,
+    ),
+  );
+  await expect(importCode({ ...options, schemas: offeredSchemas })).rejects.toMatchObject({
+    code: "INVALID_ARGUMENT",
+    message: `Source schema "${schemaRevision}/paths/other" is not available to this test at line 2`,
+  });
+  await expect(importCode(options)).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+});
+it.each([
+  "const pointer = '/p'; expect(sourceSchemas.violations('svr_x', pointer, {})).toEqual([]);",
+  "expect(sourceSchemas.violations(`svr_${'x'}`, '/p', {})).toEqual([]);",
+  "expect(sourceSchemas.violations('svr_x', '/p')).toEqual([]);",
+  "const check = sourceSchemas.violations; expect(check('svr_x', '/p', {})).toEqual([]);",
+  "expect(sourceSchemas['violations']('svr_x', '/p', {})).toEqual([]);",
+  "const alias = sourceSchemas; expect(alias.violations('svr_x', '/p', {})).toEqual([]);",
+  "expect(Object.keys(sourceSchemas)).toEqual([]);",
+])("refuses source-schema access other than a literal violations call: %s", async (body) => {
+  const options = await source(schemaTest(body));
+  await expect(
+    importCode({ ...options, schemas: { "svr_x/p": { type: "object" } } }),
+  ).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+});

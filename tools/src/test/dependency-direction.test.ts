@@ -42,6 +42,10 @@ const allowedRunner: Record<string, true> = {
   // Terminal runner (ADR-025): the PTY and the headless emulator behind the screen assertions.
   "@lydell/node-pty": true,
   "@xterm/headless": true,
+  // The `sourceSchemas` fixture of imported/generated Playwright code (its text comes from
+  // `@testmaster/domain`) requires the contracts' Ajv build; declared so the shim resolves it.
+  ajv: true,
+  "ajv-formats": true,
 };
 const testFrameworks: Record<string, true> = { vitest: true, "fast-check": true };
 const builtins = new Set(builtinModules.flatMap((name) => [name, `node:${name}`]));

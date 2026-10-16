@@ -195,11 +195,18 @@ export function resolveSourceSchema(
   return { ...schema, $defs: { ...own, ...definitions } };
 }
 
-function schemaExpectations(plan: ExecutablePlan): { sourceRevisionId: string; pointer: string }[] {
-  const found: { sourceRevisionId: string; pointer: string }[] = [];
+/** One `jsonSchema` assertion of a plan and the source schema it cites. */
+export interface SchemaCitation {
+  stepId: string;
+  sourceRevisionId: string;
+  pointer: string;
+}
+export function schemaCitations(plan: ExecutablePlan): SchemaCitation[] {
+  const found: SchemaCitation[] = [];
   for (const step of flattenSteps(plan.steps))
     if (step.operation === "assert" && step.expectation.predicate === "jsonSchema")
       found.push({
+        stepId: step.id,
         sourceRevisionId: step.expectation.sourceRevisionId,
         pointer: step.expectation.pointer,
       });
@@ -217,7 +224,7 @@ export function sourceSchemasFor(
 ): Record<string, unknown> {
   const schemas: Record<string, unknown> = {};
   if (!plan) return schemas;
-  const expectations = schemaExpectations(plan);
+  const expectations = schemaCitations(plan);
   const views = new Map<string, SourceView | null>();
   for (const { sourceRevisionId } of expectations) {
     if (views.has(sourceRevisionId)) continue;
@@ -237,7 +244,7 @@ export function sourceSchemasFor(
 /** Pointers a `jsonSchema` assertion cites that do not reach a schema in the cited revision. */
 export function unresolvedSchemaPointers(ctx: ServiceContext, plan: ExecutablePlan): string[] {
   const schemas = sourceSchemasFor(ctx, plan);
-  return schemaExpectations(plan)
+  return schemaCitations(plan)
     .filter(({ sourceRevisionId, pointer }) => !(`${sourceRevisionId}${pointer}` in schemas))
     .map(({ sourceRevisionId, pointer }) => `${sourceRevisionId}#${pointer}`);
 }
