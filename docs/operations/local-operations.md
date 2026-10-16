@@ -398,6 +398,12 @@ Assertion mismatches report `product_or_contract`, not a certain source-level de
 stay unknown. Repetition counts never certify independent samples or confirm intermittent causes;
 independent target/network fault confirmation remains separate evidence.
 
+Blocked and inconclusive samples never reach a verdict, so they stay out of the failure estimate
+(`counts.nBlocked`, `counts.nInconclusive`; the report limitations name their share). With no
+failure observed, a study whose blocked or inconclusive samples are at least half of the terminal
+ones reports `unstable_infrastructure` instead of `passing_observed`; a failure observed next to
+blocked samples keeps its failure-based classification.
+
 Run and batch comparisons discriminate revision origin, generation ModelCall ID and visual baseline
 references, including frame-local assertions. Baseline-reference comparison does not enable M5
 visual matching. Batch members match logical test/environment/matrix identity, not array order;

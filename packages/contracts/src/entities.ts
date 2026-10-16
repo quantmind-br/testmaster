@@ -45,6 +45,12 @@ import { reasonCodes } from "./registries.js";
 const nullable = <T extends TSchema>(schema: T) => Type.Union([schema, Type.Null()]);
 const refs = Type.Array(EvidenceRef);
 const names = Type.Array(Name);
+/**
+ * A path or glob as the repository lists it. `Name` stops at 200 characters, which real trees
+ * exceed (generated snapshot files, deep monorepo paths); one such file must not refuse the
+ * whole snapshot. 4096 is the longest path Linux accepts (PATH_MAX).
+ */
+const RepoPath = Type.String({ minLength: 1, maxLength: 4096 });
 const digest = nullable(ContentDigest);
 const entity = <F extends Record<string, TSchema>>(prefix: EntityPrefix, fields: F) =>
   Obj({
@@ -134,13 +140,13 @@ export const entities = {
     chunks: Type.Optional(refs),
   }),
   CodeSnapshot: entity("csp", {
-    repoRef: Name,
+    repoRef: RepoPath,
     baseSha: nullable(Name),
     headSha: nullable(Name),
     dirtyHash: digest,
     manifestHash: ContentDigest,
-    excludes: names,
-    skippedFiles: Type.Optional(Type.Array(Obj({ path: Name, reason: Name }))),
+    excludes: Type.Array(RepoPath),
+    skippedFiles: Type.Optional(Type.Array(Obj({ path: RepoPath, reason: Name }))),
   }),
   Feature: entity("fea", {
     projectId: id("prj"),
@@ -400,7 +406,7 @@ export const entities = {
     risk: Risk,
     status: Enum(["proposed", "approved", "rejected", "verified"]),
     approvalMode: nullable(Enum(["manual", "policy"])),
-    reviewerId: nullable(id("usr")),
+    reviewerId: nullable(Name),
     policyHash: nullable(ContentDigest),
     verificationRunId: nullable(id("run")),
     modelCallId: nullable(id("mdl")),

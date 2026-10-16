@@ -447,3 +447,42 @@ it("M4-03 REQ-018 attaches profiles to an environment only inside the profile's 
     await other.close();
   }
 });
+
+it("SEC-022 binding an auth profile to an environment needs no approval and is audited with the actor", async () => {
+  const current = await lab();
+  const profile = await formProfile(current);
+  const events = () =>
+    current.app.database.all<{
+      actor: string;
+      resource_id: string;
+      before_hash: string | null;
+      after_hash: string | null;
+    }>(
+      "SELECT actor,resource_id,before_hash,after_hash FROM audit_events WHERE action='environment.auth_binding'",
+    );
+  // No profile attached: nothing to audit.
+  current.environment("plain", []);
+  expect(events()).toEqual([]);
+  // Attaching needs only write permission and records who bound what.
+  const bound = current.environment("audited", [profile.id]);
+  const [created] = events();
+  expect(events()).toHaveLength(1);
+  expect(created).toMatchObject({
+    actor: current.app.context.principalId,
+    resource_id: bound.id,
+  });
+  expect(created?.before_hash).not.toBe(created?.after_hash);
+  // A change that keeps the same profile set writes nothing; detaching writes a second event.
+  const stored = current.app.environments.get(bound.id);
+  const patched = current.app.environments.update(
+    bound.id,
+    { locale: "pt-BR" },
+    Number(stored.version),
+  );
+  expect(events()).toHaveLength(1);
+  current.app.environments.update(bound.id, { authRefs: [] }, Number(patched.version));
+  const after = events();
+  expect(after).toHaveLength(2);
+  expect(after.map((event) => event.resource_id)).toEqual([bound.id, bound.id]);
+  expect(new Set(after.map((event) => event.after_hash)).size).toBe(2);
+});

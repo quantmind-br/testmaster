@@ -54,7 +54,7 @@ const definitions: readonly {
     key: "approve",
     column: "write",
     label: "Approve",
-    description: "Approve executions, proposals and healing as a human principal.",
+    description: "Decide executions, proposals and healing, as a person or as an agent.",
   },
   { key: "execute", column: "execute", label: "Execute", description: "Start and cancel Runs." },
   {
@@ -85,15 +85,11 @@ function rolesAllowing(matrix: RbacMatrix | null, column: PermissionArea): strin
 export function permissionRows(me: Me, matrix: RbacMatrix | null): PermissionRow[] {
   const role = me.membership.role;
   return definitions.map((definition) => {
-    const human = me.principal.kind === "human";
-    const allowed = me.permissions[definition.column] && (definition.key !== "approve" || human);
+    const allowed = me.permissions[definition.column];
     let reason = "";
     if (!allowed) {
       const value = matrix?.matrix[role]?.[definition.column];
-      if (definition.key === "approve" && !human)
-        reason =
-          "Approvals are decided by human principals only; service principals never approve.";
-      else if (value === "grant-only")
+      if (value === "grant-only")
         reason = `The ${role} role needs an explicit grant for ${definition.label.toLowerCase()}.`;
       else
         reason = `The ${role} role does not include ${definition.label.toLowerCase()}.${rolesAllowing(matrix, definition.column)}`;

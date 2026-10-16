@@ -42,7 +42,7 @@ The adversarial sandbox Docker suite requires `tcpdump` and permission to run
 `sudo -n tcpdump` on loopback for a bounded controlled-target packet recording. It fails
 explicitly when capture is unavailable; the container itself never receives extra capabilities.
 The suite exercises browser/CDP/broker, JavaScript/meta navigation, service-worker and iframe
-requests and WebSocket reconnect denial. WebSockets remain unsupported (fail closed); DNS has
+requests and WebSocket reconnect denial. A page WebSocket to an approved origin is connected through the proxy and one to any other origin is closed and denied (SEC-011); DNS has
 no proxy cache and is revalidated on every fresh socket. Chromium launch failure reports
 `blocked/security_precondition_failed` and never retries without its sandbox.
 Python runner images remove build-time pip/uv installers after their frozen dependency sync;
@@ -353,7 +353,13 @@ Required producer dependencies are expanded into separate pinned Runs; requested
 denominators remain separate. Consumers wait for a successful producer gate, exact revision,
 environment, typed capture and freshness before any target effects. Public capture values stay
 in accepted observations; sensitive captures cross only the trusted runner protocol and are
-encrypted by the supervisor into secret references before persistence. Runtime sockets use a
+encrypted by the supervisor into secret references before persistence. They are stored only in
+TestMaster's own encrypted vault, never in the host keyring. A worker pass erases the stored value
+and revokes the reference once the producing Run and every member of its batch have completed,
+unless a resource the Run created is not yet `cleaned`: that fixture is still live, so its
+outputs can be reused by a later batch and its `handle` capture feeds manual compensation, and
+the erasure follows the cleanup. A failed erasure keeps the reference live and the next
+maintenance pass retries. Runtime sockets use a
 short private per-user runtime root to remain inside the Unix socket pathname limit.
 
 Worker maintenance expires only eligible completed evidence through versioned
@@ -387,7 +393,16 @@ real retention, and proves foreign Run/Attempt snapshot substitution is denied.
 M1 journeys use the built CLI and real reference app in `validation/journeys/`. They write
 observed JSON summaries under `validation/results/`. The separately exercised manual quickstart
 transcript is `validation/results/quickstart-m1.md`.
-M2 source/discovery/requirement/proposal/usage commands share application services. Declare
+M2 source/discovery/requirement/proposal/usage commands share application services. `source add`
+accepts OpenAPI 3.0, 3.1, 3.2 and Swagger 2.0; a 3.2 document is validated as the 3.1 model (the
+validator knows no 3.2 schema) after its 3.2-only fields (`$self`, `itemSchema`, `summary`, `kind`, ...) are
+lifted out, `query` and `additionalOperations` operations are validated and inventoried, and a 3.2 keyword
+the 3.1 schema does not know is a warning diagnostic, never an invalid document. A source whose revision
+ends `invalid` exits non-zero (exit 5, `INVALID_ARGUMENT`, diagnostics in `details` and on stderr).
+`discover` prints a bounded receipt (shared with MCP `testmaster_analyze_code`); `--full` prints the stored
+discovery. The global `--dry-run` reports `validated: true` only after the command's own validation ran,
+and `--example` prints a command's input contract with a sample file before commander checks required
+options. Declare
 OpenAI-compatible `modelProviders` only in the selected user profile and list their IDs in the
 operator policy's `allowedModelProviders`; that allowlist is the only provider gate. There is no
 consent, grant or revoke step per project, provider or data class: a provider outside the allowlist
@@ -520,8 +535,14 @@ phase, `provider_unavailable`, `evidence_unavailable`, `evidence_too_large`, `se
 `ai/model.ts` such as `provider_credentials_unavailable`) is not final: the next `propose` reopens
 the same job (the earlier refusal is
 kept in `progress.unpaidSettlements`) and evaluates again. A leased request answers
-`already_running`. Diagnosed product,
-contract or security failures abstain before model execution. The healing prompt carries the
+`already_running`. Diagnosed product, contract or security failures abstain before model
+execution (`semantic_failure`, the same normal result with `modelCallId: null`). Before any job,
+reservation or model call, a Run whose analysis (the stored one, or the rules analysis `propose`
+computes when none exists) says `healing.advice: "not_indicated"` is refused with
+`PRECONDITION_FAILED`, `details.reasonCode: "healing_not_indicated"`, `analysisReason` and
+`nextStep`; the healing request is not spent, so a later `propose` after a new analysis can still
+run, and there is no force option. `test run --heal propose` reports that refusal under
+`healing.refused` next to the finished Run instead of failing the command. The healing prompt carries the
 sanitized plan, factual statements cited by `E` handles, locator evidence only for steps that
 did not pass (candidate lists bounded with their original count and truncation flag) and, per
 step, the exact `allowedReplacements` derived from the same contract `applyHealingPatch` admits:
@@ -533,8 +554,12 @@ pointers, locator leaves, added optional fields, assertions and predicates are r
 that cannot fit 80000 bytes after scrubbing is refused (`evidence_too_large`) before dispatch.
 The model answers `AIHealingOutput`: `{kind:"patch", patch}` or `{kind:"abstain", reason,
 evidenceHandles}`; handles are resolved in both branches. An abstention completes the auxiliary
-job with `model_abstained` (`PRECONDITION_FAILED`, `jobId`, `modelCallId`), creates no candidate,
-proposal or verification and is not regenerated. Invalid model output is
+job with `model_abstained`, creates no candidate, proposal or verification, is not regenerated
+and is a normal result, not an error: `propose` returns `HealingAbstention` (`abstained: true`,
+`failedRunId`, `reasonCode`, `reason`, `jobId`, `modelCallId`, `nextAction`; `reason` and
+`nextAction` are code-owned and the model's own text stays audit-only in the job). The CLI prints
+it and exits 0, MCP `testmaster_propose_healing` answers it without `isError`, and asking again
+returns the same abstention. Invalid model output is
 `PRECONDITION_FAILED` `model_failure` with a code-owned `detail`; model text is never persisted
 as a diagnostic. Evidence content hashes stay local. A model diagnosis enrichment rejected by local validation
 keeps the factual diagnosis and records `Model enrichment abstained: <code>: <rule>.` as a
@@ -609,6 +634,15 @@ and `resource cleanup --approval ID --expected-version N --idempotency-key KEY`.
 the recorded compensation inside a fresh hardened sandbox with the original environment policy,
 protected handle, ownership proof and a consumed resource-bound approval. Failed or uncertain
 compensation preserves the owning Run's original verdict and records a separate cleanup event.
+
+Execution approvals (`approval create`, MCP `testmaster_approve_execution`) are created by the authenticated
+caller whatever its principal kind (human, token, service or agent) with write scope; the reviewer is the
+authenticated principal and must be enabled. An `approval_required` refusal carries `details.binding`
+(`revisionHash`, `environmentRevisionId`, `originSet`, `actionSet`, `policyHash`, `actorId`) so the caller can
+copy it into the approval. The binding, the 30-minute maximum expiry and single use are unchanged. The opt-in
+project policy (`approval policy set`, `requiredApprovers` 1 or 2, `separationOfDuties`, default off) is also
+unchanged: with separation of duties the requester cannot approve its own execution
+(`reason: separation_of_duties`), and two approvers need two distinct reviewers.
 
 ### Service integration notes
 
@@ -810,10 +844,15 @@ effort participates in the model configuration hash, prompt hash and gateway cac
 is preserved during repairs. Provider rejection remains an error, never a silent fallback.
 TestMaster does not send max_tokens, max_completion_tokens, temperature, top_p, seed,
 penalties or enable_thinking. Proposal budgets accept no deadline: a model call has no deadline
-and only the caller's cancellation ends it. Provider allowlist, input
-admission, cancellation, response validation and accounting
-remain local. Output capability metadata is used only for conservative budget reservations,
-falling back to declared context capacity or the admitted input allowance; no token limit is
+and only the caller's cancellation ends it. Provider allowlist, cancellation, response validation
+and accounting remain local. There is no fixed input byte or token cap: the only local size
+refusal is a prompt larger than the model's declared `contextTokens` (one token per UTF-8 byte),
+raised before any transport as `PAYLOAD_TOO_LARGE` with `details: {promptBytes, contextTokens}`;
+a model declaring no context is never refused for size. Normalization checks its cross-source
+reconciliation (every source chunk) against that context before the first extraction batch, so a
+source set that cannot be reconciled spends no paid batch. Output capability metadata is used only
+for conservative budget reservations, falling back to declared context capacity and then to a
+fixed 100000-token output reservation (`FALLBACK_OUTPUT_RESERVATION_TOKENS`); no token limit is
 sent upstream. Such reservations are estimates, not a provider-enforced spending guarantee.
 Measured usage is settled even when it exceeds the estimate; unknown charges remain held.
 
@@ -1114,7 +1153,7 @@ through the result-preservation wrapper. It uses one local controlled provider r
 paid model calls. The evidence records Run/Attempt rows, manifests, frozen review projections and
 binary/source/image-lock SHA-256 hashes. One deterministic selector-drift family demonstrates the
 review surface, not model quality, population safety, human usability or workload improvement.
-REST/MCP approval tokens require an explicit project-scoped `HealingProposal:approve` grant.
+REST/MCP/CLI healing approval needs only the ordinary write scope (REST route scope `healing:W`); no grant and no human principal is required.
 All processes use the same project-frozen execution configuration, including configuration origins;
 the scenario does not weaken execution-identity, authorization or automatic-healing guards.
 Approval and verification admission commit in one transaction after every refusal was checked
@@ -1125,9 +1164,9 @@ the verification Run). Under `CI=true` the resolver forces `healing.mode` off wi
 shell with `CI=true` cannot approve a proposal whose failed Run was admitted without it: the
 `REVISION_CONFLICT` message and `details` (`reasonCode: execution_configuration_changed`,
 `changed`, `overrides`, `nextActions`) name the keys and their frozen/current origins, never values.
-A bearer token without the grant is refused with `FORBIDDEN` `details.reasonCode`
-`approval_grant_required` (`approval_not_permitted` for a deny grant or role) and `requiredGrant`;
-scopes R/W/X/A never imply the grant.
+An unauthorized caller is refused with a plain `FORBIDDEN` (`details.scope`); the refusals `approval_grant_required`,
+`approval_not_permitted` and `requiredGrant` no longer exist. The approval is recorded with the acting principal
+(human, token, service or agent) and stays version-bound, with assertions never changed.
 
 
 Plan/ID reconciliation: VAL-053 and VAL-054 already existed in the normative corpus (registry

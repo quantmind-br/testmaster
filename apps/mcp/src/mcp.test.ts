@@ -10,6 +10,7 @@ import { mcpToolCatalog, validateAgainstSchema } from "@testmaster/contracts";
 import { assertionsHash } from "@testmaster/planner";
 import { expect, it } from "vitest";
 import { createMcpServer, type TestMasterMcp } from "./server.js";
+import { toolDescriptions } from "./tool-descriptions.js";
 
 it("SDK handshake advertises contract schemas, records protocol and dispatches M3 comparison", async () => {
   const temporary = await mkdtemp(join(tmpdir(), "tm-mcp-"));
@@ -50,7 +51,7 @@ it("SDK handshake advertises contract schemas, records protocol and dispatches M
       expect(getRun).toContain("testmaster_analyze_run");
       const approve =
         tools.find((tool) => tool.name === "testmaster_approve_healing")?.description ?? "";
-      expect(approve).toContain("HealingProposal:approve");
+      expect(approve).not.toMatch(/grant|HealingProposal:approve/);
       for (const tool of tools) {
         expect(tool.inputSchema.type).toBe("object");
         expect(tool.outputSchema?.type).toBe("object");
@@ -283,7 +284,7 @@ it("MCP analysis emits readable layers and unchanged JSON while reads need no ex
     const reviewContent = review.content as { text: string }[];
     expect(reviewContent[0]?.text).toContain("Healing review");
     expect(reviewContent[0]?.text).toContain("Multiple locator candidates require manual review");
-    expect(reviewContent[0]?.text).toContain("--expected-version");
+    expect(reviewContent[0]?.text).toContain("testmaster_approve_healing proposalId=");
     expect(JSON.parse(reviewContent[1]?.text ?? "null")).toEqual(review.structuredContent);
     expect(review.structuredContent).toEqual(await app.healing.review(proposal.id));
     expect(app.context.entities.get("HealingProposal", init.workspaceId, proposal.id)).toEqual(
@@ -301,9 +302,14 @@ it("MCP analysis emits readable layers and unchanged JSON while reads need no ex
   }
 });
 
-it("exposes no MCP tool that creates or revokes approvals", () => {
+it("exposes MCP approval tools for healing and execution, none that revokes, and no tool that asks for a grant", () => {
   const names = mcpToolCatalog.map((tool) => tool.name);
-  expect(names.filter((name) => /approv|revoke/.test(name))).toEqual([
+  expect(names.filter((name) => /approv|revoke/.test(name)).sort()).toEqual([
+    "testmaster_approve_execution",
     "testmaster_approve_healing",
   ]);
+  for (const name of names)
+    expect(toolDescriptions[name as keyof typeof toolDescriptions], name).not.toMatch(
+      /HealingProposal:approve|\bgrant\b/,
+    );
 });

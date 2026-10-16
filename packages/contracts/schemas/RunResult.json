@@ -319,6 +319,10 @@
           "type": "string"
         },
         {
+          "const": "evidence_incomplete",
+          "type": "string"
+        },
+        {
           "const": "budget_exhausted",
           "type": "string"
         },
@@ -359,6 +363,56 @@
           "type": "string"
         }
       ]
+    },
+    "unavailableEvidence": {
+      "maxItems": 500,
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "relativePath",
+          "kind",
+          "state"
+        ],
+        "properties": {
+          "relativePath": {
+            "minLength": 1,
+            "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$",
+            "type": "string"
+          },
+          "kind": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "const": "available",
+                "type": "string"
+              },
+              {
+                "const": "missing",
+                "type": "string"
+              },
+              {
+                "const": "expired",
+                "type": "string"
+              },
+              {
+                "const": "partial",
+                "type": "string"
+              }
+            ]
+          },
+          "omissionReason": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          }
+        }
+      }
     },
     "passedOnRetry": {
       "type": "boolean"

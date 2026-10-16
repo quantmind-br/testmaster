@@ -132,7 +132,7 @@ export class ApprovalsService {
     this.ctx.authorize("R", projectId);
     return this.policyFor(projectId);
   }
-  /** Administrators set how many independent humans must approve and whether requesters are excluded. */
+  /** Administrators set how many independent reviewers must approve and whether requesters are excluded. */
   setPolicy(
     projectId: string,
     input: ApprovalPolicyInput,
@@ -174,7 +174,7 @@ export class ApprovalsService {
     });
   }
   /**
-   * Picks the approvals that satisfy the project's policy: one per distinct human reviewer, never
+   * Picks the approvals that satisfy the project's policy: one per distinct reviewer, never
    * the requester when separation of duties applies. Throws `approval_required` when too few.
    */
   private independentApprovals(
@@ -289,11 +289,8 @@ export class ApprovalsService {
           "Approval reviewer must be the authenticated principal",
         );
       const reviewer = requireEntity(this.ctx, "Principal", reviewerId);
-      if (reviewer.kind !== "human" || reviewer.disabledAt)
-        throw new ContractError(
-          "FORBIDDEN",
-          "Execution approvals require an enabled human reviewer",
-        );
+      if (reviewer.disabledAt)
+        throw new ContractError("FORBIDDEN", "Execution approvals require an enabled reviewer");
       const policy = this.policyFor(projectId);
       if (policy.separationOfDuties && (input.actorId ?? this.ctx.principalId) === reviewerId)
         throw new ContractError(
@@ -503,11 +500,6 @@ export class ApprovalsService {
         healing.policyHash !== policy.policyHash
       )
         throw new ContractError("POLICY_DENIED", "Healing verification binding changed");
-      const row = this.ctx.database.get(
-        "SELECT environment_id FROM environment_revisions WHERE workspace_id=? AND id=?",
-        this.ctx.workspaceId,
-        env.id,
-      );
       if (healing.approvalMode === "policy") {
         if (env.production || healing.reviewerId !== null)
           throw new ContractError("POLICY_DENIED", "Policy verification is not authorized");
@@ -515,12 +507,7 @@ export class ApprovalsService {
       } else {
         if (healing.reviewerId !== this.ctx.principalId)
           throw new ContractError("FORBIDDEN", "Verification reviewer does not match actor");
-        this.ctx.authorizeNamed(
-          "approve",
-          "HealingProposal",
-          test.projectId,
-          String(row?.environment_id),
-        );
+        this.ctx.authorize("W", test.projectId);
       }
     } else this.ctx.authorize("X", test.projectId);
     return authoringTransaction(this.ctx, () => {
@@ -566,7 +553,7 @@ export class ApprovalsService {
             { reasonCode: "approval_required" },
           );
         const approvalPolicy = this.policyFor(test.projectId);
-        // The named approval first, then any other independent human who bound the same cleanup.
+        // The named approval first, then any other independent reviewer who bound the same cleanup.
         const chosen = this.independentApprovals(
           [
             approval,
@@ -598,7 +585,7 @@ export class ApprovalsService {
                 { reasonCode: "binding_mismatch" },
               );
             const reviewer = requireEntity(this.ctx, "Principal", candidate.reviewerId);
-            if (reviewer.kind !== "human" || reviewer.disabledAt)
+            if (reviewer.disabledAt)
               throw new ContractError("POLICY_DENIED", "Approval reviewer is no longer enabled");
           },
         );
@@ -684,7 +671,7 @@ export class ApprovalsService {
         approvalPolicy,
         (approval) => {
           const reviewer = requireEntity(this.ctx, "Principal", approval.reviewerId);
-          if (reviewer.kind !== "human" || reviewer.disabledAt)
+          if (reviewer.disabledAt)
             throw new ContractError("POLICY_DENIED", "Approval reviewer is no longer enabled", {
               reasonCode: "approval_required",
             });
@@ -705,13 +692,22 @@ export class ApprovalsService {
           throw new ContractError(
             "POLICY_DENIED",
             approvalPolicy.requiredApprovers > 1
-              ? "Risky production actions require current bound approvals from independent humans"
-              : "Risky production actions require a current bound human approval",
+              ? "Risky production actions require current bound approvals from independent reviewers"
+              : "Risky production actions require a current bound approval",
             {
               reasonCode: "approval_required",
               actions,
               requiredApprovers: approvalPolicy.requiredApprovers,
               separationOfDuties: approvalPolicy.separationOfDuties,
+              // Everything `approval create` needs to bind an approval to this exact action.
+              binding: {
+                revisionHash: revision.contentHash,
+                environmentRevisionId: environment.id,
+                originSet: [...origins].sort(),
+                actionSet: [...new Set(actions.map((action) => action.risk))].sort(),
+                policyHash,
+                actorId,
+              },
             },
           );
         },

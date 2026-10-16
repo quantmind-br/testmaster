@@ -13,6 +13,7 @@ import { contractCommands } from "./contracts.js";
 import { databaseCommands } from "./database.js";
 import { discoveryCommands } from "./discovery.js";
 import { environmentCommands } from "./environments.js";
+import { exampleFor, leafCommand } from "./examples.js";
 import { githubCommands } from "./github.js";
 import { healingCommands } from "./heal.js";
 import { imageCommands } from "./images.js";
@@ -56,7 +57,10 @@ export function createCli(runtime: Runtime): Command {
     .option("--no-color", "Disable colors")
     .option("--verbose", "Diagnostics on stderr, without sensitive payloads")
     .option("--dry-run", "Validate locally without side effects")
-    .option("--example", "Emit a clearly labeled fixture, not a verdict");
+    .option(
+      "--example",
+      "Emit the command's input contract and a sample input file, labeled as an example, not a verdict",
+    );
   setupCommands(program, runtime);
   projectCommands(program, runtime);
   environmentCommands(program, runtime);
@@ -137,7 +141,14 @@ export async function runCli(
         required: node.required,
         actual: node.actual,
       });
-    await program.parseAsync(argv, { from: "user" });
+    // `--example` answers before commander validates the command's required options, so a
+    // command that needs `--file` or `--plan` can still print what that file looks like.
+    const example =
+      argv.includes("--example") && !argv.includes("--help") && !argv.includes("-h")
+        ? leafCommand(program, argv)
+        : undefined;
+    if (example) runtime.pending = { data: exampleFor(example) };
+    else await program.parseAsync(argv, { from: "user" });
     if (!runtime.pending) {
       if (runtime.signal) throw runtime.interrupted();
       runtime.pending = {

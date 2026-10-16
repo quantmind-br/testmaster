@@ -1,0 +1,86 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "environmentId",
+    "expectedVersion"
+  ],
+  "properties": {
+    "environmentId": {
+      "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string",
+      "description": "Environment to change"
+    },
+    "expectedVersion": {
+      "minimum": 1,
+      "type": "integer",
+      "description": "Current version of the environment, for optimistic concurrency"
+    },
+    "name": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string",
+      "description": "New name, unique in the project"
+    },
+    "baseUrl": {
+      "format": "uri",
+      "maxLength": 2048,
+      "type": "string",
+      "description": "New target URL of the application"
+    },
+    "networkProfile": {
+      "anyOf": [
+        {
+          "const": "public",
+          "type": "string"
+        },
+        {
+          "const": "private",
+          "type": "string"
+        },
+        {
+          "const": "local-loopback",
+          "type": "string"
+        }
+      ],
+      "description": "Network profile of the target"
+    },
+    "locale": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string",
+      "description": "Browser locale, e.g. en-US"
+    },
+    "timezone": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string",
+      "description": "Browser timezone, e.g. UTC"
+    },
+    "production": {
+      "type": "boolean",
+      "description": "Mark the environment as production"
+    },
+    "additionalOrigins": {
+      "maxItems": 32,
+      "type": "array",
+      "items": {
+        "format": "uri",
+        "type": "string"
+      },
+      "description": "Exact extra origins page subrequests may reach; replaces the list, [] clears it. They never receive credentials"
+    },
+    "authRefs": {
+      "maxItems": 16,
+      "type": "array",
+      "items": {
+        "pattern": "^aup_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      },
+      "description": "Auth profiles bound to the environment; replaces the list. Each must be bound to the target origin"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:Mcp_testmaster_update_environment",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -56,7 +56,11 @@ async function serve(
   if (!address || typeof address === "string") throw new Error("Missing fixture address");
   return `http://127.0.0.1:${address.port}`;
 }
-function fixture(baseUrl: string, extra: Partial<RunnerInput> = {}) {
+function fixture(
+  baseUrl: string,
+  extra: Partial<RunnerInput> = {},
+  secretValues: Record<string, string> = {},
+) {
   const events: RunnerEvent[] = [];
   const artifacts = new Map<string, Uint8Array>();
   const controller = new AbortController();
@@ -77,7 +81,7 @@ function fixture(baseUrl: string, extra: Partial<RunnerInput> = {}) {
     artifact: async (path: string, _kind: string, _mime: string, bytes: Uint8Array) => {
       artifacts.set(path, bytes);
     },
-    secret: async () => "canary-secret",
+    secret: async (ref: string) => secretValues[ref] ?? "canary-secret",
   } as unknown as ProtocolClient;
   const runtime = new Runtime(
     {
@@ -463,32 +467,23 @@ it("sends typed sensitive captures only over trusted IPC and keeps artifacts red
   ).rejects.toMatchObject({ reasonCode: "assertion_mismatch" });
 });
 
-it("propagates request taint into captures even when capture.sensitive is false", async () => {
+it("does not taint a capture of a credentialed request unless the capture declares sensitive", async () => {
   const base = await serve((req, res) =>
     res.end(JSON.stringify({ echo: req.headers.authorization })),
   );
   const { engine, runtime, events } = fixture(base, {
     variables: { auth: { value: "Bearer request-canary", sensitive: true } },
   });
+  const echo = (name: string, sensitive: boolean) =>
+    ({ name, from: "jsonPointer", pointer: "/echo", valueType: "string", sensitive }) as const;
   await engine.perform(
     requestStep("taint", [], {
       headers: { Authorization: { variableRef: "auth" } },
-      capture: [
-        {
-          name: "echo",
-          from: "jsonPointer",
-          pointer: "/echo",
-          valueType: "string",
-          sensitive: false,
-        },
-      ],
+      capture: [echo("plain", false), echo("declared", true)],
     }),
   );
-  expect(runtime.variables.get("echo")?.sensitive).toBe(true);
-  expect(events.find((event) => event.type === "variable.captured")?.payload).toMatchObject({
-    sensitive: true,
-    value: { literal: "Bearer request-canary" },
-  });
+  expect(runtime.variables.get("plain")?.sensitive).toBe(false);
+  expect(runtime.variables.get("declared")?.sensitive).toBe(true);
   expect(
     JSON.stringify(events.filter((event) => event.type !== "variable.captured")),
   ).not.toContain("request-canary");
@@ -1503,4 +1498,283 @@ it("sends a fresh invalid credential per request without turning a rejection int
     ),
   ).rejects.toMatchObject({ reasonCode: "security_precondition_failed" });
   expect(seen).toHaveLength(sent);
+});
+
+const SECRET_REF = "sec_01900000-0000-7000-8000-000000000001";
+const STATE_REF = "sec_01900000-0000-7000-8000-000000000002";
+const TOKEN_REF = "sec_01900000-0000-7000-8000-000000000003";
+
+async function sentBodies(): Promise<{ base: string; bodies: unknown[] }> {
+  const bodies: unknown[] = [];
+  const base = await serve((req, res) => {
+    const chunks: Buffer[] = [];
+    req.on("data", (chunk) => chunks.push(chunk));
+    req.on("end", () => {
+      bodies.push(JSON.parse(Buffer.concat(chunks).toString()));
+      res.end("{}");
+    });
+  });
+  return { base, bodies };
+}
+function jsonRequest(
+  document: unknown,
+  set: { pointer: string; value: { literal: unknown } | { secretRef: string } }[],
+): PlanStep {
+  return requestStep("send", ["login"], {
+    method: "POST",
+    body: { kind: "json", value: { literal: document }, set },
+  });
+}
+
+it("places JSON body set values by pointer, scrubs a placed secret and never mutates the plan literal", async () => {
+  const { base, bodies } = await sentBodies();
+  const { engine, artifacts, runtime } = fixture(
+    base,
+    { secrets: [{ secretRef: SECRET_REF, secretVersion: 1 }] },
+    { [SECRET_REF]: "placed-canary-secret" },
+  );
+  const document = { username: "root", password: null, list: [0, 1], "a/b": { "c~d": 0 } };
+  const step = jsonRequest(document, [
+    { pointer: "/password", value: { secretRef: SECRET_REF } },
+    { pointer: "/list/1", value: { literal: "second" } },
+    { pointer: "/a~1b/c~0d", value: { literal: 7 } },
+    { pointer: "/added", value: { literal: true } },
+  ]);
+  await engine.perform(step);
+  await engine.perform(step);
+  const expected = {
+    username: "root",
+    password: "placed-canary-secret",
+    list: [0, "second"],
+    "a/b": { "c~d": 7 },
+    added: true,
+  };
+  expect(bodies).toEqual([expected, expected]);
+  expect(document).toEqual({ username: "root", password: null, list: [0, 1], "a/b": { "c~d": 0 } });
+  expect(runtime.scrub("password=placed-canary-secret")).not.toContain("placed-canary-secret");
+  for (const bytes of artifacts.values())
+    expect(Buffer.from(bytes).toString()).not.toContain("placed-canary-secret");
+});
+
+it("refuses a JSON body set entry that has no parent, no array item or no pointer before sending", async () => {
+  const { base, bodies } = await sentBodies();
+  const { engine } = fixture(base);
+  const document = { name: "n", list: [1], nested: { leaf: 1 } };
+  for (const pointer of ["", "/missing/child", "/list/5", "/list/-", "/name/x"])
+    await expect(
+      engine.perform(jsonRequest(document, [{ pointer, value: { literal: 1 } }])),
+    ).rejects.toMatchObject({ reasonCode: "security_precondition_failed", outcome: "blocked" });
+  expect(bodies).toEqual([]);
+  // A member of an existing object is created, so only absent parents are refused.
+  await engine.perform(
+    jsonRequest(document, [{ pointer: "/nested/added", value: { literal: 2 } }]),
+  );
+  expect(bodies).toEqual([{ name: "n", list: [1], nested: { leaf: 1, added: 2 } }]);
+});
+
+it("does not mark a capture sensitive because the request carried a credential", async () => {
+  const base = await serve((_req, res) =>
+    res.end(JSON.stringify({ items: ["a", "id", "ok"], flag: true, none: null, name: "x" })),
+  );
+  const { engine, runtime, artifacts } = fixture(base, {
+    variables: { auth: { value: "Bearer request-canary", sensitive: true } },
+  });
+  const capture = (
+    name: string,
+    pointer: string,
+    valueType: "array" | "boolean" | "null" | "string",
+  ) => ({ name, from: "jsonPointer", pointer, valueType, sensitive: false }) as const;
+  await engine.perform(
+    requestStep("list-step", [], {
+      headers: { Authorization: { variableRef: "auth" } },
+      capture: [
+        capture("list", "/items", "array"),
+        capture("flag", "/flag", "boolean"),
+        capture("empty", "/none", "null"),
+        capture("name", "/name", "string"),
+      ],
+    }),
+  );
+  for (const name of ["list", "flag", "empty", "name"])
+    expect(runtime.variables.get(name)?.sensitive).toBe(false);
+  // Nothing captured became a scrub pattern: step ids and evidence keep their text.
+  const text = "list-step id flag a ok true null x";
+  expect(runtime.scrub(text)).toBe(text);
+  const evidence = JSON.parse(Buffer.from(artifacts.get("http/list-step.json") ?? []).toString());
+  expect(evidence.captures.map((entry: { resolved: unknown }) => entry.resolved)).toEqual([
+    ["a", "id", "ok"],
+    true,
+    null,
+    "x",
+  ]);
+});
+
+it("scrubs only the string and number leaves of a capture that declares sensitive", async () => {
+  const session = { token: "declared-canary", count: 4242, ok: true, none: null };
+  const base = await serve((_req, res) => res.end(JSON.stringify({ session })));
+  const { engine, runtime } = fixture(base);
+  await engine.perform(
+    requestStep("declared", [], {
+      capture: [
+        {
+          name: "session",
+          from: "jsonPointer",
+          pointer: "/session",
+          valueType: "object",
+          sensitive: true,
+        },
+      ],
+    }),
+  );
+  expect(runtime.variables.get("session")?.sensitive).toBe(true);
+  expect(runtime.scrub("declared-canary 4242")).toBe("[REDACTED] [REDACTED]");
+  expect(runtime.scrub("ok true null")).toBe("ok true null");
+});
+
+function profileState(base: string): string {
+  const host = new URL(base).hostname;
+  const cookie = (name: string, extra: Record<string, unknown> = {}) => ({
+    name,
+    value: `${name}-canary-value`,
+    domain: host,
+    path: "/",
+    expires: -1,
+    httpOnly: true,
+    secure: false,
+    sameSite: "Lax",
+    ...extra,
+  });
+  return JSON.stringify({
+    cookies: [
+      cookie("sid", { path: "/api" }),
+      cookie("wide"),
+      cookie("old", { expires: 1 }),
+      cookie("foreign", { domain: "other.example" }),
+      cookie("secure-only", { secure: true, domain: "other.example" }),
+    ],
+    origins: [],
+  });
+}
+function profileFixture(base: string, extra: Partial<RunnerInput> = {}) {
+  return fixture(
+    base,
+    {
+      secrets: [
+        { secretRef: STATE_REF, secretVersion: 1 },
+        { secretRef: TOKEN_REF, secretVersion: 1 },
+      ],
+      auth: { storageState: { secretRef: STATE_REF } },
+      ...extra,
+    },
+    { [STATE_REF]: profileState(base), [TOKEN_REF]: "token-canary-value" },
+  );
+}
+
+it("auth profile sends only the stored cookies that match the request URL", async () => {
+  const seen: [string, string | undefined][] = [];
+  const base = await serve((req, res) => {
+    seen.push([String(req.url), req.headers.cookie]);
+    res.end("{}");
+  });
+  const { engine } = profileFixture(base);
+  await engine.perform(requestStep("api", ["api", "me"], { auth: "profile" }));
+  await engine.perform(requestStep("root", [], { auth: "profile" }));
+  await engine.perform(requestStep("plain", ["api", "me"]));
+  // Expired and other-domain cookies never leave, `/api` cookies stay on `/api`, and a request
+  // without `auth` carries no session.
+  expect(seen).toEqual([
+    ["/api/me", "sid=sid-canary-value; wide=wide-canary-value"],
+    ["/", "wide=wide-canary-value"],
+    ["/api/me", undefined],
+  ]);
+});
+
+it("auth profile orders cookies by path and scrubs the session value from evidence", async () => {
+  const seen: string[] = [];
+  const base = await serve((req, res) => {
+    seen.push(String(req.headers.cookie));
+    res.end("{}");
+  });
+  const { engine, runtime, artifacts } = profileFixture(base);
+  await engine.perform(requestStep("api", ["api", "me"], { auth: "profile" }));
+  expect(seen).toEqual(["sid=sid-canary-value; wide=wide-canary-value"]);
+  expect(runtime.scrub("sid-canary-value")).toBe("[REDACTED]");
+  for (const bytes of artifacts.values())
+    expect(Buffer.from(bytes).toString()).not.toContain("sid-canary-value");
+  expect(responseOf(engine, "api").authenticated).toBe(true);
+});
+
+it("auth profile sends its header credential with the prefix and keeps it from other origins", async () => {
+  let observed: IncomingMessage["headers"] = {};
+  const destination = await serve((req, res) => {
+    observed = req.headers;
+    res.end("ok");
+  });
+  const received: IncomingMessage["headers"][] = [];
+  const base = await serve((req, res) => {
+    received.push(req.headers);
+    res.writeHead(302, { location: `${destination}/target` });
+    res.end();
+  });
+  const { engine } = profileFixture(base, {
+    networkPolicy: {
+      allowedOrigins: [base, destination],
+      additionalOrigins: [destination],
+      networkProfile: "local-loopback",
+    },
+    auth: { credentials: [{ header: "Authorization", secretRef: TOKEN_REF, prefix: "Bearer " }] },
+  });
+  await engine.perform(requestStep("redirected", [], { auth: "profile" }));
+  expect(received[0]?.authorization).toBe("Bearer token-canary-value");
+  expect(observed.authorization).toBeUndefined();
+  expect(observed.cookie).toBeUndefined();
+});
+
+it("auth profile blocks before sending when there is no session, nothing for the URL or a conflicting header", async () => {
+  let hits = 0;
+  const base = await serve((_req, res) => {
+    hits++;
+    res.end("{}");
+  });
+  const stateOnly = (state: string) =>
+    fixture(
+      base,
+      {
+        secrets: [{ secretRef: STATE_REF, secretVersion: 1 }],
+        auth: { storageState: { secretRef: STATE_REF } },
+      },
+      { [STATE_REF]: state },
+    );
+  await expect(
+    fixture(base).engine.perform(requestStep("none", [], { auth: "profile" })),
+  ).rejects.toMatchObject({ reasonCode: "missing_secret", outcome: "blocked" });
+  await expect(
+    stateOnly(JSON.stringify({ cookies: [], origins: [] })).engine.perform(
+      requestStep("empty", [], { auth: "profile" }),
+    ),
+  ).rejects.toMatchObject({ reasonCode: "missing_secret", outcome: "blocked" });
+  await expect(
+    stateOnly("not json").engine.perform(requestStep("bad", [], { auth: "profile" })),
+  ).rejects.toMatchObject({ reasonCode: "manual_auth_required", outcome: "blocked" });
+  // Every stored cookie is for the other path, so the session has nothing for this request.
+  const state = JSON.parse(profileState(base));
+  state.cookies = state.cookies.filter((entry: { name: string }) => entry.name === "sid");
+  await expect(
+    stateOnly(JSON.stringify(state)).engine.perform(
+      requestStep("elsewhere", ["private"], { auth: "profile" }),
+    ),
+  ).rejects.toMatchObject({ reasonCode: "missing_secret", outcome: "blocked" });
+  const conflict = profileFixture(base, {
+    auth: { credentials: [{ header: "authorization", secretRef: TOKEN_REF }] },
+    variables: { own: { value: "Bearer own-canary", sensitive: true } },
+  });
+  await expect(
+    conflict.engine.perform(
+      requestStep("both", [], {
+        auth: "profile",
+        headers: { Authorization: { variableRef: "own" } },
+      }),
+    ),
+  ).rejects.toMatchObject({ reasonCode: "security_precondition_failed" });
+  expect(hits).toBe(0);
 });

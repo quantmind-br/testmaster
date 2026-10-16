@@ -29,7 +29,12 @@ export interface RunnerInput {
   timeoutMs?: number;
   stepTimeoutMs?: number;
   bodyBytes?: number;
-  imported?: { files: string[]; codeRoot?: string };
+  /** `secrets` are the names the code may read through the harness `secrets` fixture. */
+  imported?: {
+    files: string[];
+    codeRoot?: string;
+    secrets?: { name: string; secretRef: string }[];
+  };
   agent?: {
     resolveSteps: string[];
     exploration?: boolean;
@@ -47,10 +52,14 @@ export interface RunnerInput {
    * Dynamic authentication prepared by the host (SEC-022, SEC-024). `storageState` names a vault
    * secret holding a captured browser state; `login` runs vault-referenced steps before the plan
    * and reports the resulting storage state back through the protocol, never through an event.
+   * An HTTP run applies the session to requests with `auth: "profile"` only: the cookies of
+   * `storageState` that match the request URL and every `credentials` entry (a vault secret sent
+   * as `header`, after `prefix` when the secret is a bare token).
    */
   auth?: {
     storageState?: { secretRef: string };
     login?: { steps: PlanStep[]; captureState: boolean };
+    credentials?: { header: string; secretRef: string; prefix?: string }[];
   };
 }
 export interface RunnerResult {

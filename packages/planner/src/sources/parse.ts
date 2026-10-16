@@ -1,4 +1,4 @@
-import { validate as validateApi } from "@readme/openapi-parser";
+import { dereference as dereferenceApi, validate as validateApi } from "@readme/openapi-parser";
 import { parseStrictJson, validate } from "@testmaster/contracts";
 import { canonicalJson, sha256 } from "@testmaster/domain";
 import { buildASTSchema, parse as parseGraphql } from "graphql";
@@ -8,6 +8,7 @@ import { gfmFromMarkdown } from "mdast-util-gfm";
 import { gfm } from "micromark-extension-gfm";
 import { extractText, getDocumentProxy } from "unpdf";
 import { parseDocument } from "yaml";
+import { additionalOperations, downgradeOpenApi32 } from "./openapi32.js";
 import type {
   SourceChunk,
   SourceDiagnostic,
@@ -28,6 +29,48 @@ function structured(text: string): Record<string, unknown> {
   const doc = parseDocument(text, { uniqueKeys: true });
   if (doc.errors.length) throw new Error(doc.errors.map((e) => e.message).join("; "));
   return object(doc.toJS({ maxAliasCount: 100 }));
+}
+const OPENAPI_OPTIONS = {
+  resolve: { external: false, file: false },
+  dereference: { circular: "ignore" as const },
+};
+type OpenApiResult = Awaited<ReturnType<typeof validateApi>>;
+/** The validator's message for an unknown keyword names it on the line `x is not expected`. */
+const UNKNOWN_KEYWORD = /^(?:UNEVALUATED|ADDITIONAL) PROPERTY /u;
+/**
+ * Validates an OpenAPI 3.2 document as the 3.1 model (see openapi32.ts). A keyword that 3.2
+ * defines and the 3.1 schema does not know is kept in the stored document and reported as a
+ * warning, never as an invalid document.
+ */
+async function validateOpenApi32(api: Record<string, unknown>): Promise<OpenApiResult> {
+  const checked = await validateApi(
+    downgradeOpenApi32(api) as Parameters<typeof validateApi>[0],
+    OPENAPI_OPTIONS,
+  );
+  if (checked.valid) return checked;
+  const unknown = checked.errors.filter((error) => UNKNOWN_KEYWORD.test(error.message));
+  const real = checked.errors.filter((error) => !UNKNOWN_KEYWORD.test(error.message));
+  if (real.length) return { ...checked, errors: real };
+  return {
+    ...checked,
+    valid: true,
+    errors: [],
+    warnings: [
+      ...checked.warnings,
+      ...unknown.map((error) => ({
+        message: `OpenAPI 3.2 keyword "${/(\S+) is not expected to be here/u.exec(error.message)?.[1] ?? "unknown"}" is not part of the validated 3.1 model; it is kept without schema validation`,
+      })),
+    ],
+  } as OpenApiResult;
+}
+async function dereference32(api: Record<string, unknown>): Promise<unknown> {
+  try {
+    return await dereferenceApi(api as Parameters<typeof dereferenceApi>[0], OPENAPI_OPTIONS);
+  } catch (error) {
+    throw new Error(
+      `invalid_openapi: ${error instanceof Error ? error.message : "unresolvable reference"}`,
+    );
+  }
 }
 // Keys whose value maps arbitrary names to schemas or objects: a child called `$ref` or `allOf`
 // there is a name, not a keyword.
@@ -428,20 +471,18 @@ export async function parseSource(input: SourceParseInput): Promise<SourceParseR
           offset += line.length;
         });
       } else if (input.format === "openapi") {
-        const api = structured(text);
+        let api = structured(text);
         checkReferences(api);
-        if (
-          api.swagger !== "2.0" &&
-          !(typeof api.openapi === "string" && /^3\.[01]\./u.test(api.openapi))
-        )
-          throw new Error("unsupported_openapi: Expected OpenAPI 3.0/3.1 or Swagger 2.0");
+        const openapiVersion = typeof api.openapi === "string" ? api.openapi : "";
+        if (api.swagger !== "2.0" && !/^3\.[012]\./u.test(openapiVersion))
+          throw new Error("unsupported_openapi: Expected OpenAPI 3.0, 3.1 or 3.2, or Swagger 2.0");
         // Targets that hold recursion stay references so the dereferenced document is finite.
-        const result = await validateApi(api as Parameters<typeof validateApi>[0], {
-          resolve: { external: false, file: false },
-          dereference: { circular: "ignore" },
-        });
+        const result = openapiVersion.startsWith("3.2.")
+          ? await validateOpenApi32(api)
+          : await validateApi(api as Parameters<typeof validateApi>[0], OPENAPI_OPTIONS);
         if (!result.valid)
           throw new Error(`invalid_openapi: ${result.errors.map((e) => e.message).join("; ")}`);
+        if (openapiVersion.startsWith("3.2.")) api = object(await dereference32(api));
         diagnostics.push(
           ...result.warnings.map((w) => ({ code: "openapi_warning", message: w.message })),
         );
@@ -449,9 +490,17 @@ export async function parseSource(input: SourceParseInput): Promise<SourceParseR
         for (const [path, item] of Object.entries(object(api.paths)))
           for (const [method, operation] of Object.entries(object(item))) {
             if (
-              !["get", "post", "put", "patch", "delete", "options", "head", "trace"].includes(
-                method,
-              )
+              ![
+                "get",
+                "post",
+                "put",
+                "patch",
+                "delete",
+                "options",
+                "head",
+                "trace",
+                "query",
+              ].includes(method)
             )
               continue;
             const jsonPointer = `/paths/${pointerKey(path)}/${method}`;
@@ -461,6 +510,15 @@ export async function parseSource(input: SourceParseInput): Promise<SourceParseR
               operation: bundleOperation(api, operation),
             });
             add("operation", canonicalJson(operation), { jsonPointer });
+          }
+        // OpenAPI 3.2 `additionalOperations`: methods outside the fixed set, kept under their own name.
+        for (const [path, item] of Object.entries(object(api.paths)))
+          for (const [method, operation] of additionalOperations(object(item))) {
+            if (method === "QUERY") continue;
+            operations.push({ path, method, operation: bundleOperation(api, operation) });
+            add("operation", canonicalJson(operation), {
+              jsonPointer: `/paths/${pointerKey(path)}/additionalOperations/${pointerKey(method)}`,
+            });
           }
         for (const key of [
           "components",

@@ -22,9 +22,23 @@ import {
 } from "@testmaster/planner";
 import { authoringTransaction } from "../authoring.js";
 import type { ResolvedConfig } from "../config.js";
-import { entity, requireEntity, type ServiceContext } from "../context.js";
+import { allEntities, entity, requireEntity, type ServiceContext } from "../context.js";
 
 type Stored<T> = T & EntityDocument;
+/** A secret a code test may read by name through the harness `secrets` fixture. */
+export type CodeSecretBinding = NonNullable<CodeReference["secretRefs"]>[number];
+/** The code's used names bound to the declared secrets they name; a name outside them is a bug. */
+function bindSecrets(
+  used: readonly string[] | undefined,
+  declared: readonly CodeSecretBinding[],
+): CodeSecretBinding[] {
+  return (used ?? []).map((name) => {
+    const binding = declared.find((candidate) => candidate.name === name);
+    if (!binding)
+      throw new ContractError("INVALID_ARGUMENT", `Secret ${JSON.stringify(name)} is not declared`);
+    return { name: binding.name, secretRef: binding.secretRef };
+  });
+}
 export interface CodeImportRequest {
   projectId: string;
   path: string;
@@ -49,6 +63,20 @@ export class CodeImportService {
     readonly ctx: ServiceContext,
     readonly config: Pick<ResolvedConfig, "cwd" | "dataDir">,
   ) {}
+  /**
+   * The secrets code may name: active secrets the caller can read. Without read access none are
+   * declared, so code that uses `secrets.get` is refused rather than silently unbound.
+   */
+  private declaredSecrets(): CodeSecretBinding[] {
+    try {
+      this.ctx.authorize("R");
+    } catch {
+      return [];
+    }
+    return allEntities(this.ctx, "SecretReference")
+      .filter((secret) => !secret.revokedAt && !secret.managedBy)
+      .map((secret) => ({ name: String(secret.locator), secretRef: String(secret.id) }));
+  }
   async import(input: CodeImportRequest): Promise<CodeImportResult> {
     this.ctx.authorize("W", input?.projectId);
     if (
@@ -69,11 +97,14 @@ export class CodeImportService {
     const project = requireEntity(this.ctx, "Project", input.projectId) as Stored<Project>;
     if (project.archivedAt)
       throw new ContractError("PRECONDITION_FAILED", "Archived project cannot import tests");
+    const declared = this.declaredSecrets();
     const bundle = await importCode({
       root: this.config.cwd,
       path: input.path,
       format: input.format,
+      secrets: declared.map((secret) => secret.name),
     });
+    const secretRefs = bindSecrets(bundle.secrets, declared);
     const image = input.format === "pytest" ? "testmaster-runner-python" : "testmaster-runner";
     const imageLock = JSON.parse(
       (
@@ -123,6 +154,7 @@ export class CodeImportService {
         dependencyLockRef: lockArtifact.id,
         runnerCapabilityVersion: "1.0.0",
         trustLevel: "imported",
+        ...(secretRefs.length ? { secretRefs } : {}),
       };
       Object.assign(revision, {
         testId: test.id,
@@ -201,7 +233,10 @@ export class CodeImportService {
     if (input.name !== undefined && (!input.name.trim() || input.name.length > 200))
       throw new ContractError("INVALID_ARGUMENT", "Imported test name must be 1–200 characters");
     const stored = await this.readBundle(source.id);
-    const bundle = await this.checkStoredCode(stored.bundle);
+    const bundle = await this.checkStoredCode(
+      stored.bundle,
+      (input.codeRef.secretRefs ?? []).map((secret) => secret.name),
+    );
     const test = entity(this.ctx, "tst", {
       projectId: input.projectId,
       name: input.name ?? bundle.tests[0],
@@ -218,6 +253,7 @@ export class CodeImportService {
       undefined,
       true,
       request,
+      { secretRefs: bindSecrets(bundle.secrets, input.codeRef.secretRefs ?? []) },
     );
     if (revision.testId !== test.id)
       return {
@@ -262,7 +298,10 @@ export class CodeImportService {
         "CodeReference must identify an owned imported bundle in the same project",
       );
     const { bundle, dependencyLock } = await this.readBundle(source.id);
-    const checked = await this.checkStoredCode(bundle);
+    const checked = await this.checkStoredCode(
+      bundle,
+      (codeRef.secretRefs ?? []).map((secret) => secret.name),
+    );
     return this.createFromBundle(
       target,
       checked,
@@ -271,16 +310,17 @@ export class CodeImportService {
       parentId,
       false,
       request,
+      { secretRefs: bindSecrets(checked.secrets, codeRef.secretRefs ?? []) },
     );
   }
   /**
    * The importer's verdict on a generated candidate, without storing anything. The generation
    * loop runs it as the model response check, so a refusal reaches the model as repair feedback.
    */
-  async checkGeneratedCode(input: {
-    code: string;
-    format: CodeImportFormat;
-  }): Promise<ImportedCodeBundle> {
+  async checkGeneratedCode(
+    input: { code: string; format: CodeImportFormat },
+    secrets: readonly string[] = [],
+  ): Promise<ImportedCodeBundle> {
     if (
       typeof input.code !== "string" ||
       Buffer.byteLength(input.code) > 1024 * 1024 ||
@@ -288,27 +328,44 @@ export class CodeImportService {
     )
       throw new ContractError("INVALID_ARGUMENT", "Invalid generated code candidate");
     const entrypoint = input.format === "pytest" ? "test_generated.py" : "generated.spec.ts";
-    return this.checkStoredCode({
-      schemaVersion: "1.0.0",
-      validatorVersion: "1.0.0",
-      format: input.format,
-      entrypoint,
-      files: { [entrypoint]: input.code },
-      sourceHashes: {},
-      tests: [],
-      limitations: [],
-    });
+    return this.checkStoredCode(
+      {
+        schemaVersion: "1.0.0",
+        validatorVersion: "1.0.0",
+        format: input.format,
+        entrypoint,
+        files: { [entrypoint]: input.code },
+        sourceHashes: {},
+        tests: [],
+        limitations: [],
+      },
+      secrets,
+    );
   }
-  /** `checked` is the bundle `checkGeneratedCode` already accepted for this same candidate. */
+  /**
+   * `checked` is the bundle `checkGeneratedCode` already accepted for this same candidate.
+   * `secretRefs` are the secrets that check declared; `modelCallId` is the call that wrote the code.
+   */
   async createGeneratedRevision(
     testId: string,
-    input: { code: string; format: CodeImportFormat; parentId?: string },
+    input: {
+      code: string;
+      format: CodeImportFormat;
+      parentId?: string;
+      modelCallId?: string;
+      secretRefs?: readonly CodeSecretBinding[];
+    },
     checked?: ImportedCodeBundle,
   ): Promise<Stored<TestRevision>> {
     this.ctx.authorize("W");
     const target = requireEntity(this.ctx, "TestCase", testId) as Stored<TestCase>;
     this.ctx.authorize("W", target.projectId);
-    const bundle = checked ?? (await this.checkGeneratedCode(input));
+    const bundle =
+      checked ??
+      (await this.checkGeneratedCode(
+        input,
+        (input.secretRefs ?? []).map((secret) => secret.name),
+      ));
     const image = input.format === "pytest" ? "testmaster-runner-python" : "testmaster-runner";
     const images = JSON.parse(
       (
@@ -339,9 +396,18 @@ export class CodeImportService {
       },
       "generated",
       input.parentId,
+      false,
+      undefined,
+      {
+        secretRefs: bindSecrets(bundle.secrets, input.secretRefs ?? []),
+        ...(input.modelCallId ? { generationModelCallId: input.modelCallId } : {}),
+      },
     );
   }
-  private async checkStoredCode(bundle: ImportedCodeBundle): Promise<ImportedCodeBundle> {
+  private async checkStoredCode(
+    bundle: ImportedCodeBundle,
+    secrets: readonly string[],
+  ): Promise<ImportedCodeBundle> {
     const root = await mkdtemp(join(tmpdir(), "testmaster-code-check-"));
     try {
       for (const [path, text] of Object.entries(bundle.files)) {
@@ -355,7 +421,7 @@ export class CodeImportService {
         await mkdir(dirname(join(root, path)), { recursive: true, mode: 0o700 });
         await writeFile(join(root, path), text, { flag: "wx", mode: 0o600 });
       }
-      return await importCode({ root, path: bundle.entrypoint, format: bundle.format });
+      return await importCode({ root, path: bundle.entrypoint, format: bundle.format, secrets });
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -368,6 +434,7 @@ export class CodeImportService {
     parentId?: string,
     createTest = false,
     request?: { operation: string; key: string; body: unknown },
+    extras: { secretRefs?: CodeSecretBinding[]; generationModelCallId?: string } = {},
   ): Promise<Stored<TestRevision>> {
     const revision = entity(this.ctx, "rev", {}) as Stored<TestRevision>;
     const bytes = Buffer.from(canonicalJson(bundle));
@@ -379,6 +446,7 @@ export class CodeImportService {
         "code-dependency-lock",
         Buffer.from(canonicalJson(lock)),
       );
+      const secretRefs = extras.secretRefs ?? [];
       const codeRef: CodeReference = {
         artifactId: artifact.id,
         contentHash: sha256(bytes),
@@ -388,6 +456,7 @@ export class CodeImportService {
         dependencyLockRef: dependency.id,
         runnerCapabilityVersion: "1.0.0",
         trustLevel: origin,
+        ...(secretRefs.length ? { secretRefs } : {}),
       };
       const action = () =>
         authoringTransaction(this.ctx, () => {
@@ -427,7 +496,12 @@ export class CodeImportService {
             origin,
           });
           if (origin === "generated")
-            revision.extensions = { "testmaster:verificationRequired": true };
+            revision.extensions = {
+              "testmaster:verificationRequired": true,
+              ...(extras.generationModelCallId
+                ? { "testmaster:generationModelCallId": extras.generationModelCallId }
+                : {}),
+            };
           if (createTest) {
             target.activeRevisionId = revision.id;
             this.ctx.entities.insert("TestCase", target);

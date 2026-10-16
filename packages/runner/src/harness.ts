@@ -1,11 +1,19 @@
 import { fork } from "node:child_process";
-import { cp, mkdir, readFile, symlink, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
+import { StringDecoder } from "node:string_decoder";
 import { runBrowser } from "./browser.js";
 import { startForwarder } from "./forwarder/index.js";
 import { runHttp } from "./http.js";
+import { CODE_SECRETS_ENV, stageImportedModules } from "./imported-modules.js";
 import { ProtocolClient } from "./protocol.js";
-import { abortVerdict, type RunnerInput, type RunnerResult, Runtime } from "./runtime.js";
+import {
+  abortVerdict,
+  type RunnerInput,
+  type RunnerResult,
+  Runtime,
+  RuntimeError,
+} from "./runtime.js";
 import { runTerminal } from "./terminal.js";
 
 async function readInput(): Promise<RunnerInput> {
@@ -135,6 +143,26 @@ export async function runHarness(): Promise<RunnerResult> {
     await forwarder.close().catch(() => {});
   }
 }
+/** Scrubs every string of a reporter payload before it leaves the runner. */
+function scrubDeep(runtime: Runtime, value: unknown): unknown {
+  if (typeof value === "string") return runtime.scrub(value);
+  if (Array.isArray(value)) return value.map((item) => scrubDeep(runtime, item));
+  if (value && typeof value === "object")
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, scrubDeep(runtime, item)]),
+    );
+  return value;
+}
+/** The values behind the code's declared secrets, each also registered for scrubbing. */
+async function readCodeSecrets(
+  runtime: Runtime,
+  bindings: readonly { name: string; secretRef: string }[],
+): Promise<Record<string, string>> {
+  const values: Record<string, string> = {};
+  for (const { name, secretRef } of bindings)
+    values[name] = String(await runtime.resolve({ secretRef }));
+  return values;
+}
 async function runImported(runtime: Runtime): Promise<RunnerResult> {
   const imported = runtime.input.imported;
   if (!imported) throw new Error("imported_input_missing");
@@ -144,6 +172,15 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
     imported.files.some((file) => isAbsolute(file) || file.split(/[\\/]/u).includes(".."))
   )
     throw new Error("imported_path_denied");
+  // Secrets are fetched before anything is staged or started: a missing one blocks the attempt.
+  let secretValues: Record<string, string>;
+  try {
+    secretValues = await readCodeSecrets(runtime, imported.secrets ?? []);
+  } catch (error) {
+    if (error instanceof RuntimeError)
+      return { outcome: error.outcome, reasonCode: error.reasonCode };
+    throw error;
+  }
   await mkdir("/tmp/imported", { recursive: true });
   const stagedRoot = "/tmp/imported/code";
   await cp(root, stagedRoot, {
@@ -152,14 +189,16 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
     errorOnExist: true,
     force: false,
   });
-  await symlink("/opt/testmaster/runner/node_modules", "/tmp/imported/node_modules", "dir");
+  await stageImportedModules("/opt/testmaster/runner/node_modules", "/tmp/imported/node_modules");
   const config = {
     testDir: stagedRoot,
     testMatch: imported.files,
     timeout: runtime.input.stepTimeoutMs ?? 30000,
     workers: 1,
     outputDir: "/tmp/imported/results",
-    reporter: [["/opt/testmaster/runner/dist/reporter.js"]],
+    // TestMaster's reporter feeds the evidence; the line reporter keeps Playwright's own console
+    // output (test titles, errors with code frames) in the container log.
+    reporter: [["/opt/testmaster/runner/dist/reporter.js"], ["line"]],
     use: {
       baseURL: runtime.input.baseUrl,
       browserName: "chromium",
@@ -177,7 +216,11 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
   const child = fork(
     resolve("/opt/testmaster/runner/node_modules/@playwright/test/cli.js"),
     ["test", "--config", "/tmp/imported/config.json"],
-    { cwd: stagedRoot, stdio: ["ignore", "pipe", "pipe", "ipc"] },
+    {
+      cwd: stagedRoot,
+      env: { ...process.env, [CODE_SECRETS_ENV]: JSON.stringify(secretValues) },
+      stdio: ["ignore", "pipe", "pipe", "ipc"],
+    },
   );
   child.on("message", (message: unknown) => {
     queue = queue.then(async () => {
@@ -201,28 +244,41 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
         count++;
         if (payload.status !== "passed") failures++;
       }
-      await runtime.emit(type, payload);
+      await runtime.emit(type, scrubDeep(runtime, payload));
     });
   });
   const stop = () => child.kill("SIGTERM");
   runtime.signal.addEventListener("abort", stop, { once: true });
   let logBytes = 0;
-  for (const stream of [child.stdout, child.stderr])
+  // Output is scrubbed per complete line, so a secret that straddles two chunks is still found.
+  const forward = (text: string) => {
+    if (!text) return;
+    const safe = runtime.scrub(text).slice(0, 16384);
+    process.stderr.write(safe);
+    queue = queue.then(() => runtime.emit("log", { level: "error", message: safe }));
+  };
+  for (const stream of [child.stdout, child.stderr]) {
+    const decoder = new StringDecoder("utf8");
+    let partial = "";
     stream?.on("data", (chunk: Buffer) => {
-      if (logBytes < 10485760) {
-        logBytes += chunk.length;
-        process.stderr.write(runtime.scrub(chunk.toString()).slice(0, 16384));
-        queue = queue.then(() =>
-          runtime.emit("log", {
-            level: "error",
-            message: runtime.scrub(chunk.toString()).slice(0, 16384),
-          }),
-        );
-      }
+      if (logBytes >= 10485760) return;
+      logBytes += chunk.length;
+      partial += decoder.write(chunk);
+      const lineEnd = partial.lastIndexOf("\n");
+      if (lineEnd === -1 && partial.length < 65536) return;
+      const complete = lineEnd === -1 ? partial : partial.slice(0, lineEnd + 1);
+      partial = lineEnd === -1 ? "" : partial.slice(lineEnd + 1);
+      forward(complete);
     });
+    stream?.on("end", () => {
+      forward(partial + decoder.end());
+      partial = "";
+    });
+  }
   try {
+    // `close` follows the end of both output streams, so no line is forwarded after it.
     const code = await new Promise<number | null>((resolveCode, reject) => {
-      child.once("exit", resolveCode);
+      child.once("close", resolveCode);
       child.once("error", reject);
     });
     await queue;

@@ -574,6 +574,13 @@ export class ReportsService {
           attempts[0]?.outcome ??
           null) as RunResult["firstAttemptOutcome"],
         ...(reduced?.reasonCode ? { reasonCode: String(reduced.reasonCode) } : {}),
+        ...(Array.isArray(reduced?.unavailableEvidence) && reduced.unavailableEvidence.length
+          ? {
+              unavailableEvidence: reduced.unavailableEvidence as unknown as NonNullable<
+                RunResult["unavailableEvidence"]
+              >,
+            }
+          : {}),
       };
       const recordedTimings = this.runs
         .events(runId)

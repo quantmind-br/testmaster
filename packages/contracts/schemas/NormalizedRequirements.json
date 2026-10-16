@@ -223,10 +223,30 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          "id",
+          "reason",
+          "requirementIds",
           "left",
           "right"
         ],
         "properties": {
+          "id": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 8000,
+            "type": "string"
+          },
+          "requirementIds": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "pattern": "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            }
+          },
           "left": {
             "additionalProperties": false,
             "minProperties": 1,
@@ -393,7 +413,7 @@
       }
     },
     "sourceSnapshotId": {
-      "description": "Fingerprint of the requirement snapshot; pass it as testmaster_generate_plan.sourceSnapshotId after a human approves the requirements",
+      "description": "Fingerprint of the requirement snapshot. It changes with every edit or approval: pass the fingerprint that testmaster_review_requirements returns as testmaster_generate_plan.sourceSnapshotId once the requirements are approved",
       "type": "string"
     },
     "version": {

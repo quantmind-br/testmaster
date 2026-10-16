@@ -38,6 +38,8 @@ interface Wire {
 }
 interface Scenario {
   steps: PlanStep[];
+  /** Imported code instead of the plan: the Playwright program is never reached when it blocks. */
+  imported?: RunnerInput["imported"];
   timeoutMs?: number;
   /** Event that makes the supervisor request the stop, as the executor does on a user cancel. */
   cancelOn?: (event: Wire) => boolean;
@@ -111,7 +113,7 @@ async function attempt(scenario: Scenario) {
       baseUrl: "http://127.0.0.1:1",
       networkPolicy: { allowedOrigins: [], networkProfile: "local-loopback" },
       secrets: [],
-      plan,
+      ...(scenario.imported ? { imported: scenario.imported } : { plan }),
       stepTimeoutMs: 30000,
       timeoutMs: scenario.timeoutMs ?? 60000,
     }),
@@ -170,6 +172,21 @@ it("keeps a failure proven before the cancel request as failed", async () => {
   });
   expect(result).toEqual({ outcome: "failed", reasonCode: "assertion_mismatch" });
   expect(finished).toEqual([{ outcome: "failed", reasonCode: "assertion_mismatch" }]);
+}, 30000);
+
+it("blocks imported code as missing_secret before staging or starting Playwright when a declared secret is absent from the snapshot", async () => {
+  const { result, finished, steps } = await attempt({
+    steps: [],
+    imported: {
+      files: ["code.spec.ts"],
+      secrets: [{ name: "API_KEY", secretRef: "sec_01900000-0000-7000-8000-000000000009" }],
+    },
+  });
+  expect(result).toEqual({ outcome: "blocked", reasonCode: "missing_secret" });
+  expect(finished).toEqual([{ outcome: "blocked", reasonCode: "missing_secret" }]);
+  expect(steps.map((step) => [step.stepId, step.status, step.reasonCode])).toEqual([
+    ["imported-code", "blocked", "missing_secret"],
+  ]);
 }, 30000);
 
 describe("attempt deadline while the host resolves a model request", () => {

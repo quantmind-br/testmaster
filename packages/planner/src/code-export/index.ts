@@ -240,10 +240,25 @@ export function exportCode(input: ExecutablePlan, options: CodeExportOptions): C
       { stepId, operation, format: options.format },
     );
   }
+  /** Exported code has no auth profile and sends JSON bodies as written. */
+  function unsupportedRequestFeature(
+    stepId: string,
+    input: Extract<PlanStep, { operation: "request" }>["input"],
+  ): void {
+    if (input.auth === "profile")
+      unsupported(
+        stepId,
+        "request",
+        "auth profile sessions are not available in exported code; cite the credential with a secretRef header",
+      );
+    if (input.body?.kind === "json" && input.body.set?.length)
+      unsupported(stepId, "request", "JSON body set entries are not available in exported code");
+  }
   function check(steps: PlanStep[]): void {
     for (const step of steps) {
       if (!browserOperations[step.operation])
         unsupported(step.id, step.operation, "unknown operation");
+      if (step.operation === "request") unsupportedRequestFeature(step.id, step.input);
       if (
         options.format === "pytest" &&
         step.operation === "select" &&
@@ -310,6 +325,7 @@ export function exportCode(input: ExecutablePlan, options: CodeExportOptions): C
   check(plan.steps);
   validatePlanSemantics(plan);
   for (const cleanup of plan.cleanup ?? []) {
+    unsupportedRequestFeature(cleanup.resourceRef, cleanup.input);
     const success = cleanup.successPredicate;
     if (!httpPredicates[success.predicate])
       unsupported(cleanup.resourceRef, success.predicate, "cleanup predicate is unsupported");

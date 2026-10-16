@@ -1,4 +1,10 @@
-import { ContractError, type ExecutablePlan, validate } from "@testmaster/contracts";
+import {
+  ContractError,
+  type ExecutablePlan,
+  type Expectation,
+  type PlanStep,
+  validate,
+} from "@testmaster/contracts";
 import { canonicalJson, semanticHash } from "@testmaster/domain";
 import type { EvidenceCatalog } from "../sources/evidence.js";
 import type { SourceEvidenceRef } from "../sources/types.js";
@@ -18,6 +24,65 @@ export interface UnsupportedRequirement {
 }
 export interface ResolvedProposals extends GeneratedProposals {
   unsupported: UnsupportedRequirement[];
+}
+/** Actions after which a browser plan must observe rendered content: they change what the page shows. */
+const stateChangingActions: Record<string, true> = {
+  navigate: true,
+  click: true,
+  press: true,
+  select: true,
+  check: true,
+  uncheck: true,
+  drag: true,
+  upload: true,
+  download: true,
+};
+function flatSteps(steps: readonly PlanStep[]): PlanStep[] {
+  return steps.flatMap((step) =>
+    step.operation === "frame" ? [step, ...flatSteps(step.input.childSteps)] : [step],
+  );
+}
+/** Observes content on the page, not its URL or the absence of earlier elements. */
+function observesContent(expectation: Expectation): boolean {
+  switch (expectation.predicate) {
+    case "visible":
+    case "enabled":
+    case "textEquals":
+    case "textContains":
+    case "valueEquals":
+    case "visualMatches":
+    case "downloadMatches":
+      return true;
+    case "countEquals":
+      return expectation.value > 0;
+    default:
+      return false;
+  }
+}
+/**
+ * A browser plan that changes state (login, navigation, submit) must assert, after its last such
+ * action, content the page renders. A URL check and the absence of the earlier elements also hold
+ * on a blank page, so a plan made of those alone proves nothing about the rendered result.
+ */
+function requireBrowserPostCondition(plan: ExecutablePlan): void {
+  if (plan.runner !== "playwright") return;
+  const steps = flatSteps(plan.steps);
+  const last = steps.findLastIndex(
+    (step) => step.kind === "action" && Object.hasOwn(stateChangingActions, step.operation),
+  );
+  if (last < 0) return;
+  const observed = steps
+    .slice(last + 1)
+    .some(
+      (step) =>
+        step.kind === "assertion" && step.required !== false && observesContent(step.expectation),
+    );
+  if (!observed)
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      "A browser plan that ends after a state-changing action (login, navigation, click, submit) needs a required positive assertion on rendered content after its last such action: visible, textContains, textEquals, valueEquals or countEquals above 0 on a locator for content that exists only when the action worked. A URL check and the absence of earlier elements also hold on a blank page",
+      { reasonCode: "browser_postcondition_missing" },
+    );
 }
 export function validateProposalPlan(input: unknown): ExecutablePlan {
   const plan = validate<ExecutablePlan>("ExecutablePlan", input);
@@ -51,6 +116,7 @@ export function validateProposalPlan(input: unknown): ExecutablePlan {
       "INVALID_ARGUMENT",
       "Trivial assertions cannot establish requirement coverage",
     );
+  requireBrowserPostCondition(plan);
   return plan;
 }
 /** A proposal refused on its own merits, located by its position in the model output. */
@@ -75,8 +141,9 @@ function proposalRefusal(
   try {
     validateProposalPlan(proposal.plan);
   } catch (error) {
-    if (error instanceof ContractError) return { reasonCode: "plan_invalid", error };
-    throw error;
+    if (!(error instanceof ContractError)) throw error;
+    const reasonCode = error.details.reasonCode;
+    return { reasonCode: typeof reasonCode === "string" ? reasonCode : "plan_invalid", error };
   }
   if (
     proposal.requirementRefs.some((id) => !allowedRequirements.has(id)) ||

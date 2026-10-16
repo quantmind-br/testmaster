@@ -340,4 +340,28 @@ describe("standalone deterministic code export", () => {
     expect(() => exportCode(plan, { format: "pytest" })).toThrow(/ECMAScript construct/);
     expect(() => exportCode(plan, { format: "playwright" })).not.toThrow();
   });
+  it("refuses auth profile sessions and JSON body set entries that exported code cannot reproduce", async () => {
+    const plan = await fixture("backend");
+    const request = plan.steps[0];
+    if (request?.operation !== "request") throw new Error("Bad fixture");
+    request.input.auth = "profile";
+    for (const format of ["playwright", "pytest"] as const)
+      expect(() => exportCode(plan, { format })).toThrow(
+        expect.objectContaining({
+          code: "CAPABILITY_UNAVAILABLE",
+          message: expect.stringContaining("auth profile sessions are not available"),
+        }),
+      );
+    delete request.input.auth;
+    request.input.method = "POST";
+    request.input.body = {
+      kind: "json",
+      value: { literal: { password: null } },
+      set: [
+        { pointer: "/password", value: { secretRef: "sec_01900000-0000-7000-8000-000000000001" } },
+      ],
+    };
+    for (const format of ["playwright", "pytest"] as const)
+      expect(() => exportCode(plan, { format })).toThrow(/JSON body set entries/u);
+  });
 });

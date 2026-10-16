@@ -400,7 +400,8 @@ export function describeHypothesis(hypothesis: AnalysisHypothesis): DescribedWit
 export function describeHealingAdvice(advice: HealingAdvice): string {
   const labels: Record<HealingAdvice, string> = {
     not_indicated: "Healing is not indicated for this failure.",
-    proposal_possible: "A healing proposal is possible; it would still need human review.",
+    proposal_possible:
+      "A healing proposal is possible; it would still need an explicit review decision.",
     manual_review_only: "Only a manual review can change this test; healing will not.",
   };
   return labels[advice];
@@ -446,21 +447,21 @@ export function describeHealingStatus(status: string): DescribedWithText {
         label: "Proposed",
         tone: "info",
         shape: "clock",
-        text: "Waiting for a human decision. Nothing has been changed.",
+        text: "Waiting for a decision by an authorized reviewer. Nothing has been changed.",
       };
     case "approved":
       return {
         label: "Approved — verification pending",
         tone: "warning",
         shape: "clock",
-        text: "Approved by a human. The candidate is not promoted until a new verification Run passes.",
+        text: "Approved by its reviewer. The candidate is not promoted until a new verification Run passes.",
       };
     case "rejected":
       return {
         label: "Rejected",
         tone: "neutral",
         shape: "slash",
-        text: "Rejected by a human. The test keeps its current revision.",
+        text: "Rejected by its reviewer. The test keeps its current revision.",
       };
     case "verified":
       return {
@@ -535,7 +536,7 @@ export function describeDecision(
         label: "Manual review required",
         tone: "warning",
         shape: "lock",
-        text: "Policy did not allow automatic application. A human must accept or reject it.",
+        text: "Policy did not allow automatic application. The reviewer, a person or an agent, must accept or reject it.",
       };
     default:
       return {
@@ -591,9 +592,7 @@ export function decideAcceptance(input: AcceptanceInput): Acceptance {
       "The test's active revision is no longer the base of this proposal. Review a new proposal against the current revision.",
     );
   if (input.canApprove === false)
-    reasons.push(
-      "Your role cannot approve healing proposals. Approval needs a human member with write permission.",
-    );
+    reasons.push("Your role cannot approve healing proposals. Approval needs write permission.");
   return { allowed: reasons.length === 0, reasons };
 }
 
@@ -749,7 +748,7 @@ export function describeMutationFailure(
         kind: "forbidden",
         title: "You are not allowed to decide this proposal",
         message:
-          "Approving or rejecting healing proposals needs a human member with write permission and a healing approval grant. Ask a workspace admin for access.",
+          "Approving or rejecting healing proposals needs a workspace member (or a token) with write permission. Ask a workspace admin for access.",
       };
     case "PRECONDITION_FAILED":
       return {

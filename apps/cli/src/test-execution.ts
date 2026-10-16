@@ -1,3 +1,4 @@
+import type { Application } from "@testmaster/application";
 import { ContractError, type Run, type RunRequest } from "@testmaster/contracts";
 import {
   batchExitCode,
@@ -26,6 +27,16 @@ function admissionOptions(options: Options) {
     unsafeLocal: options.unsafeLocal === true,
     ...(key ? { idempotencyKey: key } : {}),
   };
+}
+/** A refused proposal (not indicated, already settled) is reported beside the finished run. */
+async function proposeHealing(app: Application, runId: string): Promise<unknown> {
+  try {
+    return await app.healing.propose(runId, {});
+  } catch (error) {
+    if (error instanceof ContractError && error.code === "PRECONDITION_FAILED")
+      return { refused: errorData(error) };
+    throw error;
+  }
 }
 function replayOptions(options: Options): void {
   if (options.mode !== "replay" && options.mode !== "agent")
@@ -164,7 +175,7 @@ export function testExecutionCommands(test: Command, runtime: Runtime): void {
         if (options.heal === "propose" && finished.outcome === "failed")
           return {
             ...result,
-            data: { execution: result.data, healing: await app.healing.propose(finished.id, {}) },
+            data: { execution: result.data, healing: await proposeHealing(app, finished.id) },
           };
         return result;
       }
@@ -247,7 +258,7 @@ export function testExecutionCommands(test: Command, runtime: Runtime): void {
       if (options.heal === "propose") {
         for (const member of settled)
           if (member.status === "fulfilled" && member.value.outcome === "failed")
-            healing.push(await app.healing.propose(member.value.id, {}));
+            healing.push(await proposeHealing(app, member.value.id));
       }
       const codes = settled.map((member) => {
         if (member.status === "fulfilled") {

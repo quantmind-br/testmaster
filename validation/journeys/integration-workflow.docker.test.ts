@@ -132,6 +132,9 @@ it("real CLI create read update query flows its captured ID through redacted per
         else expect(steps.every((step) => step.status === "passed")).toBe(true);
         const bundle = await session.committed(runId);
         const traces: Record<string, unknown> = {};
+        // The capture declares `sensitive: false`: a credentialed request does not taint the ID,
+        // so the traces carry it in clear while the bearer stays out of every trace.
+        let productId = "";
         for (const id of mutant === "healthy"
           ? ["create", "read", "update", "query"]
           : ["create", "read", "update"]) {
@@ -143,19 +146,20 @@ it("real CLI create read update query flows its captured ID through redacted per
           const content = await readFile(join(bundle.directory, entry.relativePath), "utf8");
           expect(content).not.toContain(bearer);
           const trace = object(JSON.parse(content));
-          if (id === "create")
+          if (id === "create") {
             expect(items(trace.captures)).toEqual([
               expect.objectContaining({
                 variableRef: "create.product_id",
-                sensitive: true,
-                resolved: "[REDACTED]",
+                sensitive: false,
+                resolved: expect.any(String),
               }),
             ]);
-          else
+            productId = text(items(trace.captures)[0]?.resolved);
+          } else
             expect(items(object(trace.request).bindings)).toContainEqual({
               variableRef: "create.product_id",
-              sensitive: true,
-              resolved: "[REDACTED]",
+              sensitive: false,
+              resolved: productId,
             });
           traces[id] = trace;
         }
@@ -166,6 +170,7 @@ it("real CLI create read update query flows its captured ID through redacted per
             .all();
           expect(products).toHaveLength(1);
           const product = products[0];
+          expect(String(product?.id)).toBe(productId);
           expect(product?.price_cents).toBe(mutant === "healthy" ? 456 : 123);
           const persisted = await fetch(`${target.shop.url}/api/products/${product?.id}`, {
             headers: { authorization: `Bearer ${bearer}` },

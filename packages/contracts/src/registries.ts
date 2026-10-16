@@ -87,6 +87,7 @@ const reasonGroups: ReadonlyArray<{ codes: readonly string[]; mapping: ReasonMap
       "storage_unavailable",
       "artifact_expired",
       "redaction_failed",
+      "evidence_incomplete",
     ],
     mapping: { effect: "evidence", gate: "evaluate", exit: 1, reporter: "error" },
   },

@@ -70,7 +70,7 @@ owner and update status; `…/sources/:sourceId` shows the revision history.
 - Each requirement links to the exact source span it came from, with source name, revision, byte range,
   span hash and excerpt, and says whether that revision is still the current one. A requirement that
   rests on a superseded revision is flagged, and its old span stays readable.
-- A statement inferred only from code is a conflict until a person decides it. A decision needs the
+- A statement inferred only from code is a conflict until the caller (a person or an agent) decides it. A decision needs the
   statement and a reason and is recorded with the actor; approval of a blocked requirement is refused
   by the page and by the server. Statements from the specification are not held back by it.
 - Approving is a contextual confirmation and needs a project environment.

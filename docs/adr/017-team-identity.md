@@ -44,7 +44,7 @@ M0–M3 authenticate one local human through host-issued local tokens kept in `o
   |service_account|grant-only|grant-only|grant-only|grant-only|grant-only|deny|
 
   Rules on top of the matrix:
-  - `approve` stays human-only (`authorizeNamed`).
+  - Pipeline decisions (proposal acceptance, healing approval, execution approval, requirement approval) use the ordinary write scope of any authenticated principal and are recorded with it. Only the SEC-047 agent pull-request path (and the M5 visual baselines) keeps an explicit `approve` grant (`authorizeNamed`).
   - `raw` and secret reveal/export require an explicit unexpired grant.
   - Grants now match `resourceType` (`"*"` matches all). This fixes the defect where any grant with a matching action widened generic scope.
   - Changing one's own membership returns `FORBIDDEN` with `details.reason: "self_promotion"`.

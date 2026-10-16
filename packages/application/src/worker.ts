@@ -4,6 +4,7 @@ import { availableParallelism, totalmem } from "node:os";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import {
+  type CodeReference,
   ContractError,
   defaults,
   type EffectiveConfig,
@@ -55,6 +56,7 @@ import { sourceSchemasFor } from "./ai/source-documents.js";
 import { auditSecurity } from "./audit.js";
 import { type AuthProfilesService, authBlockReasons } from "./auth/index.js";
 import { attemptAdditionalOrigins } from "./authoring.js";
+import { erasableCaptureSecretIds } from "./capture-retention.js";
 import { runMatrixCell } from "./comparisons.js";
 import type { ResolvedConfig } from "./config.js";
 import { entity, type RunActor, requireEntity, type ServiceContext } from "./context.js";
@@ -103,6 +105,30 @@ export interface WorkerHost {
 /** Maps a revision runner to the sandbox executor kind; the Playwright runner uses the browser envelope. */
 export function executorKindOf(runner: unknown): ExecutorKind {
   return runner === "python" || runner === "http" || runner === "terminal" ? runner : "browser";
+}
+/**
+ * The secrets a code test declared, each checked to exist. A secret that is gone throws
+ * `missing_secret`, which blocks the Run before any child starts instead of failing an assertion.
+ */
+export function codeSecretBindings(
+  codeRef: CodeReference | undefined,
+  secrets: Pick<SecretsService, "get">,
+): NonNullable<CodeReference["secretRefs"]> {
+  const bindings = codeRef?.secretRefs ?? [];
+  for (const { name, secretRef } of bindings) {
+    try {
+      secrets.get(secretRef);
+    } catch (error) {
+      if (error instanceof ContractError && error.code === "NOT_FOUND")
+        throw new ContractError(
+          "PRECONDITION_FAILED",
+          `Secret ${JSON.stringify(name)} used by this code test does not exist`,
+          { reasonCode: "missing_secret", secretName: name },
+        );
+      throw error;
+    }
+  }
+  return bindings;
 }
 export function planSteps(plan: ExecutablePlan): PlanStep[] {
   const output: PlanStep[] = [];
@@ -652,6 +678,7 @@ export class WorkerService {
             signal: controller.signal,
             deadlineAt: Date.now() + attemptDeadlineMs,
             interactive: ["cli", "api", "mcp"].includes(run.origin) && process.env.CI !== "true",
+            ...(plan ? { runner: plan.runner } : {}),
           })
         : null;
       const secretIds = new Set<string>(prepared?.secretIds);
@@ -663,6 +690,11 @@ export class WorkerService {
         }
       };
       inspect(plan);
+      // A code test reads secrets only through its declared bindings.
+      const codeSecrets = imported
+        ? codeSecretBindings(revision.codeRef as CodeReference | undefined, this.host.secrets)
+        : [];
+      for (const { secretRef } of codeSecrets) secretIds.add(secretRef);
       const releases = await Promise.all([...secretIds].map((id) => this.host.secrets.release(id)));
       sealedSnapshot.secretRefs = [...secretIds].map((id) => {
         const secret = this.host.secrets.get(id);
@@ -785,7 +817,12 @@ export class WorkerService {
                     codeRoot: "/run/testmaster/input/code",
                     imageId: imported.dependencyLock.imageId,
                   }
-                : { imported: { files: [imported.bundle.entrypoint] } }
+                : {
+                    imported: {
+                      files: [imported.bundle.entrypoint],
+                      ...(codeSecrets.length ? { secrets: codeSecrets } : {}),
+                    },
+                  }
               : {}),
             baseUrl: String(cell.baseUrl),
             ...(prepared?.runnerAuth ? { auth: prepared.runnerAuth } : {}),
@@ -1058,6 +1095,12 @@ export class WorkerService {
       execution.progress(fence, "collecting");
       timer.mark("collecting");
       let evidenceComplete = false;
+      let unavailableEvidence: {
+        relativePath: string;
+        kind: string;
+        state: string;
+        omissionReason?: string;
+      }[] = [];
       if (result.bundle) {
         const bundle = await verifyBundle(result.bundle.bundleDir, {
           workspaceId: this.ctx.workspaceId,
@@ -1100,7 +1143,15 @@ export class WorkerService {
           }
         });
         await rm(join(result.bundle.bundleDir, ".partial"), { force: true });
-        evidenceComplete = !bundle.manifest.entries.some((entry) => entry.state !== "available");
+        unavailableEvidence = bundle.manifest.entries
+          .filter((entry) => entry.state !== "available")
+          .map((entry) => ({
+            relativePath: entry.relativePath,
+            kind: entry.kind,
+            state: entry.state,
+            ...(entry.omissionReason ? { omissionReason: entry.omissionReason } : {}),
+          }));
+        evidenceComplete = unavailableEvidence.length === 0;
       }
       const attempts = this.observations(run.id, plan);
       const current = attempts.find((attempt) => attempt.attemptId === fence.attemptId);
@@ -1134,6 +1185,9 @@ export class WorkerService {
         policySatisfied: true,
         requiredDependenciesPassed: true,
       });
+      // A pass whose gate failed on evidence must say so; `assertions_satisfied` alone reads as success.
+      if (reduced.outcome === "passed" && gate === "failed" && !evidenceComplete)
+        reduced.reasonCode = "evidence_incomplete";
       if (agent && result.outcome === "passed") {
         leases.assertCurrent(fence);
         const candidate = agent.candidate(run.id);
@@ -1169,6 +1223,7 @@ export class WorkerService {
       database.withTx(() =>
         new OutboxRepository(database).append(this.ctx.workspaceId, run.id, "run.reduced", {
           ...reduced,
+          ...(unavailableEvidence.length ? { unavailableEvidence } : {}),
           isolation: cell.executor === "process" ? "none" : "docker",
         }),
       );
@@ -1270,6 +1325,7 @@ export class WorkerService {
       clearInterval(heartbeat);
       signal?.removeEventListener("abort", abort);
       this.active.delete(run.id);
+      await this.eraseSettledCaptures();
       await rm(inputDir, { recursive: true, force: true });
       logs.record({
         component: "worker",
@@ -1582,10 +1638,22 @@ export class WorkerService {
       );
     }
   }
+  /** Erases sensitive captures that no dependent, reuse window or live resource can need any more. */
+  private async eraseSettledCaptures(): Promise<void> {
+    for (const secretId of erasableCaptureSecretIds(this.ctx)) {
+      try {
+        await this.host.secrets.eraseCapture(secretId);
+      } catch {
+        // The reference stays live; the next maintenance pass retries.
+        auditSecurity(this.ctx, "secret.capture.erase", secretId, "denied");
+      }
+    }
+  }
   private async maintenance() {
     const database = this.ctx.database;
     const leases = new LeaseRepository(database);
     const expired = leases.expire();
+    await this.eraseSettledCaptures();
     const pending = database.all(
       `SELECT * FROM job_leases WHERE workspace_id=? AND state='reconciliation_required' AND dispatchable=1 AND ${runJobFilter}`,
       this.ctx.workspaceId,
@@ -1798,13 +1866,7 @@ export class WorkerService {
           )
             throw new ContractError("FORBIDDEN", "Run is not an approved healing verification");
           const test = requireEntity(this.ctx, "TestCase", run.testId);
-          if (proposal.approvalMode === "manual")
-            this.ctx.authorizeNamed(
-              "approve",
-              "HealingProposal",
-              String(test.projectId),
-              String(cell.environmentId),
-            );
+          if (proposal.approvalMode === "manual") this.ctx.authorize("W", String(test.projectId));
           else this.ctx.authorize("X", String(test.projectId));
         } else this.ctx.authorize("X");
       }

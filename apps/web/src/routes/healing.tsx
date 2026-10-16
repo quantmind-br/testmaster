@@ -167,7 +167,7 @@ function IdentitySection({ review }: { review: HealingReviewRecord }): ReactNode
           </h3>
           <p>
             {entry.equivalence === null
-              ? "Equivalence could not be established from the recorded evidence. A human must judge it."
+              ? "Equivalence could not be established from the recorded evidence. The reviewer must judge it."
               : entry.equivalence.equivalent
                 ? "The recorded candidates show the new locator matches the same element."
                 : "The recorded candidates do not establish that the new locator matches the same element."}
@@ -256,7 +256,7 @@ function ReviewBody({ proposal, review, reload }: BodyProps): ReactNode {
     if (failure && !confirming) bannerRef.current?.focus();
   }, [failureSeq, confirming]);
 
-  const canApprove = me.principal.kind === "human" && me.permissions.write;
+  const canApprove = me.permissions.write;
   const acceptance = decideAcceptance({
     status: proposal.status,
     assertionsIntact: review ? review.preservedAssertions.intact : null,
@@ -412,7 +412,7 @@ function ReviewBody({ proposal, review, reload }: BodyProps): ReactNode {
           <dt>Decided by</dt>
           <dd>
             {proposal.approvalMode === "manual"
-              ? "A human reviewer"
+              ? "A reviewer"
               : proposal.approvalMode === "policy"
                 ? "Project policy"
                 : "Nobody yet"}
@@ -565,7 +565,7 @@ function ReviewBody({ proposal, review, reload }: BodyProps): ReactNode {
           {rejectable ? null : (
             <p data-testid="reject-unavailable">
               {proposal.status === "proposed"
-                ? "Your role cannot reject healing proposals. Approval needs a human member with write permission."
+                ? "Your role cannot reject healing proposals. Approval needs write permission."
                 : `This proposal is already ${proposal.status}.`}
             </p>
           )}

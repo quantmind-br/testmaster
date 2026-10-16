@@ -6,8 +6,8 @@ import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { Application, entity, scaffoldPlan } from "@testmaster/application";
-import { ajv } from "@testmaster/contracts";
+import { Application, entity, HealingService, scaffoldPlan } from "@testmaster/application";
+import { ajv, ContractError } from "@testmaster/contracts";
 import { afterEach, expect, it, vi } from "vitest";
 import { createMcpServer } from "./server.js";
 
@@ -461,7 +461,7 @@ it("the features resource maps stable keys to ids, filters by substring and page
 it("no tool input is a top-level combinator, generate_tests shows every property and normalize takes a provider", async () => {
   const f = await fixture();
   const tools = (await f.client.listTools()).tools;
-  expect(tools).toHaveLength(20);
+  expect(tools).toHaveLength(30);
   for (const tool of tools) {
     for (const keyword of ["anyOf", "oneOf", "allOf", "not"])
       expect(tool.inputSchema, `${tool.name} ${keyword}`).not.toHaveProperty(keyword);
@@ -866,6 +866,41 @@ it("propose_healing names its run runId and no longer accepts failedRunId", asyn
   expect(renamed.error?.code).toBe("NOT_FOUND");
 });
 
+it("a healing abstention is a normal MCP result while a not-indicated refusal is an error", async () => {
+  const f = await fixture();
+  const abstention = {
+    abstained: true,
+    failedRunId: missingRun,
+    reasonCode: "model_abstained",
+    reason: "The model found no safe test-only repair.",
+    jobId: "job_01900000-0000-7000-8000-000000000001",
+    modelCallId: "mdl_01900000-0000-7000-8000-000000000002",
+    nextAction: "Repair the test by hand.",
+  };
+  vi.spyOn(HealingService.prototype, "propose").mockResolvedValueOnce(abstention);
+  const settled = await f.client.callTool({
+    name: "testmaster_propose_healing",
+    arguments: { runId: missingRun },
+  });
+  expect(settled.isError).not.toBe(true);
+  expect(settled.structuredContent).toEqual(abstention);
+  expect((settled.content as { text: string }[])[0]?.text).toContain(
+    "Healing abstained (model_abstained): The model found no safe test-only repair.",
+  );
+  // Control: a refusal before any model call stays an error that names its reason code.
+  vi.spyOn(HealingService.prototype, "propose").mockRejectedValueOnce(
+    new ContractError("PRECONDITION_FAILED", "Healing is not indicated", {
+      reasonCode: "healing_not_indicated",
+    }),
+  );
+  const refused = await f.call("testmaster_propose_healing", { runId: missingRun });
+  expect(refused.isError).toBe(true);
+  expect(refused.error).toMatchObject({
+    code: "PRECONDITION_FAILED",
+    details: { reasonCode: "healing_not_indicated" },
+  });
+});
+
 it("a generated-code revision has no plan resource and names how to read its code", async () => {
   const f = await fixture();
   const test = f.app.tests.create({ projectId: f.init.projectId, plan: scaffoldPlan("backend") });
@@ -903,6 +938,9 @@ it("an unknown tool is a JSON-RPC invalid-params error, not a failed tool result
   await expect(
     f.client.callTool({ name: "testmaster_no_such_tool", arguments: {} }),
   ).rejects.toMatchObject({ code: -32602 });
+  expect(
+    f.app.database.all("SELECT actor,resource_id FROM audit_events WHERE action='mcp.tool.denied'"),
+  ).toEqual([{ actor: f.app.context.principalId, resource_id: "testmaster_no_such_tool" }]);
   // Control: a known tool still answers with a result.
   const known = await f.call("testmaster_capabilities", {});
   expect(known.isError).toBe(false);

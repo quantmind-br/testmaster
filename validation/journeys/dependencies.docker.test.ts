@@ -6,7 +6,7 @@ import { DatabaseSync } from "node:sqlite";
 import { type ExecutablePlan, validate } from "@testmaster/contracts";
 import { startShop } from "@testmaster/reference-shop";
 import { expect, it } from "vitest";
-import { files, healthPlan, items, journey, literal, object, text } from "./harness.js";
+import { data, files, healthPlan, items, journey, literal, object, text } from "./harness.js";
 
 it("real CLI batch expands a required producer and transfers its sensitive capture through the protected vault, never a public URL", async () => {
   await journey("m1-sensitive-dependencies", async (session) => {
@@ -169,8 +169,12 @@ it("real CLI batch expands a required producer and transfers its sensitive captu
         "--timeout",
         "180",
       ]).result;
-      expect(refusal.exitCode).toBe(1);
+      // A secret in a query string is refused by the runner's security policy: a blocked run, 15.
+      expect(refusal.exitCode).toBe(15);
       expect(refusal.json).toBeDefined();
+      const unsafeRunId = text(items(object(data(refusal.json).receipt).memberRuns)[0]?.runId);
+      const unsafeEvents = await session.command(["run", "events", unsafeRunId]);
+      expect(JSON.stringify(unsafeEvents)).toContain("security_precondition_failed");
       expect(leakedQueryRequests).toBe(0);
       expect(authenticatedConsumers).toBe(1);
       for (const command of session.commands) {

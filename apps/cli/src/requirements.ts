@@ -3,6 +3,7 @@ import { ContractError, parseStrictJson } from "@testmaster/contracts";
 import type { Command } from "commander";
 import {
   collect,
+  dryRunReport,
   integer,
   type Options,
   type Runtime,
@@ -97,6 +98,26 @@ export function requirementCommands(program: Command, runtime: Runtime): void {
     async (rt, args, options) => ({
       data: await (await rt.app()).requirements.approve(String(args[0]), version(options)),
     }),
+    (_rt, args, options) => {
+      const id = String(args[0]);
+      const expectedVersion = version(options);
+      return dryRunReport(
+        [
+          {
+            operation: "requirement.approve",
+            requirementId: id,
+            expectedVersion,
+            resultingVersion: expectedVersion + 1,
+            records: "an approval for the current principal, audited as requirement.approved",
+          },
+        ],
+        [
+          `requirement ${id} must still be at version ${expectedVersion}`,
+          "the requirement must have no unresolved conflict",
+          "the project must have an environment",
+        ],
+      );
+    },
   );
   runtime.bind(
     group

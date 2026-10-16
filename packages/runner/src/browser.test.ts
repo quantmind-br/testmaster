@@ -546,6 +546,100 @@ it("lets an approved additional origin through without recording a denial", asyn
   expect(approved.abort).not.toHaveBeenCalled();
   expect(egressEvents()).toEqual([]);
 });
+interface SocketDouble {
+  url: () => string;
+  close: Mock;
+  connectToServer: Mock;
+}
+function socketFor(url: string): SocketDouble {
+  return { url: () => url, close: vi.fn(async () => undefined), connectToServer: vi.fn() };
+}
+/** Fires the WebSocket handler Chromium would call for each page socket while the click step runs. */
+function socketsOnClick(...sockets: SocketDouble[]): void {
+  context.page.onClick = () => {
+    const handler = (context.routeWebSocket.mock.calls as unknown[][])[0]?.[1] as
+      | ((socket: SocketDouble) => void)
+      | undefined;
+    if (!handler) throw new Error("WebSocket handler was not installed");
+    for (const socket of sockets) handler(socket);
+  };
+}
+it("connects a same-origin WebSocket to the server and does not deny the run", async () => {
+  const secure = socketFor("ws://fixture.test/api/events?token=url-canary");
+  socketsOnClick(secure);
+  expect(await runBrowser(runtime([click, assertion]))).toMatchObject({
+    outcome: "passed",
+    reasonCode: "assertions_satisfied",
+  });
+  expect(secure.connectToServer).toHaveBeenCalledOnce();
+  expect(secure.close).not.toHaveBeenCalled();
+  expect(egressEvents()).toEqual([]);
+});
+it("maps wss to https and ws to http, so approving one scheme does not approve the other", async () => {
+  const withLiveOrigin = () => {
+    const attempt = runtime([click, assertion]);
+    attempt.input.networkPolicy.allowedOrigins.push("https://live.example.test");
+    attempt.input.networkPolicy.additionalOrigins = ["https://live.example.test"];
+    return attempt;
+  };
+  const approved = socketFor("wss://live.example.test/stream");
+  socketsOnClick(approved);
+  expect(await runBrowser(withLiveOrigin())).toMatchObject({ outcome: "passed" });
+  expect(approved.connectToServer).toHaveBeenCalledOnce();
+  context = new ContextStub();
+  launch.mockResolvedValue({
+    newContext: async () => context,
+    close: closeBrowser,
+  } as unknown as Browser);
+  const plain = socketFor("ws://live.example.test/stream");
+  socketsOnClick(plain);
+  expect(await runBrowser(withLiveOrigin())).toMatchObject({
+    outcome: "blocked",
+    reasonCode: "egress_denied",
+  });
+  expect(plain.connectToServer).not.toHaveBeenCalled();
+  expect(egressEvents()).toEqual([
+    expect.objectContaining({ origin: "http://live.example.test", resourceType: "websocket" }),
+  ]);
+});
+it("closes a third-party WebSocket, names its origin and blocks the run", async () => {
+  const foreign = socketFor("wss://tracker.example.test:8443/collect?id=url-canary");
+  socketsOnClick(foreign);
+  expect(await runBrowser(runtime([click, assertion]))).toMatchObject({
+    outcome: "blocked",
+    reasonCode: "egress_denied",
+  });
+  expect(foreign.connectToServer).not.toHaveBeenCalled();
+  expect(foreign.close).toHaveBeenCalledWith(expect.objectContaining({ code: 1008 }));
+  expect(egressEvents()).toEqual([
+    {
+      stepId: "click",
+      origin: "https://tracker.example.test:8443",
+      method: "GET",
+      resourceType: "websocket",
+      disposition: "fatal",
+      count: 1,
+    },
+  ]);
+  const message = failedStepMessages().find((text) => text.includes("not authorized"));
+  expect(message).toContain("https://tracker.example.test:8443 (websocket request)");
+  expect(message).not.toContain("url-canary");
+});
+it("does not blame an authorized origin when the browser cannot connect its WebSocket", async () => {
+  const broken = socketFor("ws://fixture.test/api/events");
+  broken.connectToServer.mockImplementation(() => {
+    throw new Error("Page closed");
+  });
+  socketsOnClick(broken);
+  expect(await runBrowser(runtime([click, assertion]))).toMatchObject({
+    outcome: "blocked",
+    reasonCode: "egress_denied",
+  });
+  expect(broken.close).toHaveBeenCalledWith(expect.objectContaining({ code: 1011 }));
+  const message = failedStepMessages().find((text) => text.includes("could not connect"));
+  expect(message).toContain("authorized origin http://fixture.test");
+  expect(egressEvents()).toEqual([]);
+});
 const failedStepMessages = () =>
   events.flatMap((event) =>
     event.type === "step.finished" && event.payload.error ? [event.payload.error.message] : [],

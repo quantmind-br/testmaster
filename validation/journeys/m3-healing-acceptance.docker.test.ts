@@ -6,7 +6,12 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { Application, issueLocalToken } from "@testmaster/application";
+import {
+  Application,
+  type HealingOutcome,
+  isHealingAbstention,
+  issueLocalToken,
+} from "@testmaster/application";
 import type { ExecutablePlan, HealingReview, Run } from "@testmaster/contracts";
 import { validate } from "@testmaster/contracts";
 import { semanticHash } from "@testmaster/domain";
@@ -27,6 +32,13 @@ import {
 } from "./harness.js";
 
 type Patch = { changes: Array<{ stepId: string; path: string; value: unknown }> };
+
+/** The proposal of a propose call that must not abstain. */
+async function proposed(request: Promise<HealingOutcome>) {
+  const outcome = await request;
+  if (isHealingAbstention(outcome)) throw new Error(`Healing abstained: ${outcome.reasonCode}`);
+  return outcome;
+}
 
 async function listen(server: Server): Promise<string> {
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -289,7 +301,7 @@ it("HEAL-001 policy selector repair passes while changed price and permission st
             },
           ],
         });
-        const proposal = await app.healing.propose(original.id);
+        const proposal = await proposed(app.healing.propose(original.id));
         expect(proposal.approvalMode).toBe("policy");
         expect(proposal.verificationRunId).not.toBeNull();
         const verification = await verify(session, app, proposal.verificationRunId!);
@@ -331,7 +343,7 @@ it("HEAL-001 policy selector repair passes while changed price and permission st
           expect((await app.analysis.analyze(failed.id)).failureKind).toBe("product_bug");
           await expect(app.healing.propose(failed.id)).rejects.toMatchObject({
             code: "PRECONDITION_FAILED",
-            details: { reason: "semantic_failure" },
+            details: { reasonCode: "healing_not_indicated" },
           });
           expect(completions()).toBe(1);
           expect(app.tests.get(test.id).activeRevisionId).toBe(candidate.id);
@@ -411,7 +423,7 @@ it("J07 M3-02 policy autoapply promotes only the unique equivalent selector and 
             { stepId: "save", path: "/input/locator", value: { by: "testId", value: "save-new" } },
           ],
         });
-        const accepted = await app.healing.propose(failedSafe.id);
+        const accepted = await proposed(app.healing.propose(failedSafe.id));
         // Only the failed step's locator evidence is sent, and evidence stays referenced by
         // handle: content hashes of the cited steps/observations never leave the process.
         const healPrompt = prompts().at(-1)!;
@@ -461,7 +473,7 @@ it("J07 M3-02 policy autoapply promotes only the unique equivalent selector and 
         });
         const beforeSaves = saves;
         const beforeDeletes = deletes;
-        const refused = await app.healing.propose(failedWrong.id);
+        const refused = await proposed(app.healing.propose(failedWrong.id));
         expect(refused).toMatchObject({
           status: "proposed",
           approvalMode: null,
@@ -561,7 +573,7 @@ it("J07 M3-02 autoapplies observed hidden readiness within the original wait cei
           ),
         ).toBe(true);
         setPatch({ changes: [{ stepId: "ready-wait", path: "/input/state", value: "hidden" }] });
-        const accepted = await app.healing.propose(failed.id);
+        const accepted = await proposed(app.healing.propose(failed.id));
         expect(accepted.approvalMode).toBe("policy");
         expect(accepted.verificationRunId).not.toBeNull();
         const basePlan = app.revisions.get(accepted.baseRevisionId).plan!;
@@ -577,7 +589,7 @@ it("J07 M3-02 autoapplies observed hidden readiness within the original wait cei
         expect(app.tests.get(safe.id).activeRevisionId).toBe(accepted.candidateRevisionId);
         const readyBefore = ready;
         setPatch({ changes: [{ stepId: "ready-wait", path: "/input/state", value: "visible" }] });
-        const refused = await app.healing.propose(failedWrong.id);
+        const refused = await proposed(app.healing.propose(failedWrong.id));
         expect(refused).toMatchObject({
           status: "proposed",
           approvalMode: null,
@@ -849,7 +861,7 @@ it("HEAL-001 repeated selector repair defers an unexecuted step until verificati
             value: { by: "role", role: "button", name: "Sign in", exact: true },
           })),
         });
-        const proposal = await app.healing.propose(failed.id);
+        const proposal = await proposed(app.healing.propose(failed.id));
         expect(proposal.approvalMode).toBe("policy");
         expect(proposal.extensions).toMatchObject({
           "testmaster:deferredLocatorProofs": [{ stepId: "later" }],
@@ -941,7 +953,7 @@ it("HEAL-003 automated assisted review preserves semantic failures and refuses s
             },
           ],
         });
-        const proposal = await app.healing.propose(failed.id);
+        const proposal = await proposed(app.healing.propose(failed.id));
         expect(proposal).toMatchObject({
           status: "proposed",
           approvalMode: null,
@@ -1168,7 +1180,7 @@ it("HEAL-003 automated assisted review preserves semantic failures and refuses s
           const negativeManifest = (await app.artifacts.get(negative.id)).manifest;
           await expect(app.healing.propose(negative.id)).rejects.toMatchObject({
             code: "PRECONDITION_FAILED",
-            details: { reason: "semantic_failure" },
+            details: { reasonCode: "healing_not_indicated" },
           });
           expect(completions()).toBe(1);
           defect = false;

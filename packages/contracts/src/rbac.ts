@@ -41,7 +41,7 @@ export const rbacMatrix: Readonly<Record<Role, Readonly<Record<RbacColumn, RbacV
 export const rbacRules: readonly string[] = Object.freeze([
   "org_admin may not change org_owner memberships.",
   "reviewer write covers proposal and healing decisions and revisions only.",
-  "approve stays human-only.",
+  "Pipeline decisions (plan acceptance, healing approval, execution approvals) need only write permission, whoever holds it, and are recorded with the acting principal; only approving an agent pull request keeps its explicit human grant.",
   "raw evidence and secret reveal or export need an explicit unexpired grant.",
   "A grant matches only its own resourceType; resourceType * matches every resource.",
   "Changing one's own membership is refused as self_promotion.",

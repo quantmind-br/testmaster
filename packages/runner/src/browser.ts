@@ -22,6 +22,7 @@ import {
   deniedOrigin,
   deniedSubrequestMessage,
   EgressDenials,
+  webSocketRequestUrl,
 } from "./egress.js";
 import { authorizeUrl, canonicalUrl, HttpEngine, readAuthorizedArtifact } from "./http.js";
 import { type ObservedPage, observePage } from "./observation.js";
@@ -1499,12 +1500,35 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       if (disposition === "fatal")
         deny(runtime.scrub(deniedSubrequestMessage(request.url(), request.resourceType())));
     });
+    // The page's socket is a mock until the runner connects it, so only an authorized origin ever
+    // reaches the proxy, which validates the CONNECT tunnel again. Dedicated workers bypass this
+    // hook and are covered by the proxy alone.
     await context.routeWebSocket("**/*", (socket) => {
-      void socket.close({
-        code: 1008,
-        reason: "WebSockets are not supported by this runner policy",
-      });
-      deny("WebSocket capability is not authorized");
+      const requestUrl = webSocketRequestUrl(socket.url());
+      try {
+        authorizeUrl(runtime, requestUrl);
+      } catch {
+        denials.record({
+          stepId: currentStepId ?? "attempt",
+          url: requestUrl,
+          method: "GET",
+          resourceType: "websocket",
+          disposition: "fatal",
+        });
+        void socket.close({ code: 1008, reason: "WebSocket origin is not authorized" });
+        deny(runtime.scrub(deniedSubrequestMessage(requestUrl, "websocket")));
+        return;
+      }
+      try {
+        socket.connectToServer();
+      } catch {
+        void socket.close({ code: 1011, reason: "WebSocket could not be connected" });
+        deny(
+          runtime.scrub(
+            `Browser could not connect a WebSocket to the authorized origin ${deniedOrigin(requestUrl)}`,
+          ),
+        );
+      }
     });
     if (policy.trace === true && policy.restrictedRaw === true)
       await context.tracing.start({ screenshots: true, snapshots: true, sources: false });

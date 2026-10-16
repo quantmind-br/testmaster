@@ -142,9 +142,26 @@ export const RequestInput = Obj({
   ),
   /** `follow` (default) follows up to 10 redirects and reports the last response; `manual` reports the 3xx response itself. */
   redirect: Type.Optional(Enum(["follow", "manual"])),
+  /**
+   * `profile` sends the session of the environment's bound auth profile (cookies of its storage
+   * state that match the request URL, or its header credential) with this request only. Absent
+   * means no profile session.
+   */
+  auth: Type.Optional(Type.Literal("profile")),
   body: Type.Optional(
     Type.Union([
-      Obj({ kind: Type.Literal("json"), value: Value }),
+      Obj({
+        kind: Type.Literal("json"),
+        value: Value,
+        /**
+         * Values placed into the JSON document by RFC 6901 pointer after `value` is resolved:
+         * the only way to put a `secretRef` or `variableRef` inside a JSON body, because a
+         * `Value` nested in a literal is plain data.
+         */
+        set: Type.Optional(
+          Type.Array(Obj({ pointer: JsonPointer, value: Value }), { maxItems: 100 }),
+        ),
+      }),
       Obj({ kind: Type.Literal("text"), value: Value }),
       Obj({ kind: Type.Literal("form"), fields: Type.Array(Obj({ name: Value, value: Value })) }),
       Obj({ kind: Type.Literal("artifact"), artifactRef: id("art"), mimeType: Name }),
@@ -436,6 +453,13 @@ export const CodeReference = Obj({
   dependencyLockRef: id("art"),
   runnerCapabilityVersion: Name,
   trustLevel: Enum(["imported", "generated", "trusted"]),
+  /**
+   * Secrets the code reads through the harness `secrets` fixture (`secrets.get("NAME")`); the
+   * importer refuses any name not declared here and the worker releases exactly these.
+   */
+  secretRefs: Type.Optional(
+    Type.Array(Obj({ name: Name, secretRef: id("sec") }), { maxItems: 64 }),
+  ),
 });
 export const TestRevisionInput = Type.Union([
   Obj({

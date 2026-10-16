@@ -42,6 +42,21 @@ export async function normalizeSources(
       ...requirement,
       evidenceIds: catalog.handles(sourceRefs),
     }));
+  /** The cross-source reconciliation request for the requirements extracted so far. */
+  const reconciliationRequest = (
+    requirements: NormalizedRequirements["requirements"],
+  ): ModelInput => ({
+    ...input,
+    purpose: "normalize",
+    responseSchema: "AIRequirementConflictsOutput",
+    inputRefs: requirements.map((requirement) => requirement.key),
+    data: {
+      requirements: citedRequirements(requirements),
+      sourceChunks: chunks.map(cited),
+    },
+    instructions:
+      "Compare the normalized statements AND original source chunks from different source revisions for incompatible acceptance criteria. Inspect every concrete status code, error condition, field name, authorization rule, and numeric constraint for the same operation/condition across sources. A source mentioning a deliberate conflict is not a resolution; preserve the disagreement. Link disagreements to the existing requirement keys that cover each side and cite the evidenceId values of the chunks stating each side, from at least two different sourceRevisionId values; never invent evidenceIds. Do not invent, rewrite or discard requirements. Disagreement remains unresolved for human adjudication. Return concise reasons and complete JSON. If extraction omitted either conflicting statement, describe the omitted statement and its evidenceId in openQuestions; do not claim no conflict.",
+  });
   const batches: SourceChunk[][] = [];
   let current: SourceChunk[] = [];
   let bytes = 0;
@@ -56,6 +71,10 @@ export async function normalizeSources(
     bytes += size;
   }
   if (current.length) batches.push(current);
+  // The reconciliation sends every source chunk. Refuse before the first paid batch when those
+  // chunks alone cannot fit the model's declared context (the extracted requirements, unknown
+  // until the batches ran, only add to it).
+  if (sources.length > 1) model.assertFitsContext(reconciliationRequest([]));
   // One unit per model batch plus one for cross-source reconciliation.
   const total = batches.length + (sources.length > 1 ? 1 : 0);
   onProgress?.({ completed: 0, total, message: `Normalizing ${batches.length} source batch(es)` });
@@ -121,18 +140,9 @@ export async function normalizeSources(
     }))
     .filter((conflict) => conflict.keys.length >= 2);
   if (sources.length > 1) {
-    const reconciliation = await model.complete<unknown>({
-      ...input,
-      purpose: "normalize",
-      responseSchema: "AIRequirementConflictsOutput",
-      inputRefs: merged.requirements.map((requirement) => requirement.key),
-      data: {
-        requirements: citedRequirements(merged.requirements),
-        sourceChunks: chunks.map(cited),
-      },
-      instructions:
-        "Compare the normalized statements AND original source chunks from different source revisions for incompatible acceptance criteria. Inspect every concrete status code, error condition, field name, authorization rule, and numeric constraint for the same operation/condition across sources. A source mentioning a deliberate conflict is not a resolution; preserve the disagreement. Link disagreements to the existing requirement keys that cover each side and cite the evidenceId values of the chunks stating each side, from at least two different sourceRevisionId values; never invent evidenceIds. Do not invent, rewrite or discard requirements. Disagreement remains unresolved for human adjudication. Return concise reasons and complete JSON. If extraction omitted either conflicting statement, describe the omitted statement and its evidenceId in openQuestions; do not claim no conflict.",
-    });
+    const reconciliation = await model.complete<unknown>(
+      reconciliationRequest(merged.requirements),
+    );
     callIds.push(reconciliation.modelCallId);
     const output = resolveConflictOutput(reconciliation.output, catalog);
     merged.conflicts = [

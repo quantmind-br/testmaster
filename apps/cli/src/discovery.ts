@@ -1,3 +1,4 @@
+import { codeAnalysisReceipt, type DiscoveryDetail } from "@testmaster/application";
 import { ContractError } from "@testmaster/contracts";
 import { type Command, Option } from "commander";
 import { collect, type Options, type Runtime, required, string, strings } from "./runtime.js";
@@ -35,6 +36,32 @@ function input(runtime: Runtime, options: Options) {
   };
 }
 
+/**
+ * The default `discover` answer: the job, the status and the same bounded receipt MCP
+ * `testmaster_analyze_code` returns. `--full` prints the stored discovery; features are also
+ * listed completely by the project features resource.
+ */
+function discoveryReceipt(detail: DiscoveryDetail) {
+  const statuses = new Map<string, { status: string; errors: string[]; count: number }>();
+  for (const result of detail.job.perFeatureResults) {
+    const key = `${result.status}:${result.errors.join(",")}`;
+    const known = statuses.get(key);
+    if (known) known.count += 1;
+    else statuses.set(key, { status: result.status, errors: result.errors, count: 1 });
+  }
+  return {
+    job: {
+      id: detail.job.id,
+      phase: detail.job.phase,
+      inputsFingerprint: detail.job.inputsFingerprint,
+    },
+    status: detail.status,
+    featureStatuses: [...statuses.values()],
+    ...codeAnalysisReceipt(detail),
+    hint: "Run again with --full for every skipped file, warning and feature",
+  };
+}
+
 export function discoveryCommands(program: Command, runtime: Runtime): void {
   runtime.bind(
     program
@@ -49,13 +76,19 @@ export function discoveryCommands(program: Command, runtime: Runtime): void {
       .option("--resume <job-id>")
       .option("--inputs-fingerprint <hash>")
       .option("--provider <id>")
-      .option("--model <id>"),
-    async (rt, _args, options) => ({
-      data: await (await rt.app()).discovery.discover({
+      .option("--model <id>")
+      .option(
+        "--full",
+        "Print the whole stored discovery (every skipped file and feature, megabytes on a large repository) instead of the bounded receipt",
+      ),
+    async (rt, _args, options) => {
+      const detail = await (await rt.app()).discovery.discover({
         ...input(rt, options),
         projectId: await rt.project(options),
-      }),
-    }),
+      });
+      if (options.full === true) return { data: detail };
+      return { data: discoveryReceipt(detail) };
+    },
     (rt, _args, options) => {
       input(rt, options);
       return { data: null };

@@ -125,7 +125,6 @@ export interface Preview {
   readonly stale: boolean;
   readonly staleReason: string | null;
   readonly policy: {
-    readonly channel: string;
     readonly canAccept: boolean;
     readonly reason: string | null;
     readonly text: string;

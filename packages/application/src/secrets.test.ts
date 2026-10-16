@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import { mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -151,6 +152,37 @@ it("fails closed on vault tampering and missing keys after metadata restore", as
   await expect(stat(join(home, ".config", "testmaster", "vault.key"))).rejects.toMatchObject({
     code: "ENOENT",
   });
+});
+
+it("keeps a capture out of the host keyring and erases it from the vault on demand", async () => {
+  const { service, ctx, home } = await fixture();
+  const origin = "https://shop.example";
+  const keyring = vi.mocked(spawn);
+  keyring.mockClear();
+  const ordinary = await service.set("ordinary", "kept-value", { allowedOrigins: [origin] });
+  // Control: an operator secret still tries the keyring first.
+  expect(keyring).toHaveBeenCalled();
+  keyring.mockClear();
+  const capture = await service.protectCapture("capture-att_1-token", "CAPTURE-CANARY", [origin]);
+  expect(keyring).not.toHaveBeenCalled();
+  expect(capture.provider).toBe("vault");
+  const path = join(home, ".local", "share", "testmaster", `${capture.id}.1.vault`);
+  expect((await readFile(path)).includes(Buffer.from("CAPTURE-CANARY"))).toBe(false);
+  expect(await (await service.release(capture.id)).resolve()).toBe('"CAPTURE-CANARY"');
+  expect(await service.eraseCapture(capture.id)).toBe(true);
+  expect(keyring).not.toHaveBeenCalled();
+  await expect(stat(path)).rejects.toMatchObject({ code: "ENOENT" });
+  expect(service.get(capture.id).revokedAt).toBeTruthy();
+  await expect(service.release(capture.id)).rejects.toMatchObject({ code: "POLICY_DENIED" });
+  expect(await service.eraseCapture(capture.id)).toBe(false);
+  expect(
+    ctx.database.all(
+      "SELECT resource_id FROM audit_events WHERE action LIKE 'secret.capture.erase.%'",
+    ),
+  ).toHaveLength(1);
+  // Only captures are erased this way; an operator secret stays usable.
+  expect(await service.eraseCapture(ordinary.id)).toBe(false);
+  expect(await (await service.release(ordinary.id)).resolve()).toBe("kept-value");
 });
 
 it("refuses symlinked storage while explicit ephemeral secrets remain usable only in this service", async () => {

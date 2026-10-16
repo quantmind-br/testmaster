@@ -1,0 +1,714 @@
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { Application, entity } from "@testmaster/application";
+import { afterEach, expect, it, vi } from "vitest";
+import { createMcpServer } from "./server.js";
+
+const cleanups: (() => Promise<void>)[] = [];
+afterEach(async () => {
+  vi.restoreAllMocks();
+  for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
+});
+
+type Scope = "R" | "W" | "X";
+interface Failure {
+  code: string;
+  message: string;
+  details: Record<string, unknown>;
+}
+
+interface World {
+  app: Application;
+  cwd: string;
+  init: { projectId: string; workspaceId: string; environmentId: string };
+  call: (name: string, args: Record<string, unknown>) => Promise<Outcome>;
+}
+interface Outcome {
+  isError: boolean;
+  body: Record<string, unknown>;
+  text: string;
+  error: Failure | undefined;
+  result: CallToolResult;
+}
+/** The text of every text content entry, in order. */
+function texts(content: unknown): string[] {
+  if (!Array.isArray(content)) return [];
+  return content.flatMap((entry) =>
+    entry && typeof entry === "object" && "text" in entry ? [String(entry.text)] : [],
+  );
+}
+function firstText(content: unknown): string {
+  return texts(content)[0] ?? "";
+}
+
+async function fixture(scopes: Scope[] = ["R", "W", "X"]) {
+  const cwd = await mkdtemp(join(tmpdir(), "tm-mcp-pipeline-"));
+  const app = await Application.open({ cwd, home: join(cwd, "home"), env: {} });
+  const init = await app.init();
+  const server = createMcpServer({
+    application: app.forIdentity({ principalId: init.principalId, scopes }),
+    roots: [cwd],
+  });
+  const [left, right] = InMemoryTransport.createLinkedPair();
+  await server.connect(right);
+  const client = new Client({ name: "pipeline-test", version: "1" });
+  await client.connect(left);
+  cleanups.push(async () => {
+    await client.close();
+    await server.close();
+    app.close();
+    await rm(cwd, { recursive: true, force: true });
+  });
+  const call = async (name: string, args: Record<string, unknown>): Promise<Outcome> => {
+    const result = await client.callTool({ name, arguments: args });
+    const body: Record<string, unknown> = JSON.parse(firstText(result.content));
+    const failure: unknown = body.error;
+    return {
+      isError: result.isError === true,
+      body,
+      text: texts(result.content).join("\n"),
+      error: failure ? (failure as Failure) : undefined,
+      result,
+    };
+  };
+  const world: World = { app, cwd, init, call };
+  return { ...world, client };
+}
+
+const origin = "https://app.example.test";
+const pipelineTools = [
+  "testmaster_add_source",
+  "testmaster_review_requirements",
+  "testmaster_set_secret",
+  "testmaster_save_auth_profile",
+  "testmaster_update_environment",
+];
+
+it("the pipeline tools are listed with schemas, annotations and no inline secret value", async () => {
+  const f = await fixture();
+  const tools = (await f.client.listTools()).tools;
+  const byName = (name: string) => {
+    const tool = tools.find((item) => item.name === name);
+    if (!tool) throw new Error(`Missing tool ${name}`);
+    return tool;
+  };
+  for (const name of pipelineTools) {
+    const tool = byName(name);
+    expect(tool.inputSchema.type, name).toBe("object");
+    expect(tool.outputSchema?.type, name).toBe("object");
+    expect(tool.description?.length ?? 0, name).toBeLessThanOrEqual(300);
+  }
+  expect(byName("testmaster_add_source").annotations).toMatchObject({
+    readOnlyHint: false,
+    destructiveHint: false,
+  });
+  expect(byName("testmaster_set_secret").annotations).toMatchObject({
+    readOnlyHint: false,
+    destructiveHint: false,
+  });
+  for (const name of [
+    "testmaster_review_requirements",
+    "testmaster_save_auth_profile",
+    "testmaster_update_environment",
+  ])
+    expect(byName(name).annotations, name).toMatchObject({
+      readOnlyHint: false,
+      destructiveHint: true,
+    });
+  // A secret value is never an argument: only a file or an environment variable names it.
+  const secret = byName("testmaster_set_secret").inputSchema;
+  expect(Object.keys(secret.properties ?? {}).sort()).toEqual([
+    "allowedOrigins",
+    "fromEnv",
+    "name",
+    "valueFile",
+  ]);
+  expect([...(secret.required ?? [])].sort()).toEqual(["allowedOrigins", "name"]);
+  expect([...(byName("testmaster_add_source").inputSchema.required ?? [])].sort()).toEqual([
+    "path",
+    "projectId",
+    "role",
+  ]);
+  expect([...(byName("testmaster_review_requirements").inputSchema.required ?? [])].sort()).toEqual(
+    ["expectedVersion", "projectId"],
+  );
+});
+
+it("every pipeline tool needs the write scope", async () => {
+  const f = await fixture(["R"]);
+  const calls: [string, Record<string, unknown>][] = [
+    ["testmaster_add_source", { projectId: f.init.projectId, path: "prd.md", role: "prd" }],
+    ["testmaster_review_requirements", { projectId: f.init.projectId, expectedVersion: 1 }],
+    ["testmaster_set_secret", { name: "A", fromEnv: "X", allowedOrigins: [origin] }],
+    [
+      "testmaster_save_auth_profile",
+      { profileId: "aup_019bf434-20c0-7000-8000-000000000001", expectedVersion: 1, name: "n" },
+    ],
+    [
+      "testmaster_update_environment",
+      { environmentId: f.init.environmentId, expectedVersion: 1, name: "n" },
+    ],
+  ];
+  for (const [name, args] of calls) {
+    const denied = await f.call(name, args);
+    expect(denied.isError, name).toBe(true);
+    expect(denied.error?.code, name).toBe("FORBIDDEN");
+  }
+});
+
+it("add_source imports a file, versions it and returns an invalid source as an error with its diagnostics", async () => {
+  const f = await fixture();
+  await writeFile(join(f.cwd, "prd.md"), "# Health\nThe health endpoint must report ok.\n");
+  const added = await f.call("testmaster_add_source", {
+    projectId: f.init.projectId,
+    path: "prd.md",
+    role: "prd",
+  });
+  expect(added.isError, added.text).toBe(false);
+  const [source] = f.app.sources.list(f.init.projectId);
+  if (!source) throw new Error("Missing source");
+  const firstRevisionId = f.app.sources.get(source.id).revision.id;
+  expect(added.body).toMatchObject({
+    source: { role: "prd", displayName: "prd.md" },
+    revision: { id: firstRevisionId, status: "ready", parentId: null },
+    diagnostics: [],
+  });
+  // The receipt is bounded: chunks and the inventory stay out, only their count is reported.
+  expect(added.body.revision).not.toHaveProperty("chunks");
+  expect(added.body).toMatchObject({ chunkCount: expect.any(Number) });
+  expect(Number(added.body.chunkCount)).toBeGreaterThan(0);
+
+  await writeFile(join(f.cwd, "prd.md"), "# Health\nThe health endpoint must report ok, fast.\n");
+  const revised = await f.call("testmaster_add_source", {
+    projectId: f.init.projectId,
+    path: "prd.md",
+    role: "prd",
+    sourceId: String(source.id),
+    expectedVersion: Number(source.version),
+  });
+  expect(revised.isError, revised.text).toBe(false);
+  expect(revised.body.revision).toMatchObject({ parentId: firstRevisionId });
+  // A revision without sourceId, and a stale version, are refused.
+  const orphan = await f.call("testmaster_add_source", {
+    projectId: f.init.projectId,
+    path: "prd.md",
+    role: "prd",
+    expectedVersion: 1,
+  });
+  expect(orphan.error?.code).toBe("INVALID_ARGUMENT");
+  const stale = await f.call("testmaster_add_source", {
+    projectId: f.init.projectId,
+    path: "prd.md",
+    role: "prd",
+    sourceId: String(source.id),
+    expectedVersion: Number(source.version),
+  });
+  expect(stale.error?.code).toBe("REVISION_CONFLICT");
+
+  // An OpenAPI version the parser does not support is an error that explains itself.
+  await writeFile(
+    join(f.cwd, "api.json"),
+    JSON.stringify({ openapi: "9.9.9", info: { title: "x", version: "1" }, paths: {} }),
+  );
+  const invalid = await f.call("testmaster_add_source", {
+    projectId: f.init.projectId,
+    path: "api.json",
+    role: "api-spec",
+  });
+  expect(invalid.isError).toBe(true);
+  expect(invalid.error?.code).toBe("INVALID_ARGUMENT");
+  expect(invalid.error?.details.diagnostics).toEqual(
+    expect.arrayContaining([expect.objectContaining({ code: "unsupported_openapi" })]),
+  );
+
+  // Files outside the approved roots and credential files never become sources.
+  const outside = await f.call("testmaster_add_source", {
+    projectId: f.init.projectId,
+    path: tmpdir(),
+    role: "prd",
+  });
+  expect(outside.error?.code).toBe("FORBIDDEN");
+  await writeFile(join(f.cwd, ".env"), "TOKEN=1\n");
+  const credential = await f.call("testmaster_add_source", {
+    projectId: f.init.projectId,
+    path: ".env",
+    role: "prd",
+  });
+  expect(credential.error?.code).toBe("POLICY_DENIED");
+});
+
+/** A stored snapshot with two requirements that disagree, as `normalize` leaves it. */
+async function seedSnapshot(f: World) {
+  await writeFile(join(f.cwd, "prd.md"), "# Health\nThe health endpoint must report ok.\n");
+  await f.call("testmaster_add_source", {
+    projectId: f.init.projectId,
+    path: "prd.md",
+    role: "prd",
+  });
+  const [source] = f.app.sources.list(f.init.projectId);
+  const sourceId = String(source?.id);
+  const ref = f.app.sources.get(sourceId).chunks[0]?.evidenceRef;
+  const requirement = (key: string, text: string) => {
+    const value = entity(f.app.context, "req", {
+      text,
+      acceptanceCriteria: ["Health reports ok"],
+      sourceRefs: [ref],
+      originKind: "user_spec",
+      confidence: null,
+      approval: null,
+      extensions: {
+        "testmaster:projectId": f.init.projectId,
+        "testmaster:key": key,
+        "testmaster:reason": "PRD",
+      },
+    });
+    f.app.context.entities.insert("Requirement", value, { projectId: f.init.projectId });
+    return value;
+  };
+  const first = requirement("health-ok", "Health reports ok");
+  const second = requirement("health-fast", "Health reports ok within 50 ms");
+  const snapshot = {
+    requirements: [first, second],
+    conflicts: [
+      {
+        id: "conflict-1",
+        requirementIds: [first.id, second.id],
+        reason: "The two statements disagree on latency",
+        sourceRefs: [ref, ref],
+        resolution: null,
+      },
+    ],
+    openQuestions: [],
+    version: 2,
+    fingerprint: "seed-fingerprint",
+  };
+  f.app.database.run(
+    "INSERT INTO operational_state(key,value) VALUES(?,?)",
+    `requirements:${f.init.workspaceId}:${f.init.projectId}`,
+    JSON.stringify(snapshot),
+  );
+  return { first: first.id, second: second.id, ref };
+}
+
+it("review_requirements decides at the snapshot version and returns the fingerprint generate_plan accepts", async () => {
+  const f = await fixture();
+  const seeded = await seedSnapshot(f);
+  const base = { projectId: f.init.projectId };
+
+  // A snapshot that moved since it was read is refused with where it stands now.
+  const stale = await f.call("testmaster_review_requirements", {
+    ...base,
+    expectedVersion: 1,
+    approve: [seeded.first],
+  });
+  expect(stale.error?.code).toBe("REVISION_CONFLICT");
+  expect(stale.error?.details).toMatchObject({ expectedVersion: 1, currentVersion: 2 });
+
+  // Approval waits for the conflict decision: the refusal is reported per item, nothing changes.
+  const early = await f.call("testmaster_review_requirements", {
+    ...base,
+    expectedVersion: 2,
+    approve: [seeded.first],
+  });
+  expect(early.isError, early.text).toBe(false);
+  expect(early.body.results).toEqual([
+    {
+      action: "approve",
+      id: seeded.first,
+      ok: false,
+      error: { code: "PRECONDITION_FAILED", message: expect.any(String) },
+    },
+  ]);
+  expect(early.body).toMatchObject({
+    sourceSnapshotId: "seed-fingerprint",
+    version: 2,
+    unresolvedConflictIds: ["conflict-1"],
+    pendingApprovalIds: [seeded.first, seeded.second],
+  });
+  // generate_plan refuses the requirement that is not approved yet.
+  const premature = await f.call("testmaster_generate_plan", {
+    ...base,
+    sourceSnapshotId: "seed-fingerprint",
+    type: "backend",
+    requirementIds: [seeded.first],
+  });
+  expect(premature.error?.code).toBe("PRECONDITION_FAILED");
+  expect(premature.error?.message).toContain("explicit approval");
+
+  const reviewed = await f.call("testmaster_review_requirements", {
+    ...base,
+    expectedVersion: 2,
+    update: [
+      { requirementId: seeded.first, text: "Health reports ok within 200 ms" },
+      { requirementId: seeded.second, acceptanceCriteria: [] },
+      { requirementId: seeded.first },
+    ],
+    adjudicate: [
+      {
+        conflictId: "conflict-1",
+        selectedRequirementId: seeded.first,
+        reason: "200 ms is the contract",
+      },
+    ],
+    approve: [seeded.first, "req_019bf434-20c0-7000-8000-000000000001"],
+  });
+  expect(reviewed.isError, reviewed.text).toBe(false);
+  expect(reviewed.body.results).toEqual([
+    { action: "update", id: seeded.first, ok: true, error: null },
+    { action: "update", id: seeded.second, ok: true, error: null },
+    {
+      action: "update",
+      id: seeded.first,
+      ok: false,
+      error: { code: "INVALID_ARGUMENT", message: expect.any(String) },
+    },
+    { action: "adjudicate", id: "conflict-1", ok: true, error: null },
+    { action: "approve", id: seeded.first, ok: true, error: null },
+    {
+      action: "approve",
+      id: "req_019bf434-20c0-7000-8000-000000000001",
+      ok: false,
+      error: { code: "NOT_FOUND", message: expect.any(String) },
+    },
+  ]);
+  const snapshot = f.app.requirements.snapshot(base.projectId);
+  expect(reviewed.body.sourceSnapshotId).toBe(snapshot.fingerprint);
+  expect(reviewed.body.version).toBe(snapshot.version);
+  expect(snapshot.fingerprint).not.toBe("seed-fingerprint");
+  // The loser of the conflict is superseded, so it is not left waiting for an approval.
+  expect(reviewed.body).toMatchObject({ pendingApprovalIds: [], unresolvedConflictIds: [] });
+  expect(f.app.requirements.get(seeded.first)).toMatchObject({
+    text: "Health reports ok within 200 ms",
+    approval: expect.stringMatching(/^apr_/),
+  });
+
+  // The fingerprint it returned is the one generate_plan accepts; the old one is stale.
+  const stalePlan = await f.call("testmaster_generate_plan", {
+    ...base,
+    sourceSnapshotId: "seed-fingerprint",
+    type: "backend",
+    requirementIds: [seeded.first],
+  });
+  expect(stalePlan.error?.details).toMatchObject({ reasonCode: "requirement_snapshot_mismatch" });
+  const plan = await f.call("testmaster_generate_plan", {
+    ...base,
+    sourceSnapshotId: String(reviewed.body.sourceSnapshotId),
+    type: "backend",
+    requirementIds: [seeded.first],
+  });
+  // No model is configured here, so the call stops at the provider, after the approval checks.
+  expect(plan.error?.details?.reasonCode).not.toBe("requirement_snapshot_mismatch");
+  expect(plan.error?.message ?? "").not.toMatch(/approval|superseded/);
+
+  // Approving again changes nothing, so the fingerprint stays valid.
+  const again = await f.call("testmaster_review_requirements", {
+    ...base,
+    expectedVersion: snapshot.version,
+    approve: [seeded.first],
+  });
+  expect(again.body.results).toEqual([
+    { action: "approve", id: seeded.first, ok: true, error: null },
+  ]);
+  expect(again.body.sourceSnapshotId).toBe(snapshot.fingerprint);
+});
+
+it("set_secret stores the trimmed file value or variable, echoes only metadata and refuses inline or unsafe sources", async () => {
+  const f = await fixture();
+  const set = vi.spyOn(Object.getPrototypeOf(f.app.secrets), "set");
+  await writeFile(join(f.cwd, "token.txt"), "s3cr3t-token-value\n");
+  const stored = await f.call("testmaster_set_secret", {
+    name: "API_TOKEN",
+    valueFile: "token.txt",
+    allowedOrigins: [origin],
+  });
+  expect(stored.isError, stored.text).toBe(false);
+  expect(stored.body).toMatchObject({
+    id: expect.stringMatching(/^sec_/),
+    locator: "API_TOKEN",
+    allowedOrigins: [origin],
+  });
+  expect(JSON.stringify(stored.result)).not.toContain("s3cr3t-token-value");
+  // The service received the value without the one trailing line terminator, and it reads back so.
+  expect(set.mock.calls[0]?.[1]).toBe("s3cr3t-token-value");
+  expect(await (await f.app.secrets.release("API_TOKEN")).resolve()).toBe("s3cr3t-token-value");
+
+  await writeFile(join(f.cwd, "crlf.txt"), "line one\r\nline two\n\n");
+  await f.call("testmaster_set_secret", {
+    name: "TWO_LINES",
+    valueFile: "crlf.txt",
+    allowedOrigins: [origin],
+  });
+  // Exactly one terminator goes: inner and further trailing newlines are part of the value.
+  expect(set.mock.calls[1]?.[1]).toBe("line one\r\nline two\n");
+
+  vi.stubEnv("TM_PIPELINE_SECRET", "from-the-environment");
+  const fromEnv = await f.call("testmaster_set_secret", {
+    name: "FROM_ENV",
+    fromEnv: "TM_PIPELINE_SECRET",
+    allowedOrigins: [origin],
+  });
+  expect(fromEnv.isError, fromEnv.text).toBe(false);
+  expect(set.mock.calls[2]?.[1]).toBe("from-the-environment");
+  vi.unstubAllEnvs();
+
+  const calls = set.mock.calls.length;
+  const both = await f.call("testmaster_set_secret", {
+    name: "BOTH",
+    valueFile: "token.txt",
+    fromEnv: "TM_PIPELINE_SECRET",
+    allowedOrigins: [origin],
+  });
+  const neither = await f.call("testmaster_set_secret", { name: "NONE", allowedOrigins: [origin] });
+  const inline = await f.call("testmaster_set_secret", {
+    name: "INLINE",
+    value: "inline-secret",
+    fromEnv: "TM_PIPELINE_SECRET",
+    allowedOrigins: [origin],
+  });
+  const unset = await f.call("testmaster_set_secret", {
+    name: "UNSET",
+    fromEnv: "TM_PIPELINE_SECRET_UNSET",
+    allowedOrigins: [origin],
+  });
+  const missing = await f.call("testmaster_set_secret", {
+    name: "MISSING",
+    valueFile: "absent.txt",
+    allowedOrigins: [origin],
+  });
+  const outside = await f.call("testmaster_set_secret", {
+    name: "OUTSIDE",
+    valueFile: join(tmpdir(), "outside-root.txt"),
+    allowedOrigins: [origin],
+  });
+  const noOrigins = await f.call("testmaster_set_secret", {
+    name: "NO_ORIGIN",
+    valueFile: "token.txt",
+    allowedOrigins: [],
+  });
+  const duplicate = await f.call("testmaster_set_secret", {
+    name: "API_TOKEN",
+    valueFile: "token.txt",
+    allowedOrigins: [origin],
+  });
+  expect(
+    [both, neither, inline, unset, missing, outside, noOrigins, duplicate].map(
+      (outcome) => outcome.error?.code,
+    ),
+  ).toEqual([
+    "INVALID_ARGUMENT",
+    "INVALID_ARGUMENT",
+    "INVALID_ARGUMENT",
+    "INVALID_ARGUMENT",
+    "NOT_FOUND",
+    "FORBIDDEN",
+    "INVALID_ARGUMENT",
+    "REVISION_CONFLICT",
+  ]);
+  // Refusals before the service never reach it, and no refusal echoes a value.
+  expect(set.mock.calls.length).toBe(calls + 1);
+  expect(JSON.stringify([both, neither, inline, unset, duplicate].map((o) => o.body))).not.toMatch(
+    /s3cr3t-token-value|inline-secret|from-the-environment/,
+  );
+});
+
+it("save_auth_profile creates and updates a profile and update_environment binds it", async () => {
+  const f = await fixture();
+  const environment = f.app.environments.get(f.init.environmentId);
+  const [target] = f.app.environments.revisions(environment.id)[0]?.targetOrigins ?? [];
+  if (!target) throw new Error("Missing target origin");
+  await writeFile(join(f.cwd, "token.txt"), "bearer-value\n");
+  const secret = await f.call("testmaster_set_secret", {
+    name: "BEARER",
+    valueFile: "token.txt",
+    allowedOrigins: [target],
+  });
+  const secretId = String(secret.body.id);
+
+  // Creating needs the whole profile; the refusal names what is missing.
+  const partial = await f.call("testmaster_save_auth_profile", {
+    projectId: f.init.projectId,
+    name: "api",
+  });
+  expect(partial.error?.code).toBe("INVALID_ARGUMENT");
+  expect(partial.error?.details.missing).toEqual(["kind", "originBindings", "secrets", "config"]);
+
+  const created = await f.call("testmaster_save_auth_profile", {
+    projectId: f.init.projectId,
+    name: "api",
+    kind: "bearer",
+    originBindings: [target],
+    secrets: { token: secretId },
+    config: {},
+  });
+  expect(created.isError, created.text).toBe(false);
+  const [profile] = f.app.authProfiles.list(f.init.projectId);
+  if (!profile) throw new Error("Missing profile");
+  expect(profile.secrets).toEqual({ token: secretId });
+  expect(JSON.stringify(created.result)).not.toContain("bearer-value");
+
+  // The kind never changes, a version is required and a stale one is refused.
+  const kind = await f.call("testmaster_save_auth_profile", {
+    profileId: profile.id,
+    expectedVersion: profile.version,
+    kind: "basic",
+  });
+  const unversioned = await f.call("testmaster_save_auth_profile", {
+    profileId: profile.id,
+    name: "renamed",
+  });
+  const stale = await f.call("testmaster_save_auth_profile", {
+    profileId: profile.id,
+    expectedVersion: profile.version + 5,
+    name: "renamed",
+  });
+  expect([kind, unversioned, stale].map((outcome) => outcome.error?.code)).toEqual([
+    "INVALID_ARGUMENT",
+    "INVALID_ARGUMENT",
+    "REVISION_CONFLICT",
+  ]);
+  const renamed = await f.call("testmaster_save_auth_profile", {
+    profileId: profile.id,
+    expectedVersion: profile.version,
+    name: "renamed",
+  });
+  expect(renamed.isError, renamed.text).toBe(false);
+  expect(renamed.body).toMatchObject({ id: profile.id, name: "renamed", version: 2 });
+
+  // An environment can only use a profile bound to its target origin.
+  const elsewhereSecret = await f.call("testmaster_set_secret", {
+    name: "ELSEWHERE",
+    valueFile: "token.txt",
+    allowedOrigins: ["https://elsewhere.example.test"],
+  });
+  const other = await f.call("testmaster_save_auth_profile", {
+    projectId: f.init.projectId,
+    name: "elsewhere",
+    kind: "bearer",
+    originBindings: ["https://elsewhere.example.test"],
+    secrets: { token: String(elsewhereSecret.body.id) },
+    config: {},
+  });
+  expect(other.isError, other.text).toBe(false);
+  const unbound = await f.call("testmaster_update_environment", {
+    environmentId: environment.id,
+    expectedVersion: Number(environment.version),
+    authRefs: [String(other.body.id)],
+  });
+  expect(unbound.error?.code).toBe("PRECONDITION_FAILED");
+  expect(unbound.error?.details).toMatchObject({ reasonCode: "security_precondition_failed" });
+
+  const bound = await f.call("testmaster_update_environment", {
+    environmentId: environment.id,
+    expectedVersion: Number(environment.version),
+    authRefs: [profile.id],
+    additionalOrigins: ["https://cdn.example.test"],
+  });
+  expect(bound.isError, bound.text).toBe(false);
+  const updated = f.app.environments.get(environment.id);
+  expect(updated.version).toBe(2);
+  expect(bound.body).toMatchObject({
+    environment: { id: environment.id, version: 2 },
+    revision: {
+      id: updated.activeRevisionId,
+      authProfileRefs: [profile.id],
+      additionalOrigins: ["https://cdn.example.test"],
+    },
+  });
+  expect(f.app.environments.revisions(environment.id)[0]?.authProfileRefs).toEqual([profile.id]);
+
+  // A stale version and an empty patch are refused.
+  const outdated = await f.call("testmaster_update_environment", {
+    environmentId: environment.id,
+    expectedVersion: Number(environment.version),
+    locale: "pt-BR",
+  });
+  const empty = await f.call("testmaster_update_environment", {
+    environmentId: environment.id,
+    expectedVersion: Number(updated.version),
+  });
+  expect([outdated.error?.code, empty.error?.code]).toEqual([
+    "REVISION_CONFLICT",
+    "INVALID_ARGUMENT",
+  ]);
+  // Control: a patch of one field keeps the bindings it did not mention.
+  const relocated = await f.call("testmaster_update_environment", {
+    environmentId: environment.id,
+    expectedVersion: Number(updated.version),
+    locale: "pt-BR",
+  });
+  expect(relocated.body.revision).toMatchObject({
+    locale: "pt-BR",
+    authProfileRefs: [profile.id],
+    additionalOrigins: ["https://cdn.example.test"],
+  });
+});
+
+it("normalize keeps each conflict's id, reason and requirements and counts one conflict in the singular", async () => {
+  const f = await fixture();
+  const ref = { sourceRevisionId: "svr_019bf434-20c0-7000-8000-000000000001" };
+  const requirement = entity(f.app.context, "req", {
+    text: "x".repeat(8000),
+    acceptanceCriteria: Array.from({ length: 5 }, () => "y".repeat(8000)),
+    sourceRefs: [],
+    originKind: "explicit",
+    confidence: null,
+    approval: null,
+  });
+  const conflict = {
+    id: "conflict-1",
+    requirementIds: [requirement.id],
+    reason: "Implementation inference requires reconciliation",
+    sourceRefs: [ref, ref],
+    resolution: null,
+  };
+  const normalize = vi
+    .spyOn(Object.getPrototypeOf(f.app.requirements), "normalize")
+    .mockResolvedValue({
+      requirements: [requirement],
+      conflicts: [conflict],
+      openQuestions: [],
+      version: 4,
+      fingerprint: "fingerprint-under-test",
+    } as never);
+  const args = {
+    projectId: f.init.projectId,
+    sourceRevisionIds: ["svr_019bf434-20c0-7000-8000-000000000001"],
+  };
+  const result = await f.client.callTool({
+    name: "testmaster_normalize_requirements",
+    arguments: args,
+  });
+  expect(result.isError).not.toBe(true);
+  expect(result.structuredContent).toMatchObject({
+    conflicts: [
+      {
+        id: "conflict-1",
+        reason: conflict.reason,
+        requirementIds: [requirement.id],
+        left: ref,
+        right: ref,
+      },
+    ],
+  });
+  // The snapshot is large, so the text is a summary: one requirement, one conflict, no plural.
+  expect(firstText(result.content)).toContain(
+    "Normalized 1 requirement and 1 conflict (snapshot version 4)",
+  );
+  // Control: other counts are plural.
+  normalize.mockResolvedValue({
+    requirements: [requirement, requirement],
+    conflicts: [],
+    openQuestions: [],
+    version: 5,
+    fingerprint: "fingerprint-under-test",
+  } as never);
+  const plural = await f.client.callTool({
+    name: "testmaster_normalize_requirements",
+    arguments: args,
+  });
+  expect(firstText(plural.content)).toContain("Normalized 2 requirements and 0 conflicts");
+});

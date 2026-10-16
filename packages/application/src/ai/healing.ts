@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import {
   ContractError,
   type ExecutablePlan,
+  type HealingAbstention,
   type HealingProposal,
   type HealingReview,
   type Locator,
@@ -51,6 +52,48 @@ export interface HealingInput {
   model?: string;
 }
 type Stored = HealingProposal & EntityDocument;
+/** A candidate proposal, or an abstention: no safe test-only repair exists for the Run. */
+export type HealingOutcome = Stored | HealingAbstention;
+export function isHealingAbstention(outcome: HealingOutcome): outcome is HealingAbstention {
+  return "abstained" in outcome && outcome.abstained === true;
+}
+const abstentionTexts = {
+  model_abstained: {
+    reason:
+      "The model reviewed the evidence and found no safe test-only repair that keeps the test's assertions.",
+    nextAction:
+      "This Run's healing request is settled and nothing was changed; repair the test by hand or fix the program under test",
+  },
+  semantic_failure: {
+    reason:
+      "The analysis classifies the failure as a product, contract or security defect; healing only repairs tests.",
+    nextAction:
+      "No model call was made and this Run's healing request is unused; investigate the cause named by the analysis",
+  },
+} as const;
+function healingAbstention(
+  failedRunId: string,
+  jobId: string,
+  reasonCode: keyof typeof abstentionTexts,
+  modelCallId: string | null,
+): HealingAbstention {
+  return {
+    abstained: true,
+    failedRunId,
+    reasonCode,
+    jobId,
+    modelCallId,
+    ...abstentionTexts[reasonCode],
+  };
+}
+function settledAbstention(
+  failedRunId: string,
+  job: { jobId: string; state: string; result?: Record<string, unknown> | null },
+): HealingAbstention | null {
+  if (job.state !== "completed" || job.result?.reason !== "model_abstained") return null;
+  const modelCallId = typeof job.result.modelCallId === "string" ? job.result.modelCallId : null;
+  return healingAbstention(failedRunId, job.jobId, "model_abstained", modelCallId);
+}
 type AIHealingOutput =
   | { kind: "patch"; patch: HealingPatch }
   | { kind: "abstain"; reason: string; evidenceHandles: string[] };
@@ -401,7 +444,7 @@ export class HealingService {
       environmentId: String((run.matrixCell as Record<string, unknown>).environmentId),
     };
   }
-  async propose(failedRunId: string, input: HealingInput = {}): Promise<Stored> {
+  async propose(failedRunId: string, input: HealingInput = {}): Promise<HealingOutcome> {
     validate("HealingInput", input);
     const run = this.runs.get(failedRunId);
     const test = requireEntity(this.ctx, "TestCase", run.testId);
@@ -438,18 +481,42 @@ export class HealingService {
     const final = prior.find(
       (job) => job.progress.paidCallStarted || job.state === "reconciliation_required",
     );
-    if (final)
+    if (final) {
+      // A settled model abstention is a result: asking again returns it instead of an error.
+      const settled = settledAbstention(failedRunId, final);
+      if (settled) return settled;
       throw new ContractError(
         "PRECONDITION_FAILED",
         "Healing request already settled or requires reconciliation",
         { reason: "no_regeneration", jobId: final.jobId },
       );
+    }
     const running = prior.find((job) => job.state === "leased");
     if (running)
       throw new ContractError("PRECONDITION_FAILED", "Healing request is already running", {
         reason: "already_running",
         jobId: running.jobId,
       });
+    // The analysis already says no test-only repair is indicated: refuse before any job or
+    // reservation exists, so the Run's healing request stays available for a later analysis.
+    const advice = facts.diagnosis?.healing;
+    if (advice?.advice === "not_indicated") {
+      const nextStep = facts.diagnosis?.nextSteps[0]?.text;
+      throw new ContractError(
+        "PRECONDITION_FAILED",
+        `Healing is not indicated by the analysis of this Run: ${advice.reason}${nextStep ? ` Next: ${nextStep}` : ""}`,
+        {
+          reason: "healing_not_indicated",
+          reasonCode: "healing_not_indicated",
+          analysisId: facts.id,
+          advice: advice.advice,
+          analysisReason: advice.reason,
+          ...(nextStep ? { nextStep } : {}),
+          nextAction:
+            "Nothing was sent to the model and this Run's healing request is unused; act on the analysis next step, or analyze the Run again with new evidence and propose again",
+        },
+      );
+    }
     const { job: enqueued } = jobs.enqueue(this.ctx.workspaceId, "healing", {
       operation: "propose",
       targetId: failedRunId,
@@ -487,8 +554,10 @@ export class HealingService {
         jobId: job.jobId,
       });
     };
-    if (["product_bug", "contract_violation", "security_policy"].includes(facts.failureKind))
-      refuse("semantic_failure");
+    if (["product_bug", "contract_violation", "security_policy"].includes(facts.failureKind)) {
+      jobs.finish(fence, "completed", { refused: true, reason: "semantic_failure" });
+      return healingAbstention(failedRunId, job.jobId, "semantic_failure", null);
+    }
     if (!selection.providerId || !selection.modelId) refuse("provider_unavailable");
     let phase = "evidence";
     let modelCallId: string | null = null;
@@ -605,15 +674,11 @@ export class HealingService {
           reason: "model_abstained",
           modelCallId,
           // Audit only: a bounded, scrubbed copy of the model's stated reason. It never changes
-          // the refusal and is not shown as advice.
+          // the abstention shown to the caller and is not shown as advice.
           abstention: scrubEvidenceText(output.reason, secretValues).text.slice(0, 1000),
           evidenceHashes: evidenceRefs.map((ref) => semanticHash(ref)),
         });
-        throw new ContractError("PRECONDITION_FAILED", "Healing abstained", {
-          reason: "model_abstained",
-          jobId: job.jobId,
-          modelCallId,
-        });
+        return healingAbstention(failedRunId, job.jobId, "model_abstained", modelCallId);
       }
       const applied = applyHealingPatch(base, output.patch);
       this.checkSecrets(base, applied.patch, run.environmentRevisionId);
@@ -1011,8 +1076,8 @@ export class HealingService {
   }
   async approve(proposalId: string, expectedVersion: number): Promise<Stored> {
     const proposal = this.get(proposalId),
-      { test, environmentId } = this.owner(proposal);
-    this.ctx.authorizeNamed("approve", "HealingProposal", String(test.projectId), environmentId);
+      { test } = this.owner(proposal);
+    this.ctx.authorize("W", String(test.projectId));
     return this.approveBound(proposal, expectedVersion, "manual");
   }
   private async approvePolicy(proposalId: string): Promise<Stored> {
@@ -1094,8 +1159,8 @@ export class HealingService {
     validate("HealingRejectInput", { reason });
     return authoringTransaction(this.ctx, () => {
       const current = this.get(proposalId),
-        { test, environmentId } = this.owner(current);
-      this.ctx.authorizeNamed("approve", "HealingProposal", test.projectId, environmentId);
+        { test } = this.owner(current);
+      this.ctx.authorize("W", test.projectId);
       if (current.status === "rejected") return current;
       if (current.status !== "proposed")
         throw new ContractError(
@@ -1124,14 +1189,8 @@ export class HealingService {
       (item) => item.verificationRunId === verificationRunId,
     );
     if (!proposal) throw new ContractError("NOT_FOUND", "Run is not a bound healing verification");
-    const { test: authorizedTest, environmentId } = this.owner(proposal);
-    if (proposal.approvalMode === "manual")
-      this.ctx.authorizeNamed(
-        "approve",
-        "HealingProposal",
-        authorizedTest.projectId,
-        environmentId,
-      );
+    const { test: authorizedTest } = this.owner(proposal);
+    if (proposal.approvalMode === "manual") this.ctx.authorize("W", authorizedTest.projectId);
     else this.ctx.authorize("X", authorizedTest.projectId);
     if (
       proposal.status === "verified" ||

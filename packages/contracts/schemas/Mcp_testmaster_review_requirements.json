@@ -1,0 +1,100 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "projectId",
+    "expectedVersion"
+  ],
+  "properties": {
+    "projectId": {
+      "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string",
+      "description": "Project id"
+    },
+    "expectedVersion": {
+      "minimum": 1,
+      "type": "integer",
+      "description": "Snapshot version these decisions are based on: version of testmaster_normalize_requirements or testmaster://requirements/{projectId}. Each item then applies at its requirement's current version"
+    },
+    "update": {
+      "minItems": 1,
+      "maxItems": 100,
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "requirementId"
+        ],
+        "properties": {
+          "requirementId": {
+            "pattern": "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string",
+            "description": "Requirement to edit"
+          },
+          "text": {
+            "maxLength": 8000,
+            "type": "string",
+            "description": "New requirement text"
+          },
+          "acceptanceCriteria": {
+            "type": "array",
+            "items": {
+              "maxLength": 8000,
+              "type": "string"
+            },
+            "description": "New acceptance criteria; replaces the list"
+          }
+        }
+      },
+      "description": "Edits applied first; an edit clears the requirement's approval"
+    },
+    "adjudicate": {
+      "minItems": 1,
+      "maxItems": 100,
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "conflictId",
+          "selectedRequirementId",
+          "reason"
+        ],
+        "properties": {
+          "conflictId": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string",
+            "description": "Conflict id from testmaster_normalize_requirements"
+          },
+          "selectedRequirementId": {
+            "pattern": "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string",
+            "description": "Requirement the conflict resolves to"
+          },
+          "reason": {
+            "minLength": 1,
+            "maxLength": 2000,
+            "type": "string",
+            "description": "Why this one"
+          }
+        }
+      },
+      "description": "Conflict decisions applied after the edits"
+    },
+    "approve": {
+      "minItems": 1,
+      "maxItems": 100,
+      "type": "array",
+      "items": {
+        "pattern": "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      },
+      "description": "Requirements to approve, applied last; a requirement in an unresolved conflict is refused"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:Mcp_testmaster_review_requirements",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

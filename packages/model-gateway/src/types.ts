@@ -146,8 +146,6 @@ export interface ModelRequest {
   reasoningEffort?: ReasoningEffort;
   dataPolicy: {
     dataClasses: string[];
-    maxInputBytes: number;
-    maxInputTokens: number;
     recordRawPrompt?: boolean;
     secrets?: string[];
   };

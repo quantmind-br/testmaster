@@ -11,7 +11,7 @@ O core deve trabalhar com documentos e observações versionadas, não com um ú
 | Markdown/texto | seções, listas, tabelas, URLs citadas | charset inválido e texto vazio recusados; sem fetch automático de links |
 | JSON PRD | estrutura com requisito/critério/evidence | schema e pointers; unknown enum não inferido |
 | PDF | texto por página; OCR opt-in isolado | OCR marcado; imagem sem texto = needs_input, não PRD com zero requisitos |
-| OpenAPI 3.0/3.1, Swagger2 | operations/security/schema/links/examples | `$ref` com ciclo/limite de profundidade e bytes; referências remotas só allowlist |
+| OpenAPI 3.0/3.1/3.2, Swagger2 | operations/security/schema/links/examples | `$ref` com ciclo/limite de profundidade e bytes; referências remotas só allowlist |
 | Postman | requests/env refs/pre/post scripts inventariados | scripts arbitrários não executados na importação; converter subset e reportar unsupported |
 | GraphQL | SDL/operations conhecidas | introspection só autorização; query/mutation distintos; subscriptions adapter M5 |
 | Repo | manifest, AST símbolos/rotas/import graph | ignore .git, node_modules, build, secrets, binaries; symlinks fora root bloqueados |
@@ -61,7 +61,7 @@ Bounds and scope (English, normative): codebase summaries keep at most 200 symbo
 }
 ```
 
-Inferência recebe confidence+reason e não `approved` automático. Documentos contraditórios mantêm ambas evidências; ordem fonte explicitamente aprovada > requisito manual > spec formal > observação > inferência. Dado observado nunca corrige contrato sem reviewer. `approval` revisão humana não é score LLM.
+Inferência recebe confidence+reason e não `approved` automático. Documentos contraditórios mantêm ambas evidências; ordem fonte explicitamente aprovada > requisito manual > spec formal > observação > inferência. Dado observado nunca corrige contrato sem decisão explícita do chamador. `approval` é decisão explícita e auditada do chamador autorizado (humano ou agente, scope de escrita), não score LLM.
 
 ## 5. Plano e oracle
 
@@ -75,10 +75,13 @@ Separar `IntentPlan` (linguagem natural + requisitos) de `ExecutablePlan` (açõ
 
 - UI: visible/hidden, exact/contains text, value, enabled, count, URL, download metadata, state after reload, accessibility finding, approved visual diff.
 - API: status exato/set permitido, headers, JSON pointer equality/type/schema, list count/boundary, pagination continuity, roundtrip persistência, idempotency e permissão por actor.
+- Generated browser plans: after the last state-changing action (login, navigation, click, submit) at least one required assertion must observe rendered content positively (visible, text, value, or count above 0). A URL check and the absence of earlier elements hold on a blank page, so a proposal made of those alone is refused as repair feedback (`browser_postcondition_missing`).
+- `jsonSchema` pointers cite the source revision: inside an operation (`/paths/<path>/<method>/...`) or document-level (`/components/...` for OpenAPI 3, `/definitions/...` for Swagger 2). Project-aware plan validation resolves them with the code that builds the runner input and reports `schema_pointer_unresolved` at the step, so a plan that passes validation is not blocked at run time.
+- Plan generation offers the model only what already exists in the project: secrets (names and ids) and auth profiles (names, kinds, origins). Create them before generating. HTTP requests to endpoints that need the session carry `auth: "profile"`; secret fields of a JSON body are bound by `body.set`. A proposal that sets `auth: "profile"` in a project with no auth profile is refused as repair feedback (`auth_profile_not_offered`).
 - Semânticas: rubric/requisito/evidence definidos; outcome `inconclusive` se ambíguo. CI crítico exige oracle determinístico ou aprovação explícita do rubric/evaluator. Modelo “parece correto” nunca substitui assertion executada.
 - Expectation vem do requisito/spec, não da response do mesmo run. Registrar expected/observed sanitized e operador, não só uma frase de sucesso.
 
-Plano declarativo de HTTP suporta capture JSON Pointer ou header, tipos, secretRef, variableRef e interpolação por token AST. Não regex/string-replace genérico em JSON; sem eval, shell expansion, template execution. Body binário/upload referencia artifact aprovado.
+Plano declarativo de HTTP suporta capture JSON Pointer ou header, tipos, secretRef, variableRef e interpolação por token AST. Dentro de um body JSON, `secretRef`/`variableRef` entram por `body.set` (valor colocado em um JSON Pointer RFC 6901), nunca aninhados em um literal, que a validação recusa; `auth: "profile"` aplica a sessão do auth profile do ambiente à request (specs/11 §4). Não regex/string-replace genérico em JSON; sem eval, shell expansion, template execution. Body binário/upload referencia artifact aprovado.
 
 ## 6. Geração por IA
 
@@ -90,11 +93,13 @@ Waiting for a model answer is not execution time. An agent-mode attempt pauses i
 
 Capacidades: structured JSON/tool calls/vision/contextTokens/maxOutputTokens. Limites declarados do modelo são metadados para admissão e reserva local, não parâmetros de geração. `reasoningEffort` da chamada prevalece sobre a configuração por modelo no perfil; quando definido, enviar `reasoning_effort` e incluir o valor efetivo nos hashes e cache. Omissão usa default do provider; valor inválido ou recusa do provider não permite fallback silencioso. A aplicação não envia `max_tokens`, `max_completion_tokens`, temperature, top-p, seed, penalidades ou `enable_thinking`. Provedor ausente ou capability necessária faltando: `CAPABILITY_UNAVAILABLE`; nunca trocar modelo ou remoto sem política. Truncation/context overflow: reduzir inputs por chunk grounded e reexecutar dentro do budget, mantendo refs; não truncar silent.
 
+Input size admission: the only local size refusal is a prompt larger than the model's declared `contextTokens` (one token per UTF-8 byte as the conservative bound); it raises `PAYLOAD_TOO_LARGE` with `details: {promptBytes, contextTokens}` before any transport. There is no fixed byte or token cap on a request, and a model that declares no context is never refused for size. Budget reservation uses the declared `maxOutputTokens`, else the declared `contextTokens`, else a fixed fallback of 100000 output tokens (an estimate only, never refused or sent on the wire). Normalization checks the cross-source reconciliation (which sends every source chunk) against the declared context before the first extraction batch and refuses with the same details, so a source set that cannot be reconciled never spends a paid batch.
+
 Loop de validação com no máximo 2 reparos estruturais por request, cada um contabilizado. Schema inválido persistente → candidate invalid e diagnóstico. AST analysis de código rejeita imports fora lock/allowlist, downloads/deps em runtime, timeout desativado e assertions vazias; análise estática não equivale a sandbox seguro. Compile/syntax valid não equivale a comportamento validado.
 
 Caching: chave inclui modelo/config/prompt/schema/source revisions/locale/policy. Cache semântico aproximado não pode servir código de outro projeto. Resultados com secrets ou dados de tenant nunca compartilhados. Defaults remotos de geração não garantem determinismo; registrar response hash e modelo resolvido.
 
-Aprovação automática opt-in (`--accept-generated`) só fora CI, com policy e verificações completas, auditada; não aprova lacunas `needs_input` ou relaxa assertions. Base: aprovação humana ou agente externo autorizado com papel separado.
+Aprovação automática opt-in (`--accept-generated`) só fora CI, com policy e verificações completas, auditada; não aprova lacunas `needs_input` ou relaxa assertions. Base: decisão explícita e auditada do chamador autorizado (humano ou agente com scope de escrita), registrada com o principal; nunca score do modelo.
 
 ## 7. Execução Playwright e HTTP
 
@@ -135,6 +140,8 @@ Conclusão e conselho de cura são calculados por regras, nunca alterados pelo m
 
 Exemplos: locator ausente + botão equivalente com mesma função pode indicar drift; botão existe e retorna 500 não é locator drift; login bloqueado sem credencial é environment/blocked; schema mudou contra spec aprovado é contract violation, não healing automático. Um trace incompleto pode comprovar assertion failed, mas não sustentar root cause.
 
+Uma assertion `statusIn` obrigatória que falha porque o alvo respondeu 4xx (sem redirect seguido que a explique) recebe diagnóstico por regras, não `cause_unknown`: a conclusão é `cause_partially_supported` e o conselho de cura é `not_indicated`. 400/422 e demais 4xx indicam conteúdo da requisição recusado (`contract_violation`; comparar corpo, query e headers com o contrato da API); 401/403 indicam credenciais ou sessão (`environment`; perfil de auth ou segredo e origem); 404 indica caminho ou recurso e 405 método (`contract_violation`); 409 indica conflito de estado (`environment`); 429 indica rate limit (`environment`). O próximo passo cita a assertion falha e a evidência HTTP da requisição; o status sozinho nunca prova a causa.
+
 ## 9. Healing seguro
 
 | Mudança | Propor | Autoapply elegível |
@@ -152,7 +159,7 @@ Preservar first failure e gerar verificationRun. Aprovação da revisão ativa u
 
 `HealingReview` é uma projeção de leitura dos registros imutáveis, sem alterar `HealingProposal`: mudanças com `stepId/path/before/after` dos planos base/candidato; identidade anterior e candidatos (`role`, `name`, `tag`, `type`, `label`, `form`, `matched`, `visible`); equivalência calculada contra baselines; decisão/motivos de automação derivados das limitações; hash e passos das assertions preservadas; risco; Run/outcome/gate de verificação quando houver; refs e limitações. `label/form` ausentes são null com indisponibilidade declarada, não identidade inferida.
 
-A resposta também informa `approval{expectedVersion,proposalId,candidateRevisionId}` para aprovação explícita presa à proposta/revisão. REST `GET /healing-proposals/{id}/review` exige `healing:R`; CLI `heal review <proposalId>` e MCP equivalente são consultas sem aplicar patch. A CLI apresenta before/after, candidatos, bloqueio, risco, verificação e comando de aprovação com `--expected-version`. Sinais novos ajudam só a revisão manual: guards de identidade, `assessPolicy`, autoapply e CAS permanecem inalterados.
+A resposta também informa `approval{expectedVersion,proposalId,candidateRevisionId}` para aprovação explícita presa à proposta/revisão. A aprovação e a rejeição exigem apenas o scope de escrita `healing:W` (REST `POST /healing-proposals/{id}/approve|reject`), sem grant dedicado nem principal humano; qualquer chamador autorizado, humano ou agente, decide e fica registrado. REST `GET /healing-proposals/{id}/review` exige `healing:R`; CLI `heal review <proposalId>` e MCP equivalente são consultas sem aplicar patch. A CLI apresenta before/after, candidatos, bloqueio, risco, verificação e comando de aprovação com `--expected-version`. Sinais novos ajudam só a revisão manual: guards de identidade, `assessPolicy`, autoapply e CAS permanecem inalterados.
 
 ## 10. Memória de projeto (M5)
 

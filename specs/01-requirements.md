@@ -22,7 +22,7 @@ Cada ID tem aceite operacional; referências E-* são evidências no catálogo. 
 | REQ-001 | Setup e diagnóstico | CLI sem conta; doctor distingue Docker ausente, modelo ausente e target morto; replay não exige modelo | P0 | M1 | E01,E07,E17 |
 | REQ-002 | Projetos/ambientes | CRUD, default único, env revisionado, URL e segredo separados; histórico sobrevive archive | P0 | M1 | E17 |
 | REQ-003 | Input PRD | Markdown/texto/JSON; PDF com páginas e diagnóstico de extração; sem texto não vira PRD vazio válido | P1 | M2 | E09,E10,E30 |
-| REQ-004 | Input API | OpenAPI 3.0/3.1/Swagger2, Postman, texto; fonte/hash/JSON pointer; `$ref` remoto bloqueado sem autorização | P1 | M2 | E02,E30,E36 |
+| REQ-004 | Input API | OpenAPI 3.0/3.1/3.2/Swagger2, Postman, texto; fonte/hash/JSON pointer; `$ref` remoto bloqueado sem autorização | P1 | M2 | E02,E30,E36 |
 | REQ-005 | Code summary | arquivos/frameworks/rotas/endpoints/símbolos e linhas com hash; respeita ignores; não executa repo | P1 | M2 | E10 |
 | REQ-006 | PRD normalizado | requisito/aceite/proveniência/confiança; observado separado de desejado; conflitos visíveis | P1 | M2 | E10 |
 | REQ-007 | Exploração browser | mapa por feature/fluxo, vídeo e estados full/partial/unreachable; retomar somente features selecionadas | P1 | M2 | E31 |

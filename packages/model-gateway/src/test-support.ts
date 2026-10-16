@@ -66,11 +66,7 @@ export const testRequest: ModelRequest = {
   locale: "en",
   policyHash: "policy",
   responseSchema: "Money",
-  dataPolicy: {
-    dataClasses: ["source"],
-    maxInputBytes: 32_768,
-    maxInputTokens: 32_768,
-  },
+  dataPolicy: { dataClasses: ["source"] },
 };
 export const completion = {
   model: "model",

@@ -1,6 +1,9 @@
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { createServer as createHttpServer } from "node:http";
 import { createServer } from "node:https";
+import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -133,6 +136,79 @@ it.each(["js", "meta", "fetch", "iframe", "websocket"])(
   },
   60000,
 );
+
+it("names the denied third-party WebSocket origin in the blocked run", async () => {
+  const shop = await startShop();
+  try {
+    const path = `/adversarial/websocket?target=${encodeURIComponent("http://127.0.0.1:9222/collect")}`;
+    const { result } = await attempt({ url: shop.url, plan: plan(path) });
+    expect(result.outcome).toBe("blocked");
+    const denied = result.events.flatMap((event) =>
+      event.type === "egress.denied" ? [event.payload] : [],
+    );
+    expect(denied).toEqual([
+      expect.objectContaining({
+        origin: "http://127.0.0.1:9222",
+        resourceType: "websocket",
+        disposition: "fatal",
+      }),
+    ]);
+  } finally {
+    await shop.close();
+  }
+}, 60000);
+
+it("connects a same-origin WebSocket opened by the page and does not deny the run", async () => {
+  const server = createHttpServer((_request, response) => {
+    response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    response.end(
+      `<main data-testid="fixture"></main><script>
+        const socket = new WebSocket("ws://" + location.host + "/events");
+        socket.onmessage = (event) => {
+          const node = document.createElement("p");
+          node.dataset.testid = "pushed";
+          node.textContent = event.data;
+          document.body.append(node);
+        };
+      </script>`,
+    );
+  });
+  server.on("upgrade", (request, socket) => {
+    const accept = createHash("sha1")
+      .update(`${request.headers["sec-websocket-key"]}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`)
+      .digest("base64");
+    const payload = Buffer.from("pushed-by-server");
+    socket.write(
+      `HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${accept}\r\n\r\n`,
+    );
+    socket.write(Buffer.concat([Buffer.from([0x81, payload.length]), payload]));
+    socket.on("error", () => socket.destroy());
+  });
+  const listening = Promise.withResolvers<void>();
+  server.listen(0, "127.0.0.1", () => listening.resolve());
+  await listening.promise;
+  const { port } = server.address() as AddressInfo;
+  try {
+    const socketPlan = plan("/");
+    socketPlan.steps = [
+      socketPlan.steps[0] as ExecutablePlan["steps"][number],
+      {
+        id: "check",
+        kind: "assertion",
+        operation: "assert",
+        description: "Require the message pushed over the socket",
+        input: { locator: { by: "testId", value: "pushed" } },
+        expectation: { predicate: "textEquals", value: { literal: "pushed-by-server" } },
+      },
+    ];
+    const { result } = await attempt({ url: `http://127.0.0.1:${port}`, plan: socketPlan });
+    expect(result.outcome).toBe("passed");
+    expect(result.events.some((event) => event.type === "egress.denied")).toBe(false);
+  } finally {
+    server.closeAllConnections();
+    server.close();
+  }
+}, 60000);
 
 it("blocks service-worker registration rather than permitting a worker fetch bypass", async () => {
   const shop = await startShop();

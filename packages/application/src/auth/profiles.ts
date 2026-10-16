@@ -20,7 +20,8 @@ import type { EntityDocument } from "@testmaster/persistence";
 import { auditedOperation, auditSecurity } from "../audit.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "../context.js";
 import type { SecretsService } from "../secrets.js";
-import { AuthEngine, type EnsureOptions } from "./engine.js";
+import { AuthEngine, type EnsureOptions, type EnsureResult } from "./engine.js";
+import { type HttpCredential, httpCredentials } from "./http-session.js";
 import { originOf } from "./oauth.js";
 import { AuthStateStore } from "./state.js";
 import {
@@ -91,6 +92,8 @@ export interface PrepareInput {
   /** Epoch milliseconds at which the Attempt must be over. */
   deadlineAt: number;
   interactive: boolean;
+  /** The Attempt's runner; an `http` Attempt needs a session its requests can use. */
+  runner?: ExecutablePlan["runner"];
 }
 export interface PreparedAuth {
   /** Managed secret ids the Attempt resolves in addition to those named by the plan. */
@@ -98,6 +101,8 @@ export interface PreparedAuth {
   runnerAuth: {
     storageState?: { secretRef: string };
     login?: { steps: PlanStep[]; captureState: boolean };
+    /** HTTP runs only: sent by requests that ask for `auth: "profile"`. */
+    credentials?: HttpCredential[];
   } | null;
   /** Receives a browser storage state captured by the login phase. */
   onAuthState: (storageState: string) => Promise<void>;
@@ -814,9 +819,53 @@ export class AuthProfilesService {
 
   // --- Worker integration -----------------------------------------------------------------------
 
+  /**
+   * Runs the browser login of `profile` in an isolated login-only Attempt and returns the
+   * profile's state afterwards, which then holds the captured storage state.
+   */
+  private async loginForHttp(
+    profile: StoredAuthProfile,
+    input: PrepareInput,
+    options: EnsureOptions,
+    result: EnsureResult,
+  ): Promise<EnsureResult> {
+    const login = result.browser?.login;
+    if (!login) return result;
+    if (!this.deps.browserLogin)
+      throw new AuthBlocked(
+        "security_precondition_failed",
+        "A browser login profile needs the isolated browser runner",
+        "browser_login_unavailable",
+      );
+    const probe = await this.deps.browserLogin({
+      profile,
+      environment: input.environment,
+      login,
+      secretIds: result.secretIds,
+      onAuthState: async (storageState) => {
+        this.validateStorageState(profile, storageState);
+        await this.engine.acceptStorageState(profile, storageState, undefined, false);
+      },
+    });
+    if (!probe.ok) {
+      this.engine.recordBrowserLoginFailure(profile, input.environment, {
+        id: input.run.id,
+        attemptId: input.attemptId,
+        requestedBy: input.run.requestedBy,
+      });
+      throw new AuthBlocked(
+        "manual_auth_required",
+        "The browser login did not complete",
+        "login_rejected",
+      );
+    }
+    return await this.engine.ensure(profile, input.environment, options);
+  }
+
   /** Brings every profile of the environment to a usable state before the Attempt starts. */
   async prepare(input: PrepareInput): Promise<PreparedAuth> {
     const secretIds = new Set<string>();
+    const credentials: HttpCredential[] = [];
     let runnerAuth: PreparedAuth["runnerAuth"] = null;
     let browserProfile: StoredAuthProfile | null = null;
     for (const profileId of input.environment.authProfileRefs) {
@@ -827,8 +876,17 @@ export class AuthProfilesService {
         signal: input.signal,
         deadlineAt: input.deadlineAt,
       };
-      const result = await this.engine.ensure(profile, input.environment, options);
+      let result = await this.engine.ensure(profile, input.environment, options);
+      // An HTTP Attempt has no browser: the login runs in its own isolated Attempt first, so the
+      // requests that ask for `auth: "profile"` get the captured session.
+      if (input.runner === "http" && result.browser?.login)
+        result = await this.loginForHttp(profile, input, options, result);
       for (const id of result.secretIds) secretIds.add(id);
+      if (input.runner === "http")
+        for (const credential of httpCredentials(profile, result)) {
+          secretIds.add(credential.secretRef);
+          credentials.push(credential);
+        }
       if (result.browser) {
         if (browserProfile)
           throw new AuthBlocked(
@@ -845,6 +903,7 @@ export class AuthProfilesService {
         };
       }
     }
+    if (credentials.length) runnerAuth = { ...runnerAuth, credentials };
     const captured = browserProfile;
     return {
       secretIds: [...secretIds],

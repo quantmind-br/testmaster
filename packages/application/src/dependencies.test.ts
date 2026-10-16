@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { access, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DependencyBinding, ExecutablePlan, RunRequest } from "@testmaster/contracts";
@@ -23,7 +23,7 @@ async function fixture() {
   const app = await Application.open({ cwd: root, home });
   const init = await app.init();
   app.preflight = async () => {};
-  return { app, init };
+  return { app, init, home };
 }
 function producerPlan(sensitive = false): ExecutablePlan {
   const plan = scaffoldPlan("backend");
@@ -33,6 +33,11 @@ function producerPlan(sensitive = false): ExecutablePlan {
     { name: "fixture-id", from: "jsonPointer", pointer: "/id", valueType: "string", sensitive },
   ];
   return plan;
+}
+function baseUrlOf(cell: unknown): string {
+  if (cell && typeof cell === "object" && "baseUrl" in cell && typeof cell.baseUrl === "string")
+    return cell.baseUrl;
+  throw new Error("Run cell has no base URL");
 }
 function binding(testId: string, environmentId: string): DependencyBinding {
   return {
@@ -355,6 +360,143 @@ it.each(["fresh", "expired", "wrong-type"] as const)(
       const variables = app.database.all("SELECT data_json FROM variables");
       expect(JSON.stringify(variables)).not.toContain("created-123");
     } finally {
+      app.close();
+    }
+  },
+);
+it.each(["settled", "live-resource"] as const)(
+  "reads a sensitive capture in its batch, keeps it for its reuse window and then erases it from the vault (%s)",
+  async (scenario) => {
+    const { app, init, home } = await fixture();
+    try {
+      const plan = producerPlan(true);
+      const producer = app.tests.create({ projectId: init.projectId, plan });
+      const consumer = app.tests.create({
+        projectId: init.projectId,
+        plan: consumerPlan({ ...binding(producer.id, init.environmentId), sensitive: true }),
+      });
+      const receipt = await app.runs.admit(
+        {
+          testId: consumer.id,
+          environmentId: init.environmentId,
+          extensions: { "testmaster:executor": "process" },
+        },
+        { wait: true },
+      );
+      const consumerRun = app.runs.get(receipt.runId);
+      const upstream = app.runs.get(dependencies(consumerRun.matrixCell)[0]!.producerRunId);
+      const fence = new LeaseRepository(app.database).claim({
+        workspaceId: init.workspaceId,
+        owner: "test",
+        queue: "local",
+        runIds: [upstream.id],
+      });
+      if (!fence) throw new Error("Producer lease missing");
+      const execution = new ExecutionRepository(app.database);
+      const captureStep = plan.steps.find((step) => step.operation === "request")!;
+      const reference = await app.secrets.protectCapture(
+        `capture-${fence.attemptId}-fixture-id`,
+        "created-123",
+        [baseUrlOf(consumerRun.matrixCell)],
+      );
+      expect(reference.provider).toBe("vault");
+      const occurredAt = new Date().toISOString();
+      execution.publish(
+        fence,
+        "VariableValue",
+        entity(app.context, "var", {
+          createdAt: occurredAt,
+          batchId: upstream.batchId,
+          producerRunId: upstream.id,
+          producerStepId: captureStep.id,
+          name: "fixture-id",
+          type: "string",
+          encryptedValueRef: reference.id,
+          taint: "sensitive",
+        }),
+      );
+      execution.observe(fence, {
+        id: entity(app.context, "evt", {}).id,
+        seq: 0,
+        payload: {
+          protocolVersion: "1.0.0",
+          attemptId: fence.attemptId,
+          occurredAt,
+          seq: 0,
+          type: "variable.captured",
+          payload: {
+            name: "fixture-id",
+            valueType: "string",
+            sensitive: true,
+            encryptedValueRef: reference.id,
+          },
+        },
+      });
+      const resource = entity(app.context, "res", {
+        creatorAttemptId: fence.attemptId,
+        resourceType: "order",
+        handleRef: null,
+        cleanupPlan: { stepId: captureStep.id },
+        state: "planned",
+        ownerProof: null,
+      });
+      if (scenario === "live-resource") app.context.entities.insert("ResourceRecord", resource);
+      execution.finalize(fence, {
+        ...upstream,
+        phase: "completed",
+        status: "passed",
+        outcome: "passed",
+        gate: "passed",
+      });
+      // The batch is still open (the consumer has not run): the producer's pass erases nothing.
+      await app.worker.reconcile();
+      expect(app.secrets.get(reference.id).revokedAt).toBeFalsy();
+      const seen: { variables?: unknown; revokedAt?: unknown } = {};
+      const execute = vi
+        .spyOn(AttemptExecutor.prototype, "execute")
+        .mockImplementation(async (input) => {
+          seen.variables = input.runnerInput?.variables;
+          seen.revokedAt = app.secrets.get(reference.id).revokedAt;
+          return {
+            outcome: "blocked",
+            reasonCode: "security_precondition_failed",
+            logDropped: 0,
+            events: [],
+          };
+        });
+      await app.worker.run({ ephemeral: true, runIds: [receipt.runId] });
+      expect(execute).toHaveBeenCalledOnce();
+      expect(seen.variables).toEqual({ fixture: { value: "created-123", sensitive: true } });
+      expect(seen.revokedAt).toBeFalsy();
+      expect(app.runs.get(receipt.runId).phase).toBe("completed");
+      const vaultFile = join(home, ".local", "share", "testmaster", `${reference.id}.1.vault`);
+      // The batch has settled, but the consumer may still reuse the capture explicitly for its
+      // binding's maximumAge (60 s).
+      await app.worker.reconcile();
+      expect(app.secrets.get(reference.id).revokedAt).toBeFalsy();
+      await access(vaultFile);
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(Date.parse(occurredAt) + 60_001);
+      await app.worker.reconcile();
+      if (scenario === "live-resource") {
+        // A fixture resource that is not cleaned still needs the capture.
+        expect(app.secrets.get(reference.id).revokedAt).toBeFalsy();
+        await access(vaultFile);
+        app.database.run(
+          "UPDATE resources SET state='cleaned',data_json=?,version=2 WHERE workspace_id=? AND id=?",
+          JSON.stringify({ ...resource, state: "cleaned", version: 2 }),
+          init.workspaceId,
+          resource.id,
+        );
+        await app.worker.reconcile();
+      }
+      expect(app.secrets.get(reference.id).revokedAt).toBeTruthy();
+      await expect(access(vaultFile)).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(app.secrets.release(reference.id)).rejects.toMatchObject({
+        code: "POLICY_DENIED",
+      });
+    } finally {
+      vi.useRealTimers();
       app.close();
     }
   },

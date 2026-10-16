@@ -222,8 +222,8 @@ describe("bound production approvals", () => {
     code(() => approvals.verify(run, test, env), "POLICY_DENIED");
     expect(approvals.list()).toHaveLength(3);
   });
-  it("rejects expired approval and service reviewer/spoofed reviewer", async () => {
-    const { approvals, input, ctx } = await setup();
+  it("rejects expired approval and spoofed reviewer", async () => {
+    const { approvals, input } = await setup();
     code(
       () => approvals.create({ ...input, expiresAt: new Date(Date.now() - 1).toISOString() }),
       "INVALID_ARGUMENT",
@@ -237,6 +237,9 @@ describe("bound production approvals", () => {
       () => approvals.create({ ...input, reviewerId: uuidV7IdGenerator.next("usr") }),
       "FORBIDDEN",
     );
+  });
+  it("an enabled service principal is accepted as the reviewer of an execution approval", async () => {
+    const { input, ctx } = await setup();
     const principalId = uuidV7IdGenerator.next("svc");
     ctx.entities.insert("Principal", {
       id: principalId,
@@ -245,7 +248,9 @@ describe("bound production approvals", () => {
       displayName: "Automation",
       disabledAt: null,
     });
-    code(() => new ApprovalsService({ ...ctx, principalId }).create(input), "FORBIDDEN");
+    const approval = new ApprovalsService({ ...ctx, principalId }).create(input);
+    expect(approval).toMatchObject({ reviewerId: principalId, actorId: principalId });
+    expect(approval.revokedAt).toBeNull();
   });
   it("defaults an execution approval to a 30-minute window", async () => {
     const { approvals, input } = await setup();

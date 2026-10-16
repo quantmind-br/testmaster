@@ -1,0 +1,183 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "projectId": {
+      "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string",
+      "description": "Project id; required to create a profile"
+    },
+    "profileId": {
+      "pattern": "^aup_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string",
+      "description": "Profile to update; absent: create. Needs expectedVersion"
+    },
+    "expectedVersion": {
+      "minimum": 1,
+      "type": "integer",
+      "description": "Current version of profileId, for optimistic concurrency"
+    },
+    "name": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string",
+      "description": "Profile name, unique in the project; required to create"
+    },
+    "kind": {
+      "anyOf": [
+        {
+          "const": "form",
+          "type": "string"
+        },
+        {
+          "const": "basic",
+          "type": "string"
+        },
+        {
+          "const": "bearer",
+          "type": "string"
+        },
+        {
+          "const": "api-key",
+          "type": "string"
+        },
+        {
+          "const": "cookie",
+          "type": "string"
+        },
+        {
+          "const": "oauth",
+          "type": "string"
+        },
+        {
+          "const": "oidc",
+          "type": "string"
+        },
+        {
+          "const": "manual",
+          "type": "string"
+        }
+      ],
+      "description": "form, basic, bearer, api-key, cookie, oauth, oidc or manual; required to create, never changes"
+    },
+    "originBindings": {
+      "minItems": 1,
+      "maxItems": 16,
+      "type": "array",
+      "items": {
+        "format": "uri",
+        "maxLength": 2048,
+        "type": "string"
+      },
+      "description": "Origins the profile may authenticate against; every environment that uses it must target one of them"
+    },
+    "secrets": {
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {
+          "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        }
+      },
+      "description": "Role to secret id (testmaster_set_secret): form username, password, totpSeed; basic username, password; bearer token; api-key key; cookie cookie"
+    },
+    "config": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ],
+      "description": "Kind-specific configuration (contract AuthFormConfig, AuthBasicConfig, AuthStaticConfig, AuthOAuthConfig or AuthManualConfig); {} for basic, bearer, api-key and cookie"
+    },
+    "refreshPolicy": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "skewSeconds": {
+          "minimum": 0,
+          "maximum": 600,
+          "type": "integer"
+        },
+        "maxRefreshesPerHour": {
+          "minimum": 1,
+          "maximum": 60,
+          "type": "integer"
+        },
+        "cooldownSeconds": {
+          "minimum": 0,
+          "maximum": 3600,
+          "type": "integer"
+        },
+        "maxConsecutiveFailures": {
+          "minimum": 1,
+          "maximum": 10,
+          "type": "integer"
+        },
+        "stateTtlSeconds": {
+          "minimum": 60,
+          "maximum": 86400,
+          "type": "integer"
+        }
+      },
+      "description": "Session refresh limits; absent fields keep their defaults"
+    }
+  },
+  "$defs": {
+    "T0": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ],
+      "description": "Kind-specific configuration (contract AuthFormConfig, AuthBasicConfig, AuthStaticConfig, AuthOAuthConfig or AuthManualConfig); {} for basic, bearer, api-key and cookie"
+    }
+  },
+  "$id": "urn:testmaster:Mcp_testmaster_save_auth_profile",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

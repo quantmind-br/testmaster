@@ -1,0 +1,70 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "actionSet",
+    "revisionHash",
+    "environmentRevisionId",
+    "originSet",
+    "policyHash",
+    "reason"
+  ],
+  "properties": {
+    "actionSet": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      },
+      "description": "Risk classes (write, destructive, securityProbe) or step ids the approval covers"
+    },
+    "revisionHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string",
+      "description": "contentHash of the exact revision being approved"
+    },
+    "environmentRevisionId": {
+      "pattern": "^evr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string",
+      "description": "Exact environment revision being approved"
+    },
+    "originSet": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      },
+      "description": "Canonical http(s) origins the run may touch, without path"
+    },
+    "policyHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string",
+      "description": "Policy hash of the run policy being approved"
+    },
+    "reason": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string",
+      "description": "Why the caller approves this execution (1-200 characters)"
+    },
+    "actorId": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string",
+      "description": "Principal id that will execute; defaults to the caller"
+    },
+    "expiresAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string",
+      "description": "Expiry, at most 30 minutes ahead; default 30 minutes"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:Mcp_testmaster_approve_execution",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

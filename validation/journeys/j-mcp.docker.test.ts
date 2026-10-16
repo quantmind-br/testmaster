@@ -129,6 +129,72 @@ it("MCP-001–004 built CLI initialize/list/run/evidence, reattach, and HTTP tok
           expect(Buffer.from(text(content.blob), "base64").length).toBeGreaterThan(0);
         }
         expect(typeof object(content._meta)["testmaster:sizeBytes"]).toBe("number");
+        // An agent authors through MCP: a candidate revision runs by id while the active one stays,
+        // and promoting it turns the earlier run's evidence stale with a stated reason.
+        const saved = object(
+          (
+            await client.callTool({
+              name: "testmaster_save_test",
+              arguments: {
+                testId: text(test.id),
+                plan: { ...healthPlan(), name: "Health check, revised through MCP" },
+              },
+            })
+          ).structuredContent,
+        );
+        expect(saved.active).toBe(false);
+        const candidateId = text(object(saved.revision).id);
+        const pinned = await client.callTool(
+          {
+            name: "testmaster_run_tests",
+            arguments: {
+              testIds: [text(test.id)],
+              environmentId: text(identity.environmentId),
+              revisionId: candidateId,
+              mode: "replay",
+              wait: true,
+            },
+          },
+          undefined,
+          { timeout: 180000 },
+        );
+        expect(pinned.isError, JSON.stringify(pinned.content)).not.toBe(true);
+        const pinnedRun = text((object(pinned.structuredContent).allMembers as string[])[0]);
+        session.runIds.push(pinnedRun);
+        expect(app.runs.get(pinnedRun).revisionId).toBe(candidateId);
+        const pinnedEvidence = object(
+          (
+            await client.callTool({
+              name: "testmaster_get_evidence",
+              arguments: { runId: pinnedRun },
+            })
+          ).structuredContent,
+        );
+        expect(pinnedEvidence).toMatchObject({ freshness: "current", staleReasons: [] });
+        const promoted = await client.callTool({
+          name: "testmaster_promote_revision",
+          arguments: {
+            revisionId: candidateId,
+            expectedVersion: object(saved.test).version,
+          },
+        });
+        expect(promoted.isError, JSON.stringify(promoted.content)).not.toBe(true);
+        const superseded = object(
+          (
+            await client.callTool({
+              name: "testmaster_get_evidence",
+              arguments: { runId: runs[0] },
+            })
+          ).structuredContent,
+        );
+        expect(superseded.freshness).toBe("stale");
+        expect(superseded.staleReasons).toMatchObject([{ code: "revision_superseded" }]);
+        session.oracles.push({
+          check: "mcpCandidateRevisionRunAndStaleReason",
+          candidateRevisionId: candidateId,
+          candidateRunId: pinnedRun,
+          supersededRunId: runs[0],
+        });
         session.oracles.push({
           check: "mcpDurableResumeAndVerifiedEvidence",
           jobId,

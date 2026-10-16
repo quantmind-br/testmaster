@@ -354,4 +354,17 @@ describe("hashes policy and redaction", () => {
     expect(exitCodeForRun({ gate: "failed", reasonCode: "missing_secret" })).toBe(6);
     expect(exitCodeForRun({ gate: "failed", reasonCode: "budget_exhausted" })).toBe(12);
   });
+  it("never exits 0 for a run whose gate did not pass, even when its reason maps to success", () => {
+    for (const gate of ["failed", "pending", "not_applicable"] as const)
+      expect(
+        exitCodeForRun({ gate, outcome: "passed", reasonCode: "assertions_satisfied" }),
+      ).not.toBe(0);
+    expect(
+      exitCodeForRun({ gate: "failed", outcome: "passed", reasonCode: "evidence_incomplete" }),
+    ).toBe(1);
+    // Control: the same reason with a passed gate is success.
+    expect(
+      exitCodeForRun({ gate: "passed", outcome: "passed", reasonCode: "assertions_satisfied" }),
+    ).toBe(0);
+  });
 });

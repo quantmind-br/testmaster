@@ -5,9 +5,9 @@ import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { Application, entity } from "@testmaster/application";
+import { Application, entity, isHealingAbstention } from "@testmaster/application";
 import type { Analysis, ExecutablePlan, HealingProposal, Requirement } from "@testmaster/contracts";
-import { defaults, reasoningEfforts, validate } from "@testmaster/contracts";
+import { ContractError, defaults, reasoningEfforts, validate } from "@testmaster/contracts";
 import { canonicalJson, semanticHash, uuidV7IdGenerator } from "@testmaster/domain";
 import { assertionsHash } from "@testmaster/planner";
 import type { FixtureControls, FixtureDriver } from "../../../evals/m3/fixture.mjs";
@@ -212,6 +212,19 @@ export function compareProtectedAssertions(
     preserved: baseHash === candidateHash,
   };
 }
+/**
+ * Evaluation ledgers record an abstention as the refusal it was before it became a result, so a
+ * rules or model abstention keeps its measured meaning.
+ */
+async function proposeHealing(app: Application, runId: string): Promise<HealingProposal> {
+  const outcome = await app.healing.propose(runId, {});
+  if (!isHealingAbstention(outcome)) return outcome;
+  throw new ContractError("PRECONDITION_FAILED", "Healing abstained", {
+    reason: outcome.reasonCode,
+    jobId: outcome.jobId,
+    ...(outcome.modelCallId ? { modelCallId: outcome.modelCallId } : {}),
+  });
+}
 export function healingRefusal(error: unknown, forbidden: readonly string[]) {
   if (
     !error ||
@@ -248,6 +261,7 @@ export function healingRefusal(error: unknown, forbidden: readonly string[]) {
         "semantic_failure",
         "provider_unavailable",
         "evidence_unavailable",
+        "healing_not_indicated",
         "model_abstained",
       ].includes(reason),
   };
@@ -1046,7 +1060,7 @@ export async function policyProbesM3(root: string, path: string, outDir: string)
         answer = controlledHealingOutput(base, fixture.authoredCandidate(item, base));
         await app.analysis.analyze(failed.id, { model: false });
         try {
-          e.proposal = await app.healing.propose(failed.id, {});
+          e.proposal = await proposeHealing(app, failed.id);
         } catch (error) {
           const refusal = healingRefusal(error, []);
           e.refusal = refusal.record;
@@ -2309,7 +2323,7 @@ async function executeRound(
       ledger.healing.offered = true;
       let proposal: HealingProposal | null = null;
       try {
-        proposal = await paid(() => app!.healing.propose(transformed.id, {}));
+        proposal = await paid(() => proposeHealing(app!, transformed.id));
       } catch (error) {
         if (!(error instanceof Error) || !("code" in error) || error.code !== "PRECONDITION_FAILED")
           throw error;

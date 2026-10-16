@@ -90,8 +90,8 @@ Não retry de 401/403, validation, policy, crédito/orçamento esgotado, produce
 | POST `/runs/{id}/analysis` | job explícito/reanálise, budget | analysis:X | M3 |
 | POST `/runs/{id}/healing-proposals` | candidate policy/budget | healing:W | M3 |
 | GET `/healing-proposals/{id}/review` | HealingReview read-only, before/after, identidade, bloqueios, assertions, aprovação e verificação | healing:R | M3 |
-| POST `/healing-proposals/{id}/approve` | candidate version, reviewer; verify Run | healing:approve | M3 |
-| POST `/healing-proposals/{id}/reject` | reason | healing:approve | M3 |
+| POST `/healing-proposals/{id}/approve` | candidate version, deciding principal (the authenticated caller, human or agent); verify Run | healing:W | M3 |
+| POST `/healing-proposals/{id}/reject` | reason | healing:W | M3 |
 | POST `/run-comparisons` | leftRunId/rightRunId, comparability warnings | runs:R | M3 |
 | POST `/batch-comparisons` | leftBatchId/rightBatchId; members requested/expanded/notDispatched, matching por test/revision/cell e warnings | runs:R | M3 |
 | POST `/flake-studies` | testRevision/environment/n/seed; study/batch | runs:X | M3 |

@@ -3,6 +3,7 @@ import { ContractError } from "@testmaster/contracts";
 import { type Command, Option } from "commander";
 import {
   collect,
+  dryRunReport,
   integer,
   type Options,
   type Runtime,
@@ -59,6 +60,43 @@ export function planCommands(program: Command, runtime: Runtime): void {
         signal: rt.controller.signal,
       }),
     }),
+    (_rt, _args, options) => {
+      const requirementIds =
+        options.requirement !== undefined ? strings(options, "requirement") : null;
+      if (
+        requirementIds &&
+        (!requirementIds.length ||
+          requirementIds.some((id) => !id.trim()) ||
+          new Set(requirementIds).size !== requirementIds.length)
+      )
+        throw new ContractError(
+          "INVALID_ARGUMENT",
+          "--requirement must contain distinct, nonempty requirement IDs",
+        );
+      const provider = string(options, "provider");
+      const model = string(options, "model");
+      return dryRunReport(
+        [
+          {
+            operation: "proposals.generate",
+            type: string(options, "type") ?? "backend",
+            requirements: requirementIds ?? "all approved requirements of the project",
+            model: model
+              ? `${provider ?? "default provider"}/${model}`
+              : "the project's configured model",
+            partialGeneration: options.partial === true,
+            sendsRequirementsToModel: true,
+            costsModelBudget: true,
+            records: "one proposal batch; no test is created until proposals are accepted",
+          },
+        ],
+        [
+          "the source snapshot, when named, must match the current requirement snapshot",
+          "every selected requirement must be approved and free of open conflicts",
+          "the model must be declared, consented and within budget",
+        ],
+      );
+    },
   );
   runtime.bind(group.command("list"), async (rt, _args, options) => ({
     data: await (await rt.app()).proposals.list(await rt.project(options)),

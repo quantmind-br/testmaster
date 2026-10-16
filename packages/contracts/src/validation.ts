@@ -2,12 +2,14 @@ import type { ErrorObject, ValidateFunction } from "ajv";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import { schemaCatalog } from "./catalog.js";
+import { JsonSetError, nestedValueReference, setJsonPointer } from "./json-body.js";
 import {
   type ExecutablePlan,
   type Expectation,
   invalidCredentialHeaders,
   type PlanStep,
 } from "./plans.js";
+import type { JsonValue } from "./primitives.js";
 import type { RunnerEvent } from "./protocol.js";
 import { ContractError, requireCapability, type ValidationIssue } from "./registries.js";
 
@@ -558,6 +560,7 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
     if (step.operation === "request") {
       seenResponses.add(step.id);
       validateHeaders(step.input.headers ?? {}, `${path}/input/headers`, reject);
+      validateRequestBody(step.input, `${path}/input`, reject);
     }
     if (plan.runner === "terminal") {
       if (sessionOperations.has(step.operation) && !launched)
@@ -645,6 +648,7 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
   walk(plan, "");
   for (const [index, cleanup] of (plan.cleanup ?? []).entries()) {
     validateHeaders(cleanup.input.headers ?? {}, `/cleanup/${index}/input/headers`, reject);
+    validateRequestBody(cleanup.input, `/cleanup/${index}/input`, reject);
     validatePattern(cleanup.successPredicate, `/cleanup/${index}/successPredicate`, reject);
   }
   if (issues.length)
@@ -696,6 +700,44 @@ function validateHeaders(
       "literal" in object
     )
       reject(`${path}/${name}`, "secretRef", "Authentication headers require a reference");
+  }
+}
+type RequestInputShape = Extract<PlanStep, { operation: "request" }>["input"];
+/**
+ * A `{secretRef}` or `{variableRef}` object inside a JSON literal is plain data: it would be sent
+ * as written, with the secret id as the value. The reference must be placed with `body.set`.
+ * When the document is a literal, every `set` pointer is also checked against it.
+ */
+function validateRequestBody(input: RequestInputShape, path: string, reject: Reject): void {
+  const body = input.body;
+  if (body?.kind !== "json") return;
+  const literals: Array<{ literal: JsonValue; path: string }> = [];
+  if ("literal" in body.value)
+    literals.push({ literal: body.value.literal, path: `${path}/body/value/literal` });
+  for (const [index, entry] of (body.set ?? []).entries())
+    if ("literal" in entry.value)
+      literals.push({
+        literal: entry.value.literal,
+        path: `${path}/body/set/${index}/value/literal`,
+      });
+  for (const { literal, path: where } of literals) {
+    const nested = nestedValueReference(literal);
+    if (nested === undefined) continue;
+    reject(
+      `${where}${nested}`,
+      "nestedReference",
+      `A JSON literal nests a secretRef/variableRef object at pointer "${nested}"; it would be sent as plain data. Keep the document in value and place the reference with body.set: [{ "pointer": "${nested}", "value": { "secretRef": "…" } }]`,
+    );
+  }
+  if (!("literal" in body.value)) return;
+  let document = body.value.literal;
+  for (const [index, entry] of (body.set ?? []).entries()) {
+    try {
+      document = setJsonPointer(document, entry.pointer, null);
+    } catch (error) {
+      if (!(error instanceof JsonSetError)) throw error;
+      reject(`${path}/body/set/${index}/pointer`, "jsonPointer", error.message);
+    }
   }
 }
 /** A `headerMatches` pattern the runner could not compile is a plan error, never a runtime failure. */

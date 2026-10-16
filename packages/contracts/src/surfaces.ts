@@ -1,6 +1,20 @@
 import { type TSchema, Type } from "@sinclair/typebox";
+import { authContracts } from "./m4/auth.js";
+import { SuiteFixedMember, SuiteSelection } from "./m4/lists.js";
 import { ExecutionLimits } from "./operations.js";
-import { Description, Enum, id, Json, Mode, Name, Obj, Version } from "./primitives.js";
+import {
+  ContentDigest,
+  Description,
+  Enum,
+  id,
+  Json,
+  Mode,
+  Name,
+  Obj,
+  Priority,
+  Timestamp,
+  Version,
+} from "./primitives.js";
 import { errorRegistry, type Milestone } from "./registries.js";
 export const ErrorEnvelope = Obj({
   schemaVersion: Type.Literal("1.0.0"),
@@ -255,13 +269,13 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ["GET", "/projects/{id}/quarantine", "tests:R", "M4", "Empty", "QuarantineListItem"],
   ["GET", "/runs/{id}/analysis", "runs:R", "M3", "Empty", "Analysis"],
   ["POST", "/runs/{id}/analysis", "analysis:X", "M3", "AnalysisInput", "Analysis"],
-  ["POST", "/runs/{id}/healing-proposals", "healing:W", "M3", "HealingInput", "HealingProposal"],
+  ["POST", "/runs/{id}/healing-proposals", "healing:W", "M3", "HealingInput", "HealingResult"],
   ["GET", "/healing-proposals/{id}", "healing:R", "M3", "Empty", "HealingProposal"],
   ["GET", "/healing-proposals/{id}/review", "healing:R", "M3", "Empty", "HealingReview"],
   [
     "POST",
     "/healing-proposals/{id}/approve",
-    "healing:approve",
+    "healing:W",
     "M3",
     "ExpectedVersionInput",
     "HealingProposal",
@@ -269,7 +283,7 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   [
     "POST",
     "/healing-proposals/{id}/reject",
-    "healing:approve",
+    "healing:W",
     "M3",
     "HealingRejectInput",
     "HealingProposal",
@@ -771,7 +785,7 @@ export const mcpTools = {
       projectId: d(id("prj"), "Project id"),
       sourceSnapshotId: d(
         Name,
-        "Fingerprint of the human-approved requirement snapshot (testmaster://requirements/{projectId})",
+        "Current fingerprint of the approved requirement snapshot (testmaster_review_requirements returns it; also at testmaster://requirements/{projectId})",
       ),
       type: d(
         Enum(["frontend", "backend", "auto", "integration"]),
@@ -846,6 +860,12 @@ export const mcpTools = {
     milestone: "M1",
     input: Obj({
       testIds: Type.Optional(d(Type.Array(id("tst")), "Tests to run; needs environmentId")),
+      revisionId: Type.Optional(
+        d(
+          id("rev"),
+          "Run this exact revision (candidate or healed) of the single test in testIds instead of its active one; not with suiteId",
+        ),
+      ),
       suiteId: Type.Optional(d(id("sui"), "List to run (replay only) instead of testIds")),
       /** Required with testIds; a list (suiteId) carries an explicit environment per project. */
       environmentId: Type.Optional(d(id("env"), "Environment for testIds; lists carry their own")),
@@ -955,7 +975,7 @@ export const mcpTools = {
       provider: Type.Optional(d(Name, "Model provider id")),
       model: Type.Optional(d(Name, "Model id")),
     }),
-    output: "HealingProposal",
+    output: "HealingResult",
   },
   testmaster_review_healing: {
     milestone: "M3",
@@ -970,10 +990,296 @@ export const mcpTools = {
     }),
     output: "HealingProposal",
   },
+  testmaster_edit_plan: {
+    milestone: "M2",
+    input: Obj({
+      proposalId: d(
+        id("pro"),
+        "Proposal to edit; it must still be proposed (not accepted or rejected)",
+      ),
+      plan: d(
+        // Validated as an ExecutablePlan by the service; inlining the recursive Step schema would
+        // make the advertised tool schema hundreds of kilobytes. testmaster_validate_document checks one.
+        Type.Object({}, { additionalProperties: true }),
+        "Replacement ExecutablePlan (kind executable); the requirement and evidence references of the proposal are kept",
+      ),
+      expectedVersion: d(Version, "Proposal version being edited, for optimistic concurrency"),
+    }),
+    output: "Proposal",
+  },
+  testmaster_save_test: {
+    milestone: "M2",
+    input: Obj({
+      plan: d(
+        Type.Object({}, { additionalProperties: true }),
+        "ExecutablePlan to store; it is linted exactly like a plan file of the CLI",
+      ),
+      projectId: Type.Optional(
+        d(id("prj"), "Create a new test in this project; give projectId or testId"),
+      ),
+      testId: Type.Optional(
+        d(
+          id("tst"),
+          "Add a new revision to this existing test instead; the revision is a candidate until testmaster_promote_revision",
+        ),
+      ),
+      parentRevisionId: Type.Optional(
+        d(
+          id("rev"),
+          "Revision the new one derives from; only with testId, must belong to that test",
+        ),
+      ),
+      name: Type.Optional(d(Name, "Test name for a new test; default: the plan name")),
+      tags: Type.Optional(d(Type.Array(Name, { maxItems: 32 }), "Tags of a new test")),
+      priority: Type.Optional(d(Priority, "Priority of a new test")),
+      justification: Type.Optional(d(Description, "Why the test or revision is saved")),
+    }),
+    output: "McpSavedTest",
+  },
+  testmaster_promote_revision: {
+    milestone: "M2",
+    input: Obj({
+      revisionId: d(id("rev"), "Candidate revision to make the active one of its test"),
+      expectedVersion: d(
+        Version,
+        "Current version of the test (test.version from testmaster_save_test)",
+      ),
+    }),
+    output: "TestCase",
+  },
+  testmaster_save_suite: {
+    milestone: "M2",
+    input: Obj({
+      suiteId: Type.Optional(
+        d(id("sui"), "Existing list to change; absent: create a list (name required)"),
+      ),
+      expectedVersion: Type.Optional(d(Version, "Current list version; required with suiteId")),
+      name: Type.Optional(d(Name, "List name; required to create")),
+      description: Type.Optional(d(Description, "List description")),
+      selection: Type.Optional(
+        d(
+          SuiteSelection,
+          "Whole selection: fixed pinned members or dynamic project filters. Create needs selection or addMembers; with suiteId it replaces the selection",
+        ),
+      ),
+      addMembers: Type.Optional(
+        d(
+          Type.Array(SuiteFixedMember, { minItems: 1, maxItems: 500 }),
+          "Fixed members (test, revision, environment) appended to the fixed selection, or the members of a new fixed list",
+        ),
+      ),
+      removeMembers: Type.Optional(
+        d(
+          Type.Array(
+            Obj({
+              testId: id("tst"),
+              revisionId: Type.Optional(id("rev")),
+              environmentId: Type.Optional(id("env")),
+            }),
+            { minItems: 1, maxItems: 500 },
+          ),
+          "Members to drop from a fixed selection; revisionId and environmentId narrow the match, absent they match every member of the test",
+        ),
+      ),
+    }),
+    output: "Suite",
+  },
+  testmaster_approve_execution: {
+    milestone: "M3",
+    input: Obj({
+      actionSet: d(
+        Type.Array(Name, { minItems: 1 }),
+        "Risk classes (write, destructive, securityProbe) or step ids the approval covers",
+      ),
+      revisionHash: d(ContentDigest, "contentHash of the exact revision being approved"),
+      environmentRevisionId: d(id("evr"), "Exact environment revision being approved"),
+      originSet: d(
+        Type.Array(Name, { minItems: 1 }),
+        "Canonical http(s) origins the run may touch, without path",
+      ),
+      policyHash: d(ContentDigest, "Policy hash of the run policy being approved"),
+      reason: d(Name, "Why the caller approves this execution (1-200 characters)"),
+      actorId: Type.Optional(d(Name, "Principal id that will execute; defaults to the caller")),
+      expiresAt: Type.Optional(
+        d(Timestamp, "Expiry, at most 30 minutes ahead; default 30 minutes"),
+      ),
+    }),
+    output: "Approval",
+  },
   testmaster_open_report: {
     milestone: "M1",
     input: Obj({ runId: runId() }),
     output: "ReportLocation",
+  },
+  testmaster_add_source: {
+    milestone: "M2",
+    input: Obj({
+      projectId: d(id("prj"), "Project id"),
+      path: d(
+        Name,
+        "Source file inside an approved root: PRD (markdown, text, JSON, PDF), OpenAPI, GraphQL or Postman",
+      ),
+      role: d(
+        Name,
+        "What the source is, e.g. prd or api; role api-spec reads as OpenAPI unless format says otherwise",
+      ),
+      name: Type.Optional(d(Name, "Display name; defaults to the file name")),
+      format: Type.Optional(
+        d(
+          Enum(["markdown", "text", "prd-json", "pdf", "openapi", "graphql", "postman"]),
+          "Parser to use; absent: chosen from the extension and role",
+        ),
+      ),
+      sourceId: Type.Optional(
+        d(id("src"), "Existing source to add a new revision to; needs expectedVersion"),
+      ),
+      expectedVersion: Type.Optional(
+        d(Version, "Current version of sourceId, for optimistic concurrency"),
+      ),
+    }),
+    output: "McpSourceReceipt",
+  },
+  testmaster_review_requirements: {
+    milestone: "M4",
+    input: Obj({
+      projectId: d(id("prj"), "Project id"),
+      expectedVersion: d(
+        Version,
+        "Snapshot version these decisions are based on: version of testmaster_normalize_requirements or testmaster://requirements/{projectId}. Each item then applies at its requirement's current version",
+      ),
+      update: Type.Optional(
+        d(
+          Type.Array(
+            Obj({
+              requirementId: d(id("req"), "Requirement to edit"),
+              text: Type.Optional(d(Description, "New requirement text")),
+              acceptanceCriteria: Type.Optional(
+                d(Type.Array(Description), "New acceptance criteria; replaces the list"),
+              ),
+            }),
+            { minItems: 1, maxItems: 100 },
+          ),
+          "Edits applied first; an edit clears the requirement's approval",
+        ),
+      ),
+      adjudicate: Type.Optional(
+        d(
+          Type.Array(
+            Obj({
+              conflictId: d(Name, "Conflict id from testmaster_normalize_requirements"),
+              selectedRequirementId: d(id("req"), "Requirement the conflict resolves to"),
+              reason: d(Type.String({ minLength: 1, maxLength: 2000 }), "Why this one"),
+            }),
+            { minItems: 1, maxItems: 100 },
+          ),
+          "Conflict decisions applied after the edits",
+        ),
+      ),
+      approve: Type.Optional(
+        d(
+          Type.Array(id("req"), { minItems: 1, maxItems: 100 }),
+          "Requirements to approve, applied last; a requirement in an unresolved conflict is refused",
+        ),
+      ),
+    }),
+    output: "McpRequirementsReview",
+  },
+  testmaster_set_secret: {
+    milestone: "M1",
+    input: Obj({
+      name: d(Name, "Secret name: letters, digits, dot, underscore, hyphen; unique"),
+      valueFile: Type.Optional(
+        d(
+          Name,
+          "File inside an approved root that holds the value; one trailing newline is removed. Give exactly one of valueFile or fromEnv",
+        ),
+      ),
+      fromEnv: Type.Optional(
+        d(
+          Name,
+          "Name of an environment variable of the TestMaster process that holds the value. Give exactly one of valueFile or fromEnv",
+        ),
+      ),
+      allowedOrigins: d(
+        Type.Array(Type.String({ minLength: 1, maxLength: 2048 }), { minItems: 1, maxItems: 32 }),
+        "Exact origins (scheme://host[:port]) the secret may be sent to; any other destination is refused",
+      ),
+    }),
+    output: "SecretReference",
+  },
+  testmaster_save_auth_profile: {
+    milestone: "M4",
+    input: Obj({
+      projectId: Type.Optional(d(id("prj"), "Project id; required to create a profile")),
+      profileId: Type.Optional(
+        d(id("aup"), "Profile to update; absent: create. Needs expectedVersion"),
+      ),
+      expectedVersion: Type.Optional(
+        d(Version, "Current version of profileId, for optimistic concurrency"),
+      ),
+      name: Type.Optional(d(Name, "Profile name, unique in the project; required to create")),
+      kind: Type.Optional(
+        d(
+          authContracts.AuthProfileInput.properties.kind,
+          "form, basic, bearer, api-key, cookie, oauth, oidc or manual; required to create, never changes",
+        ),
+      ),
+      originBindings: Type.Optional(
+        d(
+          authContracts.AuthProfileInput.properties.originBindings,
+          "Origins the profile may authenticate against; every environment that uses it must target one of them",
+        ),
+      ),
+      secrets: Type.Optional(
+        d(
+          authContracts.AuthProfileInput.properties.secrets,
+          "Role to secret id (testmaster_set_secret): form username, password, totpSeed; basic username, password; bearer token; api-key key; cookie cookie",
+        ),
+      ),
+      config: Type.Optional(
+        d(
+          Json,
+          "Kind-specific configuration (contract AuthFormConfig, AuthBasicConfig, AuthStaticConfig, AuthOAuthConfig or AuthManualConfig); {} for basic, bearer, api-key and cookie",
+        ),
+      ),
+      refreshPolicy: Type.Optional(
+        d(
+          Type.Partial(authContracts.AuthRefreshPolicy),
+          "Session refresh limits; absent fields keep their defaults",
+        ),
+      ),
+    }),
+    output: "AuthProfileView",
+  },
+  testmaster_update_environment: {
+    milestone: "M1",
+    input: Obj({
+      environmentId: d(id("env"), "Environment to change"),
+      expectedVersion: d(Version, "Current version of the environment, for optimistic concurrency"),
+      name: Type.Optional(d(Name, "New name, unique in the project")),
+      baseUrl: Type.Optional(
+        d(Type.String({ format: "uri", maxLength: 2048 }), "New target URL of the application"),
+      ),
+      networkProfile: Type.Optional(
+        d(Enum(["public", "private", "local-loopback"]), "Network profile of the target"),
+      ),
+      locale: Type.Optional(d(Name, "Browser locale, e.g. en-US")),
+      timezone: Type.Optional(d(Name, "Browser timezone, e.g. UTC")),
+      production: Type.Optional(d(Type.Boolean(), "Mark the environment as production")),
+      additionalOrigins: Type.Optional(
+        d(
+          Type.Array(Type.String({ format: "uri" }), { maxItems: 32 }),
+          "Exact extra origins page subrequests may reach; replaces the list, [] clears it. They never receive credentials",
+        ),
+      ),
+      authRefs: Type.Optional(
+        d(
+          Type.Array(id("aup"), { maxItems: 16 }),
+          "Auth profiles bound to the environment; replaces the list. Each must be bound to the target origin",
+        ),
+      ),
+    }),
+    output: "McpEnvironmentUpdate",
   },
 } as const;
 export const mcpToolCatalog = Object.entries(mcpTools).map(([name, tool]) => ({

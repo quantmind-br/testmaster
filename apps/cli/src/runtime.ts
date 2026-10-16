@@ -93,12 +93,38 @@ export function unavailable(capability: string): never {
     milestone: capabilityRegistry[capability]?.milestone ?? "M2",
   });
 }
-export const dryReceipt = {
-  dryRun: true,
-  validated: true,
-  operations: [],
-  unresolvedPreconditions: [],
-};
+/** What a command's dry run would do; `prepare` handlers return it in `data`, or `null` for nothing. */
+export interface DryRunReport {
+  operations: Array<{ operation: string } & Record<string, unknown>>;
+  /** Conditions only the real run can check, because they depend on stored state or the network. */
+  unresolvedPreconditions: string[];
+}
+export const dryRunReport = (
+  operations: DryRunReport["operations"],
+  unresolvedPreconditions: string[] = [],
+): Result => ({ data: { operations, unresolvedPreconditions } satisfies DryRunReport });
+export interface DryRunReceipt extends DryRunReport {
+  dryRun: true;
+  validated: boolean;
+}
+function dryRunReceipt(validated: boolean, report: DryRunReport | null): DryRunReceipt {
+  return {
+    dryRun: true,
+    validated,
+    operations: report?.operations ?? [],
+    unresolvedPreconditions: report?.unresolvedPreconditions ?? [],
+  };
+}
+function isDryRunReport(value: unknown): value is DryRunReport {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "operations" in value &&
+    Array.isArray(value.operations) &&
+    "unresolvedPreconditions" in value &&
+    Array.isArray(value.unresolvedPreconditions)
+  );
+}
 export interface Result {
   data: unknown;
   exit?: number;
@@ -121,6 +147,7 @@ export class Runtime {
   options: Options = {};
   emitted = false;
   private receipted = false;
+  private refusedDryRun: DryRunReceipt | undefined;
   private failed = false;
   pending: Result | undefined;
   readonly stdout: NodeJS.WritableStream;
@@ -236,6 +263,34 @@ export class Runtime {
       throw new ContractError("INVALID_ARGUMENT", "Plan validation failed", { errors });
     return { validated: true, plans };
   }
+  /**
+   * The receipt of the global `--dry-run`. `validated: true` only after the command's own
+   * `prepare` (or the plan/directory lint) accepted the input; a command with none reports
+   * `validated: false` instead of claiming a check that never ran. A refusal sets
+   * `refusedDryRun`, which `fail` puts in the error envelope next to the error.
+   */
+  private async dryRun(command: Command, args: unknown[], prepare: Handler | undefined) {
+    try {
+      if (prepare) {
+        const { data } = await prepare(this, args, this.options);
+        return dryRunReceipt(true, isDryRunReport(data) ? data : null);
+      }
+      const plan = string(this.options, "plan");
+      const directory = string(this.options, "dir");
+      if (plan) dryRunPlan(await readFile(this.path(plan)));
+      if (directory) await this.lintDirectory(directory);
+      if (plan || directory) return dryRunReceipt(true, null);
+      return dryRunReceipt(false, {
+        operations: [],
+        unresolvedPreconditions: [
+          `"${commandPath(command)}" has no local dry-run validation: its arguments parsed, nothing else was checked and nothing was run`,
+        ],
+      });
+    } catch (error) {
+      this.refusedDryRun = dryRunReceipt(false, null);
+      throw error;
+    }
+  }
   bind(command: Command, handler: Handler, prepare?: Handler): Command {
     command.action(async (...args: unknown[]) => {
       const parsed = args.at(-1);
@@ -244,24 +299,9 @@ export class Runtime {
       this.options = parsed.optsWithGlobals();
       this.output =
         this.options.json === true ? "json" : this.options.output === "json" ? "json" : "text";
-      if (this.options.example === true) {
-        this.pending = {
-          data: {
-            example: true,
-            dryRun: false,
-            command: parsed.name(),
-            fixture: { schemaVersion: "1.0.0" },
-          },
-        };
-        return;
-      }
-      if (this.options.dryRun === true) {
-        if (prepare) await prepare(this, args, this.options);
-        else if (string(this.options, "plan"))
-          dryRunPlan(await readFile(this.path(required(this.options, "plan"))));
-        if (!prepare && string(this.options, "dir"))
-          await this.lintDirectory(required(this.options, "dir"));
-        this.pending = { data: dryReceipt };
+      // A command that declares its own `--dry-run` option implements it; the global one stays out.
+      if (this.options.dryRun === true && !parsed.options.some((o) => o.long === "--dry-run")) {
+        this.pending = { data: await this.dryRun(parsed, args, prepare) };
         return;
       }
       const path = commandPath(parsed);
@@ -312,10 +352,14 @@ export class Runtime {
     const envelope = {
       schemaVersion: "1.0.0",
       requestId: this.requestId,
+      ...(this.refusedDryRun ? { data: this.refusedDryRun } : {}),
       error: { ...data, retryable: errorRegistry[code].retryable === true, nextActions: [] },
     };
     if (this.output === "json") this.stdout.write(`${JSON.stringify(envelope)}\n`);
-    else this.stderr.write(`${code}: ${data.message}\n`);
+    else {
+      this.stderr.write(`${code}: ${data.message}\n`);
+      for (const line of diagnosticLines(data.details)) this.stderr.write(`  ${line}\n`);
+    }
     process.exitCode = actual instanceof CliFailure ? actual.exit : exitCodeForError(code);
   }
   async close(): Promise<void> {
@@ -328,6 +372,16 @@ export class Runtime {
     }
     await this.application?.close();
   }
+}
+/** One line per diagnostic in an error's `details.diagnostics`, for the text output. */
+function diagnosticLines(details: Record<string, unknown>): string[] {
+  const { diagnostics } = details;
+  if (!Array.isArray(diagnostics)) return [];
+  return diagnostics.flatMap((item: unknown) =>
+    typeof item === "object" && item !== null && "message" in item
+      ? [`${"code" in item ? `${String(item.code)}: ` : ""}${String(item.message)}`]
+      : [],
+  );
 }
 export function errorData(error: unknown): {
   code: ErrorCode;

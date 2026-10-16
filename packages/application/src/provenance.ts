@@ -529,7 +529,9 @@ export function admissionSnapshot(
   const batchId = extensions?.["testmaster:batchId"];
   const batch = typeof batchId === "string" ? requireEntity(ctx, "ProposalBatch", batchId) : null;
   const batchExtensions = batch?.extensions as Record<string, unknown> | undefined;
-  const callId = batchExtensions?.["testmaster:modelCallId"];
+  // Generated code records the call that wrote it; a generated plan's call is on its batch.
+  const callId =
+    extensions?.["testmaster:generationModelCallId"] ?? batchExtensions?.["testmaster:modelCallId"];
   const callRow =
     typeof callId === "string"
       ? ctx.database.get(

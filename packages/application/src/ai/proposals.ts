@@ -34,6 +34,12 @@ import type { ModelService } from "./model.js";
 import type { RequirementsService } from "./requirements.js";
 import { applyServerBasePath, unresolvedSchemaPointers } from "./source-documents.js";
 
+const AUTH_PROFILE_INSTRUCTION =
+  'When authProfiles are supplied, a request to an endpoint that needs a logged-in session or credential the profile manages (cookie session, bearer or API-key header) sets "auth": "profile" in the request input, so the environment\'s bound auth profile supplies the session for that request only; do not copy session secrets into headers for it. Leave auth out for public endpoints and for requests that must be unauthenticated (401/403 negatives). When no authProfiles are supplied never set auth.';
+const JSON_BODY_SET_INSTRUCTION =
+  'A secret or a value captured by an earlier request that belongs inside a JSON body (a password, an id) is bound with body.set, never nested in the body literal: {"kind":"json","value":{"user":"demo"},"set":[{"pointer":"/password","value":{"secretRef":<entry id>}}]}. A {"secretRef":...} or {"variableRef":...} object inside body.value is plain data and is sent as written.';
+const BROWSER_POSTCONDITION_INSTRUCTION =
+  "A browser plan that ends after a state-changing action (login, navigation, click, submit) must assert a positive, observable post-condition on rendered content after the last such action: a visible, textContains, textEquals, valueEquals or countEquals (above 0) assertion on a locator for content that exists only when the action worked, such as the dashboard heading after login. A URL check and the absence of earlier elements also hold on a blank page and are rejected.";
 type StoredProposal = Proposal & EntityDocument;
 function secretRefsOf(value: unknown, found: string[] = []): string[] {
   if (Array.isArray(value)) for (const item of value) secretRefsOf(item, found);
@@ -68,6 +74,7 @@ function validateIntegrationPlan(plan: ExecutablePlan): void {
         : input.body?.kind === "form"
           ? input.body.fields.flatMap(({ name, value }) => [name, value])
           : []),
+      ...(input.body?.kind === "json" ? (input.body.set ?? []).map(({ value }) => value) : []),
     ];
     if (
       requests.length >= 2 &&
@@ -172,6 +179,23 @@ export class ProposalsService {
     readonly model: ModelService,
     readonly requirements: RequirementsService,
   ) {}
+  /** Auth profiles of the project an HTTP request may use with `auth: "profile"`; none when unreadable. */
+  private offeredAuthProfiles(
+    projectId: string,
+  ): { name: string; kind: string; origins: string[] }[] {
+    try {
+      this.ctx.authorize("R", projectId);
+    } catch {
+      return [];
+    }
+    return allEntities(this.ctx, "AuthProfile")
+      .filter((profile) => profile.projectId === projectId)
+      .map((profile) => ({
+        name: String(profile.name),
+        kind: String(profile.kind),
+        origins: profile.originBindings as string[],
+      }));
+  }
   /** Secret names and ids the model may reference; none when the caller cannot read secrets. */
   private offeredSecrets(): { secretRef: string; name: string }[] {
     try {
@@ -252,6 +276,7 @@ export class ProposalsService {
         ? 'Choose each plan\'s type from the requirement: "backend" with runner "http" when it is observable through HTTP API status, headers or JSON; "frontend" with runner "playwright" when it is observable only in the browser UI.'
         : `Every plan must have type "${type}" and runner "${planRunners[type]}".${type === "integration" ? ' Build an HTTP workflow with at least two request steps: capture a value from an earlier response and use its "stepId.captureName" variableRef in a later request pathSegments, query, headers or body. Include a required deterministic business assertion referencing that later request through responseStepId. A single request, unused capture, or assertion only over the initial response is not an integration workflow.' : ""}`;
     const secrets = this.offeredSecrets();
+    const authProfiles = this.offeredAuthProfiles(input.projectId);
     const declineInstruction =
       'A requirement that is not observable through HTTP responses or the browser for this request (for example a command-line program: its exit status, stdout, stderr or a terminal UI) must NOT get an invented endpoint, page or assertion. List it instead in "unsupported" as {"requirementId": <exact requirement id>, "reason": <one short sentence>} and give it no proposal. Every supplied requirement appears exactly once, either as a proposal or in "unsupported"; "proposals" may be empty when every requirement is declined. Always answer with the JSON shape {"proposals": [...], "unsupported": [...]}; never return an "error" property or any other shape.';
     const requirementIds = requirements.map((item) => item.id);
@@ -259,6 +284,15 @@ export class ProposalsService {
     const unrunnable = (
       plan: ExecutablePlan,
     ): Pick<GenerationRefusal, "reasonCode" | "message" | "pointers"> | undefined => {
+      if (
+        !authProfiles.length &&
+        flattenSteps(plan.steps).some((step) => step.operation === "request" && step.input.auth)
+      )
+        return {
+          reasonCode: "auth_profile_not_offered",
+          message:
+            'Generated proposal sets auth "profile" but the project has no auth profile (none was offered); remove the auth field or send a supplied secret as a header',
+        };
       if (secretRefsOf(plan).some((ref) => !offeredSecrets.has(ref)))
         return {
           reasonCode: "secret_not_offered",
@@ -375,8 +409,10 @@ export class ProposalsService {
           sourceSnapshotId: snapshot.fingerprint,
           // Names and ids only: values never leave the vault.
           ...(secrets.length ? { secrets } : {}),
+          // Names and kinds only: each environment binds one of them, and the runner applies its session.
+          ...(authProfiles.length ? { authProfiles } : {}),
         },
-        instructions: `Return exactly one independent executable proposal per supplied requirement that an HTTP or browser plan can observe, not an intent. ${declineInstruction} ${typeInstruction} Copy requirement IDs exactly and cite only the evidenceId values supplied with that requirement. Use deterministic business assertions deriving expected values only from approved requirements. Include an assertion that would fail if the required feature were broken; body/html visibility and broad all-status checks are trivial and rejected, and an HTTP 200 status check alone is trivial too: add a body, schema or header assertion. HTTP paths are relative pathSegments of literal values, written as the source document's paths (a declared server path prefix such as /v1 is added to the request automatically). A jsonSchema assertion's pointer must be a non-empty JSON pointer into the cited source document that reaches the response schema, for example /paths/~1items/get/responses/200/content/application~1json/schema; an empty pointer is rejected. When a secrets entry fits the target API, send its credential as a header whose value is {"secretRef": <entry id>} (for example authorization) on every request unless the source explicitly declares the operation public (security: []): specifications often omit security, and a request without a needed credential only proves the 401. Use only secretRef ids from the supplied secrets and never invent secret values. Frontend locators use testId/role/label. Do not invent absolute destinations or secret values.`,
+        instructions: `Return exactly one independent executable proposal per supplied requirement that an HTTP or browser plan can observe, not an intent. ${declineInstruction} ${typeInstruction} Copy requirement IDs exactly and cite only the evidenceId values supplied with that requirement. Use deterministic business assertions deriving expected values only from approved requirements. Include an assertion that would fail if the required feature were broken; body/html visibility and broad all-status checks are trivial and rejected, and an HTTP 200 status check alone is trivial too: add a body, schema or header assertion. HTTP paths are relative pathSegments of literal values, written as the source document's paths (a declared server path prefix such as /v1 is added to the request automatically). A jsonSchema assertion's pointer must be a non-empty JSON pointer into the cited source document that reaches the response schema: either inside the operation, for example /paths/~1items/get/responses/200/content/application~1json/schema, or a document-level schema such as /components/schemas/Item; an empty pointer is rejected. When a secrets entry fits the target API, send its credential as a header whose value is {"secretRef": <entry id>} (for example authorization) on every request unless the source explicitly declares the operation public (security: []): specifications often omit security, and a request without a needed credential only proves the 401. Use only secretRef ids from the supplied secrets and never invent secret values. ${AUTH_PROFILE_INSTRUCTION} ${JSON_BODY_SET_INSTRUCTION} Frontend locators use testId/role/label. ${BROWSER_POSTCONDITION_INSTRUCTION} Do not invent absolute destinations or secret values.`,
         sourceRevisionIds: [...new Set(catalog.refs.map((ref) => ref.sourceRevisionId))],
         dataClasses: ["requirements"],
         ...(input.provider ? { provider: input.provider } : {}),
@@ -647,7 +683,6 @@ export class ProposalsService {
         )
           throw new ContractError("INVALID_ARGUMENT", "Unknown or already decided proposal");
         if (input.acceptIds.length) {
-          this.requireAcceptancePolicy();
           this.requireDuplicateDecisions(
             current,
             proposals,
@@ -717,7 +752,6 @@ export class ProposalsService {
                 "testmaster:acceptance": {
                   principalId: this.ctx.principalId,
                   credentialKind: this.ctx.actor.credentialKind ?? "local",
-                  channel: "interactive",
                   at: new Date().toISOString(),
                   batchVersion: current.version,
                 },
@@ -786,32 +820,6 @@ export class ProposalsService {
         return receipt;
       },
     ).receipt;
-  }
-  /**
-   * UX-019: accepting a proposal makes a test active, so it is an interactive act by an enabled human
-   * principal. Service accounts, API/worker/operator credentials and controller scopes never inherit it.
-   */
-  acceptancePolicy(): { allowed: boolean; reason: string | null } {
-    const principal = this.ctx.entities.get(
-      "Principal",
-      this.ctx.workspaceId,
-      this.ctx.principalId,
-    );
-    if (principal?.kind !== "human" || principal.disabledAt)
-      return { allowed: false, reason: "human_acceptance_required" };
-    const kind = this.ctx.actor.credentialKind;
-    if (kind !== null && kind !== "session" && kind !== "local")
-      return { allowed: false, reason: "interactive_acceptance_required" };
-    return { allowed: true, reason: null };
-  }
-  private requireAcceptancePolicy(): void {
-    const decision = this.acceptancePolicy();
-    if (!decision.allowed)
-      throw new ContractError(
-        "POLICY_DENIED",
-        "Accepting generated proposals is an interactive act by a human; automation never inherits it",
-        { reason: decision.reason },
-      );
   }
   private refinedTest(batch: StoredBatch): { testId: string; baseRevisionId: string } | null {
     const value = (batch.extensions as Record<string, unknown> | undefined)?.[
@@ -1081,7 +1089,6 @@ export class ProposalsService {
         needsDecision: similar.some((item) => item.exactDuplicate),
       };
     });
-    const policy = this.acceptancePolicy();
     let permitted = true;
     try {
       this.ctx.authorize("W", batch.projectId);
@@ -1096,10 +1103,9 @@ export class ProposalsService {
       stale,
       staleReason: typeof reason === "string" ? reason : null,
       policy: {
-        channel: "interactive",
-        canAccept: policy.allowed && permitted,
-        reason: policy.reason ?? (permitted ? null : "write_permission_required"),
-        text: "A generated proposal becomes an active test only when a human accepts it in an interactive session. CI, API tokens and service accounts cannot accept proposals.",
+        canAccept: permitted,
+        reason: permitted ? null : "write_permission_required",
+        text: "Accepting a generated proposal makes it an active test. It is an explicit decision by any caller with write permission, human or agent, recorded with the acting principal.",
       },
       items,
       blocked: items.some((item) => !item.selectable),

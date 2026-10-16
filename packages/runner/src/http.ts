@@ -8,13 +8,17 @@ import {
   type Expectation,
   headerPatternMaxLength,
   invalidCredentialHeaders,
+  JsonSetError,
+  type JsonValue,
   type PlanStep,
   parseStrictJson,
   SourceSchemaError,
+  setJsonPointer,
   validateAgainstSchema,
 } from "@testmaster/contracts";
 import { type Stopwatch, uuidV7IdGenerator } from "@testmaster/domain";
 import { type Dispatcher, ProxyAgent, request } from "undici";
+import { matchingCookies, parseStorageCookies, type StoredCookie } from "./profile-session.js";
 import { type RunnerResult, type Runtime, RuntimeError, storageStateRefusal } from "./runtime.js";
 
 /** Shared with the sandbox egress proxy (packages/sandbox/src/egress/proxy.ts). */
@@ -43,6 +47,11 @@ interface OwnedResource {
   state: ResourceState;
   handleRef?: string;
   ownerProof?: unknown;
+}
+/** Cookies and header credentials of the environment's auth profiles (`auth: "profile"`). */
+interface ProfileSession {
+  cookies: StoredCookie[];
+  headers: Record<string, string>;
 }
 /** One redirect the engine followed: the request URL, the 3xx status and the raw `Location` value. */
 export interface RedirectHop {
@@ -600,8 +609,9 @@ function sensitiveInput(runtime: Runtime, value: unknown): boolean {
   return Object.values(value).some((child) => sensitiveInput(runtime, child));
 }
 function addSensitive(runtime: Runtime, value: unknown): void {
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean")
-    runtime.secrets.add(String(value));
+  // Booleans and null are never secrets, and scrubbing them corrupts any evidence that holds
+  // `true`, `false` or `null`. A declared-sensitive capture still scrubs its string and number leaves.
+  if (typeof value === "string" || typeof value === "number") runtime.secrets.add(String(value));
   else if (value && typeof value === "object") {
     runtime.secrets.add(JSON.stringify(value));
     for (const child of Object.values(value)) addSensitive(runtime, child);
@@ -611,6 +621,7 @@ function addSensitive(runtime: Runtime, value: unknown): void {
 export class HttpEngine {
   readonly responses = new Map<string, HttpResponse>();
   private readonly resources: OwnedResource[] = [];
+  private profile: Promise<ProfileSession> | undefined;
   private dispatcher: Dispatcher | undefined;
   private readonly ownsDispatcher: boolean;
   private readonly attemptTime: Stopwatch;
@@ -668,6 +679,101 @@ export class HttpEngine {
       `HTTP operation ${step.operation} is unsupported`,
     );
   }
+  /** The JSON document of a body: `value` resolved, then every `set` entry placed by pointer. */
+  private async jsonDocument(
+    body: Extract<NonNullable<RequestInput["body"]>, { kind: "json" }>,
+  ): Promise<JsonValue> {
+    // Resolved values are plan literals, JSON captures or secret strings: JSON by construction.
+    let document = (await this.runtime.resolve(body.value)) as JsonValue;
+    for (const entry of body.set ?? []) {
+      const value = (await this.runtime.resolve(entry.value)) as JsonValue;
+      try {
+        document = setJsonPointer(document, entry.pointer, value);
+      } catch (error) {
+        if (error instanceof JsonSetError) deny(`Invalid JSON body set entry: ${error.message}`);
+        throw error;
+      }
+    }
+    return document;
+  }
+  /** The auth profile session the host prepared: stored cookies and header credentials. */
+  private profileSession(): Promise<ProfileSession> {
+    this.profile ??= this.loadProfileSession();
+    return this.profile;
+  }
+  private async loadProfileSession(): Promise<ProfileSession> {
+    const runtime = this.runtime;
+    const auth = runtime.input.auth;
+    const cookies = auth?.storageState
+      ? parseStorageCookies(
+          String(await runtime.resolve({ secretRef: auth.storageState.secretRef })),
+        )
+      : [];
+    const headers: Record<string, string> = {};
+    for (const credential of auth?.credentials ?? []) {
+      const name = credential.header.toLowerCase();
+      if (
+        !/^[!#$%&'*+.^_`|~0-9a-z-]+$/u.test(name) ||
+        FORBIDDEN_HEADER[name] ||
+        name.startsWith("proxy-") ||
+        name.startsWith("x-forwarded-") ||
+        Object.hasOwn(headers, name)
+      )
+        deny("Forbidden or duplicate auth profile header");
+      const secret = scalar(await runtime.resolve({ secretRef: credential.secretRef }));
+      const value = `${credential.prefix ?? ""}${secret}`;
+      // biome-ignore lint/suspicious/noControlCharactersInRegex: Header values reject NUL and line breaks.
+      if (/[\r\n\u0000]/u.test(value)) deny("Invalid auth profile header value");
+      headers[name] = value;
+    }
+    if (cookies.length === 0 && Object.keys(headers).length === 0)
+      throw new RuntimeError(
+        "missing_secret",
+        "The environment has no usable auth profile session",
+        "blocked",
+      );
+    return { cookies, headers };
+  }
+  /**
+   * Adds the profile session to the headers of one hop of a `auth: "profile"` request. The first
+   * hop must target an environment origin and must have a credential to send, otherwise the run is
+   * blocked before anything is sent; a redirect hop only receives it on a target origin.
+   */
+  private async withProfileSession(
+    headers: Record<string, string>,
+    url: URL,
+    first: boolean,
+  ): Promise<Record<string, string> | undefined> {
+    const runtime = this.runtime;
+    const additional = (runtime.input.networkPolicy.additionalOrigins ?? []).map(
+      (origin) => canonicalUrl(origin).origin,
+    );
+    const target = runtime.input.networkPolicy.allowedOrigins
+      .map((origin) => canonicalUrl(origin).origin)
+      .filter((origin) => !additional.includes(origin));
+    if (!target.includes(url.origin)) {
+      if (first) deny("The auth profile session can only be sent to the environment's origins");
+      return undefined;
+    }
+    const session = await this.profileSession();
+    const applied = { ...session.headers };
+    const cookies = matchingCookies(session.cookies, url, Date.now() / 1000);
+    for (const cookie of cookies) runtime.secrets.add(cookie.value);
+    for (const value of Object.values(session.headers)) runtime.secrets.add(value);
+    const cookie = cookies.map((entry) => `${entry.name}=${entry.value}`).join("; ");
+    if (cookie) applied.cookie = applied.cookie ? `${applied.cookie}; ${cookie}` : cookie;
+    if (Object.keys(applied).length === 0) {
+      if (!first) return undefined;
+      throw new RuntimeError(
+        "missing_secret",
+        "The auth profile session has no credential for this request",
+        "blocked",
+      );
+    }
+    if (Object.keys(applied).some((name) => Object.hasOwn(headers, name)))
+      deny("A request header conflicts with the auth profile credential");
+    return { ...headers, ...applied };
+  }
   private async prepare(
     input: RequestInput,
   ): Promise<{ url: URL; headers: Record<string, string>; body: string | Uint8Array | undefined }> {
@@ -723,7 +829,7 @@ export class HttpEngine {
     if (input.body) {
       switch (input.body.kind) {
         case "json":
-          body = JSON.stringify(await runtime.resolve(input.body.value));
+          body = JSON.stringify(await this.jsonDocument(input.body));
           contentType = "application/json";
           break;
         case "text":
@@ -819,6 +925,7 @@ export class HttpEngine {
       let method: RequestInput["method"] = input.method;
       const hops: RedirectHop[] = [];
       const cookieNames: string[] = [];
+      let profileSent = false;
       const fakeCredentials = new Set(
         Object.entries(input.headers ?? {}).flatMap(([name, value]) =>
           isInvalidCredential(value) ? [name.toLowerCase()] : [],
@@ -827,10 +934,18 @@ export class HttpEngine {
       for (let redirects = 0; ; redirects++) {
         url = authorizeUrl(runtime, url.href);
         deadline.throwIfAborted();
+        let outgoing = headers;
+        if (input.auth === "profile") {
+          const withSession = await this.withProfileSession(headers, url, redirects === 0);
+          if (withSession) {
+            outgoing = withSession;
+            profileSent = true;
+          }
+        }
         sent = true;
         const incoming = await request(url.href, {
           method,
-          headers: { ...headers, [EGRESS_DIAGNOSTICS_HEADER]: "1" },
+          headers: { ...outgoing, [EGRESS_DIAGNOSTICS_HEADER]: "1" },
           ...(body === undefined ? {} : { body }),
           dispatcher,
           signal: deadline,
@@ -905,11 +1020,13 @@ export class HttpEngine {
           url: url.href,
           redirects: hops,
           cookieNames,
-          authenticated: Object.keys(headers).some(
-            (name) =>
-              (CREDENTIAL_HEADER[name] && !fakeCredentials.has(name)) ||
-              sensitiveInput(runtime, input.headers?.[name]),
-          ),
+          authenticated:
+            profileSent ||
+            Object.keys(headers).some(
+              (name) =>
+                (CREDENTIAL_HEADER[name] && !fakeCredentials.has(name)) ||
+                sensitiveInput(runtime, input.headers?.[name]),
+            ),
         };
         if (resource) {
           if (
@@ -976,6 +1093,7 @@ export class HttpEngine {
           pathSegments: input.pathSegments,
           query: input.query,
           headers: input.headers,
+          set: input.body?.kind === "json" ? input.body.set : undefined,
         });
         const requestBytes =
           typeof prepared.body === "string"
@@ -1111,7 +1229,7 @@ export class HttpEngine {
         name: capture.name,
         value,
         valueType: capture.valueType,
-        sensitive: capture.sensitive || sensitiveInput(this.runtime, input),
+        sensitive: capture.sensitive,
       });
     }
     for (const entry of pending) {

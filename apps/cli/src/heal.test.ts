@@ -170,3 +170,43 @@ it("heal approve without --wait leaves a worker-owned verification run to the li
   });
   expect(data.proposal.status).toBe("approved");
 });
+
+it("heal propose prints an abstention as a normal result with exit code 0", async () => {
+  const abstention = {
+    abstained: true,
+    failedRunId: "run_00000000-0000-4000-8000-000000000003",
+    reasonCode: "model_abstained",
+    reason: "The model found no safe test-only repair.",
+    jobId: "job_00000000-0000-4000-8000-000000000004",
+    modelCallId: "mdl_00000000-0000-4000-8000-000000000005",
+    nextAction: "Repair the test by hand.",
+  };
+  const propose = async (argv: string[]) => {
+    let stdout = "";
+    const output = new Writable({
+      write(chunk, _encoding, done) {
+        stdout += String(chunk);
+        done();
+      },
+    });
+    const runtime = new Runtime(output, output);
+    runtime.app = async () =>
+      ({ healing: { propose: async () => abstention } }) as unknown as Application;
+    process.exitCode = undefined;
+    await runCli([...argv, "heal", "propose", abstention.failedRunId], runtime);
+    return { stdout, exitCode: process.exitCode };
+  };
+  const exit = process.exitCode;
+  try {
+    const text = await propose([]);
+    expect(text.exitCode ?? 0).toBe(0);
+    expect(text.stdout).toContain("Healing abstained (model_abstained): The model found no safe");
+    expect(text.stdout).toContain(`Model call: ${abstention.modelCallId}`);
+    expect(text.stdout).toContain("Next: Repair the test by hand.");
+    const json = await propose(["--output", "json"]);
+    expect(json.exitCode ?? 0).toBe(0);
+    expect(JSON.parse(json.stdout).data).toEqual(abstention);
+  } finally {
+    process.exitCode = exit;
+  }
+});

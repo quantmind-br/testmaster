@@ -38,6 +38,30 @@ export function auditPromotion(
     timestamp: new Date().toISOString(),
   });
 }
+/**
+ * Binding an auth profile to an environment needs no approval (the secret's allowed origins
+ * already bound where a credential may go), so the change itself is recorded: the actor, the
+ * environment, and hashes of the bound profile set before and after. Unchanged sets write nothing.
+ */
+export function auditAuthBinding(
+  ctx: ServiceContext,
+  environmentId: string,
+  before: readonly string[],
+  after: readonly string[],
+): void {
+  const sorted = (ids: readonly string[]) => [...ids].sort();
+  if (semanticHash(sorted(before)) === semanticHash(sorted(after))) return;
+  new AuditRepository(ctx.database).append({
+    workspaceId: ctx.workspaceId,
+    actor: ctx.principalId,
+    action: "environment.auth_binding",
+    resourceId: environmentId,
+    requestId: ctx.correlationId ?? crypto.randomUUID(),
+    beforeHash: semanticHash({ environmentId, authProfileRefs: sorted(before) }),
+    afterHash: semanticHash({ environmentId, authProfileRefs: sorted(after) }),
+    timestamp: new Date().toISOString(),
+  });
+}
 export function authoringTransaction<T>(ctx: ServiceContext, action: () => T): T {
   return ctx.database.inTransaction ? action() : ctx.database.withTx(action);
 }
@@ -455,6 +479,7 @@ export class EnvironmentsService {
       }) as Stored<Environment>;
       this.ctx.entities.insert("Environment", value);
       this.ctx.entities.insert("EnvironmentRevision", revision, { environmentId: value.id });
+      auditAuthBinding(this.ctx, value.id, [], revision.authProfileRefs);
       return value;
     });
   }
@@ -601,6 +626,7 @@ export class EnvironmentsService {
         production: patch.production ?? previous.production,
       }) as Stored<EnvironmentRevision>;
       this.ctx.entities.insert("EnvironmentRevision", revision, { environmentId: id });
+      auditAuthBinding(this.ctx, id, previous.authProfileRefs, refs);
       const next = {
         ...current,
         name: patch.name ?? current.name,
@@ -778,14 +804,7 @@ export function promoteRevisionCas(
         "PRECONDITION_FAILED",
         "Deferred locator identity requires reconciliation proof before promotion",
       );
-    const cell = failed.matrixCell as Record<string, unknown>;
-    if (proposal.approvalMode === "manual")
-      ctx.authorizeNamed(
-        "approve",
-        "HealingProposal",
-        current.projectId,
-        String(cell.environmentId),
-      );
+    if (proposal.approvalMode === "manual") ctx.authorize("W", current.projectId);
     else ctx.authorize("X", current.projectId);
   } else ctx.authorize("W", current.projectId);
   expected(current, expectedVersion);

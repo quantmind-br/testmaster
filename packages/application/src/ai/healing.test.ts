@@ -17,7 +17,13 @@ import { promoteRevisionCas, scaffoldPlan } from "../authoring.js";
 import { entity } from "../context.js";
 import { issueLocalToken } from "../local-auth.js";
 import type { AnalysisService } from "./analysis.js";
-import { HealingService, modelCandidates, reviewCandidates } from "./healing.js";
+import {
+  type HealingOutcome,
+  HealingService,
+  isHealingAbstention,
+  modelCandidates,
+  reviewCandidates,
+} from "./healing.js";
 import { applyHealingPatch, healingReplacements } from "./healing-patch.js";
 import { type ModelInput, ModelService } from "./model.js";
 
@@ -27,6 +33,24 @@ afterEach(async () => {
   for (const app of apps.splice(0)) app.close();
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
+/** The proposal of a propose call that must not abstain. */
+async function proposed(request: Promise<HealingOutcome>) {
+  const outcome = await request;
+  if (isHealingAbstention(outcome)) throw new Error(`Healing abstained: ${outcome.reasonCode}`);
+  return outcome;
+}
+/** Analyzes a Run and marks its stored analysis as one that allows a healing proposal. */
+async function allowHealing(analysis: AnalysisService, runId: string) {
+  await analysis.analyze(runId, {});
+  const stored = analysis.get(runId)!;
+  vi.spyOn(analysis, "get").mockReturnValue({
+    ...stored,
+    diagnosis: stored.diagnosis && {
+      ...stored.diagnosis,
+      healing: { advice: "proposal_possible", reason: "A unique equivalent control exists." },
+    },
+  });
+}
 function browser(): ExecutablePlan {
   const plan = scaffoldPlan("frontend");
   plan.steps = [
@@ -275,13 +299,13 @@ async function fixture(
   if (withProposal) app.context.entities.insert("HealingProposal", proposal);
   return { app, test, failed, candidate, verification, proposal };
 }
-it("healing approval requires named authority and ordinary promotion cannot bypass verification", async () => {
+it("healing approval needs write permission and ordinary promotion cannot bypass verification", async () => {
   const f = await fixture("failed");
   const denied = new HealingService(
     {
       ...f.app.context,
-      authorizeNamed() {
-        throw new ContractError("FORBIDDEN", "Denied");
+      authorize(scope: string) {
+        if (scope === "W") throw new ContractError("FORBIDDEN", "Denied");
       },
     },
     f.app.model,
@@ -433,9 +457,14 @@ it("evidence-backed model abstention completes once without a candidate, proposa
   });
   const revisions = f.app.revisions.list(f.test.id);
   const runs = f.app.runs.list();
-  await expect(f.service.propose(f.failed.id)).rejects.toMatchObject({
-    code: "PRECONDITION_FAILED",
-    details: { reason: "model_abstained", modelCallId: "mdl_00000000-0000-4000-8000-000000000099" },
+  await expect(f.service.propose(f.failed.id)).resolves.toEqual({
+    abstained: true,
+    failedRunId: f.failed.id,
+    reasonCode: "model_abstained",
+    reason: expect.stringContaining("no safe test-only repair"),
+    jobId: expect.stringMatching(/^job_/),
+    modelCallId: "mdl_00000000-0000-4000-8000-000000000099",
+    nextAction: expect.stringContaining("settled"),
   });
   expect(f.app.revisions.list(f.test.id)).toEqual(revisions);
   expect(f.app.runs.list()).toEqual(runs);
@@ -448,8 +477,11 @@ it("evidence-backed model abstention completes once without a candidate, proposa
       abstention: "Insufficient equivalence evidence",
     },
   });
-  await expect(f.service.propose(f.failed.id)).rejects.toMatchObject({
-    details: { reason: "no_regeneration" },
+  // Asking again returns the settled abstention; it never reaches the model a second time.
+  await expect(f.service.propose(f.failed.id)).resolves.toMatchObject({
+    abstained: true,
+    reasonCode: "model_abstained",
+    modelCallId: "mdl_00000000-0000-4000-8000-000000000099",
   });
   expect(f.complete).toHaveBeenCalledTimes(1);
   expect(f.input[0]?.responseSchema).toBe("AIHealingOutput");
@@ -504,6 +536,7 @@ it("an evidence instruction cannot authorize assertion removal or leak rejected 
 });
 it("healing refuses missing provider without a candidate, persists the refusal and does not regenerate", async () => {
   const f = await fixture("failed", false);
+  await allowHealing(f.app.analysis, f.failed.id);
   const revisionCount = f.app.revisions.list(f.test.id).length;
   await expect(f.app.healing.propose(f.failed.id, {})).rejects.toMatchObject({
     code: "PRECONDITION_FAILED",
@@ -606,7 +639,7 @@ it("an explicit provider and model reach the model call, while the default stays
   );
   await expect(
     explicit.service.propose(explicit.failed.id, { provider: "other", model: "flash" }),
-  ).rejects.toMatchObject({ details: { reason: "model_abstained" } });
+  ).resolves.toMatchObject({ abstained: true, reasonCode: "model_abstained" });
   expect(explicit.input[0]).toMatchObject({ provider: "other", model: "flash" });
   // A provider alone selects that provider's first structured-output model.
   const providerOnly = await generationFixture(
@@ -617,7 +650,7 @@ it("an explicit provider and model reach the model call, while the default stays
   );
   await expect(
     providerOnly.service.propose(providerOnly.failed.id, { provider: "other" }),
-  ).rejects.toMatchObject({ details: { reason: "model_abstained" } });
+  ).resolves.toMatchObject({ abstained: true, reasonCode: "model_abstained" });
   expect(providerOnly.input[0]).toMatchObject({ provider: "other", model: "flash" });
   // Without a selection nothing is forwarded, so the model service keeps its own default.
   const implicit = await generationFixture(
@@ -626,8 +659,9 @@ it("an explicit provider and model reach the model call, while the default stays
     providersWithAlternative,
     ["controlled", "other"],
   );
-  await expect(implicit.service.propose(implicit.failed.id)).rejects.toMatchObject({
-    details: { reason: "model_abstained" },
+  await expect(implicit.service.propose(implicit.failed.id)).resolves.toMatchObject({
+    abstained: true,
+    reasonCode: "model_abstained",
   });
   expect(implicit.input[0]).not.toHaveProperty("provider");
   expect(implicit.input[0]).not.toHaveProperty("model");
@@ -658,8 +692,9 @@ it("an unusable explicit selection is refused before any job or model call and n
   expect(f.complete).not.toHaveBeenCalled();
   expect(f.jobs.forTarget(f.app.context.workspaceId, "healing", f.failed.id)).toHaveLength(0);
   // Positive control: the same run still accepts a valid selection afterwards.
-  await expect(attempt({ provider: "controlled", model: "model" })).rejects.toMatchObject({
-    details: { reason: "model_abstained" },
+  await expect(attempt({ provider: "controlled", model: "model" })).resolves.toMatchObject({
+    abstained: true,
+    reasonCode: "model_abstained",
   });
   expect(f.complete).toHaveBeenCalledTimes(1);
 });
@@ -738,8 +773,9 @@ async function envEvidenceFixture(text: string) {
     ...current,
     facts: [{ ...current.facts[0]!, text }],
   });
-  await expect(f.service.propose(f.failed.id)).rejects.toMatchObject({
-    details: { reason: "model_abstained" },
+  await expect(f.service.propose(f.failed.id)).resolves.toMatchObject({
+    abstained: true,
+    reasonCode: "model_abstained",
   });
   return f.input[0]!.data as { facts: { text: string }[] };
 }
@@ -848,6 +884,11 @@ async function deferredFixture(differentOriginal = false, password = false) {
   vi.spyOn(f.service.analysis, "get").mockReturnValue({
     ...persistedFacts,
     failureKind: "unknown",
+    // The model repairs only a Run whose analysis allows a proposal.
+    diagnosis: persistedFacts.diagnosis && {
+      ...persistedFacts.diagnosis,
+      healing: { advice: "proposal_possible", reason: "A unique equivalent control exists." },
+    },
   });
   const effective = f.app.config.effectiveConfig;
   effective.config.healing = { ...effective.config.healing, mode: "apply" };
@@ -970,7 +1011,7 @@ async function deferredFixture(differentOriginal = false, password = false) {
 }
 it("a repeated locator on an unexecuted step is deferred and promoted only after verification identity proof", async () => {
   const f = await deferredFixture();
-  const proposal = await f.service.propose(f.failed.id);
+  const proposal = await proposed(f.service.propose(f.failed.id));
   expect(proposal.approvalMode).toBe("policy");
   expect(proposal.extensions).toMatchObject({
     "testmaster:deferredLocatorProofs": [{ stepId: "later" }],
@@ -994,7 +1035,7 @@ it("a repeated locator on an unexecuted step is deferred and promoted only after
 });
 it("a named password input without an ARIA role is deferred and promoted after verification identity proof", async () => {
   const f = await deferredFixture(false, true);
-  const proposal = await f.service.propose(f.failed.id);
+  const proposal = await proposed(f.service.propose(f.failed.id));
   expect(proposal.approvalMode).toBe("policy");
   expect(proposal.extensions).toMatchObject({
     "testmaster:deferredLocatorProofs": [{ stepId: "later" }],
@@ -1005,7 +1046,7 @@ it("a named password input without an ARIA role is deferred and promoted after v
 });
 it("an unexecuted step with a different original locator remains manual", async () => {
   const f = await deferredFixture(true);
-  const proposal = await f.service.propose(f.failed.id);
+  const proposal = await proposed(f.service.propose(f.failed.id));
   expect(proposal.status).toBe("proposed");
   expect(proposal.approvalMode).toBeNull();
   expect(f.app.runs.admitHealingVerification).not.toHaveBeenCalled();
@@ -1024,7 +1065,7 @@ it("a failure before any model call leaves the Run healable and the retry reache
   expect(settled).toMatchObject({ state: "completed", result: { reason: "model_failure" } });
   expect(settled?.progress.paidCallStarted).toBeUndefined();
   // The retry reopens the same job, reaches the model once and creates the proposal.
-  const proposal = await f.service.propose(f.failed.id);
+  const proposal = await proposed(f.service.propose(f.failed.id));
   expect(proposal.status).toBe("proposed");
   expect(f.complete).toHaveBeenCalledTimes(1);
   const jobs = f.jobs.forTarget(f.app.context.workspaceId, "healing", f.failed.id);
@@ -1062,7 +1103,7 @@ it("a model refusal raised before anything is sent, such as a missing API key, l
   const [settled] = f.jobs.forTarget(f.app.context.workspaceId, "healing", f.failed.id);
   expect(settled?.progress.paidCallStarted).toBe(false);
   // With the key in place the same job reopens and reaches the model.
-  const proposal = await f.service.propose(f.failed.id);
+  const proposal = await proposed(f.service.propose(f.failed.id));
   expect(proposal.status).toBe("proposed");
   expect(f.complete).toHaveBeenCalledTimes(2);
   const jobs = f.jobs.forTarget(f.app.context.workspaceId, "healing", f.failed.id);
@@ -1094,8 +1135,9 @@ it("a healing request that is still running is reported as running and is not re
 });
 it("a settled healing request whose paid call started can never be reopened", async () => {
   const f = await generationFixture(abstention);
-  await expect(f.service.propose(f.failed.id)).rejects.toMatchObject({
-    details: { reason: "model_abstained" },
+  await expect(f.service.propose(f.failed.id)).resolves.toMatchObject({
+    abstained: true,
+    reasonCode: "model_abstained",
   });
   const [job] = f.jobs.forTarget(f.app.context.workspaceId, "healing", f.failed.id);
   expect(job?.progress.paidCallStarted).toBe(true);
@@ -1103,6 +1145,68 @@ it("a settled healing request whose paid call started can never be reopened", as
     f.jobs.reopenUnpaid(f.app.context.workspaceId, job!.jobId, new Date().toISOString()),
   ).toThrow("Paid call outcome must stay settled");
   expect(f.jobs.get(f.app.context.workspaceId, job!.jobId)?.state).toBe("completed");
+});
+function withAdvice(
+  service: HealingService,
+  runId: string,
+  advice: "not_indicated" | "proposal_possible",
+) {
+  const current = service.analysis.get(runId)!;
+  vi.spyOn(service.analysis, "get").mockReturnValue({
+    ...current,
+    diagnosis: {
+      healing: { advice, reason: "No evidenced test-only repair is indicated." },
+      nextSteps: [{ text: "Inspect the creation response at step create", source: "rules" }],
+    },
+  } as unknown as typeof current);
+}
+it("healing is refused before any job or model call when the stored analysis says it is not indicated", async () => {
+  const f = await generationFixture(abstention);
+  withAdvice(f.service, f.failed.id, "not_indicated");
+  await expect(f.service.propose(f.failed.id)).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+    message: expect.stringContaining("No evidenced test-only repair is indicated."),
+    details: {
+      reasonCode: "healing_not_indicated",
+      analysisId: "ana_00000000-0000-4000-8000-000000000099",
+      advice: "not_indicated",
+      analysisReason: "No evidenced test-only repair is indicated.",
+      nextStep: "Inspect the creation response at step create",
+    },
+  });
+  expect(f.complete).not.toHaveBeenCalled();
+  expect(f.jobs.forTarget(f.app.context.workspaceId, "healing", f.failed.id)).toHaveLength(0);
+  expect(f.app.database.all("SELECT id FROM healing_proposals")).toHaveLength(0);
+  // The attempt was not spent: once the analysis allows a proposal, the same Run reaches the model.
+  withAdvice(f.service, f.failed.id, "proposal_possible");
+  await expect(f.service.propose(f.failed.id)).resolves.toMatchObject({
+    abstained: true,
+    reasonCode: "model_abstained",
+  });
+  expect(f.complete).toHaveBeenCalledTimes(1);
+});
+it("a failure the rules classify as a product defect abstains without a model call and keeps the attempt", async () => {
+  const f = await generationFixture(abstention);
+  const current = f.service.analysis.get(f.failed.id)!;
+  vi.spyOn(f.service.analysis, "get").mockReturnValue({ ...current, failureKind: "product_bug" });
+  await expect(f.service.propose(f.failed.id)).resolves.toMatchObject({
+    abstained: true,
+    failedRunId: f.failed.id,
+    reasonCode: "semantic_failure",
+    modelCallId: null,
+  });
+  expect(f.complete).not.toHaveBeenCalled();
+  expect(f.jobs.forTarget(f.app.context.workspaceId, "healing", f.failed.id)[0]).toMatchObject({
+    state: "completed",
+    result: { refused: true, reason: "semantic_failure" },
+  });
+  // No paid call started, so the Run is still healable once the analysis changes.
+  vi.spyOn(f.service.analysis, "get").mockReturnValue(current);
+  await expect(f.service.propose(f.failed.id)).resolves.toMatchObject({
+    abstained: true,
+    reasonCode: "model_abstained",
+  });
+  expect(f.complete).toHaveBeenCalledTimes(1);
 });
 it.each(["executed later", "different replacement", "renamed anchor", "ambiguous baseline"])(
   "deferred admission refuses %s",
@@ -1139,7 +1243,7 @@ it.each(["executed later", "different replacement", "renamed anchor", "ambiguous
       const { evidenceHash: _hash, ...payload } = later;
       later.evidenceHash = semanticHash(payload);
     }
-    const proposal = await f.service.propose(f.failed.id);
+    const proposal = await proposed(f.service.propose(f.failed.id));
     expect(proposal.status).toBe("proposed");
     expect(proposal.approvalMode).toBeNull();
     expect(f.app.runs.admitHealingVerification).not.toHaveBeenCalled();
@@ -1153,7 +1257,7 @@ it.each([
   "ambiguous match",
 ])("deferred %s cannot promote a passing verification", async (condition) => {
   const f = await deferredFixture();
-  const proposal = await f.service.propose(f.failed.id);
+  const proposal = await proposed(f.service.propose(f.failed.id));
   expect(proposal.approvalMode).toBe("policy");
   if (condition === "different identity")
     f.records.set(f.verification.id, [
@@ -1193,7 +1297,7 @@ it("long reviewer rejection reasons are stored as explicitly truncated limitatio
 
 it("healing review reports frozen changes and recorded manual policy reasons without mutation", async () => {
   const f = await deferredFixture(true);
-  const proposal = await f.service.propose(f.failed.id);
+  const proposal = await proposed(f.service.propose(f.failed.id));
   const before = semanticHash({
     proposal,
     failed: f.app.runs.get(f.failed.id),
@@ -1316,7 +1420,7 @@ it("healing review recalculates protected assertion hashes rather than trusting 
 
 it("healing review approval version remains mandatory and rejects a divergent version", async () => {
   const f = await deferredFixture(true);
-  const proposal = await f.service.propose(f.failed.id);
+  const proposal = await proposed(f.service.propose(f.failed.id));
   const review = await f.service.review(proposal.id);
   await expect(
     f.service.approve(proposal.id, review.approval.expectedVersion + 1),
@@ -1355,7 +1459,7 @@ it("healing review denies another project before exposing immutable plan or evid
 
 it("healing review shows policy-applied verification without rewriting historical failure", async () => {
   const f = await deferredFixture();
-  const proposal = await f.service.propose(f.failed.id);
+  const proposal = await proposed(f.service.propose(f.failed.id));
   f.records.set(f.verification.id, [locatorRecord("later", f.replacement, true)]);
   const verified = await f.service.reconcile(f.verification.id);
   const review = await f.service.review(proposal.id);
@@ -1379,7 +1483,7 @@ it("healing review exposes only recorded label and form attributes and never inv
   candidate.fingerprint = locatorFingerprint(candidate);
   const { evidenceHash: _hash, ...payload } = record;
   record.evidenceHash = semanticHash(payload);
-  const proposal = await f.service.propose(f.failed.id);
+  const proposal = await proposed(f.service.propose(f.failed.id));
   const review = await f.service.review(proposal.id);
   expect(review.identity[0]!.candidates[0]).toMatchObject({
     label: "Recorded submit label",
@@ -1392,7 +1496,7 @@ it("healing review exposes only recorded label and form attributes and never inv
 
 it("healing review shows recorded truncated candidates without claiming locator equivalence", async () => {
   const f = await deferredFixture(true);
-  const proposal = await f.service.propose(f.failed.id);
+  const proposal = await proposed(f.service.propose(f.failed.id));
   const record = f.records.get(f.failed.id)![0]!;
   record.truncated = true;
   const { evidenceHash: _hash, ...payload } = record;
@@ -1408,7 +1512,7 @@ it("healing review shows recorded truncated candidates without claiming locator 
 
 it("healing review propagates unexpected locator read failures instead of masking defects", async () => {
   const f = await deferredFixture(true);
-  const proposal = await f.service.propose(f.failed.id);
+  const proposal = await proposed(f.service.propose(f.failed.id));
   vi.spyOn(f.service.artifacts, "get").mockRejectedValue(
     new Error("Unexpected locator reader defect"),
   );
@@ -1442,7 +1546,7 @@ it("model locator candidates keep the matched and interactive elements ahead of 
 
 it("healing review lists only locator-targetable candidates and keeps form control identity", async () => {
   const f = await deferredFixture(true);
-  const proposal = await f.service.propose(f.failed.id);
+  const proposal = await proposed(f.service.propose(f.failed.id));
   const record = f.records.get(f.failed.id)![0]!;
   const target = record.candidates[0]!;
   Object.assign(target, { tag: "input", type: "text", role: "textbox", name: "Email address" });
@@ -1566,72 +1670,69 @@ it("a refused approval admission leaves the proposal untouched and names the CI 
   expect(approved.status).toBe("approved");
   expect(approved.verificationRunId).toMatch(/^run_/);
 });
-function approvalIdentity(app: Application, projectId: string, withGrant: boolean) {
-  return {
-    principalId: app.context.principalId,
-    scopes: ["R", "W", "X", "A"] as ("R" | "W" | "X" | "A")[],
-    grants: withGrant
-      ? [
-          {
-            resourceType: "HealingProposal",
-            actions: ["approve" as const],
-            projectIds: [projectId],
-            environmentIds: [],
-            expiresAt: null,
-            grantedBy: app.context.principalId,
-          },
-        ]
-      : [],
-  };
+function bearerIdentity(app: Application, scopes: ("R" | "W" | "X" | "A")[]) {
+  return { principalId: app.context.principalId, scopes, grants: [] };
 }
-it("a bearer token without the HealingProposal approve grant is refused with the grant named", async () => {
+it("a write-scoped bearer token approves healing with no approve grant", async () => {
   const f = await proposedFixture();
-  for (const scopes of [
-    ["R", "W", "X", "A"],
-    ["R", "A"],
-  ] as const) {
-    const bearer = f.app.forIdentity({
-      ...approvalIdentity(f.app, String(f.test.projectId), false),
-      scopes: [...scopes],
-    });
-    const refusal = await bearer.healing.approve(f.proposal.id, 1).catch((error: unknown) => error);
-    expect(refusal).toBeInstanceOf(ContractError);
-    expect(refusal).toMatchObject({
-      code: "FORBIDDEN",
-      details: {
-        scope: "healing:approve",
-        reasonCode: "approval_grant_required",
-        requiredGrant: { resourceType: "HealingProposal", action: "approve" },
-        nextActions: expect.any(Array),
-      },
-    });
-    expect((refusal as ContractError).message).toContain("HealingProposal:approve");
-  }
-  expect(f.app.healing.get(f.proposal.id)).toMatchObject({ status: "proposed", version: 1 });
-});
-it("a bearer token with an explicit approve grant approves, and a deny grant is not a missing grant", async () => {
-  const f = await proposedFixture();
-  const denied = f.app.forIdentity({
-    ...approvalIdentity(f.app, String(f.test.projectId), true),
-    grants: [
-      {
-        resourceType: "HealingProposal",
-        actions: ["approve"],
-        projectIds: [String(f.test.projectId)],
-        environmentIds: [],
-        expiresAt: null,
-        grantedBy: f.app.context.principalId,
-        deny: true,
-      },
-    ],
-  });
-  await expect(denied.healing.approve(f.proposal.id, 1)).rejects.toMatchObject({
-    code: "FORBIDDEN",
-    details: { reasonCode: "approval_not_permitted", requiredGrant: { action: "approve" } },
-  });
-  const bearer = f.app.forIdentity(approvalIdentity(f.app, String(f.test.projectId), true));
+  const bearer = f.app.forIdentity(bearerIdentity(f.app, ["R", "W", "X"]));
   vi.spyOn(bearer, "preflight").mockResolvedValue();
   const approved = await bearer.healing.approve(f.proposal.id, 1);
   expect(approved.status).toBe("approved");
   expect(approved.verificationRunId).toMatch(/^run_/);
+  expect(approved.extensions).toMatchObject({
+    "testmaster:approvalActorId": f.app.context.principalId,
+  });
+});
+it("a bearer token without write scope cannot approve or reject healing and the proposal stays reviewable", async () => {
+  const f = await proposedFixture();
+  for (const scopes of [["R"], ["R", "X"], ["R", "A"]] as const) {
+    const bearer = f.app.forIdentity(bearerIdentity(f.app, [...scopes]));
+    await expect(bearer.healing.approve(f.proposal.id, 1)).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      details: { scope: "W" },
+    });
+    expect(() => bearer.healing.reject(f.proposal.id, "not now")).toThrowError(
+      expect.objectContaining({ code: "FORBIDDEN", details: { scope: "W" } }),
+    );
+  }
+  expect(f.app.healing.get(f.proposal.id)).toMatchObject({ status: "proposed", version: 1 });
+});
+it("a write-scoped bearer token rejects a healing proposal with no approve grant", async () => {
+  const f = await proposedFixture();
+  const bearer = f.app.forIdentity(bearerIdentity(f.app, ["R", "W"]));
+  expect(bearer.healing.reject(f.proposal.id, "the selector is not equivalent")).toMatchObject({
+    status: "rejected",
+  });
+});
+it("a service account agent with write permission approves healing and is recorded as the reviewer", async () => {
+  const f = await proposedFixture();
+  const workspaceId = f.app.context.workspaceId;
+  const agent = f.app.members.add(workspaceId, {
+    login: "healing-agent",
+    displayName: "Healing agent",
+    role: "service_account",
+    projectRestrictions: [],
+  }).member.principalId;
+  expect(agent).toMatch(/^svc_/);
+  const caller = f.app.forIdentity({
+    principalId: agent,
+    workspaceId,
+    scopes: ["R", "W", "X"],
+    grants: [
+      {
+        resourceType: "*",
+        actions: ["read", "write", "execute"],
+        projectIds: [String(f.test.projectId)],
+        environmentIds: [],
+        expiresAt: null,
+        grantedBy: f.app.context.principalId,
+      },
+    ],
+    credential: { kind: "api", id: "credential-healing-agent" },
+  });
+  vi.spyOn(caller, "preflight").mockResolvedValue();
+  const approved = await caller.healing.approve(f.proposal.id, 1);
+  expect(approved).toMatchObject({ status: "approved", approvalMode: "manual", reviewerId: agent });
+  expect(f.app.healing.get(f.proposal.id).reviewerId).toBe(agent);
 });

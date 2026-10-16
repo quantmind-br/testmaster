@@ -122,7 +122,7 @@ describe("authoring endpoints", () => {
     });
     expect(preview.statusCode, preview.body).toBe(200);
     const data = preview.json().data;
-    expect(data.policy).toMatchObject({ channel: "interactive", canAccept: true });
+    expect(data.policy).toMatchObject({ canAccept: true, reason: null });
     expect(data.items).toHaveLength(2);
     expect(data.items[0]).toMatchObject({
       selectable: true,

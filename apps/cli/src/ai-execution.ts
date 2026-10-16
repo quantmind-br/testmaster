@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { ContractError, type PlanStep, parseStrictJson } from "@testmaster/contracts";
-import type { Command } from "commander";
+import { type Command, Option } from "commander";
 import { integer, type Options, type Runtime, required, string } from "./runtime.js";
 export function codeFormat(options: Options): "playwright" | "pytest" {
   const format =
@@ -9,6 +9,10 @@ export function codeFormat(options: Options): "playwright" | "pytest" {
     throw new ContractError("INVALID_ARGUMENT", "Format must be playwright or pytest");
   return format;
 }
+const codeFormatOption = (description: string) =>
+  new Option("--format <format>", description)
+    .choices(["playwright", "pytest"])
+    .makeOptionMandatory();
 export async function importCode(rt: Runtime, options: Options) {
   const projectId = await rt.project(options);
   if (!projectId)
@@ -26,15 +30,18 @@ export function codeCommands(group: Command, runtime: Runtime): void {
     group
       .command("import")
       .requiredOption("--path <path>")
-      .requiredOption("--format <format>")
+      .addOption(codeFormatOption("Framework of the code being imported"))
       .option("--name <name>"),
     async (rt, _args, options) => ({ data: await importCode(rt, options) }),
   );
   runtime.bind(
     group
       .command("export <id>")
-      .requiredOption("--format <format>")
-      .option("--out <path>")
+      .addOption(codeFormatOption("Framework to generate code for"))
+      .option(
+        "--out <path>",
+        "New directory inside the workspace (the working directory, never the application data directory); it must not exist yet",
+      )
       .option("--revision <id>")
       .option("--async"),
     async (rt, args, options) => ({

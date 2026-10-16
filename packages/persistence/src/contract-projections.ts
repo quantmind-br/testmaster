@@ -172,7 +172,13 @@ export const constraintMigrations = {
       },
     },
   },
-  "0007_m3_contract_constraints": { tables: introducedAfter0004 },
+  "0007_m3_contract_constraints": {
+    tables: introducedAfter0004,
+    frozen: {
+      // `reviewerId` was `id("usr")` (a pattern SQL cannot check); it is now any principal `Name`.
+      "healing_proposals.reviewer_id": { anyOf: [{ type: "string" }, { type: "null" }] },
+    },
+  },
   "0022_terminal_runner": { tables: ["test_revisions"], prologue: terminalRunnerPrologue },
 } as const satisfies Record<string, ConstraintMigrationSpec>;
 export type ConstraintMigration = keyof typeof constraintMigrations;

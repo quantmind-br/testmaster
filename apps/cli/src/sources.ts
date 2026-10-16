@@ -1,4 +1,5 @@
 import { basename } from "node:path";
+import { refuseInvalidSource } from "@testmaster/application";
 import { ContractError } from "@testmaster/contracts";
 import { type Command, Option } from "commander";
 import { integer, type Options, type Runtime, required, string, version } from "./runtime.js";
@@ -50,10 +51,12 @@ export function sourceCommands(program: Command, runtime: Runtime): void {
       .option("--source <id>")
       .option("--expected-version <version>", "Current source version", integer),
     async (rt, args, options) => ({
-      data: await (await rt.app()).sources.add({
-        ...input(rt, args, options),
-        projectId: await rt.project(options),
-      }),
+      data: refuseInvalidSource(
+        await (await rt.app()).sources.add({
+          ...input(rt, args, options),
+          projectId: await rt.project(options),
+        }),
+      ),
     }),
     (rt, args, options) => {
       input(rt, args, options);

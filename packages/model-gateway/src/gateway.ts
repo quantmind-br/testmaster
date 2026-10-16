@@ -26,6 +26,12 @@ const maxRepairIssues = 20;
 const maxSummaryIssues = 5;
 const INVENTORY_LISTINGS = 4;
 const INVENTORY_BACKOFF_MS = 250;
+/**
+ * Output tokens reserved against the budget for a model that declares neither maxOutputTokens nor
+ * contextTokens. It only sizes the local reservation and cost estimate; nothing is refused or
+ * sent on the wire because of it.
+ */
+export const FALLBACK_OUTPUT_RESERVATION_TOKENS = 100_000;
 function inventoryBackoff(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
     const timer = setTimeout(done, ms);
@@ -203,8 +209,6 @@ export class ModelGateway {
         tools: tools ?? null,
         reasoningEffort: reasoningEffort ?? null,
         dataClasses: input.dataPolicy.dataClasses,
-        maxInputBytes: input.dataPolicy.maxInputBytes,
-        maxInputTokens: input.dataPolicy.maxInputTokens,
         redactionFingerprint: sha256(canonicalJson(secrets)),
       }),
     );
@@ -258,17 +262,15 @@ export class ModelGateway {
       const promptText = canonicalJson(payload);
       const promptBytes = Buffer.byteLength(promptText);
       // One token per UTF-8 byte is a conservative upper bound, not measured provider usage.
-      if (
-        !Number.isSafeInteger(input.dataPolicy.maxInputBytes) ||
-        !Number.isSafeInteger(input.dataPolicy.maxInputTokens) ||
-        promptBytes > input.dataPolicy.maxInputBytes ||
-        promptBytes > input.dataPolicy.maxInputTokens ||
-        (declared.capabilities.contextTokens !== undefined &&
-          promptBytes > declared.capabilities.contextTokens)
-      )
+      const contextTokens = declared.capabilities.contextTokens;
+      if (contextTokens !== undefined && promptBytes > contextTokens)
         throw new ContractError(
           "PAYLOAD_TOO_LARGE",
-          "Model context exceeds admitted byte/token limits",
+          "Prompt exceeds the model's declared context",
+          {
+            promptBytes,
+            contextTokens,
+          },
         );
       if (!inventoryChecked) {
         this.authorize(input, provider, signal);
@@ -313,7 +315,7 @@ export class ModelGateway {
         const outputReservation =
           declared.capabilities.maxOutputTokens ??
           declared.capabilities.contextTokens ??
-          input.dataPolicy.maxInputTokens;
+          FALLBACK_OUTPUT_RESERVATION_TOKENS;
         const estimate = price ? pricedCost(price, promptBytes, outputReservation) : "unknown";
         const reservation = await this.options.budgetLedger.reserve({
           workspaceId: input.workspaceId,

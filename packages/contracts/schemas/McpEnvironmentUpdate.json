@@ -1,0 +1,212 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "environment",
+    "revision"
+  ],
+  "properties": {
+    "environment": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "id",
+        "projectId",
+        "name",
+        "activeRevisionId",
+        "archivedAt"
+      ],
+      "properties": {
+        "id": {
+          "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "workspaceId": {
+          "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "createdAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "projectId": {
+          "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "activeRevisionId": {
+          "pattern": "^evr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "archivedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "pattern": "Z$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "extensions": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-z][a-z0-9-]*:[A-Za-z0-9_-]+$": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/T0"
+                  }
+                },
+                {
+                  "type": "object",
+                  "patternProperties": {
+                    "^(.*)$": {
+                      "$ref": "#/$defs/T0"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "revision": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "id",
+        "createdAt",
+        "targetOrigins",
+        "additionalOrigins",
+        "networkProfile",
+        "authProfileRefs",
+        "locale",
+        "timezone",
+        "production"
+      ],
+      "properties": {
+        "id": {
+          "pattern": "^evr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "createdAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "targetOrigins": {
+          "type": "array",
+          "items": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          }
+        },
+        "additionalOrigins": {
+          "type": "array",
+          "items": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          }
+        },
+        "networkProfile": {
+          "anyOf": [
+            {
+              "const": "public",
+              "type": "string"
+            },
+            {
+              "const": "private",
+              "type": "string"
+            },
+            {
+              "const": "local-loopback",
+              "type": "string"
+            }
+          ]
+        },
+        "authProfileRefs": {
+          "type": "array",
+          "items": {
+            "pattern": "^aup_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          }
+        },
+        "locale": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "timezone": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "production": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "T0": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$id": "urn:testmaster:McpEnvironmentUpdate",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

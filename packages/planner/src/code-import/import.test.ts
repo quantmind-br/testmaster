@@ -135,3 +135,64 @@ it("refuses invalid UTF-8, syntax and excessive bytes before parsing", async () 
   await writeFile(join(options.root, options.path), Buffer.alloc(1024 * 1024 + 1));
   await expect(importCode(options)).rejects.toMatchObject({ code: "PAYLOAD_TOO_LARGE" });
 });
+const secretPrefix = "import { test, expect } from '@playwright/test';\n";
+const secretTest = (body: string, fixture = "{ request, secrets }") =>
+  `${secretPrefix}test('login', async (${fixture}) => { ${body} });\n`;
+it("accepts secrets.get for declared names and records which ones the code reads", async () => {
+  const options = await source(
+    secretTest(
+      "const key = secrets.get('API_KEY'); const response = await request.get('/me', { headers: { authorization: key } }); expect(response.status()).toBe(200); expect(secrets.get('API_KEY')).not.toBe(secrets.get(\"OTHER\"));",
+    ),
+  );
+  const bundle = await importCode({ ...options, secrets: ["API_KEY", "OTHER", "UNUSED"] });
+  expect(bundle.secrets).toEqual(["API_KEY", "OTHER"]);
+});
+it("reports no secrets for code that never reads one", async () => {
+  const bundle = await importCode({
+    ...(await source(typescript)),
+    secrets: ["API_KEY"],
+  });
+  expect(bundle.secrets).toEqual([]);
+});
+it("refuses a secret the project did not declare for the test, without echoing the value", async () => {
+  const options = await source(
+    secretTest("expect(secrets.get('MISSING')).toBe('x'); expect(1).toBe(1);"),
+  );
+  await expect(importCode({ ...options, secrets: ["API_KEY"] })).rejects.toMatchObject({
+    code: "INVALID_ARGUMENT",
+    message: 'Secret "MISSING" is not declared for this test at line 2',
+  });
+  await expect(importCode(options)).rejects.toMatchObject({
+    message: 'Secret "MISSING" is not declared for this test at line 2',
+  });
+});
+it.each([
+  "const name = 'API_KEY'; expect(secrets.get(name)).toBe('x');",
+  "expect(secrets.get(`API_${'KEY'}`)).toBe('x');",
+  "expect(secrets.get()).toBe('x');",
+  "expect(secrets.get('API_KEY', 'x')).toBe('x');",
+  "const read = secrets.get; expect(read('API_KEY')).toBe('x');",
+  "const { get } = secrets; expect(get('API_KEY')).toBe('x');",
+  "expect(secrets['get']('API_KEY')).toBe('x');",
+  "const alias = secrets; expect(alias.get('API_KEY')).toBe('x');",
+  "expect(Object.keys(secrets)).toEqual([]);",
+])("refuses secret access other than a literal secrets.get call: %s", async (body) => {
+  const options = await source(secretTest(body));
+  await expect(importCode({ ...options, secrets: ["API_KEY"] })).rejects.toMatchObject({
+    code: "INVALID_ARGUMENT",
+  });
+});
+it("refuses a renamed secrets fixture and environment access even when a secret is declared", async () => {
+  const renamed = await source(
+    secretTest("expect(vault.get('API_KEY')).toBe('x');", "{ secrets: vault }"),
+  );
+  await expect(importCode({ ...renamed, secrets: ["API_KEY"] })).rejects.toMatchObject({
+    message: 'The "secrets" fixture cannot be renamed at line 2',
+  });
+  const environment = await source(
+    secretTest("expect(process.env.API_KEY).toBe(secrets.get('API_KEY'));"),
+  );
+  await expect(importCode({ ...environment, secrets: ["API_KEY"] })).rejects.toMatchObject({
+    message: 'Runtime code, shell and host access are forbidden: "process" at line 2',
+  });
+});

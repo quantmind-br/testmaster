@@ -1,3 +1,4 @@
+import { runVerdict } from "@testmaster/application";
 import { ContractError } from "@testmaster/contracts";
 import { exitCodeForRun } from "@testmaster/domain";
 import { formatDiagnosisSummary } from "@testmaster/reporting";
@@ -8,9 +9,12 @@ import { integer, type Runtime, seconds, string } from "./runtime.js";
 export function runCommands(program: Command, runtime: Runtime): void {
   const group = program.command("run").alias("runs");
   runtime.bind(group.command("list"), async (rt) => ({ data: await (await rt.app()).runs.list() }));
-  runtime.bind(group.command("get <id>"), async (rt, args) => ({
-    data: await (await rt.app()).runs.get(String(args[0])),
-  }));
+  runtime.bind(group.command("get <id>"), async (rt, args) => {
+    const app = await rt.app();
+    const id = String(args[0]);
+    const run = app.runs.get(id);
+    return { data: { ...run, ...runVerdict(run, app.runs.events(id)) } };
+  });
   runtime.bind(
     group
       .command("wait <id>")
@@ -21,10 +25,11 @@ export function runCommands(program: Command, runtime: Runtime): void {
       const id = String(args[0]);
       rt.receipts.push({ runId: id, ownership: "worker" });
       const run = await waitForRun(rt, app, id, options);
-      const completed = app.runs.events(id).find((event) => event.type === "run.completed");
+      const events = app.runs.events(id);
+      const completed = events.find((event) => event.type === "run.completed");
       const reasonCode = (completed?.payload as { reasonCode?: string } | undefined)?.reasonCode;
       return {
-        data: run,
+        data: { ...run, ...runVerdict(run, events) },
         exit: exitCodeForRun({ gate: run.gate, outcome: run.outcome, reasonCode }),
       };
     },

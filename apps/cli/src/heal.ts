@@ -1,4 +1,5 @@
-import { ContractError, type HealingReview } from "@testmaster/contracts";
+import { isHealingAbstention } from "@testmaster/application";
+import { ContractError, type HealingAbstention, type HealingReview } from "@testmaster/contracts";
 import { exitCodeForRun } from "@testmaster/domain";
 import type { Command } from "commander";
 import { waitForRun } from "./execution.js";
@@ -75,6 +76,15 @@ export function healingReviewText(review: HealingReview): string {
   return `${lines.join("\n")}\n`;
 }
 
+export function healingAbstentionText(abstention: HealingAbstention): string {
+  return `${[
+    `Healing abstained (${abstention.reasonCode}): ${abstention.reason}`,
+    `Run: ${abstention.failedRunId}`,
+    `Model call: ${abstention.modelCallId ?? "none"}`,
+    `Next: ${abstention.nextAction}`,
+  ].join("\n")}\n`;
+}
+
 export function healingCommands(program: Command, runtime: Runtime): void {
   const heal = program.command("heal");
   runtime.bind(
@@ -86,12 +96,14 @@ export function healingCommands(program: Command, runtime: Runtime): void {
       const app = await rt.app();
       const provider = string(options, "provider");
       const model = string(options, "model");
-      return {
-        data: await app.healing.propose(String(args[0]), {
-          ...(provider ? { provider } : {}),
-          ...(model ? { model } : {}),
-        }),
-      };
+      const outcome = await app.healing.propose(String(args[0]), {
+        ...(provider ? { provider } : {}),
+        ...(model ? { model } : {}),
+      });
+      // An abstention is a normal result: the request was answered, there is just nothing to apply.
+      return isHealingAbstention(outcome)
+        ? { data: outcome, text: healingAbstentionText(outcome) }
+        : { data: outcome };
     },
   );
   runtime.bind(heal.command("get <proposalId>"), async (rt, args) => ({

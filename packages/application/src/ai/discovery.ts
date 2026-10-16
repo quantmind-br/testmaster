@@ -73,6 +73,16 @@ export interface DiscoveryDetail {
   warnings: string[];
   repository?: RepositoryProvenance;
 }
+/**
+ * Why a feature found by static analysis is not `ready`. A feature that is `partial` or
+ * `needs_input` with no reason reads as an unexplained success.
+ */
+function staticFeatureReasons(needsInput: boolean, pythonUnavailable: boolean): string[] {
+  if (needsInput) return ["source_revision_not_ready"];
+  return pythonUnavailable
+    ? ["static_analysis_only", "python_unavailable"]
+    : ["static_analysis_only"];
+}
 interface DiscoveryState {
   projectId: string;
   request: DiscoverInput;
@@ -516,18 +526,15 @@ export class DiscoveryService {
                 ...existing.job,
                 phase: "queued",
                 usage: { modelCalls: 0, status: state.detail.status },
-                perFeatureResults: existing.job.perFeatureResults.map((value) =>
-                  !selectedFeatures || selectedFeatures.has(value.featureId)
-                    ? {
-                        ...value,
-                        status:
-                          state.detail.featureMap.status === "needs_input"
-                            ? "needs_input"
-                            : "partial",
-                        errors: [],
-                      }
-                    : value,
-                ),
+                perFeatureResults: existing.job.perFeatureResults.map((value) => {
+                  if (selectedFeatures && !selectedFeatures.has(value.featureId)) return value;
+                  const needsInput = state.detail.featureMap.status === "needs_input";
+                  return {
+                    ...value,
+                    status: needsInput ? "needs_input" : "partial",
+                    errors: staticFeatureReasons(needsInput, unavailable),
+                  };
+                }),
               },
               { projectId: input.projectId },
             );
@@ -629,7 +636,7 @@ export class DiscoveryService {
         featureId: feature.id,
         status: needsInput ? "needs_input" : "partial",
         evidenceRefs: featureEvidence[feature.id] ?? [],
-        errors: [],
+        errors: staticFeatureReasons(needsInput, unreachable),
       })),
       limits: this.config.profilePolicy.limits,
       usage: { modelCalls: 0, status },

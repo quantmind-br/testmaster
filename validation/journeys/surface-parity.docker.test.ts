@@ -6,6 +6,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { Application, issueLocalToken } from "@testmaster/application";
 import { ContractError, validateDocument } from "@testmaster/contracts";
 import { expect, it } from "vitest";
@@ -244,18 +245,24 @@ it("fabricated MCP calls are denied and audited with actor and command identity"
           stderr: "pipe",
         }),
       );
-      const calls = [
-        { name: "execute_shell", arguments: { command: "touch denied" } },
+      const unknownTool = { name: "execute_shell", arguments: { command: "touch denied" } };
+      const known = [
         { name: "testmaster_capabilities", arguments: { command: "touch denied" } },
         {
           name: "testmaster_normalize_requirements",
           arguments: { projectId: other.id, sourceRevisionIds: [] },
         },
       ];
-      for (const [index, call] of calls.entries()) {
+      const calls = [unknownTool, ...known];
+      // An unknown tool is a JSON-RPC protocol error (-32602), not a tool result; it is audited too.
+      await expect(client.callTool(unknownTool)).rejects.toMatchObject({
+        code: ErrorCode.InvalidParams,
+        message: expect.stringContaining("Unknown tool: execute_shell"),
+      });
+      for (const [index, call] of known.entries()) {
         const result = await client.callTool(call);
         expect(result.isError).toBe(true);
-        expect(mcpError(result).code).toBe(["NOT_FOUND", "INVALID_ARGUMENT", "FORBIDDEN"][index]);
+        expect(mcpError(result).code).toBe(["INVALID_ARGUMENT", "FORBIDDEN"][index]);
       }
       const audits = app.database.all(
         "SELECT actor,resource_id,action FROM audit_events WHERE action='mcp.tool.denied'",

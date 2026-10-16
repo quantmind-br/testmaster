@@ -1,0 +1,61 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "abstained",
+    "failedRunId",
+    "reasonCode",
+    "reason",
+    "jobId",
+    "modelCallId",
+    "nextAction"
+  ],
+  "properties": {
+    "abstained": {
+      "const": true,
+      "type": "boolean"
+    },
+    "failedRunId": {
+      "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "reasonCode": {
+      "anyOf": [
+        {
+          "const": "model_abstained",
+          "type": "string"
+        },
+        {
+          "const": "semantic_failure",
+          "type": "string"
+        }
+      ]
+    },
+    "reason": {
+      "maxLength": 8000,
+      "type": "string"
+    },
+    "jobId": {
+      "pattern": "^job_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "modelCallId": {
+      "anyOf": [
+        {
+          "pattern": "^mdl_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "nextAction": {
+      "maxLength": 8000,
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:HealingAbstention",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

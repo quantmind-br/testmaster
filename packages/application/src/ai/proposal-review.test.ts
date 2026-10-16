@@ -1,6 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
+import type { Application, PermissionGrant } from "../application.js";
 import { allEntities } from "../context.js";
 import { flattenSteps } from "../plan-analysis.js";
 import { AuthoringFixture } from "./authoring-fixture.js";
@@ -334,50 +335,77 @@ it("UX-018 a new source marks the previous generation stale and blocks accepting
   expect(counts(f)).toEqual({ tests: 0, revisions: 0 });
 });
 
-it("UX-019 only an interactive human session may accept a proposal, never an API credential", async () => {
+it("UX-019 an API credential, a service account agent and a session each accept a proposal and the revision records who", async () => {
   const f = await open();
   const { batch, proposals } = await f.generatedBatch();
-  const [a, b] = proposals;
-  if (!a || !b) throw new Error("Missing proposals");
-  const identity = (kind: "api" | "session" | "worker" | "operator") => ({
-    principalId: f.app.context.principalId,
-    workspaceId: f.app.context.workspaceId,
-    scopes: ["R", "W", "X", "A"] as ("R" | "W" | "X" | "A")[],
-    credential: { kind, id: `credential-${kind}` },
-  });
-  for (const kind of ["api", "worker", "operator"] as const) {
-    const automated = f.app.forIdentity(identity(kind));
-    expect(automated.proposals.preview(batch.id, [a.id]).policy).toMatchObject({
-      channel: "interactive",
-      canAccept: false,
-      reason: "interactive_acceptance_required",
+  const [a, b, c] = proposals;
+  if (!a || !b || !c) throw new Error("Missing proposals");
+  const workspaceId = f.app.context.workspaceId;
+  const agent = f.app.members.add(workspaceId, {
+    login: "agent-reviewer",
+    displayName: "Agent reviewer",
+    role: "service_account",
+    projectRestrictions: [],
+  }).member.principalId;
+  const grant = (actions: PermissionGrant["actions"]): PermissionGrant[] => [
+    {
+      resourceType: "*",
+      actions,
+      projectIds: [f.projectId],
+      environmentIds: [],
+      expiresAt: null,
+      grantedBy: f.app.context.principalId,
+    },
+  ];
+  const as = (principalId: string, kind: "api" | "session", grants: PermissionGrant[] = []) =>
+    f.app.forIdentity({
+      principalId,
+      workspaceId,
+      scopes: ["R", "W", "X"],
+      grants,
+      credential: { kind, id: `credential-${kind}-${principalId}` },
     });
-    expect(() =>
-      automated.proposals.accept(batch.id, {
-        proposalIds: [a.id],
-        expectedVersion: batch.version ?? 1,
-        idempotencyKey: `ux019-${kind}-credential`,
-      }),
-    ).toThrowError(
-      expect.objectContaining({
-        code: "POLICY_DENIED",
-        details: expect.objectContaining({ reason: "interactive_acceptance_required" }),
-      }),
-    );
-  }
+  const version = () => f.app.proposals.detail(batch.id).batch.version ?? 1;
+  const decide = (caller: Application, proposalId: string, key: string) =>
+    caller.proposals.accept(batch.id, {
+      proposalIds: [proposalId],
+      expectedVersion: version(),
+      idempotencyKey: key,
+    });
+  // A service account with no write grant is told why and creates nothing.
+  const reader = as(agent, "api", grant(["read"]));
+  expect(reader.proposals.preview(batch.id, [a.id]).policy).toMatchObject({
+    canAccept: false,
+    reason: "write_permission_required",
+  });
+  expect(() => decide(reader, a.id, "ux019-read-only-agent")).toThrowError(
+    expect.objectContaining({ code: "FORBIDDEN" }),
+  );
   expect(counts(f)).toEqual({ tests: 0, revisions: 0 });
-  const interactive = f.app.forIdentity(identity("session"));
-  expect(interactive.proposals.preview(batch.id, [a.id]).policy.canAccept).toBe(true);
-  const receipt = interactive.proposals.accept(batch.id, {
-    proposalIds: [a.id],
-    expectedVersion: batch.version ?? 1,
-    idempotencyKey: "ux019-session-credential",
+  // The same agent holding a write grant decides itself, and so does an API credential of the owner.
+  const writer = as(agent, "api", grant(["read", "write"]));
+  expect(writer.proposals.preview(batch.id, [a.id]).policy).toMatchObject({
+    canAccept: true,
+    reason: null,
   });
-  expect(receipt.accepted).toHaveLength(1);
-  const [revision] = allEntities(f.app.context, "TestRevision");
-  expect(revision?.extensions?.["testmaster:acceptance"]).toMatchObject({
-    principalId: f.app.context.principalId,
-    credentialKind: "session",
-    channel: "interactive",
-  });
+  expect(decide(writer, a.id, "ux019-write-grant-agent").accepted).toHaveLength(1);
+  const owner = as(f.app.context.principalId, "api");
+  expect(decide(owner, b.id, "ux019-api-credential").accepted).toHaveLength(1);
+  const session = as(f.app.context.principalId, "session");
+  expect(decide(session, c.id, "ux019-session-credential").accepted).toHaveLength(1);
+  const acceptances = allEntities(f.app.context, "TestRevision").map(
+    (revision) => revision.extensions?.["testmaster:acceptance"],
+  );
+  expect(acceptances).toHaveLength(3);
+  expect(acceptances).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ principalId: agent, credentialKind: "api" }),
+      expect.objectContaining({ principalId: f.app.context.principalId, credentialKind: "api" }),
+      expect.objectContaining({
+        principalId: f.app.context.principalId,
+        credentialKind: "session",
+      }),
+    ]),
+  );
+  expect(acceptances.some((value) => value && "channel" in (value as object))).toBe(false);
 });

@@ -222,7 +222,7 @@ echo '{"allowedModelProviders":["quantforge"]}' > ~/.config/testmaster/policy.js
 testmaster budget set --tokens 12000000                    # optional cumulative project token quota
 testmaster source add PRD.md --role prd --format markdown
 testmaster source add openapi.yaml --role api --format openapi
-testmaster discover --scope codebase                      # or --scope diff --base <ref> --head <ref>
+testmaster discover --scope codebase                      # or --scope diff --base <ref> --head <ref>; bounded receipt, --full for everything
 testmaster requirement normalize --source-revision <svr-id> && testmaster requirement list
 testmaster requirement approve <requirement-id> --expected-version <n>   # never automatic
 testmaster plan generate --type frontend --requirement <requirement-id>
@@ -236,9 +236,47 @@ testmaster usage                                           # model calls, tokens
 
 Heal with a specific model using
 `testmaster heal propose "$RUN_ID" --provider quantforge --model <id>`; without them the first
-allowed provider's first structured-output model is used.
+allowed provider's first structured-output model is used. `heal propose` refuses a failed Run
+whose analysis says healing is not indicated (`healing_not_indicated`) before calling any model;
+act on the analysis next step instead. When the model finds no safe test-only repair it prints
+`Healing abstained (...)` and exits 0: that is a normal result, not a failure.
 
 Exact flags: `testmaster <group> <command> --help`.
+
+### What plan generation can use
+
+`plan generate` (CLI, REST, MCP `testmaster_generate_plan`) offers the model only what already exists in the
+project when it runs, so create these first:
+
+- **Secrets** (`testmaster secret set ... --allowed-origin <origin>`): the model sees names and ids, never values,
+  and may send one as a header `{"secretRef": "<id>"}`. A secret inside a JSON request body is bound with
+  `body.set`: `{"kind":"json","value":{"user":"demo"},"set":[{"pointer":"/password","value":{"secretRef":"<id>"}}]}`.
+  A `secretRef`/`variableRef` object nested in `body.value` is plain data and is refused.
+- **Auth profiles** (`testmaster auth-profile create`): the model sees names, kinds and origins. A request to an
+  endpoint that needs the session sets `"auth": "profile"`, and the runner applies the session of the profile
+  bound to the environment to that request only. A proposal that sets `auth: "profile"` in a project with no
+  auth profile is sent back to the model for repair.
+
+A secret or profile created after generation is not retroactively added to existing proposals; regenerate or
+edit the plan.
+
+Generated browser plans must end with a positive check on rendered content (`visible`, `textContains`,
+`textEquals`, `valueEquals` or `countEquals` above 0) after the last state-changing action (login, navigation,
+click, submit). A URL check and the absence of the earlier elements also hold on a blank page, so a proposal that
+stops there is refused as repair feedback (`browser_postcondition_missing`); the project-aware plan validation
+(REST `POST /projects/{id}/plan-validations`, used by the portal editor) reports the same rule for hand-written plans.
+
+### `jsonSchema` pointers
+
+A `jsonSchema` assertion cites a source revision and a JSON pointer into the OpenAPI document. Accepted forms:
+
+- inside one operation: `/paths/~1items/get/responses/200/content/application~1json/schema` (escape `/` as `~1`);
+- a document-level schema: `/components/schemas/Item` (OpenAPI 3) or `/definitions/Item` (Swagger 2).
+
+A schema that still holds recursive references is bundled so it validates on its own. An empty pointer, a
+pointer outside `/paths`, `/components` and `/definitions`, or one that reaches nothing is unresolved: the project-aware
+plan validation (`POST /projects/{id}/plan-validations`) reports `schema_pointer_unresolved` at the step, and the run would be blocked with
+`unsupported_capability`.
 
 ## Third-party subresources and additional origins
 
@@ -246,7 +284,9 @@ A browser run may reach only the environment target. When the page loads somethi
 image, a web font, a flag service), the request is aborted. A passive subresource (`image`, `font`,
 `stylesheet` or `media`, fetched with `GET`/`HEAD`) is dropped and recorded without failing the run, so a
 passing test stays `passed` with `assertions_satisfied`. Any other denied request (script, `XHR`/`fetch`,
-WebSocket, document, popup) ends the run `blocked/egress_denied`. `testmaster run analyze` names the denied origin.
+WebSocket, document, popup) ends the run `blocked/egress_denied`. A page WebSocket to the target origin
+(`ws` maps to `http`, `wss` to `https`) or an additional origin is connected normally; one to any other origin is
+closed and denied, naming its origin. `testmaster run analyze` names the denied origin.
 Each denial is written once per origin and resource type to the `egress.denied` runner event and to
 `logs/egress.ndjson`; only the origin is recorded.
 
@@ -302,6 +342,15 @@ Exported projects pin their dependencies and do not call TestMaster. Imported co
 (import allowlist, no runtime installs, no disabled timeouts, no empty assertions) and only ever executes
 inside the sandbox.
 
+An imported or generated Playwright test reads secrets only through the `secrets` fixture, for example
+`headers: { authorization: secrets.get("API_KEY") }`, with a literal name. `process.env` and every other way
+of reaching a value is refused when the code is imported. `test import` accepts the names of secrets you
+registered with `testmaster secret set`; generated code may use the secrets whose `--allowed-origin` covers
+the environment's origins (the model sees their names and ids, never a value). A secret that has been
+removed blocks the Run with `missing_secret` before anything starts, and values never appear in logs or
+reports. When code fails, the report shows Playwright's message with the failing line, plus the expected and
+received values, and the analysis names the failing test instead of `unmapped`.
+
 ## Agents: API, MCP and skills
 
 ```bash
@@ -314,6 +363,28 @@ testmaster agent install --target claude             # preview; add --yes to app
 
 `token issue` works on the local profile only; repeating it for the same file reuses the token, and a
 different `--scope` set needs another file. On a server profile, tokens come from `/v1/tokens` or the portal.
+
+An agent with that token can run the whole pipeline through MCP without asking a person for anything:
+`testmaster_bootstrap`, `testmaster_analyze_code`, `testmaster_add_source` (a file inside an approved root; an
+invalid source is an error that lists its diagnostics), `testmaster_normalize_requirements`,
+`testmaster_review_requirements` (edit, adjudicate conflicts and approve at the snapshot `version`; it returns the
+`sourceSnapshotId` that `testmaster_generate_plan` needs), `testmaster_set_secret` (the value comes from a file
+inside an approved root or from an environment variable of the MCP process, never from an argument),
+`testmaster_save_auth_profile` and `testmaster_update_environment` (`authRefs`, `additionalOrigins`). Create the
+secrets and auth profiles before `testmaster_generate_plan`, because the model is offered only what already exists.
+Every decision is recorded with the acting principal.
+
+The same token covers authoring, execution and approvals. `testmaster_edit_plan` changes a still-proposed plan
+at its `expectedVersion`; `testmaster_save_test` stores a plan as a new test (`projectId`) or as a new candidate
+revision (`testId`), and its receipt says that the candidate is not active yet and which calls replay and promote
+it. `testmaster_run_tests` with `revisionId` replays that exact revision of one test, and
+`testmaster_promote_revision` (at the test's `expectedVersion`) makes it active; a generated candidate needs a
+passing replay first. `testmaster_save_suite` creates a list or adds and removes members at its
+`expectedVersion`. When a production run is refused with `approval_required`, copy `details.binding` into
+`testmaster_approve_execution`, add a reason and repeat the run: the approval is single use and recorded with
+the acting principal. `testmaster_get_evidence` reports `staleReasons` next to `freshness`; a candidate
+revision's own run is current until it is superseded. A generated candidate still counts only after a passing
+deterministic replay.
 
 Agent skill files are written atomically inside managed markers, with backups under
 `.testmaster/agent-backups/`; edited managed blocks are reported as drift, never overwritten.

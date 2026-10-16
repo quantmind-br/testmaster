@@ -6,7 +6,7 @@ import { ContractError } from "@testmaster/contracts";
 import { sha256 } from "@testmaster/domain";
 import { readConfinedCodeFile } from "../code/summary.js";
 
-export const CODE_IMPORT_VERSION = "1.0.0";
+export const CODE_IMPORT_VERSION = "1.1.0";
 export const CODE_IMPORT_MAX_BYTES = 1024 * 1024;
 /**
  * Names a TypeScript candidate may not reference: not as a variable, a property name or a string
@@ -47,6 +47,7 @@ export const CODE_IMPORT_RULES: readonly string[] = [
   `Declare tests as test("literal name", async (...) => { ... }) with a non-empty body; never test.only, test.skip or test.fixme.`,
   `Every expect(...) takes a real observation (a response status, locator, text or url), never a literal or a constant bound to a literal; never compare a value with itself.`,
   `Include at least one named test and at least one matcher assertion such as toBe, toEqual, toContain or toBeVisible.`,
+  `Read credentials only through the "secrets" fixture: destructure it in the test callback (async ({ page, secrets }) => { ... }) and call secrets.get("NAME") with exactly one literal NAME from the offered secrets list. Never read a secret from process.env, testInfo, files or literals, never alias, pass or destructure the fixture's methods, and never call secrets.get with a name that is not offered.`,
 ];
 export type CodeImportFormat = "playwright" | "pytest";
 export interface ImportedCodeBundle {
@@ -57,12 +58,16 @@ export interface ImportedCodeBundle {
   files: Record<string, string>;
   sourceHashes: Record<string, string>;
   tests: string[];
+  /** Secret names read through `secrets.get`; absent on bundles stored before the fixture existed. */
+  secrets?: string[];
   limitations: string[];
 }
 export interface CodeImportOptions {
   root: string;
   path: string;
   format: CodeImportFormat;
+  /** Secret names the code may read through the `secrets` fixture; any other name is refused. */
+  secrets?: readonly string[];
 }
 interface Node {
   type: string;
@@ -153,12 +158,71 @@ function literalKey(value: unknown): string | undefined {
   if (!text || typeof text !== "object" || !("cooked" in text)) return undefined;
   return typeof text.cooked === "string" ? text.cooked : undefined;
 }
+const SECRETS_FIXTURE = "secrets";
+const SECRET_ACCESS_REFUSAL =
+  'Secrets are read only through the harness fixture: secrets.get("NAME") with one literal name';
+interface SecretUse {
+  /** Identifier nodes that may mention the fixture; any other `secrets` identifier is refused. */
+  allowed: Set<unknown>;
+  names: string[];
+  declared: ReadonlySet<string>;
+}
+function isIdentifier(value: unknown, identifier: string): value is Node {
+  return node(value) && value.type === "Identifier" && value.name === identifier;
+}
+/** Applies the secret-fixture rules to one node; a parent is visited before its children. */
+function inspectSecretAccess(item: Node, use: SecretUse): void {
+  if (item.type === "Identifier") {
+    if (item.name === SECRETS_FIXTURE && !use.allowed.has(item))
+      refuse(SECRET_ACCESS_REFUSAL, item);
+    return;
+  }
+  if (item.type === "MemberExpression" || item.type === "OptionalMemberExpression") {
+    if (!item.computed) use.allowed.add(item.property);
+    return;
+  }
+  if (item.type === "ObjectProperty") {
+    if (!item.computed) use.allowed.add(item.key);
+    return;
+  }
+  if (item.type === "ObjectPattern") {
+    for (const property of item.properties as Node[]) {
+      if (property.type !== "ObjectProperty") continue;
+      if (isIdentifier(property.value, SECRETS_FIXTURE)) use.allowed.add(property.value);
+      if (
+        !property.computed &&
+        isIdentifier(property.key, SECRETS_FIXTURE) &&
+        !isIdentifier(property.value, SECRETS_FIXTURE)
+      )
+        refuse(`The "${SECRETS_FIXTURE}" fixture cannot be renamed`, property);
+    }
+    return;
+  }
+  if (item.type !== "CallExpression" && item.type !== "OptionalCallExpression") return;
+  const callee = item.callee;
+  if (
+    !node(callee) ||
+    (callee.type !== "MemberExpression" && callee.type !== "OptionalMemberExpression") ||
+    callee.computed ||
+    !isIdentifier(callee.object, SECRETS_FIXTURE) ||
+    !isIdentifier(callee.property, "get")
+  )
+    return;
+  use.allowed.add(callee.object);
+  const args = item.arguments as unknown[];
+  const secret = args.length === 1 ? literalKey(args[0]) : undefined;
+  if (secret === undefined) refuse(SECRET_ACCESS_REFUSAL, item);
+  if (!use.declared.has(secret))
+    refuse(`Secret ${JSON.stringify(secret.slice(0, 100))} is not declared for this test`, item);
+  if (!use.names.includes(secret)) use.names.push(secret);
+}
 interface Inspection {
   imports: string[];
   tests: string[];
   assertions: number;
+  secrets?: string[];
 }
-function inspectTypescript(text: string): Inspection {
+function inspectTypescript(text: string, declared: ReadonlySet<string>): Inspection {
   let ast: unknown;
   try {
     ast = parse(text, { sourceType: "module", plugins: ["typescript"], errorRecovery: false });
@@ -172,6 +236,7 @@ function inspectTypescript(text: string): Inspection {
     );
   }
   const result: Inspection = { imports: [], tests: [], assertions: 0 };
+  const secretUse: SecretUse = { allowed: new Set(), names: [], declared };
   const testNames = new Set<string>();
   const expectNames = new Set<string>();
   const constants = new Set<string>();
@@ -196,6 +261,7 @@ function inspectTypescript(text: string): Inspection {
     }
   });
   walk(ast, (item) => {
+    inspectSecretAccess(item, secretUse);
     if (
       ["ImportExpression", "NewExpression"].includes(item.type) &&
       (item.type === "ImportExpression" || name(item.callee) === "Function")
@@ -287,6 +353,7 @@ function inspectTypescript(text: string): Inspection {
       }
     }
   });
+  result.secrets = secretUse.names;
   return result;
 }
 
@@ -405,6 +472,8 @@ export async function importCode(options: CodeImportOptions): Promise<ImportedCo
   const tests: string[] = [];
   let total = 0;
   let assertions = 0;
+  const declared: ReadonlySet<string> = new Set(options.secrets ?? []);
+  const secrets = new Set<string>();
   const load = async (file: string): Promise<void> => {
     if (file in files) return;
     if (Object.keys(files).length >= 64)
@@ -430,8 +499,9 @@ export async function importCode(options: CodeImportOptions): Promise<ImportedCo
     files[file] = text;
     sourceHashes[file] = sha256(bytes);
     const result =
-      options.format === "pytest" ? await inspectPython(text) : inspectTypescript(text);
+      options.format === "pytest" ? await inspectPython(text) : inspectTypescript(text, declared);
     if (file === entrypoint) tests.push(...result.tests);
+    for (const secret of result.secrets ?? []) secrets.add(secret);
     assertions += result.assertions;
     for (const source of result.imports) {
       if (options.format === "playwright" && source === "@playwright/test") continue;
@@ -474,6 +544,7 @@ export async function importCode(options: CodeImportOptions): Promise<ImportedCo
     files,
     sourceHashes,
     tests,
+    secrets: [...secrets].sort(),
     limitations: [
       "AST validation does not establish sandbox safety or passing behavior.",
       "Assertions in imported code use the runner reporter/process contract; static checks are not independent business-oracle proof.",

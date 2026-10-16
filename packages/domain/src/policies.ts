@@ -206,7 +206,9 @@ export function exitCodeForRun(
   if (!wait) return 0;
   if (run.gate === "passed") return 0;
   const mapping = run.reasonCode ? reasonRegistry[run.reasonCode] : undefined;
-  if (mapping) return mapping.exit;
+  // Only a passed gate exits 0 (spec 05): a reason that maps to success (assertions_satisfied)
+  // cannot turn a failed gate into success.
+  if (mapping && mapping.exit !== 0) return mapping.exit;
   if (run.outcome === "blocked") return 15;
   return 1;
 }

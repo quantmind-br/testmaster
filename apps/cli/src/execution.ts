@@ -1,4 +1,4 @@
-import type { Application } from "@testmaster/application";
+import { type Application, runVerdict } from "@testmaster/application";
 import { ContractError, defaults, type Run, type RunReceipt } from "@testmaster/contracts";
 import { exitCodeForRun } from "@testmaster/domain";
 import type { Command } from "commander";
@@ -153,10 +153,11 @@ export async function receiptResult(
   runtime.receipts.push(receipt);
   if (options.wait !== true) return { data: receipt };
   const run = await waitForRun(runtime, app, receipt.runId, options, receipt.ownership ?? "worker");
-  const completed = app.runs.events(receipt.runId).find((event) => event.type === "run.completed");
+  const events = app.runs.events(receipt.runId);
+  const completed = events.find((event) => event.type === "run.completed");
   const reasonCode = (completed?.payload as { reasonCode?: string } | undefined)?.reasonCode;
   return {
-    data: { receipt, run },
+    data: { receipt, run: { ...run, ...runVerdict(run, events) } },
     exit: exitCodeForRun({ gate: run.gate, outcome: run.outcome, reasonCode }),
   };
 }

@@ -343,6 +343,30 @@ export interface SourceDetail extends SourceParseResult {
   source: StoredSource;
   archivedAt: string | null;
 }
+/**
+ * `source add` stores every revision, including one that did not parse, so its diagnostics stay
+ * readable. A caller that must act on the outcome (CLI exit code, MCP `isError`) calls this: it
+ * throws INVALID_ARGUMENT, with the diagnostics, for a revision whose status is `invalid`.
+ */
+export function refuseInvalidSource(detail: SourceDetail): SourceDetail {
+  if (detail.revision.status !== "invalid") return detail;
+  const first = detail.diagnostics[0];
+  throw new ContractError(
+    "INVALID_ARGUMENT",
+    `Source revision is invalid${first ? `: ${first.message.slice(0, 500)}` : ""}`,
+    {
+      reasonCode: first?.code ?? "invalid_source",
+      sourceId: detail.source.id,
+      revisionId: detail.revision.id,
+      status: detail.revision.status,
+      diagnostics: detail.diagnostics.slice(0, 20).map((item) => ({
+        code: item.code,
+        message: item.message.slice(0, 2000),
+        ...(item.location ? { location: item.location } : {}),
+      })),
+    },
+  );
+}
 interface SourceState {
   archivedAt: string | null;
   revisionId: string;

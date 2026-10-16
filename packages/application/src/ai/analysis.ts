@@ -96,6 +96,8 @@ type Evidence = {
   artifactKind?: string;
   step?: StepResult;
   planStep?: PlanStep | undefined;
+  /** Set on a code revision's step (no plan step): the operation the Playwright reporter named. */
+  codeOperation?: string;
 };
 type Diagnosis = NonNullable<Analysis["diagnosis"]>;
 /** One availability fact per artifact kind, citing every artifact of that kind. */
@@ -259,6 +261,155 @@ function followedRedirects(evidence: readonly Evidence[]): FollowedRedirect[] {
       (values.includes(first.status) || values.every((value) => value >= 300 && value <= 399))
       ? [{ item, http }]
       : [];
+  });
+}
+interface StatusMeaning {
+  failureKind: Analysis["failureKind"];
+  recommendedAction: Analysis["recommendedAction"];
+  /** What the 4xx means, as far as the status alone establishes it. */
+  subject: string;
+  alternatives: [text: string, failureKind: Analysis["failureKind"]][];
+  next: string;
+}
+/** What a 4xx answer to request step `stepId` points at; the status never proves the cause. */
+function statusMeaning(status: number, stepId: string): StatusMeaning {
+  const reading = `the error fields of the ${status} response`;
+  switch (status) {
+    case 401:
+    case 403:
+      return {
+        failureKind: "environment",
+        recommendedAction: "fix_environment",
+        subject: `the target refused the credentials or session of request step ${stepId}`,
+        alternatives: [
+          [
+            "The endpoint may now require a different permission than the contract states.",
+            "product_bug",
+          ],
+          [
+            "The request may not send the environment's auth profile or secret at all.",
+            "test_fragility",
+          ],
+        ],
+        next: `Check that the environment's auth profile or secret is valid and bound to the target origin, and that request step ${stepId} sends it (auth "profile" or a secret reference); read ${reading}, then rerun the test.`,
+      };
+    case 404:
+      return {
+        failureKind: "contract_violation",
+        recommendedAction: "review_contract",
+        subject: `the target found no resource at the path of request step ${stepId}`,
+        alternatives: [
+          ["The resource the request names may not exist in this environment.", "environment"],
+          ["The path may have been renamed or removed in the product.", "product_bug"],
+        ],
+        next: `Compare the path of request step ${stepId} with the API contract and check that the resource exists in this environment; read ${reading}.`,
+      };
+    case 405:
+      return {
+        failureKind: "contract_violation",
+        recommendedAction: "review_contract",
+        subject: `the target does not allow the method of request step ${stepId} on that path`,
+        alternatives: [["The product may have dropped or moved this operation.", "product_bug"]],
+        next: `Compare the method and path of request step ${stepId} with the API contract; read ${reading}.`,
+      };
+    case 409:
+      return {
+        failureKind: "environment",
+        recommendedAction: "fix_environment",
+        subject: `the request of step ${stepId} conflicts with the current state of the target`,
+        alternatives: [
+          ["The product may reject a transition its contract allows.", "product_bug"],
+          [
+            "An earlier step or an earlier run may have created the conflicting state.",
+            "test_fragility",
+          ],
+        ],
+        next: `Inspect the state the target holds for the resource of request step ${stepId} (data left by earlier runs or steps), reset it and rerun; read ${reading}.`,
+      };
+    case 429:
+      return {
+        failureKind: "environment",
+        recommendedAction: "fix_environment",
+        subject: `the target rate-limited request step ${stepId}`,
+        alternatives: [
+          ["The test may send more requests than the contract allows.", "test_fragility"],
+        ],
+        next: `Check the target's rate limit and the retry-after information of the ${status} response for request step ${stepId}, then rerun after it lapses or with a higher limit for this environment.`,
+      };
+    default:
+      return {
+        failureKind: "contract_violation",
+        recommendedAction: "review_contract",
+        subject: `the target rejected the content of request step ${stepId}`,
+        alternatives: [
+          ["The product may have started validating a field the test sends.", "product_bug"],
+          [
+            "The request may be missing a header or a parameter the environment requires.",
+            "test_fragility",
+          ],
+        ],
+        next: `Compare the body, query parameters and headers sent by request step ${stepId} with the API contract; read ${reading}; then correct the request or revise the contract.`,
+      };
+  }
+}
+interface RejectedStatus {
+  /** The failed statusIn assertion step. */
+  item: Evidence;
+  /** The recorded response and request step results the assertion verifies, when persisted. */
+  http: Evidence | undefined;
+  request: Evidence | undefined;
+  requestStepId: string;
+  status: number;
+  expected: number[];
+  meaning: StatusMeaning;
+}
+/**
+ * Failed required statusIn assertions where the target answered a 4xx outside the expected set
+ * and no followed redirect explains the mismatch: the target refused the request, which the
+ * status class alone attributes to the request, the credentials or the target state.
+ */
+function rejectedStatuses(evidence: readonly Evidence[]): RejectedStatus[] {
+  const followed = followedRedirects(evidence);
+  return evidence.flatMap((item) => {
+    const { step, planStep } = item;
+    if (
+      step?.status !== "failed" ||
+      step.reasonCode !== "assertion_mismatch" ||
+      planStep?.kind !== "assertion" ||
+      planStep.required === false ||
+      planStep.expectation.predicate !== "statusIn" ||
+      !("responseStepId" in planStep.input) ||
+      followed.some((entry) => entry.item === item)
+    )
+      return [];
+    const requestStepId = planStep.input.responseStepId;
+    const http = evidence.find(
+      (candidate) =>
+        httpStatusEvidence(candidate.value) && candidate.value.stepId === requestStepId,
+    );
+    const recorded = http && httpStatusEvidence(http.value) ? http.value.status : null;
+    const status =
+      typeof step.observed === "number" && Number.isInteger(step.observed)
+        ? step.observed
+        : recorded;
+    if (
+      status === null ||
+      status < 400 ||
+      status > 499 ||
+      planStep.expectation.values.includes(status)
+    )
+      return [];
+    return [
+      {
+        item,
+        http,
+        request: evidence.find((candidate) => candidate.step?.planStepId === requestStepId),
+        requestStepId,
+        status,
+        expected: planStep.expectation.values,
+        meaning: statusMeaning(status, requestStepId),
+      },
+    ];
   });
 }
 function httpStatusEvidence(value: unknown): value is HttpStatusEvidence {
@@ -523,8 +674,25 @@ function assertionMismatchFacts(
   failed: boolean,
 ): { text: string; evidenceRefs: AnalysisEvidenceRef[] }[] {
   const facts: { text: string; evidenceRefs: AnalysisEvidenceRef[] }[] = [];
+  // A failed test and its failing expect carry one Playwright message; it is reported once.
+  const reported = new Set<string>();
   for (const item of evidence) {
     const { step, planStep } = item;
+    // A failed code step has no plan assertion; the runner recorded what Playwright reported.
+    if (step?.status === "failed" && item.codeOperation && step.error) {
+      const message = step.error.message;
+      if (!reported.has(message)) {
+        reported.add(message);
+        facts.push({
+          text: scrubEvidenceText(
+            `Step ${step.planStepId} (${item.codeOperation}) failed: ${message}`,
+            secrets,
+          ).text.slice(0, 1000),
+          evidenceRefs: [item.ref],
+        });
+      }
+      continue;
+    }
     if (!step || planStep?.kind !== "assertion") continue;
     const label = `Step ${step.planStepId} (${planStep.expectation.predicate})`;
     let text: string | null = null;
@@ -616,6 +784,16 @@ function verifiedLocator(value: unknown): value is LocatorEvidence {
   }
 }
 
+/**
+ * A code revision has no plan steps: its steps are what the Playwright reporter emitted, named
+ * after what produced them (`imported-test-N` is a test, `imported-step-N` one of its steps).
+ */
+function codeStepOperation(planStepId: string): string {
+  if (planStepId.startsWith("imported-test-")) return "playwright_test";
+  if (planStepId.startsWith("imported-step-")) return "playwright_step";
+  if (planStepId === "imported-code") return "playwright_run";
+  return "code_step";
+}
 function planSteps(plan: ExecutablePlan | null): PlanStep[] {
   const result: PlanStep[] = [];
   const visit = (steps: PlanStep[]) => {
@@ -949,10 +1127,12 @@ export class AnalysisService {
         continue;
       }
       const planStep = steps.find((item) => item.id === step.planStepId);
+      const codeOperation = plan ? undefined : codeStepOperation(step.planStepId);
       evidence.push({
         value: step,
         step,
         planStep,
+        ...(codeOperation ? { codeOperation } : {}),
         reason: step.reasonCode,
         ref: {
           runId: run.id,
@@ -960,7 +1140,7 @@ export class AnalysisService {
           stepId: step.id,
           contentHash: semanticHash(step),
         },
-        text: `Step ${step.planStepId} (${planStep?.operation ?? "unmapped"}) was ${step.status}${step.reasonCode ? `: ${step.reasonCode}` : ""}.`,
+        text: `Step ${step.planStepId} (${planStep?.operation ?? codeOperation ?? "unmapped"}) was ${step.status}${step.reasonCode ? `: ${step.reasonCode}` : ""}.`,
       });
     }
     for (const row of this.ctx.database.all(
@@ -1179,6 +1359,7 @@ export class AnalysisService {
     collected: CollectedEvidence,
     failureKind: Analysis["failureKind"],
     supports: AnalysisEvidenceRef[],
+    statusRejection?: RejectedStatus,
   ): Promise<Diagnosis> {
     const secrets = environmentSecretValues();
     const steps = collected.evidence.filter((item) => item.step);
@@ -1266,7 +1447,7 @@ export class AnalysisService {
         const status = http && httpStatusEvidence(http.value) ? http.value.status : null;
         return {
           stepId: item.step!.planStepId,
-          operation: item.planStep?.operation ?? "unmapped",
+          operation: item.planStep?.operation ?? item.codeOperation ?? "unmapped",
           status: item.step!.status,
           summary: `${stepSummary(item, secrets)}${status === null ? "" : ` Observed HTTP status ${status}.`}`,
           verifies:
@@ -1286,7 +1467,8 @@ export class AnalysisService {
     else if (pointer) absence = "missing_field";
     else if (Array.isArray(failed?.step?.observed) && failed.step.observed.length === 0)
       absence = "empty_collection";
-    else if (failed?.step?.observed === null && !timedOut) absence = "null_value";
+    else if (failed?.step?.observed === null && !timedOut && !failed.codeOperation)
+      absence = "null_value";
     else if (run.outcome !== "passed" && (!failed || !collected.snapshotId))
       absence = "evidence_unavailable";
     if (timedOut?.process.lingeringProcesses)
@@ -1298,7 +1480,7 @@ export class AnalysisService {
         ? null
         : {
             stepId: failed?.step?.planStepId ?? null,
-            operation: failed?.planStep?.operation ?? null,
+            operation: failed?.planStep?.operation ?? failed?.codeOperation ?? null,
             summary: failed
               ? stepSummary(failed, secrets)
               : `Run ${run.outcome}; no failed step result is available.`,
@@ -1371,6 +1553,21 @@ export class AnalysisService {
           denied.length ? denied.map((item) => item.ref) : supports,
         );
       healing.reason = "Changing the test would bypass the refused precondition.";
+    } else if (statusRejection) {
+      const { meaning, status, expected, requestStepId, item, http, request } = statusRejection;
+      conclusion = {
+        status: "cause_partially_supported",
+        text: `Request step ${requestStepId} was answered with HTTP ${status} instead of the expected ${expected.join(", ")}: ${meaning.subject}; the evidence does not establish why.`,
+      };
+      for (const [text, kind] of meaning.alternatives) alternative(text, kind);
+      next(
+        meaning.next,
+        [item, http, request].flatMap((evidenceItem) => (evidenceItem ? [evidenceItem.ref] : [])),
+      );
+      healing = {
+        advice: "not_indicated",
+        reason: `Healing proposes locator changes only; a ${status} answer to request step ${requestStepId} is not caused by a locator.`,
+      };
     } else if (failureKind === "environment") {
       conclusion = {
         status: "cause_supported",
@@ -1533,6 +1730,7 @@ export class AnalysisService {
     const secrets = environmentSecretValues();
     let hypothesis: string | null = null;
     let supports: AnalysisEvidenceRef[] = [];
+    let diagnosedRejection: RejectedStatus | undefined;
     const reasons = (codes: string[]) =>
       evidence.filter((item) => item.reason && codes.includes(item.reason));
     if (run.outcome !== "passed") {
@@ -1633,6 +1831,7 @@ export class AnalysisService {
           !item.planStep.expectation.values.includes(item.step.observed) &&
           !followed.some((entry) => entry.item === item),
       );
+      const statusRejection = rejectedStatuses(evidence)[0];
       let locatorSupport: AnalysisEvidenceRef[] = [];
       if (
         !security.length &&
@@ -1642,6 +1841,7 @@ export class AnalysisService {
         !business &&
         !shapeMismatch &&
         !successfulStatusMismatch &&
+        !statusRejection &&
         !redirectFollowed
       ) {
         const failedActions = evidence.filter(
@@ -1743,6 +1943,14 @@ export class AnalysisService {
         hypothesis =
           "The target served a successful 2xx response outside the required approved status set; this is an observed product behavior mismatch, not a proven source-level root cause.";
         supports = [successfulStatusMismatch.ref];
+      } else if (statusRejection) {
+        diagnosedRejection = statusRejection;
+        failureKind = statusRejection.meaning.failureKind;
+        recommendedAction = statusRejection.meaning.recommendedAction;
+        hypothesis = `The target answered HTTP ${statusRejection.status} outside the required approved status set (${statusRejection.expected.join(", ")}): ${statusRejection.meaning.subject}; the status alone does not establish why, and it is not a proven source-level root cause.`;
+        supports = [statusRejection.item, statusRejection.http, statusRejection.request].flatMap(
+          (evidenceItem) => (evidenceItem ? [evidenceItem.ref] : []),
+        );
       } else if (locatorSupport.length) {
         failureKind = "test_fragility";
         recommendedAction = "fix_test";
@@ -1790,7 +1998,8 @@ export class AnalysisService {
                 confidence: 0.5,
                 calibrated: false,
                 support:
-                  failureKind === "security_policy" || failureKind === "environment"
+                  !diagnosedRejection &&
+                  (failureKind === "security_policy" || failureKind === "environment")
                     ? "supported"
                     : "partially_supported",
               },
@@ -1801,7 +2010,7 @@ export class AnalysisService {
         modelCallId: null,
         limitations: [...new Set(collected.limitations)],
         recommendedAction,
-        diagnosis: await this.layered(run, collected, failureKind, supports),
+        diagnosis: await this.layered(run, collected, failureKind, supports, diagnosedRejection),
       },
       fence,
     );
@@ -1940,7 +2149,8 @@ export class AnalysisService {
           stepId: step.planStepId,
           status: step.status,
           reasonCode: step.reasonCode ?? null,
-          operation: planStep?.operation ?? null,
+          operation:
+            planStep?.operation ?? (collected.plan ? null : codeStepOperation(step.planStepId)),
           required: planStep?.kind === "assertion" ? planStep.required !== false : null,
           predicate: planStep?.kind === "assertion" ? planStep.expectation.predicate : null,
           responseStepId:

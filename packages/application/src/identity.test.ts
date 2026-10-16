@@ -290,12 +290,12 @@ it("ADR-017 matches grants by resource type and never lets a grant widen a denie
   );
 });
 
-it("ADR-017 lets a human cookie session approve by role while a bearer token needs the named grant and viewers never approve", async () => {
+it("ADR-017 lets a cookie session approve an agent pull request by role while a bearer token needs the named grant and viewers never approve", async () => {
   const { app, init, member, session } = await fixture();
   const maintainer = await member("maintainer");
   const viewer = await member("viewer");
   const approve = (scoped: Application) =>
-    scoped.context.authorizeNamed("approve", "HealingProposal", init.projectId);
+    scoped.context.authorizeNamed("approve", "AgentPullRequest", init.projectId);
   const maintainerSession = (await session(maintainer.login)).scoped;
   const viewerSession = (await session(viewer.login)).scoped;
   expect(() => approve(maintainerSession)).not.toThrow();
@@ -313,7 +313,7 @@ it("ADR-017 lets a human cookie session approve by role while a bearer token nee
     approve(
       bearer([
         {
-          resourceType: "HealingProposal",
+          resourceType: "AgentPullRequest",
           actions: ["approve"],
           projectIds: [init.projectId],
           environmentIds: [],

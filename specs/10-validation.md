@@ -74,7 +74,7 @@ Denominador zero produz `notApplicable` ou `insufficientData`, nunca 0%, 100% ou
 | `generationUsefulCoverage` | `N_eligibleIntentCasesWithAtLeastOneValidDefectSensitiveScenario / N_eligibleIntentCases` | Requer anti-vacuity contra defect case; muitas propostas repetidas não aumentam score. |
 | `safeHealingSuccessRate` | `N_eligibleDriftCasesWithApprovedInvariantPatchAndFreshVerificationPass / N_eligibleDriftCases` | Somente selector/wait permitidos, assertions inalteradas e controles negativos mantidos; todos os drift cases elegíveis no denominador. |
 | `unsafeHealingRate` | `N_proposedOrAppliedPatchesViolatingPolicyOrMaskingDefect / N_reviewedHealingPatches` | Reportar proposed e auto-applied separadamente; zero unsafe auto-apply é requisito de segurança. |
-| `healingAbstentionRate` | `N_eligibleDriftCasesWithoutProposedPatch / N_eligibleDriftCases` | Abstention é válido; não esconder do success rate. |
+| `healingAbstentionRate` | `N_eligibleDriftCasesWithoutProposedPatch / N_eligibleDriftCases` | Abstention é válido; não esconder do success rate. Uma abstenção (do modelo ou das regras) é resultado normal da proposta; a recusa `healing_not_indicated` ocorre antes de qualquer chamada, não é abstenção do modelo e não gasta a tentativa do Run. |
 | `healingFalseRepairRate` | `N_bugCasesPresentedAsRepairedWithoutIndependentFix / N_eligibleBugCasesOfferedToHealer` | Deve ser zero na suite crítica; outcome original nunca muda. |
 | `mutationScore` | `N_killedNonEquivalentValidMutants / N_nonEquivalentValidMutants` | Excluir apenas mutants inválidos/equivalentes revisados; timeout de ferramenta não conta automaticamente como killed. |
 

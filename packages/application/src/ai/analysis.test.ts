@@ -34,6 +34,8 @@ async function fixture(
     source?: boolean;
     unbound?: boolean;
     plan?: ExecutablePlan;
+    /** The frozen revision is imported code: no plan, a Playwright runner. */
+    code?: boolean;
     step?: Partial<StepResult>;
   } = {},
 ) {
@@ -95,7 +97,8 @@ async function fixture(
       },
     ],
   };
-  revision.dto.plan = plan;
+  revision.dto.plan = options.code ? null : plan;
+  if (options.code) revision.dto.runnerKind = "playwright";
   revision.dto.contentHash = semanticHash(plan);
   revision.row.content_hash = revision.dto.contentHash as string;
   revision.row.data_json = canonicalJson(revision.dto);
@@ -309,21 +312,18 @@ it.each([201, 204, 299])(
     expect(analysis.hypotheses[0]?.text).toContain("not a proven source-level root cause");
   },
 );
-it.each([302, 401, 404])(
-  "required unexpected non-success status %i remains unknown",
-  async (status) => {
-    const f = await fixture({ status: true });
-    const stored = JSON.parse(
-      String(f.db.get("SELECT data_json FROM steps WHERE id=?", f.step.id)!.data_json),
-    );
-    stored.observed = status;
-    f.db.run("UPDATE steps SET data_json=? WHERE id=?", canonicalJson(stored), f.step.id);
-    expect(await f.service.analyze(f.run.id)).toMatchObject({
-      failureKind: "unknown",
-      hypotheses: [],
-    });
-  },
-);
+it("required unexpected 3xx status without a recorded redirect remains unknown", async () => {
+  const f = await fixture({ status: true });
+  const stored = JSON.parse(
+    String(f.db.get("SELECT data_json FROM steps WHERE id=?", f.step.id)!.data_json),
+  );
+  stored.observed = 302;
+  f.db.run("UPDATE steps SET data_json=? WHERE id=?", canonicalJson(stored), f.step.id);
+  expect(await f.service.analyze(f.run.id)).toMatchObject({
+    failureKind: "unknown",
+    hypotheses: [],
+  });
+});
 it("missing JSON value does not establish an approved schema violation", async () => {
   const f = await fixture({ missing: true });
   expect((await f.service.analyze(f.run.id)).failureKind).toBe("unknown");
@@ -2360,6 +2360,78 @@ it("a statusIn expecting the redirect that the runner followed is a test defect,
     failureKind: "product_bug",
   });
 });
+it.each([
+  [400, "contract_violation", "review_contract", "Compare the body, query parameters and headers"],
+  [422, "contract_violation", "review_contract", "Compare the body, query parameters and headers"],
+  [401, "environment", "fix_environment", "auth profile or secret"],
+  [403, "environment", "fix_environment", "auth profile or secret"],
+  [404, "contract_violation", "review_contract", "Compare the path of request step request"],
+  [405, "contract_violation", "review_contract", "Compare the method and path"],
+  [409, "environment", "fix_environment", "Inspect the state the target holds"],
+  [429, "environment", "fix_environment", "rate limit"],
+] as const)(
+  "a statusIn mismatch where the target answered %i gets a rules diagnosis, not cause_unknown",
+  async (status, failureKind, recommendedAction, nextStep) => {
+    const f = await fixture({
+      plan: requestStatusPlan([200]),
+      step: { expected: 200, observed: status },
+    });
+    await attachTerminalProcess(
+      f,
+      { response: { status, failureExcerpt: '{"error":"rejected"}' }, redirects: [] },
+      { relativePath: "http/request.json", kind: "http" },
+    );
+    const analysis = await f.service.analyze(f.run.id, {});
+    expect(analysis).toMatchObject({ failureKind, recommendedAction });
+    expect(analysis.hypotheses[0]).toMatchObject({ support: "partially_supported" });
+    expect(analysis.hypotheses[0]?.text).toContain(`HTTP ${status}`);
+    const diagnosis = analysis.diagnosis!;
+    expect(diagnosis.conclusion.status).toBe("cause_partially_supported");
+    expect(diagnosis.conclusion.text).toContain(
+      `answered with HTTP ${status} instead of the expected 200`,
+    );
+    expect(diagnosis.nextSteps[0]?.text).toContain(nextStep);
+    // The next step cites the failed assertion and the recorded request/response evidence.
+    expect(diagnosis.nextSteps[0]?.evidenceRefs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ stepId: f.step.id }),
+        expect.objectContaining({ relativePath: "http/request.json" }),
+      ]),
+    );
+    expect(diagnosis.healing.advice).toBe("not_indicated");
+    expect(diagnosis.healing.reason).toContain("not caused by a locator");
+  },
+);
+it("a 4xx that a followed redirect explains stays a test defect, not a rejected request", async () => {
+  const f = await fixture({
+    plan: requestStatusPlan([307]),
+    step: { expected: 307, observed: 404 },
+  });
+  await attachTerminalProcess(
+    f,
+    { response: { status: 404, url: "http://app.test/gone" }, redirects: [redirectHop] },
+    { relativePath: "http/request.json", kind: "http" },
+  );
+  const analysis = await f.service.analyze(f.run.id, {});
+  expect(analysis).toMatchObject({ failureKind: "test_fragility", recommendedAction: "fix_test" });
+  expect(analysis.diagnosis?.conclusion.text).toContain("followed the redirect");
+});
+it("an optional statusIn assertion answered with a 4xx gets no rejection diagnosis", async () => {
+  const plan = requestStatusPlan([200]);
+  const assertion = plan.steps[1]!;
+  if (assertion.kind !== "assertion") throw new Error("assertion expected");
+  assertion.required = false;
+  const f = await fixture({ plan, step: { expected: 200, observed: 422 } });
+  await attachTerminalProcess(
+    f,
+    { response: { status: 422 }, redirects: [] },
+    { relativePath: "http/request.json", kind: "http" },
+  );
+  expect(await f.service.analyze(f.run.id, {})).toMatchObject({
+    failureKind: "unknown",
+    hypotheses: [],
+  });
+});
 it("a failure localizes to the first inconclusive step and never prints a placeholder", async () => {
   const f = await fixture({
     step: {
@@ -2436,4 +2508,61 @@ it("a credential value in the environment is still redacted from the diagnosis t
   } finally {
     vi.unstubAllEnvs();
   }
+});
+it("a failed code run maps its steps to what the reporter named and keeps expected, observed and the error", async () => {
+  const message =
+    "expect(received).toBe(expected)\n\nExpected: 200\nReceived: 404\n    at health.spec.ts:4:38";
+  const f = await fixture({
+    code: true,
+    step: {
+      planStepId: "imported-test-0",
+      expected: 200,
+      observed: 404,
+      error: { code: "assertion_mismatch", message },
+    },
+  });
+  const analysis = await f.service.analyze(f.run.id, {});
+  expect(analysis.diagnosis?.observation).toMatchObject({
+    stepId: "imported-test-0",
+    operation: "playwright_test",
+    expected: expect.stringContaining("200"),
+    observed: expect.stringContaining("404"),
+  });
+  expect(analysis.diagnosis?.observation?.absence).not.toBe("null_value");
+  expect(analysis.diagnosis?.chain.map((link) => link.operation)).toEqual(["playwright_test"]);
+  // The facts carry Playwright's own message with its location, citing the persisted step.
+  const fact = analysis.facts.find((item) => item.text.includes("Received: 404"));
+  expect(fact?.text).toContain("Step imported-test-0 (playwright_test) failed:");
+  expect(fact?.text).toContain("at health.spec.ts:4:38");
+  expect(fact?.evidenceRefs[0]?.stepId).toBe(f.step.id);
+  expect(JSON.stringify(analysis)).not.toContain("unmapped");
+});
+it("code steps are named by their reporter id, and a failed test and its failing expect state one fact", async () => {
+  const f = await fixture({ code: true, step: { planStepId: "imported-test-0", error: null } });
+  const stepRow = (planStepId: string, index: number, serial: number) =>
+    f.ctx.entities.insert("StepResult", {
+      ...f.step,
+      id: `stp_00000000-0000-4000-8000-00000000010${serial}`,
+      workspaceId: f.ctx.workspaceId,
+      planStepId,
+      index,
+      expected: null,
+      observed: null,
+      error: {
+        code: "assertion_mismatch",
+        message: "expect(received).toBe(expected)\n\nReceived: 1",
+      },
+    });
+  stepRow("imported-step-1", 1, 1);
+  stepRow("imported-code", 1000000, 2);
+  const analysis = await f.service.analyze(f.run.id, {});
+  const operations = Object.fromEntries(
+    analysis.diagnosis?.chain.map((link) => [link.stepId, link.operation]) ?? [],
+  );
+  expect(operations).toMatchObject({
+    "imported-test-0": "playwright_test",
+    "imported-step-1": "playwright_step",
+    "imported-code": "playwright_run",
+  });
+  expect(analysis.facts.filter((item) => item.text.includes("Received: 1"))).toHaveLength(1);
 });

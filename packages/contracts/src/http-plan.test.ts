@@ -208,3 +208,101 @@ describe("HTTP plan expressiveness", () => {
     ).toBeGreaterThan(0);
   });
 });
+
+describe("JSON request bodies and profile authentication", () => {
+  const SEC = "sec_01900000-0000-7000-8000-000000000001";
+  const json = (value: Json, set?: Json[]): Json =>
+    request({ method: "POST", body: { kind: "json", value, ...(set ? { set } : {}) } });
+  it("accepts set entries that place references into a literal document", () => {
+    const document = { literal: { username: "root", password: null, list: [1] } };
+    expect(
+      rules(
+        plan([
+          json(document, [
+            { pointer: "/password", value: { secretRef: SEC } },
+            { pointer: "/list/0", value: { literal: 2 } },
+            { pointer: "/added", value: { literal: true } },
+          ]),
+          status,
+        ]),
+      ),
+    ).toEqual([]);
+  });
+  it("refuses a secretRef or variableRef object nested in a JSON literal and names the pointer and set", () => {
+    const nested = issues(
+      plan([json({ literal: { username: "root", password: { secretRef: SEC } } }), status]),
+    );
+    expect(nested.map((issue) => `${issue.rule}:${issue.path}`)).toEqual([
+      "nestedReference:/steps/0/input/body/value/literal/password",
+    ]);
+    expect(nested[0]?.message).toContain('"/password"');
+    expect(nested[0]?.message).toContain("body.set");
+    expect(
+      rules(
+        plan([
+          json({ literal: { items: [1, { variableRef: "token" }] } }, [
+            { pointer: "/items/0", value: { literal: { secretRef: SEC } } },
+          ]),
+          status,
+        ]),
+      ),
+    ).toEqual([
+      "nestedReference:/steps/0/input/body/value/literal/items/1",
+      "nestedReference:/steps/0/input/body/set/0/value/literal",
+      "binding:/steps/0/input/body/value/literal/items/1/variableRef",
+    ]);
+  });
+  it("treats an object with other keys or a non-string reference as plain data", () => {
+    const literal = { a: { secretRef: "x", note: 1 }, b: { variableRef: 3 }, c: "secretRef" };
+    expect(rules(plan([json({ literal }), status]))).toEqual([]);
+  });
+  it("refuses a nested reference in a cleanup request too", () => {
+    const cleanup = [
+      {
+        resourceRef: "go",
+        operation: "request",
+        input: {
+          method: "DELETE",
+          pathSegments: [{ literal: "x" }],
+          body: { kind: "json", value: { literal: { password: { secretRef: SEC } } } },
+        },
+        successPredicate: { predicate: "statusIn", values: [204] },
+        deadlineMs: 1000,
+        required: true,
+      },
+    ];
+    expect(rules(plan([request(), status], { cleanup }))).toEqual([
+      "nestedReference:/cleanup/0/input/body/value/literal/password",
+    ]);
+  });
+  it("refuses a set pointer that cannot be applied to a literal document and names it", () => {
+    const document = { literal: { name: "n", list: [1], nested: {} } };
+    const refused = issues(
+      plan([
+        json(document, [
+          { pointer: "/missing/child", value: { secretRef: SEC } },
+          { pointer: "", value: { literal: 1 } },
+          { pointer: "/list/3", value: { literal: 1 } },
+          { pointer: "/name/x", value: { literal: 1 } },
+          { pointer: "/nested/ok", value: { literal: 1 } },
+        ]),
+        status,
+      ]),
+    );
+    expect(refused.map((issue) => `${issue.rule}:${issue.path}`)).toEqual([
+      "jsonPointer:/steps/0/input/body/set/0/pointer",
+      "jsonPointer:/steps/0/input/body/set/1/pointer",
+      "jsonPointer:/steps/0/input/body/set/2/pointer",
+      "jsonPointer:/steps/0/input/body/set/3/pointer",
+    ]);
+    expect(refused[0]?.message).toContain("/missing/child");
+  });
+  it("cannot check a set pointer against a document known only at run time", () => {
+    const set = [{ pointer: "/anything/deep", value: { literal: 1 } }];
+    expect(rules(plan([json({ secretRef: SEC }, set), status]))).toEqual([]);
+  });
+  it("accepts auth profile on a request and refuses any other value", () => {
+    expect(rules(plan([request({ auth: "profile" }), status]))).toEqual([]);
+    expect(rules(plan([request({ auth: "none" }), status])).length).toBeGreaterThan(0);
+  });
+});

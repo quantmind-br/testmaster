@@ -1,0 +1,104 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "results",
+    "sourceSnapshotId",
+    "version",
+    "pendingApprovalIds",
+    "unresolvedConflictIds"
+  ],
+  "properties": {
+    "results": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "action",
+          "id",
+          "ok",
+          "error"
+        ],
+        "properties": {
+          "action": {
+            "anyOf": [
+              {
+                "const": "update",
+                "type": "string"
+              },
+              {
+                "const": "adjudicate",
+                "type": "string"
+              },
+              {
+                "const": "approve",
+                "type": "string"
+              }
+            ]
+          },
+          "id": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "code",
+                  "message"
+                ],
+                "properties": {
+                  "code": {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  "message": {
+                    "maxLength": 8000,
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "sourceSnapshotId": {
+      "description": "Fingerprint of the snapshot after the decisions: pass it to testmaster_generate_plan",
+      "type": "string"
+    },
+    "version": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "pendingApprovalIds": {
+      "type": "array",
+      "items": {
+        "pattern": "^req_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      }
+    },
+    "unresolvedConflictIds": {
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:McpRequirementsReview",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

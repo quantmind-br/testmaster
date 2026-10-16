@@ -127,7 +127,7 @@ Fonte versionada → parse determinístico → extração com proveniência → 
 
 ### Heal
 
-Run failed → causa provável sustentada → revision candidate/diff → policy/human approval → novo Run replay → original failed preservado → candidate eligible para promoção com compare-and-set sobre revisão ativa. Se alguém editou no meio, conflito de revisão, não sobrescrita.
+Run failed → causa provável sustentada → revision candidate/diff → decisão explícita e auditada do chamador autorizado (humano ou agente, scope de escrita) → novo Run replay → original failed preservado → candidate eligible para promoção com compare-and-set sobre revisão ativa. Se alguém editou no meio, conflito de revisão, não sobrescrita.
 
 ## 6. Decisões arquiteturais
 

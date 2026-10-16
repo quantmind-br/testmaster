@@ -82,12 +82,15 @@ export class CodeExportService {
     if (!path || destination === data || destination.startsWith(`${data}/`))
       throw new ContractError(
         "INVALID_ARGUMENT",
-        "Export must be a new workspace directory outside application data",
+        "Export destination (out) must be a new directory inside the workspace (the working directory) and outside the application data directory",
       );
     try {
       validateRelativePath(path);
     } catch {
-      throw new ContractError("INVALID_ARGUMENT", "Export output must remain inside the workspace");
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        "Export destination (out) must be a relative path that stays inside the workspace (the working directory)",
+      );
     }
     const root = new ConfinedRoot(this.config.cwd);
     let directory: ConfinedRoot | undefined;

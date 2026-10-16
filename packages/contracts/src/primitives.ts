@@ -202,7 +202,6 @@ export const scopes = {
   W: "write",
   X: "execute",
   A: "admin",
-  "healing:approve": "approve",
   "artifacts:raw": "raw",
   "secrets:export": "export",
 } as const;

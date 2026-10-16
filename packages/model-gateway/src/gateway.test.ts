@@ -1,9 +1,17 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { ContractError } from "@testmaster/contracts";
 import { afterEach, describe, expect, it } from "vitest";
-import { MemoryModelCache, ModelGateway } from "./gateway.js";
+import { FALLBACK_OUTPUT_RESERVATION_TOKENS, MemoryModelCache, ModelGateway } from "./gateway.js";
 import { completion, TestBudgetLedger, testProvider, testRequest } from "./test-support.js";
-import type { ModelCallRecord } from "./types.js";
+import type { BudgetReservationInput, ModelCallRecord } from "./types.js";
+
+class ReservingLedger extends TestBudgetLedger {
+  readonly inputs: BudgetReservationInput[] = [];
+  override async reserve(input: BudgetReservationInput) {
+    this.inputs.push(input);
+    return super.reserve(input);
+  }
+}
 
 const servers: Server[] = [];
 afterEach(async () => {
@@ -430,7 +438,6 @@ describe("policy-controlled model requests", () => {
       big.gateway.complete({
         ...testRequest,
         responseSchema: "AIProposalsOutput",
-        dataPolicy: { ...testRequest.dataPolicy, maxInputBytes: 1048576, maxInputTokens: 100000 },
       }),
     ).rejects.toMatchObject({ details: { validationFailure: { code: "INVALID_ARGUMENT" } } });
     for (const record of big.records) {
@@ -556,7 +563,6 @@ describe("policy-controlled model requests", () => {
       f.gateway.complete({
         ...testRequest,
         responseSchema: "AIProposalsOutput",
-        dataPolicy: { ...testRequest.dataPolicy, maxInputBytes: 1048576, maxInputTokens: 100000 },
       }),
     ).rejects.toMatchObject({ details: { repairs: 2 } });
     const prompts = f.payloads
@@ -713,12 +719,20 @@ describe("policy-controlled model requests", () => {
       details: { capability: "structuredJson", reasonCode: "model_capability_missing" },
     });
     expect(f.counts().requests).toBe(0);
-    await expect(
-      f.gateway.complete({
-        ...testRequest,
-        dataPolicy: { ...testRequest.dataPolicy, maxInputBytes: 1 },
-      }),
-    ).rejects.toMatchObject({ code: "PAYLOAD_TOO_LARGE" });
+    const bounded = new ModelGateway({
+      ...f.options,
+      providers: [
+        {
+          ...configuredProvider,
+          models: [{ id: "model", capabilities: { structuredJson: true, contextTokens: 1 } }],
+        },
+      ],
+    });
+    await expect(bounded.complete(testRequest)).rejects.toMatchObject({
+      code: "PAYLOAD_TOO_LARGE",
+      details: { contextTokens: 1 },
+    });
+    expect(f.counts().requests).toBe(0);
     expect(f.counts().completions).toBe(0);
     const changed = await fixture((_req, res) =>
       res.end(JSON.stringify({ ...completion, model: "other-model" })),
@@ -742,6 +756,77 @@ describe("policy-controlled model requests", () => {
     });
     expect(f.counts().requests).toBe(0);
     expect(changed.counts().completions).toBe(1);
+  });
+
+  it("admits a 600 KB prompt for a model declaring a 1,050,000-token context", async () => {
+    const f = await fixture();
+    const configured = f.options.providers[0];
+    if (!configured) throw new Error("Fixture provider missing");
+    const large = new ModelGateway({
+      ...f.options,
+      providers: [
+        {
+          ...configured,
+          models: [
+            { id: "model", capabilities: { structuredJson: true, contextTokens: 1_050_000 } },
+          ],
+        },
+      ],
+    });
+    const result = await large.complete({
+      ...testRequest,
+      messages: [{ role: "user", content: `Return Money JSON. ${"x".repeat(600_000)}` }],
+    });
+    expect(result.output).toEqual({ amount: 1, currency: "USD", scale: 2 });
+    expect(f.counts().completions).toBe(1);
+    expect(Buffer.byteLength(f.payloads.at(-1) ?? "")).toBeGreaterThan(600_000);
+  });
+
+  it("refuses a prompt over the declared context before transport, naming its size and the limit", async () => {
+    const f = await fixture();
+    const configured = f.options.providers[0];
+    if (!configured) throw new Error("Fixture provider missing");
+    const small = new ModelGateway({
+      ...f.options,
+      providers: [
+        {
+          ...configured,
+          models: [{ id: "model", capabilities: { structuredJson: true, contextTokens: 1000 } }],
+        },
+      ],
+    });
+    const refusal = await small
+      .complete({
+        ...testRequest,
+        messages: [{ role: "user", content: "x".repeat(5000) }],
+      })
+      .catch((error: unknown) => error);
+    expect(refusal).toMatchObject({
+      code: "PAYLOAD_TOO_LARGE",
+      details: { contextTokens: 1000 },
+    });
+    expect((refusal as ContractError).details?.promptBytes).toBeGreaterThan(5000);
+    expect(f.counts().requests).toBe(0);
+  });
+
+  it("reserves a documented fallback output for a model declaring neither output nor context limits", async () => {
+    const ledger = new ReservingLedger();
+    const f = await fixture(undefined, ledger);
+    const configured = f.options.providers[0];
+    if (!configured) throw new Error("Fixture provider missing");
+    const undeclared = new ModelGateway({
+      ...f.options,
+      providers: [
+        { ...configured, models: [{ id: "model", capabilities: { structuredJson: true } }] },
+      ],
+    });
+    await undeclared.complete(testRequest);
+    await new ModelGateway(f.options).complete({ ...testRequest, cache: false });
+    const [fallback, declared] = ledger.inputs;
+    expect(fallback?.reservedTokens).toBeGreaterThan(FALLBACK_OUTPUT_RESERVATION_TOKENS);
+    expect(fallback?.reservedTokens).toBeLessThan(FALLBACK_OUTPUT_RESERVATION_TOKENS + 2000);
+    // The fixture model declares maxOutputTokens 1024: the declared limit wins over the fallback.
+    expect(declared?.reservedTokens).toBeLessThan(FALLBACK_OUTPUT_RESERVATION_TOKENS);
   });
 
   it("reserves priced input plus maximum output, settles actual usage, and denies exhausted budget", async () => {

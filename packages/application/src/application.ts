@@ -923,9 +923,14 @@ export class Application {
       throw error;
     }
   }
+  /**
+   * Named resource authority evaluated against role defaults and resource-scoped PermissionGrants.
+   * Healing decisions are not named actions: they take the ordinary write scope (`authorize("W")`).
+   * Approving an agent pull request keeps its explicit human grant (SEC-047).
+   */
   private authorizeNamed(
     action: "approve" | "delete" | "export",
-    resourceType: "HealingProposal" | "Artifact" | "SecretReference" | "AgentPullRequest",
+    resourceType: "Artifact" | "SecretReference" | "AgentPullRequest",
     projectId: string,
     environmentId: string | null,
   ): void {
@@ -940,7 +945,6 @@ export class Application {
         throw new ContractError("FORBIDDEN", "Approval requires an enabled human principal");
       const role = this.requireMember(projectId);
       const aliases: Record<typeof resourceType, string[]> = {
-        HealingProposal: ["HealingProposal", "healing", "*"],
         Artifact: ["Artifact", "artifacts", "*"],
         SecretReference: ["SecretReference", "secrets", "*"],
         AgentPullRequest: ["AgentPullRequest", "github", "*"],
@@ -964,26 +968,7 @@ export class Application {
         ? rbacMatrix[role][column] === "allow"
         : decision.allowed && decision.granted;
       if (!decision.allowed || !allowed) {
-        const scope = `${{ HealingProposal: "healing", Artifact: "artifacts", SecretReference: "secrets", AgentPullRequest: "github" }[resourceType]}:${action}`;
-        if (action === "approve" && resourceType === "HealingProposal") {
-          // Name the missing grant, never the caller's own grants, role or other projects.
-          const grantMissing = !roleDecides && decision.allowed && !decision.granted;
-          throw new ContractError(
-            "FORBIDDEN",
-            grantMissing
-              ? "Approving a healing proposal needs a HealingProposal:approve grant on this token; scopes R, W, X and A do not imply it. A human can approve with `testmaster heal approve <proposalId> --expected-version <N>`."
-              : "This credential is not permitted to approve healing proposals. A human approver can approve with `testmaster heal approve <proposalId> --expected-version <N>`.",
-            {
-              scope,
-              reasonCode: grantMissing ? "approval_grant_required" : "approval_not_permitted",
-              requiredGrant: { resourceType: "HealingProposal", action: "approve" },
-              nextActions: [
-                "testmaster heal approve <proposalId> --expected-version <N> (human CLI session)",
-                "Ask a project admin for a HealingProposal:approve grant on this token",
-              ],
-            },
-          );
-        }
+        const scope = `${{ Artifact: "artifacts", SecretReference: "secrets", AgentPullRequest: "github" }[resourceType]}:${action}`;
         throw new ContractError("FORBIDDEN", "Action is not authorized", { scope });
       }
       auditSecurity(this.context, "grant", projectId, "allowed");

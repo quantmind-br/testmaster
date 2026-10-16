@@ -31,6 +31,18 @@ const names = Type.Array(P.Name);
 /** Model-facing citation of supplied evidence (`E1`, `E2`, …); resolved by the application. */
 const EvidenceHandle = Type.String({ pattern: "^E[1-9][0-9]{0,5}$" });
 const evidenceIds = (minItems: number) => Type.Array(EvidenceHandle, { minItems, maxItems: 100 });
+const healingAbstention = P.Obj({
+  abstained: Type.Literal(true),
+  failedRunId: P.id("run"),
+  /** `model_abstained`: the model found no safe test-only repair; `semantic_failure`: the rules did. */
+  reasonCode: P.Enum(["model_abstained", "semantic_failure"]),
+  reason: P.Description,
+  jobId: P.id("job"),
+  /** The call that abstained; null when the rules decided before any model call. */
+  modelCallId: Type.Union([P.id("mdl"), Type.Null()]),
+  nextAction: P.Description,
+});
+export type HealingAbstention = Static<typeof healingAbstention>;
 /**
  * Inspection actions a model may select for a next step. The application renders the visible text
  * from the action, so model prose never becomes advice shown to the user.
@@ -325,6 +337,15 @@ const supplemental = {
     model: Type.Optional(P.Name),
   }),
   HealingRejectInput: P.Obj({ reason: Type.String({ minLength: 1, maxLength: 8000 }) }),
+  /**
+   * A healing request that ended without a candidate because no safe test-only repair exists. It
+   * is a normal result, not an error: `reasonCode` and `reason` are code-owned, never model text.
+   */
+  HealingAbstention: healingAbstention,
+  /** Result of a healing request: a candidate proposal or an abstention. */
+  HealingResult: Type.Union([Entities.entities.HealingProposal, healingAbstention], {
+    type: "object",
+  }),
   HealingPatch,
   /** Model-only healing response: an admissible patch or an evidence-backed abstention. */
   AIHealingOutput: Type.Union([
@@ -587,10 +608,18 @@ const supplemental = {
   }),
   NormalizedRequirements: P.Obj({
     requirements: Type.Array(Entities.entities.Requirement),
-    conflicts: Type.Array(P.Obj({ left: P.EvidenceRef, right: P.EvidenceRef })),
+    conflicts: Type.Array(
+      P.Obj({
+        id: P.Name,
+        reason: P.Description,
+        requirementIds: Type.Array(P.id("req"), { minItems: 1 }),
+        left: P.EvidenceRef,
+        right: P.EvidenceRef,
+      }),
+    ),
     sourceSnapshotId: Type.String({
       description:
-        "Fingerprint of the requirement snapshot; pass it as testmaster_generate_plan.sourceSnapshotId after a human approves the requirements",
+        "Fingerprint of the requirement snapshot. It changes with every edit or approval: pass the fingerprint that testmaster_review_requirements returns as testmaster_generate_plan.sourceSnapshotId once the requirements are approved",
     }),
     version: P.Nonnegative,
     resource: Type.String({ description: "testmaster://requirements/{projectId}" }),
@@ -672,15 +701,59 @@ const supplemental = {
     /** One entry per revision whose candidate the checks refused after every repair. */
     validationErrors: Type.Array(P.Obj({ path: P.Name, message: P.Description })),
   }),
+  /** A saved test or revision, and whether runs of it use the revision yet. */
+  McpSavedTest: P.Obj({
+    test: Entities.entities.TestCase,
+    revision: Entities.entities.TestRevision,
+    /** True when the revision is the test's active one (a new test); a new revision of a test is not. */
+    active: Type.Boolean(),
+    nextActions: Type.Array(P.Description),
+  }),
   EvidenceSummary: P.Obj({
     manifest: Ops.ArtifactManifest,
     resources: Type.Array(Type.String({ minLength: 1, maxLength: 8192 })),
     integrity: P.Enum(["verified", "partial", "invalid"]),
     freshness: P.Enum(["current", "stale"]),
+    /** Why `freshness` is stale; empty when current. */
+    staleReasons: Type.Array(
+      P.Obj({
+        code: P.Enum(["revision_superseded", "environment_revision_changed"]),
+        message: P.Description,
+      }),
+    ),
     verificationEligible: Type.Boolean(),
     nextCursor: Type.Union([Type.String(), Type.Null()]),
   }),
   ReportLocation: P.Obj({ location: Type.String() }),
+  /** What an added source revision came to; chunks and the inventory stay out, `diagnostics` is whole. */
+  McpSourceReceipt: P.Obj({
+    source: sourceResponseContracts.SourceDetail.properties.source,
+    revision: Type.Omit(sourceResponseContracts.SourceDetail.properties.revision, ["chunks"]),
+    chunkCount: P.Nonnegative,
+    diagnostics: sourceResponseContracts.SourceDetail.properties.diagnostics,
+  }),
+  /** Outcome of each requested decision, then where the snapshot stands. */
+  McpRequirementsReview: P.Obj({
+    results: Type.Array(
+      P.Obj({
+        action: P.Enum(["update", "adjudicate", "approve"]),
+        id: P.Name,
+        ok: Type.Boolean(),
+        error: Type.Union([P.Obj({ code: P.Name, message: P.Description }), Type.Null()]),
+      }),
+    ),
+    sourceSnapshotId: Type.String({
+      description:
+        "Fingerprint of the snapshot after the decisions: pass it to testmaster_generate_plan",
+    }),
+    version: P.Nonnegative,
+    pendingApprovalIds: Type.Array(P.id("req")),
+    unresolvedConflictIds: Type.Array(P.Name),
+  }),
+  McpEnvironmentUpdate: P.Obj({
+    environment: Entities.entities.Environment,
+    revision: settingsContracts.EnvironmentRevisionView,
+  }),
 };
 export type HealingReview = Static<typeof supplemental.HealingReview>;
 
@@ -688,8 +761,8 @@ const httpInputs = {
   ProjectPatchInput: Type.Partial(supplemental.ProjectInput),
   EnvironmentPatchInput: Type.Partial(supplemental.EnvironmentInput),
   ApprovalInput: P.Obj({
-    actorId: Type.Optional(P.id("usr")),
-    reviewerId: Type.Optional(P.id("usr")),
+    actorId: Type.Optional(P.Name),
+    reviewerId: Type.Optional(P.Name),
     actionSet: names,
     revisionHash: P.ContentDigest,
     environmentRevisionId: P.id("evr"),

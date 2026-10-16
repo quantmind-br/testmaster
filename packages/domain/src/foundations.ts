@@ -137,6 +137,12 @@ export interface FlakeCounts {
   nCancelled: number;
   nInconclusive: number;
 }
+/**
+ * With no failure observed, a study whose terminal samples are at least this share blocked or
+ * inconclusive reports `unstable_infrastructure` instead of `passing_observed`: half the
+ * attempts never reached a verdict, so the passes say little about the test.
+ */
+const UNSTABLE_INFRASTRUCTURE_SHARE = 0.5;
 export function flakeStatistics(counts: FlakeCounts) {
   for (const value of Object.values(counts))
     if (!Number.isSafeInteger(value) || value < 0)
@@ -146,14 +152,20 @@ export function flakeStatistics(counts: FlakeCounts) {
   if (observed > counts.nPlanned) throw new RangeError("Observed counts exceed planned samples");
   const nValid = counts.nPass + counts.nFail;
   const interval = wilson(counts.nFail, nValid);
+  // Blocked and inconclusive samples never ran the test to a verdict: they say something about
+  // the environment, not the test. Cancelled samples are a caller decision and stay out of it.
+  const nUnjudged = counts.nBlocked + counts.nInconclusive;
+  const unjudgedShare = nUnjudged / (nValid + nUnjudged || 1);
   const classification =
-    nValid < 2
-      ? ("insufficient_data" as const)
-      : counts.nPass && counts.nFail
-        ? ("suspected_flaky" as const)
-        : counts.nFail
-          ? ("deterministic_failure" as const)
-          : ("passing_observed" as const);
+    counts.nFail === 0 && nUnjudged > 0 && unjudgedShare >= UNSTABLE_INFRASTRUCTURE_SHARE
+      ? ("unstable_infrastructure" as const)
+      : nValid < 2
+        ? ("insufficient_data" as const)
+        : counts.nPass && counts.nFail
+          ? ("suspected_flaky" as const)
+          : counts.nFail
+            ? ("deterministic_failure" as const)
+            : ("passing_observed" as const);
   return {
     counts: { ...counts, nValid, nInFlight: counts.nPlanned - observed },
     failureRate: interval.estimate,
@@ -162,6 +174,11 @@ export function flakeStatistics(counts: FlakeCounts) {
     classification,
     limitations: [
       ...(nValid < 2 ? ["Insufficient valid samples for classification"] : []),
+      ...(nUnjudged > 0
+        ? [
+            `${nUnjudged} of ${nValid + nUnjudged} terminal samples were blocked or inconclusive and are outside the failure estimate; they point at the environment, not at the test`,
+          ]
+        : []),
       ...(observed > nValid
         ? ["Failure estimate is conditional on valid pass/fail observations"]
         : []),

@@ -86,7 +86,8 @@ describe("M3 selective execution acceptance", () => {
               .get(text(positiveConsumer.id))?.n,
           ).toBe(consumerPlan.steps.length);
           healthy = false;
-          const failedEnvelope = await session.command(args, 9);
+          // A consumer blocked by its failed producer is a blocked run: exit 15 (spec 05).
+          const failedEnvelope = await session.command(args, 15);
           const failed = object(failedEnvelope.data);
           const negative = database
             .prepare("SELECT data_json FROM runs WHERE batch_id=?")

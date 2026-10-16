@@ -26,6 +26,104 @@ other secret, for example `headers: { authorization: { secretRef: "<managedSecre
 profile to an environment with `testmaster env create --auth-ref <profile id>` (`authRefs` in the API). Before
 any secret is released to an Attempt the profile signs in, or refreshes, as needed.
 
+## HTTP plans: `auth: "profile"` and secrets in JSON bodies
+
+A `request` step with `"auth": "profile"` sends the session of the environment's profiles with that request
+only, so a plan needs no `secretRef` header for it. The runner attaches:
+
+- the cookies of the profile's browser storage state that match the request URL (domain, path, `Secure` and
+  expiry, as a browser would), for `form` (browser) and `manual` profiles;
+- the profile's header credential: `Authorization` for `basic`, `bearer`, `oauth`, `oidc` and a `form` (HTTP)
+  login that stores a `token`, `Cookie` for a `form` (HTTP) `session` and for `cookie` profiles, and the header
+  named by `config.header` (default `X-Api-Key`) for `api-key` profiles.
+
+The session goes only to the environment's target origins. A first request to another origin, or one that
+already sets the same header itself, is refused; a redirect to another origin never receives it. A request
+without `auth` stays unauthenticated, so negative tests keep working. If the environment has no usable session,
+or the session has nothing for that URL, the Run ends `blocked` with `missing_secret` before the request is
+sent. A `form` (browser) profile whose stored state expired signs in first in an isolated login-only Attempt, and
+the HTTP Run then uses the captured state.
+
+To send a secret inside a JSON body, keep the document in `value` and place the reference with `set`
+(RFC 6901 pointers; the parent must exist):
+
+```json
+"body": {
+  "kind": "json",
+  "value": { "literal": { "username": "root", "password": null } },
+  "set": [{ "pointer": "/password", "value": { "secretRef": "<secret id>" } }]
+}
+```
+
+A `{ "secretRef": … }` or `{ "variableRef": … }` object written inside the `literal` would be sent as plain
+data, so `plan lint` refuses it (`nestedReference`) and names the pointer. Exported code does not support
+`auth` or `set`.
+
+## Creating a profile from a file
+
+`testmaster auth-profile create --file <path> [--project <id>]` reads one JSON object, the same fields as
+`POST /v1/auth-profiles` without `projectId` (the project comes from `--project`, the configuration or the only
+project). `testmaster auth-profile create --example` prints this file, and the command's options, without
+needing any argument. Credentials never appear in the file: `secrets` maps each static role of the kind to
+the ID of a vault secret registered earlier with `testmaster secret set --allowed-origin <origin>` (a `form`
+profile needs `username` and `password`; `totpSeed` is optional).
+
+A form login that posts a JSON body and keeps the session cookie:
+
+```json
+{
+  "name": "app-form-login",
+  "kind": "form",
+  "originBindings": [
+    "https://app.example.test"
+  ],
+  "secrets": {
+    "username": "sec_01900000-0000-7000-8000-000000000001",
+    "password": "sec_01900000-0000-7000-8000-000000000002"
+  },
+  "config": {
+    "http": {
+      "loginUrl": "https://app.example.test/api/auth/login",
+      "contentType": "json",
+      "fields": {
+        "username": "email",
+        "password": "password"
+      },
+      "staticFields": {
+        "remember": "false"
+      },
+      "success": {
+        "statusIn": [
+          200
+        ],
+        "cookieNames": [
+          "session"
+        ]
+      },
+      "ttlSeconds": 3600
+    }
+  },
+  "refreshPolicy": {
+    "cooldownSeconds": 60
+  }
+}
+```
+
+- `kind`, `originBindings` and `config` are required; `config.http.loginUrl` must be on one of the
+  `originBindings`. `fields` name the request fields that receive the vault values (`username` goes to
+  `email`, `password` to `password` here) and `contentType` is `json` or `form` (URL-encoded).
+  `staticFields` are sent as written next to them.
+- `success.statusIn` lists the statuses that mean the login worked. `success.cookieNames` copies those
+  cookies into the managed `session` credential (omit it to copy all); `success.tokenPointer` (a JSON pointer
+  into the response body) stores a token as the managed `token` credential instead.
+- Use `config.browser.steps` instead of `config.http` for a login that needs the browser, and
+  `refreshPolicy` to tune refresh (every field is optional).
+- `testmaster auth-profile update <id> --file <patch.json> --expected-version <n>` takes any subset of
+  `name`, `originBindings`, `secrets`, `config` (replaced whole) and `refreshPolicy`.
+- `testmaster --dry-run auth-profile create --file <path>` validates the file locally; nothing is stored.
+- Bind the profile to an environment (`testmaster env update <env id> --auth-ref <profile id> --expected-version <n>`), then
+  `auth-profile test-login <id> --environment <env id>` signs in once without storing anything else.
+
 ## Origins
 
 - `originBindings` are the target origins. An environment's origins must be a subset of them and the profile

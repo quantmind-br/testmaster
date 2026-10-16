@@ -2,12 +2,12 @@ import { ContractError } from "@testmaster/contracts";
 import type { EntityDocument } from "@testmaster/persistence";
 import { CODE_IMPORT_RULES, type ImportedCodeBundle } from "@testmaster/planner";
 import type { ResolvedConfig } from "../config.js";
-import { requireEntity, type ServiceContext } from "../context.js";
-import { CodeImportService } from "./code-import.js";
+import { allEntities, requireEntity, type ServiceContext } from "../context.js";
+import { CodeImportService, type CodeSecretBinding } from "./code-import.js";
 import { ModelService } from "./model.js";
 
 /** What the model must obey; the importer enforces the same constants (planner `CODE_IMPORT_RULES`). */
-const generationInstructions = `Return standalone Playwright test code importing only @playwright/test. Preserve every deterministic plan assertion and action. Use page.goto relative URLs and runner-configured baseURL. No shell, dependency installs, eval, filesystem or empty assertions. Do not use TestMaster APIs. The code is machine-checked before it is accepted and any violation is refused, so obey every rule: ${CODE_IMPORT_RULES.join(" ")}`;
+const generationInstructions = `Return standalone Playwright test code importing only @playwright/test. Preserve every deterministic plan assertion and action. Use page.goto relative URLs and runner-configured baseURL. No shell, dependency installs, eval, filesystem or empty assertions. Do not use TestMaster APIs. A plan value {"secretRef": <id>} is a credential: read it with secrets.get(NAME), where NAME is the entry of the data "secrets" list (name, id, allowedOrigins; never values) whose id matches. The code is machine-checked before it is accepted and any violation is refused, so obey every rule: ${CODE_IMPORT_RULES.join(" ")}`;
 // A refused candidate is a per-revision result; any other failure (budget, provider) is not.
 const refusalCodes: readonly string[] = ["INVALID_ARGUMENT", "POLICY_DENIED", "PAYLOAD_TOO_LARGE"];
 interface GenerationFailure {
@@ -31,6 +31,38 @@ export class CodeGenerationService {
     readonly ctx: ServiceContext,
     readonly config: ResolvedConfig,
   ) {}
+  /**
+   * Secrets the generated code may read: active, caller-readable secrets whose allowed origins
+   * cover every origin of some active environment of the project. Names, ids and origins only.
+   */
+  private offeredSecrets(projectId: string): (CodeSecretBinding & { allowedOrigins: string[] })[] {
+    try {
+      this.ctx.authorize("R");
+    } catch {
+      return [];
+    }
+    const environments: string[][] = [];
+    for (const environment of allEntities(this.ctx, "Environment")) {
+      if (environment.projectId !== projectId || environment.archivedAt) continue;
+      const revision = this.ctx.entities.get(
+        "EnvironmentRevision",
+        this.ctx.workspaceId,
+        String(environment.activeRevisionId),
+      );
+      if (revision) environments.push(revision.targetOrigins as string[]);
+    }
+    return allEntities(this.ctx, "SecretReference")
+      .filter((secret) => !secret.revokedAt && !secret.managedBy)
+      .filter((secret) => {
+        const allowed = secret.allowedOrigins as string[];
+        return environments.some((origins) => origins.every((origin) => allowed.includes(origin)));
+      })
+      .map((secret) => ({
+        name: String(secret.locator),
+        secretRef: String(secret.id),
+        allowedOrigins: secret.allowedOrigins as string[],
+      }));
+  }
   async generate(input: CodeGenerationInput, signal?: AbortSignal) {
     this.ctx.authorize("X", input.projectId);
     this.ctx.authorize("W", input.projectId);
@@ -73,6 +105,7 @@ export class CodeGenerationService {
       "Code generation",
     );
     const importer = new CodeImportService(this.ctx, this.config);
+    const offered = this.offeredSecrets(input.projectId);
     const candidates: EntityDocument[] = [];
     const validationErrors: GenerationFailure[] = [];
     const modelCallIds: string[] = [];
@@ -96,7 +129,19 @@ export class CodeGenerationService {
             projectId: input.projectId,
             purpose: "generate_code",
             responseSchema: "AIGeneratedCodeOutput",
-            data: { plan: revision.plan, format: "playwright" },
+            data: {
+              plan: revision.plan,
+              format: "playwright",
+              ...(offered.length
+                ? {
+                    secrets: offered.map((secret) => ({
+                      name: secret.name,
+                      id: secret.secretRef,
+                      allowedOrigins: secret.allowedOrigins,
+                    })),
+                  }
+                : {}),
+            },
             dataClasses: ["plans"],
             instructions: generationInstructions,
             ...(choice.providerId !== undefined && choice.explicit
@@ -106,14 +151,22 @@ export class CodeGenerationService {
             ...(signal ? { signal } : {}),
             check: async (raw) => {
               const output = raw as { code: string; format: "playwright" | "pytest" };
-              accepted.bundle = await importer.checkGeneratedCode(output);
+              accepted.bundle = await importer.checkGeneratedCode(
+                output,
+                offered.map((secret) => secret.name),
+              );
             },
           });
           modelCallIds.push(result.modelCallId);
           candidates.push(
             await importer.createGeneratedRevision(
               test.id,
-              { ...result.output, parentId: revision.id },
+              {
+                ...result.output,
+                parentId: revision.id,
+                modelCallId: result.modelCallId,
+                secretRefs: offered,
+              },
               accepted.bundle,
             ),
           );

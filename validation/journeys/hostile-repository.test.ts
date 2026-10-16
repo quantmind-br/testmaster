@@ -89,8 +89,8 @@ it("SEC-007/SEC-047 hostile fork diff/source analysis executes no hooks, helpers
       session.env.QUANTFORGE_API_KEY = canary;
       await writeFile(join(session.cwd, ".env"), `PROVIDER_KEY=${canary}\n`);
       const recorder = await recordNetwork(session, "hostile");
-      const command = async (args: string[]) => {
-        const output = await session.command(args);
+      const command = async (args: string[], expectedExit = 0) => {
+        const output = await session.command(args, expectedExit);
         await recorder.checkpoint();
         return output;
       };
@@ -108,7 +108,7 @@ it("SEC-007/SEC-047 hostile fork diff/source analysis executes no hooks, helpers
       expect(items(object(dirty.diff).changes).some((change) => change.path === "app.js")).toBe(
         true,
       );
-      const summary = await command(["discover", "--scope", "codebase"]);
+      const summary = await command(["discover", "--scope", "codebase", "--full"]);
       expect(object(summary.summary).scannedFiles).toContain("app.js");
       expect(items(object(summary.summary).skippedFiles)).toContainEqual({
         path: ".env",
@@ -128,16 +128,13 @@ it("SEC-007/SEC-047 hostile fork diff/source analysis executes no hooks, helpers
             components: { schemas: { Loop: { $ref: ref } } },
           }),
         );
-        const parsed = await command([
-          "source",
-          "add",
-          path,
-          "--role",
-          "api-spec",
-          "--format",
-          "openapi",
-        ]);
-        expect(object(parsed.revision).status).toBe("invalid");
+        // An invalid source is stored and refused: exit 5 with the revision status and diagnostics.
+        const refused = await command(
+          ["source", "add", path, "--role", "api-spec", "--format", "openapi"],
+          5,
+        );
+        const parsed = object(object(refused.error).details);
+        expect(parsed.status).toBe("invalid");
         expect(items(parsed.diagnostics).some((diagnostic) => diagnostic.code === code)).toBe(true);
       }
       expect(await readdir(markers)).toEqual([]);

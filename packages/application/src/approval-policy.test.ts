@@ -68,6 +68,17 @@ async function setup() {
   const requesterId = human("Requester");
   const firstId = human("First reviewer");
   const secondId = human("Second reviewer");
+  const agentId = (() => {
+    const id = uuidV7IdGenerator.next("svc");
+    entities.insert("Principal", {
+      id,
+      workspaceId,
+      kind: "service",
+      displayName: "Agent reviewer",
+      disabledAt: null,
+    });
+    return id;
+  })();
   const contextFor = (principalId: string): ServiceContext => ({
     database,
     entities,
@@ -130,6 +141,7 @@ async function setup() {
     executor,
     setPolicy,
     human,
+    agentId,
     contextFor,
   };
 }
@@ -223,6 +235,54 @@ describe("approval policy and separation of duties", () => {
     // The self approval is skipped, never consumed; the independent one admits the action.
     expect(world.executor.verify(world.run, world.test, world.env)).not.toBeNull();
     expect(world.executor.get(legacy.id).revokedAt).toBeNull();
+  });
+
+  it("SEC-039 an agent principal approves a production action the way a person does, bound and consumed once", async () => {
+    const world = await setup();
+    const approval = world.as(world.agentId).create(world.input);
+    expect(approval.reviewerId).toBe(world.agentId);
+    expect(world.executor.verify(world.run, world.test, world.env)?.id).toBe(approval.id);
+    expect(world.executor.get(approval.id).revokedAt).not.toBeNull();
+    expect(failure(() => world.executor.verify(world.run, world.test, world.env)).code).toBe(
+      "POLICY_DENIED",
+    );
+    const refused = failure(() => world.executor.verify(world.run, world.test, world.env));
+    expect(refused.details).toMatchObject({
+      reasonCode: "approval_required",
+      binding: {
+        revisionHash: world.input.revisionHash,
+        environmentRevisionId: world.input.environmentRevisionId,
+        originSet: ["https://example.com"],
+        actionSet: ["destructive"],
+        policyHash: world.input.policyHash,
+        actorId: world.requesterId,
+      },
+    });
+  });
+
+  it("SEC-039 separation of duties still refuses an agent approving its own request", async () => {
+    const world = await setup();
+    world.setPolicy({ requiredApprovers: 1, separationOfDuties: true });
+    const own = failure(() =>
+      world.as(world.agentId).create({ ...world.input, actorId: world.agentId }),
+    );
+    expect(own.code).toBe("FORBIDDEN");
+    expect(own.details).toMatchObject({ reason: "separation_of_duties" });
+    // The same agent may approve the request of someone else.
+    expect(world.as(world.agentId).create(world.input).reviewerId).toBe(world.agentId);
+  });
+
+  it("SEC-039 a disabled agent principal can no longer approve", async () => {
+    const world = await setup();
+    const agent = world.entities.get("Principal", world.ctx.workspaceId, world.agentId);
+    world.entities.update(
+      "Principal",
+      world.ctx.workspaceId,
+      world.agentId,
+      Number(agent?.version),
+      { ...agent, disabledAt: new Date().toISOString() },
+    );
+    expect(failure(() => world.as(world.agentId).create(world.input)).code).toBe("FORBIDDEN");
   });
 
   it("SEC-039 duplicate rows and a disabled second reviewer never satisfy two approvers", async () => {

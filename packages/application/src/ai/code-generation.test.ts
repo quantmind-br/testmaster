@@ -9,6 +9,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { completion, testProvider } from "../../../model-gateway/src/test-support.js";
 import { Application } from "../application.js";
 import { scaffoldPlan } from "../authoring.js";
+import { admissionSnapshot } from "../provenance.js";
 import { ModelService } from "./model.js";
 
 const roots: string[] = [];
@@ -241,4 +242,104 @@ it("a cancellation stays fatal and its details list the candidates created befor
     expect.stringMatching(/^mdl_/u),
     expect.stringMatching(/^mdl_/u),
   ]);
+});
+
+const secretCode = good.replace(
+  "request.get('/health')",
+  "request.get('/health', { headers: { authorization: secrets.get('API_KEY') } })",
+);
+const secretPrompt = (payload: Record<string, unknown> | undefined) =>
+  ((payload?.messages ?? []) as { content: string }[]).map((message) => message.content).join("\n");
+
+it("offers the secrets the environment origins allow by name and id, never a value, and stores the bindings with the model call", async () => {
+  const f = await fixture();
+  const origin = "http://127.0.0.1:4010";
+  f.app.environments.create({
+    projectId: f.projectId,
+    name: "target",
+    baseUrl: origin,
+    networkProfile: "local-loopback",
+    authRefs: [],
+  });
+  const value = "canary-secret-value-4f9c";
+  const api = await f.app.secrets.set("API_KEY", value, {
+    allowedOrigins: [origin],
+    ephemeral: true,
+  });
+  await f.app.secrets.set("ELSEWHERE", value, {
+    allowedOrigins: ["http://127.0.0.1:4011"],
+    ephemeral: true,
+  });
+  await f.app.secrets.set("UNBOUND", value, { ephemeral: true });
+  f.setOutput(generated(secretCode));
+  const receipt = await f.app.codeGeneration.generate({
+    projectId: f.projectId,
+    revisionIds: [f.revisionOf()],
+  });
+  const prompt = secretPrompt(f.payloads[0]);
+  expect(prompt).toContain("secrets.get(NAME)");
+  expect(prompt).toContain(api.id);
+  expect(prompt).toContain(origin);
+  expect(prompt).not.toContain("ELSEWHERE");
+  expect(prompt).not.toContain("UNBOUND");
+  expect(prompt).not.toContain(value);
+  expect(receipt.candidates).toHaveLength(1);
+  const [candidate] = receipt.candidates as unknown as {
+    codeRef: { secretRefs: unknown[] };
+    extensions: Record<string, unknown>;
+  }[];
+  expect(candidate?.codeRef.secretRefs).toEqual([{ name: "API_KEY", secretRef: api.id }]);
+  const calls = f.app.usage.get({ projectId: f.projectId }).calls;
+  expect(candidate?.extensions["testmaster:generationModelCallId"]).toBe(calls[0]?.id);
+});
+
+it("refuses generated code that reads a secret the environment does not offer", async () => {
+  const f = await fixture();
+  const origin = "http://127.0.0.1:4010";
+  f.app.environments.create({
+    projectId: f.projectId,
+    name: "target",
+    baseUrl: origin,
+    networkProfile: "local-loopback",
+    authRefs: [],
+  });
+  await f.app.secrets.set("ELSEWHERE", "v", {
+    allowedOrigins: ["http://127.0.0.1:4011"],
+    ephemeral: true,
+  });
+  f.setOutput(generated(secretCode.replace("API_KEY", "ELSEWHERE")));
+  await expect(
+    f.app.codeGeneration.generate({ projectId: f.projectId, revisionIds: [f.revisionOf()] }),
+  ).rejects.toMatchObject({
+    code: "INVALID_ARGUMENT",
+    details: {
+      validationErrors: [{ message: 'Secret "ELSEWHERE" is not declared for this test at line 2' }],
+    },
+  });
+  // The repair feedback names the rule and the secret, never the model's code or a value.
+  expect(secretPrompt(f.payloads[1])).toContain("is not declared for this test");
+});
+
+it("a generated code revision's admission snapshot names the generating call and its configuration hash", async () => {
+  const f = await fixture();
+  f.setOutput(generated(good));
+  const receipt = await f.app.codeGeneration.generate({
+    projectId: f.projectId,
+    revisionIds: [f.revisionOf()],
+  });
+  const candidate = receipt.candidates[0] as { id: string };
+  const revision = f.app.revisions.get(candidate.id);
+  const environment = f.app.environments.list(f.projectId)[0];
+  const envRevision = f.app.context.entities.get(
+    "EnvironmentRevision",
+    f.app.context.workspaceId,
+    String(environment?.activeRevisionId),
+  );
+  if (!envRevision) throw new Error("Missing environment revision");
+  const call = f.app.usage.get({ projectId: f.projectId }).calls[0];
+  const snapshot = admissionSnapshot(f.app.context, revision, envRevision, f.app.config, null, 0);
+  expect(snapshot.generationModelCallId).toBe(call?.id);
+  expect(snapshot.modelConfigHash).toMatch(/^[0-9a-f]{64}$/u);
+  expect(snapshot.generationModel).toMatchObject({ id: call?.id });
+  expect(snapshot.limitations).not.toContain("generation-model-config-hash-unavailable");
 });

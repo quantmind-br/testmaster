@@ -1,0 +1,75 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "plan"
+  ],
+  "properties": {
+    "plan": {
+      "additionalProperties": true,
+      "type": "object",
+      "properties": {},
+      "description": "ExecutablePlan to store; it is linted exactly like a plan file of the CLI"
+    },
+    "projectId": {
+      "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string",
+      "description": "Create a new test in this project; give projectId or testId"
+    },
+    "testId": {
+      "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string",
+      "description": "Add a new revision to this existing test instead; the revision is a candidate until testmaster_promote_revision"
+    },
+    "parentRevisionId": {
+      "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string",
+      "description": "Revision the new one derives from; only with testId, must belong to that test"
+    },
+    "name": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string",
+      "description": "Test name for a new test; default: the plan name"
+    },
+    "tags": {
+      "maxItems": 32,
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      },
+      "description": "Tags of a new test"
+    },
+    "priority": {
+      "anyOf": [
+        {
+          "const": "critical",
+          "type": "string"
+        },
+        {
+          "const": "high",
+          "type": "string"
+        },
+        {
+          "const": "normal",
+          "type": "string"
+        },
+        {
+          "const": "low",
+          "type": "string"
+        }
+      ],
+      "description": "Priority of a new test"
+    },
+    "justification": {
+      "maxLength": 8000,
+      "type": "string",
+      "description": "Why the test or revision is saved"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:Mcp_testmaster_save_test",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

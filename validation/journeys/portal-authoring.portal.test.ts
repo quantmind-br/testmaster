@@ -387,11 +387,32 @@ describe("portal authoring on the server profile", () => {
     await expectAccessible(page, "generate panel without a token limit");
   });
 
-  it("UX-019 only a person in an interactive session may accept; a token is refused and told why, and nothing becomes a test", async () => {
+  it("UX-019 a token with write scope accepts a proposal and a viewer is told why accepting is unavailable", async () => {
     const { projectId, requirements } = await newProject("Policy", ["A"]);
     const [requirement] = requirements;
     if (!requirement) throw new Error("Missing requirement");
-    const batch = await generate(projectId, [plan(requirement, "Needs a person")]);
+    const batch = await generate(projectId, [plan(requirement, "Needs a decision")]);
+
+    // A person sees the policy and may accept in the portal.
+    const { page } = await portal();
+    await page.goto(`/proposal-batches/${batch.id}`);
+    await expect.poll(async () => page.getByTestId("policy").textContent()).toMatch(/\S/);
+    await page.getByRole("checkbox", { name: "Needs a decision" }).check();
+    expect(await page.getByRole("button", { name: "Accept 1 selected" }).isEnabled()).toBe(true);
+
+    // A viewer can read the batch, is told why accepting is unavailable, and the server agrees.
+    const reader = await portal("viewer");
+    await reader.page.goto(`/proposal-batches/${batch.id}`);
+    await expect
+      .poll(async () => reader.page.getByTestId("policy").textContent())
+      .toContain("Your role can read this batch but not accept it");
+    // Even with the proposal selected, the accept action stays disabled and says why.
+    await reader.page.getByRole("checkbox", { name: "Needs a decision" }).check();
+    const accept = reader.page.getByRole("button", { name: "Accept 1 selected" });
+    expect(await accept.isDisabled()).toBe(true);
+    expect((await system()).tests.list(projectId)).toHaveLength(0);
+
+    // An agent holding a write-scoped token makes the same decision itself.
     const token = await stack.issueToken(stack.owner.principalId, ["R", "W", "X", "A"]);
     const automation = stack.anonymous();
     const headers = { authorization: `Bearer ${token}`, origin: stack.baseUrl };
@@ -406,12 +427,10 @@ describe("portal authoring on the server profile", () => {
       cookies: false,
     });
     expect(
-      preview.json<{ data: { policy: { canAccept: boolean; reason: string } } }>().data.policy,
-    ).toMatchObject({
-      canAccept: false,
-      reason: "interactive_acceptance_required",
-    });
-    const denied = await automation.request("POST", `/v1/proposal-batches/${batch.id}/accept`, {
+      preview.json<{ data: { policy: { canAccept: boolean; reason: string | null } } }>().data
+        .policy,
+    ).toMatchObject({ canAccept: true, reason: null });
+    const accepted = await automation.request("POST", `/v1/proposal-batches/${batch.id}/accept`, {
       body: {
         proposalIds: proposals.map((proposal) => proposal.id),
         expectedVersion: batch.version,
@@ -423,33 +442,8 @@ describe("portal authoring on the server profile", () => {
       },
       cookies: false,
     });
-    expect(denied.status).toBe(422);
-    expect(
-      denied.json<{ error: { code: string; details: { reason: string } } }>().error,
-    ).toMatchObject({
-      code: "POLICY_DENIED",
-      details: { reason: "interactive_acceptance_required" },
-    });
-    expect((await system()).tests.list(projectId)).toHaveLength(0);
-
-    // The same decision is available to the person in the portal, with the policy stated.
-    const { page } = await portal();
-    await page.goto(`/proposal-batches/${batch.id}`);
-    await expect.poll(async () => page.getByTestId("policy").textContent()).toMatch(/\S/);
-    await page.getByRole("checkbox", { name: "Needs a person" }).check();
-    expect(await page.getByRole("button", { name: "Accept 1 selected" }).isEnabled()).toBe(true);
-
-    // A viewer can read the batch, is told why accepting is unavailable, and the server agrees.
-    const reader = await portal("viewer");
-    await reader.page.goto(`/proposal-batches/${batch.id}`);
-    await expect
-      .poll(async () => reader.page.getByTestId("policy").textContent())
-      .toContain("Your role can read this batch but not accept it");
-    // Even with the proposal selected, the accept action stays disabled and says why.
-    await reader.page.getByRole("checkbox", { name: "Needs a person" }).check();
-    const accept = reader.page.getByRole("button", { name: "Accept 1 selected" });
-    expect(await accept.isDisabled()).toBe(true);
-    expect((await system()).tests.list(projectId)).toHaveLength(0);
+    expect(accepted.status).toBe(200);
+    expect((await system()).tests.list(projectId)).toHaveLength(1);
   });
 
   it("UX-021 M4-04 a concurrent edit to a proposal is shown as a diff and never overwritten silently", async () => {

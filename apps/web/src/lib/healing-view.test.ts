@@ -174,9 +174,7 @@ describe("healing review wording", () => {
     expect(describeRisk("destructive").tone).toBe("danger");
     expect(describeRisk("securityProbe").label).toBe("Security probe");
     expect(describeRisk("???").tone).toBe("warning");
-    expect(describeDecision("manual_review_required").text).toContain(
-      "human must accept or reject",
-    );
+    expect(describeDecision("manual_review_required").text).toContain("must accept or reject");
     expect(describeDecision("applied_by_policy").label).toBe("Applied by policy");
     expect(describeDecision("not_eligible").label).toContain("Not eligible");
   });

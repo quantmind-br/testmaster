@@ -1,0 +1,30 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "proposalId",
+    "plan",
+    "expectedVersion"
+  ],
+  "properties": {
+    "proposalId": {
+      "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string",
+      "description": "Proposal to edit; it must still be proposed (not accepted or rejected)"
+    },
+    "plan": {
+      "additionalProperties": true,
+      "type": "object",
+      "properties": {},
+      "description": "Replacement ExecutablePlan (kind executable); the requirement and evidence references of the proposal are kept"
+    },
+    "expectedVersion": {
+      "minimum": 1,
+      "type": "integer",
+      "description": "Proposal version being edited, for optimistic concurrency"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:Mcp_testmaster_edit_plan",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

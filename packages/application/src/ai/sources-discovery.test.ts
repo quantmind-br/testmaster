@@ -422,6 +422,18 @@ describe("durable discovery", () => {
     expect(result.warnings.some((warning) => warning.includes(": symbols_truncated: "))).toBe(true);
     expect(result.summary.fileRefs.map((ref) => ref.path)).toEqual(["many.ts"]);
   });
+  it("stores a snapshot whose skipped file path is longer than 200 characters", async () => {
+    const { cwd, projectId, discovery } = await fixture();
+    const directory = "d".repeat(120);
+    const skipped = `${directory}/${"k".repeat(105)}.pem`;
+    expect(skipped).toHaveLength(230);
+    await mkdir(join(cwd, directory));
+    await writeFile(join(cwd, skipped), "-----BEGIN PRIVATE KEY-----");
+    await writeFile(join(cwd, "ok.ts"), "export const ok = 1;\n");
+    const result = await discovery.discover({ projectId });
+    expect(result.codeSnapshot.skippedFiles?.some((file) => file.path === skipped)).toBe(true);
+    expect(result.summary.fileRefs.map((ref) => ref.path)).toEqual(["ok.ts"]);
+  });
   it("analyzes only the changed files and their importers in a diff and lists the rest", async () => {
     const { cwd, projectId, discovery } = await fixture();
     const git = promisify(execFile);

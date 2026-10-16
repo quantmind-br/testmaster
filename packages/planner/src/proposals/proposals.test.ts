@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import type { ExecutablePlan } from "@testmaster/contracts";
 import { expect, it } from "vitest";
 import { EvidenceCatalog } from "../sources/evidence.js";
 import {
@@ -27,6 +28,91 @@ it("refuses terminal plans as proposals, edits or refinements before judging the
   );
   // Positive control: an HTTP plan with a business assertion is still accepted.
   expect(validateProposalPlan(await fixture("backend")).runner).toBe("http");
+});
+
+type Step = ExecutablePlan["steps"][number];
+const assertion = (id: string, input: Record<string, unknown>, expectation: unknown): Step =>
+  ({
+    id,
+    kind: "assertion",
+    operation: "assert",
+    description: id,
+    required: true,
+    input,
+    expectation,
+  }) as Step;
+// The real generated login test: it passed on a blank page because it asserted only the URL and
+// the absence of the login fields.
+const loginPlan = async (after: Step[]): Promise<ExecutablePlan> => {
+  const plan = (await fixture("frontend")) as ExecutablePlan;
+  return { ...plan, steps: [...plan.steps.filter((step) => step.kind === "action"), ...after] };
+};
+const urlOnly = [
+  assertion(
+    "url",
+    { url: "/dashboard" },
+    { predicate: "urlEquals", value: { literal: "/dashboard" } },
+  ),
+  assertion("gone", { locator: { by: "label", value: "Password" } }, { predicate: "hidden" }),
+];
+
+it("refuses a browser plan that acts and then asserts only the URL and the absence of elements", async () => {
+  const plan = await loginPlan(urlOnly);
+  expect(() => validateProposalPlan(plan)).toThrow(
+    expect.objectContaining({
+      code: "INVALID_ARGUMENT",
+      details: { reasonCode: "browser_postcondition_missing" },
+    }),
+  );
+  const catalog = new EvidenceCatalog([
+    {
+      sourceRevisionId: "svr_01900000-0000-7000-8000-000000000001",
+      contentHash: `sha256:${"a".repeat(64)}`,
+    },
+  ]);
+  const id = requirementId();
+  const inspected = inspectGeneratedProposals(
+    { proposals: [{ plan, requirementRefs: [id], evidenceIds: ["E1"], warnings: [] }] },
+    [id],
+    catalog,
+  );
+  expect(inspected.refused.map(({ reasonCode }) => reasonCode)).toEqual([
+    "browser_postcondition_missing",
+  ]);
+});
+
+it("accepts a browser plan whose last action is followed by a positive assertion on rendered content", async () => {
+  const heading = { by: "role", role: "heading", name: "Dashboard", exact: true };
+  for (const positive of [
+    assertion("heading", { locator: heading }, { predicate: "visible" }),
+    assertion(
+      "greeting",
+      { locator: heading },
+      { predicate: "textContains", value: { literal: "Dashboard" } },
+    ),
+    assertion("rows", { locator: heading }, { predicate: "countEquals", value: 1 }),
+  ])
+    expect(validateProposalPlan(await loginPlan([...urlOnly, positive])).runner).toBe("playwright");
+  // Negative controls: a positive assertion before the last action, an optional one and an empty
+  // count do not observe the final page.
+  const early = await loginPlan(urlOnly);
+  early.steps = [
+    assertion("early", { locator: heading }, { predicate: "visible" }),
+    ...early.steps,
+  ];
+  const optional = assertion("heading", { locator: heading }, { predicate: "visible" });
+  optional.required = false;
+  for (const weak of [
+    early,
+    await loginPlan([...urlOnly, optional]),
+    await loginPlan([
+      ...urlOnly,
+      assertion("none", { locator: heading }, { predicate: "countEquals", value: 0 }),
+    ]),
+  ])
+    expect(() => validateProposalPlan(weak)).toThrow(
+      expect.objectContaining({ details: { reasonCode: "browser_postcondition_missing" } }),
+    );
 });
 
 const requirementId = () => `req_${randomUUID()}`;

@@ -56,6 +56,17 @@ export function deniedOrigin(url: string): string {
 }
 
 /**
+ * The HTTP URL whose origin authorizes a WebSocket: `ws` maps to `http` and `wss` to `https`, so a
+ * socket is held to the same attempt policy as a request. Any other scheme is returned unchanged
+ * and therefore never authorized.
+ */
+export function webSocketRequestUrl(url: string): string {
+  if (/^ws:/iu.test(url)) return `http:${url.slice(3)}`;
+  if (/^wss:/iu.test(url)) return `https:${url.slice(4)}`;
+  return url;
+}
+
+/**
  * Reason of a fatal browser denial: names the origin and resource type that the egress policy
  * refused and, when the origin is an unambiguous http(s) one, how an operator allows it on purpose.
  * `--additional-origin` replaces the environment's list, so the hint says to repeat existing entries.

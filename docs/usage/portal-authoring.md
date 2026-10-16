@@ -37,12 +37,12 @@ origin), validation, the revision acceptance would create, an estimate of the du
 
 ### Who may accept (UX-019)
 
-Accepting makes a test active, so it is an interactive act by an enabled human principal: a person with a
-browser session, or the host's local token. API tokens (`tm_api_`), worker and operator credentials, service
-accounts and controller scopes are refused with `POLICY_DENIED` and `details.reason`
-`interactive_acceptance_required` or `human_acceptance_required`. An acceptance given in an interactive session
-is not inherited by CI or other automation. The preview states this in `policy`; a role without write
-permission is reported with `write_permission_required` and the page disables the action with the reason.
+Accepting makes a test active. It is an explicit, audited decision by any principal with write permission:
+a person with a browser session, an API token (`tm_api_`), a service account with a write grant, the host's
+local token or an agent. The revision records `testmaster:acceptance` (`principalId`, `credentialKind`, `at`,
+`batchVersion`). The preview states the outcome in `policy` (`{canAccept, reason, text}`); a caller without
+write permission gets `write_permission_required` and the page disables the action with the reason. An
+acceptance is not inherited by CI or other automation: each acceptance names the principal that gave it.
 
 ## Editing a test
 

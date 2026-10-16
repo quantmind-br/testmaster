@@ -75,8 +75,6 @@ export const authoringContracts = {
     stale: Type.Boolean(),
     staleReason: Nullable(P.Description),
     policy: P.Obj({
-      /** Acceptance is an interactive act by a human principal; automation never inherits it (UX-019). */
-      channel: P.Enum(["interactive"]),
       canAccept: Type.Boolean(),
       reason: Nullable(P.Name),
       text: P.Description,

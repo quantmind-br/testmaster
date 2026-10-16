@@ -317,4 +317,62 @@ describe("deterministic grounded source parsing", () => {
         .diagnostics[0]?.code,
     ).toBe("size_limit");
   });
+  describe("OpenAPI 3.2", () => {
+    const parse32 = (document: Record<string, unknown>) =>
+      parseSource({
+        revisionId,
+        format: "openapi",
+        bytes: Buffer.from(JSON.stringify({ info: { title: "T", version: "1" }, ...document })),
+      });
+    const ok = { description: "ok" };
+    it("accepts a 3.2 document with QUERY, additionalOperations, itemSchema and 3.2-only fields", async () => {
+      const result = await parse32({
+        openapi: "3.2.0",
+        $self: "https://example.test/api",
+        tags: [{ name: "events", summary: "Events", kind: "nav" }],
+        servers: [{ url: "https://example.test", name: "prod" }],
+        paths: {
+          "/events": {
+            get: {
+              responses: {
+                "200": {
+                  description: "Stream",
+                  summary: "A stream of events",
+                  content: {
+                    "application/jsonl": { itemSchema: { $ref: "#/components/schemas/Event" } },
+                  },
+                },
+              },
+            },
+            query: { responses: { "200": ok } },
+            additionalOperations: { COPY: { responses: { "200": ok } } },
+          },
+        },
+        components: { schemas: { Event: { type: "object", xml: { nodeType: "element" } } } },
+      });
+      expect(result.revision.status).toBe("ready");
+      const operations = (
+        result.inventory.operations as Array<{ method: string; path: string }>
+      ).map((item) => `${item.method} ${item.path}`);
+      expect(operations).toEqual(["GET /events", "QUERY /events", "COPY /events"]);
+    });
+    it("keeps unknown 3.2 keywords out of the verdict and reports them as warnings", async () => {
+      const result = await parse32({
+        openapi: "3.2.1",
+        paths: { "/a": { get: { responses: { "200": { ...ok, futureKeyword: true } } } } },
+      });
+      expect(result.revision.status).toBe("ready");
+      expect(result.diagnostics.map((item) => item.message).join()).toContain("futureKeyword");
+    });
+    it("still rejects a 3.2 document whose QUERY operation is malformed, and 3.3", async () => {
+      const bad = await parse32({
+        openapi: "3.2.0",
+        paths: { "/a": { query: { responses: { "200": {} } } } },
+      });
+      expect(bad.revision.status).toBe("invalid");
+      const future = await parse32({ openapi: "3.3.0", paths: {} });
+      expect(future.revision.status).toBe("invalid");
+      expect(future.diagnostics[0]?.code).toBe("unsupported_openapi");
+    });
+  });
 });

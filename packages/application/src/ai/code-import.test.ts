@@ -5,7 +5,7 @@ import { uuidV7IdGenerator } from "@testmaster/domain";
 import { EntityRepository, PersistenceDatabase } from "@testmaster/persistence";
 import { afterEach, expect, it } from "vitest";
 import { ProjectsService } from "../authoring.js";
-import type { ServiceContext } from "../context.js";
+import { entity, type ServiceContext } from "../context.js";
 import { CodeImportService } from "./code-import.js";
 
 const cleanups: (() => Promise<unknown> | undefined)[] = [];
@@ -198,4 +198,97 @@ it("creates same-project references idempotently and rejects foreign project or 
   await expect(
     service.createTestFromReference({ projectId: foreign.id, codeRef: ref }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
+});
+const secretCode =
+  "import {test,expect} from '@playwright/test';test('me',async({request,secrets})=>{const r=await request.get('/me',{headers:{authorization:secrets.get('API_KEY')}});expect(r.status()).toBe(200);});";
+function registerSecret(ctx: ServiceContext, locator: string, extra: Record<string, unknown> = {}) {
+  const secret = entity(ctx, "sec", {
+    provider: "ephemeral",
+    locator,
+    secretVersion: 1,
+    allowedOrigins: [],
+    ...extra,
+  });
+  ctx.entities.insert("SecretReference", secret);
+  return secret;
+}
+it("binds the secrets imported code reads to the project's registered references and keeps them on copies", async () => {
+  const { cwd, ctx, project, service } = await setup();
+  await writeFile(join(cwd, "me.spec.ts"), secretCode);
+  const input = { projectId: project.id, path: "me.spec.ts", format: "playwright" as const };
+  // Unregistered, revoked and credential-managed secrets are not declared: the code is refused.
+  await expect(service.import(input)).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+  registerSecret(ctx, "API_KEY", { revokedAt: new Date().toISOString() });
+  registerSecret(ctx, "API_KEY", { managedBy: uuidV7IdGenerator.next("aup") });
+  await expect(service.import(input)).rejects.toMatchObject({
+    message: 'Secret "API_KEY" is not declared for this test at line 1',
+  });
+  const secret = registerSecret(ctx, "API_KEY");
+  const imported = await service.import(input);
+  expect(imported.revision.codeRef?.secretRefs).toEqual([
+    { name: "API_KEY", secretRef: secret.id },
+  ]);
+  expect(imported.revision.plan).toBeNull();
+  const copied = await service.createTestFromReference({
+    projectId: project.id,
+    codeRef: imported.revision.codeRef as NonNullable<typeof imported.revision.codeRef>,
+  });
+  expect(copied.revision.codeRef?.secretRefs).toEqual([{ name: "API_KEY", secretRef: secret.id }]);
+  // A reference whose secretRefs differ from the stored bundle's cannot widen what the code reads.
+  await expect(
+    service.createRevision(
+      copied.test.id,
+      {
+        ...(imported.revision.codeRef as NonNullable<typeof imported.revision.codeRef>),
+        secretRefs: [{ name: "OTHER", secretRef: secret.id }],
+      },
+      copied.revision.id,
+    ),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" });
+});
+it("imports code that reads no secret without secretRefs, even when secrets exist", async () => {
+  const { cwd, ctx, project, service } = await setup();
+  registerSecret(ctx, "API_KEY");
+  await writeFile(
+    join(cwd, "health.spec.ts"),
+    "import {test,expect} from '@playwright/test';test('health',async({request})=>{const r=await request.get('/health');expect(r.status()).toBe(200);});",
+  );
+  const imported = await service.import({
+    projectId: project.id,
+    path: "health.spec.ts",
+    format: "playwright",
+  });
+  expect(imported.revision.codeRef).not.toHaveProperty("secretRefs");
+});
+it("records the generating model call and the offered secrets on a generated revision, refusing others", async () => {
+  const { cwd, ctx, project, service } = await setup();
+  const secret = registerSecret(ctx, "API_KEY");
+  await writeFile(join(cwd, "me.spec.ts"), secretCode.replace("secrets.get('API_KEY')", "'x'"));
+  const initial = await service.import({
+    projectId: project.id,
+    path: "me.spec.ts",
+    format: "playwright",
+  });
+  const offered = [{ name: "API_KEY", secretRef: secret.id }];
+  const generated = await service.createGeneratedRevision(initial.test.id, {
+    code: secretCode,
+    format: "playwright",
+    parentId: initial.revision.id,
+    modelCallId: "mc-generation-1",
+    secretRefs: offered,
+  });
+  expect(generated.codeRef?.secretRefs).toEqual(offered);
+  expect(generated.extensions).toMatchObject({
+    "testmaster:generationModelCallId": "mc-generation-1",
+    "testmaster:verificationRequired": true,
+  });
+  await expect(
+    service.createGeneratedRevision(initial.test.id, {
+      code: secretCode,
+      format: "playwright",
+      parentId: initial.revision.id,
+      modelCallId: "mc-generation-2",
+      secretRefs: [],
+    }),
+  ).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
 });

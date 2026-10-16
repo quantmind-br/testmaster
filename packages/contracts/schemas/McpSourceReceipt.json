@@ -1,0 +1,268 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "source",
+    "revision",
+    "chunkCount",
+    "diagnostics"
+  ],
+  "properties": {
+    "source": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "id",
+        "workspaceId",
+        "createdAt",
+        "version",
+        "projectId",
+        "role",
+        "displayName",
+        "origin",
+        "activeRevisionId"
+      ],
+      "properties": {
+        "id": {
+          "pattern": "^src_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "workspaceId": {
+          "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "createdAt": {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "projectId": {
+          "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "role": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "displayName": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "origin": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "activeRevisionId": {
+          "anyOf": [
+            {
+              "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "extensions": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-z][a-z0-9-]*:[A-Za-z0-9_-]+$": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/T0"
+                  }
+                },
+                {
+                  "type": "object",
+                  "patternProperties": {
+                    "^(.*)$": {
+                      "$ref": "#/$defs/T0"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "revision": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "id",
+        "workspaceId",
+        "contentHash",
+        "mediaType",
+        "sizeBytes",
+        "parserVersion",
+        "status",
+        "parentId"
+      ],
+      "properties": {
+        "id": {
+          "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "workspaceId": {
+          "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "contentHash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "mediaType": {
+          "anyOf": [
+            {
+              "const": "text/markdown",
+              "type": "string"
+            },
+            {
+              "const": "text/plain",
+              "type": "string"
+            },
+            {
+              "const": "application/json",
+              "type": "string"
+            },
+            {
+              "const": "application/pdf",
+              "type": "string"
+            },
+            {
+              "const": "application/vnd.oai.openapi",
+              "type": "string"
+            },
+            {
+              "const": "application/graphql",
+              "type": "string"
+            }
+          ]
+        },
+        "sizeBytes": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "parserVersion": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "const": "ready",
+              "type": "string"
+            },
+            {
+              "const": "partial",
+              "type": "string"
+            },
+            {
+              "const": "needs_input",
+              "type": "string"
+            },
+            {
+              "const": "invalid",
+              "type": "string"
+            }
+          ]
+        },
+        "parentId": {
+          "anyOf": [
+            {
+              "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "chunkCount": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "T0": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$id": "urn:testmaster:McpSourceReceipt",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

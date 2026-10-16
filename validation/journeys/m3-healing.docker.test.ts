@@ -1,11 +1,18 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { join } from "node:path";
-import { Application } from "@testmaster/application";
+import { Application, type HealingOutcome, isHealingAbstention } from "@testmaster/application";
 import { assertionsHash } from "@testmaster/planner";
 import { expect, it } from "vitest";
 import { completion, testProvider } from "../../packages/model-gateway/src/test-support.js";
 import { action, assertion, executable, journey, text } from "./harness.js";
+
+/** The proposal of a propose call that must not abstain. */
+async function proposed(request: Promise<HealingOutcome>) {
+  const outcome = await request;
+  if (isHealingAbstention(outcome)) throw new Error(`Healing abstained: ${outcome.reasonCode}`);
+  return outcome;
+}
 
 it("M3-02 deterministic controlled-provider Chromium healing preserves original failure and kills the semantic mutant", async () => {
   await journey("m3-healing", async (session) => {
@@ -145,7 +152,7 @@ it("M3-02 deterministic controlled-provider Chromium healing preserves original 
         failed.id,
       );
       const originalManifest = await app.artifacts.get(failed.id);
-      const proposal = await app.healing.propose(failed.id, {});
+      const proposal = await proposed(app.healing.propose(failed.id, {}));
       expect(proposal.status).toBe("proposed");
       expect(proposal.approvalMode).toBeNull();
       expect(() =>
@@ -154,7 +161,7 @@ it("M3-02 deterministic controlled-provider Chromium healing preserves original 
           Number(app!.tests.get(test.id).version),
         ),
       ).toThrow();
-      expect((await app.healing.propose(failed.id, {})).id).toBe(proposal.id);
+      expect((await proposed(app.healing.propose(failed.id, {}))).id).toBe(proposal.id);
       expect(completions).toBe(1);
       const candidate = app.revisions.get(proposal.candidateRevisionId);
       expect(assertionsHash(candidate.plan!)).toBe(

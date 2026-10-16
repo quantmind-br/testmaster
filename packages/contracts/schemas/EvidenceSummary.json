@@ -6,6 +6,7 @@
     "resources",
     "integrity",
     "freshness",
+    "staleReasons",
     "verificationEligible",
     "nextCursor"
   ],
@@ -252,6 +253,35 @@
           "type": "string"
         }
       ]
+    },
+    "staleReasons": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "const": "revision_superseded",
+                "type": "string"
+              },
+              {
+                "const": "environment_revision_changed",
+                "type": "string"
+              }
+            ]
+          },
+          "message": {
+            "maxLength": 8000,
+            "type": "string"
+          }
+        }
+      }
     },
     "verificationEligible": {
       "type": "boolean"

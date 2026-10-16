@@ -2,11 +2,13 @@ import {
   ContractError,
   type ExecutablePlan,
   type PlanIssue,
+  type PlanStep,
   type PlanValidation,
   type planValidationChecks,
   validate,
 } from "@testmaster/contracts";
 import { validateProposalPlan } from "@testmaster/planner";
+import { sourceSchemasFor } from "./ai/source-documents.js";
 import { requireEntity, type ServiceContext } from "./context.js";
 import { captureDeclarations } from "./runs.js";
 
@@ -104,12 +106,20 @@ export class PlanValidationService {
         validateProposalPlan(plan);
       } catch (error) {
         if (!(error instanceof ContractError)) throw error;
-        push("assertions", "trivial_assertion", "/steps", error.message, null);
+        const reasonCode = error.details.reasonCode;
+        push(
+          "assertions",
+          typeof reasonCode === "string" ? reasonCode : "trivial_assertion",
+          "/steps",
+          error.message,
+          null,
+        );
       }
       checked.add("dependencies");
       checked.add("secrets");
       this.dependencies(plan, input.testId, push);
       this.secrets(input.plan, input.environmentId, push);
+      this.schemaPointers(plan, push);
     }
     checked.add("permissions");
     try {
@@ -219,6 +229,36 @@ export class PlanValidationService {
           null,
         );
     }
+  }
+
+  /** Each `jsonSchema` pointer must reach a schema exactly as the runner input is built. */
+  private schemaPointers(
+    plan: ExecutablePlan,
+    push: (
+      check: Check,
+      code: string,
+      field: string,
+      message: string,
+      stepId?: string | null,
+    ) => void,
+  ): void {
+    const resolved = sourceSchemasFor(this.ctx, plan);
+    const visit = (steps: readonly PlanStep[], base: string): void => {
+      for (const [index, step] of steps.entries()) {
+        const path = `${base}/${index}`;
+        if (step.operation === "frame") visit(step.input.childSteps, `${path}/input/childSteps`);
+        if (step.operation !== "assert" || step.expectation.predicate !== "jsonSchema") continue;
+        const { sourceRevisionId, pointer } = step.expectation;
+        if (`${sourceRevisionId}${pointer}` in resolved) continue;
+        push(
+          "references",
+          "schema_pointer_unresolved",
+          `${path}/expectation/pointer`,
+          `Pointer "${pointer}" does not reach a schema in source revision ${sourceRevisionId}: it must be /paths/<path>/<method>/... inside an operation, or /components/schemas/<Name> (/definitions/<Name> for Swagger 2), and the revision must be a ready OpenAPI source of this workspace.`,
+        );
+      }
+    };
+    visit(plan.steps, "/steps");
   }
 
   private secrets(

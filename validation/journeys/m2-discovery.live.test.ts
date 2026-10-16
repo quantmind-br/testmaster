@@ -100,6 +100,7 @@ it("J02 preserves conflicting source references, adjudication, fixed diff, exclu
           formalRevision,
           "--exclude",
           "excluded.js",
+          "--full",
         ]);
         const summary = object(full.summary);
         expect(summary.scannedFiles).toContain("src/server.js");

@@ -253,6 +253,18 @@ export const RunResult = Obj({
   cleanupOutcome: CleanupOutcome,
   analysisStatus: AnalysisStatus,
   reasonCode: Type.Optional(Enum(reasonCodes)),
+  /** Manifest entries that were not available when the run finished; set with `evidence_incomplete`. */
+  unavailableEvidence: Type.Optional(
+    Type.Array(
+      Obj({
+        relativePath: RelativePath,
+        kind: Name,
+        state: ArtifactState,
+        omissionReason: Type.Optional(Name),
+      }),
+      { maxItems: 500 },
+    ),
+  ),
   passedOnRetry: Type.Boolean(),
   firstAttemptOutcome: Type.Union([Outcome, Type.Null()]),
 });

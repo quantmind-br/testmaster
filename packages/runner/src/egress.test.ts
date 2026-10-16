@@ -4,7 +4,18 @@ import {
   deniedOrigin,
   deniedSubrequestMessage,
   EgressDenials,
+  webSocketRequestUrl,
 } from "./egress.js";
+
+it.each([
+  ["ws://app.example.test/live", "http://app.example.test/live"],
+  ["wss://app.example.test:8443/live?x=1", "https://app.example.test:8443/live?x=1"],
+  ["WSS://app.example.test/live", "https://app.example.test/live"],
+  ["ftp://app.example.test/live", "ftp://app.example.test/live"],
+  ["https://app.example.test/live", "https://app.example.test/live"],
+])("maps the WebSocket URL %s to the request URL that authorizes it", (url, expected) => {
+  expect(webSocketRequestUrl(url)).toBe(expected);
+});
 
 it.each([
   ["image", "GET"],

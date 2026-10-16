@@ -74,14 +74,16 @@ describe("permission rows", () => {
     expect(byKey(rows, "read")?.reason).toBe("");
   });
 
-  it("UX-005 approval is human-only: a service principal that may write still cannot approve", () => {
+  it("UX-005 approval follows write permission: a service principal that may write can approve like a person", () => {
     const human = permissionRows(me("human", "maintainer", ["read", "write"]), matrix);
     expect(byKey(human, "approve")?.allowed).toBe(true);
     const service = permissionRows(me("service", "service_account", ["read", "write"]), matrix);
     expect(byKey(service, "author")?.allowed).toBe(true);
-    expect(byKey(service, "approve")?.allowed).toBe(false);
-    expect(byKey(service, "approve")?.reason).toBe(
-      "Approvals are decided by human principals only; service principals never approve.",
+    expect(byKey(service, "approve")).toMatchObject({ allowed: true, reason: "" });
+    const reader = permissionRows(me("service", "service_account", ["read"]), matrix);
+    expect(byKey(reader, "approve")?.allowed).toBe(false);
+    expect(byKey(reader, "approve")?.reason).toBe(
+      "The service_account role needs an explicit grant for approve.",
     );
   });
 

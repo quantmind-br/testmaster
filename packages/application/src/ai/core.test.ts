@@ -25,7 +25,10 @@ afterEach(async () => {
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
   delete process.env.FAKE_KEY;
 });
-async function fixture(reasoningEffort?: "low" | "medium" | "high" | "xhigh") {
+async function fixture(
+  reasoningEffort?: "low" | "medium" | "high" | "xhigh",
+  contextTokens?: number,
+) {
   const root = await mkdtemp(join(tmpdir(), "tm-ai-core-"));
   roots.push(root);
   const home = join(root, "home");
@@ -91,6 +94,10 @@ async function fixture(reasoningEffort?: "low" | "medium" | "high" | "xhigh") {
               baseUrl: `http://127.0.0.1:${address.port}/v1`,
               models: testProvider.models.map((model) => ({
                 ...model,
+                capabilities: {
+                  ...model.capabilities,
+                  ...(contextTokens ? { contextTokens } : {}),
+                },
                 ...(reasoningEffort ? { reasoningEffort } : {}),
               })),
             },
@@ -297,6 +304,41 @@ it("normalization reports progress per model batch and forwards an explicit mode
     { completed: 2, total: 2 },
   ]);
   expect(f.payloads.map((payload) => payload.model)).toEqual(["model", "model"]);
+});
+it("normalization refuses before the first paid batch when the reconciliation cannot fit the declared context", async () => {
+  const f = await fixture(undefined, 30_000);
+  const section = (name: string, index: number) =>
+    `## ${name} section ${index}\n${`The ${name} endpoint ${index} must report ok. `.repeat(16)}\n`;
+  const sources = [];
+  for (const name of ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]) {
+    const path = join(f.root, `${name}.md`);
+    await writeFile(
+      path,
+      `# ${name}\n${Array.from({ length: 8 }, (_, index) => section(name, index)).join("")}`,
+    );
+    sources.push(
+      await f.app.sources.add({ projectId: f.projectId, role: "prd", path, format: "markdown" }),
+    );
+  }
+  const refusal = await f.app.requirements
+    .normalize({
+      projectId: f.projectId,
+      sourceRevisionIds: sources.map((source) => source.revision.id),
+    })
+    .catch((error: unknown) => error);
+  expect(refusal).toMatchObject({
+    code: "PAYLOAD_TOO_LARGE",
+    details: { contextTokens: 30_000 },
+  });
+  expect((refusal as ContractError).details?.promptBytes).toBeGreaterThan(30_000);
+  expect(f.counts().requests).toBe(0);
+  // Control: one source's extraction batches fit the same context, so the first batch reaches the
+  // provider (its canned output is not a valid extraction; only the transport call matters).
+  const [first] = sources;
+  await f.app.requirements
+    .normalize({ projectId: f.projectId, sourceRevisionIds: [String(first?.revision.id)] })
+    .catch(() => undefined);
+  expect(f.counts().completions).toBeGreaterThan(0);
 });
 it("an unknown explicit model is refused before any provider request", async () => {
   const f = await fixture();
@@ -2197,4 +2239,113 @@ it("partialGeneration stores the proposals that pass and lists the refused ones,
     details: { atomicity: "all_or_nothing", refused: [expect.anything(), expect.anything()] },
   });
   expect(f.app.proposals.list(f.projectId)).toHaveLength(stored);
+});
+it("generation offers the project's auth profiles and the JSON body set guidance, and refuses auth profile when none exists", async () => {
+  const { f, secret, proposal } = await openApiGenerationFixture();
+  const withProfileAuth = () => {
+    const output = proposal();
+    const request = output.proposals[0]?.plan.steps[0];
+    if (request?.operation !== "request") throw new Error("Missing request step");
+    request.input.auth = "profile";
+    return output;
+  };
+  const sentPrompt = () =>
+    ((f.payloads.at(-1)?.messages ?? []) as { content: string }[])
+      .map((message) => message.content)
+      .join("\n");
+  f.setOutput(withProfileAuth());
+  await expect(f.app.proposals.generate({ projectId: f.projectId })).rejects.toMatchObject({
+    code: "INVALID_ARGUMENT",
+    details: { refused: [expect.objectContaining({ reasonCode: "auth_profile_not_offered" })] },
+  });
+  expect(sentPrompt()).not.toContain('"authProfiles"');
+  // Positive control: once the project has an auth profile it is offered and the plan is accepted.
+  await f.app.authProfiles.create({
+    projectId: f.projectId,
+    name: "api-login",
+    kind: "bearer",
+    originBindings: ["https://api.example.test"],
+    config: {},
+    secrets: { token: secret.id },
+  });
+  f.setOutput(withProfileAuth());
+  const batch = await f.app.proposals.generate({ projectId: f.projectId });
+  const [generated] = f.app.proposals.detail(batch.id).proposals;
+  const request = generated?.plan.kind === "executable" ? generated.plan.steps[0] : undefined;
+  expect(request?.operation === "request" && request.input.auth).toBe("profile");
+  const prompt = sentPrompt();
+  expect(prompt).toContain(
+    '"authProfiles":[{"kind":"bearer","name":"api-login","origins":["https://api.example.test"]}]',
+  );
+  expect(prompt).toContain('"auth": "profile"');
+  expect(prompt).toContain("body.set");
+  expect(prompt).toContain('"pointer":"/password"');
+  expect(prompt).not.toContain("canary-credential-value");
+});
+it("a jsonSchema pointer into /components/schemas resolves for generation, the runner input and plan validation", async () => {
+  const { f, source, proposal } = await openApiGenerationFixture();
+  const pointer = "/components/schemas/Items";
+  f.setOutput(proposal({ pointer }));
+  const batch = await f.app.proposals.generate({ projectId: f.projectId });
+  const [generated] = f.app.proposals.detail(batch.id).proposals;
+  if (generated?.plan.kind !== "executable") throw new Error("Missing generated plan");
+  expect(sourceSchemasFor(f.app.context, generated.plan)).toEqual({
+    [`${source.revision.id}${pointer}`]: expect.objectContaining({
+      type: "object",
+      required: ["items"],
+    }),
+  });
+  const codes = (plan: unknown) =>
+    f.app.planValidation
+      .validate(f.projectId, { plan })
+      .issues.filter((issue) => issue.code === "schema_pointer_unresolved")
+      .map((issue) => issue.field);
+  expect(codes(generated.plan)).toEqual([]);
+  // Negative control: a component the document does not declare is reported at its step.
+  const missing = proposal({ pointer: "/components/schemas/Missing" }).proposals[0]?.plan;
+  expect(codes(missing)).toEqual(["/steps/2/expectation/pointer"]);
+});
+it("generation sends a browser proposal that asserts only the URL back to the model and stores the repaired one", async () => {
+  const { f, proposal } = await openApiGenerationFixture();
+  const base = proposal().proposals[0];
+  if (!base) throw new Error("Missing base proposal");
+  const browser = (after: unknown[]) => {
+    const plan = scaffoldPlan("frontend");
+    plan.requirementRefs = base.requirementRefs;
+    plan.steps = [...plan.steps.slice(0, 2), ...(after as PlanStep[])];
+    return { proposals: [{ ...base, plan }] };
+  };
+  const assertion = (id: string, input: unknown, expectation: unknown) => ({
+    id,
+    kind: "assertion",
+    operation: "assert",
+    description: id,
+    required: true,
+    input,
+    expectation,
+  });
+  const urlOnly = [
+    assertion("url", { url: "/items" }, { predicate: "urlEquals", value: { literal: "/items" } }),
+    assertion("gone", { locator: { by: "testId", value: "login" } }, { predicate: "hidden" }),
+  ];
+  const shown = assertion(
+    "items",
+    { locator: { by: "testId", value: "items" } },
+    { predicate: "visible" },
+  );
+  f.queueOutputs(browser(urlOnly));
+  f.setOutput(browser([...urlOnly, shown]));
+  const before = f.counts().completions;
+  const batch = await f.app.proposals.generate({ projectId: f.projectId, type: "frontend" });
+  expect(f.counts().completions - before).toBe(2);
+  const repair = JSON.stringify(f.payloads.at(-1)?.messages);
+  expect(repair).toContain("browser_postcondition_missing");
+  const [stored] = f.app.proposals.detail(batch.id).proposals;
+  expect(stored?.plan.kind === "executable" && stored.plan.steps.map((step) => step.id)).toEqual([
+    "open-login",
+    "submit-login",
+    "url",
+    "gone",
+    "items",
+  ]);
 });

@@ -41,7 +41,7 @@ Personas não são papéis de autorização: a mesma pessoa pode acumular inten�
 | `ProductReviewer` | Comparar PRD e comportamento esperado, aprovar propostas de intenção. | Exposição de código/segredos desnecessária; aprovação de teste confundida com aprovação do produto. |
 | `ProjectAdministrator` | Configurar fontes, auth, ambientes, limites, secrets e integrações. | Escopo amplo, preview de fork não confiável, acesso cruzado de tenant. |
 | `ReleaseOperator` | Avaliar gate CI, histórico, schedule, distribuição e rollback operacional. | Check verde com cancelled/blocked; export incompleto; discrepância de revisões. |
-| `AgentConsumer` | Usar CLI/MCP e abrir deep link para revisar uma decisão humana. | Sessão de agente sem scope adequado, proposta autoinserida, output não estruturado. |
+| `AgentConsumer` | Usar CLI/MCP para executar o pipeline e tomar decisões explícitas e auditadas (aceitar propostas, healing, aprovações), ou abrir deep link para que uma pessoa as revise. | Sessão de agente sem scope adequado, proposta autoinserida, output não estruturado. |
 
 Navegação principal: workspace/projeto → overview → sources/requirements → proposals → tests/lists → runs/comparison → environments/auth → integrations/settings. `RunDetail`, `BatchRunDetail`, `TestRevisionDetail`, `ProposalDetail` e `ArtifactDetail` são deep links estáveis com autorização em cada acesso. BatchRunDetail mostra seleção, membros, rejeitados/não despachados, contagens e gate agregado; RunDetail não mistura attempts de membros distintos. O projeto atual fica explícito no cabeçalho, e o ambiente selecionado não é uma variável global silenciosa.
 
@@ -85,7 +85,7 @@ A tela mostra cards e tabela com origem, requisito-alvo, intenção, prioridade,
 | UX-016 | Aceitação parcial é atômica por unidade declarada, idempotente e preserva itens não selecionados. | Aceitar A/B de A/B/C e reenviar mesma operação não duplica testes; C permanece pendente. |
 | UX-017 | Alterações humanas e LLM têm autoria/proveniência distintas; deduplicação mostra similaridade sem destruir intenção. | Dois cenários parecidos podem permanecer; aceitar duplicata produz aviso e decisão explícita. |
 | UX-018 | Gerar/retomar tem cancelamento e orçamento visível; source novo não invalida silenciosamente a geração anterior. | Geração interrompida conserva fases completas; proposta antiga mostra source stale e exige revisão. |
-| UX-019 | Nenhuma proposta gerada vira teste ativo em CI por aceitação implícita. | Caminho automatizado documenta policy; aceitação de sessão interativa não é herdada pela CI. |
+| UX-019 | Nenhuma proposta gerada vira teste ativo em CI por aceitação implícita. | A aceitação é decisão explícita de qualquer principal com permissão de escrita (humano ou agente), registrada com o principal; sem permissão a prévia informa `write_permission_required`; aceitação anterior não é herdada pela CI. |
 
 ## 4. Autoria, edição e versionamento
 
@@ -325,7 +325,7 @@ Export deve produzir manifest com schemaVersion, tipo de bundle, IDs/proveniênc
 
 ### 13.2 TestSprite: somente dados manualmente exportados
 
-Não deve existir scraping de sessão autenticada, coleta de tokens TestSprite, consumo de endpoint privado, emulação de backend ou promessa de sync. O usuário entrega arquivos que possui e está autorizado a usar: planos JSON, scripts Python e relatórios manualmente exportados. O wizard analisa o formato, mostra o que pode e não pode ser mapeado e solicita revisão humana.
+Não deve existir scraping de sessão autenticada, coleta de tokens TestSprite, consumo de endpoint privado, emulação de backend ou promessa de sync. O usuário entrega arquivos que possui e está autorizado a usar: planos JSON, scripts Python e relatórios manualmente exportados. O wizard analisa o formato, mostra o que pode e não pode ser mapeado e exige revisão explícita do chamador (pessoa ou agente) antes de persistir.
 
 | ID | Requisito | Aceitação |
 |---|---|---|

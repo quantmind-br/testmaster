@@ -34,12 +34,13 @@ export interface ServiceContext {
    */
   authorizeDecrypt?(projectId?: string): void;
   /**
-   * Named resource authority (`healing:approve`, `artifacts:delete`) evaluated against role
-   * defaults and resource-scoped PermissionGrants; generic W/X never implies it.
+   * Named resource authority (`artifacts:delete`, `github:approve`) evaluated against role
+   * defaults and resource-scoped PermissionGrants; generic W/X never implies it. Pipeline
+   * decisions (plan acceptance, healing approval) are not named actions: they use scope W.
    */
   authorizeNamed(
     action: "approve" | "delete" | "export",
-    resourceType: "HealingProposal" | "Artifact" | "SecretReference" | "AgentPullRequest",
+    resourceType: "Artifact" | "SecretReference" | "AgentPullRequest",
     projectId: string,
     environmentId?: string | null,
   ): void;

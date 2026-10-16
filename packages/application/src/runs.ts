@@ -758,13 +758,7 @@ export class RunsService {
       )
         throw new ContractError("POLICY_DENIED", "Policy healing verification is not authorized");
       this.ctx.authorize("X", String(test.projectId));
-    } else
-      this.ctx.authorizeNamed(
-        "approve",
-        "HealingProposal",
-        String(test.projectId),
-        String(cell.environmentId),
-      );
+    } else this.ctx.authorize("W", String(test.projectId));
   }
   /**
    * Pure reads: refuses exactly what admission refuses, so an approval can be checked before it
@@ -1045,12 +1039,7 @@ export class RunsService {
         ? requireEntity(this.ctx, "HealingProposal", cell.healingProposalId)
         : null;
     if (proposal?.approvalMode === "manual" && proposal.verificationRunId === id)
-      this.ctx.authorizeNamed(
-        "approve",
-        "HealingProposal",
-        String(test.projectId),
-        String(cell.environmentId),
-      );
+      this.ctx.authorize("W", String(test.projectId));
     else this.ctx.authorize("X", String(test.projectId));
     const cancel = () => {
       const current = this.get(id);

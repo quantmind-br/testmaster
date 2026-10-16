@@ -625,6 +625,10 @@ export class SecretsService {
       } catch {
         /* Fall back only to authenticated encryption. */
       }
+    return this.persistVault(reference, value);
+  }
+  /** Authenticated encryption in TestMaster's own vault, never the host keyring. */
+  private async persistVault(reference: SecretMetadata, value: string): Promise<string> {
     try {
       const hasVaultReferences = (
         allEntities(this.ctx, "SecretReference") as SecretMetadata[]
@@ -733,7 +737,11 @@ export class SecretsService {
     auditSecurity(this.ctx, "secret.set", reference.id, "allowed");
     return reference;
   }
-  /** Trusted supervisor capture path; requires execution authority and never exports plaintext. */
+  /**
+   * Trusted supervisor capture path; requires execution authority and never exports plaintext.
+   * A capture lives only in the encrypted vault (never the host keyring) and is erased by
+   * {@link eraseCapture} once no consumer can need it.
+   */
   async protectCapture(
     name: string,
     value: unknown,
@@ -748,7 +756,7 @@ export class SecretsService {
       secretVersion: 1,
       allowedOrigins: origins(allowedOrigins),
     }) as SecretMetadata;
-    reference.provider = await this.persist(reference, encoded, false);
+    reference.provider = await this.persistVault(reference, encoded);
     try {
       this.ctx.entities.insert("SecretReference", reference);
     } catch (error) {
@@ -756,6 +764,34 @@ export class SecretsService {
       throw error;
     }
     return reference;
+  }
+  /**
+   * Erases the stored value of a capture reference and revokes it, keeping the metadata
+   * tombstone. Idempotent; a failed erasure leaves the reference live so a later sweep retries.
+   */
+  async eraseCapture(id: string): Promise<boolean> {
+    this.ctx.authorize("X");
+    const previous = this.lookup(id);
+    if (previous.revokedAt || !previous.locator.startsWith("capture-")) return false;
+    this.ephemeral.delete(`${previous.id}:${previous.secretVersion}`);
+    try {
+      await erase(this.layout, previous);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+    this.ctx.entities.update(
+      "SecretReference",
+      this.ctx.workspaceId,
+      previous.id,
+      previous.version,
+      {
+        ...previous,
+        revokedAt: new Date().toISOString(),
+        version: previous.version + 1,
+      },
+    );
+    auditSecurity(this.ctx, "secret.capture.erase", previous.id, "allowed");
+    return true;
   }
   async rotate(
     idOrName: string,
