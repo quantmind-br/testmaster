@@ -2028,6 +2028,33 @@ it("ambiguous locator candidates produce manual-only advice without a supported 
   expect(analysis.diagnosis?.nextSteps[0]?.text).toContain("Inspect locator candidates");
 });
 
+it("an assertion step whose locator matched nothing gets no healing advice, since its locator is what it checks", async () => {
+  const f = await fixture({
+    plan: {
+      ...persistencePlan,
+      type: "frontend",
+      runner: "playwright",
+      steps: [
+        {
+          id: "price",
+          kind: "assertion",
+          operation: "assert",
+          input: { locator: { by: "role", role: "button", name: "Old checkout", exact: true } },
+          expectation: { predicate: "visible" },
+        },
+      ],
+    },
+    step: { reasonCode: "assertion_timeout", observed: null, expected: null },
+  });
+  await attachLocatorEvidence(f, 2);
+  const diagnosis = (await f.service.analyze(f.run.id)).diagnosis!;
+  expect(diagnosis.conclusion.status).toBe("cause_unknown");
+  expect(diagnosis.nextSteps[0]?.text).toContain("Inspect locator candidates");
+  expect(diagnosis.healing.advice).toBe("not_indicated");
+  expect(diagnosis.healing.reason).toContain("step price is an assertion");
+  expect(diagnosis.healing.reason).toContain("save a corrected revision");
+});
+
 async function unmatchedClickFixture() {
   const f = await fixture({
     plan: {

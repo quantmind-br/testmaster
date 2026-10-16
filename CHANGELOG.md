@@ -20,6 +20,15 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 - The REST routes that run a model (proposal generation and refinement, `POST /runs/{id}/analysis`, `POST /runs/{id}/healing-proposals`, requirement normalization) and `POST /mcp` turn off the server's 30 s socket idle timeout for their connection; other routes keep it (`ServerOptions.connectionTimeoutMs`).
 - The eval runner never kills a model command; its trial wall time only stops commands that do no model work and keeps later commands from starting. The development smoke forwarder relays model calls without a timeout.
 
+### Eighteenth Omnigent agent run
+
+Found when an omp agent drove the pipeline on Omnigent an eighteenth time (the suite passed 8/8 four times and the code candidates 8/8; the 3 failures were deliberate drills).
+
+- A failure on an assertion step gets healing advice `not_indicated`, with a reason saying healing replaces locators of action steps only, that an assertion's locator names the target it checks, and how to save and replay a corrected revision. `testmaster_propose_healing` / `heal propose` then refuse with `healing_not_indicated` before any model call, so the Run's healing request stays unused. Before, the advice was `manual_review_only` ("a healing proposal can still be requested"), the paid model call was made with no step it could change, and it abstained (`model_abstained`), which settled the Run's healing request.
+- The planner is told that a criterion expecting a submission to be refused (a wrong password, invalid input) needs its first required assertion after the submit to be a positive one on the refusal itself (an alert, error message or validation text), and to decline the requirement, naming the missing feedback, when its evidence names none. The generated wrong-password plan checked the URL, the form heading and the hidden sidebar right after the click: all held before the server answered.
+- When the model declines every selected requirement, the `CAPABILITY_UNAVAILABLE` (`requirement_not_observable`) message names each requirement with the model's reason and says to give it an observable criterion. Before, it always said the requirements could not be observed through HTTP or the browser and pointed only at terminal tests.
+- The `testmaster_save_test` description says a new test's first revision is active at once, before any run; only a revision added with `testId` stays a candidate until `testmaster_promote_revision`.
+
 ### Seventeenth Omnigent agent run
 
 Found when an omp agent drove the pipeline on Omnigent a seventeenth time (the suite passed 8/8 three times and the code candidates 8/8; the 2 failures were deliberate drills).

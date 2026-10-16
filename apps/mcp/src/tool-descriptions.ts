@@ -49,7 +49,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_edit_plan:
     "Replace the plan of a still-proposed proposal at its expectedVersion (validated; requirement and evidence references kept). Returns the Proposal itself, not wrapped, plus batchVersion, which testmaster_review_plan takes: every edit raises it. Next: testmaster_review_plan.",
   testmaster_save_test:
-    "Store a plan as a new test (projectId) or a new candidate revision of a test (testId); plan.requirementRefs is required ([] when it maps none). Returns test, revision, active and nextActions: a new revision is not active until testmaster_promote_revision.",
+    "Store a plan as a new test (projectId) or a candidate revision of a test (testId); plan.requirementRefs is required ([] if none). Returns test, revision, active and nextActions. A new test's first revision is active at once; a testId revision stays a candidate until testmaster_promote_revision.",
   testmaster_promote_revision:
     "Make a candidate revision the active one of its test at expectedVersion (test.version); an optional reason is recorded. A generated candidate needs a passing replay first: testmaster_run_tests with revisionId. Healed revisions go through testmaster_approve_healing.",
   testmaster_archive_test:

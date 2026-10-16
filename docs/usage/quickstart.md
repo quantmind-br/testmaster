@@ -254,7 +254,9 @@ Heal with a specific model using
 `testmaster heal propose "$RUN_ID" --provider quantforge --model <id>`; without them the first
 allowed provider's first structured-output model is used. `heal propose` refuses a failed Run
 whose analysis says healing is not indicated (`healing_not_indicated`) before calling any model;
-act on the analysis next step instead. It also refuses a failed Run of a revision that is not the
+act on the analysis next step instead. That is always the case when the failed step is an
+assertion: healing replaces locators of action steps only, and an assertion's locator names what
+it checks, so correct it in a new revision. It also refuses a failed Run of a revision that is not the
 test's active revision (`revision_not_active`) before calling any model: healing derives its
 candidate from the active revision, so save a corrected revision and replay it
 (`test revision create`, `test run --revision`), or promote that revision and heal a failed Run of

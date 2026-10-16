@@ -175,6 +175,16 @@ function manualReviewReason(
   return `${fact} A healing proposal can still be requested; a reviewer decides whether to apply it.`;
 }
 /**
+ * Healing replaces locators of action steps only: an assertion's locator names the target the
+ * assertion checks, so replacing it would change the assertion.
+ */
+function assertionHealing(stepId: string): Diagnosis["healing"] {
+  return {
+    advice: "not_indicated",
+    reason: `Healing changes locators of action steps only; step ${stepId} is an assertion, and its locator names the target it checks, so replacing it would change the assertion. If the target was renamed on purpose, save a corrected revision (testmaster_save_test with testId; CLI: test revision create) and replay it (testmaster_run_tests with revisionId; CLI: test run --revision).`,
+  };
+}
+/**
  * Visible text of a model-selected next step. The prefix identifies the same action when the rules
  * already advised it, so a repeated suggestion is not listed twice.
  */
@@ -2272,6 +2282,9 @@ export class AnalysisService {
     const localized =
       failed ?? steps.find((item) => ["inconclusive", "blocked"].includes(item.step!.status));
     const location = localized?.step?.planStepId ?? null;
+    const assertionStep =
+      location !== null &&
+      planSteps(collected.plan).find((step) => step.id === location)?.kind === "assertion";
     const redirected =
       failureKind === "test_fragility" ? followedRedirects(collected.evidence)[0] : undefined;
     // The rules choose this cause only for an otherwise unexplained failure, so any other kind
@@ -2502,12 +2515,14 @@ export class AnalysisService {
         "product_bug",
       );
       next(
-        `Compare step ${stepId} with the same step of revision ${parent.revisionId}, then save a corrected revision (testmaster_save_test with testId; CLI: test revision create) and replay it (testmaster_run_tests with revisionId; CLI: test run --revision). For a failed Run of the active revision, a healing proposal (testmaster_propose_healing; CLI: heal propose) is the alternative.`,
+        `Compare step ${stepId} with the same step of revision ${parent.revisionId}, then save a corrected revision (testmaster_save_test with testId; CLI: test revision create) and replay it (testmaster_run_tests with revisionId; CLI: test run --revision).${assertionStep ? "" : " For a failed Run of the active revision, a healing proposal (testmaster_propose_healing; CLI: heal propose) is the alternative."}`,
       );
-      healing = {
-        advice: "manual_review_only",
-        reason: `The failure follows a change of step ${stepId} made after the passing parent revision ${parent.revisionId}; the repair is to compare that step with the parent's, and a reviewer decides whether a healing proposal applies.`,
-      };
+      healing = assertionStep
+        ? assertionHealing(stepId)
+        : {
+            advice: "manual_review_only",
+            reason: `The failure follows a change of step ${stepId} made after the passing parent revision ${parent.revisionId}; the repair is to compare that step with the parent's, and a reviewer decides whether a healing proposal applies.`,
+          };
     } else if (failureKind === "test_fragility") {
       conclusion = {
         status: "cause_partially_supported",
@@ -2544,10 +2559,9 @@ export class AnalysisService {
           locators.map((item) => item.ref),
         );
         alternative("The target may be changed, removed, or ambiguous.", "unknown");
-        healing = {
-          advice: "manual_review_only",
-          reason: manualReviewReason(baselineRuns, parent),
-        };
+        healing = assertionStep
+          ? assertionHealing(location!)
+          : { advice: "manual_review_only", reason: manualReviewReason(baselineRuns, parent) };
       } else {
         if (
           absence === "empty_collection" ||

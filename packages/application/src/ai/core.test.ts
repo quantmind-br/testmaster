@@ -756,6 +756,9 @@ it("a model that declines every requirement fails fast with CAPABILITY_UNAVAILAB
     },
   });
   expect(refusal.message).toContain("docs/usage/terminal-tests.md");
+  // Each declined requirement's reason is in the message, so the caller sees why without details.
+  expect(refusal.message).toContain(`${first}: Observable only through a CLI exit status`);
+  expect(refusal.message).toContain(`${second}: Observable only through stdout`);
   expect(f.counts().completions - before).toBe(1);
   expect(f.app.proposals.list(f.projectId)).toEqual([]);
   // The model was told how to decline instead of inventing endpoints.

@@ -67,7 +67,7 @@ const URL_ASSERTION_INSTRUCTION =
 const BROWSER_LOCATOR_INSTRUCTION =
   "Frontend locators use testId/role/label. A role locator names the element's ARIA role; an element without a role attribute has its implicit role: <aside> is complementary, <nav> navigation, <main> main, <header> banner and <footer> contentinfo outside sectioning elements, <section> or <form> with an accessible name region or form, <a href> link, <button> button, <h1>-<h6> heading, <ul>/<ol> list, a text <input> or <textarea> textbox. A container narrows the search to its descendants and never matches the target itself: when a test id, label or role belongs to the target element, locate the target by it directly, without a container.";
 const BROWSER_POSTCONDITION_INSTRUCTION =
-  "A browser plan that ends after a state-changing action (login, navigation, click, submit) must assert a positive, observable post-condition on rendered content after the last such action: a visible, textContains, textEquals, valueEquals, countEquals or countAtLeast (above 0) assertion on a locator for content that exists only when the action worked, such as the dashboard heading after login. A URL check and the absence of earlier elements also hold on a blank page and are rejected. A negative check (a hidden, countEquals 0 or countAtMost 0 assertion, or a waitFor hidden or detached) never directly follows a page load (navigate, or the click or key press that submits a form or changes the URL): put a required positive assertion on content of the destination page between them, because an absent element also passes while the page is still blank. Order a login plan as: submit, URL check, positive assertion on the authenticated page, then the checks that the login fields are hidden.";
+  "A browser plan that ends after a state-changing action (login, navigation, click, submit) must assert a positive, observable post-condition on rendered content after the last such action: a visible, textContains, textEquals, valueEquals, countEquals or countAtLeast (above 0) assertion on a locator for content that exists only when the action worked, such as the dashboard heading after login. A URL check and the absence of earlier elements also hold on a blank page and are rejected. A negative check (a hidden, countEquals 0 or countAtMost 0 assertion, or a waitFor hidden or detached) never directly follows a page load (navigate, or the click or key press that submits a form or changes the URL): put a required positive assertion on content of the destination page between them, because an absent element also passes while the page is still blank. Order a login plan as: submit, URL check, positive assertion on the authenticated page, then the checks that the login fields are hidden. When a criterion expects a submission to be refused (a wrong password, invalid input), the first required assertion after the submit is a positive one on the refusal itself: an alert, error message or validation text the page shows only after it answered. The form's heading, its fields and an unchanged URL were already there before the submit, so checking them first passes before the answer arrives. When the requirement's evidence names no such refusal feedback, list the requirement in \"unsupported\" with a reason naming the feedback its criteria lack; never invent it.";
 const API_SPEC_INSTRUCTION =
   "When apiSpecs are supplied, they are the project's API specifications: each lists its sourceRevisionId and its operations with the pointer of the JSON response schema per HTTP status. They are offered even where no requirement cites them. A jsonSchema assertion for a response cites that apiSpecs entry's sourceRevisionId with one of the listed pointers copied exactly; the requirement's own evidence does not have to be the specification. Write request paths as the listed operation paths. A jsonSchema assertion verifies only what the cited schema declares, and apiSpecs does not show the schema: a specification may leave a field untyped or a list item open, so a criterion about a specific field's type, bound or list item shape also gets a jsonConforms assertion, and a step description never claims more than its assertion checks. Never warn that no OpenAPI document or schema was supplied when apiSpecs lists the operation; an operation absent from apiSpecs has no schema to cite. An operation marked public declares no credential.";
 type StoredProposal = Proposal & EntityDocument;
@@ -558,18 +558,23 @@ export class ProposalsService {
       throw refusalError(generated.refused, { modelCallId: output.modelCallId });
     const gap = coverageGap(generated, requirementIds);
     if (gap) throw gap;
-    if (!generated.valid.length)
+    if (!generated.valid.length) {
+      const declined = generated.unsupported
+        .slice(0, 5)
+        .map((item) => `${item.requirementId}: ${item.reason}`)
+        .join("; ");
       throw new ContractError(
         "CAPABILITY_UNAVAILABLE",
-        "None of the selected requirements can be observed through HTTP or the browser, so no plan was generated. Terminal (CLI/TUI) tests cannot be generated by the model: write them by hand (docs/usage/terminal-tests.md)",
+        `No plan was generated: the model declined every selected requirement as not observable through HTTP or the browser as written (${declined}). Give such a requirement a criterion a browser or HTTP test can observe; terminal (CLI/TUI) tests cannot be generated by the model: write them by hand (docs/usage/terminal-tests.md)`,
         {
           capability: "plan-generation",
           reasonCode: "requirement_not_observable",
           unsupported: generated.unsupported,
           modelCallId: output.modelCallId,
-          hint: "Author terminal plans manually; see docs/usage/terminal-tests.md",
+          hint: "Add an observable criterion to the requirement, or author a terminal plan by hand (docs/usage/terminal-tests.md)",
         },
       );
+    }
     const commit = () => {
       if (this.requirements.snapshot(input.projectId).fingerprint !== snapshot.fingerprint)
         throw new ContractError("REVISION_CONFLICT", "Requirements changed during generation", {
