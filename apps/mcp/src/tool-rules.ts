@@ -56,10 +56,10 @@ export const toolRules: Record<keyof typeof mcpTools, readonly string[]> = {
     "The call returns when the runs completed. Trial runs live on a hidden test per proposal that never appears in test listings, suites, selection, coverage or the feature map and cannot be run otherwise; accepting the proposal creates the real test.",
   ],
   testmaster_review_plan: [
-    "Accepts or rejects proposals at `expectedVersion` = the batch version (`batch.version` of the batch resource, or the `batchVersion` of the last testmaster_edit_plan).",
+    "Accepts or rejects proposals at `expectedVersion` = the batch version (`batch.version` of the batch resource, or the `batchVersion` of the last testmaster_edit_plan or testmaster_review_plan).",
     "Before accepting, testmaster_trial_plan replays the proposals against an environment with no model call, so a wrong pointer or value is fixed before it becomes a test.",
     "Unselected proposals stay pending. An optional `reason` is kept on each decided proposal.",
-    "Returns `acceptedProposals` `{proposalId, testId, revisionId}`: the test and revision each accepted proposal produced.",
+    "Returns `acceptedProposals` `{proposalId, testId, revisionId}`: the test and revision each accepted proposal produced, and `batchVersion`, which the next review of the batch (for example a group with another reason) takes.",
     "A stale version is REVISION_CONFLICT with `details.diff`; a cited requirement that changed refuses the accept with `staleProposals`.",
     "Next: testmaster_run_tests on the accepted tests, or testmaster_generate_tests for code candidates.",
   ],

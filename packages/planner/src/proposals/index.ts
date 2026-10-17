@@ -68,6 +68,59 @@ function requireBrowserPostCondition(plan: ExecutablePlan): void {
       { reasonCode: "browser_postcondition_missing" },
     );
 }
+/** Request steps of a plan by id, with their JSON pointer; frames are searched too. */
+function requestSteps(
+  steps: readonly PlanStep[],
+  path = "/steps",
+  found = new Map<string, { step: Extract<PlanStep, { operation: "request" }>; path: string }>(),
+): typeof found {
+  steps.forEach((step, index) => {
+    if (step.operation === "request") found.set(step.id, { step, path: `${path}/${index}` });
+    if (step.operation === "frame")
+      requestSteps(step.input.childSteps, `${path}/${index}/input/childSteps`, found);
+  });
+  return found;
+}
+/**
+ * A declared cleanup the runner can never perform: it deletes only a resource whose creating
+ * request step declares `input.resource` with both `handle` and `ownerProof`, and leaves any
+ * other resource orphaned, which fails the gate of a test that passed.
+ */
+function assertCleanupRuns(plan: ExecutablePlan): void {
+  const requests = requestSteps(plan.steps);
+  const issues = (plan.cleanup ?? []).flatMap((cleanup, index) => {
+    const creator = requests.get(cleanup.resourceRef);
+    if (!creator?.step.input.resource)
+      return [
+        {
+          path: `/cleanup/${index}/resourceRef`,
+          rule: "cleanupResource",
+          message: `Cleanup ${index} names "${cleanup.resourceRef}", which is not a request step that declares input.resource; the runner deletes only a resource its creating request declares`,
+        },
+      ];
+    const { handle, ownerProof } = creator.step.input.resource;
+    const missing = [
+      handle === undefined ? "handle" : [],
+      ownerProof === undefined ? "ownerProof" : [],
+    ].flat();
+    return missing.length
+      ? [
+          {
+            path: `${creator.path}/input/resource`,
+            rule: "cleanupResource",
+            message: `Step "${creator.step.id}" creates the resource cleanup ${index} deletes but its input.resource lacks ${missing.join(" and ")}: JSON pointers into the creation response to the resource id (handle) and to a field that proves the run's account owns it (ownerProof, such as the creator or tenant id). Without them the runner never runs the cleanup and the resource is left orphaned`,
+          },
+        ]
+      : [];
+  });
+  if (issues.length)
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      issues.map((issue) => issue.message).join("; "),
+      { reasonCode: "cleanup_never_runs", issues },
+      issues,
+    );
+}
 export function validateProposalPlan(input: unknown): ExecutablePlan {
   const plan = validate<ExecutablePlan>("ExecutablePlan", input);
   if (plan.runner === "terminal")
@@ -102,6 +155,7 @@ export function validateProposalPlan(input: unknown): ExecutablePlan {
     );
   requireBrowserPostCondition(plan);
   assertNoNegativeBeforeRender(plan);
+  assertCleanupRuns(plan);
   return plan;
 }
 /** A proposal refused on its own merits, located by its position in the model output. */

@@ -198,6 +198,17 @@ it("edit_plan reports the batch version review_plan wants and a stale review ans
     rejectIds: [proposals[2]?.id],
   });
   expect(reviewed.isError, JSON.stringify(reviewed.error)).toBe(false);
+  expect(reviewed.data).toMatchObject({ rejected: [proposals[2]?.id], batchVersion: 4 });
+  // A second review group (another reason) takes the version the first review returned.
+  const again = await call("testmaster_review_plan", {
+    batchId: batch.id,
+    expectedVersion: reviewed.data?.batchVersion,
+    acceptIds: [],
+    rejectIds: [proposals[3]?.id],
+    reason: "A second group with its own reason",
+  });
+  expect(again.isError, JSON.stringify(again.error)).toBe(false);
+  expect(again.data?.batchVersion).toBe(5);
 });
 
 it("save_test stores a new test as active, keeps a new revision a candidate and promote_revision activates it", async () => {

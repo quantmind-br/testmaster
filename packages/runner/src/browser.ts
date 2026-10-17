@@ -1099,7 +1099,27 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
             kept.set(node, described);
             return true;
           };
-          const walker = doc.createTreeWalker(doc.documentElement, NodeFilter.SHOW_ELEMENT);
+          // SVG resource definitions (an icon sprite's <symbol>s, gradients, clip paths) never
+          // render where they stand, so their subtrees are skipped: an icon library's sprite can
+          // hold hundreds of identified <symbol>s that would fill the budget before the form.
+          const definitionTags = [
+            "defs",
+            "symbol",
+            "clippath",
+            "mask",
+            "lineargradient",
+            "radialgradient",
+            "pattern",
+            "filter",
+            "marker",
+          ];
+          const walker = doc.createTreeWalker(doc.documentElement, NodeFilter.SHOW_ELEMENT, {
+            acceptNode: (node) =>
+              (node as Element).namespaceURI === "http://www.w3.org/2000/svg" &&
+              definitionTags.includes((node as Element).localName.toLowerCase())
+                ? NodeFilter.FILTER_REJECT
+                : NodeFilter.FILTER_ACCEPT,
+          });
           let walking = consider(doc.documentElement);
           let visited = 0;
           while (walking) {

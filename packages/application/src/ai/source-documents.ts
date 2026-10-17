@@ -7,6 +7,8 @@ import {
 import { allEntities, type ServiceContext } from "../context.js";
 import { flattenSteps } from "../plan-analysis.js";
 
+type RequestPathSegments = NonNullable<ExecutablePlan["cleanup"]>[number]["input"]["pathSegments"];
+
 /**
  * What an OpenAPI source revision exposes to plans: a document shaped like the original
  * (`/paths/<path>/<method>` with operations) plus the path prefix its first server declares. The
@@ -422,11 +424,22 @@ export function offeredApiSpecs(ctx: ServiceContext, projectId: string): Offered
   return specs;
 }
 
+/** The request's path segments, starting with the server path prefix. */
+function prefixedSegments(
+  basePath: readonly string[],
+  segments: RequestPathSegments,
+): RequestPathSegments {
+  const present = basePath.every((part, index) => {
+    const segment = segments[index];
+    return segment !== undefined && "literal" in segment && segment.literal === part;
+  });
+  return present ? segments : [...basePath.map((literal) => ({ literal })), ...segments];
+}
 /**
  * Request paths are relative to the OpenAPI server URL but the environment base URL is an
- * origin, so every request must carry the server path prefix itself. Prefixes the literal
- * segments when the cited sources agree on one prefix and the request does not already start
- * with it.
+ * origin, so every request, cleanup requests included, must carry the server path prefix
+ * itself. Prefixes the literal segments when the cited sources agree on one prefix and the
+ * request does not already start with it.
  */
 export function applyServerBasePath(
   ctx: ServiceContext,
@@ -441,15 +454,10 @@ export function applyServerBasePath(
   if (prefixes.size !== 1) return plan;
   const basePath = JSON.parse([...prefixes][0] as string) as string[];
   const clone = structuredClone(plan);
-  for (const step of flattenSteps(clone.steps)) {
-    if (step.operation !== "request") continue;
-    const segments = step.input.pathSegments;
-    const present = basePath.every((part, index) => {
-      const segment = segments[index];
-      return segment !== undefined && "literal" in segment && segment.literal === part;
-    });
-    if (!present)
-      step.input.pathSegments = [...basePath.map((literal) => ({ literal })), ...segments];
-  }
+  for (const step of flattenSteps(clone.steps))
+    if (step.operation === "request")
+      step.input.pathSegments = prefixedSegments(basePath, step.input.pathSegments);
+  for (const cleanup of clone.cleanup ?? [])
+    cleanup.input.pathSegments = prefixedSegments(basePath, cleanup.input.pathSegments);
   return clone;
 }

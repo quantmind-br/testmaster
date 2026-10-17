@@ -921,12 +921,18 @@ function serverLogFacts(
   const text = during.length
     ? `${source} recorded ${during.length} error line${during.length === 1 ? "" : "s"} ${window ? `while step ${stepId} ran` : "during the attempt"}: ${quotedErrors(during)}.`
     : `${source} recorded ${total} error line${total === 1 ? "" : "s"} during the attempt, none while step ${stepId} ran; first: ${quotedErrors(log.value.errors.slice(0, 1))}.`;
-  const shared = log.value.concurrentRunIds.length
-    ? ` Run${log.value.concurrentRunIds.length === 1 ? "" : "s"} ${log.value.concurrentRunIds.join(", ")} used the same server at the same time, so these lines may come from ${log.value.concurrentRunIds.length === 1 ? "it" : "them"}.`
+  const runs = log.value.concurrentRunIds;
+  const named =
+    runs.length > 5
+      ? `${runs.slice(0, 5).join(", ")} and ${runs.length - 5} more`
+      : runs.join(", ");
+  const shared = runs.length
+    ? ` Run${runs.length === 1 ? "" : "s"} ${named} used the same server at the same time, so these lines may come from ${runs.length === 1 ? "it" : "them"}.`
     : "";
   return [
     {
-      text: scrubEvidenceText(text + shared, secrets).text.slice(0, 1000),
+      // The shared-server notice is kept whole; only the log lines give way to the 1000-char cap.
+      text: `${scrubEvidenceText(text, secrets).text.slice(0, 1000 - shared.length)}${shared}`,
       evidenceRefs: [log.ref, ...(step ? [step.ref] : [])],
     },
   ];
@@ -2148,9 +2154,14 @@ export class AnalysisService {
         }
         if (entry.kind === "server-log" && entry.relativePath === SERVER_LOG_PATH) {
           const log = await this.serverLog(run.id, bundle.manifest.attemptId, entry.sizeBytes);
+          // A limitation is at most 200 characters: the container name and the docker error
+          // vary, so the unavailable reason is clipped, and shared runs are named in the fact.
           if (log.unavailable)
             limitations.push(
-              `The server log of container ${log.container} was unavailable: ${log.unavailable}.`,
+              clipMessage(
+                `The server log of container ${log.container} was unavailable: ${log.unavailable}.`,
+                200,
+              ),
             );
           else {
             if (log.partial)
@@ -2162,9 +2173,10 @@ export class AnalysisService {
               bundle.manifest.attemptId,
               log.container,
             );
-            if (log.concurrentRunIds.length)
+            const shared = log.concurrentRunIds.length;
+            if (shared)
               limitations.push(
-                `The server log of container ${log.container} is shared with run${log.concurrentRunIds.length === 1 ? "" : "s"} ${log.concurrentRunIds.join(", ")}, which ran at the same time; its lines are not attributed to this run.`,
+                `The server log is shared with ${shared === 1 ? "a run" : `${shared} runs`} that ran at the same time (named in its fact); its lines are not attributed to this run.`,
               );
           }
           value = log;

@@ -3226,25 +3226,27 @@ it("a 5xx whose server log recorded an exception while the request ran is a prod
   );
 });
 it("a server log shared with a run that ran at the same time attributes no error to this run", async () => {
+  // A long (valid) container name: the analysis must still fit its 200-character limitations.
+  const container = `searxng-tm-app-${"x".repeat(100)}`;
   const logged = async (concurrentRun: boolean) => {
     const f = await fixture({
       plan: requestStatusPlan([200]),
       step: { expected: 200, observed: 500 },
-      serverLogContainer: "searxng-tm-app",
+      serverLogContainer: container,
       concurrentRun,
     });
     const at = requestStepWindow(f);
     await attachServerLog(
       f,
       500,
-      `${serverLogHeader}\n${at} AttributeError: 'NoneType' object has no attribute 'netloc'\n`,
+      `${serverLogHeader.replace("searxng-tm-app", container)}\n${at} AttributeError: 'NoneType' object has no attribute 'netloc'\n`,
     );
     return f.service.analyze(f.run.id, {});
   };
   const shared = await logged(true);
   expect(shared.failureKind).toBe("unknown");
   expect(shared.limitations).toContain(
-    "The server log of container searxng-tm-app is shared with run run_00000000-0000-4000-8000-0000000000b1, which ran at the same time; its lines are not attributed to this run.",
+    "The server log is shared with a run that ran at the same time (named in its fact); its lines are not attributed to this run.",
   );
   expect(shared.facts.find((item) => item.text.includes("logs/server.log"))?.text).toContain(
     "Run run_00000000-0000-4000-8000-0000000000b1 used the same server at the same time, so these lines may come from it.",
@@ -3270,6 +3272,26 @@ it("an unavailable server log is a limitation, never a cause", async () => {
   expect(analysis.limitations).toContain(
     "The server log of container searxng-tm-app was unavailable: docker exited 1: No such container: searxng-tm-app.",
   );
+});
+it("a long docker error for an unavailable server log is clipped to the limitation bound", async () => {
+  const f = await fixture({
+    plan: requestStatusPlan([200]),
+    step: { expected: 200, observed: 500 },
+  });
+  requestStepWindow(f);
+  await attachServerLog(
+    f,
+    500,
+    `testmaster: server log unavailable (docker logs searxng-tm-app from 2026-10-17T12:00:00.000Z to 2026-10-17T12:00:05.000Z): docker exited 1: ${"permission denied while connecting to the Docker daemon socket ".repeat(5)}\n`,
+  );
+  const analysis = await f.service.analyze(f.run.id, {});
+  const limitation = analysis.limitations.find((item) => item.includes("was unavailable"));
+  expect(
+    limitation?.startsWith(
+      "The server log of container searxng-tm-app was unavailable: docker exited 1: permission denied",
+    ),
+  ).toBe(true);
+  expect(limitation?.length).toBeLessThanOrEqual(200);
 });
 it("server log lines reach facts with secrets masked", async () => {
   vi.stubEnv("TESTMASTER_SECRET_TOKEN", "s3cr3t-host-value-0042");

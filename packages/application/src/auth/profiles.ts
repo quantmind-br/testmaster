@@ -94,7 +94,10 @@ export interface PrepareInput {
   /** Epoch milliseconds at which the Attempt must be over. */
   deadlineAt: number;
   interactive: boolean;
-  /** The Attempt's runner; an `http` Attempt needs a session its requests can use. */
+  /**
+   * The Attempt's runner. An `http` Attempt needs a session its requests can use; the request
+   * steps of a `playwright` plan send the same header credentials with `auth: "profile"`.
+   */
   runner?: ExecutablePlan["runner"];
 }
 export interface PreparedAuth {
@@ -103,7 +106,7 @@ export interface PreparedAuth {
   runnerAuth: {
     storageState?: { secretRef: string };
     login?: { steps: PlanStep[]; captureState: boolean };
-    /** HTTP runs only: sent by requests that ask for `auth: "profile"`. */
+    /** HTTP and browser runs: sent only by request steps that ask for `auth: "profile"`. */
     credentials?: HttpCredential[];
   } | null;
   /** Receives a browser storage state captured by the login phase. */
@@ -921,7 +924,9 @@ export class AuthProfilesService {
       if (input.runner === "http" && result.browser?.login)
         result = await this.loginForHttp(profile, input, options, result);
       for (const id of result.secretIds) secretIds.add(id);
-      if (input.runner === "http")
+      // Request steps send the header credential with `auth: "profile"` in a browser plan too;
+      // the browser runner applies it to those requests only, never to the page.
+      if (input.runner === "http" || input.runner === "playwright")
         for (const credential of httpCredentials(profile, result)) {
           secretIds.add(credential.secretRef);
           credentials.push(credential);

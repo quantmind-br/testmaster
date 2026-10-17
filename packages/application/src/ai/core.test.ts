@@ -2290,6 +2290,35 @@ it("generation offers the project's API specification to the model although no r
       input: { responseStepId: "call" },
       expectation: { predicate: "jsonSchema", sourceRevisionId: api.revision.id, pointer },
     },
+    {
+      id: "create",
+      kind: "action",
+      operation: "request",
+      description: "Create an item the cleanup deletes",
+      input: {
+        method: "POST",
+        pathSegments: [{ literal: "items" }],
+        resource: {
+          resourceType: "item",
+          correlationKey: { literal: "generated-item" },
+          handle: "/id",
+          ownerProof: "/owner",
+        },
+      },
+    },
+  ];
+  plan.cleanup = [
+    {
+      resourceRef: "create",
+      operation: "request",
+      input: {
+        method: "DELETE",
+        pathSegments: [{ literal: "items" }, { variableRef: "create.handle" }],
+      },
+      successPredicate: { predicate: "statusIn", values: [204] },
+      deadlineMs: 1000,
+      required: true,
+    },
   ];
   f.setOutput({
     proposals: [{ plan, requirementRefs: [requirement.id], evidenceIds: ["E1"], warnings: [] }],
@@ -2318,6 +2347,12 @@ it("generation offers the project's API specification to the model although no r
   const request = generated.plan.steps[0];
   if (request?.operation !== "request") throw new Error("Missing request step");
   expect(request.input.pathSegments).toEqual([{ literal: "v1" }, { literal: "items" }]);
+  // The cleanup request carries the same prefix, or it would delete outside the API.
+  expect(generated.plan.cleanup?.[0]?.input.pathSegments).toEqual([
+    { literal: "v1" },
+    { literal: "items" },
+    { variableRef: "create.handle" },
+  ]);
   expect(Object.keys(sourceSchemasFor(f.app.context, generated.plan))).toEqual([
     `${api.revision.id}${pointer}`,
   ]);

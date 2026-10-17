@@ -273,10 +273,22 @@ the active one. When the model finds no safe test-only repair it prints
 before anyone accepts it and without calling a model. A wrong JSON pointer or value then shows as a failed step with
 its expected and observed values (`check-total failed assertion_mismatch: expected 4, observed null - ... missing JSON
 pointer: /results/0/value`), so you fix the proposal with `plan edit` and try again, instead of finding a false failure
-after acceptance. A failure the requirement predicts is a product defect: keep that plan. Trial runs belong to a
+after acceptance. That includes a locator that matches nothing or the wrong element: edit it in the proposal. Healing
+(`heal propose`) only repairs a failed Run of a test's active revision, so it cannot fix a proposal that was never
+accepted. A failure the requirement predicts is a product defect: keep that plan. Trial runs belong to a
 hidden test per proposal that no listing, suite, selection, coverage or feature map shows and that `test run` cannot
 run; accepting the proposal creates the real test. MCP: `testmaster_trial_plan {batchId, environmentId,
-proposalIds?}`.
+proposalIds?}`. A review receipt (`plan accept`, `plan reject`, MCP `testmaster_review_plan`) and
+`testmaster_edit_plan` return `batchVersion`, the `expectedVersion` of the next review of the batch (for example a
+second group of proposals with another reason).
+
+A plan that creates a resource and deletes it in `cleanup` must let the runner prove the resource is its own: the
+creating request step sets `input.resource` with `handle` (JSON pointer to the new id in the creation response) and
+`ownerProof` (JSON pointer to a field proving the run's account owns it, such as the creator or tenant id), and the
+cleanup deletes `{"variableRef": "<step id>.handle"}`. Without both pointers the runner never sends the cleanup, the
+resource is left orphaned and the gate fails, so generation, `plan edit`, `plan trial` and the plan validation route
+refuse such a plan (`cleanup_never_runs`). Generated cleanup paths get the specification's server path prefix
+(`basePath` or the server URL path) like request paths.
 
 Exact flags: `testmaster <group> <command> --help`.
 
@@ -291,8 +303,10 @@ project when it runs, so create these first:
   A `secretRef`/`variableRef` object nested in `body.value` is plain data and is refused.
 - **Auth profiles** (`testmaster auth-profile create`): the model sees names, kinds and origins. A request to an
   endpoint that needs the session sets `"auth": "profile"`, and the runner applies the session of the profile
-  bound to the environment to that request only. A proposal that sets `auth: "profile"` in a project with no
-  auth profile is sent back to the model for repair.
+  bound to the environment to that request only, in an HTTP plan and in a request step of a browser plan alike. A
+  proposal that sets `auth: "profile"` in a project with no auth profile is sent back to the model for repair.
+  An HTTP plan keeps no cookie jar: a cookie one response sets is not sent by the next request, so a preference
+  the site remembers in a cookie is tested with a browser plan.
 - **API specifications** (`testmaster source add openapi.json --role api-spec`): the model sees, for every active
   OpenAPI/Swagger source, each operation (method, path, `operationId`) and the pointer of its JSON response schema
   per HTTP status, and a `jsonSchema` assertion may cite that source's revision id. The specification does not have
@@ -470,7 +484,9 @@ a required `statusIn` assertion that saw a 5xx while the log recorded such a lin
 line in the hypothesis. The container's log is shared by every run against it: when another run of an environment
 reading the same container had an attempt overlapping this one (`concurrency` above 1), the analysis names those runs,
 adds a limitation and attributes no line to this run, so it never concludes `product_bug` from the log. Set
-`execution.concurrency` to 1 when the log should explain each failure. MCP:
+`execution.concurrency` to 1 in `testmaster.config.json` when the log should explain each failure. The CLI reads the
+file on every command; a running `testmaster mcp serve` read it when it started, so restart the MCP server (in an
+agent, reload its MCP connection) after the edit. MCP:
 `testmaster_update_environment {serverLog: {kind: "docker", container}}`, `null` stops it.
 
 ## Selective reruns and read-only preview

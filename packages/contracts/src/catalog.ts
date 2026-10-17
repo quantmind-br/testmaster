@@ -225,6 +225,8 @@ const supplemental = {
     ),
     retained: Type.Array(P.id("pro")),
     rejected: Type.Array(P.id("pro")),
+    /** The batch's version after this decision: the `expectedVersion` of its next review. */
+    batchVersion: P.Version,
   }),
   /**
    * A replay of proposals before acceptance (`plan trial`, `testmaster_trial_plan`): each tried

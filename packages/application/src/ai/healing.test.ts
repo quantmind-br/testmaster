@@ -331,7 +331,14 @@ it("failed verification returns to reviewable without another candidate and leav
     code: "PRECONDITION_FAILED",
   });
   // The review must not offer an approval that approve() refuses.
-  expect((await f.app.healing.review(result.id)).automation.decision).toBe("not_eligible");
+  const review = await f.app.healing.review(result.id);
+  expect(review.automation.decision).toBe("not_eligible");
+  // The structured review names why and what to do next, not only the text summary.
+  expect(review.automation.reasons).toContainEqual(
+    expect.stringContaining(
+      `Its verification run ${f.verification.id} ended failed, so it cannot be approved again: reject it`,
+    ),
+  );
   expect(f.app.revisions.list(f.test.id)).toHaveLength(2);
   expect(semanticHash(f.app.runs.get(f.failed.id))).toBe(before);
 });

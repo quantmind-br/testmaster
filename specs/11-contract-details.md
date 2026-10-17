@@ -255,6 +255,8 @@ Para cada ação mutante: persistir intenção/correlationKey antes do request; 
 
 Cleanup contém `resourceRef`, `operation`, `input` com bindings, `successPredicate`, `deadlineMs` e `required`. Executa ordem inversa do grafo de ownership, respeitando autenticação/allowlist; nunca infere DELETE pela simples concatenação de URL. 404 pode significar removido conforme contrato; 202 requer confirmação bounded quando exigida. Recurso preexistente/seed não pode ser inscrito como criado sem prova.
 
+Um cleanup só executa sobre recurso cujo step de request criador declara `input.resource` com `handle` e `ownerProof`; sem os dois ponteiros o recurso termina `orphaned` e o gate falha mesmo com as assertions satisfeitas. Por isso a geração, `plan edit`, `plan trial` e a validação de plano recusam (`cleanup_never_runs`) um cleanup cujo `resourceRef` não nomeia um request com `input.resource` completo. O prefixo de caminho do servidor da especificação citada (`basePath` do Swagger 2 ou o caminho da URL do servidor OpenAPI) é aplicado aos caminhos de cleanup gerados como aos de request.
+
 Resource cleanup pode falhar sem invalidar a observação de negócio; gate obrigatório falha e órfão fica consultável. Retry de compensação não reexecuta o teste inteiro. Cancelamento interrompe novas ações e permite compensações limitadas com autorização ainda válida; revogação de segredo pode impedir cleanup, devendo registrar orphan em vez de violar revogação.
 
 ## 6. Reducer de resultado e contagem de batch

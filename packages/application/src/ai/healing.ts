@@ -518,7 +518,16 @@ export class HealingService {
             : proposal.status === "proposed" && !proposal.verificationRunId
               ? "manual_review_required"
               : "not_eligible",
-        reasons: [...proposal.limitations],
+        reasons: [
+          ...proposal.limitations,
+          ...(proposal.status === "proposed" &&
+          verification?.outcome &&
+          verification.outcome !== "passed"
+            ? [
+                `Its verification run ${verification.id} ended ${verification.outcome}, so it cannot be approved again: reject it (testmaster_reject_healing, CLI heal reject) with the reason, then repair the test with a new revision (testmaster_save_test) and replay it, or propose healing for a new failed run`,
+              ]
+            : []),
+        ],
       },
       preservedAssertions: {
         hash,

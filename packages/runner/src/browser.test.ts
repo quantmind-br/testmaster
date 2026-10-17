@@ -279,6 +279,8 @@ class DomText {
 class DomElement {
   readonly nodeType = 1;
   readonly tagName: string;
+  readonly localName: string;
+  namespaceURI = "http://www.w3.org/1999/xhtml";
   readonly childNodes: (DomElement | DomText)[] = [];
   parentElement: DomElement | null = null;
   constructor(
@@ -287,6 +289,7 @@ class DomElement {
     children: (DomElement | string)[] = [],
   ) {
     this.tagName = tag.toUpperCase();
+    this.localName = tag;
     for (const child of children) {
       const node = typeof child === "string" ? new DomText(child) : child;
       node.parentElement = this;
@@ -326,10 +329,16 @@ class DomDocument {
   getElementById() {
     return null;
   }
-  createTreeWalker(root: DomElement, whatToShow: number) {
+  createTreeWalker(
+    root: DomElement,
+    whatToShow: number,
+    filter?: { acceptNode: (node: DomElement) => number },
+  ) {
     const nodes: (DomElement | DomText)[] = [];
     const collect = (node: DomElement) => {
       for (const child of node.childNodes) {
+        // FILTER_REJECT (2) skips the element and its whole subtree, as in the DOM.
+        if (child instanceof DomElement && filter?.acceptNode(child) === 2) continue;
         if (child.nodeType === (whatToShow === 1 ? 1 : 3)) nodes.push(child);
         if (child instanceof DomElement) collect(child);
       }
@@ -347,6 +356,16 @@ class DomDocument {
     return walker;
   }
 }
+/** An element in the SVG namespace, as an inline <svg> in an HTML page creates it. */
+function svgElement(
+  tag: string,
+  attrs: Record<string, string> = {},
+  children: DomElement[] = [],
+): DomElement {
+  const element = new DomElement(tag, attrs, children);
+  element.namespaceURI = "http://www.w3.org/2000/svg";
+  return element;
+}
 /** Replaces the locator's candidate collection with the real in-page callback run on `body`. */
 function observeDom(
   target: LocatorStub,
@@ -363,7 +382,12 @@ function observeDom(
   target.evaluateAll = (async (callback: (...args: unknown[]) => unknown, attributes?: unknown) => {
     if (attributes === undefined) return readiness(callback);
     vi.stubGlobal("document", dom);
-    vi.stubGlobal("NodeFilter", { SHOW_ELEMENT: 1, SHOW_TEXT: 4 });
+    vi.stubGlobal("NodeFilter", {
+      SHOW_ELEMENT: 1,
+      SHOW_TEXT: 4,
+      FILTER_ACCEPT: 1,
+      FILTER_REJECT: 2,
+    });
     vi.stubGlobal("getComputedStyle", () => ({ visibility: "visible" }));
     return callback(matches, attributes);
   }) as never;
@@ -389,6 +413,21 @@ it("records a named control that follows more than a hundred anonymous wrappers"
   const record = recordedLocator();
   expect(record.candidates).toEqual([
     expect.objectContaining({ tag: "button", role: "button", name: "Sign in", matched: false }),
+  ]);
+  expect(record.truncated).toBe(false);
+});
+it("skips an icon sprite's hundreds of identified symbols and records the form after it", async () => {
+  const symbols = Array.from({ length: 150 }, (_, index) =>
+    svgElement("symbol", { id: `t-icon-${index}` }, [svgElement("path", { id: `p-${index}` })]),
+  );
+  observeDom(context.page.locator("submit"), [
+    svgElement("svg", { "aria-hidden": "true" }, [svgElement("defs", {}, symbols)]),
+    new DomElement("input", { placeholder: "Email" }),
+  ]);
+  expect(await runBrowser(runtime([click]))).toMatchObject({ outcome: "passed" });
+  const record = recordedLocator();
+  expect(record.candidates).toEqual([
+    expect.objectContaining({ tag: "input", role: "textbox", matched: false }),
   ]);
   expect(record.truncated).toBe(false);
 });

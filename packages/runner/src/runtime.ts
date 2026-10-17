@@ -70,7 +70,7 @@ export interface RunnerInput {
    * Dynamic authentication prepared by the host (SEC-022, SEC-024). `storageState` names a vault
    * secret holding a captured browser state; `login` runs vault-referenced steps before the plan
    * and reports the resulting storage state back through the protocol, never through an event.
-   * An HTTP run applies the session to requests with `auth: "profile"` only: the cookies of
+   * A request step (in an HTTP or a browser plan) applies the session with `auth: "profile"` only: the cookies of
    * `storageState` that match the request URL and every `credentials` entry (a vault secret sent
    * as `header`, after `prefix` when the secret is a bare token). Imported code with `profile` set
    * receives the same session through its `profileRequest` and `profilePage` fixtures only.

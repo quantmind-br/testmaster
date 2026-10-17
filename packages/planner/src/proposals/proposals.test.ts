@@ -29,6 +29,62 @@ it("refuses terminal plans as proposals, edits or refinements before judging the
   // Positive control: an HTTP plan with a business assertion is still accepted.
   expect(validateProposalPlan(await fixture("backend")).runner).toBe("http");
 });
+it("refuses a cleanup the runner can never perform and names the missing resource pointers", async () => {
+  const base = (await fixture("backend")) as ExecutablePlan;
+  const create = (resource: Record<string, unknown>): Step =>
+    ({
+      id: "create",
+      kind: "action",
+      operation: "request",
+      description: "Create the item",
+      input: {
+        method: "POST",
+        pathSegments: [{ literal: "items" }],
+        resource: { resourceType: "item", correlationKey: { literal: "k" }, ...resource },
+      },
+    }) as Step;
+  const withCleanup = (step: Step, resourceRef = "create"): ExecutablePlan => ({
+    ...base,
+    steps: [...base.steps, step],
+    cleanup: [
+      {
+        resourceRef,
+        operation: "request",
+        input: {
+          method: "DELETE",
+          pathSegments: [{ literal: "items" }, { variableRef: "create.handle" }],
+        },
+        successPredicate: { predicate: "statusIn", values: [204] },
+        deadlineMs: 1000,
+        required: true,
+      },
+    ],
+  });
+  // A handle without an owner proof: the runner records the resource as uncertain and orphans it.
+  expect(() => validateProposalPlan(withCleanup(create({ handle: "/id" })))).toThrow(
+    expect.objectContaining({
+      code: "INVALID_ARGUMENT",
+      details: expect.objectContaining({
+        reasonCode: "cleanup_never_runs",
+        issues: [
+          expect.objectContaining({ path: "/steps/3/input/resource", rule: "cleanupResource" }),
+        ],
+      }),
+      message: expect.stringContaining("input.resource lacks ownerProof"),
+    }),
+  );
+  expect(() => validateProposalPlan(withCleanup(create({ handle: "/id" }), "get-health"))).toThrow(
+    expect.objectContaining({
+      details: expect.objectContaining({
+        issues: [expect.objectContaining({ path: "/cleanup/0/resourceRef" })],
+      }),
+    }),
+  );
+  // Control: with both pointers the cleanup can run and the plan is accepted.
+  expect(
+    validateProposalPlan(withCleanup(create({ handle: "/id", ownerProof: "/owner" }))).cleanup,
+  ).toHaveLength(1);
+});
 
 type Step = ExecutablePlan["steps"][number];
 const assertion = (id: string, input: Record<string, unknown>, expectation: unknown): Step =>

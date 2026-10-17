@@ -67,7 +67,7 @@ async function serviceLab(browserLogin?: BrowserLoginProbe) {
     stepUp: async () => undefined,
     ...(browserLogin ? { browserLogin } : {}),
   });
-  const prepare = (environmentId: string, runner?: "http" | "playwright") =>
+  const prepare = (environmentId: string, runner?: "http" | "playwright" | "terminal") =>
     service.prepare({
       run: { id: "run_01900000-0000-7000-8000-000000000001", origin: "cli", requestedBy: "usr_x" },
       attemptId: "att_01900000-0000-7000-8000-000000000001",
@@ -92,7 +92,7 @@ const sessionState = (domain: string) =>
     origins: [],
   });
 
-it("an HTTP attempt receives the static credentials of its profile and a browser attempt does not", async () => {
+it("HTTP and browser attempts receive the static header credential their auth-profile requests send", async () => {
   const lab = await serviceLab();
   const token = await lab.current.secret("api-token", "static-token-value");
   const profile = await lab.current.profile({
@@ -102,13 +102,17 @@ it("an HTTP attempt receives the static credentials of its profile and a browser
     secrets: { token },
   });
   const environment = lab.current.environment("http-env", [profile.id]);
+  const credentials = [{ header: "authorization", secretRef: token, prefix: "Bearer " }];
   const http = await lab.prepare(environment.id, "http");
-  expect(http.runnerAuth).toEqual({
-    credentials: [{ header: "authorization", secretRef: token, prefix: "Bearer " }],
-  });
+  expect(http.runnerAuth).toEqual({ credentials });
   expect(http.secretIds).toContain(token);
   expect(JSON.stringify(http)).not.toContain("static-token-value");
-  expect((await lab.prepare(environment.id, "playwright")).runnerAuth).toBeNull();
+  // A browser plan's request steps with `auth: "profile"` send the same header.
+  const browser = await lab.prepare(environment.id, "playwright");
+  expect(browser.runnerAuth).toEqual({ credentials });
+  expect(browser.secretIds).toContain(token);
+  // A terminal plan has no request step, so it never receives the credential.
+  expect((await lab.prepare(environment.id, "terminal")).runnerAuth).toBeNull();
 });
 
 it("an HTTP attempt signs a browser-login profile in first and uses the captured state", async () => {

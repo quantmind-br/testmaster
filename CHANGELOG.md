@@ -20,6 +20,26 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 - The REST routes that run a model (proposal generation and refinement, `POST /runs/{id}/analysis`, `POST /runs/{id}/healing-proposals`, requirement normalization) and `POST /mcp` turn off the server's 30 s socket idle timeout for their connection; other routes keep it (`ServerOptions.connectionTimeoutMs`).
 - The eval runner never kills a model command; its trial wall time only stops commands that do no model work and keeps later commands from starting. The development smoke forwarder relays model calls without a timeout.
 
+### Second WeKnora agent run
+
+Found when an omp agent drove the pipeline on WeKnora a second time, on an empty database: 22 tests, 17 passed with the gate; the 5 failures are product defects (a refresh token reuse that is sometimes accepted, a knowledge base created without a name, the web origin answering `/health` with the SPA page, login and registration responses outside the product's own Swagger).
+
+- Generation, `plan edit`, `plan trial` and plan validation refuse a cleanup the runner can never perform (`cleanup_never_runs`): its `resourceRef` must name a request step whose `input.resource` has both `handle` and `ownerProof`, and the issue names the missing pointer. The planner is told how to declare it, and to leave cleanup out when the creation response proves no owner. Before, five generated knowledge-base plans passed their assertions, failed their gate with orphaned resources, and the agent found the cause in the runner's source.
+- Generated cleanup requests get the specification's server path prefix like request steps. Before, a cleanup sent `DELETE /knowledge-bases/{id}` instead of `/api/v1/knowledge-bases/{id}` and reached the front end.
+- A request step with `auth: "profile"` in a browser plan sends the profile's header credential (form-login token, bearer, API key, basic, OAuth/OIDC), as in an HTTP plan; the browser runner applies it to that request only, never to the page. Before, it was refused with "The environment has no usable auth profile session" while the profile was authenticated.
+- Locator evidence skips SVG resource definitions (`<defs>`, `<symbol>`, gradients, clip paths, masks, patterns, filters, markers) and their subtrees. Before, an icon library's sprite of hidden `<symbol id>` elements filled the 100-candidate budget, the login inputs never reached the evidence, and healing abstained.
+- The planner is told that a label locator needs a `<label>`, `aria-label` or `aria-labelledby`, and that an input captioned only by its placeholder is located `by: "placeholder"`. Before, generated plans used `by: "label"` on placeholder-only inputs.
+
+### Third SearXNG agent run
+
+Found when an omp agent drove the pipeline on SearXNG a third time: 27 tests, 24 passed; the 3 failures are the product's CSV 500, confirmed by the server log.
+
+- `testmaster_analyze_run` no longer fails with `Invalid Analysis` (`/limitations/0` over 200 characters) when the run's server log is shared with overlapping runs: the limitation is short and generic, the fact names at most five runs ("and N more") and keeps that list whole when the log text is cut, and the limitation for an unreadable log is cut to the bound. This was a regression of the shared-log rule above, seen with long container names.
+- A review receipt (`plan accept`, `plan reject`, `testmaster_review_plan`) returns `batchVersion`, the `expectedVersion` of the next review of the batch. Before, an agent reviewing proposals in groups with different reasons read the batch again between calls.
+- A healing review whose verification did not pass says why it is `not_eligible` and what to do next in `automation.reasons` (reject it, then save a corrected revision or heal a new failed run). Before, the structured review only read `not_eligible` with the proposal back in `proposed`.
+- The planner is told that an HTTP plan keeps no cookies between requests, so a preference the site remembers in a cookie is a browser plan. Before, it generated HTTP preference flows that could never see the cookie.
+- Docs: a running MCP server reads `testmaster.config.json` when it starts, so restart it after changing `execution.concurrency`; a bad locator found by `plan trial` is fixed with `plan edit`, because healing repairs only a failed Run of an active revision.
+
 ### First WeKnora agent run
 
 Found when an omp agent drove the pipeline on WeKnora (Go API with a Swagger 2.0 document, Vue front end, token authentication) with no human step: 18 tests, 12 passed; the 6 failures are product defects (the web origin answers `/health` with the SPA page, a knowledge base without a name is accepted, a refresh token still works after rotation, login and registration responses diverge from the product's own Swagger).
