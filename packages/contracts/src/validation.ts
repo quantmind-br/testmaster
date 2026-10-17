@@ -633,8 +633,6 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
       const locatorPredicates = [
         "visible",
         "hidden",
-        "textEquals",
-        "textContains",
         "valueEquals",
         "enabled",
         "disabled",
@@ -670,6 +668,22 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
           "predicateInput",
           "Count requires browser locator or responseStepId",
         );
+      // Text predicates read a browser locator's text, or a whole response body as UTF-8 text.
+      if (predicate === "textEquals" || predicate === "textContains") {
+        if ("responseStepId" in input) {
+          if ("jsonPointer" in input)
+            reject(
+              `${path}/input/jsonPointer`,
+              "predicateInput",
+              "A text assertion on a response reads the whole body: drop jsonPointer, or use jsonEquals for a JSON value",
+            );
+        } else if (!("locator" in input) || plan.runner !== "playwright")
+          reject(
+            `${path}/input`,
+            "predicateInput",
+            "Text assertion requires a browser locator or responseStepId",
+          );
+      }
       if (step.expectation.predicate === "countAtLeast" && step.expectation.value === 0)
         reject(
           `${path}/expectation/value`,
@@ -740,8 +754,13 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
       issues,
     );
 }
-/** Observes content on the page, not its URL or the absence of earlier elements. */
-export function observesRenderedContent(expectation: Expectation): boolean {
+/**
+ * Observes content on the page, not its URL, the absence of earlier elements, or a response body
+ * (a check through `responseStepId` reads an HTTP response, never the page).
+ */
+export function observesRenderedContent(step: Extract<PlanStep, { kind: "assertion" }>): boolean {
+  if ("responseStepId" in step.input) return false;
+  const expectation = step.expectation;
   switch (expectation.predicate) {
     case "visible":
     case "enabled":
@@ -821,7 +840,7 @@ export function findNegativeBeforeRender(plan: ExecutablePlan): ValidationIssue[
         return;
       }
       if (step.kind === "assertion") {
-        if (required && observesRenderedContent(step.expectation)) {
+        if (required && observesRenderedContent(step)) {
           unsettled = null;
           lastNavigating = null;
           formFilled = false;

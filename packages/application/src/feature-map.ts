@@ -5,6 +5,7 @@ import { type RequirementsService, requirementRejection } from "./ai/requirement
 import { flattenSteps, pathMatches, requestPath } from "./ai/source-insights.js";
 import type { SourcesService } from "./ai/sources.js";
 import { allEntities, requireEntity, type ServiceContext } from "./context.js";
+import { governingPlan } from "./revision-plan.js";
 
 const MAX_ROWS = 500;
 const MAX_EVIDENCE = 20;
@@ -243,13 +244,20 @@ export class FeatureMapService {
         | { requirementRefs: string[]; steps: PlanStep[] }
         | null
         | undefined;
-      if (!revision || !plan) continue;
-      const steps = flattenSteps(plan.steps);
+      // Code carries no plan: it links through the requirements of the plan it came from, and its
+      // requests and pages are unknown because the code may differ from that plan.
+      const requirementRefs = plan
+        ? plan.requirementRefs
+        : revision
+          ? (governingPlan(this.ctx, String(revision.id))?.requirementRefs ?? [])
+          : [];
+      if (!revision || (!plan && !requirementRefs.length)) continue;
+      const steps = plan ? flattenSteps(plan.steps) : [];
       out.push({
         test,
         revisionId: revision.id,
         ordinal: Number(revision.ordinal ?? 1),
-        requirementRefs: plan.requirementRefs,
+        requirementRefs,
         requests: steps.flatMap((step) =>
           step.operation === "request"
             ? [{ method: step.input.method, path: requestPath(step) }]

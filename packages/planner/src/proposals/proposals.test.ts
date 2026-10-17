@@ -97,8 +97,8 @@ it("accepts a browser plan whose last action is followed by a positive assertion
       validateProposalPlan(await loginPlan([...urlOnly.slice(0, 1), positive, ...urlOnly.slice(1)]))
         .runner,
     ).toBe("playwright");
-  // Negative controls: a positive assertion before the last action, an optional one and an empty
-  // count do not observe the final page.
+  // Negative controls: a positive assertion before the last action, an optional one, an empty
+  // count and a check of a response body (an HTTP answer, not the page) do not observe the final page.
   const early = await loginPlan(urlOnly);
   early.steps = [
     assertion("early", { locator: heading }, { predicate: "visible" }),
@@ -116,6 +116,21 @@ it("accepts a browser plan whose last action is followed by a positive assertion
     await loginPlan([
       ...urlOnly,
       assertion("at-most", { locator: heading }, { predicate: "countAtMost", value: 0 }),
+    ]),
+    await loginPlan([
+      ...urlOnly,
+      {
+        id: "api",
+        kind: "action",
+        operation: "request",
+        description: "Read the dashboard",
+        input: { method: "GET", pathSegments: [{ literal: "dashboard" }] },
+      } as Step,
+      assertion(
+        "body",
+        { responseStepId: "api" },
+        { predicate: "textContains", value: { literal: "Dashboard" } },
+      ),
     ]),
   ])
     expect(() => validateProposalPlan(weak)).toThrow(

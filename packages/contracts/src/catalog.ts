@@ -818,6 +818,8 @@ const supplemental = {
         sourceRevisionId: P.id("rev"),
         /** Present when the candidate was generated from an accepted proposal. */
         proposalId: Type.Optional(P.id("pro")),
+        /** `testmaster://revisions/{id}/code`: the candidate's files, each inline while it fits, and a resource per file. */
+        code: Type.String({ minLength: 1, maxLength: 512 }),
       }),
     ),
     /** One entry per revision whose candidate the checks refused after every repair. */

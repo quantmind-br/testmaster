@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { ContractError, type PlanStep, parseStrictJson } from "@testmaster/contracts";
 import { type Command, Option } from "commander";
+import { candidateReceipt } from "./revisions.js";
 import { integer, type Options, type Runtime, required, string } from "./runtime.js";
 export function codeFormat(options: Options): "playwright" | "pytest" {
   const format =
@@ -25,14 +26,45 @@ export async function importCode(rt: Runtime, options: Options) {
     ...(name ? { name } : {}),
   });
 }
+/** Adds the code to the existing test `--test` as an inactive candidate revision. */
+async function importCodeRevision(rt: Runtime, testId: string, options: Options) {
+  if (string(options, "name"))
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      "--name names a new test and cannot be combined with --test",
+    );
+  const app = await rt.app();
+  const parentId = string(options, "parent");
+  const revision = await app.codeImport.importRevision({
+    testId,
+    path: required(options, "path"),
+    format: codeFormat(options),
+    ...(parentId ? { parentId } : {}),
+  });
+  return candidateReceipt(app, revision);
+}
 export function codeCommands(group: Command, runtime: Runtime): void {
   runtime.bind(
     group
       .command("import")
       .requiredOption("--path <path>")
       .addOption(codeFormatOption("Framework of the code being imported"))
-      .option("--name <name>"),
-    async (rt, _args, options) => ({ data: await importCode(rt, options) }),
+      .option("--name <name>", "Name of the new test (not with --test)")
+      .option(
+        "--test <id>",
+        "Add the code as a candidate revision of this existing test instead of creating a test; it is not activated",
+      )
+      .option(
+        "--parent <id>",
+        "Parent revision of the candidate (only with --test; default: the test's active revision)",
+      ),
+    async (rt, _args, options) => {
+      const testId = string(options, "test");
+      if (testId) return importCodeRevision(rt, testId, options);
+      if (string(options, "parent"))
+        throw new ContractError("INVALID_ARGUMENT", "--parent requires --test");
+      return { data: await importCode(rt, options) };
+    },
   );
   runtime.bind(
     group

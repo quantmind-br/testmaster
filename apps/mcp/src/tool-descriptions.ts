@@ -23,7 +23,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_review_plan:
     "Accept or reject proposals at expectedVersion = the batch version (batch.version, or batchVersion of an edit); an optional reason is kept on each decided one. Returns acceptedProposals {proposalId, testId, revisionId}. Stale version: details.diff or staleProposals. Next: testmaster_generate_tests.",
   testmaster_generate_tests:
-    "Generate candidates from accepted proposals (proposalIds) or revisions (revisionIds), one project per call; provider/model pick the model; no model deadline. Each candidate: id (its revision; testmaster_run_tests revisionId), testId, testName, sourceRevisionId, proposalId. Refused: validationErrors.",
+    "Generate candidates from accepted proposals (proposalIds) or revisions (revisionIds), one project per call; provider/model pick the model; no model deadline. Each candidate: id (run it as revisionId), testId, testName, sourceRevisionId, proposalId, code (its files). Refused: validationErrors.",
   testmaster_run_tests:
     "Run testIds with environmentId, or a list (suiteId, replay only), in the sandbox; revisionId pins one test's revision (pin several in a testmaster_save_suite list). Mode defaults to replay. jobId re-reads a batch. wait=true blocks until timeoutMs (runs go on), or poll testmaster_get_run.",
   testmaster_get_run:
@@ -39,7 +39,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_compare_runs:
     "Compare two runs, paged by cursor and limit. Example: a failed run against a green baseline, to tell regression from drift.",
   testmaster_propose_healing:
-    "Propose a locator-only candidate for a failed Run of the active plan revision; assertions never change. Next: testmaster_review_healing. abstained: true (reasonCode) = no safe repair. Refused before a model call (PRECONDITION_FAILED): healing_not_indicated, code_revision, revision_not_active.",
+    "Propose a candidate changing only the locator of a failed action step (active plan revision); assertions are never healed (fix: testmaster_save_test). Next: testmaster_review_healing. abstained = no safe repair. PRECONDITION_FAILED pre-call: healing_not_indicated, code_revision, revision_not_active.",
   testmaster_review_healing:
     "Read the proposal's status (proposed, approved, verified, rejected), healing diff, risk, assertions check (preservedAssertions.intact), verification and approval. Next: testmaster_approve_healing with approval.expectedVersion, or testmaster_reject_healing with a reason, only after review.",
   testmaster_approve_healing:
@@ -65,7 +65,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_archive_source:
     "Archive a source at expectedVersion (testmaster://projects/{projectId}/sources lists it): with no active revision, plan generation stops offering its API operations and coverage stops counting them. Its revisions, requirements and tests stay; testmaster_add_source with sourceId reactivates it.",
   testmaster_review_requirements:
-    "Edit, adjudicate conflicts, reject (reason required; final) and approve requirements at the snapshot expectedVersion, in that order; an optional reason is kept on each edited or approved one. Returns per-item results and the new sourceSnapshotId. Next: testmaster_generate_plan.",
+    "Edit, adjudicate conflicts, reject (reason required; final) and approve requirements at snapshot expectedVersion, in that order; lists may be empty. An optional reason is kept on edited or approved ones. Returns per-item results and the new sourceSnapshotId. Next: testmaster_generate_plan.",
   testmaster_set_secret:
     "Register a secret from valueFile or fromEnv (never inline; one trailing newline trimmed) with allowedOrigins; returns metadata (locator is the name). A taken name is REVISION_CONFLICT with details.secretId: use testmaster_rotate_secret. Secrets and auth profiles precede testmaster_generate_plan.",
   testmaster_rotate_secret:

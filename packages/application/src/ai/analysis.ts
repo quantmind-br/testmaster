@@ -33,6 +33,7 @@ import {
 import { type ArtifactsService, isEvidenceUnavailable } from "../artifacts.js";
 import { entity, requireEntity, type ServiceContext } from "../context.js";
 import type { AdmissionSnapshot } from "../provenance.js";
+import { governingPlan } from "../revision-plan.js";
 import {
   describeExecutionError,
   type RunExecutionError,
@@ -185,13 +186,23 @@ function assertionHealing(stepId: string): Diagnosis["healing"] {
   };
 }
 /**
+ * The runner's own message for a failed step whose record alone does not say what went wrong.
  * `assertion_timeout` is the reason code of every step that ran out of time on a live page; on an
- * action it means the action's target never appeared, so the runner's own message is added.
+ * action it means the action's target never appeared. An `assertion_mismatch` with no expected or
+ * observed value means the runner refused the step before comparing anything (an ambiguous locator,
+ * a response that is not JSON), and only its message names why.
  */
-function actionTimeoutGloss(planStep: PlanStep | undefined, step: StepResult): string {
-  if (planStep?.kind !== "action" || step.reasonCode !== "assertion_timeout" || !step.error)
-    return "";
-  return ` (an action, not an assertion: ${step.error.message.replace(/\.$/u, "")})`;
+function runnerMessageGloss(planStep: PlanStep | undefined, step: StepResult): string {
+  if (!planStep || !step.error) return "";
+  const message = scrubEvidenceText(
+    clipMessage(step.error.message, 500).replace(/\.$/u, ""),
+    environmentSecretValues(),
+  ).text;
+  if (planStep.kind === "action" && step.reasonCode === "assertion_timeout")
+    return ` (an action, not an assertion: ${message})`;
+  if (step.reasonCode === "assertion_mismatch" && step.expected == null && step.observed == null)
+    return ` (no value was compared: ${message})`;
+  return "";
 }
 /**
  * Visible text of a model-selected next step. The prefix identifies the same action when the rules
@@ -261,6 +272,8 @@ type CollectedEvidence = {
   snapshotId: Analysis["snapshotId"];
   limitations: string[];
   plan: ExecutablePlan | null;
+  /** Requirements of the plan the revision verifies: its own, or the plan a code revision came from. */
+  requirementRefs: string[];
 };
 
 type HttpStatusEvidence = {
@@ -1743,7 +1756,7 @@ export class AnalysisService {
           stepId: step.id,
           contentHash: semanticHash(step),
         },
-        text: `Step ${step.planStepId} (${planStep?.operation ?? codeLabel ?? "unmapped"}) was ${step.status}${step.reasonCode ? `: ${step.reasonCode}` : ""}${actionTimeoutGloss(planStep, step)}.`,
+        text: `Step ${step.planStepId} (${planStep?.operation ?? codeLabel ?? "unmapped"}) was ${step.status}${step.reasonCode ? `: ${step.reasonCode}` : ""}${runnerMessageGloss(planStep, step)}.`,
       });
     }
     for (const row of this.ctx.database.all(
@@ -2010,7 +2023,15 @@ export class AnalysisService {
       );
     if (!evidence.length)
       limitations.push("No persisted step or observation evidence is available.");
-    return { evidence, snapshotId, limitations: [...new Set(limitations)], plan };
+    return {
+      evidence,
+      snapshotId,
+      limitations: [...new Set(limitations)],
+      plan,
+      requirementRefs: [
+        ...new Set(governingPlan(this.ctx, String(revision.id))?.requirementRefs ?? []),
+      ],
+    };
   }
   /** Names of the auth profiles bound to the Run's environment revision; never their secrets. */
   private environmentAuthProfiles(run: Run): string[] {
@@ -2741,7 +2762,7 @@ export class AnalysisService {
         requirements: requirementContext(
           this.ctx,
           String(requireEntity(this.ctx, "TestCase", run.testId).projectId),
-          [...new Set(plan?.requirementRefs ?? [])],
+          collected.requirementRefs,
           secrets,
         ).requirements,
         steps: planSteps(plan),
@@ -2932,7 +2953,7 @@ export class AnalysisService {
         snapshotId: collected.snapshotId,
         parentId: null,
         source: "rules",
-        affectedRequirementIds: [...new Set(plan?.requirementRefs ?? [])],
+        affectedRequirementIds: collected.requirementRefs,
         facts: [
           {
             text: `Run finished with outcome ${run.outcome} and gate ${run.gate}.`,
@@ -3294,12 +3315,7 @@ export class AnalysisService {
     const mapped =
       run.outcome === "passed"
         ? { requirements: [], limitations: [] }
-        : requirementContext(
-            this.ctx,
-            projectId,
-            [...new Set(collected.plan?.requirementRefs ?? [])],
-            secrets,
-          );
+        : requirementContext(this.ctx, projectId, collected.requirementRefs, secrets);
     const data = {
       outcome: run.outcome,
       rulesFailureKind: factual.failureKind,

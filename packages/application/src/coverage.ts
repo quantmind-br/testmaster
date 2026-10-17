@@ -3,6 +3,7 @@ import type { ReportRun, ReportSnapshot } from "@testmaster/reporting";
 import { coverageMetrics, ratioMetric } from "@testmaster/reporting";
 import { type RequirementSnapshot, requirementStatus } from "./ai/requirements.js";
 import { allEntities, type ServiceContext } from "./context.js";
+import { governingPlan } from "./revision-plan.js";
 
 export function reportCoverage(ctx: ServiceContext, snapshot: ReportSnapshot): CoverageMetrics {
   const projects = new Set(snapshot.runs.map((item) => item.projectId));
@@ -16,7 +17,7 @@ export function reportCoverage(ctx: ServiceContext, snapshot: ReportSnapshot): C
     ),
   );
   const mapped = revisions.flatMap(
-    (value) => (value.plan as ExecutablePlan | null)?.requirementRefs ?? [],
+    (value) => governingPlan(ctx, String(value.id))?.requirementRefs ?? [],
   );
   const inScopeRequirements = inScopeRequirementIds(ctx, projects);
   const coveredOperations: string[] = [],
@@ -249,10 +250,11 @@ function latestRunPerTest(ctx: ServiceContext, runs: readonly ReportRun[]): Repo
 
 /**
  * Requirement ids whose mapped test passed in the latest replay of the report among the runs in the
- * given freshness state. A `current` run verifies through the required business assertions of its
- * own plan. A `candidate` run (a revision never promoted, newer than the active one) maps to the
- * requirements of the nearest plan in its revision ancestry: generated code carries no plan, and
- * its Run and gate passing is the assertion.
+ * given freshness state. A plan revision verifies through the required business assertions of its
+ * own plan. A code revision (generated from a plan, or imported as a fix of one) carries no plan:
+ * it maps to the requirements of the nearest plan in its revision ancestry, and its Run and gate
+ * passing is the assertion. `current` runs belong to the active revision, `candidate` runs to a
+ * revision never promoted, newer than the active one.
  */
 function passedRequirementIds(
   ctx: ServiceContext,
@@ -270,29 +272,20 @@ function passedRequirementIds(
     ),
   )) {
     if (!freshPassingRun(item)) continue;
-    let revision = ctx.entities.get("TestRevision", ctx.workspaceId, item.run.revisionId);
-    const own = revision?.plan as ExecutablePlan | null | undefined;
-    let plan = own ?? null;
-    if (state === "candidate") {
-      const seen = new Set<string>();
-      while (!plan && revision?.parentId && !seen.has(String(revision.id))) {
-        seen.add(String(revision.id));
-        revision = ctx.entities.get("TestRevision", ctx.workspaceId, String(revision.parentId));
-        plan = (revision?.plan as ExecutablePlan | null | undefined) ?? null;
-      }
-    }
+    const own = ctx.entities.get("TestRevision", ctx.workspaceId, item.run.revisionId)?.plan as
+      | ExecutablePlan
+      | null
+      | undefined;
+    const plan = own ?? governingPlan(ctx, item.run.revisionId);
     if (!plan) continue;
     const assertedBusiness =
-      state === "candidate" && !own
-        ? true
-        : planSteps(plan).some(
-            (step) =>
-              step.kind === "assertion" &&
-              step.required !== false &&
-              item.steps.some(
-                (result) => result.planStepId === step.id && result.status === "passed",
-              ),
-          );
+      !own ||
+      planSteps(plan).some(
+        (step) =>
+          step.kind === "assertion" &&
+          step.required !== false &&
+          item.steps.some((result) => result.planStepId === step.id && result.status === "passed"),
+      );
     if (assertedBusiness) for (const id of plan.requirementRefs ?? []) verified.add(id);
   }
   return verified;

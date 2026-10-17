@@ -112,6 +112,8 @@ export async function executePlan(plan: Data, initialPage: Page, request: APIReq
       case 'headerMatches': { const header = response.headers[e.header.toLowerCase()]; expect(header, 'Header ' + e.header + ' is absent').toBeDefined(); expect(header).toMatch(new RegExp(e.pattern, 'u')); break; }
       case 'cookieAbsent': expect(response.cookies).not.toContain(e.name); break;
       case 'jsonEquals': expect(pointer(JSON.parse(response.body), p)).toStrictEqual(value(e.value)); break;
+      case 'textEquals': expect(new TextDecoder('utf-8', {fatal: true}).decode(response.bytes)).toBe(string(e.value)); break;
+      case 'textContains': expect(new TextDecoder('utf-8', {fatal: true}).decode(response.bytes)).toContain(string(e.value)); break;
       case 'countEquals': { const v = pointer(JSON.parse(response.body), p); expect(Array.isArray(v)).toBe(true); expect(v.length).toBe(e.value); break; }
       case 'countAtLeast': { const v = pointer(JSON.parse(response.body), p); expect(Array.isArray(v)).toBe(true); expect(v.length).toBeGreaterThanOrEqual(e.value); break; }
       case 'countAtMost': { const v = pointer(JSON.parse(response.body), p); expect(Array.isArray(v)).toBe(true); expect(v.length).toBeLessThanOrEqual(e.value); break; }
@@ -160,7 +162,7 @@ export async function executePlan(plan: Data, initialPage: Page, request: APIReq
         if((status === 303 && method !== 'HEAD') || ((status === 301 || status === 302) && method === 'POST')) { method = 'GET'; data = undefined; delete headers['content-type']; }
         target = next.href; continue;
       }
-      return {status, headers:incoming, body:bytes.toString('utf8'), cookies};
+      return {status, headers:incoming, body:bytes.toString('utf8'), bytes, cookies};
     }
   }
   async function perform(step: Data): Promise<void> {

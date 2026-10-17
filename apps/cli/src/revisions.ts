@@ -1,5 +1,27 @@
+import type { Application } from "@testmaster/application";
 import type { Command } from "commander";
 import { integer, type Runtime, required, string, version } from "./runtime.js";
+
+/**
+ * A new revision never becomes the test's active one: runs keep using the active revision
+ * until it is promoted, so the receipt says so and gives the exact command.
+ */
+export function candidateReceipt<T extends { id: string; testId: string }>(
+  app: Application,
+  revision: T,
+) {
+  const test = app.tests.get(revision.testId);
+  const active = test.activeRevisionId === revision.id;
+  const promote = `testmaster test revision promote ${revision.id} --expected-version ${test.version}`;
+  return {
+    data: { ...revision, active, nextActions: active ? [] : [promote] },
+    warnings: active
+      ? []
+      : [
+          `Revision ${revision.id} is not active: runs keep using ${test.activeRevisionId ?? "no revision"}. Activate it with: ${promote}`,
+        ],
+  };
+}
 
 export function revisionCommands(test: Command, runtime: Runtime): void {
   const group = test.command("revision").alias("revisions");
@@ -8,20 +30,10 @@ export function revisionCommands(test: Command, runtime: Runtime): void {
     async (rt, args, options) => {
       const plan = await rt.plan(required(options, "plan"));
       const app = await rt.app();
-      const revision = app.revisions.create(String(args[0]), plan, string(options, "parent"));
-      const test = app.tests.get(revision.testId);
-      // A new revision never becomes the test's active one: runs keep using the active revision
-      // until it is promoted, so the receipt says so and gives the exact command.
-      const active = test.activeRevisionId === revision.id;
-      const promote = `testmaster test revision promote ${revision.id} --expected-version ${test.version}`;
-      return {
-        data: { ...revision, active, nextActions: active ? [] : [promote] },
-        warnings: active
-          ? []
-          : [
-              `Revision ${revision.id} is not active: runs keep using ${test.activeRevisionId ?? "no revision"}. Activate it with: ${promote}`,
-            ],
-      };
+      return candidateReceipt(
+        app,
+        app.revisions.create(String(args[0]), plan, string(options, "parent")),
+      );
     },
   );
   runtime.bind(group.command("list <test-id>"), async (rt, args) => ({

@@ -1527,6 +1527,54 @@ it("cookieAbsent passes when a response clears the cookie instead of setting it"
   ).rejects.toMatchObject({ reasonCode: "assertion_mismatch", outcome: "failed" });
 });
 
+it("textEquals and textContains judge the whole response body as UTF-8 text", async () => {
+  let body: string | Uint8Array = "\uFEFFUser-agent: *\nDisallow: /stats\n";
+  const base = await serve((_req, res) => {
+    res.setHeader("content-type", "text/plain; charset=utf-8");
+    res.end(body);
+  });
+  const text = (predicate: "textEquals" | "textContains", literal: string): PlanStep => ({
+    id: "text",
+    kind: "assertion",
+    operation: "assert",
+    description: "Body text",
+    input: { responseStepId: "robots" },
+    expectation: { predicate, value: { literal } },
+  });
+  const judge = async (check: PlanStep) => {
+    const f = fixture(base);
+    const result = await f.runtime.runSteps(
+      [requestStep("robots", ["robots.txt"]), check],
+      (step) => f.engine.perform(step),
+    );
+    const finished = f.events.find(
+      (event) => event.type === "step.finished" && event.payload.stepId === "text",
+    )?.payload;
+    return { result, finished };
+  };
+  // The BOM is not part of the text, and the comparison is exact.
+  expect(
+    (await judge(text("textEquals", "User-agent: *\nDisallow: /stats\n"))).result,
+  ).toMatchObject({ outcome: "passed" });
+  expect((await judge(text("textContains", "Disallow: /stats"))).result).toMatchObject({
+    outcome: "passed",
+  });
+  const missing = await judge(text("textContains", "Disallow: /preferences"));
+  expect(missing.result).toMatchObject({ outcome: "failed", reasonCode: "assertion_mismatch" });
+  expect(missing.finished).toMatchObject({
+    observed: "User-agent: *\nDisallow: /stats\n",
+    expected: "Disallow: /preferences",
+  });
+  expect((await judge(text("textEquals", "User-agent: *"))).result).toMatchObject({
+    outcome: "failed",
+    reasonCode: "assertion_mismatch",
+  });
+  // Bytes that are not UTF-8 are not text: the assertion fails instead of comparing mojibake.
+  body = Uint8Array.from([0x44, 0x69, 0xff, 0x0a]);
+  const binary = await judge(text("textContains", "Di"));
+  expect(binary.result).toMatchObject({ outcome: "failed", reasonCode: "assertion_mismatch" });
+});
+
 it("evaluates headerMatches as an unanchored pattern and never lets a bad pattern crash the runner", async () => {
   const base = await serve((_req, res) => {
     res.setHeader("X-Request-Id", "req-12345");

@@ -395,7 +395,14 @@ export class TestMasterMcp {
                     };
                   });
                 })()
-              : [];
+              : tool.name === "testmaster_generate_tests"
+                ? (data.candidates as { code: string; testName: string }[]).map((candidate) => ({
+                    type: "resource_link" as const,
+                    uri: candidate.code,
+                    name: `Generated code of ${candidate.testName}`,
+                    mimeType: "application/json",
+                  }))
+                : [];
           const summary =
             tool.name === "testmaster_get_analysis"
               ? formatDiagnosisSummary(data as unknown as Analysis)
@@ -1174,6 +1181,7 @@ export class TestMasterMcp {
               testName: app.tests.get(String(candidate.testId)).name,
               sourceRevisionId: candidate.parentId,
               ...(proposalId ? { proposalId } : {}),
+              code: `testmaster://revisions/${candidate.id}/code`,
             };
           }),
           validationErrors: result.validationErrors,

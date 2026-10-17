@@ -318,6 +318,21 @@ URL. When the destination carries a query that is not fixed (a `return_to` param
 Keep the origin out of the pattern so the plan runs against every environment. Both URL predicates belong to browser
 (`playwright`) plans; an HTTP plan asserts a redirect with `statusIn` and `headerMatches` on `Location`.
 
+### Text of a response
+
+`textEquals` and `textContains` with `responseStepId` (and no `jsonPointer`) read the whole response body as UTF-8
+text, on an HTTP plan or a browser plan's request step. Use them for answers that are not JSON: a health check that
+returns `OK`, a `robots.txt` line, an RSS or OpenSearch XML document, a CSV header row:
+
+```json
+{"id": "csv-header", "kind": "assertion", "operation": "assert", "description": "CSV starts with its header row",
+ "input": {"responseStepId": "search-csv"},
+ "expectation": {"predicate": "textContains", "value": {"literal": "title,url,content"}}}
+```
+
+A body that is not valid UTF-8 fails the check. A value inside a JSON body stays `jsonEquals` with a `jsonPointer`. A
+response check does not observe the page, so a browser plan still needs a locator check of the rendered result.
+
 ### `jsonSchema` pointers
 
 A `jsonSchema` assertion cites a source revision and a JSON pointer into the OpenAPI document. Accepted forms:
@@ -437,6 +452,20 @@ testmaster test import --path tests/login.spec.ts --format playwright --name log
 Exported projects pin their dependencies and do not call TestMaster. Imported code is statically checked
 (import allowlist, no runtime installs, no disabled timeouts, no empty assertions) and only ever executes
 inside the sandbox.
+
+To attach hand-corrected code to a test that already exists, give `--test`:
+
+```bash
+testmaster test import --test "$TEST_ID" --path tests/login.fixed.spec.ts --format playwright
+testmaster test import --test "$TEST_ID" --parent "$REVISION_ID" --path tests/login.fixed.spec.ts --format playwright
+```
+
+The code goes through the same checks and becomes a new revision of that test (origin `imported`), never the
+active one: runs keep using the active revision until you promote it. Like `test revision create`, the receipt
+says `active: false` and gives the exact `testmaster test revision promote <revisionId> --expected-version <n>`
+command (stderr in text mode). `--parent` (only with `--test`) names the revision the candidate descends from;
+it defaults to the test's active revision, so a fix of a generated or plan revision keeps its lineage, and a
+revision of another test is refused. `--name` belongs to a new test and is refused together with `--test`.
 
 An exported imported or generated Playwright project runs with `npm ci && npx playwright install chromium &&
 BASE_URL=<target> npm test`: its `testmaster-fixtures/` package keeps the authored `@playwright/test` import

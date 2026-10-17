@@ -140,6 +140,24 @@ describe("HTTP plan expressiveness", () => {
       ),
     ).toEqual(["predicateInput:/steps/1/input", "predicateInput:/steps/2/input"]);
   });
+  it("accepts textEquals and textContains over a whole response body, never with a jsonPointer or without a response", () => {
+    const text = (input: Json) => [
+      check({ predicate: "textEquals", value: { literal: "OK" } }, "a", input),
+      check({ predicate: "textContains", value: { literal: "Disallow" } }, "b", input),
+    ];
+    expect(rules(plan([request(), ...text({ responseStepId: "go" })]))).toEqual([]);
+    expect(
+      rules(plan([request(), ...text({ responseStepId: "go", jsonPointer: "/status" })])),
+    ).toEqual([
+      "predicateInput:/steps/1/input/jsonPointer",
+      "predicateInput:/steps/2/input/jsonPointer",
+    ]);
+    // A locator belongs to a browser plan; on the HTTP runner it reads nothing.
+    expect(rules(plan([request(), ...text({ locator: { by: "css", value: "a" } })]))).toEqual([
+      "predicateInput:/steps/1/input",
+      "predicateInput:/steps/2/input",
+    ]);
+  });
   it("accepts countAtLeast and countAtMost over a response and refuses them without one", () => {
     const counts = (input: Json) => [
       check({ predicate: "countEquals", value: 1 }, "a", input),

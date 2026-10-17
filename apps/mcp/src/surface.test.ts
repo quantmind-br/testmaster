@@ -1110,13 +1110,29 @@ it("generate_tests names the test and the proposal of every candidate it returns
       testName: "Alpha",
       sourceRevisionId: alphaRevision,
       proposalId: proposal.id,
+      code: "testmaster://revisions/rev_019bf434-20c0-7000-8000-0000000000a1/code",
     },
     {
       id: "rev_019bf434-20c0-7000-8000-0000000000b2",
       testId: beta.id,
       testName: "Beta",
       sourceRevisionId: betaRevision,
+      code: "testmaster://revisions/rev_019bf434-20c0-7000-8000-0000000000b2/code",
     },
+  ]);
+  // The code of each candidate is also a resource link, so a client lists where to read it.
+  const links = (generated.result.content as { type: string; uri?: string; name?: string }[])
+    .filter((entry) => entry.type === "resource_link")
+    .map(({ uri, name }) => [uri, name]);
+  expect(links).toEqual([
+    [
+      "testmaster://revisions/rev_019bf434-20c0-7000-8000-0000000000a1/code",
+      "Generated code of Alpha",
+    ],
+    [
+      "testmaster://revisions/rev_019bf434-20c0-7000-8000-0000000000b2/code",
+      "Generated code of Beta",
+    ],
   ]);
 });
 

@@ -365,6 +365,14 @@ function responseJson(response: HttpResponse): unknown {
     throw new RuntimeError("assertion_mismatch", "Response is not valid JSON", "failed");
   }
 }
+/** The whole body as UTF-8 text (a leading BOM dropped); bytes that are not UTF-8 fail the assertion. */
+function responseText(response: HttpResponse): string {
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(response.body);
+  } catch {
+    throw new RuntimeError("assertion_mismatch", "Response body is not UTF-8 text", "failed");
+  }
+}
 /**
  * A complete, valid JSON response that lacks the asserted target contradicts the expectation
  * (e.g. a renamed field or a missing record): it is an observation, not missing evidence.
@@ -475,6 +483,25 @@ export async function assertResponse(
       expected = { absent: expectation.name };
       matches = !response.cookieNames.includes(expectation.name);
       break;
+    case "textEquals":
+    case "textContains": {
+      if (pointer !== undefined)
+        throw new RuntimeError(
+          "security_precondition_failed",
+          "A text assertion reads the whole response body and takes no jsonPointer",
+        );
+      const wanted = await runtime.resolve(expectation.value);
+      if (typeof wanted !== "string")
+        throw new RuntimeError(
+          "security_precondition_failed",
+          "Text expectation must resolve to a string",
+        );
+      const text = responseText(response);
+      observed = text;
+      expected = wanted;
+      matches = expectation.predicate === "textEquals" ? text === wanted : text.includes(wanted);
+      break;
+    }
     case "jsonEquals": {
       const target = assertedJsonValue(runtime, response, pointer);
       missingDiagnostic = target.diagnostic;

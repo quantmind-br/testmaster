@@ -346,6 +346,27 @@ describe("standalone deterministic code export", () => {
     expect(() => exportCode(plan, { format: "pytest" })).toThrow(/ECMAScript construct/);
     expect(() => exportCode(plan, { format: "playwright" })).not.toThrow();
   });
+  it("exports textEquals and textContains over a response body in both formats", async () => {
+    const plan = await fixture("backend");
+    const request = plan.steps[0];
+    if (request?.operation !== "request") throw new Error("Bad fixture");
+    const text = (id: string, expectation: Expectation): PlanStep => ({
+      id,
+      kind: "assertion",
+      operation: "assert",
+      description: id,
+      input: { responseStepId: "get-health" },
+      expectation,
+    });
+    plan.steps = [
+      request,
+      text("exact", { predicate: "textEquals", value: { literal: "OK" } }),
+      text("part", { predicate: "textContains", value: { literal: "O" } }),
+    ];
+    const helpers = exportCode(plan, { format: "playwright" }).files["helpers/standalone.ts"] ?? "";
+    expect(() => parse(helpers, { sourceType: "module", plugins: ["typescript"] })).not.toThrow();
+    expect(() => exportCode(plan, { format: "pytest" })).not.toThrow();
+  });
   it("exports a forged session cookie as name=random in both formats", async () => {
     const plan = await fixture("backend");
     const request = plan.steps[0];

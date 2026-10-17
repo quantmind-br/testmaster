@@ -2097,6 +2097,51 @@ it("an action that timed out on its target says so in its fact; an assertion tim
     "Step price (assert) was failed: assertion_timeout.",
   );
 });
+it("a step the runner refused before comparing a value names the runner's message; a compared mismatch does not", async () => {
+  const failedText = (step: { observed: unknown; expected: unknown }) =>
+    fixture({
+      plan: {
+        ...persistencePlan,
+        type: "frontend",
+        runner: "playwright",
+        steps: [
+          {
+            id: "price",
+            kind: "assertion",
+            operation: "assert",
+            input: {
+              locator: {
+                by: "text",
+                value: "demo offline",
+                exact: true,
+                container: { by: "css", value: "article.result .engines" },
+              },
+            },
+            expectation: { predicate: "visible" },
+          },
+        ],
+      },
+      step: {
+        reasonCode: "assertion_mismatch",
+        ...step,
+        error: { code: "Error", message: "Locator is ambiguous; matched 4" },
+      },
+    });
+  const refused = await failedText({ observed: null, expected: null });
+  const analysis = await refused.service.analyze(refused.run.id);
+  expect(analysis.facts.find((fact) => fact.text.startsWith("Step price"))?.text).toBe(
+    "Step price (assert) was failed: assertion_mismatch (no value was compared: Locator is ambiguous; matched 4).",
+  );
+  expect(analysis.diagnosis?.observation?.summary).toContain(
+    "(no value was compared: Locator is ambiguous; matched 4)",
+  );
+  const compared = await failedText({ observed: "hidden", expected: "visible" });
+  expect(
+    (await compared.service.analyze(compared.run.id)).facts.find((fact) =>
+      fact.text.startsWith("Step price"),
+    )?.text,
+  ).toBe("Step price (assert) was failed: assertion_mismatch.");
+});
 
 async function unmatchedClickFixture() {
   const f = await fixture({
@@ -3627,6 +3672,18 @@ it("a failed test that maps to no requirement tells the model so instead of impl
   const { data } = f.complete.mock.calls[0]![0] as ModelRequestData;
   expect(data.requirements).toEqual([]);
   expect(data.limitations.join(" ")).toContain("maps to no requirement");
+});
+it("a failed generated-code run maps the requirements of the plan it was generated from", async () => {
+  const requirementId = "req_00000000-0000-4000-8000-0000000000c1";
+  const f = await fixture({
+    code: true,
+    parentPlan: { ...persistencePlan, requirementRefs: [requirementId] },
+    step: { planStepId: "imported-test-0" },
+  });
+  const analysis = await f.service.analyze(f.run.id, { model: true });
+  expect(analysis.affectedRequirementIds).toEqual([requirementId]);
+  const { data } = f.complete.mock.calls[0]![0] as ModelRequestData;
+  expect(data.limitations.join(" ")).not.toContain("maps to no requirement");
 });
 
 const lowerFixtures = [

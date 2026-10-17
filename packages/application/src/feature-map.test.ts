@@ -208,6 +208,42 @@ it("UX-013 lists no coverage row for a rejected requirement", async () => {
   expect(map.summary).toEqual({ noTests: 1, testsWithoutValidRun: 0, validRun: 0 });
 });
 
+it("UX-013 links an active code revision to the requirements of the plan it came from, and code with no plan ancestor to none", async () => {
+  const f = await fixture();
+  const generated = seedRequirement(f, "generated", "Generated", []);
+  const imported = seedRequirement(f, "imported", "Imported", []);
+  const promoteCode = (requirement: Requirement, linked: boolean) => {
+    const test = f.app.tests.create({
+      projectId: f.projectId,
+      plan: requestPlan(requirement.id, "/health", [requirement.id]),
+    });
+    const revision = entity(f.app.context, "rev", {
+      testId: test.id,
+      ordinal: 2,
+      contentHash: f.app.revisions.get(String(test.activeRevisionId)).contentHash,
+      plan: null,
+      codeArtifactId: null,
+      runnerKind: "playwright",
+      author: f.app.context.principalId,
+      parentId: linked ? test.activeRevisionId : null,
+      origin: linked ? "generated" : "imported",
+    });
+    f.app.context.entities.insert("TestRevision", revision);
+    f.app.revisions.promote(String(revision.id), Number(test.version), "code replaces the plan");
+    return test.id;
+  };
+  const generatedTest = promoteCode(generated, true);
+  promoteCode(imported, false);
+  const rows = f.app.featureMap.get(f.projectId).rows;
+  const row = (key: string) => rows.find((item) => item.key === key);
+  expect(row(`requirement:${generated.id}`)?.tests.map((item) => item.testId)).toEqual([
+    generatedTest,
+  ]);
+  expect(row(`requirement:${imported.id}`)).toMatchObject({ coverage: "no_tests", tests: [] });
+  // The code may call other routes than its parent plan did: no endpoint is linked through it.
+  expect(row("endpoint:GET:/health")).toBeUndefined();
+});
+
 it("UX-014 lists discovery runs newest first with scope, counts and the files that were skipped", async () => {
   const f = await fixture();
   await writeFile(

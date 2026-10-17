@@ -422,3 +422,45 @@ it("a candidate run verifies nothing, but candidateRequirementCoverage lists wha
     denominator: 4,
   });
 });
+
+it("a current code revision verifies the requirements of the plan in its ancestry; code with no plan ancestor verifies none", async () => {
+  const { app, projectId, environmentId } = await openApp();
+  const generated = seed(app, projectId, "generated");
+  const unrelated = seed(app, projectId, "unrelated");
+  storeRequirements(app, projectId, [generated, unrelated]);
+  const codeRun = (requirement: Requirement, linked: boolean) => {
+    const plan = scaffoldPlan("backend");
+    plan.requirementRefs = [requirement.id];
+    const test = app.tests.create({ projectId, plan });
+    const revision = entity(app.context, "rev", {
+      testId: test.id,
+      ordinal: 2,
+      contentHash: app.revisions.get(String(test.activeRevisionId)).contentHash,
+      plan: null,
+      codeArtifactId: null,
+      runnerKind: "playwright",
+      author: app.context.principalId,
+      parentId: linked ? test.activeRevisionId : null,
+      origin: linked ? "generated" : "imported",
+    });
+    app.context.entities.insert("TestRevision", revision);
+    return passedItem(
+      projectId,
+      {
+        ...app.runs.prepare({ testId: test.id, environmentId }),
+        revisionId: revision.id,
+      } as unknown as ReportRun["run"],
+      { steps: [{ planStepId: "imported-code", status: "passed" }] },
+    );
+  };
+  const runs = [codeRun(generated, true), codeRun(unrelated, false)];
+  const report = {
+    runs,
+    selection: { requestedRunIds: runs.map((item) => item.run.id), notDispatched: [] },
+  } as unknown as ReportSnapshot;
+
+  expect(verifiedRequirementCoverage(app.context, report)).toMatchObject({
+    numerator: 1,
+    denominator: 2,
+  });
+});

@@ -292,3 +292,82 @@ it("records the generating model call and the offered secrets on a generated rev
     }),
   ).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
 });
+const healthCode =
+  "import {test,expect} from '@playwright/test';test('health',async({request})=>{const r=await request.get('/health');expect(r.status()).toBe(200);});";
+it("imports code as an inactive candidate revision whose parent defaults to the active revision", async () => {
+  const { cwd, project, service, ctx } = await setup();
+  await writeFile(join(cwd, "health.spec.ts"), healthCode);
+  const initial = await service.import({
+    projectId: project.id,
+    path: "health.spec.ts",
+    format: "playwright",
+  });
+  await writeFile(join(cwd, "fixed.spec.ts"), healthCode.replace("/health", "/healthz"));
+  const candidate = await service.importRevision({
+    testId: initial.test.id,
+    path: "fixed.spec.ts",
+    format: "playwright",
+  });
+  expect(candidate).toMatchObject({
+    testId: initial.test.id,
+    plan: null,
+    origin: "imported",
+    codeRef: { trustLevel: "imported", entrypoint: "fixed.spec.ts" },
+    parentId: initial.revision.id,
+    ordinal: 2,
+  });
+  const stored = ctx.entities.get("TestCase", ctx.workspaceId, initial.test.id);
+  expect(stored?.activeRevisionId).toBe(initial.revision.id);
+  expect(stored?.version).toBe(initial.test.version);
+  expect((await service.readBundle(candidate.id)).bundle.files["fixed.spec.ts"]).toContain(
+    "/healthz",
+  );
+});
+it("refuses a parent revision of another test and leaves no revision or artifact behind", async () => {
+  const { cwd, project, service, ctx } = await setup();
+  await writeFile(join(cwd, "health.spec.ts"), healthCode);
+  const first = await service.import({
+    projectId: project.id,
+    path: "health.spec.ts",
+    format: "playwright",
+  });
+  const second = await service.import({
+    projectId: project.id,
+    path: "health.spec.ts",
+    format: "playwright",
+  });
+  await expect(
+    service.importRevision({
+      testId: first.test.id,
+      path: "health.spec.ts",
+      format: "playwright",
+      parentId: second.revision.id,
+    }),
+  ).rejects.toMatchObject({ code: "INVALID_ARGUMENT", message: /another test/u });
+  expect(ctx.database.get("SELECT COUNT(*) AS count FROM test_revisions")?.count).toBe(2);
+  expect(ctx.database.get("SELECT COUNT(*) AS count FROM artifacts")?.count).toBe(4);
+});
+it("refuses unsafe code and unknown input when importing a candidate revision", async () => {
+  const { cwd, project, service } = await setup();
+  await writeFile(join(cwd, "health.spec.ts"), healthCode);
+  const initial = await service.import({
+    projectId: project.id,
+    path: "health.spec.ts",
+    format: "playwright",
+  });
+  await writeFile(
+    join(cwd, "bad.spec.ts"),
+    "import {test,expect} from '@playwright/test';test('bad',()=>expect(true).toBe(true));",
+  );
+  await expect(
+    service.importRevision({ testId: initial.test.id, path: "bad.spec.ts", format: "playwright" }),
+  ).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+  await expect(
+    service.importRevision({
+      testId: initial.test.id,
+      path: "health.spec.ts",
+      format: "playwright",
+      name: "renamed",
+    } as never),
+  ).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+});

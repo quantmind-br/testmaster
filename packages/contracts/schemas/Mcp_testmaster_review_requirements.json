@@ -17,7 +17,6 @@
       "description": "Snapshot version these decisions are based on: version of testmaster_normalize_requirements or testmaster://requirements/{projectId}. Each item then applies at its requirement's current version"
     },
     "update": {
-      "minItems": 1,
       "maxItems": 100,
       "type": "array",
       "items": {
@@ -50,7 +49,6 @@
       "description": "Edits applied first; an edit clears the requirement's approval"
     },
     "adjudicate": {
-      "minItems": 1,
       "maxItems": 100,
       "type": "array",
       "items": {
@@ -84,7 +82,6 @@
       "description": "Conflict decisions applied after the edits"
     },
     "reject": {
-      "minItems": 1,
       "maxItems": 100,
       "type": "array",
       "items": {
@@ -111,7 +108,6 @@
       "description": "Rejections applied after the conflict decisions and before the approvals. A rejected requirement is not pending, is never planned and cannot be approved or edited again; an id in both reject and approve refuses the whole call"
     },
     "approve": {
-      "minItems": 1,
       "maxItems": 100,
       "type": "array",
       "items": {

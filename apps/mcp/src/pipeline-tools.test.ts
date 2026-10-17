@@ -434,6 +434,29 @@ it("review_requirements decides at the snapshot version and returns the fingerpr
   expect(again.body.sourceSnapshotId).toBe(snapshot.fingerprint);
 });
 
+it("review_requirements takes empty decision lists, so a call can only adjudicate", async () => {
+  const f = await fixture();
+  const seeded = await seedSnapshot(f);
+  const decided = await f.call("testmaster_review_requirements", {
+    projectId: f.init.projectId,
+    expectedVersion: 2,
+    update: [],
+    adjudicate: [
+      { conflictId: "conflict-1", selectedRequirementId: seeded.first, reason: "The contract" },
+    ],
+    reject: [],
+    approve: [],
+  });
+  expect(decided.isError, decided.text).toBe(false);
+  expect(decided.body.results).toEqual([
+    { action: "adjudicate", id: "conflict-1", ok: true, error: null },
+  ]);
+  expect(decided.body).toMatchObject({
+    unresolvedConflictIds: [],
+    pendingApprovalIds: [seeded.first],
+  });
+});
+
 it("the requirements resource states each requirement's decision as one status", async () => {
   const f = await fixture();
   const seeded = await seedSnapshot(f);

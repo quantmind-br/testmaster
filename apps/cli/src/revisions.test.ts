@@ -52,7 +52,7 @@ async function fixture() {
     await runCli([...(json ? ["--json"] : []), "--cwd", cwd, ...args], runtime);
     return { exit: process.exitCode ?? 0, stdout, stderr };
   };
-  return { app, test, invoke };
+  return { app, test, invoke, cwd };
 }
 
 interface RevisionReceipt {
@@ -111,4 +111,75 @@ it("test revision promote --reason records the reason on the test", async () => 
     states: ["current"],
     promotion: { reason: "Candidate replay passed", actorId: app.context.principalId },
   });
+});
+
+const fixedCode =
+  "import {test,expect} from '@playwright/test';test('health',async({request})=>{const r=await request.get('/healthz');expect(r.status()).toBe(200);});";
+const importArgs = ["test", "import", "--path", "fixed.spec.ts", "--format", "playwright"];
+interface ImportReceipt extends RevisionReceipt {
+  data: RevisionReceipt["data"] & { testId: string; parentId: string | null; origin: string };
+}
+interface ErrorReceipt {
+  error: { code: string; message: string };
+}
+interface NewTestReceipt {
+  data: { revision: { id: string } };
+}
+
+it("test import --test adds an inactive candidate whose parent is the active revision", async () => {
+  const { app, test, invoke, cwd } = await fixture();
+  await writeFile(join(cwd, "fixed.spec.ts"), fixedCode);
+  const activeBefore = app.tests.get(test.id).activeRevisionId;
+  const imported = await invoke([...importArgs, "--test", test.id]);
+  expect(imported.exit).toBe(0);
+  const receipt = JSON.parse(imported.stdout) as ImportReceipt;
+  expect(receipt.data).toMatchObject({
+    testId: test.id,
+    parentId: activeBefore,
+    origin: "imported",
+    active: false,
+  });
+  expect(app.tests.get(test.id).activeRevisionId).toBe(activeBefore);
+  const command = `testmaster test revision promote ${receipt.data.id} --expected-version ${app.tests.get(test.id).version}`;
+  expect(receipt.data.nextActions).toEqual([command]);
+  expect(receipt.warnings).toHaveLength(1);
+  expect(receipt.warnings[0]).toContain(command);
+
+  // Text output carries the same promote hint on stderr.
+  const text = await invoke([...importArgs, "--test", test.id], false);
+  expect(text.exit).toBe(0);
+  expect(text.stderr).toContain("testmaster test revision promote rev_");
+  expect(text.stderr).toContain(`--expected-version ${app.tests.get(test.id).version}`);
+});
+
+it("test import --test refuses a parent from another test", async () => {
+  const { app, test, invoke, cwd } = await fixture();
+  await writeFile(join(cwd, "fixed.spec.ts"), fixedCode);
+  const other = await invoke(importArgs);
+  const otherRevision = (JSON.parse(other.stdout) as NewTestReceipt).data.revision.id;
+  const refused = await invoke([...importArgs, "--test", test.id, "--parent", otherRevision]);
+  expect(refused.exit).not.toBe(0);
+  expect((JSON.parse(refused.stdout) as ErrorReceipt).error).toMatchObject({
+    code: "INVALID_ARGUMENT",
+    message: expect.stringContaining("another test"),
+  });
+  expect(app.revisionHistory.list(test.id)).toHaveLength(1);
+});
+
+it("test import refuses --name with --test and --parent without --test", async () => {
+  const { app, test, invoke, cwd } = await fixture();
+  await writeFile(join(cwd, "fixed.spec.ts"), fixedCode);
+  const named = await invoke([...importArgs, "--test", test.id, "--name", "renamed"]);
+  expect(named.exit).not.toBe(0);
+  expect((JSON.parse(named.stdout) as ErrorReceipt).error).toMatchObject({
+    code: "INVALID_ARGUMENT",
+    message: expect.stringContaining("--name"),
+  });
+  const orphan = await invoke([...importArgs, "--parent", "rev_missing"]);
+  expect(orphan.exit).not.toBe(0);
+  expect((JSON.parse(orphan.stdout) as ErrorReceipt).error).toMatchObject({
+    code: "INVALID_ARGUMENT",
+    message: "--parent requires --test",
+  });
+  expect(app.revisionHistory.list(test.id)).toHaveLength(1);
 });

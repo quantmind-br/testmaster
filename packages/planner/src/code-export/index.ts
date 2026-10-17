@@ -195,6 +195,8 @@ const httpPredicates: Record<string, true> = {
   headerMatches: true,
   cookieAbsent: true,
   jsonEquals: true,
+  textEquals: true,
+  textContains: true,
   countEquals: true,
   countAtLeast: true,
   countAtMost: true,

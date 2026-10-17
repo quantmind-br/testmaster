@@ -209,6 +209,11 @@ class PlanRuntime:
             assert expectation["name"] not in response.testmaster_cookies
         elif predicate == "jsonEquals":
             assert equal(pointer(response.json(), path), self.value(expectation["value"]))
+        elif predicate in ("textEquals", "textContains"):
+            # The whole body as strict UTF-8 text without a leading BOM, as the TestMaster runner reads it.
+            observed = response.content.decode("utf-8-sig")
+            expected = self.string(expectation["value"])
+            assert (expected in observed) if predicate == "textContains" else observed == expected
         elif predicate in ("countEquals", "countAtLeast", "countAtMost"):
             value = pointer(response.json(), path)
             assert isinstance(value, list)

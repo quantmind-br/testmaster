@@ -45,6 +45,12 @@ export interface CodeImportRequest {
   format: CodeImportFormat;
   name?: string;
 }
+export interface CodeRevisionImportRequest {
+  testId: string;
+  path: string;
+  format: CodeImportFormat;
+  parentId?: string;
+}
 export interface CodeImportResult {
   test: Stored<TestCase>;
   revision: Stored<TestRevision>;
@@ -94,42 +100,7 @@ export class CodeImportService {
       (typeof input.name !== "string" || !input.name.trim() || input.name.length > 200)
     )
       throw new ContractError("INVALID_ARGUMENT", "Imported test name must be 1–200 characters");
-    const project = requireEntity(this.ctx, "Project", input.projectId) as Stored<Project>;
-    if (project.archivedAt)
-      throw new ContractError("PRECONDITION_FAILED", "Archived project cannot import tests");
-    const declared = this.declaredSecrets();
-    const bundle = await importCode({
-      root: this.config.cwd,
-      path: input.path,
-      format: input.format,
-      secrets: declared.map((secret) => secret.name),
-    });
-    const secretRefs = bindSecrets(bundle.secrets, declared);
-    const image = input.format === "pytest" ? "testmaster-runner-python" : "testmaster-runner";
-    const imageLock = JSON.parse(
-      (
-        await readConfinedCodeFile(
-          await realpath(fileURLToPath(new URL("../../../../", import.meta.url))),
-          "containers/images.lock.json",
-          64 * 1024,
-        )
-      ).toString("utf8"),
-    ) as Record<string, { imageId: string; buildInputsHash: string }>;
-    const pinned = imageLock[image];
-    if (
-      !pinned ||
-      !/^sha256:[a-f0-9]{64}$/u.test(pinned.imageId) ||
-      !/^[a-f0-9]{64}$/u.test(pinned.buildInputsHash)
-    )
-      throw new ContractError("PRECONDITION_FAILED", "Runner image dependency lock is unavailable");
-    const lock: ImportedDependencyLock = {
-      schemaVersion: "1.0.0",
-      runnerCapabilityVersion: "1.0.0",
-      image,
-      imageId: pinned.imageId,
-      buildInputsHash: pinned.buildInputsHash,
-      runtimeInstalls: false,
-    };
+    const { bundle, secretRefs, lock } = await this.checkImportFile(input);
     const test = entity(this.ctx, "tst", {
       projectId: input.projectId,
       name: input.name ?? bundle.tests[0],
@@ -185,6 +156,87 @@ export class CodeImportService {
         await rm(join(this.config.dataDir, lockArtifact.storageKey), { force: true });
       throw error;
     }
+  }
+  /**
+   * Reads and checks the code exactly like `import`, then adds it to an existing test as an
+   * imported candidate revision. It never becomes the active revision. `parentId` defaults to the
+   * test's active revision, so a fix of a generated or plan revision keeps its lineage.
+   */
+  async importRevision(input: CodeRevisionImportRequest): Promise<Stored<TestRevision>> {
+    this.ctx.authorize("W");
+    if (
+      !input ||
+      typeof input !== "object" ||
+      Object.keys(input).some((key) => !["testId", "path", "format", "parentId"].includes(key)) ||
+      typeof input.testId !== "string" ||
+      typeof input.path !== "string" ||
+      !input.path ||
+      !["playwright", "pytest"].includes(input.format) ||
+      (input.parentId !== undefined && (typeof input.parentId !== "string" || !input.parentId))
+    )
+      throw new ContractError("INVALID_ARGUMENT", "Invalid code revision import input");
+    const target = requireEntity(this.ctx, "TestCase", input.testId) as Stored<TestCase>;
+    this.ctx.authorize("W", target.projectId);
+    const { bundle, secretRefs, lock } = await this.checkImportFile({
+      projectId: target.projectId,
+      path: input.path,
+      format: input.format,
+    });
+    return this.createFromBundle(
+      target,
+      bundle,
+      lock,
+      "imported",
+      input.parentId ?? target.activeRevisionId ?? undefined,
+      false,
+      undefined,
+      { secretRefs },
+    );
+  }
+  /** The code file read and checked against the project's secrets, with its pinned runner image. */
+  private async checkImportFile(input: Omit<CodeImportRequest, "name">) {
+    const project = requireEntity(this.ctx, "Project", input.projectId) as Stored<Project>;
+    if (project.archivedAt)
+      throw new ContractError("PRECONDITION_FAILED", "Archived project cannot import tests");
+    const declared = this.declaredSecrets();
+    const bundle = await importCode({
+      root: this.config.cwd,
+      path: input.path,
+      format: input.format,
+      secrets: declared.map((secret) => secret.name),
+    });
+    return {
+      bundle,
+      secretRefs: bindSecrets(bundle.secrets, declared),
+      lock: await this.dependencyLock(input.format),
+    };
+  }
+  private async dependencyLock(format: CodeImportFormat): Promise<ImportedDependencyLock> {
+    const image = format === "pytest" ? "testmaster-runner-python" : "testmaster-runner";
+    const images = JSON.parse(
+      (
+        await readConfinedCodeFile(
+          await realpath(fileURLToPath(new URL("../../../../", import.meta.url))),
+          "containers/images.lock.json",
+          64 * 1024,
+        )
+      ).toString("utf8"),
+    ) as Record<string, { imageId: string; buildInputsHash: string }>;
+    const pinned = images[image];
+    if (
+      !pinned ||
+      !/^sha256:[a-f0-9]{64}$/u.test(pinned.imageId) ||
+      !/^[a-f0-9]{64}$/u.test(pinned.buildInputsHash)
+    )
+      throw new ContractError("PRECONDITION_FAILED", "Runner image dependency lock is unavailable");
+    return {
+      schemaVersion: "1.0.0",
+      runnerCapabilityVersion: "1.0.0",
+      image,
+      imageId: pinned.imageId,
+      buildInputsHash: pinned.buildInputsHash,
+      runtimeInstalls: false,
+    };
   }
   async createTestFromReference(input: {
     projectId: string;
@@ -373,34 +425,11 @@ export class CodeImportService {
         (input.secretRefs ?? []).map((secret) => secret.name),
         input.schemas,
       ));
-    const image = input.format === "pytest" ? "testmaster-runner-python" : "testmaster-runner";
-    const images = JSON.parse(
-      (
-        await readConfinedCodeFile(
-          await realpath(fileURLToPath(new URL("../../../../", import.meta.url))),
-          "containers/images.lock.json",
-          64 * 1024,
-        )
-      ).toString("utf8"),
-    ) as Record<string, { imageId: string; buildInputsHash: string }>;
-    const pinned = images[image];
-    if (
-      !pinned ||
-      !/^sha256:[a-f0-9]{64}$/u.test(pinned.imageId) ||
-      !/^[a-f0-9]{64}$/u.test(pinned.buildInputsHash)
-    )
-      throw new ContractError("PRECONDITION_FAILED", "Runner image dependency lock is unavailable");
+    const lock = await this.dependencyLock(input.format);
     return this.createFromBundle(
       target,
       bundle,
-      {
-        schemaVersion: "1.0.0",
-        runnerCapabilityVersion: "1.0.0",
-        image,
-        imageId: pinned.imageId,
-        buildInputsHash: pinned.buildInputsHash,
-        runtimeInstalls: false,
-      },
+      lock,
       "generated",
       input.parentId,
       false,

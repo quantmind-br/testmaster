@@ -87531,7 +87531,8 @@
                 "id",
                 "testId",
                 "testName",
-                "sourceRevisionId"
+                "sourceRevisionId",
+                "code"
               ],
               "properties": {
                 "id": {
@@ -87553,6 +87554,11 @@
                 },
                 "proposalId": {
                   "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "code": {
+                  "minLength": 1,
+                  "maxLength": 512,
                   "type": "string"
                 }
               }
@@ -135481,7 +135487,6 @@
             "description": "Snapshot version these decisions are based on: version of testmaster_normalize_requirements or testmaster://requirements/{projectId}. Each item then applies at its requirement's current version"
           },
           "update": {
-            "minItems": 1,
             "maxItems": 100,
             "type": "array",
             "items": {
@@ -135514,7 +135519,6 @@
             "description": "Edits applied first; an edit clears the requirement's approval"
           },
           "adjudicate": {
-            "minItems": 1,
             "maxItems": 100,
             "type": "array",
             "items": {
@@ -135548,7 +135552,6 @@
             "description": "Conflict decisions applied after the edits"
           },
           "reject": {
-            "minItems": 1,
             "maxItems": 100,
             "type": "array",
             "items": {
@@ -135575,7 +135578,6 @@
             "description": "Rejections applied after the conflict decisions and before the approvals. A rejected requirement is not pending, is never planned and cannot be approved or edited again; an id in both reject and approve refuses the whole call"
           },
           "approve": {
-            "minItems": 1,
             "maxItems": 100,
             "type": "array",
             "items": {

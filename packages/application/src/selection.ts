@@ -13,6 +13,7 @@ import { allEntities, requireEntity, type ServiceContext } from "./context.js";
 import { resolveReuse } from "./dependency-reuse.js";
 import { resolveRunProvenance } from "./provenance.js";
 import { QuarantineService } from "./quarantine.js";
+import { governingPlan } from "./revision-plan.js";
 import type { AdmissionOptions, BatchesService, ResolvedDependency, RunsService } from "./runs.js";
 
 export interface SelectionInput {
@@ -316,8 +317,7 @@ export class SelectionService {
       const mapping = new Map<string, string[]>();
       for (const test of active) {
         const revision = requireEntity(this.ctx, "TestRevision", String(test.activeRevisionId));
-        const requirementIds = ((revision.plan as ExecutablePlan | undefined)?.requirementRefs ??
-          []) as string[];
+        const requirementIds = governingPlan(this.ctx, revision.id)?.requirementRefs ?? [];
         const evidence = requirementIds.flatMap((id) => {
           const requirement = requireEntity(this.ctx, "Requirement", id);
           const refs = [requirement.sourceRefs, requirement.evidenceRefs];

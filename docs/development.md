@@ -887,6 +887,9 @@ unchanged: with separation of duties the requester cannot approve its own execut
   playwright|pytest` and `test create --code FILE --runner playwright|python` admit checked source
   bundles and execute only inside the matching pinned Docker image. Generated-code candidates
   likewise require AST validation and replay verification; compilation never establishes passing.
+  `test import --test ID [--parent REVISION]` adds the checked code as an inactive `imported`
+  candidate revision of an existing test (parent defaults to its active revision, a parent of another
+  test is refused, `--name` is refused with `--test`); the receipt mirrors `test revision create`.
 - `CodeExportService(context, {cwd, dataDir}).export(testId, {format, out?, revisionId?, async?})`
   reads an immutable authorized revision and returns `files` plus deterministic metadata without
   a model call or secret release. Writing requires W scope and a new directory confined beneath

@@ -59,9 +59,7 @@ function requireBrowserPostCondition(plan: ExecutablePlan): void {
     .slice(last + 1)
     .some(
       (step) =>
-        step.kind === "assertion" &&
-        step.required !== false &&
-        observesRenderedContent(step.expectation),
+        step.kind === "assertion" && step.required !== false && observesRenderedContent(step),
     );
   if (!observed)
     throw new ContractError(
