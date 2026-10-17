@@ -211,7 +211,21 @@ it("open_report with a batchId serves one report over both member runs with the 
   };
   const opened = await open({ batchId });
   expect(opened.isError).toBe(false);
-  expect(opened.body).toEqual({ location: `testmaster://batches/${batchId}/report` });
+  const location = `testmaster://batches/${batchId}/report`;
+  expect(opened.body).toEqual({
+    location,
+    formats: {
+      json: location,
+      markdown: `${location}?format=markdown`,
+      html: `${location}?format=html`,
+      junit: `${location}?format=junit`,
+    },
+  });
+  // Each listed format URI opens that format.
+  const markdown = (await client.readResource({ uri: opened.body.formats.markdown })).contents[0];
+  expect(markdown?.mimeType).toBe("text/markdown");
+  const junit = (await client.readResource({ uri: opened.body.formats.junit })).contents[0];
+  expect(String(junit?.text)).toMatch(/^<\?xml/u);
   const content = (await client.readResource({ uri: opened.body.location })).contents[0] as Record<
     string,
     unknown

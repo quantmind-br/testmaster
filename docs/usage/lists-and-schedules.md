@@ -73,8 +73,9 @@ returns the batch receipt. Passing both, or `testIds` without `environmentId`, i
 
 The report of a whole batch (a suite run or any `run_tests` receipt) is one document over its member runs:
 `testmaster report export <batchId> --format json|markdown|html|junit|allure` on the CLI, and on MCP
-`testmaster_open_report` with `batchId` (the receipt's `batchId`/`jobId`), which returns
-`testmaster://batches/{id}/report{?format,cursor}`. It lists every member run and carries the aggregate
+`testmaster_open_report` with `batchId` (the receipt's `batchId`/`jobId`), which returns the JSON report's
+`location`, `testmaster://batches/{id}/report`, and `formats`, the ready URI of each of `json`, `markdown`, `html`
+and `junit`. It lists every member run and carries the aggregate
 `executionMetrics` counts and rates and the coverage; its pages behave like a run report's. In the JSON format the
 summary (`selection`, `completeness`, `executionMetrics`, `coverage`, `gate`) is written before `runs`, so the first
 page already carries the verdict and the metrics, and each run (tens of KB of metadata) follows.

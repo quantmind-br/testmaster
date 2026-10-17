@@ -2,11 +2,36 @@
   "additionalProperties": false,
   "type": "object",
   "required": [
-    "location"
+    "location",
+    "formats"
   ],
   "properties": {
     "location": {
       "type": "string"
+    },
+    "formats": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "json",
+        "markdown",
+        "html",
+        "junit"
+      ],
+      "properties": {
+        "json": {
+          "type": "string"
+        },
+        "markdown": {
+          "type": "string"
+        },
+        "html": {
+          "type": "string"
+        },
+        "junit": {
+          "type": "string"
+        }
+      }
     }
   },
   "$defs": {},

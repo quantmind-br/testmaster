@@ -175,6 +175,15 @@ const REPORT_MEDIA_TYPES = {
   junit: "application/xml",
 } as const;
 type ReportFormat = keyof typeof REPORT_MEDIA_TYPES;
+/** The ready URI of each report format: JSON is the bare location, the others add `?format=`. */
+function reportFormats(location: string): Record<ReportFormat, string> {
+  return {
+    json: location,
+    markdown: `${location}?format=markdown`,
+    html: `${location}?format=html`,
+    junit: `${location}?format=junit`,
+  };
+}
 const TEST_PRIORITIES = ["critical", "high", "normal", "low"];
 /** Error codes that refuse a tool call itself; other errors are failed operations. */
 const DENIED_CODES: Record<string, true> = {
@@ -1004,12 +1013,14 @@ export class TestMasterMcp {
           throw new ContractError("INVALID_ARGUMENT", "Send exactly one of runId or batchId", {
             fields: ["runId", "batchId"],
           });
-        if (args.batchId !== undefined) {
-          app.batches.get(String(args.batchId));
-          return { location: `testmaster://batches/${args.batchId}/report` };
-        }
-        app.runs.get(String(args.runId));
-        return { location: `testmaster://runs/${args.runId}/report` };
+        // Reading the run or batch first refuses an unknown or unreadable id.
+        if (args.batchId !== undefined) app.batches.get(String(args.batchId));
+        else app.runs.get(String(args.runId));
+        const location =
+          args.batchId !== undefined
+            ? `testmaster://batches/${args.batchId}/report`
+            : `testmaster://runs/${args.runId}/report`;
+        return { location, formats: reportFormats(location) };
       }
       case "testmaster_bootstrap":
         return this.bootstrap(args, app);

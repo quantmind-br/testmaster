@@ -185,6 +185,15 @@ function assertionHealing(stepId: string): Diagnosis["healing"] {
   };
 }
 /**
+ * `assertion_timeout` is the reason code of every step that ran out of time on a live page; on an
+ * action it means the action's target never appeared, so the runner's own message is added.
+ */
+function actionTimeoutGloss(planStep: PlanStep | undefined, step: StepResult): string {
+  if (planStep?.kind !== "action" || step.reasonCode !== "assertion_timeout" || !step.error)
+    return "";
+  return ` (an action, not an assertion: ${step.error.message.replace(/\.$/u, "")})`;
+}
+/**
  * Visible text of a model-selected next step. The prefix identifies the same action when the rules
  * already advised it, so a repeated suggestion is not listed twice.
  */
@@ -1734,7 +1743,7 @@ export class AnalysisService {
           stepId: step.id,
           contentHash: semanticHash(step),
         },
-        text: `Step ${step.planStepId} (${planStep?.operation ?? codeLabel ?? "unmapped"}) was ${step.status}${step.reasonCode ? `: ${step.reasonCode}` : ""}.`,
+        text: `Step ${step.planStepId} (${planStep?.operation ?? codeLabel ?? "unmapped"}) was ${step.status}${step.reasonCode ? `: ${step.reasonCode}` : ""}${actionTimeoutGloss(planStep, step)}.`,
       });
     }
     for (const row of this.ctx.database.all(

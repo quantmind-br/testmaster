@@ -846,7 +846,16 @@ const supplemental = {
     verificationEligible: Type.Boolean(),
     nextCursor: Type.Union([Type.String(), Type.Null()]),
   }),
-  ReportLocation: P.Obj({ location: Type.String() }),
+  /** Where a committed report is read: `location` is the JSON report, `formats` the ready URI of each text format. */
+  ReportLocation: P.Obj({
+    location: Type.String(),
+    formats: P.Obj({
+      json: Type.String(),
+      markdown: Type.String(),
+      html: Type.String(),
+      junit: Type.String(),
+    }),
+  }),
   /** What an added source revision came to; chunks and the inventory stay out, `diagnostics` is whole, `requirementsReset` only when it reset a requirement. */
   McpSourceReceipt: P.Obj({
     source: sourceResponseContracts.SourceDetail.properties.source,

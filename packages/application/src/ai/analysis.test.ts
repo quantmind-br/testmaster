@@ -2055,6 +2055,49 @@ it("an assertion step whose locator matched nothing gets no healing advice, sinc
   expect(diagnosis.healing.reason).toContain("save a corrected revision");
 });
 
+it("an action that timed out on its target says so in its fact; an assertion timeout does not", async () => {
+  const message = "Locator did not match an attached element before the step deadline";
+  const timedOut = (kind: "action" | "assertion") =>
+    fixture({
+      plan: {
+        ...persistencePlan,
+        type: "frontend",
+        runner: "playwright",
+        steps: [
+          kind === "action"
+            ? {
+                id: "price",
+                kind: "action",
+                operation: "click",
+                input: { locator: { by: "role", role: "button", name: "Pay", exact: true } },
+              }
+            : {
+                id: "price",
+                kind: "assertion",
+                operation: "assert",
+                input: { locator: { by: "role", role: "button", name: "Pay", exact: true } },
+                expectation: { predicate: "visible" },
+              },
+        ],
+      },
+      step: {
+        reasonCode: "assertion_timeout",
+        observed: null,
+        expected: null,
+        error: { code: "assertion_timeout", message: `${message}.` },
+      },
+    });
+  const factOf = async (f: Awaited<ReturnType<typeof fixture>>) =>
+    (await f.service.analyze(f.run.id)).facts.find((fact) => fact.text.startsWith("Step price"))
+      ?.text;
+  expect(await factOf(await timedOut("action"))).toBe(
+    `Step price (click) was failed: assertion_timeout (an action, not an assertion: ${message}).`,
+  );
+  expect(await factOf(await timedOut("assertion"))).toBe(
+    "Step price (assert) was failed: assertion_timeout.",
+  );
+});
+
 async function unmatchedClickFixture() {
   const f = await fixture({
     plan: {

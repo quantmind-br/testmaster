@@ -20,6 +20,14 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 - The REST routes that run a model (proposal generation and refinement, `POST /runs/{id}/analysis`, `POST /runs/{id}/healing-proposals`, requirement normalization) and `POST /mcp` turn off the server's 30 s socket idle timeout for their connection; other routes keep it (`ServerOptions.connectionTimeoutMs`).
 - The eval runner never kills a model command; its trial wall time only stops commands that do no model work and keeps later commands from starting. The development smoke forwarder relays model calls without a timeout.
 
+### Nineteenth Omnigent agent run
+
+Found when an omp agent drove the pipeline on Omnigent a nineteenth time (the suite passed 8/8 three times and the code candidates 8/8; the 2 failures were deliberate drills).
+
+- `testmaster_open_report` returns `formats`, the ready URI of each report format (`json`, `markdown`, `html`, `junit`), beside `location`. Before, it returned `{location}` alone and an agent had to append `?format=markdown` by hand.
+- An action step (click, fill, wait) whose target never appeared keeps the reason code `assertion_timeout`, and its analysis fact now adds that the step is an action, not an assertion, with the runner's message ("Locator did not match an attached element before the step deadline"). Before, a click on a renamed button read as a failed assertion.
+- The code export metadata documents that `assertionIds` lists the assertion step ids of an exported plan; authored and generated code carries no step mapping, so its list is empty.
+
 ### Eighteenth Omnigent agent run
 
 Found when an omp agent drove the pipeline on Omnigent an eighteenth time (the suite passed 8/8 four times and the code candidates 8/8; the 3 failures were deliberate drills).

@@ -35,6 +35,10 @@ export interface CodeExportMetadata {
   framework: "playwright-test" | "playwright-sync" | "playwright-async" | "requests" | "pytest";
   entrypoint: string;
   planHash: string;
+  /**
+   * Plan step ids of the assertions an exported plan checks. Authored and generated code is kept
+   * as written and carries no step mapping, so its list is empty.
+   */
   assertionIds: string[];
   requiredInputs: {
     secrets: string[];
