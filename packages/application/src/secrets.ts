@@ -339,9 +339,48 @@ function parseVaultEnvelope(stored: Buffer): VaultEnvelope {
     payload: value.payload,
   };
 }
-async function vaultLock(
-  layout: VaultLayout,
-): Promise<{ directory: FileHandle; release(): Promise<void> }> {
+interface VaultLock {
+  directory: FileHandle;
+  release(): Promise<void>;
+}
+/** Tail of this process's queue of vault lock holders, per lock directory. */
+const vaultLockQueues = new Map<string, Promise<void>>();
+/**
+ * Holds the vault lock. Holders in this process wait for one another, so concurrent attempts
+ * storing captures take turns instead of failing; only a live holder in another process is
+ * refused as busy.
+ */
+async function vaultLock(layout: VaultLayout): Promise<VaultLock> {
+  const key = layout.lockDirectory;
+  const previous = vaultLockQueues.get(key) ?? Promise.resolve();
+  const turn = Promise.withResolvers<void>();
+  const tail = previous.then(() => turn.promise);
+  vaultLockQueues.set(key, tail);
+  const finish = () => {
+    turn.resolve();
+    if (vaultLockQueues.get(key) === tail) vaultLockQueues.delete(key);
+  };
+  await previous;
+  let lock: VaultLock;
+  try {
+    lock = await vaultFileLock(layout);
+  } catch (error) {
+    finish();
+    throw error;
+  }
+  return {
+    directory: lock.directory,
+    release: async () => {
+      try {
+        await lock.release();
+      } finally {
+        finish();
+      }
+    },
+  };
+}
+/** The cross-process lock file; a live holder in another process is refused as busy. */
+async function vaultFileLock(layout: VaultLayout): Promise<VaultLock> {
   const directory = await privateDirectory(layout.keyDirectory);
   let lockDirectory = directory;
   if (layout.lockDirectory !== layout.keyDirectory)

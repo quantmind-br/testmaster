@@ -185,6 +185,20 @@ it("keeps a capture out of the host keyring and erases it from the vault on dema
   expect(await (await service.release(ordinary.id)).resolve()).toBe("kept-value");
 });
 
+it("stores captures from concurrent attempts one after another instead of refusing them as busy", async () => {
+  const { service } = await fixture();
+  const origin = "https://shop.example";
+  // The first write creates the vault key; the concurrent ones then contend for the vault lock.
+  await service.protectCapture("capture-att_0-handle", "first", [origin]);
+  const captures = await Promise.all(
+    Array.from({ length: 9 }, (_, index) =>
+      service.protectCapture(`capture-att_${index + 1}-handle`, `value-${index}`, [origin]),
+    ),
+  );
+  for (const [index, capture] of captures.entries())
+    expect(await (await service.release(capture.id)).resolve()).toBe(`"value-${index}"`);
+});
+
 it("refuses symlinked storage while explicit ephemeral secrets remain usable only in this service", async () => {
   const { service, config, home, ctx } = await fixture();
   const outside = await mkdtemp(join(tmpdir(), "tm-outside-"));

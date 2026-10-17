@@ -20,6 +20,13 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 - The REST routes that run a model (proposal generation and refinement, `POST /runs/{id}/analysis`, `POST /runs/{id}/healing-proposals`, requirement normalization) and `POST /mcp` turn off the server's 30 s socket idle timeout for their connection; other routes keep it (`ServerOptions.connectionTimeoutMs`).
 - The eval runner never kills a model command; its trial wall time only stops commands that do no model work and keeps later commands from starting. The development smoke forwarder relays model calls without a timeout.
 
+### Third WeKnora agent run
+
+Found when an omp agent drove the pipeline on WeKnora a third time, on an empty database: 24 tests, 21 passed; the 3 failures are product defects (a knowledge base created without a name, a 500 for a name over 255 characters, the web origin answering `/health` with the SPA page).
+
+- Concurrent attempts storing a sensitive capture (a resource handle) no longer fail with `missing_secret`. The vault lock refused any second holder as busy, also one in the same process, so one of nine plans tried together created its knowledge base and then ended `inconclusive` with the resource orphaned; tried alone it passed. Holders in one process now wait their turn; only a live holder in another process is refused as busy.
+- The planner is told that every run shares the auth profile's session, so a logout, token revocation or password change never uses `auth: "profile"`: the plan logs in on its own and ends that session, or lists the requirement as unsupported. Before, generated logout plans revoked the session the other tests ran with.
+
 ### Second WeKnora agent run
 
 Found when an omp agent drove the pipeline on WeKnora a second time, on an empty database: 22 tests, 17 passed with the gate; the 5 failures are product defects (a refresh token reuse that is sometimes accepted, a knowledge base created without a name, the web origin answering `/health` with the SPA page, login and registration responses outside the product's own Swagger).

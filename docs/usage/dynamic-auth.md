@@ -44,6 +44,11 @@ or the session has nothing for that URL, the Run ends `blocked` with `missing_se
 sent. A `form` (browser) profile whose stored state expired signs in first in an isolated login-only Attempt, and
 the HTTP Run then uses the captured state.
 
+Every Run of the environment shares that session. A request that ends or invalidates it (logout, token
+revocation, password change) must not use `auth: "profile"`, or the following Runs lose their session: the plan
+logs in on its own and ends that session instead. The planner is told so, and lists such a requirement as
+unsupported when the plan cannot send its own session.
+
 To send a secret inside a JSON body, keep the document in `value` and place the reference with `set`
 (RFC 6901 pointers; the parent must exist):
 
