@@ -41,7 +41,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_propose_healing:
     "Propose a locator-only candidate for a failed Run of the active plan revision; assertions never change. Next: testmaster_review_healing. abstained: true (reasonCode) = no safe repair. Refused before a model call (PRECONDITION_FAILED): healing_not_indicated, code_revision, revision_not_active.",
   testmaster_review_healing:
-    "Read the proposal's status (proposed, approved, verified, rejected), healing diff, risk, assertions-intact check, verification and approval. Next: testmaster_approve_healing with approval.expectedVersion, or testmaster_reject_healing with a reason, only after review.",
+    "Read the proposal's status (proposed, approved, verified, rejected), healing diff, risk, assertions check (preservedAssertions.intact), verification and approval. Next: testmaster_approve_healing with approval.expectedVersion, or testmaster_reject_healing with a reason, only after review.",
   testmaster_approve_healing:
     "Approve at expectedVersion after testmaster_review_healing (reason optional): creates the candidate revision and a verification run, run here when no worker is live (testmaster_get_run wait=true). A pass makes the proposal verified and the candidate the active revision. Write scope; audited.",
   testmaster_reject_healing:
@@ -67,7 +67,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_review_requirements:
     "Edit, adjudicate conflicts, reject (reason required; final) and approve requirements at the snapshot expectedVersion, in that order; an optional reason is kept on each edited or approved one. Returns per-item results and the new sourceSnapshotId. Next: testmaster_generate_plan.",
   testmaster_set_secret:
-    "Register a secret from valueFile or fromEnv (never an argument; one trailing newline trimmed) with its allowedOrigins; returns metadata only. A taken name is REVISION_CONFLICT with details.secretId: use testmaster_rotate_secret. Create secrets and auth profiles before testmaster_generate_plan.",
+    "Register a secret from valueFile or fromEnv (never inline; one trailing newline trimmed) with allowedOrigins; returns metadata (locator is the name). A taken name is REVISION_CONFLICT with details.secretId: use testmaster_rotate_secret. Secrets and auth profiles precede testmaster_generate_plan.",
   testmaster_rotate_secret:
     "Store a new value for an existing secret (id or name) from valueFile or fromEnv; the id, name and allowedOrigins stay, secretVersion goes up, and auth profiles and plans that cite it use the new value. Returns metadata only.",
   testmaster_save_auth_profile:

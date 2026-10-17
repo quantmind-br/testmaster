@@ -339,7 +339,8 @@ Archiving a source (`source archive`, `testmaster_archive_source`) removes it fr
 
 A `jsonSchema` assertion verifies only what the cited schema declares. When the specification leaves a field untyped (an
 object with `additionalProperties: true`, list items `{}`) or a criterion states a bound it does not, write the criterion
-as an inline JSON Schema (draft 2020-12) instead of adding a source:
+as an inline JSON Schema (draft 2020-12, validated by Ajv's 2020 validator, so `prefixItems`, `const`, `contains` and
+`$defs` work) instead of adding a source:
 
 ```json
 {

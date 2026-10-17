@@ -416,7 +416,7 @@ export class TestMasterMcp {
                           `Status: ${formatReviewStatus(review.status)}`,
                           `Automation: ${formatReviewAutomation(review)}`,
                           ...review.automation.reasons.map((reason) => `Reason: ${reason}`),
-                          `Risk: ${formatReviewRisk(review)}; assertions intact: ${review.preservedAssertions.intact}`,
+                          `Risk: ${formatReviewRisk(review)}; assertions intact (preservedAssertions.intact): ${review.preservedAssertions.intact}`,
                           `Verification: ${review.verification ? `${review.verification.runId}: ${review.verification.outcome}; gate ${review.verification.gate}` : "not recorded"}`,
                           review.approval.decision
                             ? `Decision: ${formatReviewDecision(review.approval.decision)}`
