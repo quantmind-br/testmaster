@@ -457,6 +457,10 @@ describe("SQLite persistence", () => {
       ["A", "B", "C"].map((idempotencyKey) => ledger.reserve({ ...request, idempotencyKey })),
     );
     expect(reservations.filter((result) => result.ok)).toHaveLength(2);
+    // A busy slot is named apart from a spent budget.
+    expect(reservations.filter((result) => !result.ok)).toEqual([
+      { ok: false, reasonCode: "quota_exceeded", remaining: "unknown" },
+    ]);
     const first = reservations[0];
     if (!first?.ok) throw new Error("Missing compute slot");
     await ledger.settle(

@@ -19,7 +19,8 @@ export interface BudgetReservationInput {
 }
 export type BudgetReservationResult =
   | { ok: true; reservationId: string }
-  | { ok: false; reasonCode: "budget_exhausted"; remaining: Cost };
+  /** `quota_exceeded`: every compute slot of the project is held by a call still running. */
+  | { ok: false; reasonCode: "budget_exhausted" | "quota_exceeded"; remaining: Cost };
 export interface TokenUsage {
   inputTokens: number | null;
   outputTokens: number | null;

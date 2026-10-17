@@ -383,6 +383,10 @@ it("escapes hostile diagnosis hypotheses and warns honestly for historical analy
   expect(md).toContain("\\[click\\]\\(javascript:alert\\(1\\)\\)");
   expect(md).not.toContain("\n# injected");
   expect(md).not.toContain("[click](javascript:");
+  // Markup is neutralized, but quotes stay quotes: Markdown read as text carries no `&quot;`.
+  expect(md).toContain('&lt;img src=x onerror="alert\\(1\\)"&gt;');
+  expect(md).not.toContain("<img");
+  expect(md).not.toContain("&quot;");
   for (const output of [html, md, formatDiagnosisSummary(item.analysis)]) {
     expect(output).toContain("layered diagnosis not recorded for this analysis");
     expect(output).toContain("not established");

@@ -72,6 +72,31 @@ async function dereference32(api: Record<string, unknown>): Promise<unknown> {
     );
   }
 }
+const HTTP_METHODS = ["get", "post", "put", "patch", "delete", "options", "head", "trace", "query"];
+function record(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+/**
+ * The validator reports an operation whose `responses` names no status code as "NOT must NOT be
+ * valid"; this names those operations in words, ahead of the validator's own messages.
+ */
+function emptyResponsesProblem(api: Record<string, unknown>): string[] {
+  const empty: string[] = [];
+  for (const [path, item] of Object.entries(record(api.paths)))
+    for (const [method, operation] of Object.entries(record(item))) {
+      const responses = record(operation).responses;
+      if (!HTTP_METHODS.includes(method) || !responses || typeof responses !== "object") continue;
+      if (!Object.keys(responses).some((key) => !key.startsWith("x-")))
+        empty.push(`${method.toUpperCase()} ${path}`);
+    }
+  if (!empty.length) return [];
+  const shown = empty.slice(0, 5).join(", ");
+  return [
+    `${empty.length} operation${empty.length === 1 ? "" : "s"} declare${empty.length === 1 ? "s" : ""} no response, and responses must name at least one status code: ${shown}${empty.length > 5 ? ", …" : ""}`,
+  ];
+}
 // Keys whose value maps arbitrary names to schemas or objects: a child called `$ref` or `allOf`
 // there is a name, not a keyword.
 const NAME_MAPS: Record<string, true> = {
@@ -481,7 +506,9 @@ export async function parseSource(input: SourceParseInput): Promise<SourceParseR
           ? await validateOpenApi32(api)
           : await validateApi(api as Parameters<typeof validateApi>[0], OPENAPI_OPTIONS);
         if (!result.valid)
-          throw new Error(`invalid_openapi: ${result.errors.map((e) => e.message).join("; ")}`);
+          throw new Error(
+            `invalid_openapi: ${[...emptyResponsesProblem(api), ...result.errors.map((e) => e.message)].join("; ")}`,
+          );
         if (openapiVersion.startsWith("3.2.")) api = object(await dereference32(api));
         diagnostics.push(
           ...result.warnings.map((w) => ({ code: "openapi_warning", message: w.message })),
@@ -489,20 +516,7 @@ export async function parseSource(input: SourceParseInput): Promise<SourceParseR
         const operations: unknown[] = [];
         for (const [path, item] of Object.entries(object(api.paths)))
           for (const [method, operation] of Object.entries(object(item))) {
-            if (
-              ![
-                "get",
-                "post",
-                "put",
-                "patch",
-                "delete",
-                "options",
-                "head",
-                "trace",
-                "query",
-              ].includes(method)
-            )
-              continue;
+            if (!HTTP_METHODS.includes(method)) continue;
             const jsonPointer = `/paths/${pointerKey(path)}/${method}`;
             operations.push({
               path,
@@ -521,6 +535,7 @@ export async function parseSource(input: SourceParseInput): Promise<SourceParseR
             });
           }
         for (const key of [
+          "basePath",
           "components",
           "definitions",
           "securityDefinitions",

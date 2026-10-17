@@ -366,7 +366,12 @@ function responseJson(response: HttpResponse): unknown {
   try {
     return parseStrictJson(response.body, response.body.byteLength);
   } catch {
-    throw new RuntimeError("assertion_mismatch", "Response is not valid JSON", "failed");
+    const type = response.headers["content-type"];
+    throw new RuntimeError(
+      "assertion_mismatch",
+      `Response is not valid JSON (status ${response.status}, content-type ${type === undefined ? "absent" : JSON.stringify(type.slice(0, 100))})`,
+      "failed",
+    );
   }
 }
 /** The whole body as UTF-8 text (a leading BOM dropped); bytes that are not UTF-8 fail the assertion. */

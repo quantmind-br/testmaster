@@ -593,6 +593,16 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
   let launched = false;
   if (plan.runner === "terminal" && (plan.cleanup ?? []).length)
     reject("/cleanup", "runner", "Cleanup requests are not available in the terminal runner");
+  const requiredRunner = RUNNER_OF_TYPE[plan.type];
+  if (
+    (requiredRunner !== undefined && plan.runner !== requiredRunner) ||
+    (requiredRunner === undefined && plan.runner === "terminal")
+  )
+    reject(
+      "/runner",
+      "runner",
+      `Runner ${plan.runner} does not match test type ${plan.type}: type frontend needs runner playwright, backend needs http, cli needs terminal, and integration takes playwright or http`,
+    );
   for (const { step, path } of flat) {
     if (
       plan.runner === "http" &&
@@ -608,12 +618,6 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
       !terminalOnlyOperations.has(step.operation)
     )
       reject(`${path}/operation`, "runner", "Operation is not available in the terminal runner");
-    if (
-      (plan.type === "frontend" && plan.runner !== "playwright") ||
-      (plan.type === "backend" && plan.runner !== "http") ||
-      (plan.type === "cli") !== (plan.runner === "terminal")
-    )
-      reject("/runner", "runner", "Runner does not match test type");
     if (step.operation === "request") {
       seenResponses.add(step.id);
       validateHeaders(step.input.headers ?? {}, `${path}/input/headers`, reject);
@@ -636,7 +640,13 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
         requireCapability(predicate);
       const input = step.input as Record<string, unknown>;
       if (terminalPredicates.has(predicate))
-        reject(`${path}/expectation`, "predicateInput", "Predicate requires the terminal runner");
+        reject(
+          `${path}/expectation`,
+          "predicateInput",
+          predicate === "textNotContains"
+            ? "Predicate textNotContains requires the terminal runner; in a playwright plan assert absence with hidden, or countEquals 0 on a locator that selects the unwanted text"
+            : `Predicate ${predicate} requires the terminal runner`,
+        );
       if (["processStepId", "screen", "file", "clipboard"].some((key) => key in input))
         reject(`${path}/input`, "predicateInput", "Input requires the terminal runner");
       const locatorPredicates = [
@@ -1045,6 +1055,12 @@ function validateInlineSchema(expectation: Expectation, path: string, reject: Re
     reject(`${path}/schema`, "schema", `Inline JSON Schema cannot be compiled: ${error.problem}`);
   }
 }
+/** The one runner each test type needs; a type absent here (integration) takes any but terminal. */
+const RUNNER_OF_TYPE: Partial<Record<ExecutablePlan["type"], ExecutablePlan["runner"]>> = {
+  frontend: "playwright",
+  backend: "http",
+  cli: "terminal",
+};
 const terminalOnlyOperations: ReadonlySet<string> = new Set([
   "run",
   "launch",

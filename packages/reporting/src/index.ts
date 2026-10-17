@@ -131,8 +131,9 @@ export function reportGate(snapshot: ReportSnapshot): ReportGate {
   if (snapshot.runs.some((run) => run.result.gate !== "passed")) return "failed";
   return "passed";
 }
-function xml(text: unknown): string {
-  const safe = [...String(text)]
+/** The text with every character XML 1.0 cannot carry replaced by U+FFFD. */
+function printable(text: unknown): string {
+  return [...String(text)]
     .map((character) => {
       const code = character.codePointAt(0) ?? 0;
       return code === 9 ||
@@ -145,15 +146,17 @@ function xml(text: unknown): string {
         : "\ufffd";
     })
     .join("");
-  return safe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
 }
+/** Escapes the characters that would open markup or an entity; quotes matter only in attributes. */
+function escapeMarkup(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function xml(text: unknown): string {
+  return escapeMarkup(printable(text)).replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+}
+/** Markdown text: raw HTML and Markdown syntax are neutralized, quotes stay readable. */
 function markdown(text: unknown): string {
-  return xml(text)
+  return escapeMarkup(printable(text))
     .replace(/[\\`*_{}[\]()#+.!|~-]/g, "\\$&")
     .replace(/\r?\n/g, " ");
 }

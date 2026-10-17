@@ -85,6 +85,28 @@ describe("union failures report the branch the instance selects", () => {
       { path: "/runner", rule: "enum" },
     ]);
   });
+  it("reports a runner that does not fit the test type once, naming the runner the type needs", () => {
+    const refused = issues(
+      plan([request(), status, check({ predicate: "statusIn", values: [200] }, "again")], {
+        type: "frontend",
+      }),
+    );
+    expect(refused).toMatchObject([{ path: "/runner", rule: "runner" }]);
+    expect(refused[0]?.message).toContain("Runner http does not match test type frontend");
+    expect(refused[0]?.message).toContain("frontend needs runner playwright");
+    expect(rules(plan([request(), status], { type: "integration" }))).toEqual([]);
+  });
+  it("refuses textNotContains outside the terminal runner and names the browser alternative", () => {
+    const refused = issues(
+      plan([
+        request(),
+        status,
+        check({ predicate: "textNotContains", value: { literal: "None" } }, "absent"),
+      ]),
+    );
+    expect(refused).toMatchObject([{ path: "/steps/2/expectation", rule: "predicateInput" }]);
+    expect(refused[0]?.message).toContain("countEquals 0 on a locator");
+  });
   it("reports a missing discriminator as the missing property", () => {
     const { operation: _operation, ...step } = request();
     expect(rules(plan([step, status]))).toEqual(["required:/steps/0"]);

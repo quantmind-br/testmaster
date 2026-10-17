@@ -235,6 +235,80 @@ it("operation coverage matches a request with literal ids to its templated opera
   expect(covered("/items/7", "/health")).toBe(0);
 });
 
+it("operation coverage counts and covers Swagger 2 response schemas", async () => {
+  const { app, root, projectId, environmentId } = await openApp();
+  await writeFile(
+    join(root, "swagger.json"),
+    JSON.stringify({
+      swagger: "2.0",
+      info: { title: "Auth", version: "1" },
+      basePath: "/api/v1",
+      paths: {
+        "/auth/me": {
+          get: {
+            responses: {
+              "200": { description: "ok", schema: { type: "object" } },
+              "401": { description: "no session" },
+            },
+          },
+        },
+      },
+    }),
+  );
+  const { revision } = await app.sources.add({ projectId, role: "api-spec", path: "swagger.json" });
+  const plan = scaffoldPlan("backend");
+  plan.steps = [
+    {
+      id: "call",
+      kind: "action",
+      operation: "request",
+      description: "Read the session user under the basePath, as generated plans call it",
+      input: {
+        method: "GET",
+        pathSegments: ["api", "v1", "auth", "me"].map((literal) => ({ literal })),
+      },
+    },
+    {
+      id: "status",
+      kind: "assertion",
+      operation: "assert",
+      description: "Status is 200",
+      input: { responseStepId: "call" },
+      expectation: { predicate: "statusIn", values: [200] },
+    },
+    {
+      id: "schema",
+      kind: "assertion",
+      operation: "assert",
+      description: "Body matches the declared schema",
+      input: { responseStepId: "call" },
+      expectation: {
+        predicate: "jsonSchema",
+        sourceRevisionId: revision.id,
+        pointer: "/paths/~1auth~1me/get/responses/200/schema",
+      },
+    },
+  ];
+  const test = app.tests.create({ projectId, plan });
+  const run = app.runs.prepare({ testId: test.id, environmentId });
+  const report = {
+    runs: [
+      {
+        projectId,
+        run,
+        steps: plan.steps.map((step) => ({ planStepId: step.id, status: "passed" })),
+        result: { outcome: "passed" },
+      },
+    ],
+    selection: { requestedRunIds: [run.id], notDispatched: [] },
+  } as unknown as ReportSnapshot;
+  // Only the 200 response declares a schema; the 401 has none and is not an operation pair.
+  expect(reportCoverage(app.context, report).operation).toMatchObject({
+    numerator: 1,
+    denominator: 1,
+  });
+});
+
 function passedItem(
   projectId: string,
   run: ReportRun["run"],

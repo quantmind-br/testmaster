@@ -2,6 +2,7 @@ import type { CoverageMetrics, ExecutablePlan, PlanStep, RatioMetric } from "@te
 import type { ReportRun, ReportSnapshot } from "@testmaster/reporting";
 import { coverageMetrics, ratioMetric } from "@testmaster/reporting";
 import { type RequirementSnapshot, requirementStatus } from "./ai/requirements.js";
+import { loadSourceView } from "./ai/source-documents.js";
 import { allEntities, type ServiceContext } from "./context.js";
 import { governingPlan } from "./revision-plan.js";
 
@@ -25,6 +26,8 @@ export function reportCoverage(ctx: ServiceContext, snapshot: ReportSnapshot): C
     visitedRoutes: string[] = [];
   let operationsKnown = false;
   const operationSources = new Map<string, Record<string, unknown>[]>();
+  // Requests carry the server path prefix (applyServerBasePath); the declared paths do not.
+  const pathPrefixes = new Map<string, string>();
   for (const source of allEntities(ctx, "Source").filter((value) =>
     projects.has(String(value.projectId)),
   )) {
@@ -42,16 +45,15 @@ export function reportCoverage(ctx: ServiceContext, snapshot: ReportSnapshot): C
     if (state.result.revision.status !== "ready" || !state.result.inventory.operations) continue;
     operationsKnown = true;
     operationSources.set(String(source.activeRevisionId), state.result.inventory.operations);
-    for (const value of state.result.inventory.operations) {
-      const operation = value.operation as {
-        responses?: Record<string, { content?: Record<string, { schema?: unknown }> }>;
-      };
-      for (const [status, response] of Object.entries(operation.responses ?? {})) {
-        for (const [media, body] of Object.entries(response.content ?? {})) {
-          if (body.schema) declaredOperations.push(operationPairKey(value, status, media));
-        }
-      }
-    }
+    pathPrefixes.set(
+      String(source.activeRevisionId),
+      (loadSourceView(ctx, String(source.activeRevisionId))?.basePath ?? [])
+        .map((part) => `/${part}`)
+        .join(""),
+    );
+    for (const value of state.result.inventory.operations)
+      for (const { status, media } of schemaBodies(value.operation))
+        declaredOperations.push(operationPairKey(value, status, media));
   }
   for (const item of snapshot.runs) {
     const revision = ctx.entities.get("TestRevision", ctx.workspaceId, item.run.revisionId);
@@ -71,7 +73,9 @@ export function reportCoverage(ctx: ServiceContext, snapshot: ReportSnapshot): C
       const responseStepId = step.input.responseStepId;
       const request = steps.find((value) => value.id === responseStepId);
       if (request?.operation !== "request") continue;
-      const declared = operationSources.get(step.expectation.sourceRevisionId) ?? [];
+      const sourceRevisionId = step.expectation.sourceRevisionId;
+      const declared = operationSources.get(sourceRevisionId) ?? [];
+      const prefix = pathPrefixes.get(sourceRevisionId) ?? "";
       const pointer = step.expectation.pointer;
       for (const operation of declared.filter(
         (value) =>
@@ -79,13 +83,11 @@ export function reportCoverage(ctx: ServiceContext, snapshot: ReportSnapshot): C
           pointer.startsWith(
             `/paths/${pointerToken(String(value.path))}/${String(value.method).toLowerCase()}/`,
           ) &&
-          requestMatchesPath(request.input.pathSegments, String(value.path)),
+          (requestMatchesPath(request.input.pathSegments, String(value.path)) ||
+            (prefix !== "" &&
+              requestMatchesPath(request.input.pathSegments, `${prefix}${String(value.path)}`))),
       )) {
-        const operationContract = operation.operation as {
-          responses?: Record<string, { content?: Record<string, unknown> }>;
-        };
-        const responses = operationContract.responses ?? {};
-        for (const [status, response] of Object.entries(responses)) {
+        for (const { status, media, pointer: at } of schemaBodies(operation.operation)) {
           const statusAsserted = steps.some(
             (value) =>
               value.operation === "assert" &&
@@ -97,10 +99,8 @@ export function reportCoverage(ctx: ServiceContext, snapshot: ReportSnapshot): C
                 (result) => result.planStepId === value.id && result.status === "passed",
               ),
           );
-          if (!statusAsserted || !pointer.includes(`/responses/${status}/`)) continue;
-          for (const media of Object.keys(response.content ?? {}))
-            if (pointer.includes(pointerToken(media)))
-              coveredOperations.push(operationPairKey(operation, status, media));
+          if (statusAsserted && (pointer.endsWith(at) || pointer.includes(`${at}/`)))
+            coveredOperations.push(operationPairKey(operation, status, media));
         }
       }
     }
@@ -174,6 +174,35 @@ function planSteps(plan: ExecutablePlan): PlanStep[] {
   };
   visit(plan.steps);
   return steps;
+}
+
+/**
+ * The response bodies of an operation that declare a schema, with the pointer suffix of that
+ * schema. OpenAPI 3 keeps one per media type under `content`; Swagger 2 keeps one under the
+ * response for every type the operation `produces` (JSON when it names none).
+ */
+function schemaBodies(value: unknown): { status: string; media: string; pointer: string }[] {
+  const operation = value as {
+    produces?: unknown;
+    responses?: Record<
+      string,
+      { content?: Record<string, { schema?: unknown }>; schema?: unknown }
+    >;
+  };
+  const produces =
+    Array.isArray(operation.produces) && operation.produces.length
+      ? operation.produces.map(String)
+      : ["application/json"];
+  const bodies: { status: string; media: string; pointer: string }[] = [];
+  for (const [status, response] of Object.entries(operation.responses ?? {})) {
+    const at = `/responses/${pointerToken(status)}`;
+    for (const [media, body] of Object.entries(response?.content ?? {}))
+      if (body?.schema)
+        bodies.push({ status, media, pointer: `${at}/content/${pointerToken(media)}/schema` });
+    if (!response?.content && response?.schema)
+      for (const media of produces) bodies.push({ status, media, pointer: `${at}/schema` });
+  }
+  return bodies;
 }
 
 /**

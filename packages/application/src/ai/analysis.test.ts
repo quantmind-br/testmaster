@@ -46,6 +46,14 @@ async function fixture(
     outcome?: "inconclusive";
     /** A passed Run whose gate failed (its evidence could not be published). */
     gateFailed?: boolean;
+    /** How the Run's cleanup ended (the Run row's `cleanupOutcome`). */
+    cleanupOutcome?: "inconclusive";
+    /**
+     * The environment revision opts in to this container's log; with `concurrentRun`, a second
+     * Run of the same environment revision has an attempt that overlaps the fixture's attempt.
+     */
+    serverLogContainer?: string;
+    concurrentRun?: boolean;
     step?: Partial<StepResult>;
   } = {},
 ) {
@@ -160,6 +168,7 @@ async function fixture(
     status: options.queued ? "queued" : terminal,
     outcome: options.queued ? null : terminal,
     gate: options.queued ? "pending" : options.passed && !options.gateFailed ? "passed" : "failed",
+    ...(options.cleanupOutcome ? { cleanupOutcome: options.cleanupOutcome } : {}),
     analysisStatus: "not_requested",
   } as unknown as Run;
   const repository = {
@@ -181,15 +190,29 @@ async function fixture(
     status: run.status,
     outcome: run.outcome,
     gate: run.gate,
+    cleanup_outcome: run.cleanupOutcome,
     data_json: canonicalJson(run),
   });
   const attempt = get("Attempt");
-  Object.assign(attempt.dto, { phase: "completed", outcome: terminal });
+  const attemptSpan = options.serverLogContainer
+    ? { startedAt: "2026-10-17T12:00:00.000Z", endedAt: "2026-10-17T12:00:05.000Z" }
+    : {};
+  Object.assign(attempt.dto, { phase: "completed", outcome: terminal, ...attemptSpan });
   Object.assign(attempt.row, {
     phase: "completed",
     outcome: terminal,
+    ...(options.serverLogContainer
+      ? { started_at: attemptSpan.startedAt, ended_at: attemptSpan.endedAt }
+      : {}),
     data_json: canonicalJson(attempt.dto),
   });
+  if (options.serverLogContainer) {
+    const environment = get("EnvironmentRevision");
+    Object.assign(environment.dto, {
+      serverLog: { kind: "docker", container: options.serverLogContainer },
+    });
+    environment.row.data_json = canonicalJson(environment.dto);
+  }
   const jobId = String(attempt.row.job_id);
   db.withTx(() => {
     for (const kind of needed) {
@@ -211,6 +234,48 @@ async function fixture(
       const item = get(kind);
       const insert = fixtureInsert(item);
       db.run(insert.sql, ...insert.values);
+    }
+    if (options.concurrentRun) {
+      // Same environment revision, attempt started while the fixture's attempt ran.
+      const otherRunId = "run_00000000-0000-4000-8000-0000000000b1";
+      const otherJobId = "job_00000000-0000-4000-8000-0000000000b1";
+      const otherRun = structuredClone(runFixture);
+      Object.assign(otherRun.dto, { id: otherRunId, idempotencyKey: "concurrent" });
+      Object.assign(otherRun.row, {
+        id: otherRunId,
+        ...("idempotency_key" in otherRun.row ? { idempotency_key: "concurrent" } : {}),
+        data_json: canonicalJson(otherRun.dto),
+      });
+      const otherAttempt = structuredClone(attempt);
+      Object.assign(otherAttempt.dto, {
+        id: "att_00000000-0000-4000-8000-0000000000b1",
+        runId: otherRunId,
+        jobId: otherJobId,
+        startedAt: "2026-10-17T12:00:02.000Z",
+        endedAt: "2026-10-17T12:00:09.000Z",
+      });
+      Object.assign(otherAttempt.row, {
+        id: otherAttempt.dto.id,
+        run_id: otherRunId,
+        job_id: otherJobId,
+        started_at: otherAttempt.dto.startedAt,
+        ended_at: otherAttempt.dto.endedAt,
+        data_json: canonicalJson(otherAttempt.dto),
+      });
+      db.run(
+        "INSERT INTO job_leases(workspace_id,id,created_at,queue,resource_id,available_at,data_json) VALUES(?,?,?,?,?,?,?)",
+        ws,
+        otherJobId,
+        new Date().toISOString(),
+        "execution",
+        otherRunId,
+        new Date().toISOString(),
+        "{}",
+      );
+      for (const item of [otherRun, otherAttempt]) {
+        const insert = fixtureInsert(item);
+        db.run(insert.sql, ...insert.values);
+      }
     }
   });
   const ctx: ServiceContext = {
@@ -374,6 +439,69 @@ it("a passed run whose gate failed without a recorded error is not reported as n
   const analysis = await f.service.analyze(f.run.id, {});
   expect(analysis.diagnosis?.conclusion.status).toBe("cause_unknown");
   expect(analysis.diagnosis?.conclusion.text).toContain("its gate failed");
+});
+it("a passed run whose gate failed on cleanup names the resource declaration that kept it from running", async () => {
+  const createStep = (resource: Record<string, unknown>) => ({
+    schemaVersion: "1.0.0",
+    kind: "executable",
+    name: "Create a knowledge base",
+    type: "backend",
+    runner: "http",
+    requirementRefs: ["req_00000000-0000-4000-8000-000000000003"],
+    steps: [
+      {
+        id: "create_kb",
+        kind: "action",
+        operation: "request",
+        description: "Create",
+        input: {
+          method: "POST",
+          pathSegments: [{ literal: "kb" }],
+          resource: {
+            resourceType: "knowledge-base",
+            correlationKey: { literal: "kb" },
+            ...resource,
+          },
+        },
+      },
+    ],
+    cleanup: [
+      {
+        resourceRef: "create_kb",
+        operation: "request",
+        input: { method: "DELETE", pathSegments: [{ literal: "kb" }] },
+        successPredicate: { predicate: "statusIn", values: [200] },
+        deadlineMs: 30000,
+        required: true,
+      },
+    ],
+  });
+  const f = await fixture({
+    passed: true,
+    gateFailed: true,
+    cleanupOutcome: "inconclusive",
+    plan: createStep({ handle: "/data/id" }) as unknown as ExecutablePlan,
+  });
+  const diagnosis = (await f.service.analyze(f.run.id, {})).diagnosis!;
+  expect(diagnosis.conclusion.status).toBe("cause_supported");
+  expect(diagnosis.conclusion.text).toContain("its cleanup ended inconclusive");
+  expect(diagnosis.conclusion.text).toContain(
+    "step create_kb creates a knowledge-base without ownerProof",
+  );
+  expect(diagnosis.nextSteps.map((step) => step.text).join("\n")).toContain("ownerProof");
+  // Control: complete declarations name no missing field, only the cleanup that did not delete.
+  const complete = await fixture({
+    passed: true,
+    gateFailed: true,
+    cleanupOutcome: "inconclusive",
+    plan: createStep({
+      handle: "/data/id",
+      ownerProof: "/data/creator_id",
+    }) as unknown as ExecutablePlan,
+  });
+  const text = (await complete.service.analyze(complete.run.id, {})).diagnosis!.conclusion.text;
+  expect(text).toContain("was not deleted by its cleanup request");
+  expect(text).not.toContain("without");
 });
 it("HTTP 500 request response is not locator drift or a certain product cause", async () => {
   const f = await fixture({ requestOnly: true });
@@ -1273,6 +1401,35 @@ it("a missing provider credential is an unavailable model reading, and the retry
   const again = await other.service.analyze(other.run.id, { model: true });
   expect(again.id).toBe(abstained.id);
   expect(other.complete).toHaveBeenCalledTimes(1);
+});
+it("a reading refused because the project's compute slots were busy reaches the model on the next request", async () => {
+  const f = await fixture();
+  f.complete.mockRejectedValueOnce(
+    new ContractError("QUOTA_EXCEEDED", "Two model calls of this project are already running", {
+      reasonCode: "quota_exceeded",
+      remaining: "unknown",
+    }),
+  );
+  const busy = await f.service.analyze(f.run.id, { model: true });
+  expect(f.service.modelStatus(busy)).toMatchObject({
+    state: "abstained",
+    reasonCode: "quota_exceeded",
+  });
+  f.complete.mockImplementationOnce(async () => ({
+    modelCallId: f.modelCallId,
+    output: {
+      failureKind: "unknown",
+      hypotheses: [],
+      recommendedAction: "collect_more_evidence",
+      fixTargetHandle: null,
+      limitations: [],
+      nextSteps: [],
+      evidenceGaps: [],
+    },
+  }));
+  const retried = await f.service.analyze(f.run.id, { model: true });
+  expect(retried).toMatchObject({ source: "model", modelCallId: f.modelCallId });
+  expect(f.complete).toHaveBeenCalledTimes(2);
 });
 it("a model reading that outlasts the job lease keeps its lease and is stored", async () => {
   const f = await fixture();
@@ -3067,6 +3224,35 @@ it("a 5xx whose server log recorded an exception while the request ran is a prod
   expect(unexplained.facts.map((item) => item.text)).toContain(
     'The server log of container searxng-tm-app (logs/server.log) recorded 1 error line during the attempt, none while step request ran; first: "ERROR an older failure outside the step".',
   );
+});
+it("a server log shared with a run that ran at the same time attributes no error to this run", async () => {
+  const logged = async (concurrentRun: boolean) => {
+    const f = await fixture({
+      plan: requestStatusPlan([200]),
+      step: { expected: 200, observed: 500 },
+      serverLogContainer: "searxng-tm-app",
+      concurrentRun,
+    });
+    const at = requestStepWindow(f);
+    await attachServerLog(
+      f,
+      500,
+      `${serverLogHeader}\n${at} AttributeError: 'NoneType' object has no attribute 'netloc'\n`,
+    );
+    return f.service.analyze(f.run.id, {});
+  };
+  const shared = await logged(true);
+  expect(shared.failureKind).toBe("unknown");
+  expect(shared.limitations).toContain(
+    "The server log of container searxng-tm-app is shared with run run_00000000-0000-4000-8000-0000000000b1, which ran at the same time; its lines are not attributed to this run.",
+  );
+  expect(shared.facts.find((item) => item.text.includes("logs/server.log"))?.text).toContain(
+    "Run run_00000000-0000-4000-8000-0000000000b1 used the same server at the same time, so these lines may come from it.",
+  );
+  // Control: the same log with no overlapping run is a product bug citing the line.
+  const alone = await logged(false);
+  expect(alone.failureKind).toBe("product_bug");
+  expect(alone.limitations.join("\n")).not.toContain("is shared with");
 });
 it("an unavailable server log is a limitation, never a cause", async () => {
   const f = await fixture({

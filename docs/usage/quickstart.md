@@ -467,7 +467,11 @@ grammar. A log that cannot be read (no such container, no docker) is stored as o
 unavailable` line with the reason and never changes the outcome. `testmaster run analyze` cites the error lines
 written while the failed step ran (tracebacks, `…Error:`/`…Exception:` lines, `ERROR`, `CRITICAL`, `FATAL`, `panic:`);
 a required `statusIn` assertion that saw a 5xx while the log recorded such a line becomes a `product_bug` with the
-line in the hypothesis. MCP: `testmaster_update_environment {serverLog: {kind: "docker", container}}`, `null` stops it.
+line in the hypothesis. The container's log is shared by every run against it: when another run of an environment
+reading the same container had an attempt overlapping this one (`concurrency` above 1), the analysis names those runs,
+adds a limitation and attributes no line to this run, so it never concludes `product_bug` from the log. Set
+`execution.concurrency` to 1 when the log should explain each failure. MCP:
+`testmaster_update_environment {serverLog: {kind: "docker", container}}`, `null` stops it.
 
 ## Selective reruns and read-only preview
 
@@ -520,7 +524,11 @@ revision of another test is refused. `--name` belongs to a new test and is refus
 Over MCP, `testmaster_import_code` does the same with `{projectId | testId, path, format, name?, parentRevisionId?}`:
 the path must be inside the project root, a refusal of the code is `INVALID_ARGUMENT` naming the rule and the line,
 and a candidate's result lists the `testmaster_run_tests` (with `revisionId`) and `testmaster_promote_revision`
-calls.
+calls. Code imported as a revision of a test may check a response with
+`sourceSchemas.violations(sourceRevisionId, pointer, value)` against the schemas that test's plan cites in
+`jsonSchema` assertions, as generated code does; any other schema is refused. Every `expect()` takes an observed
+value, never a literal: `expect([403, 404]).toContain(status)` is refused, and
+`expect(String(status)).toMatch(/^(403|404)$/)` accepts either value.
 
 Code generation runs over MCP only. `testmaster_generate_tests` writes Playwright candidates from accepted proposals
 (`proposalIds`) or plan revisions (`revisionIds`). When a candidate fails its run, pass that run alone

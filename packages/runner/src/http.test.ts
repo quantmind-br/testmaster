@@ -292,6 +292,23 @@ it("fails assertions whose JSON target is absent from a complete response", asyn
       ),
     ).rejects.toMatchObject({ reasonCode: "assertion_mismatch", outcome: "failed" });
 });
+it("names the status and content type of a body that is not JSON", async () => {
+  const base = await serve((_req, res) => {
+    res.setHeader("content-type", "text/html; charset=utf-8");
+    res.end("<!doctype html><title>app</title>");
+  });
+  const { engine, runtime } = fixture(base);
+  await engine.perform(requestStep("health", ["health"]));
+  await expect(
+    assertResponse(runtime, responseOf(engine, "health"), {
+      predicate: "jsonEquals",
+      value: { literal: { status: "ok" } },
+    }),
+  ).rejects.toMatchObject({
+    reasonCode: "assertion_mismatch",
+    message: 'Response is not valid JSON (status 200, content-type "text/html; charset=utf-8")',
+  });
+});
 it("records value-free missing-pointer structure and distinguishes empty arrays from absent keys", async () => {
   const base = await serve((_req, res) =>
     res.end(

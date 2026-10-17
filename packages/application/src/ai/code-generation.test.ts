@@ -239,6 +239,15 @@ it("a cancellation stays fatal and its details list the candidates created befor
   const candidateIds = details.candidateRevisionIds as string[];
   expect(candidateIds).toHaveLength(1);
   expect(f.app.revisions.get(String(candidateIds[0])).id).toBe(candidateIds[0]);
+  // Each candidate names its test and source revision; the retry covers only the rest.
+  expect(details.candidates).toEqual([
+    {
+      revisionId: candidateIds[0],
+      testId: f.app.revisions.get(created).testId,
+      sourceRevisionId: created,
+    },
+  ]);
+  expect(details.remainingRevisionIds).toEqual([cancelled]);
   // The accepted call and the cancelled request, which is recorded and may be billed.
   expect(details.modelCallIds).toEqual([
     expect.stringMatching(/^mdl_/u),
@@ -493,6 +502,35 @@ it("sends code that never checks a cited schema back to the model, and refuses a
     details: {
       validationErrors: [{ message: expect.stringContaining("is not available to this test") }],
     },
+  });
+});
+
+it("code imported by hand as a revision of a test may check the schemas its plan cites, and no other", async () => {
+  const f = await fixture();
+  const { revisionId, sourceRevisionId, schemaCode } = await schemaRevisionOf(
+    f.app,
+    f.projectId,
+    f.root,
+  );
+  const testId = String(f.app.revisions.get(revisionId).testId);
+  await writeFile(join(f.root, "items.spec.ts"), schemaCode);
+  const candidate = await f.app.codeImport.importRevision({
+    testId,
+    path: "items.spec.ts",
+    format: "playwright",
+  });
+  const { bundle } = await f.app.codeImport.readBundle(candidate.id);
+  expect(Object.keys(bundle.schemas ?? {})).toEqual([`${sourceRevisionId}${SCHEMA_POINTER}`]);
+  // Control: a schema the plan does not cite stays refused.
+  await writeFile(
+    join(f.root, "other.spec.ts"),
+    schemaCode.replace(SCHEMA_POINTER, "/components/schemas/Other"),
+  );
+  await expect(
+    f.app.codeImport.importRevision({ testId, path: "other.spec.ts", format: "playwright" }),
+  ).rejects.toMatchObject({
+    code: "INVALID_ARGUMENT",
+    message: expect.stringContaining("plan cites in jsonSchema assertions"),
   });
 });
 

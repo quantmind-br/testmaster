@@ -104,8 +104,9 @@ export const toolRules: Record<keyof typeof mcpTools, readonly string[]> = {
     "A request is not a stop: confirm with testmaster_get_run until the phase is completed.",
   ],
   testmaster_compare_runs: [
-    "Compares two runs, paged by `cursor` and `limit`.",
-    "Example: a failed run against a green baseline, to tell a regression from drift.",
+    "Compares two runs, paged by `cursor` and `limit`: `comparability` (comparable, partially_comparable, incomparable) with its `reasons`, and `differences`, one entry per differing field.",
+    "A field is compared whole: `steps` and `artifacts` differences carry both sides' complete lists, so compare `status`, `reasonCode`, `expected` and `observed` per `planStepId` yourself.",
+    "It lists differences and never judges a regression: a failed run against a green baseline of the same revision and environment is the closest it comes to telling a product change from drift.",
   ],
   testmaster_propose_healing: [
     "Proposes a candidate revision that changes only the locator of a failed action step of the test's active plan revision. Nothing is applied.",
@@ -141,6 +142,7 @@ export const toolRules: Record<keyof typeof mcpTools, readonly string[]> = {
     "Imports one entry file and the local files it imports, inside an approved root and the project root (symlinks are refused); `format` is `playwright` (.ts) or `pytest` (.py).",
     "The code is checked exactly like `test import`: allowed modules only, secrets only through `secrets.get` of a registered secret, at least one assertion; a refusal is `INVALID_ARGUMENT` naming the rule and the line (a path outside the project root or through a symlink is `POLICY_DENIED`).",
     "With `projectId` a new test is created with the code active (`name` defaults to the first test title); with `testId` the code becomes a candidate revision (`active: false`, parent `parentRevisionId` or the active revision) and `nextActions` names the testmaster_run_tests call with `revisionId` and the testmaster_promote_revision call.",
+    "Every `expect()` takes the observed value, never a literal (`expect([403, 404]).toContain(...)` is refused; write `expect(String(status)).toMatch(/^(403|404)$/)`). With `testId`, `sourceSchemas.violations(revision, pointer, value)` may check the schemas the test's plan cites in `jsonSchema` assertions.",
     "Use it to fix a failed generated candidate by hand: read its files at testmaster://revisions/{id}/code, write the corrected file in the project, import it with `testId`, replay, promote.",
   ],
   testmaster_promote_revision: [

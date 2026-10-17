@@ -270,7 +270,7 @@ function schemaFixture(declared: Readonly<Record<string, unknown>>, keys: string
       const key = `${revision}${pointer}`;
       if (!Object.hasOwn(declared, key))
         refuse(
-          `Source schema ${JSON.stringify(key.slice(0, 200))} is not available to this test`,
+          `Source schema ${JSON.stringify(key.slice(0, 200))} is not available to this test (code checks only the schemas its test's plan cites in jsonSchema assertions)`,
           item,
         );
       if (!keys.includes(key)) keys.push(key);
@@ -409,7 +409,10 @@ function inspectTypescript(
           (CONSTANT_NODES[args[0].type] ||
             (args[0].type === "Identifier" && constants.has(String(args[0].name)))))
       )
-        refuse("Assertions need a nonconstant observation", item);
+        refuse(
+          "Assertions need a nonconstant observation: pass the observed value to expect(), not a literal (for one of several values, expect(String(observed)).toMatch(/^(a|b)$/))",
+          item,
+        );
     }
     if (node(item.callee) && item.callee.type === "MemberExpression") {
       let chain: unknown = item.callee.object;

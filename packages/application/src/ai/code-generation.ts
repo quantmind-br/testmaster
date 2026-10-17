@@ -306,8 +306,10 @@ export class CodeGenerationService {
     const candidates: EntityDocument[] = [];
     const validationErrors: GenerationFailure[] = [];
     const modelCallIds: string[] = [];
+    let current = 0;
     try {
-      for (const id of revisions) {
+      for (const [index, id] of revisions.entries()) {
+        current = index;
         const target = repair ?? this.planTarget(input.projectId, id);
         const { revision, test, plan } = target;
         // The code checks the schemas the plan cites through the sourceSchemas fixture, so they are
@@ -430,6 +432,13 @@ export class CodeGenerationService {
           ...error.details,
           requested: revisions.length,
           candidateRevisionIds: candidates.map((candidate) => candidate.id),
+          // Which test each candidate belongs to, and what a retry still has to cover.
+          candidates: candidates.map((candidate) => ({
+            revisionId: candidate.id,
+            testId: candidate.testId,
+            sourceRevisionId: candidate.parentId,
+          })),
+          remainingRevisionIds: revisions.slice(current),
           validationErrors,
           modelCallIds,
         },

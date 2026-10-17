@@ -40,7 +40,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_cancel_run:
     "Request cancellation of a run with a reason. A request is not a stop: confirm with testmaster_get_run until the phase is completed.",
   testmaster_compare_runs:
-    "Compare two runs, paged by cursor and limit. Example: a failed run against a green baseline, to tell regression from drift.",
+    "Compare two runs: whether they are comparable, why, and each differing field (outcome, steps, artifacts, provenance), paged by cursor and limit. It lists differences; it never judges a regression.",
   testmaster_propose_healing:
     "Propose a candidate changing only the locator of a failed action step of the active plan revision; assertions are never healed. abstained = no safe repair. Next: testmaster_review_healing.",
   testmaster_review_healing:

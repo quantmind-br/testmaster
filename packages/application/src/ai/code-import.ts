@@ -23,6 +23,8 @@ import {
 import { authoringTransaction } from "../authoring.js";
 import type { ResolvedConfig } from "../config.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "../context.js";
+import { governingPlan } from "../revision-plan.js";
+import { sourceSchemasFor } from "./source-documents.js";
 
 type Stored<T> = T & EntityDocument;
 /** A secret a code test may read by name through the harness `secrets` fixture. */
@@ -177,24 +179,22 @@ export class CodeImportService {
       throw new ContractError("INVALID_ARGUMENT", "Invalid code revision import input");
     const target = requireEntity(this.ctx, "TestCase", input.testId) as Stored<TestCase>;
     this.ctx.authorize("W", target.projectId);
-    const { bundle, secretRefs, lock } = await this.checkImportFile({
-      projectId: target.projectId,
-      path: input.path,
-      format: input.format,
-    });
-    return this.createFromBundle(
-      target,
-      bundle,
-      lock,
-      "imported",
-      input.parentId ?? target.activeRevisionId ?? undefined,
-      false,
-      undefined,
-      { secretRefs },
+    const parentId = input.parentId ?? target.activeRevisionId ?? undefined;
+    // Code that fixes a test checks the same source schemas generated code of that test may: the
+    // ones its governing plan cites in `jsonSchema` assertions.
+    const { bundle, secretRefs, lock } = await this.checkImportFile(
+      { projectId: target.projectId, path: input.path, format: input.format },
+      parentId ? sourceSchemasFor(this.ctx, governingPlan(this.ctx, parentId)) : {},
     );
+    return this.createFromBundle(target, bundle, lock, "imported", parentId, false, undefined, {
+      secretRefs,
+    });
   }
   /** The code file read and checked against the project's secrets, with its pinned runner image. */
-  private async checkImportFile(input: Omit<CodeImportRequest, "name">) {
+  private async checkImportFile(
+    input: Omit<CodeImportRequest, "name">,
+    schemas: Readonly<Record<string, unknown>> = {},
+  ) {
     const project = requireEntity(this.ctx, "Project", input.projectId) as Stored<Project>;
     if (project.archivedAt)
       throw new ContractError("PRECONDITION_FAILED", "Archived project cannot import tests");
@@ -204,6 +204,7 @@ export class CodeImportService {
       path: input.path,
       format: input.format,
       secrets: declared.map((secret) => secret.name),
+      schemas,
     });
     return {
       bundle,
@@ -288,6 +289,7 @@ export class CodeImportService {
     const bundle = await this.checkStoredCode(
       stored.bundle,
       (input.codeRef.secretRefs ?? []).map((secret) => secret.name),
+      stored.bundle.schemas,
     );
     const test = entity(this.ctx, "tst", {
       projectId: input.projectId,
@@ -353,6 +355,7 @@ export class CodeImportService {
     const checked = await this.checkStoredCode(
       bundle,
       (codeRef.secretRefs ?? []).map((secret) => secret.name),
+      bundle.schemas,
     );
     return this.createFromBundle(
       target,

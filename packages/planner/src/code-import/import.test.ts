@@ -254,7 +254,7 @@ it("refuses a schema the test was not offered, including every code that has no 
   );
   await expect(importCode({ ...options, schemas: offeredSchemas })).rejects.toMatchObject({
     code: "INVALID_ARGUMENT",
-    message: `Source schema "${schemaRevision}/paths/other" is not available to this test at line 2`,
+    message: `Source schema "${schemaRevision}/paths/other" is not available to this test (code checks only the schemas its test's plan cites in jsonSchema assertions) at line 2`,
   });
   await expect(importCode(options)).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
 });

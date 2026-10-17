@@ -176,3 +176,23 @@ describe("document-level jsonSchema pointers", () => {
     expect(() => validateAgainstSchema(pet, {})).toThrow(mismatch);
   });
 });
+describe("operation path prefix", () => {
+  const swagger = (extra: object) => ({
+    swagger: "2.0",
+    info: { title: "Auth", version: "1" },
+    paths: { "/auth/login": { post: { responses: { "200": { description: "ok" } } } } },
+    ...extra,
+  });
+  it("takes the Swagger 2 basePath as the prefix requests must carry", async () => {
+    expect((await parsedView(swagger({ basePath: "/api/v1" }), [])).basePath).toEqual([
+      "api",
+      "v1",
+    ]);
+    // Control: without a basePath the operations sit at the origin.
+    expect((await parsedView(swagger({}), [])).basePath).toEqual([]);
+  });
+  it("takes the first OpenAPI 3 server URL's path", async () => {
+    const view = await parsedView({ ...openapi, servers: [{ url: "https://host.test/v2" }] }, []);
+    expect(view.basePath).toEqual(["v2"]);
+  });
+});

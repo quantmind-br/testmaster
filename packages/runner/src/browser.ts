@@ -506,6 +506,7 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       expectation.predicate === "countAtMost"
     ) {
       const count = await locator.count();
+      runtime.recordComparison(count, expectation.value);
       const [holds, bound] =
         expectation.predicate === "countEquals"
           ? [count === expectation.value, ""]

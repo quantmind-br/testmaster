@@ -333,10 +333,13 @@ export class ModelGateway {
           idempotencyKey: `${invocationId}:${repairAttempt}:${transportAttempt}`,
         });
         if (!reservation.ok)
-          throw new ContractError("QUOTA_EXCEEDED", "Model budget exceeded", {
-            reasonCode: reservation.reasonCode,
-            remaining: reservation.remaining,
-          });
+          throw new ContractError(
+            "QUOTA_EXCEEDED",
+            reservation.reasonCode === "quota_exceeded"
+              ? "Two model calls of this project are already running, the most it runs at once; retry when one finishes"
+              : "Model budget exceeded",
+            { reasonCode: reservation.reasonCode, remaining: reservation.remaining },
+          );
         if (signal.aborted) {
           await this.options.budgetLedger.release(
             reservation.reservationId,

@@ -23,6 +23,7 @@ import {
   type AuxiliaryFence,
   type AuxiliaryJob,
   AuxiliaryLeaseRepository,
+  type EntityDocument,
 } from "@testmaster/persistence";
 import {
   assessLocatorEquivalence,
@@ -31,7 +32,7 @@ import {
   waitStateEquivalence,
 } from "@testmaster/planner";
 import { type ArtifactsService, isEvidenceUnavailable } from "../artifacts.js";
-import { entity, requireEntity, type ServiceContext } from "../context.js";
+import { allEntities, entity, requireEntity, type ServiceContext } from "../context.js";
 import type { AdmissionSnapshot } from "../provenance.js";
 import { governingPlan } from "../revision-plan.js";
 import {
@@ -848,9 +849,17 @@ interface ServerFault {
   windowed: boolean;
   lines: ServerLogLine[];
 }
+/** When an attempt ran, in milliseconds; a running attempt runs until now. */
+function attemptSpan(attempt: EntityDocument | undefined): { from: number; to: number } | null {
+  const from = typeof attempt?.startedAt === "string" ? Date.parse(attempt.startedAt) : Number.NaN;
+  if (Number.isNaN(from)) return null;
+  const to = typeof attempt?.endedAt === "string" ? Date.parse(attempt.endedAt) : Date.now();
+  return { from, to };
+}
 function serverFault(evidence: readonly Evidence[]): ServerFault | undefined {
   const log = serverLogItem(evidence);
-  if (!log || log.value.unavailable) return undefined;
+  // A log shared with runs that ran at the same time cannot attribute an error to this request.
+  if (!log || log.value.unavailable || log.value.concurrentRunIds.length) return undefined;
   const events = evidence.map((item) => item.value);
   for (const item of evidence) {
     const { step, planStep } = item;
@@ -912,9 +921,12 @@ function serverLogFacts(
   const text = during.length
     ? `${source} recorded ${during.length} error line${during.length === 1 ? "" : "s"} ${window ? `while step ${stepId} ran` : "during the attempt"}: ${quotedErrors(during)}.`
     : `${source} recorded ${total} error line${total === 1 ? "" : "s"} during the attempt, none while step ${stepId} ran; first: ${quotedErrors(log.value.errors.slice(0, 1))}.`;
+  const shared = log.value.concurrentRunIds.length
+    ? ` Run${log.value.concurrentRunIds.length === 1 ? "" : "s"} ${log.value.concurrentRunIds.join(", ")} used the same server at the same time, so these lines may come from ${log.value.concurrentRunIds.length === 1 ? "it" : "them"}.`
+    : "";
   return [
     {
-      text: scrubEvidenceText(text, secrets).text.slice(0, 1000),
+      text: scrubEvidenceText(text + shared, secrets).text.slice(0, 1000),
       evidenceRefs: [log.ref, ...(step ? [step.ref] : [])],
     },
   ];
@@ -1497,6 +1509,29 @@ function planSteps(plan: ExecutablePlan | null): PlanStep[] {
   };
   if (plan) visit(plan.steps);
   return result;
+}
+/**
+ * Why the resources a plan creates could not all be cleaned up, read from the plan itself: the
+ * runner deletes a resource only when its creation step names both a `handle` and an
+ * `ownerProof` and a cleanup entry names that step. Empty when every declaration is complete.
+ */
+function cleanupGaps(plan: ExecutablePlan | null): string[] {
+  const gaps: string[] = [];
+  for (const step of planSteps(plan)) {
+    if (step.operation !== "request" || !step.input.resource) continue;
+    const missing = (["handle", "ownerProof"] as const).filter(
+      (field) => step.input.resource?.[field] === undefined,
+    );
+    if (missing.length)
+      gaps.push(
+        `step ${step.id} creates a ${step.input.resource.resourceType} without ${missing.join(" or ")}, so the runner cannot prove it owns what it created and never deletes it`,
+      );
+    else if (!plan?.cleanup?.some((entry) => entry.resourceRef === step.id))
+      gaps.push(
+        `step ${step.id} creates a ${step.input.resource.resourceType} that no cleanup entry deletes`,
+      );
+  }
+  return gaps;
 }
 /**
  * Names, never values, of the fields in which two definitions of one plan step differ. The
@@ -2117,10 +2152,21 @@ export class AnalysisService {
             limitations.push(
               `The server log of container ${log.container} was unavailable: ${log.unavailable}.`,
             );
-          else if (log.partial)
-            limitations.push(
-              `Only the last ${SERVER_LOG_READ_BYTES} bytes of the server log ${entry.artifactId} were read.`,
+          else {
+            if (log.partial)
+              limitations.push(
+                `Only the last ${SERVER_LOG_READ_BYTES} bytes of the server log ${entry.artifactId} were read.`,
+              );
+            log.concurrentRunIds = this.concurrentRuns(
+              run,
+              bundle.manifest.attemptId,
+              log.container,
             );
+            if (log.concurrentRunIds.length)
+              limitations.push(
+                `The server log of container ${log.container} is shared with run${log.concurrentRunIds.length === 1 ? "" : "s"} ${log.concurrentRunIds.join(", ")}, which ran at the same time; its lines are not attributed to this run.`,
+              );
+          }
           value = log;
         }
         evidence.push({
@@ -2172,6 +2218,33 @@ export class AnalysisService {
         ? start.slice(newline + 1)
         : "";
     return serverLogEvidence(header, body, partial, environmentSecretValues());
+  }
+  /** Other runs whose attempts used server log container `container` while attempt `attemptId` ran. */
+  private concurrentRuns(run: Run, attemptId: string, container: string): string[] {
+    const attempts = allEntities(this.ctx, "Attempt");
+    const own = attemptSpan(attempts.find((attempt) => attempt.id === attemptId));
+    if (!own) return [];
+    const runs = new Set<string>();
+    for (const attempt of attempts) {
+      const other = attemptSpan(attempt);
+      const runId = String(attempt.runId);
+      if (runId === run.id || runs.has(runId) || !other) continue;
+      if (other.from >= own.to || other.to <= own.from) continue;
+      if (this.serverLogContainer(runId) === container) runs.add(runId);
+    }
+    return [...runs].sort();
+  }
+  /** The container whose log the Run's environment revision opted in to, or null. */
+  private serverLogContainer(runId: string): string | null {
+    const { workspaceId, entities } = this.ctx;
+    const run = entities.get("Run", workspaceId, runId);
+    const revisionId = run?.environmentRevisionId;
+    const environment =
+      typeof revisionId === "string"
+        ? entities.get("EnvironmentRevision", workspaceId, revisionId)
+        : undefined;
+    const source = environment?.serverLog as { container?: unknown } | null | undefined;
+    return typeof source?.container === "string" ? source.container : null;
   }
   /** Names of the auth profiles bound to the Run's environment revision; never their secrets. */
   private environmentAuthProfiles(run: Run): string[] {
@@ -2487,6 +2560,20 @@ export class AnalysisService {
         "Resolve the recorded execution error, then rerun the test: a pass whose gate failed is not a verified pass, and its evidence may be missing.",
         [recorded.ref],
       );
+    // The gate requires cleanup to pass when the plan declares cleanup; a pass whose cleanup did
+    // not is explained by the plan's resource declarations.
+    const cleanupLeft =
+      gateFailedPass &&
+      !recordedError &&
+      Boolean(collected.plan?.cleanup?.length) &&
+      run.cleanupOutcome !== "passed";
+    const leftGaps = cleanupLeft ? cleanupGaps(collected.plan) : [];
+    if (cleanupLeft)
+      next(
+        leftGaps.length
+          ? "Give every resource-creating request a handle and an ownerProof (a JSON pointer to a response field that proves the caller owns the resource) and a cleanup entry for that step, then rerun the test; delete what earlier runs left on the target."
+          : "Read the run's resource.cleanup events to find the resource left behind, fix its cleanup request or success predicate, then rerun the test.",
+      );
     if (run.outcome === "passed")
       conclusion = !gateFailedPass
         ? { status: "no_failure", text: "The Run passed; no failure was observed." }
@@ -2495,10 +2582,19 @@ export class AnalysisService {
               status: "cause_supported",
               text: `The Run's steps passed, but it then recorded an execution error and its gate failed: ${describeExecutionError(recordedError)}. The pass is not established.`,
             }
-          : {
-              status: "cause_unknown",
-              text: "The Run's assertions passed but its gate failed; no failure of the target was observed, and the recorded evidence does not establish why the gate failed.",
-            };
+          : cleanupLeft
+            ? {
+                status: "cause_supported",
+                text: `The Run's assertions passed but its gate failed because its cleanup ended ${run.cleanupOutcome}: ${
+                  leftGaps.length
+                    ? leftGaps.join("; ")
+                    : "a resource it created was not deleted by its cleanup request, or its creation response did not prove ownership"
+                }. What it created may remain on the target.`,
+              }
+            : {
+                status: "cause_unknown",
+                text: "The Run's assertions passed but its gate failed; no failure of the target was observed, and the recorded evidence does not establish why the gate failed.",
+              };
     else if (failureKind === "security_policy") {
       const denied = collected.evidence.filter(
         (item) => egressDenial(item.value)?.disposition === "fatal",
@@ -3428,6 +3524,7 @@ export class AnalysisService {
               .slice(0, 20)
               .map((line) => boundedEvidence({ at: line.at, text: line.text }, secrets)),
             omittedErrors: record.omittedErrors + Math.max(0, record.errors.length - 20),
+            concurrentRunIds: record.concurrentRunIds,
           });
         } else if (terminalProcessEvidence(record)) {
           Object.assign(entry, {

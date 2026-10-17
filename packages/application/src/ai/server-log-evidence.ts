@@ -35,6 +35,11 @@ export type ServerLogEvidence = {
   omittedErrors: number;
   /** Whether only the end of a larger log was read. */
   partial: boolean;
+  /**
+   * Other runs whose attempts used the same container while this attempt ran: the log is shared,
+   * so any of its lines may come from them.
+   */
+  concurrentRunIds: string[];
 };
 export interface TimeWindow {
   from: string;
@@ -72,6 +77,7 @@ export function serverLogEvidence(
       errors: [],
       omittedErrors: 0,
       partial,
+      concurrentRunIds: [],
     };
   }
   const lines = body.split("\n");
@@ -91,7 +97,15 @@ export function serverLogEvidence(
       text: scrubEvidenceText(text, secrets).text.slice(0, ERROR_LINE_CHARS),
     });
   }
-  return { kind: "server-log", container, unavailable: null, errors, omittedErrors, partial };
+  return {
+    kind: "server-log",
+    container,
+    unavailable: null,
+    errors,
+    omittedErrors,
+    partial,
+    concurrentRunIds: [],
+  };
 }
 
 /** Milliseconds of a docker or event timestamp; JavaScript dates keep three fraction digits. */

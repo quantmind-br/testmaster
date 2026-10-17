@@ -20,7 +20,8 @@ export interface BudgetReserveRequest {
 }
 export type BudgetReserveResult =
   | { ok: true; reservationId: string }
-  | { ok: false; reasonCode: "budget_exhausted"; remaining: Money | "unknown" };
+  /** `quota_exceeded`: the project's compute slots are all taken by calls still running. */
+  | { ok: false; reasonCode: "budget_exhausted" | "quota_exceeded"; remaining: Money | "unknown" };
 export interface TokenUsage {
   inputTokens: number | null;
   outputTokens: number | null;
@@ -169,7 +170,7 @@ export class SqliteBudgetLedger implements BudgetLedger {
           request.workspaceId,
           request.projectId,
         )?.count ?? 0;
-      if (active >= 2) return { ok: false, reasonCode: "budget_exhausted", remaining: "unknown" };
+      if (active >= 2) return { ok: false, reasonCode: "quota_exceeded", remaining: "unknown" };
       const tokenRemaining = this.tokenBudget(request.workspaceId, request.projectId).remaining;
       if (tokenRemaining !== null && tokens > tokenRemaining)
         return { ok: false, reasonCode: "budget_exhausted", remaining: "unknown" };

@@ -1277,10 +1277,16 @@ it.each([
     };
     for (const count of failing) {
       context.page.locator("rows").countValue = count;
+      events = [];
       expect(await runBrowser(runtime([rows]))).toMatchObject({
         outcome: "failed",
         reasonCode: "assertion_mismatch",
       });
+      expect(
+        events.findLast(
+          (event) => event.type === "step.finished" && event.payload.stepId === "check",
+        )?.payload,
+      ).toMatchObject({ observed: count, expected: value });
     }
     for (const count of passing) {
       context.page.locator("rows").countValue = count;

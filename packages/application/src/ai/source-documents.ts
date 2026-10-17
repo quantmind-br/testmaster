@@ -39,16 +39,24 @@ interface StoredRevision {
   };
 }
 
+/**
+ * The path every operation sits under: the first OpenAPI 3 server URL's path, or the Swagger 2
+ * `basePath`.
+ */
 function serverBasePath(chunks: { kind: string; text: string }[] | undefined): string[] {
-  const text = chunks?.find((chunk) => chunk.kind === "servers")?.text;
-  if (!text) return [];
-  let servers: unknown;
-  try {
-    servers = JSON.parse(text);
-  } catch {
-    return [];
-  }
-  const url = Array.isArray(servers) ? (servers[0] as { url?: unknown } | undefined)?.url : null;
+  const section = (kind: string): unknown => {
+    const text = chunks?.find((chunk) => chunk.kind === kind)?.text;
+    if (!text) return undefined;
+    try {
+      return JSON.parse(text);
+    } catch {
+      return undefined;
+    }
+  };
+  const servers = section("servers");
+  const url = Array.isArray(servers)
+    ? (servers[0] as { url?: unknown } | undefined)?.url
+    : section("basePath");
   // A templated server URL has no single path to prefix.
   if (typeof url !== "string" || url.includes("{")) return [];
   try {

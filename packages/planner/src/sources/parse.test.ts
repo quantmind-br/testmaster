@@ -261,6 +261,23 @@ describe("deterministic grounded source parsing", () => {
     const exploded = await parseSource({ revisionId, format: "openapi", bytes: spec(fanOut) });
     expect(exploded.diagnostics[0]?.message).toContain("exceeded at /paths/~1tree/get");
   });
+  it("names the operations whose responses declare no status code", async () => {
+    const swagger = (paths: Record<string, unknown>) =>
+      Buffer.from(JSON.stringify({ swagger: "2.0", info: { title: "A", version: "1" }, paths }));
+    const result = await parseSource({
+      revisionId,
+      format: "openapi",
+      bytes: swagger({
+        "/a": { get: { responses: {} }, post: { responses: { "x-note": "none" } } },
+        "/b": { get: { responses: { "200": { description: "ok" } } } },
+      }),
+    });
+    expect(result.revision.status).toBe("invalid");
+    expect(result.diagnostics[0]?.message).toContain(
+      "2 operations declare no response, and responses must name at least one status code: GET /a, POST /a",
+    );
+    expect(result.diagnostics[0]?.message).not.toContain("GET /b");
+  });
   it("inventories Postman scripts without evaluating them", async () => {
     const result = await fixture("reference-shop/artifacts/postman.json", "postman");
     expect(result.revision.status).toBe("ready");
