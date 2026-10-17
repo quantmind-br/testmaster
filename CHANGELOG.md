@@ -11,6 +11,17 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 
 - MCP tools now carry action-oriented descriptions (what the tool does, when to use it, which tool comes next); `testmaster_get_run` states it returns a summary only and points to evidence and analysis before naming a cause.
 
+### Resource pages fit clients that cut reads at 50 KiB
+
+Found when the WeKnora agent could not parse a plan batch: omp shows only the first 50 KiB of an MCP resource read, cutting inside a one-line JSON text, and drops `_meta`, so a 51 KiB page lost its end and its `next`.
+
+- Every JSON resource is served in pages of at most 32 KiB (`RESOURCE_PAGE_BYTES`, was 64 KiB). A list page (features, tests, sources, environments, plan batches, a plan batch's proposals, test revisions, run steps, the evidence manifest) ends before the item that would pass that and always holds at least one item; the item counts are now maxima and `next` works as before. The code listing inlines file text only while the listing fits 32 KiB (`inlineLimitBytes` 32768), and artifact pages are 32 KiB.
+- A JSON document larger than a page (a page whose single item is larger, a large plan or requirement set) stays whole for clients that read it whole. Its `_meta` names `testmaster:sizeBytes` and `testmaster:textPages`, and a page document starts with `textPages` (`first`, `pageBytes`, `rule`), which a cut read still shows. `offset` reads any JSON resource as UTF-8-safe text pages, with `testmaster:sha256` of the whole text; they concatenate to the document. A byte page link carries `expires`, the expiry the page's cursors were rendered with, so every byte page renders the same text; `expires` beyond one cursor lifetime is refused, and a past one says to read the page again.
+
+### Screenshots have no time limit of their own
+
+- A declarative step's screenshot evidence may take the step's own deadline (the step timeout, within the attempt deadline) instead of at most 5 s, and the screenshot of a failed imported-code test sets no Playwright timeout (it was 5 s): the test's timeout and the attempt deadline bound it. A cut capture lost evidence of a page that was still answering.
+
 ### Model calls have no deadline
 
 - A model request runs until the provider answers: the gateway has no deadline (`ModelRequest.deadlineMs` is gone) and the provider transport disables undici's 300 s header and body timeouts. Only a caller cancellation (Ctrl-C, client disconnect, run or job cancel) stops a call; it is `PRECONDITION_FAILED "Model request cancelled"` and names the recorded request as `lastModelCallId`. A model call is never `UPSTREAM_TIMEOUT`.

@@ -328,7 +328,7 @@ it("report resources are text pages with the paging in _meta", async () => {
   const run = f.app.runs.resolve({ testId: test.id, environmentId: f.init.environmentId });
   Object.assign(run, { phase: "completed", status: "passed", outcome: "passed", gate: "passed" });
   f.app.context.entities.insert("Run", run);
-  // "é" takes two bytes and the prefix is 11 bytes, so a 65536-byte page ends inside a character
+  // "é" takes two bytes and the prefix is 11 bytes, so a 32768-byte page ends inside a character
   // unless pages are cut on character boundaries.
   const document = JSON.stringify({ filler: "é".repeat(40000) });
   vi.spyOn(Object.getPrototypeOf(f.app.reports), "export").mockResolvedValue({
@@ -348,7 +348,7 @@ it("report resources are text pages with the paging in _meta", async () => {
     expect(content).not.toHaveProperty("blob");
     const text = String(content.text);
     expect(text).not.toContain("\uFFFD");
-    expect(Buffer.byteLength(text)).toBeLessThanOrEqual(65536);
+    expect(Buffer.byteLength(text)).toBeLessThanOrEqual(32768);
     expect(meta["testmaster:offset"]).toBe(Buffer.byteLength(pages.join("")));
     expect(meta["testmaster:sizeBytes"]).toBe(Buffer.byteLength(document));
     pages.push(text);
@@ -1425,9 +1425,10 @@ it("the revision resources serve the revision and every file of its code as text
   }>(f, `testmaster://revisions/${revisionId}/code`);
   expect(index).toMatchObject({ testId: test.id, revisionId, format: "playwright" });
   expect(index.files.map((entry) => entry.path).sort()).toEqual(Object.keys(exported.files).sort());
-  // A small export is read in one call: every file carries its text, no per-file read needed.
+  // A file carries its text while the listing still fits one resource page; any other file is
+  // read through its resource below.
   for (const entry of index.files)
-    expect(entry.content, entry.path).toBe(exported.files[entry.path]);
+    if (entry.content !== null) expect(entry.content, entry.path).toBe(exported.files[entry.path]);
   // Each listed file reads back, page by page, as exactly the bytes the export holds.
   for (const entry of index.files) {
     let text = "";
@@ -1437,7 +1438,7 @@ it("the revision resources serve the revision and every file of its code as text
         unknown
       >;
       expect(page.mimeType).toBe("text/plain");
-      expect(Buffer.byteLength(String(page.text))).toBeLessThanOrEqual(65536);
+      expect(Buffer.byteLength(String(page.text))).toBeLessThanOrEqual(32768);
       text += String(page.text);
       next = (page._meta as Record<string, string | null>)["testmaster:next"] ?? null;
     }
@@ -1472,7 +1473,7 @@ it("the code listing carries file text only while it fits one resource page and 
   const f = await fixture();
   const test = f.app.tests.create({ projectId: f.init.projectId, plan: scaffoldPlan("backend") });
   const revisionId = String(test.activeRevisionId);
-  const files = { "a.ts": "a".repeat(40000), "b.ts": "b".repeat(40000), "c.ts": "tiny" };
+  const files = { "a.ts": "a".repeat(20000), "b.ts": "b".repeat(20000), "c.ts": "tiny" };
   vi.spyOn(Object.getPrototypeOf(f.app.codeExport), "export").mockResolvedValue({
     testId: test.id,
     revisionId,
@@ -1480,14 +1481,17 @@ it("the code listing carries file text only while it fits one resource page and 
     files,
     metadata: { entrypoint: "a.ts" },
   } as never);
-  const index = await readJson<{
+  const uri = `testmaster://revisions/${revisionId}/code`;
+  const text = String((await f.client.readResource({ uri })).contents[0]?.text);
+  const index = JSON.parse(text) as {
     inlineLimitBytes: number;
     files: { path: string; content: string | null; resource: string }[];
-  }>(f, `testmaster://revisions/${revisionId}/code`);
-  expect(index.inlineLimitBytes).toBe(65536);
-  // The second file would pass the budget: it is linked, and the small one after it still fits.
+  };
+  expect(index.inlineLimitBytes).toBe(32768);
+  expect(Buffer.byteLength(text)).toBeLessThanOrEqual(32768);
+  // The second file would pass the page: it is linked, and the small one after it still fits.
   expect(index.files.map((entry) => [entry.path, entry.content?.length ?? null])).toEqual([
-    ["a.ts", 40000],
+    ["a.ts", 20000],
     ["b.ts", null],
     ["c.ts", 4],
   ]);
@@ -1636,7 +1640,12 @@ it("the tests resource lists a project's tests, narrows them like test list and 
   type Page = { total: number; tests: { id: string }[]; next: string | null };
   const base = `testmaster://projects/${f.init.projectId}/tests`;
   const pages = await readPages<Page>(f, base);
-  expect(pages.map((page) => page.tests.length)).toEqual([100, 2]);
+  // A page holds at most 100 tests and fits 32 KiB; together the pages hold every test once.
+  expect(pages.length).toBeGreaterThan(1);
+  for (const page of pages) {
+    expect(page.tests.length).toBeLessThanOrEqual(100);
+    expect(Buffer.byteLength(JSON.stringify(page))).toBeLessThanOrEqual(32768);
+  }
   const ids = pages.flatMap((page) => page.tests.map((test) => test.id));
   expect(new Set(ids).size).toBe(102);
   expect(ids).toContain(login.id);
@@ -1861,6 +1870,93 @@ it("the plan batch resources list a project's batches and page the proposals of 
       uri: "testmaster://projects/prj_019bf434-20c0-7000-8000-000000000001/plan-batches",
     }),
   ).rejects.toMatchObject({ code: -32002 });
+});
+
+it("a plan batch page stays within 32 KiB, and a proposal larger than that reads as byte pages", async () => {
+  const f = await fixture();
+  const batch = { id: "pbt_019bf434-20c0-7000-8000-000000000009", version: 3 };
+  // "é" is two bytes, so a 6,000-byte proposal holds 3,000 of them.
+  const proposal = (index: number, bytes: number) => ({
+    id: `pro_${index}`,
+    version: 1,
+    plan: { name: `Proposal ${index}`, notes: "é".repeat(bytes / 2) },
+  });
+  const proposals = [0, 1, 2, 3, 4].map((index) => proposal(index, 6000));
+  proposals.push(proposal(5, 40000), proposal(6, 6000));
+  vi.spyOn(Object.getPrototypeOf(f.app.proposals), "detail").mockReturnValue({
+    batch,
+    proposals,
+  } as never);
+  const read = async (uri: string) =>
+    (await f.client.readResource({ uri })).contents[0] as Record<string, unknown>;
+  type Page = {
+    textPages?: { first: string; pageBytes: number; rule: string };
+    proposals: { id: string }[];
+    next: string | null;
+  };
+  const contents: Record<string, unknown>[] = [];
+  for (let next: string | null = `testmaster://plan-batches/${batch.id}`; next; ) {
+    const content = await read(next);
+    contents.push(content);
+    next = (JSON.parse(String(content.text)) as Page).next;
+  }
+  const texts = contents.map((content) => String(content.text));
+  const pages = texts.map((text) => JSON.parse(text) as Page);
+  // Ten 6 KB proposals would pass 32 KiB: a page ends before it would, and the 40 KB one is alone.
+  expect(pages.map((page) => page.proposals.map((item) => item.id))).toEqual([
+    ["pro_0", "pro_1", "pro_2", "pro_3", "pro_4"],
+    ["pro_5"],
+    ["pro_6"],
+  ]);
+  expect(Buffer.byteLength(texts[0] as string)).toBeLessThanOrEqual(32768);
+  expect(Buffer.byteLength(texts[2] as string)).toBeLessThanOrEqual(32768);
+  expect(pages[0]).not.toHaveProperty("textPages");
+
+  // The oversized page still holds its proposal, and its first field says where its byte pages are.
+  const oversized = texts[1] as string;
+  expect(Buffer.byteLength(oversized)).toBeGreaterThan(32768);
+  expect(Object.keys(pages[1] as Page)[0]).toBe("textPages");
+  const pointer = pages[1]?.textPages;
+  expect(pointer).toMatchObject({ pageBytes: 32768 });
+  expect(pointer?.first).toContain("offset=0");
+  expect(new URL(String(pointer?.first)).searchParams.get("cursor")).toBe(
+    new URL(pages[0]?.next as string).searchParams.get("cursor"),
+  );
+  expect((contents[1] as { _meta: Record<string, unknown> })._meta["testmaster:textPages"]).toBe(
+    pointer?.first,
+  );
+
+  // Its byte pages fit 32 KiB each, never split a character, and concatenate to the page.
+  const parts: string[] = [];
+  for (let next: string | null = String(pointer?.first); next; ) {
+    const page = await read(next);
+    const text = String(page.text);
+    const meta = page._meta as Record<string, unknown>;
+    expect(page.mimeType).toBe("application/json");
+    expect(Buffer.byteLength(text)).toBeLessThanOrEqual(32768);
+    expect(text).not.toContain("\uFFFD");
+    expect(meta["testmaster:offset"]).toBe(Buffer.byteLength(parts.join("")));
+    expect(meta["testmaster:sizeBytes"]).toBe(Buffer.byteLength(oversized));
+    parts.push(text);
+    next = meta["testmaster:next"] as string | null;
+  }
+  expect(parts.length).toBe(2);
+  expect(parts.join("")).toBe(oversized);
+  await expect(read(`testmaster://plan-batches/${batch.id}?offset=-1`)).rejects.toMatchObject({
+    code: -32602,
+  });
+
+  // The byte pages expire with the page's cursors, and no client can push that expiry further out.
+  const withExpiry = (expires: number) => {
+    const link = new URL(String(pointer?.first));
+    link.searchParams.set("expires", String(expires));
+    return link.href;
+  };
+  await expect(read(withExpiry(Date.now() + 600000))).rejects.toMatchObject({ code: -32602 });
+  await expect(read(withExpiry(Date.now() - 1))).rejects.toMatchObject({
+    code: -32602,
+    message: expect.stringContaining("expired"),
+  });
 });
 
 it("the list and document resources refuse a caller without the read scope", async () => {

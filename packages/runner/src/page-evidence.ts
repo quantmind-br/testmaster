@@ -16,7 +16,7 @@ export const ARTIFACT_BYTES = 64 * 1024 * 1024;
 
 /**
  * Screenshot of `page` with every field, canvas, image, video and frame blacked out, and every
- * text equal to one of `secrets`.
+ * text equal to one of `secrets`. `timeoutMs` is Playwright's: 0 sets no limit of its own.
  */
 export async function screenshotPage(
   page: Page,

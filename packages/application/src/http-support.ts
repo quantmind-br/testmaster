@@ -46,10 +46,9 @@ export class SignedCursorCodec {
     });
     this.key = Buffer.from(key, "base64url");
   }
-  encode(cursor: Omit<Cursor, "expiresAt">): string {
-    const payload = Buffer.from(
-      canonicalJson({ ...cursor, expiresAt: this.now() + this.ttlMs }),
-    ).toString("base64url");
+  /** `expiresAt` pins the expiry, so a page rendered again yields the same cursor; it defaults to now plus the TTL. */
+  encode(cursor: Omit<Cursor, "expiresAt">, expiresAt = this.now() + this.ttlMs): string {
+    const payload = Buffer.from(canonicalJson({ ...cursor, expiresAt })).toString("base64url");
     return `${payload}.${createHmac("sha256", this.key).update(payload).digest("base64url")}`;
   }
   decode(value: string, binding: string): Cursor {

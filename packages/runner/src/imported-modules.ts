@@ -19,9 +19,6 @@ export const CODE_SECRETS_ENV = "TESTMASTER_CODE_SECRETS";
 export const CODE_PROFILE_ENV = "TESTMASTER_CODE_PROFILE";
 /** Carries every value the runner scrubs from evidence (a JSON array) to the Playwright processes. */
 export const CODE_REDACTIONS_ENV = "TESTMASTER_CODE_REDACTIONS";
-/** How long a failed test's screenshot may take: the page is already failing, so it is not worth more. */
-const SCREENSHOT_TIMEOUT_MS = 5000;
-
 /**
  * Where the shared fixtures module (`@testmaster/domain` `playwrightFixturesCommonjs`) gets its
  * values in the runner: only the names the host declared for this revision are readable through
@@ -30,7 +27,8 @@ const SCREENSHOT_TIMEOUT_MS = 5000;
  * `capturePageFailure` when a test that used a page fails: it attaches the page as the
  * declarative runner records it (`screenshotPage`, `pageMarkup` and `redactMarkup`, embedded as
  * source), masked and redacted against every value the runner scrubs, for the reporter to
- * forward. A capture that fails attaches the reason instead and never throws.
+ * forward. The screenshot has no time limit of its own (`timeout: 0`): the test's timeout and the
+ * attempt's deadline bound it. A capture that fails attaches the reason instead and never throws.
  */
 const hostValues = `const values = JSON.parse(process.env.${CODE_SECRETS_ENV} || "{}");
 function secretValue(name) {
@@ -50,7 +48,7 @@ async function capturePageFailure(page, testInfo) {
   try {
     if (page.isClosed()) return;
     const redactions = JSON.parse(process.env.${CODE_REDACTIONS_ENV} || "[]");
-    const png = await screenshotPage(page, redactions, ${SCREENSHOT_TIMEOUT_MS});
+    const png = await screenshotPage(page, redactions, 0);
     await testInfo.attach(${JSON.stringify(FAILURE_ATTACHMENTS.screenshot.name)}, { body: png, contentType: ${JSON.stringify(FAILURE_ATTACHMENTS.screenshot.mimeType)} });
     const documents = (await pageMarkup(page)).map((markup) => redactMarkup(markup, redactions));
     await testInfo.attach(${JSON.stringify(FAILURE_ATTACHMENTS.dom.name)}, { body: Buffer.from(documents.join("\\n")), contentType: ${JSON.stringify(FAILURE_ATTACHMENTS.dom.mimeType)} });

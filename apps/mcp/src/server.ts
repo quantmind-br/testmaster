@@ -161,16 +161,18 @@ const RESOURCE_COLLECTIONS: Readonly<Record<string, string>> = {
   requirements: "testmaster://requirements/{projectId or requirementId}",
   tools: "testmaster://tools/{name} (the rules of a tool, by its name in tools/list)",
 };
-const RESOURCE_PAGE_BYTES = 65536;
-/** Text of a revision's code files a code listing carries inline; one resource page, shared by its files. */
-const INLINE_CODE_BYTES = RESOURCE_PAGE_BYTES;
-/** Entries of a project-features resource page. */
+/**
+ * Bytes of one resource page, JSON or text. Some MCP clients show only the first 50 KiB of a read
+ * (omp cuts there, inside the single line a JSON document is), so a page stays below that.
+ */
+const RESOURCE_PAGE_BYTES = 32768;
+/** Most entries of a project-features resource page; bytes bound it too. */
 const FEATURE_PAGE = 100;
-/** Entries of a list resource page (tests, sources, plan batches, revisions). */
+/** Most entries of a list resource page (tests, sources, plan batches, revisions); bytes bound it too. */
 const LIST_PAGE = 100;
-/** Run steps per page: each one carries its observed values. */
+/** Most run steps per page: each one carries its observed values. */
 const STEP_PAGE = 50;
-/** Proposals per page: each one carries a whole plan. */
+/** Most proposals per page: each one carries a whole plan. */
 const PROPOSAL_PAGE = 10;
 /** Report formats a resource can serve; Allure is a directory of files and needs the CLI `--out`. */
 const REPORT_MEDIA_TYPES = {
@@ -215,15 +217,47 @@ interface MemberMatch {
   revisionId?: string;
   environmentId?: string;
 }
-/** A resource page: JSON documents, or raw bytes served as `text` or `blob` by their media type. */
-type ResourcePayload =
-  | { json: unknown }
-  | { bytes: Buffer; mimeType: string; meta: Record<string, unknown> };
+/**
+ * A resource page: JSON documents, or raw bytes served as `text` or `blob` by their media type.
+ * `page` marks a JSON page document of this server, which may gain a `textPages` pointer.
+ */
+type BytePayload = { bytes: Buffer; mimeType: string; meta: Record<string, unknown> };
+type ResourcePayload = { json: unknown; page?: true } | BytePayload;
+/** The items of one list page, how many the list has, and the cursor of the following page. */
+interface ListPage<T> {
+  total: number;
+  items: T[];
+  cursor: string | null;
+}
 const TEXT_MEDIA_TYPE =
   /^(text\/.+|application\/(json|xml|x-ndjson|ndjson|jsonl|x-jsonlines|javascript|yaml|x-yaml)|.+\/.+\+(json|xml))$/;
 /** Textual media types are returned as `text` contents so agents can read them; the rest as `blob`. */
 function isTextual(mimeType: string): boolean {
   return TEXT_MEDIA_TYPE.test((mimeType.split(";")[0] ?? "").trim().toLowerCase());
+}
+function jsonBytes(value: unknown): number {
+  return Buffer.byteLength(JSON.stringify(value));
+}
+/**
+ * The most items, up to `available`, whose page `fits` (which grows with the count); at least one,
+ * so an item larger than a page still gets its own page.
+ */
+function fittingCount(available: number, fits: (count: number) => boolean): number {
+  if (available <= 1 || fits(available)) return available;
+  let low = 1;
+  let high = available - 1;
+  while (low < high) {
+    const middle = Math.ceil((low + high) / 2);
+    if (fits(middle)) low = middle;
+    else high = middle - 1;
+  }
+  return low;
+}
+/** The same resource URI, with the cursor expiry its page was rendered with, read at a byte offset. */
+function atOffset(url: URL, offset: number): string {
+  const link = new URL(url.href);
+  link.searchParams.set("offset", String(offset));
+  return link.href;
 }
 /** A new revision of an existing test: a candidate until promoted, with the exact next calls. */
 function candidateReceipt<T extends { id: string }>(app: Application, testId: string, revision: T) {
@@ -534,12 +568,16 @@ export class TestMasterMcp {
       resourceTemplates: [
         ["testmaster://projects/{id}", "Project", "Project entity by project id"],
         [
-          "testmaster://projects/{projectId}/features{?match,cursor}",
+          "testmaster://projects/{projectId}/features{?match,cursor,offset}",
           "Project features",
-          "Features of a project's current analysis with their stable keys (route:GET:/login, endpoint:POST:/api/x), ordered by key and paged 100 at a time. Features only an earlier analysis found are not listed. match keeps the keys containing that text (case-insensitive); follow next for the following page. testmaster_explore featureIds come from here",
+          "Features of a project's current analysis with their stable keys (route:GET:/login, endpoint:POST:/api/x), ordered by key, up to 100 a page within 32 KiB. Features only an earlier analysis found are not listed. match keeps the keys containing that text (case-insensitive); follow next for the following page. testmaster_explore featureIds come from here",
         ],
         ["testmaster://runs/{id}/result", "Run result", "Phase, outcome and gate of a run"],
-        ["testmaster://runs/{id}/manifest", "Evidence manifest", "Evidence manifest page of a run"],
+        [
+          "testmaster://runs/{id}/manifest{?cursor,offset}",
+          "Evidence manifest",
+          "Evidence manifest page of a run, within 32 KiB; follow nextCursor",
+        ],
         [
           "testmaster://runs/{id}/report{?format,cursor}",
           "Committed report",
@@ -551,20 +589,24 @@ export class TestMasterMcp {
           "One report over every member run of a run_tests batch (its batchId/jobId). JSON puts the summary (selection, completeness, executionMetrics counts and rates, coverage, gate) before runs[], so the first page carries the verdict. Same text paging and formats as a run report; _meta testmaster:batch lists the member runs",
         ],
         [
-          "testmaster://runs/{id}/steps{?attemptId,cursor}",
+          "testmaster://runs/{id}/steps{?attemptId,cursor,offset}",
           "Run steps",
-          "Recorded step results of a run (every attempt, or one attemptId) in execution order, paged 50 at a time; follow next. A code run's steps (imported-test-N, imported-step-N, pytest node ids) carry a title with what the test framework called them (expect.toHaveURL, a test.step name, the test title)",
+          "Recorded step results of a run (every attempt, or one attemptId) in execution order, up to 50 a page within 32 KiB; follow next. A code run's steps (imported-test-N, imported-step-N, pytest node ids) carry a title with what the test framework called them (expect.toHaveURL, a test.step name, the test title)",
         ],
         [
           "testmaster://revisions/{id}",
           "Test revision",
           "A test revision: origin, ordinal, hashes, plan or code reference",
         ],
-        ["testmaster://revisions/{id}/plan", "Executable plan", "Plan of a test revision"],
         [
-          "testmaster://revisions/{id}/code{?format}",
+          "testmaster://revisions/{id}/plan{?offset}",
+          "Executable plan",
+          "Plan of a test revision. A plan past 32 KiB names its text pages in _meta testmaster:textPages; offset reads them",
+        ],
+        [
+          "testmaster://revisions/{id}/code{?format,offset}",
           "Revision code",
-          "Files of the code of a revision (generated code, imported code, or the export of a plan): path, size, sha256, resource and content. Text up to inlineLimitBytes (64 KiB) in total is inline; a file past that has content null, read it at its resource. format: playwright (default) or pytest; imported code keeps its own",
+          "Files of the code of a revision (generated code, imported code, or the export of a plan): path, size, sha256, resource and content. File text is inline while the listing stays within inlineLimitBytes (32 KiB); a file past that has content null, read it at its resource. format: playwright (default) or pytest; imported code keeps its own",
         ],
         [
           "testmaster://revisions/{id}/code/{+path}{?format,offset}",
@@ -577,24 +619,24 @@ export class TestMasterMcp {
           "Test case by id: name, tags, priority, active revision, version",
         ],
         [
-          "testmaster://tests/{id}/revisions{?cursor}",
+          "testmaster://tests/{id}/revisions{?cursor,offset}",
           "Test revisions",
-          "Revisions of a test in ordinal order without their plans, each marked active or candidate; read one at testmaster://revisions/{id}",
+          "Revisions of a test in ordinal order without their plans, each marked active or candidate, up to 100 a page within 32 KiB; read one at testmaster://revisions/{id}",
         ],
         [
-          "testmaster://projects/{projectId}/tests{?tag,priority,status,cursor}",
+          "testmaster://projects/{projectId}/tests{?tag,priority,status,cursor,offset}",
           "Project tests",
-          "Tests of a project, paged 100 at a time. tag, priority (critical|high|normal|low) and status (active|archived) narrow the list like test list; follow next",
+          "Tests of a project, up to 100 a page within 32 KiB. tag, priority (critical|high|normal|low) and status (active|archived) narrow the list like test list; follow next",
         ],
         [
-          "testmaster://projects/{projectId}/sources{?cursor}",
+          "testmaster://projects/{projectId}/sources{?cursor,offset}",
           "Project sources",
-          "Sources of a project (not archived), paged 100 at a time; read one at testmaster://sources/{id}",
+          "Sources of a project (not archived), up to 100 a page within 32 KiB; read one at testmaster://sources/{id}",
         ],
         [
-          "testmaster://projects/{projectId}/environments{?cursor}",
+          "testmaster://projects/{projectId}/environments{?cursor,offset}",
           "Project environments",
-          "Environments of a project (archived ones included, with archivedAt), paged 100 at a time: id, name, version (the expectedVersion of testmaster_update_environment) and the active revision's target and additional origins, network profile and auth profile references. The project's default environment is marked default",
+          "Environments of a project (archived ones included, with archivedAt), up to 100 a page within 32 KiB: id, name, version (the expectedVersion of testmaster_update_environment) and the active revision's target and additional origins, network profile and auth profile references. The project's default environment is marked default",
         ],
         [
           "testmaster://sources/{id}",
@@ -602,19 +644,19 @@ export class TestMasterMcp {
           "A source with its active revision (no chunks), chunk count and diagnostics",
         ],
         [
-          "testmaster://projects/{projectId}/plan-batches{?cursor}",
+          "testmaster://projects/{projectId}/plan-batches{?cursor,offset}",
           "Plan batches",
-          "Proposal batches of a project, paged 100 at a time; read one at testmaster://plan-batches/{id}",
+          "Proposal batches of a project, up to 100 a page within 32 KiB; read one at testmaster://plan-batches/{id}",
         ],
         [
-          "testmaster://plan-batches/{id}{?cursor}",
+          "testmaster://plan-batches/{id}{?cursor,offset}",
           "Plan batch",
-          "A proposal batch with its proposals (plans, state, version), paged 10 at a time: total counts them all, returned the page, next the following page (null on the last). batch.version is the expectedVersion of testmaster_review_plan; each proposal's own version is that of testmaster_edit_plan",
+          "A proposal batch with its proposals (plans, state, version), up to 10 a page within 32 KiB: total counts them all, returned the page, next the following page (null on the last). A proposal past 32 KiB gets a page of its own whose first field, textPages, says how to read it with offset. batch.version is the expectedVersion of testmaster_review_plan; each proposal's own version is that of testmaster_edit_plan",
         ],
         [
-          "testmaster://requirements/{projectId}",
+          "testmaster://requirements/{projectId}{?offset}",
           "Requirements",
-          "Requirement snapshot of a project id, with its fingerprint and version; a requirement id returns one requirement. Each requirement carries status: pending, approved, rejected or superseded",
+          "Requirement snapshot of a project id, with its fingerprint and version; a requirement id returns one requirement. Each requirement carries status: pending, approved, rejected or superseded. A snapshot past 32 KiB names its text pages in _meta testmaster:textPages; offset reads them",
         ],
         [
           "testmaster://runs/{id}/artifacts/{+path}{?attemptId,offset}",
@@ -666,7 +708,7 @@ export class TestMasterMcp {
     this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
       const uri = request.params.uri;
       this.options.authenticate?.();
-      let payload: ResourcePayload;
+      let payload: BytePayload;
       try {
         payload = await this.resource(uri);
       } catch (error) {
@@ -676,22 +718,10 @@ export class TestMasterMcp {
           throw new McpError(ErrorCode.InvalidParams, error.message, { uri, code: error.code });
         throw error;
       }
-      const content =
-        "json" in payload
-          ? { uri, mimeType: "application/json", text: JSON.stringify(payload.json) }
-          : isTextual(payload.mimeType)
-            ? {
-                uri,
-                mimeType: payload.mimeType,
-                text: payload.bytes.toString("utf8"),
-                _meta: payload.meta,
-              }
-            : {
-                uri,
-                mimeType: payload.mimeType,
-                blob: payload.bytes.toString("base64"),
-                _meta: payload.meta,
-              };
+      const meta = Object.keys(payload.meta).length ? { _meta: payload.meta } : {};
+      const content = isTextual(payload.mimeType)
+        ? { uri, mimeType: payload.mimeType, text: payload.bytes.toString("utf8"), ...meta }
+        : { uri, mimeType: payload.mimeType, blob: payload.bytes.toString("base64"), ...meta };
       return { contents: [content] };
     });
   }
@@ -794,13 +824,16 @@ export class TestMasterMcp {
       }),
     );
   }
-  private cursor(offset: number, binding: string): string {
-    return this.cursors.encode({
-      binding: `mcp:${binding}:${this.options.application.context.principalId}`,
-      id: String(offset),
-      createdAt: "",
-      cutoff: "",
-    });
+  private cursor(offset: number, binding: string, expiresAt?: number): string {
+    return this.cursors.encode(
+      {
+        binding: `mcp:${binding}:${this.options.application.context.principalId}`,
+        id: String(offset),
+        createdAt: "",
+        cutoff: "",
+      },
+      expiresAt,
+    );
   }
   private decodeCursor(cursor: unknown, binding: string): number {
     if (cursor === undefined) return 0;
@@ -2011,7 +2044,11 @@ export class TestMasterMcp {
       return { match: environment, stale: undefined, created: true };
     });
   }
-  private async evidence(args: Arguments) {
+  /**
+   * A page of a run's evidence manifest; `pageBytes` bounds the whole page, as a resource read
+   * does, and `expiresAt` pins its cursor's expiry.
+   */
+  private async evidence(args: Arguments, pageBytes?: number, expiresAt?: number) {
     const bundle = await this.options.application.artifacts.get(String(args.runId), {
       ...(args.attemptId ? { attemptId: String(args.attemptId) } : {}),
       failedOnly: Boolean(args.failedOnly),
@@ -2032,7 +2069,7 @@ export class TestMasterMcp {
     if (offset > bundle.manifest.entries.length)
       throw new ContractError("INVALID_ARGUMENT", "Invalid evidence cursor offset");
     const maxBytes = Math.min(Number(args.maxBytes ?? 65536), 262144);
-    const entries = [];
+    const entries: typeof bundle.manifest.entries = [];
     let size = 0;
     for (const entry of bundle.manifest.entries.slice(offset)) {
       const bytes = Buffer.byteLength(JSON.stringify(entry));
@@ -2044,28 +2081,37 @@ export class TestMasterMcp {
       throw new ContractError("INVALID_ARGUMENT", "maxBytes cannot fit an evidence entry", {
         minimumBytes: Buffer.byteLength(JSON.stringify(bundle.manifest.entries[offset])),
       });
-    const nextOffset = offset + entries.length;
-    return {
-      manifest: {
-        ...bundle.manifest,
-        entries,
-        ...(nextOffset < bundle.manifest.entries.length || offset > 0
-          ? { subset: true, parentSnapshot: bundle.manifest.snapshotId }
-          : {}),
-      },
-      resources: entries
-        .filter((entry) => entry.state === "available" && entry.redactionStatus !== "restrictedRaw")
-        .map(
-          (entry) =>
-            `testmaster://runs/${args.runId}/artifacts/${encodeURIComponent(entry.relativePath)}?attemptId=${bundle.manifest.attemptId}&offset=0`,
-        ),
-      integrity: partial ? "partial" : "verified",
-      freshness: stale ? "stale" : "current",
-      staleReasons,
-      verificationEligible: !partial && !stale && run.gate === "passed",
-      nextCursor:
-        nextOffset < bundle.manifest.entries.length ? this.cursor(nextOffset, binding) : null,
+    const page = (count: number) => {
+      const shown = entries.slice(0, count);
+      const nextOffset = offset + count;
+      return {
+        manifest: {
+          ...bundle.manifest,
+          entries: shown,
+          ...(nextOffset < bundle.manifest.entries.length || offset > 0
+            ? { subset: true, parentSnapshot: bundle.manifest.snapshotId }
+            : {}),
+        },
+        resources: shown
+          .filter(
+            (entry) => entry.state === "available" && entry.redactionStatus !== "restrictedRaw",
+          )
+          .map(
+            (entry) =>
+              `testmaster://runs/${args.runId}/artifacts/${encodeURIComponent(entry.relativePath)}?attemptId=${bundle.manifest.attemptId}&offset=0`,
+          ),
+        integrity: partial ? "partial" : "verified",
+        freshness: stale ? "stale" : "current",
+        staleReasons,
+        verificationEligible: !partial && !stale && run.gate === "passed",
+        nextCursor:
+          nextOffset < bundle.manifest.entries.length
+            ? this.cursor(nextOffset, binding, expiresAt)
+            : null,
+      };
     };
+    if (pageBytes === undefined) return page(entries.length);
+    return page(fittingCount(entries.length, (count) => jsonBytes(page(count)) <= pageBytes));
   }
   /**
    * Why the evidence of a run no longer describes the test as it stands. A run of a candidate
@@ -2091,8 +2137,7 @@ export class TestMasterMcp {
       });
     return reasons;
   }
-  private async resource(uri: string): Promise<ResourcePayload> {
-    const app = this.options.application;
+  private async resource(uri: string): Promise<BytePayload> {
     let url: URL;
     try {
       url = new URL(uri);
@@ -2101,6 +2146,75 @@ export class TestMasterMcp {
     }
     if (url.protocol !== "testmaster:" || url.username || url.password || url.port || url.hash)
       throw new ContractError("INVALID_ARGUMENT", "Resource must use testmaster URI");
+    this.pinCursorExpiry(url);
+    const payload = await this.document(url, uri);
+    return "json" in payload ? this.jsonPages(url, payload) : payload;
+  }
+  /**
+   * Pins the expiry of every cursor a page renders (`expires`, set when the URI has none), so the
+   * page read again, as its byte pages are, renders the same text. A client may pass only an
+   * expiry this server could have chosen: in the future and at most one cursor lifetime away.
+   */
+  private pinCursorExpiry(url: URL): void {
+    const now = this.cursors.now();
+    const raw = url.searchParams.get("expires");
+    if (raw === null) {
+      url.searchParams.set("expires", String(now + this.cursors.ttlMs));
+      return;
+    }
+    const expires = Number(raw);
+    if (!Number.isSafeInteger(expires) || expires > now + this.cursors.ttlMs)
+      throw new ContractError("INVALID_ARGUMENT", "expires must be one a page link carries", {
+        field: "expires",
+      });
+    if (expires <= now)
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        "These byte pages expired with the page's cursors: read the page again without offset and expires",
+        { field: "expires" },
+      );
+  }
+  /**
+   * A JSON document as text. One larger than a resource page stays whole for clients that read it
+   * whole: a page document of this server (only possible when its one item is larger) names first,
+   * in `textPages`, where to read it as byte pages, and every JSON document names them in `_meta`.
+   * `offset` serves those pages: the same text cut on character boundaries, which concatenate to it.
+   */
+  private jsonPages(url: URL, payload: Extract<ResourcePayload, { json: unknown }>): BytePayload {
+    const raw = url.searchParams.get("offset");
+    const offset = raw === null ? null : Number(raw);
+    if (offset !== null && (!Number.isSafeInteger(offset) || offset < 0))
+      throw new ContractError("INVALID_ARGUMENT", "offset must be a non-negative integer", {
+        field: "offset",
+      });
+    let text = Buffer.from(JSON.stringify(payload.json));
+    const oversized = text.length > RESOURCE_PAGE_BYTES;
+    if (oversized && payload.page)
+      text = Buffer.from(
+        JSON.stringify({ textPages: this.textPagesPointer(url), ...(payload.json as object) }),
+      );
+    if (offset !== null)
+      return this.textPage(text, offset, "application/json", (end) => atOffset(url, end), {
+        "testmaster:sha256": createHash("sha256").update(text).digest("hex"),
+      });
+    return {
+      bytes: text,
+      mimeType: "application/json",
+      meta: oversized
+        ? { "testmaster:sizeBytes": text.length, "testmaster:textPages": atOffset(url, 0) }
+        : {},
+    };
+  }
+  /** Where a page larger than a resource page is read as byte pages, and how. */
+  private textPagesPointer(url: URL) {
+    return {
+      first: atOffset(url, 0),
+      pageBytes: RESOURCE_PAGE_BYTES,
+      rule: `This page is larger than ${RESOURCE_PAGE_BYTES} bytes, which some clients cut: read first as text pages (cut on UTF-8 character boundaries), each next one at _meta testmaster:next or at offset plus that page's UTF-8 byte length, and concatenate them before parsing. Keep the expires parameter: the pages expire with this page's cursors`,
+    };
+  }
+  private async document(url: URL, uri: string): Promise<ResourcePayload> {
+    const app = this.options.application;
     const parts = url.pathname.split("/").filter(Boolean);
     const id = parts[0] ?? "";
     switch (url.hostname) {
@@ -2108,19 +2222,17 @@ export class TestMasterMcp {
         if (parts.length === 1) return { json: app.projects.get(id) };
         if (parts.length === 2 && parts[1] === "features")
           return {
-            json: this.features(
-              id,
-              url.searchParams.get("match") || undefined,
-              url.searchParams.get("cursor") ?? undefined,
-            ),
+            json: this.features(id, url.searchParams.get("match") || undefined, url),
+            page: true,
           };
-        if (parts.length === 2 && parts[1] === "tests") return { json: this.projectTests(id, url) };
+        if (parts.length === 2 && parts[1] === "tests")
+          return { json: this.projectTests(id, url), page: true };
         if (parts.length === 2 && parts[1] === "sources")
-          return { json: this.projectSources(id, url) };
+          return { json: this.projectSources(id, url), page: true };
         if (parts.length === 2 && parts[1] === "environments")
-          return { json: this.projectEnvironments(id, url) };
+          return { json: this.projectEnvironments(id, url), page: true };
         if (parts.length === 2 && parts[1] === "plan-batches")
-          return { json: this.projectPlanBatches(id, url) };
+          return { json: this.projectPlanBatches(id, url), page: true };
         break;
       case "revisions":
         if (parts.length === 1) return { json: this.revisionDocument(id) };
@@ -2135,7 +2247,7 @@ export class TestMasterMcp {
           return { json: revision.plan };
         }
         if (parts.length === 2 && parts[1] === "code")
-          return { json: await this.revisionCode(id, url) };
+          return { json: await this.revisionCode(id, url), page: true };
         if (parts.length >= 3 && parts[1] === "code")
           // The path is one encoded segment or several plain ones (RFC 6570 `{+path}`); the lookup
           // is an exact match on the revision's file names, so no other path can be read.
@@ -2148,24 +2260,32 @@ export class TestMasterMcp {
       case "tests":
         if (parts.length === 1) return { json: app.tests.get(id) };
         if (parts.length === 2 && parts[1] === "revisions")
-          return { json: this.testRevisions(id, url) };
+          return { json: this.testRevisions(id, url), page: true };
         break;
       case "sources":
         if (parts.length === 1) return { json: this.sourceDocument(id) };
         break;
       case "plan-batches":
-        if (parts.length === 1) return { json: this.planBatch(id, url) };
+        if (parts.length === 1) return { json: this.planBatch(id, url), page: true };
         break;
       case "runs":
         if (parts.length === 2 && parts[1] === "result") return { json: this.result(id) };
         if (parts.length === 2 && parts[1] === "manifest")
           return {
-            json: await this.evidence({
-              runId: id,
-              ...(url.searchParams.has("cursor") ? { cursor: url.searchParams.get("cursor") } : {}),
-            }),
+            json: await this.evidence(
+              {
+                runId: id,
+                ...(url.searchParams.has("cursor")
+                  ? { cursor: url.searchParams.get("cursor") }
+                  : {}),
+              },
+              RESOURCE_PAGE_BYTES,
+              Number(url.searchParams.get("expires")),
+            ),
+            page: true,
           };
-        if (parts.length === 2 && parts[1] === "steps") return { json: this.runSteps(id, url) };
+        if (parts.length === 2 && parts[1] === "steps")
+          return { json: this.runSteps(id, url), page: true };
         if (parts.length === 2 && parts[1] === "report") return this.report("runs", id, url);
         if (parts.length >= 3 && parts[1] === "artifacts") {
           const offset = Number(url.searchParams.get("offset") ?? 0);
@@ -2177,6 +2297,7 @@ export class TestMasterMcp {
               ? { attemptId: String(url.searchParams.get("attemptId")) }
               : {}),
             offset,
+            maxBytes: RESOURCE_PAGE_BYTES,
           });
           // A textual page that is not the last one must not end inside a character.
           const length =
@@ -2226,16 +2347,32 @@ export class TestMasterMcp {
           : `no such collection; the collections are ${Object.keys(RESOURCE_COLLECTIONS).join(", ")}`;
     return `Unknown resource ${shown}: ${hint}. List every readable template with resources/templates/list`;
   }
-  /** One page of an ordered list; its cursor is bound to the list it pages, so another list refuses it. */
-  private listPage<T>(items: readonly T[], size: number, binding: string, cursor: string | null) {
-    const offset = this.decodeCursor(cursor ?? undefined, binding);
+  /**
+   * The page document of an ordered list: at most `size` items, and no more than fit one resource
+   * page once rendered (at least one, so a larger item still has its page). Its cursor is bound to
+   * the list it pages, so another list refuses it, and expires when the URI's `expires` says.
+   */
+  private listPage<T, D>(
+    items: readonly T[],
+    size: number,
+    binding: string,
+    url: URL,
+    render: (page: ListPage<T>) => D,
+  ): D {
+    const offset = this.decodeCursor(url.searchParams.get("cursor") ?? undefined, binding);
     if (offset > items.length) throw new ContractError("INVALID_ARGUMENT", "Invalid page cursor");
-    const end = Math.min(offset + size, items.length);
-    return {
-      total: items.length,
-      items: items.slice(offset, end),
-      cursor: end < items.length ? this.cursor(end, binding) : null,
+    const expires = url.searchParams.get("expires");
+    const expiresAt = expires === null ? undefined : Number(expires);
+    const page = (count: number) => {
+      const end = offset + count;
+      return render({
+        total: items.length,
+        items: items.slice(offset, end),
+        cursor: end < items.length ? this.cursor(end, binding, expiresAt) : null,
+      });
     };
+    const available = Math.min(size, items.length - offset);
+    return page(fittingCount(available, (count) => jsonBytes(page(count)) <= RESOURCE_PAGE_BYTES));
   }
   /** The URI of the next page of a list resource, carrying the filters the cursor was issued for. */
   private pageLink(
@@ -2256,7 +2393,7 @@ export class TestMasterMcp {
     mimeType: string,
     next: (end: number) => string,
     meta: Record<string, unknown>,
-  ): ResourcePayload {
+  ): BytePayload {
     if (offset > bytes.length) throw new ContractError("INVALID_ARGUMENT", "Invalid page offset");
     const window = bytes.subarray(offset, offset + RESOURCE_PAGE_BYTES);
     const more = offset + window.length < bytes.length;
@@ -2320,20 +2457,14 @@ export class TestMasterMcp {
   private runSteps(runId: string, url: URL) {
     const attemptId = url.searchParams.get("attemptId");
     const steps = this.options.application.runs.steps(runId, attemptId ?? undefined);
-    const page = this.listPage(
-      steps,
-      STEP_PAGE,
-      `steps:${runId}:${attemptId ?? ""}`,
-      url.searchParams.get("cursor"),
-    );
-    return {
+    return this.listPage(steps, STEP_PAGE, `steps:${runId}:${attemptId ?? ""}`, url, (page) => ({
       runId,
       ...(attemptId === null ? {} : { attemptId }),
       total: page.total,
       returned: page.items.length,
       steps: page.items,
       next: this.pageLink(`testmaster://runs/${runId}/steps`, { attemptId }, page.cursor),
-    };
+    }));
   }
   /** A revision as stored, with where its plan and its code can be read. */
   private revisionDocument(id: string) {
@@ -2356,20 +2487,14 @@ export class TestMasterMcp {
       active: revision.id === test.activeRevisionId,
       resource: `testmaster://revisions/${revision.id}`,
     }));
-    const page = this.listPage(
-      revisions,
-      LIST_PAGE,
-      `revisions:${testId}`,
-      url.searchParams.get("cursor"),
-    );
-    return {
+    return this.listPage(revisions, LIST_PAGE, `revisions:${testId}`, url, (page) => ({
       testId,
       activeRevisionId: test.activeRevisionId,
       total: page.total,
       returned: page.items.length,
       revisions: page.items,
       next: this.pageLink(`testmaster://tests/${testId}/revisions`, {}, page.cursor),
-    };
+    }));
   }
   /** The code of a revision as the CLI `test export` and GET /revisions/{id}/code read it. */
   private async exportRevision(id: string, requested: string | null) {
@@ -2383,35 +2508,40 @@ export class TestMasterMcp {
     const exported = await app.codeExport.export(revision.testId, { format, revisionId: id });
     return { exported, format, origin: revision.origin };
   }
-  /** The files of a revision's code: path, size, hash, where to read it and its text while it fits the inline budget. */
+  /** The files of a revision's code: path, size, hash, where to read it and its text while the listing fits one resource page. */
   private async revisionCode(id: string, url: URL) {
     const { exported, format, origin } = await this.exportRevision(
       id,
       url.searchParams.get("format"),
     );
-    // Files fill one resource page between them, in order: a listing never costs more than reading
-    // one large file would, and a file past the budget is read at its own resource.
-    let remaining = INLINE_CODE_BYTES;
-    return {
+    const files = Object.entries(exported.files).map(([path, content]) => ({
+      path,
+      sizeBytes: Buffer.byteLength(content),
+      sha256: createHash("sha256").update(content).digest("hex"),
+      resource: `testmaster://revisions/${id}/code/${encodeURIComponent(path)}?format=${format}&offset=0`,
+      content: null as string | null,
+    }));
+    const listing = {
       testId: exported.testId,
       revisionId: exported.revisionId,
       origin,
       format,
       metadata: exported.metadata,
-      files: Object.entries(exported.files).map(([path, content]) => {
-        const sizeBytes = Buffer.byteLength(content);
-        const inline = sizeBytes <= remaining;
-        if (inline) remaining -= sizeBytes;
-        return {
-          path,
-          sizeBytes,
-          sha256: createHash("sha256").update(content).digest("hex"),
-          resource: `testmaster://revisions/${id}/code/${encodeURIComponent(path)}?format=${format}&offset=0`,
-          content: inline ? content : null,
-        };
-      }),
-      inlineLimitBytes: INLINE_CODE_BYTES,
+      files,
+      inlineLimitBytes: RESOURCE_PAGE_BYTES,
     };
+    // File texts fill the rest of one resource page between them, in order: a listing never costs
+    // more than one page, and a file past the budget is read at its own resource.
+    let remaining = RESOURCE_PAGE_BYTES - jsonBytes(listing);
+    for (const file of files) {
+      const content = exported.files[file.path] as string;
+      // Inline text replaces the `null` the listing was measured with.
+      const added = jsonBytes(content) - 4;
+      if (added > remaining) continue;
+      file.content = content;
+      remaining -= added;
+    }
+    return listing;
   }
   /** One file of a revision's code, as text pages. */
   private async revisionCodeFile(id: string, path: string, url: URL): Promise<ResourcePayload> {
@@ -2460,63 +2590,63 @@ export class TestMasterMcp {
           (status === null || (test.archivedAt ? "archived" : "active") === status),
       );
     const filters = { tag, priority, status };
-    const page = this.listPage(
+    return this.listPage(
       tests,
       LIST_PAGE,
       `tests:${projectId}:${JSON.stringify(filters)}`,
-      url.searchParams.get("cursor"),
+      url,
+      (page) => ({
+        projectId,
+        total: page.total,
+        returned: page.items.length,
+        tests: page.items,
+        next: this.pageLink(`testmaster://projects/${projectId}/tests`, filters, page.cursor),
+      }),
     );
-    return {
-      projectId,
-      total: page.total,
-      returned: page.items.length,
-      tests: page.items,
-      next: this.pageLink(`testmaster://projects/${projectId}/tests`, filters, page.cursor),
-    };
   }
   /** Sources of a project that are not archived. */
   private projectSources(projectId: string, url: URL) {
-    const page = this.listPage(
+    return this.listPage(
       this.options.application.sources.list(projectId),
       LIST_PAGE,
       `sources:${projectId}`,
-      url.searchParams.get("cursor"),
+      url,
+      (page) => ({
+        projectId,
+        total: page.total,
+        returned: page.items.length,
+        sources: page.items.map((source) => ({
+          ...source,
+          resource: `testmaster://sources/${source.id}`,
+        })),
+        next: this.pageLink(`testmaster://projects/${projectId}/sources`, {}, page.cursor),
+      }),
     );
-    return {
-      projectId,
-      total: page.total,
-      returned: page.items.length,
-      sources: page.items.map((source) => ({
-        ...source,
-        resource: `testmaster://sources/${source.id}`,
-      })),
-      next: this.pageLink(`testmaster://projects/${projectId}/sources`, {}, page.cursor),
-    };
   }
   /** Environments of a project with what their active revision targets; variables stay out. */
   private projectEnvironments(projectId: string, url: URL) {
     const app = this.options.application;
     const project = app.projects.get(projectId);
-    const page = this.listPage(
+    return this.listPage(
       app.environments.list(projectId),
       LIST_PAGE,
       `environments:${projectId}`,
-      url.searchParams.get("cursor"),
+      url,
+      (page) => ({
+        projectId,
+        total: page.total,
+        returned: page.items.length,
+        environments: page.items.map((environment) => ({
+          ...environment,
+          default: project.defaultEnvironmentId === environment.id,
+          activeRevision:
+            app.environments
+              .revisions(environment.id)
+              .find((revision) => revision.id === environment.activeRevisionId) ?? null,
+        })),
+        next: this.pageLink(`testmaster://projects/${projectId}/environments`, {}, page.cursor),
+      }),
     );
-    return {
-      projectId,
-      total: page.total,
-      returned: page.items.length,
-      environments: page.items.map((environment) => ({
-        ...environment,
-        default: project.defaultEnvironmentId === environment.id,
-        activeRevision:
-          app.environments
-            .revisions(environment.id)
-            .find((revision) => revision.id === environment.activeRevisionId) ?? null,
-      })),
-      next: this.pageLink(`testmaster://projects/${projectId}/environments`, {}, page.cursor),
-    };
   }
   /** A source with its active revision, without the chunks (the receipt of testmaster_add_source). */
   private sourceDocument(id: string) {
@@ -2534,22 +2664,22 @@ export class TestMasterMcp {
   private projectPlanBatches(projectId: string, url: URL) {
     const app = this.options.application;
     app.projects.get(projectId);
-    const page = this.listPage(
+    return this.listPage(
       app.proposals.list(projectId),
       LIST_PAGE,
       `plan-batches:${projectId}`,
-      url.searchParams.get("cursor"),
+      url,
+      (page) => ({
+        projectId,
+        total: page.total,
+        returned: page.items.length,
+        batches: page.items.map((batch) => ({
+          ...batch,
+          resource: `testmaster://plan-batches/${batch.id}`,
+        })),
+        next: this.pageLink(`testmaster://projects/${projectId}/plan-batches`, {}, page.cursor),
+      }),
     );
-    return {
-      projectId,
-      total: page.total,
-      returned: page.items.length,
-      batches: page.items.map((batch) => ({
-        ...batch,
-        resource: `testmaster://plan-batches/${batch.id}`,
-      })),
-      next: this.pageLink(`testmaster://projects/${projectId}/plan-batches`, {}, page.cursor),
-    };
   }
   /** A project's requirement snapshot or one requirement, each requirement with its derived status. */
   private requirementResource(id: string) {
@@ -2566,19 +2696,13 @@ export class TestMasterMcp {
   /** One proposal batch and a page of its proposals. */
   private planBatch(id: string, url: URL) {
     const { batch, proposals } = this.options.application.proposals.detail(id);
-    const page = this.listPage(
-      proposals,
-      PROPOSAL_PAGE,
-      `plan-batch:${id}`,
-      url.searchParams.get("cursor"),
-    );
-    return {
+    return this.listPage(proposals, PROPOSAL_PAGE, `plan-batch:${id}`, url, (page) => ({
       batch,
       total: page.total,
       returned: page.items.length,
       proposals: page.items,
       next: this.pageLink(`testmaster://plan-batches/${id}`, {}, page.cursor),
-    };
+    }));
   }
   /**
    * One page of a project's current features, ordered by stable key, optionally narrowed by key
@@ -2586,7 +2710,7 @@ export class TestMasterMcp {
    * explorations cite their ids) but are not listed: exploring them would spend budget on routes
    * the code no longer has.
    */
-  private features(projectId: string, match: string | undefined, cursor: string | undefined) {
+  private features(projectId: string, match: string | undefined, url: URL) {
     const app = this.options.application;
     app.projects.get(projectId);
     if (match !== undefined && match.length > 200)
@@ -2594,7 +2718,6 @@ export class TestMasterMcp {
         field: "match",
       });
     const binding = `features:${projectId}:${match ?? ""}`;
-    const offset = this.decodeCursor(cursor, binding);
     // LIKE with an escaped pattern is the substring test both SQL engines share.
     const filter = match === undefined ? "" : " AND lower(stable_key) LIKE ? ESCAPE '\\'";
     const pattern =
@@ -2608,23 +2731,19 @@ export class TestMasterMcp {
         ...pattern,
       )
       .filter((row) => !stale.has(row.id));
-    const total = listed.length;
-    if (offset > total) throw new ContractError("INVALID_ARGUMENT", "Invalid features cursor");
-    const rows = listed.slice(offset, offset + FEATURE_PAGE);
-    const end = offset + rows.length;
-    return {
+    return this.listPage(listed, FEATURE_PAGE, binding, url, (page) => ({
       projectId,
       ...(match === undefined ? {} : { match }),
-      total,
-      returned: rows.length,
-      features: rows.map((row) => ({ id: row.id, stableKey: row.stable_key })),
+      total: page.total,
+      returned: page.items.length,
+      features: page.items.map((row) => ({ id: row.id, stableKey: row.stable_key })),
       next:
-        end < total
-          ? `testmaster://projects/${projectId}/features?${
+        page.cursor === null
+          ? null
+          : `testmaster://projects/${projectId}/features?${
               match === undefined ? "" : `match=${encodeURIComponent(match)}&`
-            }cursor=${encodeURIComponent(this.cursor(end, binding))}`
-          : null,
-    };
+            }cursor=${encodeURIComponent(page.cursor)}`,
+    }));
   }
 }
 export function createMcpServer(options: McpOptions): TestMasterMcp {

@@ -1230,7 +1230,7 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
   async function evidence(step: PlanStep, phase: "before" | "after"): Promise<void> {
     if (page.isClosed()) return;
     try {
-      const png = await screenshotPage(page, runtime.secrets, Math.min(deadline(step), 5000));
+      const png = await screenshotPage(page, runtime.secrets, deadline(step));
       if (png.byteLength > ARTIFACT_BYTES)
         throw new RuntimeError("artifact_limit_exceeded", "Screenshot byte limit", "inconclusive");
       await runtime.artifact(

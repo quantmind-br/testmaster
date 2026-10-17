@@ -25,7 +25,7 @@ export const toolRules: Record<keyof typeof mcpTools, readonly string[]> = {
   testmaster_analyze_code: [
     "Modes: whole codebase (no `base`), `base`..`head`, or `base`..working tree (`dirty: true`, needs `base`).",
     "The receipt is bounded: counts, the first 50 skipped files, the first 100 features `{id, stableKey}` and the diff impact.",
-    "Current features by key: testmaster://projects/{projectId}/features?match= (paged 100 at a time).",
+    "Current features by key: testmaster://projects/{projectId}/features?match= (up to 100 a page within 32 KiB).",
     "Code analysis is not a plan source: plans come from approved requirements and API-spec sources. Documentation files (.md, .rst) are skipped here; add them with testmaster_add_source.",
   ],
   testmaster_normalize_requirements: [
@@ -43,7 +43,7 @@ export const toolRules: Record<keyof typeof mcpTools, readonly string[]> = {
   testmaster_generate_plan: [
     "Generates plan proposals (candidates, not tests) from the approved requirement snapshot; `sourceSnapshotId` is its fingerprint (testmaster://requirements/{projectId}).",
     "The model sees only secrets, auth profiles and API-spec sources that already exist: add them first.",
-    "The batch result carries no proposals: read them at testmaster://plan-batches/{batchId}, paged 10 at a time.",
+    "The batch result carries no proposals: read them at testmaster://plan-batches/{batchId}, up to 10 a page within 32 KiB. A proposal larger than that gets a page of its own whose first field, `textPages`, says how to read it as byte pages with `offset`.",
     "Requirements HTTP or browser tests cannot observe are declined and listed in `extensions['testmaster:unsupportedRequirements']`.",
     "A proposal that fails a semantic check is repaired up to twice; if any still fails the whole batch is refused unless `partialGeneration: true`.",
     "Next: testmaster_trial_plan to replay the proposals against an environment, then testmaster_edit_plan for a proposal whose trial failed on a wrong pointer or value, then testmaster_review_plan.",
