@@ -31,6 +31,12 @@ import {
 import { PolicyDenied } from "../egress/policy.js";
 import { EgressProxy } from "../egress/proxy.js";
 import { attemptEgressPolicy } from "./egress.js";
+import {
+  captureServerLog,
+  dockerServerLogs,
+  type ServerLogCapture,
+  type ServerLogReader,
+} from "./server-log.js";
 
 export interface SecretRelease {
   secretRef: string;
@@ -137,6 +143,14 @@ export interface AttemptInput {
    */
   onAuthState?: (storageState: string) => Promise<void>;
   resolveAction?: (stepId: string, observation: unknown) => Promise<PlanStep | null>;
+  /**
+   * The environment's opted-in server log: the lines written while the runner ran become
+   * `logs/server.log`, scrubbed with the attempt's secrets, `hostSecretValues` and the default
+   * patterns. Reading it can never change the attempt's outcome.
+   */
+  serverLog?: ServerLogCapture;
+  /** Secret values the host knows besides the attempt's own (scrubbed from host-read logs). */
+  hostSecretValues?: readonly string[];
 }
 export interface AttemptResult {
   outcome: "passed" | "failed" | "blocked" | "cancelled" | "inconclusive";
@@ -162,6 +176,7 @@ export class AttemptExecutor {
     private readonly evidence: EvidenceStore,
     private readonly docker: AttemptRuntimeExecutor = new DockerExecutor(),
     private readonly runtimeDir?: string,
+    private readonly serverLogs: ServerLogReader = dockerServerLogs,
   ) {}
   async execute(input: AttemptInput, signal?: AbortSignal): Promise<AttemptResult> {
     validate("NetworkPolicy", input.networkPolicy);
@@ -417,6 +432,7 @@ export class AttemptExecutor {
     let facts: InspectFacts | undefined;
     let logDropped = 0;
     let log = "";
+    let serverLogSince: Date | undefined;
     let enforcementReady = false;
     let cleanupFailure: AttemptResult["cleanupFailure"];
     try {
@@ -450,6 +466,7 @@ export class AttemptExecutor {
           { mode: 0o644 },
         );
       if (signal?.aborted) cancel();
+      serverLogSince = new Date();
       const execution = await this.docker.execute(
         {
           attemptId: input.attemptId,
@@ -605,6 +622,16 @@ export class AttemptExecutor {
       "application/x-ndjson",
       (await readFile(join(sockets, "egress.ndjson"), "utf8").catch(() => "")) + routeDenials,
     );
+    if (input.serverLog && serverLogSince) {
+      const text = await captureServerLog(
+        input.serverLog,
+        serverLogSince,
+        new Date(),
+        this.serverLogs,
+        input.hostSecretValues,
+      );
+      await artifact("logs/server.log", "server-log", "text/plain", text);
+    }
     const bundle = await staging.commit({
       redactionPolicyHash:
         input.redactionPolicyHash ??

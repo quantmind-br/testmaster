@@ -47,6 +47,17 @@ import {
   requirementReviewState,
   storedRequirementSnapshot,
 } from "./requirements.js";
+import {
+  errorsDuring,
+  isServerLogEvidence,
+  quotedErrors,
+  SERVER_LOG_PATH,
+  SERVER_LOG_READ_BYTES,
+  type ServerLogEvidence,
+  type ServerLogLine,
+  serverLogEvidence,
+  stepWindow,
+} from "./server-log-evidence.js";
 
 export interface AnalysisInput {
   model?: boolean;
@@ -811,6 +822,102 @@ function runnerProtocolFailure(
   return evidence.find((item): item is Evidence & { value: RunnerProtocolEvidence } =>
     runnerProtocolEvidence(item.value),
   );
+}
+
+type ServerLogItem = Evidence & { value: ServerLogEvidence };
+/** The attempt's server log, when the environment opted in and it was collected. */
+function serverLogItem(evidence: readonly Evidence[]): ServerLogItem | undefined {
+  return evidence.find((item): item is ServerLogItem => isServerLogEvidence(item.value));
+}
+/** The step whose request the server handled: an assertion's response step, else the step itself. */
+function servedStepId(item: Evidence): string {
+  const planStep = item.planStep;
+  return planStep?.kind === "assertion" && "responseStepId" in planStep.input
+    ? planStep.input.responseStepId
+    : item.step!.planStepId;
+}
+/** A required statusIn assertion that saw a 5xx while the server log recorded an error. */
+interface ServerFault {
+  item: Evidence;
+  http: Evidence | undefined;
+  log: ServerLogItem;
+  status: number;
+  expected: number[];
+  requestStepId: string;
+  /** Whether the lines are from the request step's window (else from the whole attempt). */
+  windowed: boolean;
+  lines: ServerLogLine[];
+}
+function serverFault(evidence: readonly Evidence[]): ServerFault | undefined {
+  const log = serverLogItem(evidence);
+  if (!log || log.value.unavailable) return undefined;
+  const events = evidence.map((item) => item.value);
+  for (const item of evidence) {
+    const { step, planStep } = item;
+    if (
+      step?.status !== "failed" ||
+      step.reasonCode !== "assertion_mismatch" ||
+      planStep?.kind !== "assertion" ||
+      planStep.required === false ||
+      planStep.expectation.predicate !== "statusIn" ||
+      !("responseStepId" in planStep.input)
+    )
+      continue;
+    const requestStepId = planStep.input.responseStepId;
+    const http = evidence.find(
+      (candidate) =>
+        httpStatusEvidence(candidate.value) && candidate.value.stepId === requestStepId,
+    );
+    const status = isHttpStatus(step.observed)
+      ? step.observed
+      : http && httpStatusEvidence(http.value)
+        ? http.value.status
+        : null;
+    if (status === null || status < 500 || planStep.expectation.values.includes(status)) continue;
+    const window = stepWindow(events, requestStepId);
+    const lines = errorsDuring(log.value, window);
+    if (lines.length)
+      return {
+        item,
+        http,
+        log,
+        status,
+        expected: planStep.expectation.values,
+        requestStepId,
+        windowed: window !== null,
+        lines,
+      };
+  }
+  return undefined;
+}
+/** What the server log recorded around the first failed step of a failed Run. */
+function serverLogFacts(
+  evidence: readonly Evidence[],
+  failed: boolean,
+  secrets: readonly string[],
+): { text: string; evidenceRefs: AnalysisEvidenceRef[] }[] {
+  const log = serverLogItem(evidence);
+  if (!failed || !log || log.value.unavailable || !log.value.errors.length) return [];
+  const step = evidence.find((item) => item.step?.status === "failed");
+  const stepId = step ? servedStepId(step) : null;
+  const window = stepId
+    ? stepWindow(
+        evidence.map((item) => item.value),
+        stepId,
+      )
+    : null;
+  const during = errorsDuring(log.value, window);
+  const total = log.value.errors.length + log.value.omittedErrors;
+  const source = `The server log of container ${log.value.container} (${SERVER_LOG_PATH})`;
+  const text = during.length
+    ? `${source} recorded ${during.length} error line${during.length === 1 ? "" : "s"} ${window ? `while step ${stepId} ran` : "during the attempt"}: ${quotedErrors(during)}.`
+    : `${source} recorded ${total} error line${total === 1 ? "" : "s"} during the attempt, none while step ${stepId} ran; first: ${quotedErrors(log.value.errors.slice(0, 1))}.`;
+  return [
+    {
+      text: scrubEvidenceText(text, secrets).text.slice(0, 1000),
+      evidenceRefs: [log.ref, ...(step ? [step.ref] : [])],
+    },
+  ];
 }
 
 /** A recorded runner or test-code refusal to judge a response with a cited source schema it cannot compile. */
@@ -2004,6 +2111,18 @@ export class AnalysisService {
             limitations.push(`Malformed runner protocol record ${entry.artifactId} was excluded.`);
           }
         }
+        if (entry.kind === "server-log" && entry.relativePath === SERVER_LOG_PATH) {
+          const log = await this.serverLog(run.id, bundle.manifest.attemptId, entry.sizeBytes);
+          if (log.unavailable)
+            limitations.push(
+              `The server log of container ${log.container} was unavailable: ${log.unavailable}.`,
+            );
+          else if (log.partial)
+            limitations.push(
+              `Only the last ${SERVER_LOG_READ_BYTES} bytes of the server log ${entry.artifactId} were read.`,
+            );
+          value = log;
+        }
         evidence.push({
           ref,
           value,
@@ -2032,6 +2151,27 @@ export class AnalysisService {
         ...new Set(governingPlan(this.ctx, String(revision.id))?.requirementRefs ?? []),
       ],
     };
+  }
+  /** The error lines of a stored server log, read from its end within one artifact page. */
+  private async serverLog(
+    runId: string,
+    attemptId: string,
+    sizeBytes: number,
+  ): Promise<ServerLogEvidence> {
+    const page = async (offset: number, maxBytes: number) =>
+      Buffer.from(
+        (await this.artifacts.read(runId, SERVER_LOG_PATH, { attemptId, offset, maxBytes })).bytes,
+      ).toString("utf8");
+    const partial = sizeBytes > SERVER_LOG_READ_BYTES;
+    const start = partial ? await page(0, 1024) : await page(0, Math.max(1, sizeBytes));
+    const newline = start.indexOf("\n");
+    const header = newline >= 0 ? start.slice(0, newline) : start;
+    const body = partial
+      ? await page(sizeBytes - SERVER_LOG_READ_BYTES, SERVER_LOG_READ_BYTES)
+      : newline >= 0
+        ? start.slice(newline + 1)
+        : "";
+    return serverLogEvidence(header, body, partial, environmentSecretValues());
   }
   /** Names of the auth profiles bound to the Run's environment revision; never their secrets. */
   private environmentAuthProfiles(run: Run): string[] {
@@ -2474,6 +2614,23 @@ export class AnalysisService {
         `Compare the response from ${stepReference(response)} with the approved schema and decide whether this is a contract revision or a regression.`,
       );
       healing.reason = "Changing the assertion would hide the observed contract divergence.";
+    } else if (failureKind === "product_bug" && serverFault(collected.evidence)) {
+      const fault = serverFault(collected.evidence)!;
+      conclusion = {
+        status: "cause_partially_supported",
+        text: scrubEvidenceText(
+          `The server failed while handling request step ${fault.requestStepId} (HTTP ${fault.status}) and its log recorded ${quotedErrors(fault.lines)}; the source-level root cause has not been determined.`,
+          secrets,
+        ).text.slice(0, 1000),
+      };
+      alternative(
+        "The request may send input the contract does not allow, which the server fails to reject cleanly.",
+        "test_fragility",
+      );
+      next(
+        `Read the error lines of ${SERVER_LOG_PATH} around request step ${fault.requestStepId}, fix the server-side failure they name and rerun the unchanged test.`,
+      );
+      healing.reason = "A test change would hide the observed server failure.";
     } else if (failureKind === "product_bug") {
       conclusion = {
         status: "cause_partially_supported",
@@ -2767,8 +2924,10 @@ export class AnalysisService {
         ).requirements,
         steps: planSteps(plan),
       })[0];
+      const fault = serverFault(evidence);
       let locatorSupport: AnalysisEvidenceRef[] = [];
       if (
+        !fault &&
         !security.length &&
         !environment.length &&
         !network.length &&
@@ -2893,6 +3052,14 @@ export class AnalysisService {
         hypothesis =
           "The target served a successful 2xx response outside the required approved status set; this is an observed product behavior mismatch, not a proven source-level root cause.";
         supports = [successfulStatusMismatch.ref];
+      } else if (fault) {
+        failureKind = "product_bug";
+        recommendedAction = "fix_product";
+        hypothesis = scrubEvidenceText(
+          `The target answered HTTP ${fault.status} to request step ${fault.requestStepId} where the step's assertion expects ${fault.expected.join(", ")}, and the server log of container ${fault.log.value.container} recorded an error ${fault.windowed ? "while that step ran" : "during the attempt"}: ${quotedErrors(fault.lines)}. The log names a server-side failure; it is not a proven source-level root cause.`,
+          secrets,
+        ).text.slice(0, 1000);
+        supports = [fault.item, fault.http, fault.log].flatMap((item) => (item ? [item.ref] : []));
       } else if (statusRejection) {
         diagnosedRejection = statusRejection;
         failureKind = statusRejection.meaning.failureKind;
@@ -2961,6 +3128,7 @@ export class AnalysisService {
           },
           ...artifactAvailabilityFacts(evidence),
           ...assertionMismatchFacts(evidence, secrets, run.outcome !== "passed"),
+          ...serverLogFacts(evidence, run.outcome !== "passed", secrets),
           ...denialFacts.facts,
           ...(protocolFailure
             ? [
@@ -3150,6 +3318,9 @@ export class AnalysisService {
             planStep && "responseStepId" in planStep.input ? planStep.input.responseStepId : null,
           jsonPointer:
             planStep && "jsonPointer" in planStep.input ? planStep.input.jsonPointer : null,
+          ...(planStep && "xmlPath" in planStep.input && planStep.input.xmlPath !== undefined
+            ? { xmlPath: planStep.input.xmlPath }
+            : {}),
           expected: boundedEvidence(excerptAsText(step.expected), secrets),
           observed: boundedEvidence(excerptAsText(step.observed), secrets),
           missingJsonPointer: step.status !== "passed" ? missingJsonPointer(step, secrets) : null,
@@ -3246,6 +3417,17 @@ export class AnalysisService {
             kind: "protocol",
             reasonCode: record.reasonCode,
             error: boundedEvidence(record.error, secrets),
+          });
+        } else if (isServerLogEvidence(record)) {
+          // Error lines only, already scrubbed and cut: the rest of the log never reaches the model.
+          Object.assign(entry, {
+            kind: "server-log",
+            container: boundedEvidence(record.container, secrets),
+            unavailable: record.unavailable,
+            errors: record.errors
+              .slice(0, 20)
+              .map((line) => boundedEvidence({ at: line.at, text: line.text }, secrets)),
+            omittedErrors: record.omittedErrors + Math.max(0, record.errors.length - 20),
           });
         } else if (terminalProcessEvidence(record)) {
           Object.assign(entry, {

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { once } from "node:events";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
@@ -517,4 +518,193 @@ it("a generated code revision's admission snapshot names the generating call and
   expect(snapshot.modelConfigHash).toMatch(/^[0-9a-f]{64}$/u);
   expect(snapshot.generationModel).toMatchObject({ id: call?.id });
   expect(snapshot.limitations).not.toContain("generation-model-config-hash-unavailable");
+});
+
+// ------------------------------------------------------------------ candidate repair
+
+const repairedCode = good.replace(
+  "toBe(200)",
+  "toBe(200); expect(await response.text()).toContain('ok')",
+);
+/** A generated candidate and a completed Run of it that ended `outcome`, with one recorded step. */
+async function candidateRun(
+  f: Awaited<ReturnType<typeof fixture>>,
+  outcome: "passed" | "failed",
+  phase: "completed" | "running" = "completed",
+  message = "expect(received).toBe(expected) Expected: 200 Received: 500",
+) {
+  const source = f.revisionOf();
+  const receipt = await f.app.codeGeneration.generate({
+    projectId: f.projectId,
+    revisionIds: [source],
+  });
+  const candidate = receipt.candidates[0]!;
+  const environment = f.app.environments.list(f.projectId)[0]!;
+  const run = f.app.runs.prepare({
+    testId: String(candidate.testId),
+    environmentId: String(environment.id),
+    revisionId: String(candidate.id),
+  });
+  Object.assign(run, {
+    phase,
+    status: phase === "completed" ? outcome : phase,
+    outcome: phase === "completed" ? outcome : null,
+    gate: phase === "completed" ? outcome : "pending",
+  });
+  const { context } = f.app;
+  context.entities.insert("Run", run);
+  const now = new Date().toISOString();
+  const jobId = `job_${randomUUID()}`;
+  const attemptId = `att_${randomUUID()}`;
+  context.database.run(
+    "INSERT INTO job_leases(workspace_id,id,created_at,queue,resource_id,available_at,data_json) VALUES(?,?,?,?,?,?,?)",
+    context.workspaceId,
+    jobId,
+    now,
+    "execution",
+    run.id,
+    now,
+    "{}",
+  );
+  context.database.run(
+    "INSERT INTO attempts(workspace_id,id,created_at,data_json,run_id,number,phase,outcome,job_id,fence,lease_owner) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+    context.workspaceId,
+    attemptId,
+    now,
+    "{}",
+    run.id,
+    1,
+    "completed",
+    outcome,
+    jobId,
+    1,
+    "test",
+  );
+  context.entities.insert("StepResult", {
+    id: `stp_${randomUUID()}`,
+    attemptId,
+    planStepId: "code-step-1",
+    title: "health answers 200",
+    index: 0,
+    status: outcome,
+    ...(outcome === "failed" ? { reasonCode: "assertion_mismatch" } : {}),
+    expected: 200,
+    observed: outcome === "failed" ? 500 : 200,
+    error: outcome === "failed" ? { code: "Error", message } : null,
+    durationMs: 1,
+    evidenceRefs: [],
+    workspaceId: context.workspaceId,
+  });
+  return { source, candidate, run };
+}
+const promptOf = (payload: Record<string, unknown> | undefined) =>
+  ((payload?.messages ?? []) as { content: string }[]).map((message) => message.content).join("\n");
+
+it("repairs a failed candidate from its files, its plan and the run's failed steps into a child candidate", async () => {
+  const f = await fixture();
+  process.env.TESTMASTER_REPAIR_TOKEN = "repair-secret-value-0042";
+  try {
+    const { source, candidate, run } = await candidateRun(
+      f,
+      "failed",
+      "completed",
+      "Expected: 200 Received: 500 while sending repair-secret-value-0042",
+    );
+    f.setOutput(generated(repairedCode));
+    const before = f.counts().completions;
+    const receipt = await f.app.codeGeneration.generate({ projectId: f.projectId, runId: run.id });
+    expect(f.counts().completions).toBe(before + 1);
+    const prompt = promptOf(f.payloads.at(-1));
+    // The candidate's code, the failed step and the plan it was generated from reach the model.
+    expect(prompt).toContain("const response = await request.get('/health')");
+    expect(prompt).toContain("health answers 200");
+    expect(prompt).toContain("Expected: 200 Received: 500");
+    expect(prompt).toContain(
+      JSON.stringify((f.app.revisions.get(source).plan as { steps: unknown[] }).steps[0]).slice(
+        0,
+        40,
+      ),
+    );
+    expect(prompt).toContain("never weaken, loosen or drop an assertion");
+    // Secret values in the recorded messages are masked before the call.
+    expect(prompt).not.toContain("repair-secret-value-0042");
+    expect(receipt).toMatchObject({ requested: 1, validationErrors: [] });
+    const repaired = receipt.candidates[0]!;
+    expect(repaired).toMatchObject({
+      testId: candidate.testId,
+      parentId: candidate.id,
+      origin: "generated",
+      plan: null,
+      extensions: expect.objectContaining({ "testmaster:repairedFromRunId": run.id }),
+    });
+    expect(
+      (await f.app.codeImport.readBundle(String(repaired.id))).bundle.files["generated.spec.ts"],
+    ).toBe(repairedCode);
+  } finally {
+    delete process.env.TESTMASTER_REPAIR_TOKEN;
+  }
+});
+
+it("refuses a repair before any model call for a passed or unfinished run, a plan revision and a mixed selection", async () => {
+  const f = await fixture();
+  const passed = await candidateRun(f, "passed");
+  const running = await candidateRun(f, "failed", "running");
+  const environment = f.app.environments.list(f.projectId)[0]!;
+  const planRun = f.app.runs.prepare({
+    testId: String(f.app.revisions.get(passed.source).testId),
+    environmentId: String(environment.id),
+    revisionId: passed.source,
+  });
+  Object.assign(planRun, {
+    phase: "completed",
+    status: "failed",
+    outcome: "failed",
+    gate: "failed",
+  });
+  f.app.context.entities.insert("Run", planRun);
+  const before = f.counts().completions;
+  const revisions = f.revisionCount();
+  const refused = (runId: string) =>
+    f.app.codeGeneration.generate({ projectId: f.projectId, runId });
+  await expect(refused(passed.run.id)).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+    details: { reasonCode: "run_not_failed" },
+  });
+  await expect(refused(running.run.id)).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+    details: { reasonCode: "run_not_completed" },
+  });
+  await expect(refused(planRun.id)).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+    details: { reasonCode: "plan_revision" },
+    message: expect.stringContaining("testmaster_propose_healing"),
+  });
+  await expect(
+    f.app.codeGeneration.generate({
+      projectId: f.projectId,
+      runId: passed.run.id,
+      revisionIds: [passed.source],
+    }),
+  ).rejects.toMatchObject({ code: "INVALID_ARGUMENT", message: expect.stringContaining("runId") });
+  expect(f.counts().completions).toBe(before);
+  expect(f.revisionCount()).toBe(revisions);
+});
+
+it("the importer still refuses forbidden code in a repair", async () => {
+  const f = await fixture();
+  const { run } = await candidateRun(f, "failed");
+  const revisions = f.revisionCount();
+  f.setOutput(generated(hostAccess));
+  await expect(
+    f.app.codeGeneration.generate({ projectId: f.projectId, runId: run.id }),
+  ).rejects.toMatchObject({
+    code: "INVALID_ARGUMENT",
+    details: {
+      reasonCode: "generated_code_refused",
+      validationErrors: [
+        { message: 'Runtime code, shell and host access are forbidden: "process" at line 2' },
+      ],
+    },
+  });
+  expect(f.revisionCount()).toBe(revisions);
 });

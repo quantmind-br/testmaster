@@ -19,6 +19,7 @@ import {
   type AttemptObservation,
   canonicalJson,
   canRetry,
+  environmentSecretValues,
   evaluateGate,
   reduceOutcome,
   semanticHash,
@@ -826,6 +827,15 @@ export class WorkerService {
             baseUrl: String(cell.baseUrl),
           },
           secretRefs: releases,
+          ...(env.serverLog
+            ? {
+                serverLog: {
+                  ...(env.serverLog as { kind: "docker"; container: string }),
+                  maxBytes: limits.logBytes ?? defaults.logBytes,
+                },
+                hostSecretValues: environmentSecretValues(),
+              }
+            : {}),
           runnerInput: {
             ...(agent ? { agent: agent.runnerInput } : {}),
             ...(imported

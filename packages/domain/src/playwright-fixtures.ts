@@ -1,3 +1,4 @@
+import { xmlPathSource } from "@testmaster/contracts";
 import { sourceSchemaValidatorSource } from "./source-schema-validator.js";
 
 /**
@@ -10,6 +11,9 @@ import { sourceSchemaValidatorSource } from "./source-schema-validator.js";
  * reading its values. `sourceSchemas.violations(sourceRevisionId, pointer, value)` checks a value
  * against a source schema frozen into the test (`schemas.json` beside this module) exactly as the
  * `jsonSchema` predicate of a plan does.
+ * `xml.select(body, path)` evaluates the `xmlPath` of a plan's response check on an XML body text
+ * with the runner's own evaluator and returns `{ count, text }` (text: the string value of the
+ * first selected node, null when none); it throws when the body is not well-formed XML.
  */
 export interface PlaywrightFixturesOptions {
   /** Module specifier of the real `@playwright/test`, resolved by the generated module itself. */
@@ -55,6 +59,12 @@ const secrets = Object.freeze({
   },
 });
 ${sourceSchemaValidatorSource()}
+${xmlPathSource()}
+const xml = Object.freeze({
+  select(body, path) {
+    return selectXmlPath(String(body), path);
+  },
+});
 const VERBS = ["get", "post", "put", "patch", "delete", "head", "fetch"];
 function withProfileHeaders(context, session, baseURL) {
   if (Object.keys(session.headers).length === 0) return context;
@@ -105,6 +115,9 @@ const extended = base.extend({
   },
   sourceSchemas: async ({}, use) => {
     await use(sourceSchemas);
+  },
+  xml: async ({}, use) => {
+    await use(xml);
   },
 });
 for (const key of Reflect.ownKeys(base)) {

@@ -45,6 +45,7 @@ export * from "./onboarding.js";
 export * from "./operations.js";
 export * from "./operations-controllers.js";
 export * from "./operations-state.js";
+export * from "./plan-trial.js";
 export * from "./provenance.js";
 export * from "./quarantine.js";
 export * from "./release.js";

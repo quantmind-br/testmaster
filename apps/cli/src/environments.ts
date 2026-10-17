@@ -19,6 +19,12 @@ function environmentPatch(opts: Options) {
   const timezone = string(opts, "timezone");
   const authRefs = strings(opts, "authRef");
   const additionalOrigins = strings(opts, "additionalOrigin");
+  const serverLogContainer = string(opts, "serverLogContainer");
+  if (opts.clearServerLog === true && serverLogContainer)
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      "--clear-server-log cannot be combined with --server-log-container",
+    );
   if (profile && !["public", "private", "local-loopback"].includes(profile))
     throw new ContractError("INVALID_ARGUMENT", "Invalid network profile");
   if (opts.clearAdditionalOrigins === true && additionalOrigins.length)
@@ -39,6 +45,11 @@ function environmentPatch(opts: Options) {
     ...(locale ? { locale } : {}),
     ...(timezone ? { timezone } : {}),
     ...(typeof opts.production === "boolean" ? { production: opts.production } : {}),
+    ...(serverLogContainer
+      ? { serverLog: { kind: "docker" as const, container: serverLogContainer } }
+      : opts.clearServerLog === true
+        ? { serverLog: null }
+        : {}),
   };
 }
 function environmentOptions(command: Command): Command {
@@ -56,6 +67,11 @@ function environmentOptions(command: Command): Command {
       [],
     )
     .option("--clear-additional-origins", "Remove every additional origin")
+    .option(
+      "--server-log-container <name>",
+      "Docker container of the application server: the log lines it writes during each attempt become the evidence logs/server.log (opt-in)",
+    )
+    .option("--clear-server-log", "Stop reading the server log")
     .option("--production");
 }
 export function environmentCommands(program: Command, runtime: Runtime): void {

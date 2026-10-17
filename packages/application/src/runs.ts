@@ -41,6 +41,7 @@ import { withUsedEnvironment } from "./run-config.js";
 import { runtimeIdentity } from "./runtime-identity.js";
 import { type EvidenceLimits, runEvidenceBytes } from "./storage-admission.js";
 import { clockDomain, timingBoundary } from "./timing.js";
+import { isTrialTest } from "./trial-tests.js";
 
 export interface BatchProvenance {
   suiteId: string | null;
@@ -274,6 +275,7 @@ export class RunsService {
     batchId: string | null,
     authority: (projectId?: string) => void,
     consumeApproval = true,
+    trial = false,
   ): EntityDocument {
     validate("RunRequest", request);
     authority();
@@ -281,7 +283,14 @@ export class RunsService {
       throw new ContractError("INVALID_ARGUMENT", "Invalid execution mode");
     const test = requireEntity(this.ctx, "TestCase", request.testId);
     authority(String(test.projectId));
-    if (test.archivedAt) throw new ContractError("PRECONDITION_FAILED", "Test is archived");
+    // A plan trial's test is archived from birth, so only a trial admission ever runs it.
+    if (trial !== isTrialTest(test))
+      throw new ContractError(
+        "PRECONDITION_FAILED",
+        trial ? "Only a plan trial test runs as a trial" : "A plan trial test is not runnable",
+      );
+    if (test.archivedAt && !trial)
+      throw new ContractError("PRECONDITION_FAILED", "Test is archived");
     const revision = requireEntity(
       this.ctx,
       "TestRevision",
@@ -435,7 +444,7 @@ export class RunsService {
       phase: "queued",
       status: "queued",
       outcome: null,
-      origin: request.origin ?? "cli",
+      origin: trial ? "trial" : (request.origin ?? "cli"),
       gatePolicy: {
         cleanupRequired: false,
         requiredEvidenceComplete: true,
@@ -1009,6 +1018,40 @@ export class RunsService {
       );
       return receipt;
     });
+  }
+  /**
+   * Admits a replay of a plan trial's hidden revision (origin `trial`, healing off), with the same
+   * preflight, secret-origin checks and approvals as every run, and no idempotency record: each
+   * trial is a new run. The caller executes it when no worker will claim it.
+   */
+  async admitTrial(
+    request: Omit<RunRequest, "origin" | "mode" | "healingPolicy">,
+  ): Promise<OwnedReceipt> {
+    this.ctx.authorize("X");
+    let securityFailure: ContractError | undefined;
+    try {
+      await this.host.preflight(
+        false,
+        String(this.host.config.effectiveConfig.config.execution?.executor ?? "docker"),
+        runEvidenceBytes(this.limitsFor(request.limits)),
+      );
+    } catch (error) {
+      if (
+        !(error instanceof ContractError) ||
+        error.details.reasonCode !== "security_precondition_failed"
+      )
+        throw error;
+      securityFailure = error;
+    }
+    const full: RunRequest = { ...request, mode: "replay", healingPolicy: "off" };
+    const authority = (projectId?: string) => this.ctx.authorize("X", projectId);
+    return this.ctx.database.withTx(() =>
+      this.insert(
+        this.prepareAuthorized(full, null, authority, true, true),
+        `trial:${randomUUID()}`,
+        securityFailure,
+      ),
+    );
   }
   async admit(request: RunRequest, options: AdmissionOptions = {}): Promise<OwnedReceipt> {
     this.ctx.authorize("X");

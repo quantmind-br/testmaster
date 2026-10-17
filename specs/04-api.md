@@ -50,7 +50,7 @@ Não retry de 401/403, validation, policy, crédito/orçamento esgotado, produce
 | GET/PATCH `/projects/{id}` | metadata/defaultEnvironment | projects:R/W | M1 |
 | POST `/projects/{id}/archive` | impedir novos jobs, preservar histórico | projects:W | M1 |
 | POST `/projects/{id}/purge` | confirmation token, deletion job e tombstone | projects:A | M4 |
-| GET/POST `/projects/{id}/environments` | name/baseUrl/networkProfile/authRefs/additionalOrigins | env:R/W | M1 |
+| GET/POST `/projects/{id}/environments` | name/baseUrl/networkProfile/authRefs/additionalOrigins/serverLog | env:R/W | M1 |
 | GET/PATCH/DELETE `/environments/{id}` | nova EnvironmentRevision; delete=archive | env:R/W | M1 |
 | POST `/projects/{id}/default-environment` | environmentId, If-Match project | env:W | M1 |
 | GET/POST `/secrets` | refs metadata; create value em corpo TLS, não response | secrets:R/W | M1 |

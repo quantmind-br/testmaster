@@ -1,5 +1,5 @@
 import { type Static, type TSchema, Type } from "@sinclair/typebox";
-import { entities } from "../entities.js";
+import { entities, ServerLogSource } from "../entities.js";
 import { Description, Enum, id, Name, Obj, Timestamp, Version } from "../primitives.js";
 
 const nullable = <T extends TSchema>(schema: T) => Type.Union([schema, Type.Null()]);
@@ -49,6 +49,8 @@ export const settingsContracts = {
     locale: Name,
     timezone: Name,
     production: Type.Boolean(),
+    /** The opted-in server log source; null when the environment reads none. */
+    serverLog: Type.Union([ServerLogSource, Type.Null()]),
   }),
 };
 export type SecretRotationInput = Static<typeof settingsContracts.SecretRotationInput>;

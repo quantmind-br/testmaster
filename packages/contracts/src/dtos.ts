@@ -1,5 +1,5 @@
 import type { Static } from "@sinclair/typebox";
-import { entities } from "./entities.js";
+import { entities, type ServerLogSource } from "./entities.js";
 export const {
   Workspace,
   Principal,

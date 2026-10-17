@@ -248,6 +248,7 @@ testmaster requirement approve <requirement-id> --expected-version <n>   # never
 testmaster requirement reject <requirement-id> --reason "Out of scope: CLI behavior" --expected-version <n>   # final; never planned
 testmaster plan generate --type frontend --requirement <requirement-id>
 testmaster plan get "$BATCH_ID"
+testmaster plan trial "$BATCH_ID" --env staging              # replay the proposals before review, no model call
 testmaster plan accept "$BATCH_ID" --only <proposal-a>,<proposal-b> --expected-version <n>
 testmaster test run "$TEST_ID" --mode agent --wait         # resolves flagged steps into typed actions
 testmaster test run "$TEST_ID" --revision "$CANDIDATE" --wait   # deterministic replay of the candidate
@@ -267,6 +268,15 @@ candidate from the active revision, so save a corrected revision and replay it
 (`test revision create`, `test run --revision`), or promote that revision and heal a failed Run of
 the active one. When the model finds no safe test-only repair it prints
 `Healing abstained (...)` and exits 0: that is a normal result, not a failure.
+
+`plan trial` replays each still-proposed plan of the batch against the environment exactly like a replay run,
+before anyone accepts it and without calling a model. A wrong JSON pointer or value then shows as a failed step with
+its expected and observed values (`check-total failed assertion_mismatch: expected 4, observed null - ... missing JSON
+pointer: /results/0/value`), so you fix the proposal with `plan edit` and try again, instead of finding a false failure
+after acceptance. A failure the requirement predicts is a product defect: keep that plan. Trial runs belong to a
+hidden test per proposal that no listing, suite, selection, coverage or feature map shows and that `test run` cannot
+run; accepting the proposal creates the real test. MCP: `testmaster_trial_plan {batchId, environmentId,
+proposalIds?}`.
 
 Exact flags: `testmaster <group> <command> --help`.
 
@@ -322,7 +332,7 @@ Keep the origin out of the pattern so the plan runs against every environment. B
 
 `textEquals` and `textContains` with `responseStepId` (and no `jsonPointer`) read the whole response body as UTF-8
 text, on an HTTP plan or a browser plan's request step. Use them for answers that are not JSON: a health check that
-returns `OK`, a `robots.txt` line, an RSS or OpenSearch XML document, a CSV header row:
+returns `OK`, a `robots.txt` line, a CSV header row:
 
 ```json
 {"id": "csv-header", "kind": "assertion", "operation": "assert", "description": "CSV starts with its header row",
@@ -332,6 +342,27 @@ returns `OK`, a `robots.txt` line, an RSS or OpenSearch XML document, a CSV head
 
 A body that is not valid UTF-8 fails the check. A value inside a JSON body stays `jsonEquals` with a `jsonPointer`. A
 response check does not observe the page, so a browser plan still needs a locator check of the rendered result.
+
+### Nodes of an XML response
+
+An XML answer (RSS, Atom, OpenSearch, a SOAP or sitemap document) is checked node by node with `input.xmlPath`
+instead of `jsonPointer`. The path is absolute: element names separated by `/` (a child) or `//` (any descendant),
+`*` for any element, `[n]` for the n-th matching sibling, and an optional last step `@name` or `@*` for attributes.
+Names match by local name, so `/rss/channel/totalResults` and `/rss/channel/os:totalResults` select the same node
+whatever namespace the document declares.
+
+```json
+{"id": "four-items", "kind": "assertion", "operation": "assert", "description": "The feed lists four results",
+ "input": {"responseStepId": "search-rss", "xmlPath": "/rss/channel/item"},
+ "expectation": {"predicate": "countEquals", "value": 4}}
+```
+
+`countEquals`, `countAtLeast` and `countAtMost` count the selected nodes; `textEquals` and `textContains` compare the
+text of the first one (all its descendant text, entities decoded), so `"/OpenSearchDescription/ShortName"` with
+`textEquals "SearXNG"` checks the engine name. A path that selects nothing fails the check, and so does a body that is
+not well-formed XML. A DOCTYPE with an internal subset is refused and entities are never expanded. Code generated or
+imported for such a test reads the body with the `xml` fixture: `xml.select(await response.text(), path)` returns the
+same `{count, text}`.
 
 ### `jsonSchema` pointers
 
@@ -418,6 +449,26 @@ client-supplied forwarding headers, and records only their names (`removedHeader
 sees it from a test; sign in through an auth profile instead. Plan validation refuses a request header with one of
 these names, and the HTTP runner refuses an auth-profile header with one when it sends the request.
 
+### Server log
+
+A 500 says only that the server failed; the reason is in the application's own log. When the application runs in a
+docker container on the same host, an environment can opt in to reading that log:
+
+```bash
+testmaster env update "$ENV_ID" --expected-version 3 --server-log-container searxng-tm-app
+testmaster env update "$ENV_ID" --expected-version 4 --clear-server-log
+```
+
+Each attempt then stores the lines the container wrote while the runner ran (`docker logs --since/--until`, both
+streams in timestamp order, at most `limits.logBytes`, the newest kept) as the evidence `logs/server.log`, with secrets
+masked like every other artifact: the attempt's secrets, the host's secret-named environment variables and the
+default patterns. TestMaster never writes to the container and passes the name only after checking docker's name
+grammar. A log that cannot be read (no such container, no docker) is stored as one `testmaster: server log
+unavailable` line with the reason and never changes the outcome. `testmaster run analyze` cites the error lines
+written while the failed step ran (tracebacks, `…Error:`/`…Exception:` lines, `ERROR`, `CRITICAL`, `FATAL`, `panic:`);
+a required `statusIn` assertion that saw a 5xx while the log recorded such a line becomes a `product_bug` with the
+line in the hypothesis. MCP: `testmaster_update_environment {serverLog: {kind: "docker", container}}`, `null` stops it.
+
 ## Selective reruns and read-only preview
 
 ```bash
@@ -466,10 +517,23 @@ says `active: false` and gives the exact `testmaster test revision promote <revi
 command (stderr in text mode). `--parent` (only with `--test`) names the revision the candidate descends from;
 it defaults to the test's active revision, so a fix of a generated or plan revision keeps its lineage, and a
 revision of another test is refused. `--name` belongs to a new test and is refused together with `--test`.
+Over MCP, `testmaster_import_code` does the same with `{projectId | testId, path, format, name?, parentRevisionId?}`:
+the path must be inside the project root, a refusal of the code is `INVALID_ARGUMENT` naming the rule and the line,
+and a candidate's result lists the `testmaster_run_tests` (with `revisionId`) and `testmaster_promote_revision`
+calls.
+
+Code generation runs over MCP only. `testmaster_generate_tests` writes Playwright candidates from accepted proposals
+(`proposalIds`) or plan revisions (`revisionIds`). When a candidate fails its run, pass that run alone
+(`{runId}`) to repair it instead of regenerating from the plan, which tends to repeat the same mistake. The model gets
+the candidate's files, the plan it was generated from and the run's failed steps (error, expected, observed, with
+secret values masked), and must keep every assertion of the plan; when the failure is the product's, the assertion
+stays. The importer checks the answer like any generated code, and the repaired candidate is a child of the failed one
+whose receipt entry carries `repairedFromRunId`. A passed or unfinished run, or a run of a plan revision (heal those
+with `testmaster_propose_healing`), is refused before any model call.
 
 An exported imported or generated Playwright project runs with `npm ci && npx playwright install chromium &&
 BASE_URL=<target> npm test`: its `testmaster-fixtures/` package keeps the authored `@playwright/test` import
-working and provides the `secrets`, `profileRequest` and `profilePage` fixtures. `secrets.get("NAME")` reads
+working and provides the `secrets`, `profileRequest`, `profilePage`, `sourceSchemas` and `xml` fixtures. `secrets.get("NAME")` reads
 the environment variable `SECRET_NAME`. The auth profile session of `profileRequest`/`profilePage` comes from
 `TESTMASTER_PROFILE_STORAGE_STATE` (path of a Playwright storage-state file) and, for header credentials,
 `TESTMASTER_PROFILE_HEADERS` (a JSON object such as `{"x-api-key":"..."}`); it is sent only to the `BASE_URL`

@@ -1,0 +1,53 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "path",
+    "format"
+  ],
+  "properties": {
+    "path": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string",
+      "description": "Entry file (.ts Playwright or .py pytest) inside an approved root and the project root; its relative imports are bundled"
+    },
+    "format": {
+      "anyOf": [
+        {
+          "const": "playwright",
+          "type": "string"
+        },
+        {
+          "const": "pytest",
+          "type": "string"
+        }
+      ],
+      "description": "Framework of the code"
+    },
+    "projectId": {
+      "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string",
+      "description": "Create a new test in this project; give projectId or testId"
+    },
+    "testId": {
+      "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string",
+      "description": "Add the code as a candidate revision of this existing test instead; it is not active until testmaster_promote_revision"
+    },
+    "parentRevisionId": {
+      "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string",
+      "description": "Parent of the candidate; only with testId (default: the test's active revision)"
+    },
+    "name": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string",
+      "description": "Name of a new test; default: the first test title in the code"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:Mcp_testmaster_import_code",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

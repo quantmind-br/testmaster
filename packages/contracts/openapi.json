@@ -21379,6 +21379,11 @@
                                       "jsonPointer": {
                                         "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                                         "type": "string"
+                                      },
+                                      "xmlPath": {
+                                        "minLength": 1,
+                                        "maxLength": 512,
+                                        "type": "string"
                                       }
                                     }
                                   },
@@ -29575,6 +29580,11 @@
                           },
                           "jsonPointer": {
                             "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                            "type": "string"
+                          },
+                          "xmlPath": {
+                            "minLength": 1,
+                            "maxLength": 512,
                             "type": "string"
                           }
                         }
@@ -42010,6 +42020,11 @@
                                 "jsonPointer": {
                                   "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                                   "type": "string"
+                                },
+                                "xmlPath": {
+                                  "minLength": 1,
+                                  "maxLength": 512,
+                                  "type": "string"
                                 }
                               }
                             },
@@ -49805,6 +49820,11 @@
                           },
                           "jsonPointer": {
                             "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                            "type": "string"
+                          },
+                          "xmlPath": {
+                            "minLength": 1,
+                            "maxLength": 512,
                             "type": "string"
                           }
                         }
@@ -65689,6 +65709,32 @@
           },
           "production": {
             "type": "boolean"
+          },
+          "serverLog": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "kind",
+                  "container"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "docker",
+                    "type": "string"
+                  },
+                  "container": {
+                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{1,127}$",
+                    "description": "Docker container name or id (docker's name grammar)",
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "$defs": {}
@@ -65740,6 +65786,32 @@
           },
           "production": {
             "type": "boolean"
+          },
+          "serverLog": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "kind",
+                  "container"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "docker",
+                    "type": "string"
+                  },
+                  "container": {
+                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{1,127}$",
+                    "description": "Docker container name or id (docker's name grammar)",
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "$defs": {}
@@ -65967,6 +66039,25 @@
           "production": {
             "type": "boolean"
           },
+          "serverLog": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "kind",
+              "container"
+            ],
+            "properties": {
+              "kind": {
+                "const": "docker",
+                "type": "string"
+              },
+              "container": {
+                "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{1,127}$",
+                "description": "Docker container name or id (docker's name grammar)",
+                "type": "string"
+              }
+            }
+          },
           "extensions": {
             "type": "object",
             "patternProperties": {
@@ -66048,7 +66139,8 @@
           "authProfileRefs",
           "locale",
           "timezone",
-          "production"
+          "production",
+          "serverLog"
         ],
         "properties": {
           "id": {
@@ -66111,6 +66203,32 @@
           },
           "production": {
             "type": "boolean"
+          },
+          "serverLog": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "kind",
+                  "container"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "docker",
+                    "type": "string"
+                  },
+                  "container": {
+                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{1,127}$",
+                    "description": "Docker container name or id (docker's name grammar)",
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "$defs": {}
@@ -74051,6 +74169,11 @@
                             },
                             "jsonPointer": {
                               "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                              "type": "string"
+                            },
+                            "xmlPath": {
+                              "minLength": 1,
+                              "maxLength": 512,
                               "type": "string"
                             }
                           }
@@ -84187,6 +84310,11 @@
                           "jsonPointer": {
                             "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                             "type": "string"
+                          },
+                          "xmlPath": {
+                            "minLength": 1,
+                            "maxLength": 512,
+                            "type": "string"
                           }
                         }
                       },
@@ -87554,6 +87682,10 @@
                 },
                 "proposalId": {
                   "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "repairedFromRunId": {
+                  "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
                   "type": "string"
                 },
                 "code": {
@@ -102687,6 +102819,11 @@
                                     "jsonPointer": {
                                       "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                                       "type": "string"
+                                    },
+                                    "xmlPath": {
+                                      "minLength": 1,
+                                      "maxLength": 512,
+                                      "type": "string"
                                     }
                                   }
                                 },
@@ -113143,6 +113280,11 @@
                           "jsonPointer": {
                             "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                             "type": "string"
+                          },
+                          "xmlPath": {
+                            "minLength": 1,
+                            "maxLength": 512,
+                            "type": "string"
                           }
                         }
                       },
@@ -114653,7 +114795,8 @@
               "authProfileRefs",
               "locale",
               "timezone",
-              "production"
+              "production",
+              "serverLog"
             ],
             "properties": {
               "id": {
@@ -114716,6 +114859,32 @@
               },
               "production": {
                 "type": "boolean"
+              },
+              "serverLog": {
+                "anyOf": [
+                  {
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "kind",
+                      "container"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "const": "docker",
+                        "type": "string"
+                      },
+                      "container": {
+                        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{1,127}$",
+                        "description": "Docker container name or id (docker's name grammar)",
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             }
           }
@@ -122443,6 +122612,11 @@
                                         },
                                         "jsonPointer": {
                                           "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                                          "type": "string"
+                                        },
+                                        "xmlPath": {
+                                          "minLength": 1,
+                                          "maxLength": 512,
                                           "type": "string"
                                         }
                                       }
@@ -132843,6 +133017,11 @@
                           "jsonPointer": {
                             "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                             "type": "string"
+                          },
+                          "xmlPath": {
+                            "minLength": 1,
+                            "maxLength": 512,
+                            "type": "string"
                           }
                         }
                       },
@@ -135175,6 +135354,11 @@
             },
             "description": "Existing revisions to regenerate code for; give proposalIds or revisionIds (at least one), all from one project"
           },
+          "runId": {
+            "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string",
+            "description": "A completed, failed run of a code candidate: repairs that candidate from the run's failed steps. Exclusive with proposalIds and revisionIds"
+          },
           "budget": {
             "additionalProperties": false,
             "description": "Optional model-call budget",
@@ -135275,6 +135459,57 @@
             "maximum": 6000000,
             "type": "integer",
             "description": "Wait deadline in ms; the run continues after it"
+          }
+        },
+        "$defs": {}
+      },
+      "Mcp_testmaster_import_code": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "path",
+          "format"
+        ],
+        "properties": {
+          "path": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string",
+            "description": "Entry file (.ts Playwright or .py pytest) inside an approved root and the project root; its relative imports are bundled"
+          },
+          "format": {
+            "anyOf": [
+              {
+                "const": "playwright",
+                "type": "string"
+              },
+              {
+                "const": "pytest",
+                "type": "string"
+              }
+            ],
+            "description": "Framework of the code"
+          },
+          "projectId": {
+            "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string",
+            "description": "Create a new test in this project; give projectId or testId"
+          },
+          "testId": {
+            "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string",
+            "description": "Add the code as a candidate revision of this existing test instead; it is not active until testmaster_promote_revision"
+          },
+          "parentRevisionId": {
+            "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string",
+            "description": "Parent of the candidate; only with testId (default: the test's active revision)"
+          },
+          "name": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string",
+            "description": "Name of a new test; default: the first test title in the code"
           }
         },
         "$defs": {}
@@ -136648,6 +136883,37 @@
         },
         "$defs": {}
       },
+      "Mcp_testmaster_trial_plan": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "batchId",
+          "environmentId"
+        ],
+        "properties": {
+          "batchId": {
+            "pattern": "^pbt_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string",
+            "description": "Proposal batch id"
+          },
+          "environmentId": {
+            "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string",
+            "description": "Environment to replay the proposals' plans against"
+          },
+          "proposalIds": {
+            "minItems": 1,
+            "uniqueItems": true,
+            "type": "array",
+            "items": {
+              "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "description": "Proposals of the batch to try; absent: every proposal of the batch"
+          }
+        },
+        "$defs": {}
+      },
       "Mcp_testmaster_update_environment": {
         "additionalProperties": false,
         "type": "object",
@@ -136728,6 +136994,33 @@
               "type": "string"
             },
             "description": "Auth profiles bound to the environment; replaces the list. Each must be bound to the target origin"
+          },
+          "serverLog": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "kind",
+                  "container"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "docker",
+                    "type": "string"
+                  },
+                  "container": {
+                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{1,127}$",
+                    "description": "Docker container name or id (docker's name grammar)",
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opt-in docker container of the application server; its log lines during each attempt become logs/server.log. null stops reading it"
           }
         },
         "$defs": {}
@@ -142098,6 +142391,585 @@
           }
         },
         "$defs": {}
+      },
+      "PlanTrialReceipt": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "batchId",
+          "batchVersion",
+          "environmentId",
+          "trials"
+        ],
+        "properties": {
+          "batchId": {
+            "pattern": "^pbt_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "batchVersion": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "environmentId": {
+            "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "trials": {
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "proposalId",
+                "proposalVersion",
+                "planName",
+                "tried",
+                "failedSteps"
+              ],
+              "properties": {
+                "proposalId": {
+                  "pattern": "^pro_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "proposalVersion": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "planName": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "tried": {
+                  "type": "boolean"
+                },
+                "reason": {
+                  "maxLength": 8000,
+                  "type": "string"
+                },
+                "runId": {
+                  "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "outcome": {
+                  "anyOf": [
+                    {
+                      "anyOf": [
+                        {
+                          "const": "passed",
+                          "type": "string"
+                        },
+                        {
+                          "const": "failed",
+                          "type": "string"
+                        },
+                        {
+                          "const": "blocked",
+                          "type": "string"
+                        },
+                        {
+                          "const": "cancelled",
+                          "type": "string"
+                        },
+                        {
+                          "const": "inconclusive",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "reasonCode": {
+                  "anyOf": [
+                    {
+                      "const": "assertions_satisfied",
+                      "type": "string"
+                    },
+                    {
+                      "const": "assertion_mismatch",
+                      "type": "string"
+                    },
+                    {
+                      "const": "assertion_timeout",
+                      "type": "string"
+                    },
+                    {
+                      "const": "missing_secret",
+                      "type": "string"
+                    },
+                    {
+                      "const": "actor_revoked",
+                      "type": "string"
+                    },
+                    {
+                      "const": "credential_revoked",
+                      "type": "string"
+                    },
+                    {
+                      "const": "manual_auth_required",
+                      "type": "string"
+                    },
+                    {
+                      "const": "auth_checkpoint_expired",
+                      "type": "string"
+                    },
+                    {
+                      "const": "upstream_failed",
+                      "type": "string"
+                    },
+                    {
+                      "const": "dependency_cycle",
+                      "type": "string"
+                    },
+                    {
+                      "const": "ambiguous_producer",
+                      "type": "string"
+                    },
+                    {
+                      "const": "unsupported_capability",
+                      "type": "string"
+                    },
+                    {
+                      "const": "security_precondition_failed",
+                      "type": "string"
+                    },
+                    {
+                      "const": "approval_required",
+                      "type": "string"
+                    },
+                    {
+                      "const": "egress_denied",
+                      "type": "string"
+                    },
+                    {
+                      "const": "worker_lost",
+                      "type": "string"
+                    },
+                    {
+                      "const": "worker_lease_expired",
+                      "type": "string"
+                    },
+                    {
+                      "const": "execution_deadline",
+                      "type": "string"
+                    },
+                    {
+                      "const": "attempt_timeout",
+                      "type": "string"
+                    },
+                    {
+                      "const": "insufficient_evidence",
+                      "type": "string"
+                    },
+                    {
+                      "const": "oracle_uncertain",
+                      "type": "string"
+                    },
+                    {
+                      "const": "retry_unsafe_external_effect",
+                      "type": "string"
+                    },
+                    {
+                      "const": "user_cancelled",
+                      "type": "string"
+                    },
+                    {
+                      "const": "deadline_cancelled",
+                      "type": "string"
+                    },
+                    {
+                      "const": "tunnel_lost",
+                      "type": "string"
+                    },
+                    {
+                      "const": "artifact_limit_exceeded",
+                      "type": "string"
+                    },
+                    {
+                      "const": "storage_unavailable",
+                      "type": "string"
+                    },
+                    {
+                      "const": "artifact_expired",
+                      "type": "string"
+                    },
+                    {
+                      "const": "redaction_failed",
+                      "type": "string"
+                    },
+                    {
+                      "const": "evidence_incomplete",
+                      "type": "string"
+                    },
+                    {
+                      "const": "budget_exhausted",
+                      "type": "string"
+                    },
+                    {
+                      "const": "quota_exceeded",
+                      "type": "string"
+                    },
+                    {
+                      "const": "schedule_misfire",
+                      "type": "string"
+                    },
+                    {
+                      "const": "schedule_overlap",
+                      "type": "string"
+                    },
+                    {
+                      "const": "owner_revoked",
+                      "type": "string"
+                    },
+                    {
+                      "const": "cleanup_failed",
+                      "type": "string"
+                    },
+                    {
+                      "const": "cleanup_inconclusive",
+                      "type": "string"
+                    },
+                    {
+                      "const": "optional_step_skipped",
+                      "type": "string"
+                    },
+                    {
+                      "const": "stopped_after_failure",
+                      "type": "string"
+                    },
+                    {
+                      "const": "cancelled_before_step",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "failedSteps": {
+                  "type": "array",
+                  "items": {
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "stepId",
+                      "status",
+                      "expected",
+                      "observed"
+                    ],
+                    "properties": {
+                      "stepId": {
+                        "minLength": 1,
+                        "maxLength": 200,
+                        "type": "string"
+                      },
+                      "status": {
+                        "anyOf": [
+                          {
+                            "const": "pending",
+                            "type": "string"
+                          },
+                          {
+                            "const": "running",
+                            "type": "string"
+                          },
+                          {
+                            "const": "passed",
+                            "type": "string"
+                          },
+                          {
+                            "const": "failed",
+                            "type": "string"
+                          },
+                          {
+                            "const": "blocked",
+                            "type": "string"
+                          },
+                          {
+                            "const": "cancelled",
+                            "type": "string"
+                          },
+                          {
+                            "const": "skipped",
+                            "type": "string"
+                          },
+                          {
+                            "const": "not_run",
+                            "type": "string"
+                          },
+                          {
+                            "const": "inconclusive",
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      "reasonCode": {
+                        "anyOf": [
+                          {
+                            "const": "assertions_satisfied",
+                            "type": "string"
+                          },
+                          {
+                            "const": "assertion_mismatch",
+                            "type": "string"
+                          },
+                          {
+                            "const": "assertion_timeout",
+                            "type": "string"
+                          },
+                          {
+                            "const": "missing_secret",
+                            "type": "string"
+                          },
+                          {
+                            "const": "actor_revoked",
+                            "type": "string"
+                          },
+                          {
+                            "const": "credential_revoked",
+                            "type": "string"
+                          },
+                          {
+                            "const": "manual_auth_required",
+                            "type": "string"
+                          },
+                          {
+                            "const": "auth_checkpoint_expired",
+                            "type": "string"
+                          },
+                          {
+                            "const": "upstream_failed",
+                            "type": "string"
+                          },
+                          {
+                            "const": "dependency_cycle",
+                            "type": "string"
+                          },
+                          {
+                            "const": "ambiguous_producer",
+                            "type": "string"
+                          },
+                          {
+                            "const": "unsupported_capability",
+                            "type": "string"
+                          },
+                          {
+                            "const": "security_precondition_failed",
+                            "type": "string"
+                          },
+                          {
+                            "const": "approval_required",
+                            "type": "string"
+                          },
+                          {
+                            "const": "egress_denied",
+                            "type": "string"
+                          },
+                          {
+                            "const": "worker_lost",
+                            "type": "string"
+                          },
+                          {
+                            "const": "worker_lease_expired",
+                            "type": "string"
+                          },
+                          {
+                            "const": "execution_deadline",
+                            "type": "string"
+                          },
+                          {
+                            "const": "attempt_timeout",
+                            "type": "string"
+                          },
+                          {
+                            "const": "insufficient_evidence",
+                            "type": "string"
+                          },
+                          {
+                            "const": "oracle_uncertain",
+                            "type": "string"
+                          },
+                          {
+                            "const": "retry_unsafe_external_effect",
+                            "type": "string"
+                          },
+                          {
+                            "const": "user_cancelled",
+                            "type": "string"
+                          },
+                          {
+                            "const": "deadline_cancelled",
+                            "type": "string"
+                          },
+                          {
+                            "const": "tunnel_lost",
+                            "type": "string"
+                          },
+                          {
+                            "const": "artifact_limit_exceeded",
+                            "type": "string"
+                          },
+                          {
+                            "const": "storage_unavailable",
+                            "type": "string"
+                          },
+                          {
+                            "const": "artifact_expired",
+                            "type": "string"
+                          },
+                          {
+                            "const": "redaction_failed",
+                            "type": "string"
+                          },
+                          {
+                            "const": "evidence_incomplete",
+                            "type": "string"
+                          },
+                          {
+                            "const": "budget_exhausted",
+                            "type": "string"
+                          },
+                          {
+                            "const": "quota_exceeded",
+                            "type": "string"
+                          },
+                          {
+                            "const": "schedule_misfire",
+                            "type": "string"
+                          },
+                          {
+                            "const": "schedule_overlap",
+                            "type": "string"
+                          },
+                          {
+                            "const": "owner_revoked",
+                            "type": "string"
+                          },
+                          {
+                            "const": "cleanup_failed",
+                            "type": "string"
+                          },
+                          {
+                            "const": "cleanup_inconclusive",
+                            "type": "string"
+                          },
+                          {
+                            "const": "optional_step_skipped",
+                            "type": "string"
+                          },
+                          {
+                            "const": "stopped_after_failure",
+                            "type": "string"
+                          },
+                          {
+                            "const": "cancelled_before_step",
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      "message": {
+                        "maxLength": 8000,
+                        "type": "string"
+                      },
+                      "expected": {
+                        "anyOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/components/schemas/PlanTrialReceipt/$defs/T0"
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "patternProperties": {
+                              "^(.*)$": {
+                                "$ref": "#/components/schemas/PlanTrialReceipt/$defs/T0"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "observed": {
+                        "anyOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/components/schemas/PlanTrialReceipt/$defs/T0"
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "patternProperties": {
+                              "^(.*)$": {
+                                "$ref": "#/components/schemas/PlanTrialReceipt/$defs/T0"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "$defs": {
+          "T0": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/PlanTrialReceipt/$defs/T0"
+                }
+              },
+              {
+                "type": "object",
+                "patternProperties": {
+                  "^(.*)$": {
+                    "$ref": "#/components/schemas/PlanTrialReceipt/$defs/T0"
+                  }
+                }
+              }
+            ]
+          }
+        }
       },
       "PlanValidation": {
         "additionalProperties": false,
@@ -150569,6 +151441,11 @@
                                     },
                                     "jsonPointer": {
                                       "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                                      "type": "string"
+                                    },
+                                    "xmlPath": {
+                                      "minLength": 1,
+                                      "maxLength": 512,
                                       "type": "string"
                                     }
                                   }
@@ -161022,6 +161899,11 @@
                           "jsonPointer": {
                             "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                             "type": "string"
+                          },
+                          "xmlPath": {
+                            "minLength": 1,
+                            "maxLength": 512,
+                            "type": "string"
                           }
                         }
                       },
@@ -169331,6 +170213,11 @@
                                           },
                                           "jsonPointer": {
                                             "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                                            "type": "string"
+                                          },
+                                          "xmlPath": {
+                                            "minLength": 1,
+                                            "maxLength": 512,
                                             "type": "string"
                                           }
                                         }
@@ -179819,6 +180706,11 @@
                           },
                           "jsonPointer": {
                             "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                            "type": "string"
+                          },
+                          "xmlPath": {
+                            "minLength": 1,
+                            "maxLength": 512,
                             "type": "string"
                           }
                         }
@@ -204135,6 +205027,11 @@
                       "jsonPointer": {
                         "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                         "type": "string"
+                      },
+                      "xmlPath": {
+                        "minLength": 1,
+                        "maxLength": 512,
+                        "type": "string"
                       }
                     }
                   },
@@ -211832,6 +212729,11 @@
                           },
                           "jsonPointer": {
                             "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                            "type": "string"
+                          },
+                          "xmlPath": {
+                            "minLength": 1,
+                            "maxLength": 512,
                             "type": "string"
                           }
                         }
@@ -222124,6 +223026,11 @@
                                       "jsonPointer": {
                                         "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                                         "type": "string"
+                                      },
+                                      "xmlPath": {
+                                        "minLength": 1,
+                                        "maxLength": 512,
+                                        "type": "string"
                                       }
                                     }
                                   },
@@ -229832,6 +230739,11 @@
                           },
                           "jsonPointer": {
                             "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                            "type": "string"
+                          },
+                          "xmlPath": {
+                            "minLength": 1,
+                            "maxLength": 512,
                             "type": "string"
                           }
                         }
@@ -238755,6 +239667,11 @@
                                     },
                                     "jsonPointer": {
                                       "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                                      "type": "string"
+                                    },
+                                    "xmlPath": {
+                                      "minLength": 1,
+                                      "maxLength": 512,
                                       "type": "string"
                                     }
                                   }
@@ -249113,6 +250030,11 @@
                           "jsonPointer": {
                             "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
                             "type": "string"
+                          },
+                          "xmlPath": {
+                            "minLength": 1,
+                            "maxLength": 512,
+                            "type": "string"
                           }
                         }
                       },
@@ -257072,6 +257994,11 @@
                                     },
                                     "jsonPointer": {
                                       "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                                      "type": "string"
+                                    },
+                                    "xmlPath": {
+                                      "minLength": 1,
+                                      "maxLength": 512,
                                       "type": "string"
                                     }
                                   }
@@ -267386,6 +268313,11 @@
                           },
                           "jsonPointer": {
                             "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+                            "type": "string"
+                          },
+                          "xmlPath": {
+                            "minLength": 1,
+                            "maxLength": 512,
                             "type": "string"
                           }
                         }

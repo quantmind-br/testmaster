@@ -32,13 +32,30 @@ export async function screenshotPage(
     );
     for (const secret of secrets) if (secret) masks.push(frame.getByText(secret, { exact: false }));
   }
-  return await page.screenshot({
-    type: "png",
-    timeout: timeoutMs,
-    animations: "disabled",
-    mask: masks,
-    maskColor: "#000000",
-  });
+  // Chromium answers "Unable to capture screenshot" when its compositor has no frame to give,
+  // which happens on a loaded host; once the page has drawn another frame, the capture works.
+  // Three tries: a page that never draws (a crashed renderer) still ends in the error.
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await page.screenshot({
+        type: "png",
+        timeout: timeoutMs,
+        animations: "disabled",
+        mask: masks,
+        maskColor: "#000000",
+      });
+    } catch (error) {
+      if (
+        attempt === 3 ||
+        !(error instanceof Error) ||
+        !error.message.includes("Unable to capture screenshot")
+      )
+        throw error;
+      await page.evaluate(
+        () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
+      );
+    }
+  }
 }
 
 /**

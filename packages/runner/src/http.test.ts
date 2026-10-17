@@ -1575,6 +1575,58 @@ it("textEquals and textContains judge the whole response body as UTF-8 text", as
   expect(binary.result).toMatchObject({ outcome: "failed", reasonCode: "assertion_mismatch" });
 });
 
+it("xmlPath counts the selected nodes and reads the first one's text, and fails on a miss or on a body that is not XML", async () => {
+  let body =
+    '<?xml version="1.0"?><rss><channel><title>q</title><item><title>a &amp; b</title></item><item/><item/><item/></channel></rss>';
+  const base = await serve((_req, res) => {
+    res.setHeader("content-type", "application/rss+xml; charset=utf-8");
+    res.end(body);
+  });
+  const check = (xmlPath: string, expectation: PlanStep["expectation"]): PlanStep =>
+    ({
+      id: "xml",
+      kind: "assertion",
+      operation: "assert",
+      description: "Feed",
+      input: { responseStepId: "feed", xmlPath },
+      expectation,
+    }) as PlanStep;
+  const judge = async (step: PlanStep) => {
+    const f = fixture(base);
+    const result = await f.runtime.runSteps([requestStep("feed", ["rss"]), step], (current) =>
+      f.engine.perform(current),
+    );
+    const finished = f.events.find(
+      (event) => event.type === "step.finished" && event.payload.stepId === "xml",
+    )?.payload;
+    return { result, finished };
+  };
+  const count = (value: number) => ({ predicate: "countEquals", value }) as const;
+  expect((await judge(check("/rss/channel/item", count(4)))).result).toMatchObject({
+    outcome: "passed",
+  });
+  const five = await judge(check("/rss/channel/item", count(5)));
+  expect(five.result).toMatchObject({ outcome: "failed", reasonCode: "assertion_mismatch" });
+  expect(five.finished).toMatchObject({ observed: 4, expected: 5 });
+  expect(
+    (await judge(check("//item/title", { predicate: "textEquals", value: { literal: "a & b" } })))
+      .result,
+  ).toMatchObject({ outcome: "passed" });
+  const missing = await judge(
+    check("/rss/channel/link", { predicate: "textContains", value: { literal: "x" } }),
+  );
+  expect(missing.result).toMatchObject({ outcome: "failed", reasonCode: "assertion_mismatch" });
+  expect(missing.finished).toMatchObject({
+    error: { message: expect.stringContaining("the path selects no node") },
+  });
+  body = '{"items": [1, 2, 3, 4]}';
+  const json = await judge(check("/rss/channel/item", count(4)));
+  expect(json.result).toMatchObject({ outcome: "failed", reasonCode: "assertion_mismatch" });
+  expect(json.finished).toMatchObject({
+    error: { message: expect.stringContaining("the response body is not XML") },
+  });
+});
+
 it("evaluates headerMatches as an unanchored pattern and never lets a bad pattern crash the runner", async () => {
   const base = await serve((_req, res) => {
     res.setHeader("X-Request-Id", "req-12345");

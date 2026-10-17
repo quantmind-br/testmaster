@@ -139,12 +139,14 @@ const alive = (pid: number): boolean => {
   }
 };
 /** A program whose key presses are echoed as JSON, on the alternate screen with DECCKM on. */
+// Keys sent back to back can reach a busy program in one read ("\r\x11"), so Ctrl+Q is looked
+// for anywhere in the chunk, not only as its first byte.
 const keyEcho = `
 process.stdin.setRawMode(true); process.stdin.resume();
 process.stdout.write("\\x1b[?1049h\\x1b[?1hREADY");
 process.stdin.on("data", (data) => {
   process.stdout.write("\\r\\nKEY:" + JSON.stringify(data.toString()));
-  if (data[0] === 0x11) process.exit(7);
+  if (data.includes(0x11)) process.exit(7);
 });`;
 
 it("reports exit code, stdout and stderr separately and feeds stdin", async () => {

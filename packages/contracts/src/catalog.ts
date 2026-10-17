@@ -171,6 +171,8 @@ const supplemental = {
     ),
     authRefs: Type.Optional(Type.Array(P.id("aup"))),
     production: Type.Optional(Type.Boolean()),
+    /** Opt-in server log source read after each attempt; null on update clears it. */
+    serverLog: Type.Optional(Type.Union([Entities.ServerLogSource, Type.Null()])),
   }),
   DefaultEnvironmentInput: P.Obj({ environmentId: P.id("env") }),
   SecretInput: P.Obj({
@@ -223,6 +225,40 @@ const supplemental = {
     ),
     retained: Type.Array(P.id("pro")),
     rejected: Type.Array(P.id("pro")),
+  }),
+  /**
+   * A replay of proposals before acceptance (`plan trial`, `testmaster_trial_plan`): each tried
+   * proposal ran in the sandbox like a replay run, with no model call; proposal and batch versions
+   * are unchanged.
+   */
+  PlanTrialReceipt: P.Obj({
+    batchId: P.id("pbt"),
+    batchVersion: P.Version,
+    environmentId: P.id("env"),
+    trials: Type.Array(
+      P.Obj({
+        proposalId: P.id("pro"),
+        proposalVersion: P.Version,
+        planName: P.Name,
+        tried: Type.Boolean(),
+        /** Why the proposal was not tried (not `proposed`, invalid, intent plan, refused admission). */
+        reason: Type.Optional(P.Description),
+        runId: Type.Optional(P.id("run")),
+        outcome: Type.Optional(Type.Union([P.Outcome, Type.Null()])),
+        reasonCode: Type.Optional(P.Enum(reasonCodes)),
+        /** The steps of the last attempt that did not pass, scrubbed like every step result. */
+        failedSteps: Type.Array(
+          P.Obj({
+            stepId: P.Name,
+            status: P.StepStatus,
+            reasonCode: Type.Optional(P.Enum(reasonCodes)),
+            message: Type.Optional(P.Description),
+            expected: P.Json,
+            observed: P.Json,
+          }),
+        ),
+      }),
+    ),
   }),
   TestMetadataInput: P.Obj({
     name: Type.Optional(P.Name),
@@ -814,10 +850,12 @@ const supplemental = {
         id: P.id("rev"),
         testId: P.id("tst"),
         testName: P.Name,
-        /** The revision the code was generated from (the accepted proposal's revision, or the one regenerated). */
+        /** The revision the code was generated from (the accepted proposal's revision, the one regenerated, or the failed candidate repaired). */
         sourceRevisionId: P.id("rev"),
         /** Present when the candidate was generated from an accepted proposal. */
         proposalId: Type.Optional(P.id("pro")),
+        /** Present when the candidate repairs `sourceRevisionId`, the candidate this failed run ran. */
+        repairedFromRunId: Type.Optional(P.id("run")),
         /** `testmaster://revisions/{id}/code`: the candidate's files, each inline while it fits, and a resource per file. */
         code: Type.String({ minLength: 1, maxLength: 512 }),
       }),
@@ -891,6 +929,7 @@ const supplemental = {
 };
 export type HealingReview = Static<typeof supplemental.HealingReview>;
 export type McpRunResult = Static<typeof supplemental.McpRunResult>;
+export type PlanTrialReceipt = Static<typeof supplemental.PlanTrialReceipt>;
 
 const httpInputs = {
   ProjectPatchInput: Type.Partial(supplemental.ProjectInput),

@@ -41,11 +41,24 @@ it("SDK handshake advertises contract schemas, records protocol and dispatches M
       for (const tool of tools) {
         const description = tool.description ?? "";
         expect(description.length, tool.name).toBeGreaterThan(0);
-        expect(description.length, tool.name).toBeLessThanOrEqual(300);
+        expect(description.length, tool.name).toBeLessThanOrEqual(250);
         expect(description, tool.name).not.toMatch(/^testmaster_\w+ \(M\d\)$/);
-        for (const cited of description.match(/testmaster_[a-z_]+/g) ?? [])
+        // The rules behind each summary are a resource of their own, citing only real tools.
+        const [rules] = (await client.readResource({ uri: `testmaster://tools/${tool.name}` }))
+          .contents as { mimeType?: string; text?: string }[];
+        expect(rules?.mimeType, tool.name).toBe("text/markdown");
+        expect(rules?.text, tool.name).toMatch(
+          new RegExp(`^# ${tool.name}\\n\\n.+\\n\\n## Rules\\n\\n- `),
+        );
+        for (const cited of `${description} ${rules?.text}`.match(/testmaster_[a-z_]+/g) ?? [])
           expect(catalogNames.has(cited), `${tool.name} cites ${cited}`).toBe(true);
       }
+      await expect(
+        client.readResource({ uri: "testmaster://tools/testmaster_nothing" }),
+      ).rejects.toMatchObject({
+        code: -32002,
+        message: expect.stringContaining("testmaster://tools/{name}"),
+      });
       const getRun = tools.find((tool) => tool.name === "testmaster_get_run")?.description ?? "";
       expect(getRun).toContain("testmaster_get_evidence");
       expect(getRun).toContain("testmaster_analyze_run");

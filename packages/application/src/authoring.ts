@@ -9,16 +9,24 @@ import {
   type ExecutablePlan,
   type Project,
   parseAndValidate,
+  type ServerLogSource,
   type TestCase,
   type TestRevision,
   validate,
 } from "@testmaster/contracts";
 import { materializePlanDefaults, semanticHash } from "@testmaster/domain";
 import { AuditRepository, type EntityDocument } from "@testmaster/persistence";
-import { type CanonicalTarget, canonicalUrl, classifyIp, PolicyDenied } from "@testmaster/sandbox";
+import {
+  type CanonicalTarget,
+  canonicalUrl,
+  classifyIp,
+  DOCKER_CONTAINER_NAME,
+  PolicyDenied,
+} from "@testmaster/sandbox";
 import { assertCitedSchemasUsable } from "./ai/source-documents.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "./context.js";
 import { type RevisionStanding, revisionStanding } from "./revision-standing.js";
+import { isTrialTest } from "./trial-tests.js";
 
 type Stored<T> = T & EntityDocument;
 
@@ -106,6 +114,8 @@ export interface EnvironmentInput {
   production?: boolean;
   additionalOrigins?: string[];
   authRefs?: string[];
+  /** Opt-in server log source; null clears it on update. */
+  serverLog?: ServerLogSource | null;
 }
 export type EnvironmentPatch = Partial<Omit<EnvironmentInput, "projectId">>;
 export type TestPatch = Partial<Pick<TestCase, "name" | "tags" | "priority">>;
@@ -116,7 +126,11 @@ function keys(value: object, allowed: readonly string[]): void {
   for (const key of Object.keys(value)) {
     if (!allowed.includes(key))
       throw new ContractError("INVALID_ARGUMENT", "Unknown input field", { field: key });
-    if ((value as Record<string, unknown>)[key] === null && key !== "defaultEnvironmentId")
+    if (
+      (value as Record<string, unknown>)[key] === null &&
+      key !== "defaultEnvironmentId" &&
+      key !== "serverLog"
+    )
       throw new ContractError("INVALID_ARGUMENT", "Null is not an omitted input field", {
         field: key,
       });
@@ -504,6 +518,32 @@ function rootBindingKey(workspaceId: string, root: string): string {
   return `mcp.bootstrap:${workspaceId}:${createHash("sha256").update(root).digest("hex")}`;
 }
 
+/** A validated server log source, or null for none (`null` or absent). */
+function serverLogSource(value: unknown): ServerLogSource | null {
+  if (value === undefined || value === null) return null;
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    Object.keys(value).some((key) => key !== "kind" && key !== "container")
+  )
+    throw new ContractError("INVALID_ARGUMENT", 'serverLog is {kind: "docker", container}', {
+      field: "serverLog",
+    });
+  const { kind, container } = value as Record<string, unknown>;
+  if (kind !== "docker")
+    throw new ContractError("INVALID_ARGUMENT", "serverLog kind must be docker", {
+      field: "serverLog.kind",
+    });
+  if (typeof container !== "string" || !DOCKER_CONTAINER_NAME.test(container))
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      "serverLog container must be a docker container name or id ([a-zA-Z0-9][a-zA-Z0-9_.-]+, at most 128 characters)",
+      { field: "serverLog.container" },
+    );
+  return { kind, container };
+}
+
 export class EnvironmentsService {
   constructor(readonly ctx: ServiceContext) {}
   create(input: EnvironmentInput): Stored<Environment> {
@@ -518,7 +558,9 @@ export class EnvironmentsService {
       "production",
       "additionalOrigins",
       "authRefs",
+      "serverLog",
     ]);
+    const serverLog = serverLogSource(input.serverLog);
     return authoringTransaction(this.ctx, () => {
       const owner = project(this.ctx, input.projectId);
       active(owner);
@@ -534,6 +576,7 @@ export class EnvironmentsService {
         timezone: input.timezone ?? "UTC",
         variables: {},
         production: input.production ?? false,
+        ...(serverLog ? { serverLog } : {}),
       }) as Stored<EnvironmentRevision>;
       const value = entity(this.ctx, "env", {
         projectId: input.projectId,
@@ -640,6 +683,7 @@ export class EnvironmentsService {
           locale: revision.locale,
           timezone: revision.timezone,
           production: revision.production,
+          serverLog: revision.serverLog ?? null,
         } as EnvironmentRevisionView;
       });
   }
@@ -654,7 +698,9 @@ export class EnvironmentsService {
       "production",
       "additionalOrigins",
       "authRefs",
+      "serverLog",
     ]);
+    const serverLog = patch.serverLog === undefined ? undefined : serverLogSource(patch.serverLog);
     return authoringTransaction(this.ctx, () => {
       const current = requireEntity(this.ctx, "Environment", id) as Stored<Environment>;
       this.ctx.authorize("W", current.projectId);
@@ -688,6 +734,10 @@ export class EnvironmentsService {
         timezone: patch.timezone ?? previous.timezone,
         variables: previous.variables,
         production: patch.production ?? previous.production,
+        // undefined keeps the previous source, null (serverLogSource → null) clears it.
+        ...((patch.serverLog === undefined ? previous.serverLog : serverLog)
+          ? { serverLog: patch.serverLog === undefined ? previous.serverLog : serverLog }
+          : {}),
       }) as Stored<EnvironmentRevision>;
       this.ctx.entities.insert("EnvironmentRevision", revision, { environmentId: id });
       auditAuthBinding(this.ctx, id, previous.authProfileRefs, refs);
@@ -782,7 +832,10 @@ export class TestsService {
     this.ctx.authorize("R", projectId);
     if (projectId) project(this.ctx, projectId);
     return (allEntities(this.ctx, "TestCase") as Stored<TestCase>[]).filter(
-      (item) => (!projectId || item.projectId === projectId) && visible(this.ctx, item.projectId),
+      (item) =>
+        (!projectId || item.projectId === projectId) &&
+        visible(this.ctx, item.projectId) &&
+        !isTrialTest(item),
     );
   }
   get(id: string): Stored<TestCase> {

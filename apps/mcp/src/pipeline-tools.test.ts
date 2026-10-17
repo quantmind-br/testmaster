@@ -101,7 +101,7 @@ it("the pipeline tools are listed with schemas, annotations and no inline secret
     const tool = byName(name);
     expect(tool.inputSchema.type, name).toBe("object");
     expect(tool.outputSchema?.type, name).toBe("object");
-    expect(tool.description?.length ?? 0, name).toBeLessThanOrEqual(300);
+    expect(tool.description?.length ?? 0, name).toBeLessThanOrEqual(250);
   }
   expect(byName("testmaster_add_source").annotations).toMatchObject({
     readOnlyHint: false,

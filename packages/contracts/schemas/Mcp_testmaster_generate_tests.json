@@ -20,6 +20,11 @@
       },
       "description": "Existing revisions to regenerate code for; give proposalIds or revisionIds (at least one), all from one project"
     },
+    "runId": {
+      "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string",
+      "description": "A completed, failed run of a code candidate: repairs that candidate from the run's failed steps. Exclusive with proposalIds and revisionIds"
+    },
     "budget": {
       "additionalProperties": false,
       "description": "Optional model-call budget",

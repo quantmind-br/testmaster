@@ -45,6 +45,32 @@
     },
     "production": {
       "type": "boolean"
+    },
+    "serverLog": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "kind",
+            "container"
+          ],
+          "properties": {
+            "kind": {
+              "const": "docker",
+              "type": "string"
+            },
+            "container": {
+              "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{1,127}$",
+              "description": "Docker container name or id (docker's name grammar)",
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   },
   "$defs": {},

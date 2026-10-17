@@ -672,6 +672,7 @@ it("M4-05 lists environment revisions newest first and never returns variables",
       "locale",
       "networkProfile",
       "production",
+      "serverLog",
       "targetOrigins",
       "timezone",
     ].sort(),
@@ -794,6 +795,63 @@ it.each([
       additionalOrigins,
     }),
   ).toThrowError(expect.objectContaining({ code }));
+  expect(f.app.database.all("SELECT id FROM environment_revisions")).toHaveLength(before);
+});
+
+// ------------------------------------------------------------------ server log
+
+it("stores an opted-in server log source per revision, keeps it across updates and clears it with null", async () => {
+  const f = await fixture();
+  const environments = f.app.environments;
+  const source = { kind: "docker" as const, container: "searxng-tm-app" };
+  const created = environments.create({
+    projectId: f.init.projectId,
+    name: "with-log",
+    ...publicEnvironment,
+    serverLog: source,
+  });
+  expect(environments.revisions(created.id)[0]?.serverLog).toEqual(source);
+  // Control: nothing is read unless the environment opts in.
+  const plain = environments.create({
+    projectId: f.init.projectId,
+    name: "no-log",
+    ...publicEnvironment,
+  });
+  expect(environments.revisions(plain.id)[0]?.serverLog).toBeNull();
+  const relocated = environments.update(created.id, { locale: "pt-BR" }, Number(created.version));
+  const cleared = environments.update(created.id, { serverLog: null }, Number(relocated.version));
+  expect(environments.revisions(created.id).map((entry) => entry.serverLog)).toEqual([
+    null,
+    source,
+    source,
+  ]);
+  expect(
+    f.app.context.entities.get(
+      "EnvironmentRevision",
+      f.app.context.workspaceId,
+      cleared.activeRevisionId,
+    ),
+  ).not.toHaveProperty("serverLog");
+});
+
+it.each([
+  ["an option-like name", { kind: "docker", container: "--since=0" }],
+  ["a name with a space", { kind: "docker", container: "app server" }],
+  ["a one-character name", { kind: "docker", container: "a" }],
+  ["an unknown kind", { kind: "file", container: "app" }],
+  ["an unknown field", { kind: "docker", container: "app", path: "/var/log" }],
+  ["a bare string", "app"],
+])("refuses a server log source with %s", async (_label, serverLog) => {
+  const f = await fixture();
+  const before = f.app.database.all("SELECT id FROM environment_revisions").length;
+  expect(() =>
+    f.app.environments.create({
+      projectId: f.init.projectId,
+      name: "refused",
+      ...publicEnvironment,
+      serverLog: serverLog as never,
+    }),
+  ).toThrowError(expect.objectContaining({ code: "INVALID_ARGUMENT" }));
   expect(f.app.database.all("SELECT id FROM environment_revisions")).toHaveLength(before);
 });
 

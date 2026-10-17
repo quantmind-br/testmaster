@@ -14,7 +14,16 @@ import {
 import type { JsonValue } from "./primitives.js";
 import type { RunnerEvent } from "./protocol.js";
 import { ContractError, requireCapability, type ValidationIssue } from "./registries.js";
+import { parseXmlPath } from "./xml-path.js";
 
+/** The predicates that read an XML response body through `xmlPath`. */
+export const XML_PATH_PREDICATES: readonly string[] = [
+  "textEquals",
+  "textContains",
+  "countEquals",
+  "countAtLeast",
+  "countAtMost",
+];
 export const ajv = new Ajv2020({ strict: true, allErrors: true, validateFormats: true });
 addFormats.default(ajv);
 const compiled = new Map<string, ValidateFunction>();
@@ -683,6 +692,25 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
             "predicateInput",
             "Text assertion requires a browser locator or responseStepId",
           );
+      }
+      if ("xmlPath" in input) {
+        if ("jsonPointer" in input)
+          reject(
+            `${path}/input/xmlPath`,
+            "predicateInput",
+            "Give jsonPointer for a JSON body or xmlPath for an XML body, not both",
+          );
+        if (!XML_PATH_PREDICATES.includes(predicate))
+          reject(
+            `${path}/input/xmlPath`,
+            "predicateInput",
+            `xmlPath is read by ${XML_PATH_PREDICATES.join(", ")} only`,
+          );
+        try {
+          parseXmlPath(String(input.xmlPath));
+        } catch (error) {
+          reject(`${path}/input/xmlPath`, "xmlPath", (error as Error).message);
+        }
       }
       if (step.expectation.predicate === "countAtLeast" && step.expectation.value === 0)
         reject(

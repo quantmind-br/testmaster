@@ -1,4 +1,4 @@
-import { type TSchema, Type } from "@sinclair/typebox";
+import { type Static, type TSchema, Type } from "@sinclair/typebox";
 import { authCheckpointKinds } from "./m4/auth.js";
 import { SuiteSelection, suiteStates } from "./m4/lists.js";
 import {
@@ -60,6 +60,19 @@ const RepoPath = Type.String({ minLength: 1, maxLength: 4096 });
  * (PATH_MAX, 4096): a key beyond it could never be a file.
  */
 const StorageKey = Type.String({ minLength: 1, maxLength: 4096 });
+/**
+ * Where the application server of an environment writes its log, opted in explicitly: a docker
+ * container whose `docker logs` lines written during each attempt become `logs/server.log`.
+ * Tagged by `kind` so other sources can follow.
+ */
+export const ServerLogSource = Obj({
+  kind: Type.Literal("docker"),
+  container: Type.String({
+    pattern: "^[a-zA-Z0-9][a-zA-Z0-9_.-]{1,127}$",
+    description: "Docker container name or id (docker's name grammar)",
+  }),
+});
+export type ServerLogSource = Static<typeof ServerLogSource>;
 const digest = nullable(ContentDigest);
 const entity = <F extends Record<string, TSchema>>(prefix: EntityPrefix, fields: F) =>
   Obj({
@@ -120,6 +133,8 @@ export const entities = {
     timezone: Name,
     variables: Type.Record(Type.String(), VariableCapture),
     production: Type.Boolean(),
+    /** The application server's log source; absent: no server log is read. */
+    serverLog: Type.Optional(ServerLogSource),
   }),
   SecretReference: entity("sec", {
     workspaceId: id("ws"),

@@ -27,3 +27,4 @@ export * from "./registries.js";
 export * from "./session.js";
 export * from "./surfaces.js";
 export * from "./validation.js";
+export * from "./xml-path.js";

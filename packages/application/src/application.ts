@@ -106,6 +106,7 @@ import { correlationId } from "./observability.js";
 import { OnboardingService } from "./onboarding.js";
 import { OperationsService } from "./operations.js";
 import { registerOperationsControllers } from "./operations-controllers.js";
+import { PlanTrialService } from "./plan-trial.js";
 import { PlanValidationService } from "./plan-validation.js";
 import { QuarantineService } from "./quarantine.js";
 import { revokedImageIds, revokeImage } from "./release.js";
@@ -287,6 +288,7 @@ export class Application {
   readonly onboarding: OnboardingService;
   readonly featureMap: FeatureMapService;
   readonly proposals: ProposalsService;
+  readonly planTrials: PlanTrialService;
   readonly refinements: RefinementService;
   readonly planValidation: PlanValidationService;
   readonly revisionHistory: RevisionHistoryService;
@@ -502,6 +504,7 @@ export class Application {
     this.schedules = new SchedulesService(this.context, this.suites, this.integrations);
     this.requirements = new RequirementsService(this.context, this.model, this.sources);
     this.proposals = new ProposalsService(this.context, this.model, this.requirements);
+    this.planTrials = new PlanTrialService(this.context, this.proposals, this.runs);
     this.onboarding = new OnboardingService(this.context, config);
     this.featureMap = new FeatureMapService(
       this.context,

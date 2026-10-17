@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -777,4 +777,66 @@ it("reject_healing rejects a proposed healing with its reason, applies nothing a
     reason: "Too late",
   });
   expect(late.error?.code).toBe("PRECONDITION_FAILED");
+});
+
+it("import_code creates a test from confined code, adds a candidate revision with testId, and refuses forbidden code, symlinks and outside paths", async () => {
+  const f = await fixture();
+  const { call } = await f.connect();
+  const spec = (path: string) =>
+    `import {test,expect} from '@playwright/test'; test('health',async({request})=>{ const r=await request.get('${path}'); expect(r.status()).toBe(200); });`;
+  await writeFile(join(f.app.config.cwd, "health.spec.ts"), spec("/health"));
+  const created = await call("testmaster_import_code", {
+    projectId: f.init.projectId,
+    path: "health.spec.ts",
+    format: "playwright",
+  });
+  expect(created.isError, JSON.stringify(created.body)).toBe(false);
+  expect(created.data).toMatchObject({ active: true, test: { name: "health" } });
+  expect(created.data?.revision).toMatchObject({ origin: "imported", plan: null });
+  const testId = String(created.data?.test.id);
+  await writeFile(join(f.app.config.cwd, "fixed.spec.ts"), spec("/healthz"));
+  const candidate = await call("testmaster_import_code", {
+    testId,
+    path: "fixed.spec.ts",
+    format: "playwright",
+  });
+  expect(candidate.isError, JSON.stringify(candidate.body)).toBe(false);
+  expect(candidate.data).toMatchObject({ active: false });
+  expect(candidate.data?.revision.parentId).toBe(created.data?.revision.id);
+  expect(candidate.data?.nextActions[0]).toContain(`revisionId ${candidate.data?.revision.id}`);
+  // The active revision is still the first import.
+  expect(f.app.tests.get(testId).activeRevisionId).toBe(created.data?.revision.id);
+  await writeFile(
+    join(f.app.config.cwd, "shell.spec.ts"),
+    "import {test,expect} from '@playwright/test'; import { execSync } from 'node:child_process'; test('x',async()=>{ expect(execSync('id').length).toBeGreaterThan(0); });",
+  );
+  const forbidden = await call("testmaster_import_code", {
+    testId,
+    path: "shell.spec.ts",
+    format: "playwright",
+  });
+  expect(forbidden.error).toMatchObject({
+    code: "INVALID_ARGUMENT",
+    message: expect.stringContaining("node:child_process"),
+  });
+  await symlink(join(f.app.config.cwd, "fixed.spec.ts"), join(f.app.config.cwd, "link.spec.ts"));
+  const linked = await call("testmaster_import_code", {
+    testId,
+    path: "link.spec.ts",
+    format: "playwright",
+  });
+  expect(linked.error?.code).toBe("POLICY_DENIED");
+  const outside = await call("testmaster_import_code", {
+    projectId: f.init.projectId,
+    path: "/etc/hostname",
+    format: "playwright",
+  });
+  expect(outside.error?.code).toBe("FORBIDDEN");
+  const both = await call("testmaster_import_code", {
+    projectId: f.init.projectId,
+    testId,
+    path: "fixed.spec.ts",
+    format: "playwright",
+  });
+  expect(both.error?.code).toBe("INVALID_ARGUMENT");
 });

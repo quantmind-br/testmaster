@@ -702,6 +702,7 @@ it("no tool input is a top-level combinator, generate_tests shows every property
     "proposalIds",
     "provider",
     "revisionIds",
+    "runId",
   ]);
   expect(input("testmaster_generate_tests")?.required ?? []).toEqual([]);
   expect(Object.keys(input("testmaster_normalize_requirements")?.properties ?? {})).toContain(
@@ -723,6 +724,18 @@ it("generate_tests requires proposalIds or revisionIds at runtime and accepts ei
     budget: { modelCalls: 2 },
   });
   expect(withRevisions.error?.code).toBe("NOT_FOUND");
+  // runId repairs one failed candidate alone; with revisionIds it is refused before any lookup.
+  const mixed = await f.call("testmaster_generate_tests", {
+    runId: "run_019bf434-20c0-7000-8000-000000000001",
+    revisionIds: ["rev_019bf434-20c0-7000-8000-000000000001"],
+  });
+  expect(mixed.error?.code).toBe("INVALID_ARGUMENT");
+  expect(mixed.error?.details.issues).toEqual([expect.objectContaining({ path: "/runId" })]);
+  // Control: runId alone passes validation and fails on the unknown run.
+  const repair = await f.call("testmaster_generate_tests", {
+    runId: "run_019bf434-20c0-7000-8000-000000000001",
+  });
+  expect(repair.error?.code).toBe("NOT_FOUND");
 });
 
 it("normalize_requirements forwards provider and model to the service", async () => {

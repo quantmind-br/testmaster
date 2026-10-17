@@ -1,9 +1,12 @@
+import { xmlPathSource } from "@testmaster/contracts";
+
 export const typescriptRuntime = String.raw`import { expect, type Page, type Frame, type Locator, type APIRequestContext } from '@playwright/test';
 import { createHash, randomBytes } from 'node:crypto';
 import { readFileSync, realpathSync, lstatSync } from 'node:fs';
 import { resolve, relative, isAbsolute } from 'node:path';
 
 type Data = any;
+${xmlPathSource()}
 function removesCookie(attributes: string[]): boolean {
   const values = new Map<string, string>();
   for(const attribute of attributes) { const at = attribute.indexOf('='); if(at > 0) values.set(attribute.slice(0, at).trim().toLowerCase(), attribute.slice(at + 1).trim()); }
@@ -105,7 +108,18 @@ export async function executePlan(plan: Data, initialPage: Page, request: APIReq
       default: throw new Error('Unsupported locator');
     }
   }
-  function checkResponse(response: Data, e: Data, p = '') {
+  function checkResponse(response: Data, e: Data, p = '', x?: string) {
+    if (x !== undefined) {
+      const s = selectXmlPath(new TextDecoder('utf-8', {fatal: true}).decode(response.bytes), x);
+      switch(e.predicate) {
+        case 'textEquals': expect(s.text, 'xmlPath ' + x).toBe(string(e.value)); return;
+        case 'textContains': expect(s.text, 'xmlPath ' + x + ' selects no node').not.toBeNull(); expect(s.text).toContain(string(e.value)); return;
+        case 'countEquals': expect(s.count, 'xmlPath ' + x).toBe(e.value); return;
+        case 'countAtLeast': expect(s.count, 'xmlPath ' + x).toBeGreaterThanOrEqual(e.value); return;
+        case 'countAtMost': expect(s.count, 'xmlPath ' + x).toBeLessThanOrEqual(e.value); return;
+        default: throw new Error('Unsupported xmlPath predicate: ' + e.predicate);
+      }
+    }
     switch(e.predicate) {
       case 'statusIn': expect(e.values).toContain(response.status); break;
       case 'headerEquals': expect(response.headers[e.header.toLowerCase()]).toStrictEqual(value(e.value)); break;
@@ -187,7 +201,7 @@ export async function executePlan(plan: Data, initialPage: Page, request: APIReq
     }
     if(step.operation === 'assert') {
       const e = step.expectation;
-      if('responseStepId' in i) { const r = responses.get(i.responseStepId); if(!r) throw new Error('Missing referenced response'); checkResponse(r,e,i.jsonPointer); return; }
+      if('responseStepId' in i) { const r = responses.get(i.responseStepId); if(!r) throw new Error('Missing referenced response'); checkResponse(r,e,i.jsonPointer,i.xmlPath); return; }
       if(e.predicate === 'urlEquals') { const p = selected(i.pageAlias); const expected = string(e.value); await p.waitForURL(expected,{timeout,waitUntil:'commit'}); expect(p.url()).toBe(expected); return; }
       if(e.predicate === 'urlMatches') { await expect(selected(i.pageAlias)).toHaveURL(new RegExp(e.pattern,'u'),{timeout}); return; }
       if(e.predicate === 'downloadMatches') { expect(i.outputName).toBe(e.outputName); const d = downloads.get(i.outputName); if(!d) throw new Error('Missing named download'); for(const key of ['sha256','mimeType','sizeBytes']) if(e[key] !== undefined) expect(d[key]).toBe(e[key]); return; }

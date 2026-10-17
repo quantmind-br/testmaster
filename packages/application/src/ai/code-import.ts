@@ -412,6 +412,8 @@ export class CodeImportService {
       modelCallId?: string;
       secretRefs?: readonly CodeSecretBinding[];
       schemas?: Readonly<Record<string, unknown>>;
+      /** The failed Run whose candidate (`parentId`) this code repairs. */
+      repairedFromRunId?: string;
     },
     checked?: ImportedCodeBundle,
   ): Promise<Stored<TestRevision>> {
@@ -437,6 +439,7 @@ export class CodeImportService {
       {
         secretRefs: bindSecrets(bundle.secrets, input.secretRefs ?? []),
         ...(input.modelCallId ? { generationModelCallId: input.modelCallId } : {}),
+        ...(input.repairedFromRunId ? { repairedFromRunId: input.repairedFromRunId } : {}),
       },
     );
   }
@@ -477,7 +480,11 @@ export class CodeImportService {
     parentId?: string,
     createTest = false,
     request?: { operation: string; key: string; body: unknown },
-    extras: { secretRefs?: CodeSecretBinding[]; generationModelCallId?: string } = {},
+    extras: {
+      secretRefs?: CodeSecretBinding[];
+      generationModelCallId?: string;
+      repairedFromRunId?: string;
+    } = {},
   ): Promise<Stored<TestRevision>> {
     const revision = entity(this.ctx, "rev", {}) as Stored<TestRevision>;
     const bytes = Buffer.from(canonicalJson(bundle));
@@ -543,6 +550,9 @@ export class CodeImportService {
               "testmaster:verificationRequired": true,
               ...(extras.generationModelCallId
                 ? { "testmaster:generationModelCallId": extras.generationModelCallId }
+                : {}),
+              ...(extras.repairedFromRunId
+                ? { "testmaster:repairedFromRunId": extras.repairedFromRunId }
                 : {}),
             };
           if (createTest) {

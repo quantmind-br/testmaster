@@ -1,6 +1,8 @@
 import type { PlanGenerationType } from "@testmaster/application";
-import { ContractError } from "@testmaster/contracts";
+import { ContractError, type PlanTrialReceipt, type Run } from "@testmaster/contracts";
+import { exitCodeForRun } from "@testmaster/domain";
 import { type Command, Option } from "commander";
+import { environmentId, waitForRun } from "./execution.js";
 import {
   collect,
   dryRunReport,
@@ -8,6 +10,7 @@ import {
   type Options,
   type Runtime,
   required,
+  seconds,
   string,
   strings,
   version,
@@ -21,6 +24,30 @@ function selection(options: Options): string[] {
       "--only must contain distinct, nonempty proposal IDs",
     );
   return ids;
+}
+
+/** A tried proposal exits like its run: 0 only when the gate passed. */
+function trialExit(run: Run): number {
+  return exitCodeForRun({ outcome: run.outcome, gate: run.gate });
+}
+
+/** One line per proposal, then one indented line per step that did not pass. */
+function planTrialText(receipt: PlanTrialReceipt): string {
+  const value = (data: unknown) => JSON.stringify(data)?.slice(0, 200) ?? "null";
+  const lines = receipt.trials.flatMap((trial) => {
+    if (!trial.tried) return [`${trial.proposalId} ${trial.planName}: not tried (${trial.reason})`];
+    return [
+      `${trial.proposalId} ${trial.planName}: ${trial.outcome ?? "no outcome"}${trial.reasonCode ? ` (${trial.reasonCode})` : ""}, run ${trial.runId}`,
+      ...trial.failedSteps.map(
+        (step) =>
+          `  ${step.stepId} ${step.status}${step.reasonCode ? ` ${step.reasonCode}` : ""}: expected ${value(step.expected)}, observed ${value(step.observed)}${step.message ? ` - ${step.message}` : ""}`,
+      ),
+    ];
+  });
+  return [
+    `Trial of ${receipt.batchId} (version ${receipt.batchVersion}) on ${receipt.environmentId}`,
+    ...lines,
+  ].join("\n");
 }
 
 export function planCommands(program: Command, runtime: Runtime): void {
@@ -104,6 +131,40 @@ export function planCommands(program: Command, runtime: Runtime): void {
   runtime.bind(group.command("get <batch-id>"), async (rt, args) => ({
     data: await (await rt.app()).proposals.detail(String(args[0])),
   }));
+  runtime.bind(
+    group
+      .command("trial <batch-id>")
+      .description(
+        "Replay the proposed plans of a batch against an environment before review, with no model call",
+      )
+      .option("--env <id-or-name>", "Environment (default: the project's default environment)")
+      .option("--only <proposal-id>", "Proposal to try (repeatable or comma-separated)", collect)
+      .option("--timeout <seconds>", "Wait deadline per run in seconds", seconds),
+    async (rt, args, options) => {
+      const app = await rt.app();
+      const batchId = String(args[0]);
+      const projectId = app.proposals.get(batchId).projectId;
+      const admission = await app.planTrials.admit(batchId, {
+        environmentId: await environmentId(rt, options, projectId),
+        ...(strings(options, "only").length ? { proposalIds: selection(options) } : {}),
+      });
+      // Ephemeral runs have no other executor: each runs in-process here, one after the other.
+      for (const item of admission.items) {
+        if (!item.run) continue;
+        rt.receipts.push({ runId: item.run.runId, ownership: item.run.ownership });
+        await waitForRun(rt, app, item.run.runId, options, item.run.ownership);
+      }
+      const data = app.planTrials.receipt(admission);
+      const failed = data.trials.find(
+        (trial) => trial.tried && trial.runId && trialExit(app.runs.get(trial.runId)) !== 0,
+      );
+      return {
+        data,
+        text: planTrialText(data),
+        exit: failed?.runId ? trialExit(app.runs.get(failed.runId)) : 0,
+      };
+    },
+  );
   runtime.bind(
     group
       .command("edit <proposal-id>")

@@ -3,6 +3,7 @@ import json
 import math
 import re
 import hashlib
+from xml.parsers import expat
 import time
 import secrets
 import asyncio
@@ -70,6 +71,113 @@ def equal(left, right):
     if isinstance(left, list):
         return len(left) == len(right) and all(equal(a, b) for a, b in zip(left, right))
     return left == right
+
+
+XML_NAME = re.compile(r"(?:[^\W\d][\w.-]*:)?([^\W\d][\w.-]*)")
+XML_POSITION = re.compile(r"\[([1-9][0-9]{0,8})\]")
+
+
+def xml_path(path):
+    # The TestMaster xmlPath subset: / and //, names matched by local name, *, [n], a last @name or @*.
+    if not isinstance(path, str) or not 1 <= len(path) <= 512:
+        raise ValueError("An xmlPath is 1 to 512 characters")
+    steps = []
+    at = 0
+    while at < len(path):
+        if steps and steps[-1][1]:
+            raise ValueError("xmlPath " + path + ": an attribute step (@name) must be the last step")
+        if path.startswith("//", at):
+            axis, at = "descendant", at + 2
+        elif path.startswith("/", at):
+            axis, at = "child", at + 1
+        else:
+            raise ValueError("xmlPath " + path + ": expected / or // at character " + str(at + 1))
+        attribute = path.startswith("@", at)
+        at += 1 if attribute else 0
+        local = None
+        if path.startswith("*", at):
+            at += 1
+        else:
+            match = XML_NAME.match(path, at)
+            if not match:
+                raise ValueError("xmlPath " + path + ": expected a name or * at character " + str(at + 1))
+            local, at = match.group(1), match.end()
+        position = None
+        if path.startswith("[", at):
+            match = None if attribute else XML_POSITION.match(path, at)
+            if not match:
+                raise ValueError("xmlPath " + path + ": only a positive element position [n] is accepted")
+            position, at = int(match.group(1)), match.end()
+        steps.append((axis, attribute, local, position))
+    return steps
+
+
+def xml_document(text):
+    # Expat with no DTD processing: an internal subset or an entity it cannot expand is refused, never resolved.
+    document = {"name": "", "attributes": [], "children": [], "order": -1}
+    stack = [document]
+    counter = [0]
+
+    def doctype(name, system_id, public_id, has_internal_subset):
+        if has_internal_subset:
+            raise ValueError("a DOCTYPE internal subset is never processed")
+
+    def skipped(name, is_parameter_entity):
+        raise ValueError("undeclared entity &" + name + ";")
+
+    def start(name, attributes):
+        pairs = [(key.split(":")[-1], value) for key, value in attributes.items() if key != "xmlns" and not key.startswith("xmlns:")]
+        element = {"name": name.split(":")[-1], "attributes": pairs, "children": [], "order": counter[0]}
+        counter[0] += 1
+        stack[-1]["children"].append(element)
+        stack.append(element)
+
+    def end(name):
+        stack.pop()
+
+    def characters(data):
+        stack[-1]["children"].append(data)
+
+    parser = expat.ParserCreate()
+    parser.SetParamEntityParsing(expat.XML_PARAM_ENTITY_PARSING_NEVER)
+    parser.StartDoctypeDeclHandler = doctype
+    parser.SkippedEntityHandler = skipped
+    parser.StartElementHandler = start
+    parser.EndElementHandler = end
+    parser.CharacterDataHandler = characters
+    parser.Parse(text, True)
+    return document
+
+
+def xml_string(element):
+    return "".join(child if isinstance(child, str) else xml_string(child) for child in element["children"])
+
+
+def document_order(nodes):
+    return sorted({node["order"]: node for node in nodes}.values(), key=lambda node: node["order"])
+
+
+def select_xml(text, path):
+    # Returns (count, text of the first node) exactly as the TestMaster runner evaluates xmlPath.
+    steps = xml_path(path)
+    context = [xml_document(text)]
+    for axis, attribute, name, position in steps:
+        if axis == "descendant":
+            expanded, pending = [], list(context)
+            while pending:
+                node = pending.pop()
+                expanded.append(node)
+                pending.extend(child for child in node["children"] if not isinstance(child, str))
+            context = document_order(expanded)
+        if attribute:
+            values = [value for node in context for key, value in node["attributes"] if name is None or key == name]
+            return len(values), (values[0] if values else None)
+        selected = []
+        for node in context:
+            elements = [child for child in node["children"] if not isinstance(child, str) and (name is None or child["name"] == name)]
+            selected.extend(elements if position is None else elements[position - 1:position])
+        context = document_order(selected)
+    return len(context), (xml_string(context[0]) if context else None)
 
 
 class PlanRuntime:
@@ -196,9 +304,23 @@ class PlanRuntime:
         method = {"label": root.get_by_label, "text": root.get_by_text, "placeholder": root.get_by_placeholder}[by]
         return method(spec["value"], **({"exact": spec["exact"]} if "exact" in spec else {}))
 
-    def check_response(self, response, expectation, path=""):
+    def check_response(self, response, expectation, path="", xml=None):
         predicate = expectation["predicate"]
-        if predicate == "statusIn":
+        if xml is not None:
+            # The first selected node's string value for the text predicates, the node count for the counts.
+            count, text = select_xml(response.content.decode("utf-8-sig"), xml)
+            if predicate in ("textEquals", "textContains"):
+                expected = self.string(expectation["value"])
+                assert text is not None and ((expected in text) if predicate == "textContains" else text == expected)
+            elif predicate == "countEquals":
+                assert count == expectation["value"]
+            elif predicate == "countAtLeast":
+                assert count >= expectation["value"]
+            elif predicate == "countAtMost":
+                assert count <= expectation["value"]
+            else:
+                raise ValueError("xmlPath is read by the text and count predicates only")
+        elif predicate == "statusIn":
             assert response.status_code in expectation["values"]
         elif predicate == "headerEquals":
             assert equal(response.headers.get(expectation["header"]), self.value(expectation["value"]))
@@ -334,7 +456,7 @@ class PlanRuntime:
             expectation = step["expectation"]
             predicate = expectation["predicate"]
             if "responseStepId" in input:
-                self.check_response(self.responses[input["responseStepId"]], expectation, input.get("jsonPointer", ""))
+                self.check_response(self.responses[input["responseStepId"]], expectation, input.get("jsonPointer", ""), input.get("xmlPath"))
                 return
             if predicate == "urlEquals":
                 page = self.selected(input.get("pageAlias"))

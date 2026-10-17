@@ -9,6 +9,7 @@ import {
   type ExecutablePlan,
   type Expectation,
   type PlanStep,
+  selectXmlPath,
   validate,
   validateAgainstSchema,
 } from "@testmaster/contracts";
@@ -367,6 +368,65 @@ describe("standalone deterministic code export", () => {
     expect(() => parse(helpers, { sourceType: "module", plugins: ["typescript"] })).not.toThrow();
     expect(() => exportCode(plan, { format: "pytest" })).not.toThrow();
   });
+  it("exports an xmlPath response check with the runner's evaluator in both formats", async () => {
+    const plan = await fixture("backend");
+    const request = plan.steps[0];
+    if (request?.operation !== "request") throw new Error("Bad fixture");
+    plan.steps = [
+      request,
+      {
+        id: "items",
+        kind: "assertion",
+        operation: "assert",
+        description: "items",
+        input: { responseStepId: "get-health", xmlPath: "/rss/channel/item" },
+        expectation: { predicate: "countEquals", value: 4 },
+      },
+    ];
+    const helpers = exportCode(plan, { format: "playwright" }).files["helpers/standalone.ts"] ?? "";
+    expect(() => parse(helpers, { sourceType: "module", plugins: ["typescript"] })).not.toThrow();
+    // The Python port selects exactly like the runner, and refuses what the runner refuses.
+    const python = exportCode(plan, { format: "pytest" }).files["standalone.py"] ?? "";
+    const feed =
+      '<?xml version="1.0"?><rss xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>q</title><atom:link href="/o"/><item><title>a &amp; <b>b</b></title></item><item><title><![CDATA[<c>]]></title><item/></item><item/><item/></channel></rss>';
+    const paths = [
+      "/rss/channel/item",
+      "//item",
+      "//item[1]",
+      "//item/title",
+      "/rss/channel/item[2]/title",
+      "/rss/*/title",
+      "//link/@href",
+      "//atom:link/@*",
+      "/rss/@*",
+      "/channel",
+    ];
+    const probe = [
+      "import json, sys, types",
+      "sys.modules['requests'] = types.ModuleType('requests')",
+      "namespace = {}",
+      "exec(compile(sys.stdin.read(), 'standalone.py', 'exec'), namespace)",
+      `feed, paths = json.loads(${JSON.stringify(JSON.stringify([feed, paths]))})`,
+      "selected = [list(namespace['select_xml'](feed, path)) for path in paths]",
+      "refused = []",
+      "for body in ['<a>', '<a>&nbsp;</a>', '<!DOCTYPE a [<!ENTITY x \"y\">]><a>&x;</a>', '<!DOCTYPE a SYSTEM \"a.dtd\"><a>&x;</a>', '{}']:",
+      "    try:",
+      "        namespace['select_xml'](body, '/a')",
+      "    except Exception:",
+      "        refused.append(body)",
+      "print(json.dumps([selected, len(refused)]))",
+    ].join("\n");
+    const [selected, refused] = JSON.parse(
+      execFileSync("python3", ["-I", "-c", probe], { input: python, encoding: "utf8" }),
+    );
+    expect(selected).toEqual(
+      paths.map((path) => {
+        const { count, text } = selectXmlPath(feed, path);
+        return [count, text];
+      }),
+    );
+    expect(refused).toBe(5);
+  });
   it("exports a forged session cookie as name=random in both formats", async () => {
     const plan = await fixture("backend");
     const request = plan.steps[0];
@@ -572,7 +632,7 @@ describe("imported Playwright export runner fixtures", () => {
     );
     for (const output of [commonjs, module])
       expect(JSON.parse(output)).toEqual([
-        ["secrets", "profileRequest", "profilePage", "sourceSchemas"],
+        ["secrets", "profileRequest", "profilePage", "sourceSchemas", "xml"],
         "function",
       ]);
   });
@@ -733,6 +793,17 @@ describe("imported Playwright export runner fixtures", () => {
       /conflicts with the auth profile credential/u,
     );
     expect(sent).toHaveLength(1);
+  });
+  it("gives code an xml fixture that selects exactly like a plan's xmlPath check", async () => {
+    const root = installed(exported().files);
+    const xml = await provided<{
+      select(body: string, path: string): { count: number; text: string | null };
+    }>(root, "xml", {});
+    const feed = "<rss><channel><item><title>a</title></item><item/></channel></rss>";
+    for (const path of ["/rss/channel/item", "//item/title", "/rss/channel/link"])
+      expect(xml.select(feed, path)).toEqual(selectXmlPath(feed, path));
+    expect(() => xml.select("{}", "/rss")).toThrow(/root element/u);
+    expect(Object.isFrozen(xml)).toBe(true);
   });
   it("fails a profile fixture without a session, and profilePage without a browser session", async () => {
     const root = installed(exported({ profile: true }).files);

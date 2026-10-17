@@ -2929,6 +2929,186 @@ function withRequestInput(plan: ExecutablePlan, input: Record<string, unknown>):
   return plan;
 }
 const redirectHop = { url: "http://app.test/legacy", status: 307, location: "/current" };
+/**
+ * Attaches the HTTP record of request step `request` and an opted-in server log as two artifacts,
+ * each read back by its own path.
+ */
+async function attachServerLog(f: AnalysisFixture, status: number, log: string) {
+  const fixtures = relationalFixtures(f.db);
+  const snapshot = fixtures.find((item) => item.kind === "Snapshot")!;
+  const base = fixtures.find((item) => item.kind === "Artifact")!;
+  const snapshotInsert = fixtureInsert(snapshot);
+  f.db.run(snapshotInsert.sql, ...snapshotInsert.values);
+  const files = [
+    {
+      relativePath: "http/request.json",
+      kind: "http",
+      content: JSON.stringify({ response: { status }, redirects: [] }),
+    },
+    { relativePath: "logs/server.log", kind: "server-log", content: log },
+  ];
+  const entries = files.map((file, index) => {
+    const artifact = structuredClone(base);
+    const id = `art_00000000-0000-4000-8000-0000000009${index + 10}`;
+    Object.assign(artifact.dto, {
+      id,
+      kind: file.kind,
+      state: "available",
+      hash: "a".repeat(64),
+      storageKey: `${String(base.dto.storageKey)}-${index}`,
+    });
+    Object.assign(artifact.row, {
+      id,
+      state: "available",
+      hash: "a".repeat(64),
+      ...("storage_key" in artifact.row ? { storage_key: artifact.dto.storageKey } : {}),
+      ...("kind" in artifact.row ? { kind: file.kind } : {}),
+      data_json: canonicalJson(artifact.dto),
+    });
+    const insert = fixtureInsert(artifact);
+    f.db.run(insert.sql, ...insert.values);
+    return {
+      artifactId: id,
+      relativePath: file.relativePath,
+      kind: file.kind,
+      sizeBytes: Buffer.byteLength(file.content),
+      state: "available",
+      redactionStatus: "sanitized",
+      sha256: "a".repeat(64),
+    };
+  });
+  vi.mocked(f.artifacts.get).mockResolvedValue({
+    manifest: { snapshotId: snapshot.dto.id, attemptId: f.step.attemptId, entries },
+  } as never);
+  f.artifacts.read = vi.fn(
+    async (_runId: string, path: string, options: { offset?: number; maxBytes?: number } = {}) => {
+      const bytes = Buffer.from(files.find((file) => file.relativePath === path)!.content);
+      const offset = options.offset ?? 0;
+      return { bytes: bytes.subarray(offset, offset + (options.maxBytes ?? 65536)) };
+    },
+  ) as never;
+}
+/** Records the runner's start and finish of step `request` around `during`, returning a log timestamp inside it. */
+function requestStepWindow(f: AnalysisFixture): string {
+  const started = recordRunnerEvent(f, 1, "step.started", { stepId: "request", index: 0 });
+  recordRunnerEvent(f, 2, "step.finished", {
+    stepId: "request",
+    index: 0,
+    status: "passed",
+    durationMs: 5,
+    evidencePaths: ["http/request.json"],
+  });
+  return `${started.occurredAt.slice(0, -1)}123456Z`;
+}
+const serverLogHeader =
+  "testmaster: docker logs searxng-tm-app from 2026-10-17T12:00:00.000Z to 2026-10-17T12:00:05.000Z";
+it("a 5xx whose server log recorded an exception while the request ran is a product bug citing that line", async () => {
+  const f = await fixture({
+    plan: requestStatusPlan([200]),
+    step: { expected: 200, observed: 500 },
+  });
+  const at = requestStepWindow(f);
+  await attachServerLog(
+    f,
+    500,
+    [
+      serverLogHeader,
+      "2020-01-01T00:00:00.000000000Z ERROR an older failure outside the step",
+      `${at} Traceback (most recent call last):`,
+      `${at}   File "/usr/local/searxng/searx/webutils.py", line 130, in get_result_url`,
+      `${at} AttributeError: 'NoneType' object has no attribute 'netloc'`,
+      "",
+    ].join("\n"),
+  );
+  const analysis = await f.service.analyze(f.run.id, { model: true });
+  expect(analysis).toMatchObject({ failureKind: "product_bug", recommendedAction: "fix_product" });
+  expect(analysis.hypotheses[0]?.text).toContain(
+    "\"AttributeError: 'NoneType' object has no attribute 'netloc'\"",
+  );
+  expect(analysis.hypotheses[0]?.supports).toContainEqual(
+    expect.objectContaining({ relativePath: "logs/server.log" }),
+  );
+  const fact = analysis.facts.find((item) => item.text.includes("logs/server.log"));
+  expect(fact?.text).toBe(
+    "The server log of container searxng-tm-app (logs/server.log) recorded 2 error lines while step request ran: \"AttributeError: 'NoneType' object has no attribute 'netloc'\"; \"Traceback (most recent call last):\".",
+  );
+  expect(fact?.evidenceRefs).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ relativePath: "logs/server.log" }),
+      expect.objectContaining({ stepId: f.step.id }),
+    ]),
+  );
+  expect(analysis.diagnosis?.conclusion.text).toContain(
+    "The server failed while handling request step request (HTTP 500)",
+  );
+  expect(analysis.diagnosis?.nextSteps[0]?.text).toContain(
+    "Read the error lines of logs/server.log",
+  );
+  const request = f.complete.mock.calls[0]![0] as {
+    data: { measurements: Record<string, unknown>[] };
+  };
+  expect(request.data.measurements.find((item) => item.kind === "server-log")).toMatchObject({
+    container: "searxng-tm-app",
+    unavailable: null,
+  });
+  // Control: the same 500 with a log that recorded nothing while the step ran is no product bug.
+  const quiet = await fixture({
+    plan: requestStatusPlan([200]),
+    step: { expected: 200, observed: 500 },
+  });
+  requestStepWindow(quiet);
+  await attachServerLog(
+    quiet,
+    500,
+    `${serverLogHeader}\n2020-01-01T00:00:00.000000000Z ERROR an older failure outside the step\n`,
+  );
+  const unexplained = await quiet.service.analyze(quiet.run.id, {});
+  expect(unexplained.failureKind).toBe("unknown");
+  expect(unexplained.facts.map((item) => item.text)).toContain(
+    'The server log of container searxng-tm-app (logs/server.log) recorded 1 error line during the attempt, none while step request ran; first: "ERROR an older failure outside the step".',
+  );
+});
+it("an unavailable server log is a limitation, never a cause", async () => {
+  const f = await fixture({
+    plan: requestStatusPlan([200]),
+    step: { expected: 200, observed: 500 },
+  });
+  requestStepWindow(f);
+  await attachServerLog(
+    f,
+    500,
+    "testmaster: server log unavailable (docker logs searxng-tm-app from 2026-10-17T12:00:00.000Z to 2026-10-17T12:00:05.000Z): docker exited 1: No such container: searxng-tm-app\n",
+  );
+  const analysis = await f.service.analyze(f.run.id, {});
+  expect(analysis.failureKind).toBe("unknown");
+  expect(analysis.limitations).toContain(
+    "The server log of container searxng-tm-app was unavailable: docker exited 1: No such container: searxng-tm-app.",
+  );
+});
+it("server log lines reach facts with secrets masked", async () => {
+  vi.stubEnv("TESTMASTER_SECRET_TOKEN", "s3cr3t-host-value-0042");
+  try {
+    const f = await fixture({
+      plan: requestStatusPlan([200]),
+      step: { expected: 200, observed: 502 },
+    });
+    const at = requestStepWindow(f);
+    await attachServerLog(
+      f,
+      502,
+      `${serverLogHeader}\n${at} RuntimeError: upstream refused key s3cr3t-host-value-0042\n`,
+    );
+    const analysis = await f.service.analyze(f.run.id, {});
+    const texts = [
+      ...analysis.facts.map((item) => item.text),
+      ...analysis.hypotheses.map((item) => item.text),
+    ].join("\n");
+    expect(texts).toContain("RuntimeError: upstream refused key");
+    expect(texts).not.toContain("s3cr3t-host-value-0042");
+  } finally {
+    vi.unstubAllEnvs();
+  }
+});
 it("a statusIn expecting the redirect that the runner followed is a test defect, not a product bug", async () => {
   const f = await fixture({
     plan: requestStatusPlan([307]),

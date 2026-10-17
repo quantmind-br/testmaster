@@ -394,7 +394,11 @@ const buildStep = (withTerminal: boolean) =>
         input: Type.Union([
           Obj({ locator: Locator }),
           Obj({ pageAlias: Type.Optional(Name), url: Type.Optional(Type.String()) }),
-          Obj({ responseStepId: Name, jsonPointer: Type.Optional(JsonPointer) }),
+          Obj({
+            responseStepId: Name,
+            jsonPointer: Type.Optional(JsonPointer),
+            xmlPath: Type.Optional(Type.String({ minLength: 1, maxLength: 512 })),
+          }),
           Obj({ outputName: Name }),
           ...(withTerminal
             ? [

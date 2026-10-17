@@ -11,10 +11,14 @@ import {
   type JsonValue,
   type PlanStep,
   parseStrictJson,
+  parseXmlPath,
   patternMaxLength,
   SourceSchemaError,
+  selectXmlPath,
   setJsonPointer,
   validateAgainstSchema,
+  XML_PATH_PREDICATES,
+  type XmlSelection,
 } from "@testmaster/contracts";
 import { type Stopwatch, uuidV7IdGenerator } from "@testmaster/domain";
 import { type Dispatcher, ProxyAgent, request } from "undici";
@@ -428,12 +432,102 @@ function assertedJsonValue(
     throw error;
   }
 }
+/**
+ * What `xmlPath` selects in the XML body: the string value of the first node for the text
+ * predicates, the number of nodes for the counts. A body that is not well-formed XML fails.
+ */
+async function assertXmlResponse(
+  runtime: Runtime,
+  response: HttpResponse,
+  expectation: Expectation,
+  xmlPath: string,
+): Promise<void> {
+  let selection: XmlSelection;
+  try {
+    parseXmlPath(xmlPath);
+  } catch (error) {
+    throw new RuntimeError("security_precondition_failed", (error as Error).message);
+  }
+  try {
+    selection = selectXmlPath(responseText(response), xmlPath);
+  } catch (error) {
+    recordFailedComparison(runtime, { xmlPath, wellFormed: false }, { xmlPath });
+    throw new RuntimeError(
+      "assertion_mismatch",
+      `HTTP ${expectation.predicate} on xmlPath ${xmlPath}: the response body is not XML (${runtime.scrub((error as Error).message).slice(0, 300)})`,
+      "failed",
+    );
+  }
+  let matches: boolean;
+  let observed: unknown;
+  let expected: unknown;
+  switch (expectation.predicate) {
+    case "textEquals":
+    case "textContains": {
+      const wanted = await runtime.resolve(expectation.value);
+      if (typeof wanted !== "string")
+        throw new RuntimeError(
+          "security_precondition_failed",
+          "Text expectation must resolve to a string",
+        );
+      observed = selection.text;
+      expected = wanted;
+      matches =
+        selection.text !== null &&
+        (expectation.predicate === "textEquals"
+          ? selection.text === wanted
+          : selection.text.includes(wanted));
+      break;
+    }
+    case "countEquals":
+    case "countAtLeast":
+    case "countAtMost":
+      observed = selection.count;
+      expected =
+        expectation.predicate === "countEquals"
+          ? expectation.value
+          : expectation.predicate === "countAtLeast"
+            ? { atLeast: expectation.value }
+            : { atMost: expectation.value };
+      matches =
+        expectation.predicate === "countEquals"
+          ? selection.count === expectation.value
+          : expectation.predicate === "countAtLeast"
+            ? selection.count >= expectation.value
+            : selection.count <= expectation.value;
+      break;
+    default:
+      throw new RuntimeError(
+        "security_precondition_failed",
+        `xmlPath is read by ${XML_PATH_PREDICATES.join(", ")} only`,
+      );
+  }
+  if (matches) {
+    runtime.recordComparison(observed, expected);
+    return;
+  }
+  recordFailedComparison(runtime, observed, expected);
+  throw new RuntimeError(
+    "assertion_mismatch",
+    `HTTP ${expectation.predicate} expectation was not satisfied at xmlPath ${xmlPath}${selection.count === 0 ? ": the path selects no node" : ""}`,
+    "failed",
+  );
+}
 export async function assertResponse(
   runtime: Runtime,
   response: HttpResponse,
   expectation: Expectation,
   pointer?: string,
+  xmlPath?: string,
 ): Promise<void> {
+  if (xmlPath !== undefined) {
+    if (pointer !== undefined)
+      throw new RuntimeError(
+        "security_precondition_failed",
+        "A response check takes jsonPointer or xmlPath, not both",
+      );
+    return assertXmlResponse(runtime, response, expectation, xmlPath);
+  }
   let matches = false;
   let observed: unknown;
   let expected: unknown;
@@ -900,7 +994,13 @@ export class HttpEngine {
           ? [httpBodiesPath(step.input.responseStepId)]
           : []),
       ]);
-      await assertResponse(this.runtime, response, step.expectation, step.input.jsonPointer);
+      await assertResponse(
+        this.runtime,
+        response,
+        step.expectation,
+        step.input.jsonPointer,
+        step.input.xmlPath,
+      );
       return;
     }
     throw new RuntimeError(

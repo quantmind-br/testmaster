@@ -1,4 +1,5 @@
 import { type TSchema, Type } from "@sinclair/typebox";
+import { ServerLogSource } from "./entities.js";
 import { AuthConfigInput, AuthPlainUsername, authContracts } from "./m4/auth.js";
 import { SuiteFixedMember, SuiteSelection } from "./m4/lists.js";
 import { RunLimits } from "./operations.js";
@@ -830,6 +831,20 @@ export const mcpTools = {
     }),
     output: "McpProposalBatch",
   },
+  testmaster_trial_plan: {
+    milestone: "M2",
+    input: Obj({
+      batchId: d(id("pbt"), "Proposal batch id"),
+      environmentId: d(id("env"), "Environment to replay the proposals' plans against"),
+      proposalIds: Type.Optional(
+        d(
+          Type.Array(id("pro"), { minItems: 1, uniqueItems: true }),
+          "Proposals of the batch to try; absent: every proposal of the batch",
+        ),
+      ),
+    }),
+    output: "PlanTrialReceipt",
+  },
   testmaster_review_plan: {
     milestone: "M2",
     input: Obj({
@@ -849,7 +864,7 @@ export const mcpTools = {
   testmaster_generate_tests: {
     milestone: "M2",
     // Flat object on purpose: a top-level anyOf hides the other properties from clients that render
-    // the first branch only. "proposalIds or revisionIds" is enforced by the tool at runtime.
+    // the first branch only. "proposalIds or revisionIds, or runId alone" is enforced at runtime.
     input: Obj({
       proposalIds: Type.Optional(
         d(
@@ -861,6 +876,12 @@ export const mcpTools = {
         d(
           Type.Array(id("rev"), { minItems: 1 }),
           "Existing revisions to regenerate code for; give proposalIds or revisionIds (at least one), all from one project",
+        ),
+      ),
+      runId: Type.Optional(
+        d(
+          id("run"),
+          "A completed, failed run of a code candidate: repairs that candidate from the run's failed steps. Exclusive with proposalIds and revisionIds",
         ),
       ),
       budget: Type.Optional(
@@ -1081,6 +1102,33 @@ export const mcpTools = {
       tags: Type.Optional(d(Type.Array(Name, { maxItems: 32 }), "Tags of a new test")),
       priority: Type.Optional(d(Priority, "Priority of a new test")),
       justification: Type.Optional(d(Description, "Why the test or revision is saved")),
+    }),
+    output: "McpSavedTest",
+  },
+  testmaster_import_code: {
+    milestone: "M2",
+    input: Obj({
+      path: d(
+        Name,
+        "Entry file (.ts Playwright or .py pytest) inside an approved root and the project root; its relative imports are bundled",
+      ),
+      format: d(Enum(["playwright", "pytest"]), "Framework of the code"),
+      projectId: Type.Optional(
+        d(id("prj"), "Create a new test in this project; give projectId or testId"),
+      ),
+      testId: Type.Optional(
+        d(
+          id("tst"),
+          "Add the code as a candidate revision of this existing test instead; it is not active until testmaster_promote_revision",
+        ),
+      ),
+      parentRevisionId: Type.Optional(
+        d(
+          id("rev"),
+          "Parent of the candidate; only with testId (default: the test's active revision)",
+        ),
+      ),
+      name: Type.Optional(d(Name, "Name of a new test; default: the first test title in the code")),
     }),
     output: "McpSavedTest",
   },
@@ -1415,6 +1463,12 @@ export const mcpTools = {
         d(
           Type.Array(id("aup"), { maxItems: 16 }),
           "Auth profiles bound to the environment; replaces the list. Each must be bound to the target origin",
+        ),
+      ),
+      serverLog: Type.Optional(
+        d(
+          Type.Union([ServerLogSource, Type.Null()]),
+          "Opt-in docker container of the application server; its log lines during each attempt become logs/server.log. null stops reading it",
         ),
       ),
     }),
