@@ -81,6 +81,27 @@ describe("authoring services", () => {
       "POLICY_DENIED",
     );
   });
+  it("a promoted plan renames a test still named after its plan and keeps a name set apart", async () => {
+    const ctx = await context();
+    new ProjectsService(ctx).create({ name: "Shop" });
+    const tests = new TestsService(ctx);
+    const revisions = new RevisionsService(ctx);
+    const promoteRenamed = (testId: string, name: string) => {
+      const current = tests.get(testId);
+      const plan = scaffoldPlan("backend");
+      plan.name = name;
+      const candidate = revisions.create(testId, plan, current.activeRevisionId as string);
+      return revisions.promote(candidate.id, current.version as number);
+    };
+    const derived = tests.create({ plan: scaffoldPlan("backend") });
+    expect(derived.name).toBe(scaffoldPlan("backend").name);
+    expect(promoteRenamed(derived.id, "Health check with corrected status").name).toBe(
+      "Health check with corrected status",
+    );
+    // An explicit test name is not the plan's, so a promotion keeps it.
+    const named = tests.create({ plan: scaffoldPlan("backend"), name: "Release gate: health" });
+    expect(promoteRenamed(named.id, "Another plan name").name).toBe("Release gate: health");
+  });
   it("creates immutable environment snapshots and rolls back stale updates", async () => {
     const ctx = await context();
     const projects = new ProjectsService(ctx);

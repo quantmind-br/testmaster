@@ -691,12 +691,15 @@ export class SecretsService {
     }
     if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(name))
       throw new ContractError("INVALID_ARGUMENT", "Secret name must be a bounded identifier");
-    if (
-      (allEntities(this.ctx, "SecretReference") as SecretMetadata[]).some(
-        (entry) => entry.locator === name && !entry.revokedAt,
-      )
-    )
-      throw new ContractError("REVISION_CONFLICT", "Secret name already exists; use rotate");
+    const taken = (allEntities(this.ctx, "SecretReference") as SecretMetadata[]).find(
+      (entry) => entry.locator === name && !entry.revokedAt,
+    );
+    if (taken)
+      throw new ContractError(
+        "REVISION_CONFLICT",
+        "Secret name already exists; rotate it to store a new value (CLI secret rotate, MCP testmaster_rotate_secret)",
+        { secretId: taken.id, name },
+      );
     const reference = entity(this.ctx, "sec", {
       provider: "ephemeral",
       locator: name,

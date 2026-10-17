@@ -51,7 +51,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_save_test:
     "Store a plan as a new test (projectId) or a candidate revision of a test (testId); plan.requirementRefs is required ([] if none). Returns test, revision, active and nextActions. A new test's first revision is active at once; a testId revision stays a candidate until testmaster_promote_revision.",
   testmaster_promote_revision:
-    "Make a candidate revision the active one of its test at expectedVersion (test.version); an optional reason is recorded. A generated candidate needs a passing replay first: testmaster_run_tests with revisionId. Healed revisions go through testmaster_approve_healing.",
+    "Make a candidate revision active at expectedVersion (test.version); an optional reason is recorded. A test named after its active plan takes the promoted plan's name. A generated candidate needs a passing replay first (testmaster_run_tests with revisionId); healed: testmaster_approve_healing.",
   testmaster_archive_test:
     "Archive a test at expectedVersion (test.version): it leaves active use, its history and evidence stay, and no unarchive exists. An optional reason is recorded on the test with the actor and time. Returns the archived test.",
   testmaster_save_suite:
@@ -67,7 +67,9 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_review_requirements:
     "Edit, adjudicate conflicts, reject (reason required; final) and approve requirements at the snapshot expectedVersion, in that order; an optional reason is kept on each edited or approved one. Returns per-item results and the new sourceSnapshotId. Next: testmaster_generate_plan.",
   testmaster_set_secret:
-    "Register a secret from valueFile or fromEnv (never an argument; one trailing newline trimmed) with its allowedOrigins; returns metadata only. Secrets and auth profiles must exist before testmaster_generate_plan. Next: testmaster_save_auth_profile.",
+    "Register a secret from valueFile or fromEnv (never an argument; one trailing newline trimmed) with its allowedOrigins; returns metadata only. A taken name is REVISION_CONFLICT with details.secretId: use testmaster_rotate_secret. Create secrets and auth profiles before testmaster_generate_plan.",
+  testmaster_rotate_secret:
+    "Store a new value for an existing secret (id or name) from valueFile or fromEnv; the id, name and allowedOrigins stay, secretVersion goes up, and auth profiles and plans that cite it use the new value. Returns metadata only.",
   testmaster_save_auth_profile:
     "Create (projectId, name, kind, originBindings, secrets, config) or update (profileId, expectedVersion, top-level fields to change) an auth profile; secrets are secret ids, username may be plain (unmasked); config keys per kind: input schema. Returns the view. Next: testmaster_update_environment.",
   testmaster_update_environment:

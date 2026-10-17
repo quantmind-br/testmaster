@@ -20,6 +20,18 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 - The REST routes that run a model (proposal generation and refinement, `POST /runs/{id}/analysis`, `POST /runs/{id}/healing-proposals`, requirement normalization) and `POST /mcp` turn off the server's 30 s socket idle timeout for their connection; other routes keep it (`ServerOptions.connectionTimeoutMs`).
 - The eval runner never kills a model command; its trial wall time only stops commands that do no model work and keeps later commands from starting. The development smoke forwarder relays model calls without a timeout.
 
+### Twentieth Omnigent agent run
+
+Found when an omp agent drove the pipeline on Omnigent a twentieth time (the suite passed 9/9 three times and the code candidates 9/9; the 2 failures were deliberate drills).
+
+- `testmaster init` in an initialized workspace writes `testmaster.config.json` again when it is absent (for the bound project, with its default environment's origin and network profile) and reports `configWritten`; an existing file is still kept unless `--overwrite`. Before, a second `init` returned the ids and wrote nothing, so an agent found no config file and had to write it by hand.
+- `init` binds its working directory to the project, the binding `testmaster_bootstrap` keeps for a root, so bootstrap finds the init project even without the config file; a config file that names a project binds its root on bootstrap. Without the file, bootstrap's next action says to write `proposedConfig` there (it never writes a file itself).
+- `testmaster_rotate_secret` (scope `W`) stores a new value for an existing secret, by id or name, from `valueFile` or `fromEnv`: the id, name and allowed origins stay and `secretVersion` goes up, as `testmaster secret rotate` does. `testmaster_set_secret` refuses a taken name with `REVISION_CONFLICT` carrying `details.secretId` and `name`. Before, MCP had no rotation and the agent had to switch to the CLI.
+- Plan generation is told which secrets each auth profile binds by role (`secrets: {username, password, ...}`, only offered secrets) and its plain username, and to fill a login with the profile's own account rather than a look-alike secret. Before, a browser login plan used a user-name secret left over from another project in the same workspace.
+- Promoting a revision renames a test that is still named after its replaced active plan to the promoted plan's name, on every promotion path; a name set apart from the plan, and a code revision, keep the test's name.
+- Documented what the agent could not tell from the docs: URL predicates (and `visible`/`hidden`) wait until the step deadline, 30 s by default; an action step whose locator never attaches is `assertion_timeout`; the analysis `confidence` is the model's uncalibrated number, independent of the rules-owned conclusion; `manual_review_only` for a new test means no passing run exists to prove the replacement; operation coverage counts only passed `jsonSchema` steps of declarative plans, never code revisions; a healing proposal's `risk` is the highest class of the candidate plan's steps, so a login form test is `write`.
+- Repository provenance (`dirtyHash`, `working-tree-dirty`) leaves out TestMaster's own artifacts, `testmaster.config.json` and any `.testmaster/` directory, tracked or untracked, as the dirty code analysis already did; the run freezes its configuration on its own. Before, a run in a repository whose only change was the config file was reported on a dirty tree.
+
 ### Nineteenth Omnigent agent run
 
 Found when an omp agent drove the pipeline on Omnigent a nineteenth time (the suite passed 8/8 three times and the code candidates 8/8; the 2 failures were deliberate drills).

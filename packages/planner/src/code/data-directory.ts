@@ -40,3 +40,21 @@ export function dataDirectoryPrefixes(repoRoot: string, dataDir: string | undefi
 export function insideDataDirectory(path: string, prefixes: readonly string[]): boolean {
   return prefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 }
+
+/** TestMaster's own artifacts: the project configuration and any `.testmaster` data directory. */
+const TESTMASTER_ARTIFACT = /(?:^|\/)(?:testmaster\.config\.json$|\.testmaster(?:\/|$))/u;
+
+/**
+ * True for a repository-relative path that is one of TestMaster's own artifacts, never a change
+ * of the code under test: a working tree is not dirty, and no impact widens, because of them.
+ */
+export function testmasterArtifact(path: string): boolean {
+  return TESTMASTER_ARTIFACT.test(path);
+}
+
+/** Git pathspecs that leave out the same paths as `testmasterArtifact` from a tracked diff. */
+export const TESTMASTER_ARTIFACT_PATHSPECS = [
+  ":(exclude,glob)**/testmaster.config.json",
+  ":(exclude,glob)**/.testmaster",
+  ":(exclude,glob)**/.testmaster/**",
+] as const;

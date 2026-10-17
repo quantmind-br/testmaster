@@ -2691,8 +2691,9 @@ it("generation offers the project's auth profiles and the JSON body set guidance
   const request = generated?.plan.kind === "executable" ? generated.plan.steps[0] : undefined;
   expect(request?.operation === "request" && request.input.auth).toBe("profile");
   const prompt = sentPrompt();
+  // The profile names the secret it binds by role, so a login fills the profile's own account.
   expect(prompt).toContain(
-    '"authProfiles":[{"kind":"bearer","name":"api-login","origins":["https://api.example.test"]}]',
+    `"authProfiles":[{"kind":"bearer","name":"api-login","origins":["https://api.example.test"],"secrets":{"token":"${secret.id}"}}]`,
   );
   expect(prompt).toContain('"auth": "profile"');
   expect(prompt).toContain("body.set");

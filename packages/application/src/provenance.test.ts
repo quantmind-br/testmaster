@@ -142,6 +142,42 @@ it("keeps absent repositories unbound and verifies checkout, dirty and ancestor 
     await rm(root, { recursive: true, force: true });
   }
 });
+it("never marks the working tree dirty for TestMaster's own artifacts, tracked or untracked, and does for a look-alike name", async () => {
+  const root = await mkdtemp(join(tmpdir(), "tm-provenance-artifacts-"));
+  try {
+    const git = (args: string[]) =>
+      execFileSync("git", ["-c", "core.hooksPath=/dev/null", ...args], {
+        cwd: root,
+        encoding: "utf8",
+      });
+    git(["init", "--quiet"]);
+    git(["config", "user.email", "test@example.invalid"]);
+    git(["config", "user.name", "Test"]);
+    await mkdir(join(root, "app"));
+    await writeFile(join(root, "app", "testmaster.config.json"), '{"version":1}\n');
+    await writeFile(join(root, "app", "mytestmaster.config.json"), '{"version":1}\n');
+    git(["add", "."]);
+    git(["commit", "--quiet", "-m", "first"]);
+    // A tracked configuration edit, a new configuration and a nested data directory.
+    await writeFile(join(root, "app", "testmaster.config.json"), '{"version":2}\n');
+    await writeFile(join(root, "testmaster.config.json"), '{"version":1}\n');
+    await mkdir(join(root, "app", ".testmaster", "evidence"), { recursive: true });
+    await writeFile(join(root, "app", ".testmaster", "evidence", "run.json"), "{}\n");
+    expect(resolveRepositoryProvenance(root)).toMatchObject({
+      binding: "verified",
+      dirtyHash: null,
+      limitations: [],
+    });
+    // Positive control: a file whose name only ends like the configuration is repository content.
+    await writeFile(join(root, "app", "mytestmaster.config.json"), '{"version":2}\n');
+    expect(resolveRepositoryProvenance(root)).toMatchObject({
+      dirtyHash: expect.any(String),
+      limitations: ["working-tree-dirty"],
+    });
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 it("preserves dirty content hashes across chunk boundaries and invalidates cached same-size edits", async () => {
   const root = await mkdtemp(join(tmpdir(), "tm-provenance-stream-"));
@@ -200,7 +236,9 @@ it("never lists or opens the project data directory, whose live database this pr
       "-m",
       "initial",
     ]);
-    const dataDir = join(root, ".testmaster");
+    // A configured data directory (TESTMASTER_DATA_DIR) whose name is not `.testmaster`, which is
+    // always left out as a TestMaster artifact.
+    const dataDir = join(root, "tm-data");
     await mkdir(join(dataDir, "runs"), { recursive: true });
     await writeFile(join(dataDir, "testmaster.db"), "database v1");
     await writeFile(join(dataDir, "testmaster.db-wal"), "wal v1");

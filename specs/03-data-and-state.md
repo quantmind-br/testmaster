@@ -73,7 +73,7 @@ running/collecting ─→ inconclusive (cannot determine required result)
 | Worker perdido após efeito incerto, evidence obrigatória ausente, oracle sem confiança | inconclusive | `worker_lost`, `insufficient_evidence`, `oracle_uncertain` |
 | Cancel vence CAS terminal sem falha comprovada anterior | cancelled | `user_cancelled`, `deadline_cancelled`, `tunnel_lost`; se já há falha comprovada, preservar failed |
 | Cancel chega depois da conclusão | resultado anterior | receipt `already_terminal`, não reescreve |
-| Timeout de step/assertion com observação confiável | failed | `assertion_timeout`; não assumir bug root cause |
+| Timeout de step/assertion com observação confiável | failed | `assertion_timeout`; não assumir bug root cause. An action step whose locator never attaches before its deadline gets the same code (no action code exists); its analysis fact names it an action |
 | Timeout de plataforma antes de observar assertion | inconclusive | `execution_deadline` |
 | Timeout de espera no cliente | sem mudança | CLI exit 7 e runId para reattach |
 

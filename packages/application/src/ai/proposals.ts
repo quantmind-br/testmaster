@@ -55,7 +55,7 @@ import {
 } from "./source-documents.js";
 
 const AUTH_PROFILE_INSTRUCTION =
-  'When authProfiles are supplied, a request to an endpoint that needs a logged-in session or credential the profile manages (cookie session, bearer or API-key header) sets "auth": "profile" in the request input, so the environment\'s bound auth profile supplies the session for that request only; do not copy session secrets into headers for it. Leave auth out for public endpoints and for requests that must be unauthenticated (401/403 negatives). When no authProfiles are supplied never set auth.';
+  'When authProfiles are supplied, a request to an endpoint that needs a logged-in session or credential the profile manages (cookie session, bearer or API-key header) sets "auth": "profile" in the request input, so the environment\'s bound auth profile supplies the session for that request only; do not copy session secrets into headers for it. Leave auth out for public endpoints and for requests that must be unauthenticated (401/403 negatives). When no authProfiles are supplied never set auth. An authProfiles entry lists the secrets it binds by role ("secrets": {"username": <entry id>, "password": <entry id>, ...}) and its plain "username" when the user name is not a secret. A browser login (or a login request) with the account of an auth profile fills the user name and the password from that profile: the secretRef of each role, or its plain username as a literal. Prefer them over another secrets entry whose name looks alike: that one may belong to another account or project.';
 const JSON_BODY_SET_INSTRUCTION =
   'A secret or a value captured by an earlier request that belongs inside a JSON body (a user name, a password, an id) is bound with body.set, never nested in the body literal: {"kind":"json","value":{"remember":true},"set":[{"pointer":"/username","value":{"secretRef":<user entry id>}},{"pointer":"/password","value":{"secretRef":<password entry id>}}]}. A {"secretRef":...} or {"variableRef":...} object inside body.value is plain data and is sent as written.';
 const SECRET_CREDENTIAL_INSTRUCTION =
@@ -279,10 +279,21 @@ export class ProposalsService {
     readonly model: ModelService,
     readonly requirements: RequirementsService,
   ) {}
-  /** Auth profiles of the project an HTTP request may use with `auth: "profile"`; none when unreadable. */
+  /**
+   * Auth profiles of the project an HTTP request may use with `auth: "profile"`, each with the
+   * secrets it binds by role (only the offered ones) and its plain username, so a browser login
+   * fills the profile's own account; none when unreadable.
+   */
   private offeredAuthProfiles(
     projectId: string,
-  ): { name: string; kind: string; origins: string[] }[] {
+    offered: ReadonlySet<string>,
+  ): {
+    name: string;
+    kind: string;
+    origins: string[];
+    secrets?: Record<string, string>;
+    username?: string;
+  }[] {
     try {
       this.ctx.authorize("R", projectId);
     } catch {
@@ -290,11 +301,18 @@ export class ProposalsService {
     }
     return allEntities(this.ctx, "AuthProfile")
       .filter((profile) => profile.projectId === projectId)
-      .map((profile) => ({
-        name: String(profile.name),
-        kind: String(profile.kind),
-        origins: profile.originBindings as string[],
-      }));
+      .map((profile) => {
+        const roles = Object.entries((profile.secrets ?? {}) as Record<string, string>).filter(
+          ([, secretRef]) => offered.has(secretRef),
+        );
+        return {
+          name: String(profile.name),
+          kind: String(profile.kind),
+          origins: profile.originBindings as string[],
+          ...(roles.length ? { secrets: Object.fromEntries(roles) } : {}),
+          ...(typeof profile.username === "string" ? { username: profile.username } : {}),
+        };
+      });
   }
   /** Secret names and ids the model may reference; none when the caller cannot read secrets. */
   private offeredSecrets(): { secretRef: string; name: string }[] {
@@ -382,11 +400,11 @@ export class ProposalsService {
         ? 'Choose each plan\'s type from the requirement: "backend" with runner "http" when it is observable through HTTP API status, headers or JSON; "frontend" with runner "playwright" when it is observable only in the browser UI. Where a user visiting a web page ends up (a redirect to a login page, a return_to parameter) is a browser outcome: single-page applications redirect in the browser after a 200 HTML answer, so assert the final URL in a frontend plan, and assert an HTTP 3xx status and Location header only when a source states the server answers that way.'
         : `Every plan must have type "${type}" and runner "${planRunners[type]}".${type === "integration" ? ' Build an HTTP workflow with at least two request steps: capture a value from an earlier response and use its "stepId.captureName" variableRef in a later request pathSegments, query, headers or body. Include a required deterministic business assertion referencing that later request through responseStepId. A single request, unused capture, or assertion only over the initial response is not an integration workflow.' : ""}`;
     const secrets = this.offeredSecrets();
-    const authProfiles = this.offeredAuthProfiles(input.projectId);
+    const offeredSecrets = new Set(secrets.map((secret) => secret.secretRef));
+    const authProfiles = this.offeredAuthProfiles(input.projectId, offeredSecrets);
     const declineInstruction =
       'A requirement that is not observable through HTTP responses or the browser for this request (for example a command-line program: its exit status, stdout, stderr or a terminal UI) must NOT get an invented endpoint, page or assertion. List it instead in "unsupported" as {"requirementId": <exact requirement id>, "reason": <one short sentence>} and give it no proposal. Every supplied requirement appears exactly once, either as a proposal or in "unsupported"; "proposals" may be empty when every requirement is declined. Always answer with the JSON shape {"proposals": [...], "unsupported": [...]}; never return an "error" property or any other shape.';
     const requirementIds = requirements.map((item) => item.id);
-    const offeredSecrets = new Set(secrets.map((secret) => secret.secretRef));
     const unrunnable = (
       plan: ExecutablePlan,
     ): Pick<GenerationRefusal, "reasonCode" | "message" | "pointers"> | undefined => {
@@ -531,7 +549,7 @@ export class ProposalsService {
           sourceSnapshotId: snapshot.fingerprint,
           // Names and ids only: values never leave the vault.
           ...(secrets.length ? { secrets } : {}),
-          // Names and kinds only: each environment binds one of them, and the runner applies its session.
+          // Names, kinds, bound secret ids by role and a plain username: each environment binds one of them.
           ...(authProfiles.length ? { authProfiles } : {}),
           // Operations and schema pointers only: the documents stay in the store.
           ...(apiSpecs.length ? { apiSpecs } : {}),

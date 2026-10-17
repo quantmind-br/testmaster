@@ -4,7 +4,11 @@ import { dirname, relative, resolve } from "node:path";
 import { promisify } from "node:util";
 import { ContractError } from "@testmaster/contracts";
 import { canonicalJson, sha256 } from "@testmaster/domain";
-import { dataDirectoryPrefixes, insideDataDirectory } from "./data-directory.js";
+import {
+  dataDirectoryPrefixes,
+  insideDataDirectory,
+  testmasterArtifact,
+} from "./data-directory.js";
 import { analyzableCodeType, hashConfinedCodeFile } from "./summary.js";
 import type { CodeDiff, CodeRoute, CodeSummary } from "./types.js";
 
@@ -115,8 +119,6 @@ function parseNameStatus(output: string): GitFile[] {
 const HIDDEN_DIRECTORY = /(?:^|\/)\.[^/]+\//u;
 /** Schema-like sources that are not code files but still define shared structure. */
 const SHARED_DATA_FILE = /\.(?:sql|prisma|graphql|gql|proto)$/iu;
-/** TestMaster's own artifacts: the project configuration and the data directory. */
-const TESTMASTER_ARTIFACT = /(?:^|\/)(?:testmaster\.config\.json$|\.testmaster(?:\/|$))/u;
 /**
  * Shared code by path segment, not by substring: a directory named `schema(s)`, `migration(s)`,
  * `shared` or `database`, or a file whose stem ends in one of those words (`schema.ts`,
@@ -275,7 +277,7 @@ export async function collectDiffChanges(
       head,
       "--",
     ]),
-  ).filter((change) => !TESTMASTER_ARTIFACT.test(change.path));
+  ).filter((change) => !testmasterArtifact(change.path));
   let dirtyHash: string | null = null;
   if (options.workingTree) {
     // The project data directory holds the live SQLite database of the calling process; reading
@@ -289,13 +291,12 @@ export async function collectDiffChanges(
       ),
     ).filter(
       (change) =>
-        !insideDataDirectory(change.path, dataPrefixes) && !TESTMASTER_ARTIFACT.test(change.path),
+        !insideDataDirectory(change.path, dataPrefixes) && !testmasterArtifact(change.path),
     );
     const untracked = (await git(root, ["ls-files", "--others", "--exclude-standard", "-z"]))
       .split("\0")
       .filter(
-        (path) =>
-          path && !insideDataDirectory(path, dataPrefixes) && !TESTMASTER_ARTIFACT.test(path),
+        (path) => path && !insideDataDirectory(path, dataPrefixes) && !testmasterArtifact(path),
       );
     dirty.push(...untracked.map((path) => ({ status: "A", path })));
     const hashes: { path: string; contentHash: string | null }[] = [];

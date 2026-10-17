@@ -320,11 +320,15 @@ also keeps `dirtyHash` stable across runs, which write their own evidence there.
 outside the repository is unaffected; `testmaster init` still does not edit `.gitignore`.
 
 A dirty or diff impact analysis never counts TestMaster's own artifacts (`testmaster.config.json`
-and any `.testmaster/` directory) as changes. A change widens the impact to every analyzable file
-(`criticalSmoke`) only when it touches authentication or shared code AND the changed path is code
-or a schema-like source (`.sql`, `.prisma`, `.graphql`, `.proto`), outside hidden tool directories
-(`.reversa/`, `.atl/`) and not excluded by the default or configured scan rules; untracked tool
-caches and binaries are listed in `changes` but never widen and never appear in `selectedFiles`.
+and any `.testmaster/` directory) as changes, and repository provenance leaves them out of
+`dirtyHash`, tracked or untracked (`testmasterArtifact` and `TESTMASTER_ARTIFACT_PATHSPECS` in
+`packages/planner/src/code/data-directory.ts`), so a run is never on a `working-tree-dirty` tree
+because of its own configuration, which the run freezes on its own. A change widens the impact
+to every analyzable file (`criticalSmoke`) only when it touches authentication or shared code AND
+the changed path is code or a schema-like source (`.sql`, `.prisma`, `.graphql`, `.proto`),
+outside hidden tool directories (`.reversa/`, `.atl/`) and not excluded by the default or
+configured scan rules; untracked tool caches and binaries are listed in `changes` but never widen
+and never appear in `selectedFiles`.
 "Shared" is judged on path segments, not substrings: a directory named `schema(s)`, `migration(s)`,
 `shared` or `database`, or a file whose stem ends in one of those words (`schema.ts`,
 `user.schema.ts`, `prisma/schema.prisma`); `schema-summary.json` and `schemaless.ts` do not match.
@@ -642,6 +646,14 @@ keeps the factual diagnosis and records `Model enrichment abstained: <code>: <ru
 limitation. Replacement patches cannot alter
 assertions (including nested frames), response predicates, dependencies, cleanup or time ceilings.
 Business-input changes require manual review; generic write permission does not grant approval.
+A proposal's `risk` is the highest class among the candidate plan's non-assertion steps, not of
+the change (`planRiskActions` in `packages/application/src/approvals.ts`): an HTTP `DELETE` is
+`destructive`, any other method but GET/HEAD/OPTIONS, a request body or a `resource` is `write`;
+a browser operation other than `navigate`, `hover`, `waitFor` and `switchPage` (`click`, `fill`,
+...) is `write`; text naming a deletion raises a step to `destructive`, text naming a mutation
+(`create`, `password`, `auth`, ...) raises a read step to `write`, a probe word to
+`securityProbe`, and a step's declared `risk` can raise its class, never lower it. A login form
+test is therefore `write`; `riskBasis` in the review names each step and why.
 Approval admits a distinct strict replay verification. Only its passed outcome AND passed gate,
 plus an unchanged active base revision, promote the candidate. Original failures and evidence
 remain immutable; failed verification remains reviewable and never starts a healing loop.
@@ -672,7 +684,14 @@ the proposal manual. `test run --heal propose --wait` proposes only after observ
 not live-model repair quality.
 
 An unambiguous locator state wait that exceeds its approved deadline on a live page is
-`failed/assertion_timeout`; a crashed page or detached frame remains an evidence failure.
+`failed/assertion_timeout`; a crashed page or detached frame remains an evidence failure. An
+action step (`click`, `fill`, `select`, ...) whose locator never matches an attached element
+before the deadline gets the same `assertion_timeout`, since the reason-code registry has no
+action code; its analysis fact says the step is an action, not an assertion. Every browser
+assertion waits until the step deadline (the step's `timeoutMs`, else `execution.stepTimeoutMs`,
+30000 ms by default): `urlEquals` and `urlMatches` wait for a navigation to a matching URL
+(`waitForURL`) and then judge the page URL once, `visible` and `hidden` wait for that state, so
+a URL check right after a click needs no element check before it.
 Browser value predicates (`textEquals`, `textContains`, `valueEquals`, `enabled`, `disabled`) poll the
 bound element until the step deadline and fail with the last observation, so an eventually
 rendered value passes while a stale one fails. An HTTP assertion whose JSON Pointer target is

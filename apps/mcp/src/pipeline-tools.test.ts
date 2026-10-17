@@ -84,6 +84,7 @@ const pipelineTools = [
   "testmaster_add_source",
   "testmaster_review_requirements",
   "testmaster_set_secret",
+  "testmaster_rotate_secret",
   "testmaster_save_auth_profile",
   "testmaster_update_environment",
 ];
@@ -114,6 +115,7 @@ it("the pipeline tools are listed with schemas, annotations and no inline secret
     "testmaster_archive_source",
     "testmaster_review_requirements",
     "testmaster_save_auth_profile",
+    "testmaster_rotate_secret",
     "testmaster_update_environment",
   ])
     expect(byName(name).annotations, name).toMatchObject({
@@ -151,6 +153,7 @@ it("every pipeline tool needs the write scope", async () => {
     ["testmaster_add_source", { projectId: f.init.projectId, path: "prd.md", role: "prd" }],
     ["testmaster_review_requirements", { projectId: f.init.projectId, expectedVersion: 1 }],
     ["testmaster_set_secret", { name: "A", fromEnv: "X", allowedOrigins: [origin] }],
+    ["testmaster_rotate_secret", { secret: "A", fromEnv: "X" }],
     [
       "testmaster_save_auth_profile",
       { profileId: "aup_019bf434-20c0-7000-8000-000000000001", expectedVersion: 1, name: "n" },
@@ -672,6 +675,59 @@ it("set_secret stores the trimmed file value or variable, echoes only metadata a
   expect(JSON.stringify([both, neither, inline, unset, duplicate].map((o) => o.body))).not.toMatch(
     /s3cr3t-token-value|inline-secret|from-the-environment/,
   );
+});
+
+it("rotate_secret stores a new value of a taken name without an inline value; set_secret names the secret to rotate", async () => {
+  const f = await fixture();
+  vi.stubEnv("TM_ROTATE_FIRST", "first-value");
+  vi.stubEnv("TM_ROTATE_SECOND", "second-value");
+  const stored = await f.call("testmaster_set_secret", {
+    name: "LOGIN_PASSWORD",
+    fromEnv: "TM_ROTATE_FIRST",
+    allowedOrigins: [origin],
+  });
+  expect(stored.isError, stored.text).toBe(false);
+  const taken = await f.call("testmaster_set_secret", {
+    name: "LOGIN_PASSWORD",
+    fromEnv: "TM_ROTATE_SECOND",
+    allowedOrigins: [origin],
+  });
+  expect(taken.error).toMatchObject({
+    code: "REVISION_CONFLICT",
+    details: { secretId: stored.body.id, name: "LOGIN_PASSWORD" },
+  });
+  expect(taken.error?.message).toContain("testmaster_rotate_secret");
+  const rotated = await f.call("testmaster_rotate_secret", {
+    secret: "LOGIN_PASSWORD",
+    fromEnv: "TM_ROTATE_SECOND",
+  });
+  expect(rotated.isError, rotated.text).toBe(false);
+  expect(rotated.body).toMatchObject({
+    id: stored.body.id,
+    locator: "LOGIN_PASSWORD",
+    allowedOrigins: [origin],
+    secretVersion: 2,
+  });
+  expect(JSON.stringify(rotated.result)).not.toContain("second-value");
+  expect(await (await f.app.secrets.release("LOGIN_PASSWORD")).resolve()).toBe("second-value");
+  // By id too; an inline value or an unknown secret is refused and changes nothing.
+  await writeFile(join(f.cwd, "third.txt"), "third-value\n");
+  const byId = await f.call("testmaster_rotate_secret", {
+    secret: stored.body.id,
+    valueFile: "third.txt",
+  });
+  expect(byId.body).toMatchObject({ secretVersion: 3 });
+  const inline = await f.call("testmaster_rotate_secret", {
+    secret: "LOGIN_PASSWORD",
+    value: "inline-secret",
+  });
+  const unknown = await f.call("testmaster_rotate_secret", {
+    secret: "NOT_A_SECRET",
+    fromEnv: "TM_ROTATE_FIRST",
+  });
+  expect([inline.error?.code, unknown.error?.code]).toEqual(["INVALID_ARGUMENT", "NOT_FOUND"]);
+  expect(await (await f.app.secrets.release("LOGIN_PASSWORD")).resolve()).toBe("third-value");
+  vi.unstubAllEnvs();
 });
 
 it("save_auth_profile creates and updates a profile and update_environment binds it", async () => {

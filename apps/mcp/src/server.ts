@@ -122,6 +122,7 @@ const annotations: Record<ToolName, Annotations> = {
   testmaster_archive_source: DESTRUCTIVE,
   testmaster_review_requirements: DESTRUCTIVE,
   testmaster_set_secret: ADDITIVE,
+  testmaster_rotate_secret: DESTRUCTIVE,
   testmaster_save_auth_profile: DESTRUCTIVE,
   testmaster_update_environment: DESTRUCTIVE,
   testmaster_test_auth_login: DESTRUCTIVE,
@@ -878,7 +879,11 @@ export class TestMasterMcp {
       case "testmaster_review_requirements":
         return this.reviewRequirements(args, app);
       case "testmaster_set_secret":
-        return this.setSecret(args, app);
+        return app.secrets.set(String(args.name), await this.secretValue(args), {
+          allowedOrigins: args.allowedOrigins as string[],
+        });
+      case "testmaster_rotate_secret":
+        return app.secrets.rotate(String(args.secret), await this.secretValue(args));
       case "testmaster_save_auth_profile":
         return this.saveAuthProfile(args, app);
       case "testmaster_update_environment":
@@ -1613,8 +1618,8 @@ export class TestMasterMcp {
         .map((item) => item.id),
     };
   }
-  /** The value comes from a confined file or the server's environment, never from an argument. */
-  private async setSecret(args: Arguments, app: Application) {
+  /** A secret's value from a confined file or the server's environment, never from an argument. */
+  private async secretValue(args: Arguments): Promise<string> {
     const file = typeof args.valueFile === "string" ? args.valueFile : undefined;
     const variable = typeof args.fromEnv === "string" ? args.fromEnv : undefined;
     if (Boolean(file) === Boolean(variable))
@@ -1622,29 +1627,24 @@ export class TestMasterMcp {
         "INVALID_ARGUMENT",
         "Provide exactly one of valueFile or fromEnv; inline secrets are forbidden",
       );
-    let value: string;
     if (variable !== undefined) {
       const found = process.env[variable];
       if (found === undefined)
         throw new ContractError("INVALID_ARGUMENT", "Secret environment variable is not set");
-      value = found;
-    } else {
-      let text: string;
-      try {
-        text = await readFile(await this.confined(String(file)), "utf8");
-      } catch (error) {
-        const code = (error as NodeJS.ErrnoException).code;
-        if (code === "ENOENT" || code === "EISDIR" || code === "ENOTDIR")
-          throw new ContractError("NOT_FOUND", "Secret file does not exist or is not a file");
-        throw error;
-      }
-      // Editors and `echo` append a line terminator that is not part of the secret; exactly one is
-      // removed, as `testmaster secret set --file` does.
-      value = text.replace(/\r?\n$/, "");
+      return found;
     }
-    return app.secrets.set(String(args.name), value, {
-      allowedOrigins: args.allowedOrigins as string[],
-    });
+    let text: string;
+    try {
+      text = await readFile(await this.confined(String(file)), "utf8");
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === "ENOENT" || code === "EISDIR" || code === "ENOTDIR")
+        throw new ContractError("NOT_FOUND", "Secret file does not exist or is not a file");
+      throw error;
+    }
+    // Editors and `echo` append a line terminator that is not part of the secret; exactly one is
+    // removed, as `testmaster secret set --file` does.
+    return text.replace(/\r?\n$/, "");
   }
   /** Creates a profile, or updates one at expectedVersion; the kind and the project never change. */
   private async saveAuthProfile(args: Arguments, app: Application) {
@@ -1739,9 +1739,12 @@ export class TestMasterMcp {
         throw error;
       }
     };
-    const mappingKey = `mcp.bootstrap:${app.context.workspaceId}:${createHash("sha256").update(root).digest("hex")}`;
-    const mapped = app.database.get("SELECT value FROM operational_state WHERE key=?", mappingKey);
-    let project = known(configuredId) ?? known(mapped ? String(mapped.value) : undefined);
+    const configured = known(configuredId);
+    const boundProject = app.projects.boundTo(root);
+    // The project the config file names binds the root, so it is found again once the file is gone.
+    if (configured && boundProject?.id !== configured.id)
+      app.projects.bindRoot(root, configured.id);
+    let project = configured ?? boundProject;
     if (!project) {
       const name = basename(root) || "Local project";
       // Same derivation as ProjectsService.create, so a clash is detected before the write.
@@ -1759,11 +1762,7 @@ export class TestMasterMcp {
         );
       project = app.database.withTx(() => {
         const created = app.projects.create({ name, slug });
-        app.database.run(
-          "INSERT INTO operational_state(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-          mappingKey,
-          created.id,
-        );
+        app.projects.bindRoot(root, created.id);
         return created;
       });
     }
@@ -1819,7 +1818,11 @@ export class TestMasterMcp {
               `Environment ${stale.name} targets ${stale.origins.join(", ")}, not ${target.origin}; bootstrap never retargets one. Retarget it with testmaster_update_environment {environmentId: ${stale.id}, expectedVersion: ${Number(stale.version)}, baseUrl: ${target.origin}}`,
             ]
           : []),
-        ...(bound ? [] : [`Set project.id to ${project.id} in testmaster.config.json (CLI init)`]),
+        ...(bound
+          ? []
+          : configPresent
+            ? [`Set project.id to ${project.id} in ${configFile}`]
+            : [`Write proposedConfig as ${configFile} (bootstrap never writes a file)`]),
         "Add sources with testmaster_add_source",
         `Run testmaster_analyze_code on this root (${scope.join(", ")})`,
       ],

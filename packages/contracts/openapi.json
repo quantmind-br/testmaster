@@ -135593,6 +135593,34 @@
         },
         "$defs": {}
       },
+      "Mcp_testmaster_rotate_secret": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "secret"
+        ],
+        "properties": {
+          "secret": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string",
+            "description": "Secret id (sec_…) or name of a live secret; its allowedOrigins and id stay, its secretVersion goes up"
+          },
+          "valueFile": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string",
+            "description": "File inside an approved root that holds the new value; one trailing newline is removed. Give exactly one of valueFile or fromEnv"
+          },
+          "fromEnv": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string",
+            "description": "Name of an environment variable of the TestMaster process that holds the new value. Give exactly one of valueFile or fromEnv"
+          }
+        },
+        "$defs": {}
+      },
       "Mcp_testmaster_run_tests": {
         "additionalProperties": false,
         "type": "object",

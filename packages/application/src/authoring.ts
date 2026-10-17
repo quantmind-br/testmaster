@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { isIP } from "node:net";
 import {
   assertNoNegativeBeforeRender,
@@ -423,6 +424,33 @@ export class ProjectsService {
       visible(this.ctx, item.id),
     );
   }
+  /**
+   * The project a directory root (a canonical path) is bound to by `testmaster init` or MCP
+   * bootstrap; undefined when none is or the bound project no longer exists.
+   */
+  boundTo(root: string): Stored<Project> | undefined {
+    this.ctx.authorize("R");
+    const row = this.ctx.database.get(
+      "SELECT value FROM operational_state WHERE key=?",
+      rootBindingKey(this.ctx.workspaceId, root),
+    );
+    if (!row) return undefined;
+    try {
+      return this.get(String(row.value));
+    } catch (error) {
+      if (error instanceof ContractError && error.code === "NOT_FOUND") return undefined;
+      throw error;
+    }
+  }
+  /** Binds a directory root (a canonical path) to a project, replacing an earlier binding. */
+  bindRoot(root: string, projectId: string): void {
+    this.ctx.authorize("W", projectId);
+    this.ctx.database.run(
+      "INSERT INTO operational_state(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+      rootBindingKey(this.ctx.workspaceId, root),
+      projectId,
+    );
+  }
   get(id: string): Stored<Project> {
     this.ctx.authorize("R", id);
     return project(this.ctx, id);
@@ -469,6 +497,11 @@ export class ProjectsService {
       return next;
     });
   }
+}
+
+/** The stored key of a root binding; its `mcp.bootstrap` prefix predates `init` binding roots and keeps stored bindings resolving. */
+function rootBindingKey(workspaceId: string, root: string): string {
+  return `mcp.bootstrap:${workspaceId}:${createHash("sha256").update(root).digest("hex")}`;
 }
 
 export class EnvironmentsService {
@@ -854,6 +887,9 @@ export function promoteRevisionCas(
     else ctx.authorize("X", current.projectId);
   } else ctx.authorize("W", current.projectId);
   expected(current, expectedVersion);
+  const replaced = current.activeRevisionId
+    ? (requireEntity(ctx, "TestRevision", current.activeRevisionId) as Stored<TestRevision>)
+    : null;
   const next = {
     ...current,
     ...(reason
@@ -872,12 +908,25 @@ export function promoteRevisionCas(
           },
         }
       : {}),
+    name: followedName(current, replaced, revision),
     activeRevisionId: revision.id,
     version: expectedVersion + 1,
   };
   ctx.entities.update("TestCase", ctx.workspaceId, current.id, expectedVersion, next);
   auditPromotion(ctx, current.id, revision.id, current.activeRevisionId);
   return next;
+}
+/**
+ * The test's name once `revision` is active: a test still named after its active plan takes the
+ * promoted plan's name; a name set apart from the plan (or a code revision, which has none) stays.
+ */
+function followedName(
+  test: Stored<TestCase>,
+  replaced: Stored<TestRevision> | null,
+  revision: Stored<TestRevision>,
+): string {
+  const promoted = revision.plan?.name;
+  return promoted && replaced?.plan?.name === test.name ? promoted : test.name;
 }
 export class RevisionsService {
   constructor(readonly ctx: ServiceContext) {}

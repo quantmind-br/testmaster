@@ -87,6 +87,11 @@ testmaster test rerun "$TEST_ID" --wait --output json
 
 `--type cli` scaffolds a terminal-runner plan for a command-line or TUI program; see [Terminal tests](terminal-tests.md).
 
+`testmaster init` writes `testmaster.config.json` in the working directory and binds that directory to the
+project. Run again in the same workspace, it keeps an existing file (unless `--overwrite`) and writes an absent
+one for the same project, with its default environment's origin; `configWritten` in the receipt says which.
+TestMaster's own files (`testmaster.config.json`, `.testmaster/`) never make a run's checkout `working-tree-dirty`.
+
 - `--output json` (or `--json`) prints exactly one JSON envelope on stdout; diagnostics go to stderr.
   A long-running command (`server start`, `backup agent`) prints its receipt envelope as soon as it is running; if
   it then fails, a second envelope with the `error` follows on stdout and the exit code is set. Only your own
@@ -357,6 +362,9 @@ as an inline JSON Schema (draft 2020-12) instead of adding a source:
 `input.jsonPointer` narrows the check to one value, like `jsonEquals`. Plan validation compiles the schema and refuses one
 that does not compile or is empty. Write only what the approved criteria say, never a shape copied from a response. The
 step does not count toward operation coverage, and `test export` refuses it (exported code has no JSON Schema validator).
+Operation coverage counts an operation's response only when a passed `jsonSchema` step of a declarative plan checked it
+with a `statusIn` of the same status; code revisions (exported or authored Playwright, Python) carry no plan steps and
+never count, even when their own code validates the schema.
 
 ## Third-party subresources and additional origins
 
@@ -483,8 +491,11 @@ invalid source is an error that lists its diagnostics), `testmaster_normalize_re
 `testmaster_review_requirements` (edit, adjudicate conflicts, reject with a reason and approve at the snapshot `version`; it returns the
 `sourceSnapshotId` that `testmaster_generate_plan` needs), `testmaster_set_secret` (the value comes from a file
 inside an approved root or from an environment variable of the MCP process, never from an argument),
+`testmaster_rotate_secret` (a new value for a secret whose name is taken: names are unique in the workspace, and
+`testmaster_set_secret` refuses a taken one with `details.secretId`),
 `testmaster_save_auth_profile` and `testmaster_update_environment` (`authRefs`, `additionalOrigins`). Create the
-secrets and auth profiles before `testmaster_generate_plan`, because the model is offered only what already exists.
+secrets and auth profiles before `testmaster_generate_plan`, because the model is offered only what already exists;
+it is told which secrets each auth profile binds to which role, so a browser login fills the profile's account.
 Every decision is recorded with the acting principal. `testmaster_review_plan` (accept or reject),
 `testmaster_review_requirements` (edits and approvals; rejections and conflict decisions already carry their own
 reason), `testmaster_promote_revision` and `testmaster_approve_healing` take an optional `reason` (1-2000

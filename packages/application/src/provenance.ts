@@ -20,7 +20,12 @@ import type { ExecutablePlan, RunRequest } from "@testmaster/contracts";
 import { type ArtifactManifest, ContractError, validate } from "@testmaster/contracts";
 import { semanticHash } from "@testmaster/domain";
 import type { EntityDocument } from "@testmaster/persistence";
-import { dataDirectoryPrefixes, insideDataDirectory } from "@testmaster/planner";
+import {
+  dataDirectoryPrefixes,
+  insideDataDirectory,
+  TESTMASTER_ARTIFACT_PATHSPECS,
+  testmasterArtifact,
+} from "@testmaster/planner";
 import type { ImageLock } from "@testmaster/sandbox";
 import type { ResolvedConfig } from "./config.js";
 import { requireEntity, type ServiceContext } from "./context.js";
@@ -367,11 +372,22 @@ export function resolveRepositoryProvenance(
   const dataPrefixes = dataDirectoryPrefixes(root, options.dataDir);
   const paths = String(git(["-C", root, "ls-files", "--others", "--exclude-standard", "-z"]))
     .split("\0")
-    .filter((path) => path && !insideDataDirectory(path, dataPrefixes))
+    .filter((path) => path && !insideDataDirectory(path, dataPrefixes) && !testmasterArtifact(path))
     .sort();
   const diff = String(
     git(
-      ["-C", root, "diff", "--no-ext-diff", "--no-textconv", "--binary", "HEAD", "--"],
+      [
+        "-C",
+        root,
+        "diff",
+        "--no-ext-diff",
+        "--no-textconv",
+        "--binary",
+        "HEAD",
+        "--",
+        ".",
+        ...TESTMASTER_ARTIFACT_PATHSPECS,
+      ],
       filterOverrides,
     ),
   );

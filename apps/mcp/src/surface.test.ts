@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -202,6 +202,40 @@ it("bootstrap binds each root to one project and refuses clashes and bad targets
   }
   expect((await bootstrap(f.cwd, { scope: ["R"] })).error?.code).toBe("INVALID_ARGUMENT");
   expect(f.app.projects.list()).toHaveLength(4);
+});
+
+it("init binds its root, so bootstrap finds that project without the config file, and init again writes the file", async () => {
+  const f = await fixture();
+  const configFile = join(await realpath(f.cwd), "testmaster.config.json");
+  const bootstrap = () =>
+    f.call("testmaster_bootstrap", {
+      projectRoot: f.cwd,
+      target: "http://127.0.0.1:3000",
+      scope: ["codebase"],
+      mode: "replay",
+    });
+  await rm(configFile);
+  const found = await bootstrap();
+  expect(found.body.projectId).toBe(f.init.projectId);
+  expect(f.app.projects.list()).toHaveLength(1);
+  expect(found.body.preflight).toContainEqual({ check: "config_file_present", passed: false });
+  expect(JSON.stringify(found.body.nextActions)).toContain(`Write proposedConfig as ${configFile}`);
+  // A repeated init writes the missing file for the same project, with its environment's origin.
+  expect(await f.app.init()).toMatchObject({
+    projectId: f.init.projectId,
+    environmentId: f.init.environmentId,
+    configWritten: true,
+  });
+  expect(JSON.parse(await readFile(configFile, "utf8"))).toMatchObject({
+    project: { id: f.init.projectId },
+    environment: { baseUrl: "http://127.0.0.1:3000" },
+  });
+  // Control: an existing file is kept, and bootstrap then finds it.
+  expect((await f.app.init()).configWritten).toBe(false);
+  expect((await bootstrap()).body.preflight).toContainEqual({
+    check: "config_file_present",
+    passed: true,
+  });
 });
 
 it("bootstrap reports an environment aimed at another origin with the exact update call and never retargets it", async () => {

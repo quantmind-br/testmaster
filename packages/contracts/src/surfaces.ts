@@ -1318,6 +1318,28 @@ export const mcpTools = {
     }),
     output: "SecretReference",
   },
+  testmaster_rotate_secret: {
+    milestone: "M1",
+    input: Obj({
+      secret: d(
+        Name,
+        "Secret id (sec_…) or name of a live secret; its allowedOrigins and id stay, its secretVersion goes up",
+      ),
+      valueFile: Type.Optional(
+        d(
+          Name,
+          "File inside an approved root that holds the new value; one trailing newline is removed. Give exactly one of valueFile or fromEnv",
+        ),
+      ),
+      fromEnv: Type.Optional(
+        d(
+          Name,
+          "Name of an environment variable of the TestMaster process that holds the new value. Give exactly one of valueFile or fromEnv",
+        ),
+      ),
+    }),
+    output: "SecretReference",
+  },
   testmaster_save_auth_profile: {
     milestone: "M4",
     input: Obj({

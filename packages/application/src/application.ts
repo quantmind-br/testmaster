@@ -5,6 +5,7 @@ import {
   lstat,
   mkdir,
   mkdtemp,
+  realpath,
   rm,
   statfs,
   writeFile,
@@ -991,6 +992,8 @@ export class Application {
     projectId: string;
     environmentId: string;
     sessionOnly: boolean;
+    /** True when this call wrote `testmaster.config.json` (absent before, or `overwrite`). */
+    configWritten: boolean;
     notice?: string;
   }> {
     if (this.serverConfig)
@@ -998,16 +1001,37 @@ export class Application {
         "PRECONDITION_FAILED",
         "The server profile is initialized with `testmaster server bootstrap`",
       );
+    const root = await realpath(this.config.cwd);
     if (this.context.workspaceId) {
       this.context.authorize("W");
-      const project = this.projects.list()[0];
-      const environment = this.environments.list(project?.id)[0];
+      const project = this.projects.boundTo(root) ?? this.projects.list()[0];
+      const environments = this.environments.list(project?.id);
+      const environment =
+        environments.find((item) => item.id === project?.defaultEnvironmentId) ?? environments[0];
+      let configWritten = false;
+      if (project) {
+        if (this.projects.boundTo(root)?.id !== project.id)
+          this.projects.bindRoot(root, project.id);
+        const revision = environment
+          ? this.environments
+              .revisions(environment.id)
+              .find((item) => item.id === environment.activeRevisionId)
+          : undefined;
+        // A config file removed after the first init is written again for the same project.
+        configWritten = await this.writeProjectConfig(
+          project,
+          revision?.targetOrigins[0],
+          revision?.networkProfile,
+          options.overwrite === true,
+        );
+      }
       return {
         workspaceId: this.context.workspaceId,
         principalId: this.context.principalId,
         projectId: project?.id ?? "",
         environmentId: environment?.id ?? "",
         sessionOnly: false,
+        configWritten,
       };
     }
     const workspaceId = uuidV7IdGenerator.next("ws");
@@ -1049,30 +1073,13 @@ export class Application {
       timezone: config.environment?.timezone ?? "America/Sao_Paulo",
     });
     this.environments.setDefault(project.id, environment.id, project.version ?? 1);
-    config.project = { name: String(project.name), id: project.id };
-    // The written file must name the origin and profile the local environment was created with.
-    config.environment = {
-      ...config.environment,
+    this.projects.bindRoot(root, project.id);
+    const configWritten = await this.writeProjectConfig(
+      project,
       baseUrl,
-      networkProfile: config.environment?.networkProfile ?? "local-loopback",
-    };
-    const path = join(this.config.cwd, "testmaster.config.json");
-    let exists = false;
-    try {
-      const existing = await lstat(path);
-      if (!existing.isFile() || existing.isSymbolicLink() || existing.nlink !== 1)
-        throw new ContractError("POLICY_DENIED", "Configuration overwrite target is unsafe");
-      exists = true;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-    }
-    if (exists && !options.overwrite) {
-      /* Existing effective configuration is intentionally preserved. */
-    } else
-      await writeFile(path, JSON.stringify(config, null, 2), {
-        mode: 0o600,
-        flag: options.overwrite ? "w" : "wx",
-      });
+      config.environment?.networkProfile,
+      options.overwrite === true,
+    );
     let sessionOnly = false;
     try {
       const home = await lstat(this.config.home);
@@ -1103,8 +1110,48 @@ export class Application {
       projectId: project.id,
       environmentId: environment.id,
       sessionOnly,
+      configWritten,
       ...(sessionOnly ? { notice: "User profile cannot be persisted; session-only setup" } : {}),
     };
+  }
+  /**
+   * Writes `testmaster.config.json` in the working directory for `project`, the effective config
+   * with the project and the local environment's origin and network profile applied. An existing
+   * file is kept unless `overwrite`; returns whether it wrote.
+   */
+  private async writeProjectConfig(
+    project: { id: string; name: unknown },
+    baseUrl: string | undefined,
+    networkProfile: string | undefined,
+    overwrite: boolean,
+  ): Promise<boolean> {
+    const path = join(this.config.cwd, "testmaster.config.json");
+    let exists = false;
+    try {
+      const existing = await lstat(path);
+      if (!existing.isFile() || existing.isSymbolicLink() || existing.nlink !== 1)
+        throw new ContractError("POLICY_DENIED", "Configuration overwrite target is unsafe");
+      exists = true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+    // An existing effective configuration is intentionally preserved.
+    if (exists && !overwrite) return false;
+    const config = this.config.effectiveConfig.config;
+    config.project = { name: String(project.name), id: project.id };
+    // The written file must name the origin and profile the local environment was created with.
+    const origin = baseUrl ?? config.environment?.baseUrl;
+    if (origin)
+      config.environment = {
+        ...config.environment,
+        baseUrl: origin,
+        networkProfile: networkProfile ?? config.environment?.networkProfile ?? "local-loopback",
+      };
+    await writeFile(path, JSON.stringify(config, null, 2), {
+      mode: 0o600,
+      flag: overwrite ? "w" : "wx",
+    });
+    return true;
   }
   /**
    * Admission checks before a run is created. `incomingBytes` is the worst-case evidence of the
