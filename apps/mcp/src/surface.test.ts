@@ -16,7 +16,7 @@ import {
   schemaCatalog,
 } from "@testmaster/contracts";
 import { afterEach, expect, it, vi } from "vitest";
-import { createMcpServer } from "./server.js";
+import { createMcpServer, listedTools } from "./server.js";
 
 const cleanups: (() => Promise<void>)[] = [];
 afterEach(async () => {
@@ -125,6 +125,19 @@ it("tools/list advertises unique output ids, described inputs and the annotation
     destructiveHint: true,
   });
   expect(annotations("testmaster_cancel_run")).toMatchObject({ destructiveHint: true });
+});
+
+// The catalog size lock: the `tools/list` payload is one JSON-RPC response, so a client with a
+// message limit or one that forwards it whole to a model pays every byte. The ceiling only goes
+// down: lower it to the measured value (`node tools/surface-size.mjs`) after each shrink.
+const TOOLS_LIST_CEILING_BYTES = 982_964;
+
+it("tools/list serves the measured catalog and stays under the catalog size ceiling", async () => {
+  const f = await fixture();
+  const served = (await f.client.listTools()).tools;
+  expect(served).toEqual(listedTools());
+  const wireBytes = Buffer.byteLength(JSON.stringify({ tools: listedTools() }));
+  expect(wireBytes).toBeLessThanOrEqual(TOOLS_LIST_CEILING_BYTES);
 });
 
 it("argument errors name the tool, list each issue once and name the allowed values", async () => {
