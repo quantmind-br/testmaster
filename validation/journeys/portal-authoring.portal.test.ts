@@ -325,25 +325,17 @@ describe("portal authoring on the server profile", () => {
     );
   });
 
-  it("UX-018 generation shows its budget, cancelling keeps the prepared phases and creates nothing, and resume completes", async () => {
+  it("UX-018 generation shows its inputs, cancelling keeps the prepared phases and creates nothing, and resume completes", async () => {
     const { projectId, requirements } = await newProject("Generation", ["A"]);
     const [requirement] = requirements;
     if (!requirement) throw new Error("Missing requirement");
-    const limit = await stack
-      .ownerClient()
-      .mutate("POST", `/v1/projects/${projectId}/budget`, { tokens: 100_000 });
-    expect(limit.status).toBe(200);
     const { page } = await portal();
     await page.goto(`/projects/${projectId}/proposals`);
     await page.getByRole("heading", { level: 2, name: "Generate proposals" }).waitFor();
     await page.getByText("Requirements approved").waitFor();
     await expect
-      .poll(async () => page.getByTestId("token-budget").textContent())
-      .toMatch(/of 100,000/);
-    await expect
       .poll(async () => page.getByTestId("requirement-count").textContent())
       .toMatch(/1 of 1/);
-    const callsBefore = Number(await page.getByTestId("call-count").textContent());
 
     model.setOutput({ proposals: [plan(requirement, "Generated after resume")] });
     const arrived = model.completionArrived();
@@ -364,7 +356,6 @@ describe("portal authoring on the server profile", () => {
       .request("GET", `/v1/projects/${projectId}/proposal-batches`);
     expect(listed.json<{ data: { items: unknown[] } }>().data.items).toHaveLength(0);
     expect(await page.getByTestId("requirement-count").textContent()).toMatch(/1 of 1/);
-    expect(callsBefore).toBeGreaterThanOrEqual(0);
 
     await page.getByRole("button", { name: "Resume generation" }).click();
     await page.waitForURL((url) => url.pathname.startsWith("/proposal-batches/"));
@@ -375,16 +366,16 @@ describe("portal authoring on the server profile", () => {
     expect(after.json<{ data: { items: unknown[] } }>().data.items).toHaveLength(1);
   });
 
-  it("UX-018 a project without a token limit says so instead of failing the generate panel", async () => {
-    const { projectId } = await newProject("No limit", ["A"]);
+  it("UX-018 the generate panel shows its inputs and no token budget for a fresh project", async () => {
+    const { projectId } = await newProject("Fresh", ["A"]);
     const { page, diagnostics } = await portal();
     await page.goto(`/projects/${projectId}/proposals`);
     await page.getByRole("heading", { level: 2, name: "Generate proposals" }).waitFor();
-    await expect
-      .poll(async () => page.getByTestId("token-budget").textContent())
-      .toContain("No limit set for this project");
+    await page.getByText("Requirements approved").waitFor();
+    expect(await page.getByText("Token budget").count()).toBe(0);
+    expect(await page.getByTestId("token-budget").count()).toBe(0);
     expect(diagnostics.pageErrors).toEqual([]);
-    await expectAccessible(page, "generate panel without a token limit");
+    await expectAccessible(page, "generate panel");
   });
 
   it("UX-019 a token with write scope accepts a proposal and a viewer is told why accepting is unavailable", async () => {

@@ -45,7 +45,7 @@ it("expected feature matrix distinguishes full partial and login-unreachable; se
           environmentId: env.id,
           url: shop.url,
           featureIds: [login, partial, orders, cart],
-          budget: { steps: 4, modelCalls: 4, timeMs: 240000 },
+          budget: { steps: 4, timeMs: 240000 },
         });
         const results = items({ items: original.perFeatureResults }.items);
         expect(results.find((r) => r.featureId === login)?.status).toBe("ready");
@@ -66,7 +66,7 @@ it("expected feature matrix distinguishes full partial and login-unreachable; se
           jobId: original.id,
           retryFeatureIds: [orders],
           video: true,
-          budget: { steps: 1, modelCalls: 1, timeMs: 60000 },
+          budget: { steps: 1, timeMs: 60000 },
         });
         expect(retry.id).not.toBe(original.id);
         expect(app.explore.get(original.id)).toEqual(original);
@@ -220,7 +220,7 @@ it("live model receives each malicious channel without acquiring process network
             projectId,
             environmentId: environment.id,
             url: `${target.url}/injection/${channel}`,
-            budget: { steps: 1, modelCalls: 1, timeMs: 60000 },
+            budget: { steps: 1, timeMs: 60000 },
           });
           expect(explored.phase, JSON.stringify(explored)).toBe("completed");
           const bundle = object(object(explored.extensions)["testmaster:evidenceBundle"]);

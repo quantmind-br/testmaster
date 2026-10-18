@@ -219,8 +219,8 @@ export class ExploreService {
           "Exploration mutation requires an explicitly typed non-production form action",
         );
     }
-    const budget = input.budget ?? { steps: 5, timeMs: 60000, modelCalls: 5 };
-    if (features.length > budget.steps || features.length > budget.modelCalls)
+    const budget = input.budget ?? { steps: 5, timeMs: 60000 };
+    if (features.length > budget.steps)
       throw new ContractError(
         "INVALID_ARGUMENT",
         "Budget needs at least one observation per selected feature",
@@ -284,7 +284,6 @@ export class ExploreService {
             url: new URL((feature.routeRefs as string[])[0] as string, input.url).href,
             budget: {
               steps: Math.floor(prepared.budget.steps / prepared.features.length),
-              modelCalls: Math.floor(prepared.budget.modelCalls / prepared.features.length),
               timeMs: Math.floor(prepared.budget.timeMs / prepared.features.length),
             },
           };
@@ -474,7 +473,6 @@ export class ExploreService {
               // In a feature-seeded exploration the seeded page is the target, so a page with no
               // link to follow is a complete observation; in an open one it is no exploration.
               requireActionable: !prepared.features.length,
-              maxRequests: budget.modelCalls,
             },
           },
           resolveAction: async (stepId: string, value: unknown): Promise<PlanStep | null> => {
@@ -568,8 +566,6 @@ export class ExploreService {
             // first observation (the runner ends that run inconclusive) and a legitimate stop
             // once every observed link is visited.
             if (!available.actions.length) return null;
-            if (modelCalls >= budget.modelCalls)
-              throw new ContractError("POLICY_DENIED", "Exploration model budget exceeded");
             modelCalls++;
             try {
               // The model call runs until the provider answers: only the caller's cancellation

@@ -309,8 +309,8 @@ it("REQ-035 OPS-016 schedule commands preview, create, edit, pause, resume, list
     "2",
     "--overlap",
     "forbid",
-    "--max-runs-per-day",
-    "50",
+    "--auto-pause-after-failures",
+    "7",
   ]);
   expect(created.exit).toBe(0);
   const schedule = created.document.data as unknown as { id: string; version: number };
@@ -318,7 +318,7 @@ it("REQ-035 OPS-016 schedule commands preview, create, edit, pause, resume, list
     revision: 1,
     definition: {
       misfire: { policy: "catch_up", maxCatchUp: 2 },
-      budget: { maxRunsPerDay: 50 },
+      autoPauseAfterFailures: 7,
       trigger: { timezone: "America/Sao_Paulo" },
     },
   });

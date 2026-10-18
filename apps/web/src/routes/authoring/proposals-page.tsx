@@ -17,13 +17,6 @@ import { ErrorNotice, Pill, useAction } from "./parts";
 interface Usage {
   readonly calls: readonly unknown[];
   readonly unknownCostCalls: number;
-  readonly lifetimeBudget: {
-    readonly tokenBudget: {
-      readonly limit: number | null;
-      readonly used: number;
-      readonly remaining: number | null;
-    } | null;
-  };
 }
 
 interface RequirementRow {
@@ -149,7 +142,6 @@ function GeneratePanel({
     }
   }
 
-  const budget = usage.data?.lifetimeBudget.tokenBudget ?? null;
   const resumable = key.current !== null && phase !== "running";
   return (
     <section aria-labelledby="generate-heading">
@@ -158,7 +150,7 @@ function GeneratePanel({
         Generation reads the approved requirements and asks the model for test proposals. Nothing
         becomes a test until a person reviews and accepts it.
       </p>
-      <dl className="context" aria-label="Generation inputs and budget">
+      <dl className="context" aria-label="Generation inputs">
         <dt>Sources</dt>
         <dd data-testid="source-count">
           {sources.items.length}
@@ -170,17 +162,6 @@ function GeneratePanel({
         </dd>
         <dt>Model calls so far</dt>
         <dd data-testid="call-count">{usage.data ? usage.data.calls.length : "…"}</dd>
-        <dt>Token budget</dt>
-        <dd data-testid="token-budget">
-          {budget && budget.limit !== null && budget.remaining !== null ? (
-            <>
-              {budget.used.toLocaleString("en-US")} used of {budget.limit.toLocaleString("en-US")},{" "}
-              {budget.remaining.toLocaleString("en-US")} remaining
-            </>
-          ) : (
-            `No limit set for this project${budget ? ` (${budget.used.toLocaleString("en-US")} used)` : ""}`
-          )}
-        </dd>
         <dt>Calls with unknown cost</dt>
         <dd>{usage.data?.unknownCostCalls ?? "…"}</dd>
       </dl>

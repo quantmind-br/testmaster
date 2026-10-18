@@ -28,7 +28,7 @@ it("explores within budget and resolves an accepted draft into a replay-verified
             projectId,
             environmentId: environment.id,
             url: shop.url,
-            budget: { steps: 2, timeMs: 120000, modelCalls: 2 },
+            budget: { steps: 2, timeMs: 120000 },
           });
           expect(explored.phase, JSON.stringify(explored)).toBe("completed");
           expect(object(explored.usage).modelCalls).toBeLessThanOrEqual(2);
@@ -49,7 +49,7 @@ it("explores within budget and resolves an accepted draft into a replay-verified
               projectId,
               environmentId: evil.id,
               url: `${adversarial.url}/prompt-injection`,
-              budget: { steps: 1, modelCalls: 1, timeMs: 60000 },
+              budget: { steps: 1, timeMs: 60000 },
             });
             expect(attacked.phase).toBe("completed");
             expect(app.config.effectiveConfig.policyHash).toBe(policy);

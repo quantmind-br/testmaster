@@ -8418,12 +8418,12 @@
       "ownerRole": "AI",
       "status": "verified",
       "scenario": [
-        "Atomic independent money/token quotas with unknown usage retained",
-        "Unpriced model admitted while no monetary ceiling exists and refused before any outgoing request once a monetary budget is exhausted",
-        "Deterministic Docker replay completes despite AI budget stop",
-        "validation/journeys/model-accounting.docker.test.ts::VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run and attributed evidence",
-        "packages/persistence/src/persistence.test.ts::bounds concurrent model compute slots even without a price or monetary quota",
-        "packages/persistence/src/persistence.test.ts::reserves independent cumulative tokens atomically and retains unknown-response charges"
+        "Atomic money/token accounting with unknown usage retained and no ceiling (ADR-026)",
+        "Unpriced model admitted with an unknown cost and refused before any outgoing request only when every compute slot is held",
+        "Deterministic Docker replay completes while model work runs",
+        "validation/journeys/model-accounting.docker.test.ts::VAL-009 model usage is recorded and never stops or cancels an admitted Docker Run",
+        "packages/persistence/src/persistence.test.ts::bounds concurrent model compute slots even without a price",
+        "packages/persistence/src/persistence.test.ts::records measured and conservative token charges and never refuses for tokens or money"
       ],
       "oracle": [
         "packages/model-gateway/src/gateway.test.ts",
@@ -8442,17 +8442,17 @@
         "packages/persistence/src/usage.ts",
         "packages/application/src/ai/model.ts"
       ],
-      "note": "Existing gateway policy/repair/cache regressions plus new cumulative token, unpriced-budget and compute checks and real Docker acceptance pass.",
+      "note": "Existing gateway policy/repair/cache regressions plus token accounting, unpriced-model and compute-slot checks and real Docker acceptance pass. Token and money ceilings were removed (ADR-026); historical evidence records the earlier ceiling behavior.",
       "coverage": {
         "positive": [
-          "validation/journeys/model-accounting.docker.test.ts::VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run and attributed evidence",
-          "packages/persistence/src/persistence.test.ts::bounds concurrent model compute slots even without a price or monetary quota",
-          "packages/persistence/src/persistence.test.ts::reserves independent cumulative tokens atomically and retains unknown-response charges"
+          "validation/journeys/model-accounting.docker.test.ts::VAL-009 model usage is recorded and never stops or cancels an admitted Docker Run",
+          "packages/persistence/src/persistence.test.ts::bounds concurrent model compute slots even without a price",
+          "packages/persistence/src/persistence.test.ts::records measured and conservative token charges and never refuses for tokens or money"
         ],
         "negative": [
-          "validation/journeys/model-accounting.docker.test.ts::VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run and attributed evidence",
-          "packages/persistence/src/persistence.test.ts::bounds concurrent model compute slots even without a price or monetary quota",
-          "packages/persistence/src/persistence.test.ts::reserves independent cumulative tokens atomically and retains unknown-response charges"
+          "validation/journeys/model-accounting.docker.test.ts::VAL-009 model usage is recorded and never stops or cancels an admitted Docker Run",
+          "packages/persistence/src/persistence.test.ts::bounds concurrent model compute slots even without a price",
+          "packages/persistence/src/persistence.test.ts::records measured and conservative token charges and never refuses for tokens or money"
         ],
         "criticalAssertions": [
           {
@@ -8461,19 +8461,19 @@
           },
           {
             "path": "validation/journeys/model-accounting.docker.test.ts",
-            "assertion": "expect(object(object(stopped.json).error).code).toBe(\"QUOTA_EXCEEDED\");"
+            "assertion": "expect(finished.exitCode, finished.stdout).toBe(0);"
           },
           {
             "path": "validation/journeys/model-accounting.docker.test.ts",
-            "assertion": "expect(object(object(usage.lifetimeBudget).tokenBudget)).toMatchObject({\n            used: 30,\n            remaining: 0,\n          });"
+            "assertion": "expect(Number(object(usage.reservations).settled)).toBeGreaterThanOrEqual(1);"
           },
           {
             "path": "packages/persistence/src/persistence.test.ts",
-            "assertion": "expect(results.filter((result) => result.ok)).toHaveLength(1);"
+            "assertion": "expect(reservations.filter((result) => result.ok)).toHaveLength(2);"
           },
           {
             "path": "packages/persistence/src/persistence.test.ts",
-            "assertion": "expect(ledger.tokenBudget(ws, project)).toEqual({ limit: 100, used: 90, remaining: 10 });"
+            "assertion": "expect(next.ok).toBe(true);"
           }
         ]
       }
@@ -8743,7 +8743,7 @@
           },
           {
             "path": "validation/journeys/m2-proposals.live.test.ts",
-            "assertion": "expect(\n          Number(object(object(usage.lifetimeBudget).reservations).settled),\n        ).toBeGreaterThanOrEqual(2);"
+            "assertion": "expect(Number(object(usage.reservations).settled)).toBeGreaterThanOrEqual(2);"
           },
           {
             "path": "packages/application/src/ai/core.test.ts",
@@ -10169,7 +10169,7 @@
         "packages/application/src/settings.pg.test.ts::M4-05 answers another workspace's environment with not found for revisions"
       ],
       "oracle": [
-        "The settings, secrets and retention pages (environments, model providers, budget, limits, secrets, retention and deletion) call only public /v1 catalog routes; every portal settings route answers over HTTP.",
+        "The settings, secrets and retention pages (environments, model providers, usage, limits, secrets, retention and deletion) call only public /v1 catalog routes; every portal settings route answers over HTTP.",
         "Environment revisions are listed newest first without variables and another workspace's environment answers not found. Setup, review, run and artifact pages of the portal are appended by the other portal slices."
       ],
       "evidence": [
@@ -12845,7 +12845,7 @@
         "packages/application/src/scheduling/scheduler.test.ts::OPS-017 catch_up replays at most three occurrences inside its window and a week-long outage creates a bounded number of rows",
         "packages/application/src/scheduling/scheduler.test.ts::OPS-017 skip records one aggregated misfire for a missed window and dispatches nothing",
         "packages/application/src/scheduling/scheduler.test.ts::OPS-017 a clock that moves back never fires again and a clock that jumps forward does not avalanche",
-        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 the daily firing budget skips further occurrences and a run of failed gates pauses the schedule",
+        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 a run of failed gates pauses the schedule and no daily cap ever skips a firing",
         "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 an expired schedule pauses with a reason and stops firing",
         "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 a changed secret pauses a schedule whose policy says pause and a use_current schedule keeps running",
         "validation/journeys/lists-schedules.portal.test.ts::OPS-017 OPS-019 the firing history shows a real scheduled firing with its outcome and batch",
@@ -12855,7 +12855,7 @@
       ],
       "oracle": [
         "A missed window is recorded as one aggregated misfire (skip), one representative (fire_once) or at most three catch-up firings inside the window; a week-long outage creates a bounded number of rows, a clock moving back never refires and a clock jumping forward does not avalanche.",
-        "The daily budget, schedule expiry, failed-gate streaks and a changed secret pause or skip with a recorded reason, and the firing history shows what was decided and which batch it admitted."
+        "Schedule expiry, failed-gate streaks and a changed secret pause or skip with a recorded reason, a schedule is never skipped for a daily cap, and the firing history shows what was decided and which batch it admitted."
       ],
       "evidence": [
         "validation/results/m4-acceptance/s6/009-s6-pnpm-test-final2/output.log",
@@ -12876,7 +12876,7 @@
           "packages/application/src/scheduling/scheduler.test.ts::OPS-017 catch_up replays at most three occurrences inside its window and a week-long outage creates a bounded number of rows",
           "packages/application/src/scheduling/scheduler.test.ts::OPS-017 skip records one aggregated misfire for a missed window and dispatches nothing",
           "packages/application/src/scheduling/scheduler.test.ts::OPS-017 a clock that moves back never fires again and a clock that jumps forward does not avalanche",
-          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 the daily firing budget skips further occurrences and a run of failed gates pauses the schedule",
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 a run of failed gates pauses the schedule and no daily cap ever skips a firing",
           "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 an expired schedule pauses with a reason and stops firing",
           "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 a changed secret pauses a schedule whose policy says pause and a use_current schedule keeps running",
           "validation/journeys/lists-schedules.portal.test.ts::OPS-017 OPS-019 the firing history shows a real scheduled firing with its outcome and batch",
@@ -12887,7 +12887,7 @@
           "packages/application/src/scheduling/scheduler.test.ts::OPS-017 a clock that moves back never fires again and a clock that jumps forward does not avalanche",
           "packages/application/src/scheduling/scheduler.test.ts::OPS-017 skip records one aggregated misfire for a missed window and dispatches nothing",
           "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-018 a firing waits when no worker is live and is recorded as a misfire after its grace period",
-          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 the daily firing budget skips further occurrences and a run of failed gates pauses the schedule"
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 a run of failed gates pauses the schedule and no daily cap ever skips a firing"
         ],
         "criticalAssertions": [
           {
@@ -12900,7 +12900,7 @@
           },
           {
             "path": "packages/application/src/scheduling/scheduler-policies.test.ts",
-            "assertion": "expect(dispatched(w, budget.id)).toHaveLength(1);"
+            "assertion": "expect(dispatched(w, steady.id)).toHaveLength(2);"
           },
           {
             "path": "apps/server/src/lists-schedules.test.ts",
@@ -13882,7 +13882,6 @@
         "packages/application/src/alerts.pg.test.ts::OPS-028 backup_failing fires from a synthetic condition with its outbox event and audit row, then resolves",
         "packages/application/src/alerts.pg.test.ts::OPS-028 dlq_not_empty fires from a synthetic condition with its outbox event and audit row, then resolves",
         "packages/application/src/alerts.pg.test.ts::OPS-028 audit_unavailable fires from a synthetic condition with its outbox event and audit row, then resolves",
-        "packages/application/src/alerts.pg.test.ts::OPS-028 budget_exhausted fires from a synthetic condition with its outbox event and audit row, then resolves",
         "packages/application/src/alerts.pg.test.ts::OPS-028 cancellation_stuck fires from a synthetic condition with its outbox event and audit row, then resolves",
         "packages/application/src/alerts.pg.test.ts::OPS-028 tenant_violation fires from a synthetic condition with its outbox event and audit row, then resolves",
         "packages/application/src/alerts.pg.test.ts::OPS-028 egress_denied fires from a synthetic condition with its outbox event and audit row, then resolves",
@@ -13895,7 +13894,7 @@
         "packages/application/src/telemetry.pg.test.ts::NFR-010 does not charge target timeouts or cancellations to the platform budget but charges lost leases"
       ],
       "oracle": [
-        "Eleven alert rules cover every OPS-028 condition (abnormal lease expirations, oldest queue age, storage 80% and 90%, continuous backup failure, non-empty DLQ, audit unavailable, budget exhaustion, cancellation with a live worker, cross-tenant suspicion and egress denied), each with an owner, a severity and a runbook anchor that exists in docs/operations/alerts.md.",
+        "Ten alert rules cover every OPS-028 condition (abnormal lease expirations, oldest queue age, storage 80% and 90%, continuous backup failure, non-empty DLQ, audit unavailable, cancellation with a live worker, cross-tenant suspicion and egress denied), each with an owner, a severity and a runbook anchor that exists in docs/operations/alerts.md; no budget-exhaustion rule exists (ADR-026).",
         "A controlled synthetic condition fires each rule once with an outbox event and an audit row and resolves it on recovery; a healthy deployment stays quiet, a failing rule keeps its open alerts, a target timeout does not consume the API error budget, and the SLO page separates the proposed target from the observed measurement."
       ],
       "evidence": [
@@ -13919,7 +13918,6 @@
           "packages/application/src/alerts.pg.test.ts::OPS-028 backup_failing fires from a synthetic condition with its outbox event and audit row, then resolves",
           "packages/application/src/alerts.pg.test.ts::OPS-028 dlq_not_empty fires from a synthetic condition with its outbox event and audit row, then resolves",
           "packages/application/src/alerts.pg.test.ts::OPS-028 audit_unavailable fires from a synthetic condition with its outbox event and audit row, then resolves",
-          "packages/application/src/alerts.pg.test.ts::OPS-028 budget_exhausted fires from a synthetic condition with its outbox event and audit row, then resolves",
           "packages/application/src/alerts.pg.test.ts::OPS-028 cancellation_stuck fires from a synthetic condition with its outbox event and audit row, then resolves",
           "packages/application/src/alerts.pg.test.ts::OPS-028 tenant_violation fires from a synthetic condition with its outbox event and audit row, then resolves",
           "packages/application/src/alerts.pg.test.ts::OPS-028 egress_denied fires from a synthetic condition with its outbox event and audit row, then resolves",
@@ -13972,14 +13970,13 @@
       "ownerRole": "Operations",
       "status": "verified",
       "scenario": [
-        "packages/persistence/src/persistence.test.ts::never overspends under concurrent reserve and accounts settled usage",
+        "packages/persistence/src/persistence.test.ts::accounts settled usage in the ledger and never lets it block the next reservation",
         "packages/model-gateway/src/gateway.test.ts::only retries a lost response, reserving and recording both attempts",
         "packages/model-gateway/src/gateway.test.ts::preserves unknown usage and unknown costs",
-        "packages/model-gateway/src/gateway.test.ts::reserves priced input plus maximum output, settles actual usage, and denies exhausted budget",
-        "packages/model-gateway/src/gateway.test.ts::atomic reservations cannot spend the last unit twice"
+        "packages/model-gateway/src/gateway.test.ts::atomic compute-slot reservations admit one call at a time when one slot exists"
       ],
       "oracle": [
-        "Atomic monetary reservations precede request; lost responses retain prudent unknown charge; retries have distinct reservations; exhausted budget blocks new completion."
+        "Atomic reservations precede every request as accounting records; lost responses retain a prudent unknown charge; retries have distinct reservations; settled usage never blocks a new completion and only a held compute slot refuses one (ADR-026)."
       ],
       "evidence": [
         "packages/persistence/src/persistence.test.ts",
@@ -13989,28 +13986,20 @@
       "note": "Local single-user ledger; no cross-tenant production profile claim.",
       "coverage": {
         "positive": [
-          "packages/model-gateway/src/gateway.test.ts::reserves priced input plus maximum output, settles actual usage, and denies exhausted budget"
+          "packages/model-gateway/src/gateway.test.ts::only retries a lost response, reserving and recording both attempts"
         ],
         "negative": [
-          "packages/model-gateway/src/gateway.test.ts::atomic reservations cannot spend the last unit twice",
-          "packages/persistence/src/persistence.test.ts::never overspends under concurrent reserve and accounts settled usage"
+          "packages/model-gateway/src/gateway.test.ts::atomic compute-slot reservations admit one call at a time when one slot exists",
+          "packages/persistence/src/persistence.test.ts::accounts settled usage in the ledger and never lets it block the next reservation"
         ],
         "criticalAssertions": [
           {
             "path": "packages/model-gateway/src/gateway.test.ts",
-            "assertion": "expect(result.cost).toEqual({ amount: \"40\", currency: \"USD\", scale: 6 });"
+            "assertion": "expect(new Set(f.records.map((record) => record.reservationId)).size).toBe(2);"
           },
           {
             "path": "packages/model-gateway/src/gateway.test.ts",
-            "assertion": "expect(f.ledger.spent).toBe(40n);"
-          },
-          {
-            "path": "packages/model-gateway/src/gateway.test.ts",
-            "assertion": "await expect(denied.complete({ ...testRequest, cache: false })).rejects.toMatchObject({\n      code: \"QUOTA_EXCEEDED\",\n    });"
-          },
-          {
-            "path": "packages/model-gateway/src/gateway.test.ts",
-            "assertion": "expect(f.counts().completions).toBe(1);"
+            "assertion": "expect(f.ledger.settlements[0]?.cost).toBe(\"unknown\");"
           },
           {
             "path": "packages/model-gateway/src/gateway.test.ts",
@@ -14030,39 +14019,33 @@
           },
           {
             "path": "packages/persistence/src/persistence.test.ts",
-            "assertion": "expect(total).toBeLessThanOrEqual(100);"
-          },
-          {
-            "path": "packages/persistence/src/persistence.test.ts",
-            "assertion": "expect(\n      (\n        await ledger.reserve({\n          workspaceId: ws,\n          projectId: project,\n          purpose: \"plan\",\n          provider: \"p\",\n          model: \"m\",\n          estimate: { amount: \"1\", currency: \"USD\", scale: 2 },\n          idempotencyKey: \"next\",\n        })\n      ).ok,\n    ).toBe(false);"
+            "assertion": "expect((await ledger.reserve({ ...request, idempotencyKey: \"next\" })).ok).toBe(true);"
           }
         ]
       }
     },
     {
       "id": "OPS-030",
-      "title": "Quotas de tokens, moeda e compute",
+      "title": "Accounting de tokens, moeda e compute",
       "sourceFile": "specs/08-operations.md",
       "milestone": "M2",
       "ownerRole": "Operations",
       "status": "verified",
       "scenario": [
-        "Unpriced model admitted while no monetary ceiling exists and refused before the HTTP boundary once a monetary budget limit is set or exhausted; no grant is involved",
-        "Independent token reservations and max-two model compute slots",
-        "Mid-generation quota cutoff leaves admitted Docker replay untouched",
-        "packages/model-gateway/src/gateway.test.ts::admits an unpriced model when the ledger has room and refuses it before the call when the budget is exhausted",
-        "packages/persistence/src/persistence.test.ts::refuses an unpriced reservation only while a monetary budget limit exists",
-        "validation/journeys/model-accounting.docker.test.ts::VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run and attributed evidence",
-        "packages/persistence/src/persistence.test.ts::bounds concurrent model compute slots even without a price or monetary quota",
-        "packages/persistence/src/persistence.test.ts::reserves independent cumulative tokens atomically and retains unknown-response charges"
+        "Unpriced model admitted with an unknown cost and refused before the HTTP boundary only when every compute slot is held; no grant is involved",
+        "Token charges recorded without a ceiling and max-two model compute slots",
+        "Model usage during an admitted Docker replay is recorded and never stops it",
+        "packages/model-gateway/src/gateway.test.ts::admits an unpriced model and refuses it before the call only when every compute slot is held",
+        "validation/journeys/model-accounting.docker.test.ts::VAL-009 model usage is recorded and never stops or cancels an admitted Docker Run",
+        "packages/persistence/src/persistence.test.ts::bounds concurrent model compute slots even without a price",
+        "packages/persistence/src/persistence.test.ts::records measured and conservative token charges and never refuses for tokens or money"
       ],
       "oracle": [
         "packages/application/src/ai/core.test.ts: needs no consent: a permitted provider is called directly, source injection cannot add tools, and policy refusals stay enforced",
-        "packages/model-gateway/src/gateway.test.ts: admits an unpriced model when the ledger has room and refuses it before the call when the budget is exhausted",
-        "packages/persistence/src/persistence.test.ts: refuses an unpriced reservation only while a monetary budget limit exists",
-        "packages/persistence/src/persistence.test.ts: reserves independent cumulative tokens atomically and retains unknown-response charges",
-        "packages/persistence/src/persistence.test.ts: bounds concurrent model compute slots even without a price or monetary quota",
-        "validation/journeys/model-accounting.docker.test.ts: VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run and attributed evidence"
+        "packages/model-gateway/src/gateway.test.ts: admits an unpriced model and refuses it before the call only when every compute slot is held",
+        "packages/persistence/src/persistence.test.ts: records measured and conservative token charges and never refuses for tokens or money",
+        "packages/persistence/src/persistence.test.ts: bounds concurrent model compute slots even without a price",
+        "validation/journeys/model-accounting.docker.test.ts: VAL-009 model usage is recorded and never stops or cancels an admitted Docker Run"
       ],
       "evidence": [
         "validation/results/model-accounting-checks.json",
@@ -14077,21 +14060,19 @@
         "apps/cli/src/usage.ts",
         "apps/server/src/server.ts"
       ],
-      "note": "Verified M2 accounting remains historical; M3 analysis/healing now use the same admitted accounting path and immutable failure handling. Controlled-provider budgets are not model-quality proof; M5 distributed compute pools remain outside local scope.",
+      "note": "Verified M2 accounting remains historical; M3 analysis/healing now use the same admitted accounting path and immutable failure handling. Token and money ceilings were removed (ADR-026); historical evidence records the earlier ceiling behavior. Controlled-provider accounting is not model-quality proof; M5 distributed compute pools remain outside local scope.",
       "coverage": {
         "positive": [
-          "packages/model-gateway/src/gateway.test.ts::admits an unpriced model when the ledger has room and refuses it before the call when the budget is exhausted",
-          "packages/persistence/src/persistence.test.ts::refuses an unpriced reservation only while a monetary budget limit exists",
-          "validation/journeys/model-accounting.docker.test.ts::VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run and attributed evidence",
-          "packages/persistence/src/persistence.test.ts::bounds concurrent model compute slots even without a price or monetary quota",
-          "packages/persistence/src/persistence.test.ts::reserves independent cumulative tokens atomically and retains unknown-response charges"
+          "packages/model-gateway/src/gateway.test.ts::admits an unpriced model and refuses it before the call only when every compute slot is held",
+          "validation/journeys/model-accounting.docker.test.ts::VAL-009 model usage is recorded and never stops or cancels an admitted Docker Run",
+          "packages/persistence/src/persistence.test.ts::bounds concurrent model compute slots even without a price",
+          "packages/persistence/src/persistence.test.ts::records measured and conservative token charges and never refuses for tokens or money"
         ],
         "negative": [
-          "packages/model-gateway/src/gateway.test.ts::admits an unpriced model when the ledger has room and refuses it before the call when the budget is exhausted",
-          "packages/persistence/src/persistence.test.ts::refuses an unpriced reservation only while a monetary budget limit exists",
-          "validation/journeys/model-accounting.docker.test.ts::VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run and attributed evidence",
-          "packages/persistence/src/persistence.test.ts::bounds concurrent model compute slots even without a price or monetary quota",
-          "packages/persistence/src/persistence.test.ts::reserves independent cumulative tokens atomically and retains unknown-response charges"
+          "packages/model-gateway/src/gateway.test.ts::admits an unpriced model and refuses it before the call only when every compute slot is held",
+          "validation/journeys/model-accounting.docker.test.ts::VAL-009 model usage is recorded and never stops or cancels an admitted Docker Run",
+          "packages/persistence/src/persistence.test.ts::bounds concurrent model compute slots even without a price",
+          "packages/persistence/src/persistence.test.ts::records measured and conservative token charges and never refuses for tokens or money"
         ],
         "criticalAssertions": [
           {
@@ -14104,7 +14085,7 @@
           },
           {
             "path": "packages/persistence/src/persistence.test.ts",
-            "assertion": "expect(await ledger.reserve({ ...request, idempotencyKey: \"limited-1\" })).toEqual({\n      ok: false,\n      reasonCode: \"budget_exhausted\",\n      remaining: \"unknown\",\n    });"
+            "assertion": "expect(next.ok).toBe(true);"
           },
           {
             "path": "validation/journeys/model-accounting.docker.test.ts",
@@ -14112,19 +14093,19 @@
           },
           {
             "path": "validation/journeys/model-accounting.docker.test.ts",
-            "assertion": "expect(object(object(stopped.json).error).code).toBe(\"QUOTA_EXCEEDED\");"
+            "assertion": "expect(finished.exitCode, finished.stdout).toBe(0);"
           },
           {
             "path": "validation/journeys/model-accounting.docker.test.ts",
-            "assertion": "expect(object(object(usage.lifetimeBudget).tokenBudget)).toMatchObject({\n            used: 30,\n            remaining: 0,\n          });"
+            "assertion": "expect(Number(object(usage.reservations).settled)).toBeGreaterThanOrEqual(1);"
           },
           {
             "path": "packages/persistence/src/persistence.test.ts",
-            "assertion": "expect(results.filter((result) => result.ok)).toHaveLength(1);"
+            "assertion": "expect(reservations.filter((result) => result.ok)).toHaveLength(2);"
           },
           {
             "path": "packages/persistence/src/persistence.test.ts",
-            "assertion": "expect(ledger.tokenBudget(ws, project)).toEqual({ limit: 100, used: 90, remaining: 10 });"
+            "assertion": "    ).toEqual([30, 5_000_000]);"
           }
         ]
       }
@@ -17462,7 +17443,7 @@
         "apps/cli/src/lists-schedules.test.ts::REQ-035 OPS-016 schedule commands refuse an unknown timezone, a bad cron and a stale version without storing anything"
       ],
       "oracle": [
-        "A schedule is a revisioned definition with an IANA timezone, trigger, target list or pinned revisions, overlap, budget and secret policy, previewed before saving and created, edited, paused, resumed, archived and read through the service, HTTP, CLI and portal.",
+        "A schedule is a revisioned definition with an IANA timezone, trigger, target list or pinned revisions, overlap, failure auto-pause and secret policy, previewed before saving and created, edited, paused, resumed, archived and read through the service, HTTP, CLI and portal.",
         "An invalid timezone, a bad trigger, a stale version or a project the caller cannot read stores nothing and exposes nothing."
       ],
       "evidence": [
@@ -17763,27 +17744,27 @@
     },
     {
       "id": "REQ-041",
-      "title": "Budgets/uso",
+      "title": "Uso",
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M2",
       "ownerRole": "Core",
       "status": "verified",
       "scenario": [
-        "Read/set project token ceiling by CLI and authenticated API",
+        "Read measured project usage by CLI and authenticated API; no token ceiling exists",
         "Attribute model wall milliseconds and committed evidence bytes per project/run",
-        "Keep measured tokens and unknown money after stop",
-        "validation/journeys/model-accounting.docker.test.ts::VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run and attributed evidence",
-        "apps/server/src/model-budget.test.ts::sets and reads independent token quota through the authenticated API and denies reader mutation"
+        "Keep measured tokens and unknown money",
+        "validation/journeys/model-accounting.docker.test.ts::VAL-009 model usage is recorded and never stops or cancels an admitted Docker Run",
+        "apps/server/src/settings.test.ts::UX-047 exposes measured usage and storage bytes and has no budget route"
       ],
       "oracle": [
-        "apps/server/src/model-budget.test.ts: sets and reads independent token quota through the authenticated API and denies reader mutation",
+        "apps/server/src/settings.test.ts: UX-047 exposes measured usage and storage bytes and has no budget route",
         "validation/journeys/model-accounting.docker.test.ts"
       ],
       "evidence": [
         "validation/results/model-accounting-checks.json",
         "validation/results/val009-model-budget-isolation.json",
         "validation/journeys/model-accounting.docker.test.ts",
-        "apps/server/src/model-budget.test.ts"
+        "apps/server/src/settings.test.ts"
       ],
       "code": [
         "packages/application/src/ai/usage.ts",
@@ -17794,12 +17775,12 @@
       "note": "Runtime is model-call wall time; evidence bytes reflect recorded artifacts, not unobserved physical disk billing. Calls retain optional runId and exact source/model config metadata.",
       "coverage": {
         "positive": [
-          "validation/journeys/model-accounting.docker.test.ts::VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run and attributed evidence",
-          "apps/server/src/model-budget.test.ts::sets and reads independent token quota through the authenticated API and denies reader mutation"
+          "validation/journeys/model-accounting.docker.test.ts::VAL-009 model usage is recorded and never stops or cancels an admitted Docker Run",
+          "apps/server/src/settings.test.ts::UX-047 exposes measured usage and storage bytes and has no budget route"
         ],
         "negative": [
-          "validation/journeys/model-accounting.docker.test.ts::VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run and attributed evidence",
-          "apps/server/src/model-budget.test.ts::sets and reads independent token quota through the authenticated API and denies reader mutation"
+          "validation/journeys/model-accounting.docker.test.ts::VAL-009 model usage is recorded and never stops or cancels an admitted Docker Run",
+          "apps/server/src/settings.test.ts::UX-047 exposes measured usage and storage bytes and has no budget route"
         ],
         "criticalAssertions": [
           {
@@ -17808,19 +17789,19 @@
           },
           {
             "path": "validation/journeys/model-accounting.docker.test.ts",
-            "assertion": "expect(object(object(stopped.json).error).code).toBe(\"QUOTA_EXCEEDED\");"
+            "assertion": "expect(finished.exitCode, finished.stdout).toBe(0);"
           },
           {
             "path": "validation/journeys/model-accounting.docker.test.ts",
-            "assertion": "expect(object(object(usage.lifetimeBudget).tokenBudget)).toMatchObject({\n            used: 30,\n            remaining: 0,\n          });"
+            "assertion": "expect(Number(object(usage.reservations).settled)).toBeGreaterThanOrEqual(1);"
           },
           {
-            "path": "apps/server/src/model-budget.test.ts",
-            "assertion": "expect(denied.statusCode).toBe(403);"
+            "path": "apps/server/src/settings.test.ts",
+            "assertion": "expect(gone.statusCode).toBe(404);"
           },
           {
-            "path": "apps/server/src/model-budget.test.ts",
-            "assertion": "expect(read.json().data.lifetimeBudget.tokenBudget).toEqual({\n      limit: 234,\n      used: 0,\n      remaining: 234,\n    });"
+            "path": "apps/server/src/settings.test.ts",
+            "assertion": "expect(usage.json().data).not.toHaveProperty(\"lifetimeBudget\");"
           }
         ]
       }
@@ -23050,19 +23031,19 @@
     },
     {
       "id": "UX-018",
-      "title": "Gerar/retomar tem cancelamento e orçamento visível; source novo não invalida silenciosamente a geração anterior.",
+      "title": "Gerar/retomar tem cancelamento e consumo visível; source novo não invalida silenciosamente a geração anterior.",
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
       "status": "verified",
       "scenario": [
         "packages/application/src/ai/proposal-review.test.ts::UX-018 a cancelled generation persists nothing, keeps completed phases and can be resumed",
-        "validation/journeys/portal-authoring.portal.test.ts::UX-018 generation shows its budget, cancelling keeps the prepared phases and creates nothing, and resume completes",
-        "validation/journeys/portal-authoring.portal.test.ts::UX-018 a project without a token limit says so instead of failing the generate panel",
+        "validation/journeys/portal-authoring.portal.test.ts::UX-018 generation shows its inputs, cancelling keeps the prepared phases and creates nothing, and resume completes",
+        "validation/journeys/portal-authoring.portal.test.ts::UX-018 the generate panel shows its inputs and no token budget for a fresh project",
         "packages/application/src/ai/proposal-review.test.ts::UX-018 a new source marks the previous generation stale and blocks accepting it until reviewed"
       ],
       "oracle": [
-        "Generation shows the project's token budget; cancelling it (the server cancels the model call when the connection drops) stores nothing and keeps the normalized requirements, and resuming completes. A new source marks the earlier batch stale with a reason, blocks its acceptance and shows the issue in the preview."
+        "Generation shows its inputs and the model calls made so far, never a token budget; cancelling it (the server cancels the model call when the connection drops) stores nothing and keeps the normalized requirements, and resuming completes. A new source marks the earlier batch stale with a reason, blocks its acceptance and shows the issue in the preview."
       ],
       "evidence": [
         "validation/results/m4-acceptance/s4b/069-ev-authoring-unit/output.log",
@@ -23083,8 +23064,8 @@
       "coverage": {
         "positive": [
           "packages/application/src/ai/proposal-review.test.ts::UX-018 a cancelled generation persists nothing, keeps completed phases and can be resumed",
-          "validation/journeys/portal-authoring.portal.test.ts::UX-018 generation shows its budget, cancelling keeps the prepared phases and creates nothing, and resume completes",
-          "validation/journeys/portal-authoring.portal.test.ts::UX-018 a project without a token limit says so instead of failing the generate panel"
+          "validation/journeys/portal-authoring.portal.test.ts::UX-018 generation shows its inputs, cancelling keeps the prepared phases and creates nothing, and resume completes",
+          "validation/journeys/portal-authoring.portal.test.ts::UX-018 the generate panel shows its inputs and no token budget for a fresh project"
         ],
         "negative": [
           "packages/application/src/ai/proposal-review.test.ts::UX-018 a new source marks the previous generation stale and blocks accepting it until reviewed"
@@ -23104,7 +23085,7 @@
           },
           {
             "path": "validation/journeys/portal-authoring.portal.test.ts",
-            "assertion": "toContain(\"No limit set for this project\");"
+            "assertion": "expect(await page.getByTestId(\"token-budget\").count()).toBe(0);"
           }
         ]
       },
@@ -24752,17 +24733,16 @@
       "status": "verified",
       "scenario": [
         "apps/web/src/global-ux.test.ts::UX-047 states the reproducibility, cost and data-protection effect of an environment change",
-        "apps/web/src/global-ux.test.ts::UX-047 states how a lifetime token budget change affects cost",
         "validation/journeys/portal-settings.portal.test.ts::UX-047 UX-007 lists the model providers read-only with the policy verdict, has no data-sharing controls and does not serve the removed model-consent routes",
-        "validation/journeys/portal-settings.portal.test.ts::UX-047 UX-054 sets the token budget with a field-bound error, an impact statement and a persisted limit",
+        "validation/journeys/portal-settings.portal.test.ts::UX-047 shows measured model usage and storage with no budget control and no budget route",
         "packages/application/src/settings.test.ts::UX-047 shows the configured model providers and profile admission, and never exposes endpoint credentials",
         "apps/server/src/settings.test.ts::UX-047 lists the model providers over HTTP without exposing credentials or any consent state",
-        "apps/server/src/settings.test.ts::UX-047 exposes the lifetime token budget and storage bytes and refuses budget changes to viewers",
+        "apps/server/src/settings.test.ts::UX-047 exposes measured usage and storage bytes and has no budget route",
         "apps/web/src/global-ux.test.ts::UX-047 says nothing will be saved when no setting changed",
         "packages/application/src/settings.test.ts::UX-047 lets every role read the model providers and refuses an unknown project"
       ],
       "oracle": [
-        "Before an environment or budget change is saved, the portal states its effect on reproducibility, cost and data protection with text and a shape; nothing is saved when nothing changed.",
+        "Before an environment change is saved, the portal states its effect on reproducibility, cost and data protection with text and a shape; nothing is saved when nothing changed. Settings show measured model usage and storage with no budget control, and the removed budget route is gone.",
         "The portal, the application and the HTTP route list the configured model providers read-only with the policy verdict (allowed or blocked by the operator's profile, local or remote) and never expose endpoint credentials, data-sharing controls or consent state; the removed model-consent routes answer 404, an unknown project is not found, and every role may read the providers."
       ],
       "evidence": [
@@ -24781,12 +24761,11 @@
       "coverage": {
         "positive": [
           "apps/web/src/global-ux.test.ts::UX-047 states the reproducibility, cost and data-protection effect of an environment change",
-          "apps/web/src/global-ux.test.ts::UX-047 states how a lifetime token budget change affects cost",
           "validation/journeys/portal-settings.portal.test.ts::UX-047 UX-007 lists the model providers read-only with the policy verdict, has no data-sharing controls and does not serve the removed model-consent routes",
-          "validation/journeys/portal-settings.portal.test.ts::UX-047 UX-054 sets the token budget with a field-bound error, an impact statement and a persisted limit",
+          "validation/journeys/portal-settings.portal.test.ts::UX-047 shows measured model usage and storage with no budget control and no budget route",
           "packages/application/src/settings.test.ts::UX-047 shows the configured model providers and profile admission, and never exposes endpoint credentials",
           "apps/server/src/settings.test.ts::UX-047 lists the model providers over HTTP without exposing credentials or any consent state",
-          "apps/server/src/settings.test.ts::UX-047 exposes the lifetime token budget and storage bytes and refuses budget changes to viewers"
+          "apps/server/src/settings.test.ts::UX-047 exposes measured usage and storage bytes and has no budget route"
         ],
         "negative": [
           "apps/web/src/global-ux.test.ts::UX-047 says nothing will be saved when no setting changed",
@@ -24804,16 +24783,12 @@
             "assertion": "    expect(impacts[0]?.text).toBe(\"No setting changed; nothing will be saved.\");"
           },
           {
-            "path": "apps/web/src/global-ux.test.ts",
-            "assertion": "expect(budgetImpact(1000, 5000)[1]?.text).toContain(\"was 1,000\");"
-          },
-          {
             "path": "validation/journeys/portal-settings.portal.test.ts",
             "assertion": "expect(await remote.innerText()).toContain(\"does not allow this provider\");"
           },
           {
             "path": "validation/journeys/portal-settings.portal.test.ts",
-            "assertion": "    expect(usage.lifetimeBudget.tokenBudget.limit).toBe(250000);"
+            "assertion": "expect(await page.getByRole(\"form\", { name: \"Token budget\" }).count()).toBe(0);"
           },
           {
             "path": "packages/application/src/settings.test.ts",
@@ -24912,7 +24887,7 @@
     },
     {
       "id": "UX-049",
-      "title": "Schedule define timezone IANA, cron, destino, lista/revisões, overlap, budget e política de secrets.",
+      "title": "Schedule define timezone IANA, cron, destino, lista/revisões, overlap, limite de falhas e política de secrets.",
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M4",
       "ownerRole": "UX",
@@ -24924,11 +24899,11 @@
         "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 a changed secret pauses a schedule whose policy says pause and a use_current schedule keeps running",
         "packages/application/src/scheduling/service.test.ts::REQ-035 OPS-016 a draft preview names the local times a DST gap removed and refuses invalid triggers",
         "apps/cli/src/lists-schedules.test.ts::REQ-035 OPS-016 schedule commands refuse an unknown timezone, a bad cron and a stale version without storing anything",
-        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 the daily firing budget skips further occurrences and a run of failed gates pauses the schedule"
+        "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 a run of failed gates pauses the schedule and no daily cap ever skips a firing"
       ],
       "oracle": [
-        "The schedule form defines IANA timezone, cron or interval, target list or revisions, overlap, misfire, budget and secret policy, and shows the next ten occurrences, the tzdata version and the local times a DST gap removed before saving.",
-        "A changed secret pauses a pause-policy schedule, the daily budget skips further occurrences, and invalid input is refused with nothing stored."
+        "The schedule form defines IANA timezone, cron or interval, target list or revisions, overlap, misfire, failure limit and secret policy, and shows the next ten occurrences, the tzdata version and the local times a DST gap removed before saving.",
+        "A changed secret pauses a pause-policy schedule, a failed-gate streak pauses a schedule, and invalid input is refused with nothing stored."
       ],
       "evidence": [
         "validation/results/m4-acceptance/s6/009-s6-pnpm-test-final2/output.log",
@@ -24956,7 +24931,7 @@
         "negative": [
           "packages/application/src/scheduling/service.test.ts::REQ-035 OPS-016 a draft preview names the local times a DST gap removed and refuses invalid triggers",
           "apps/cli/src/lists-schedules.test.ts::REQ-035 OPS-016 schedule commands refuse an unknown timezone, a bad cron and a stale version without storing anything",
-          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 the daily firing budget skips further occurrences and a run of failed gates pauses the schedule"
+          "packages/application/src/scheduling/scheduler-policies.test.ts::OPS-017 a run of failed gates pauses the schedule and no daily cap ever skips a firing"
         ],
         "criticalAssertions": [
           {
@@ -24973,7 +24948,7 @@
           },
           {
             "path": "packages/application/src/scheduling/scheduler-policies.test.ts",
-            "assertion": "expect(dispatched(w, budget.id)).toHaveLength(1);"
+            "assertion": "expect(dispatched(w, steady.id)).toHaveLength(2);"
           },
           {
             "path": "apps/cli/src/lists-schedules.test.ts",
@@ -25883,17 +25858,17 @@
     },
     {
       "id": "VAL-009",
-      "title": "Custos têm atribuição e budgets com cancelamento seguro, sem drop de evidência por corte financeiro.",
+      "title": "Custos têm atribuição e uso medido, sem corte financeiro de trabalho admitido.",
       "sourceFile": "specs/10-validation.md",
       "milestone": "M2",
       "ownerRole": "Quality",
       "status": "verified",
       "scenario": [
-        "Real CLI admits reference-shop health replay to real Docker worker; controlled OpenAI HTTP call holds reservation while token limit lowered; next chunk refused; prior usage and intact passing evidence remain",
-        "validation/journeys/model-accounting.docker.test.ts::VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run and attributed evidence"
+        "Real CLI admits reference-shop health replay to real Docker worker; a controlled OpenAI HTTP call is held open while the run proceeds; normalization completes with no token limit; measured usage and intact passing evidence remain",
+        "validation/journeys/model-accounting.docker.test.ts::VAL-009 model usage is recorded and never stops or cancels an admitted Docker Run"
       ],
       "oracle": [
-        "validation/journeys/model-accounting.docker.test.ts: VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run and attributed evidence"
+        "validation/journeys/model-accounting.docker.test.ts: VAL-009 model usage is recorded and never stops or cancels an admitted Docker Run"
       ],
       "evidence": [
         "validation/results/val009-model-budget-isolation.json",
@@ -25905,13 +25880,13 @@
         "packages/application/src/ai/usage.ts",
         "packages/application/src/ai/normalization.ts"
       ],
-      "note": "One measured 20-input/10-output call, quota used=30 remaining=0, prior runtime/storage reported, replay passed. HTTP double is permitted accounting-only acceptance; no model-quality claim.",
+      "note": "The historical evidence records the removed token-limit behavior (one measured call, quota used=30 remaining=0); since ADR-026 the journey proves normalization completes, usage and runtime/storage are reported and the replay passes. HTTP double is permitted accounting-only acceptance; no model-quality claim.",
       "coverage": {
         "positive": [
-          "validation/journeys/model-accounting.docker.test.ts::VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run and attributed evidence"
+          "validation/journeys/model-accounting.docker.test.ts::VAL-009 model usage is recorded and never stops or cancels an admitted Docker Run"
         ],
         "negative": [
-          "validation/journeys/model-accounting.docker.test.ts::VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run and attributed evidence"
+          "validation/journeys/model-accounting.docker.test.ts::VAL-009 model usage is recorded and never stops or cancels an admitted Docker Run"
         ],
         "criticalAssertions": [
           {
@@ -25920,11 +25895,11 @@
           },
           {
             "path": "validation/journeys/model-accounting.docker.test.ts",
-            "assertion": "expect(object(object(stopped.json).error).code).toBe(\"QUOTA_EXCEEDED\");"
+            "assertion": "expect(finished.exitCode, finished.stdout).toBe(0);"
           },
           {
             "path": "validation/journeys/model-accounting.docker.test.ts",
-            "assertion": "expect(object(object(usage.lifetimeBudget).tokenBudget)).toMatchObject({\n            used: 30,\n            remaining: 0,\n          });"
+            "assertion": "expect(Number(object(usage.reservations).settled)).toBeGreaterThanOrEqual(1);"
           }
         ]
       }

@@ -21,7 +21,7 @@ export interface BudgetReserveRequest {
 export type BudgetReserveResult =
   | { ok: true; reservationId: string }
   /** `quota_exceeded`: the project's compute slots are all taken by calls still running. */
-  | { ok: false; reasonCode: "budget_exhausted" | "quota_exceeded"; remaining: Money | "unknown" };
+  | { ok: false; reasonCode: "quota_exceeded" };
 export interface TokenUsage {
   inputTokens: number | null;
   outputTokens: number | null;
@@ -87,60 +87,6 @@ function integerMoney(value: Money): bigint {
 }
 export class SqliteBudgetLedger implements BudgetLedger {
   constructor(readonly database: PersistenceDatabase) {}
-  setLimit(workspaceId: string, projectId: string, limit: Money): void {
-    integerMoney(limit);
-    this.database.withTx(() => {
-      const existing = this.database.get(
-        "SELECT currency,scale FROM budget_limits WHERE workspace_id=? AND project_id=?",
-        workspaceId,
-        projectId,
-      );
-      if (
-        existing &&
-        (existing.currency !== limit.currency || Number(existing.scale) !== limit.scale)
-      )
-        throw new ContractError(
-          "INVALID_ARGUMENT",
-          "Budget currency and scale cannot change while accounting exists",
-        );
-      this.database.run(
-        "INSERT INTO budget_limits(workspace_id,id,created_at,project_id,currency,scale,amount) VALUES(?,?,?,?,?,?,?) ON CONFLICT(workspace_id,project_id) DO UPDATE SET amount=excluded.amount",
-        workspaceId,
-        randomUUID(),
-        new Date().toISOString(),
-        projectId,
-        limit.currency,
-        limit.scale,
-        limit.amount,
-      );
-    });
-  }
-  setTokenLimit(workspaceId: string, projectId: string, tokens: number): void {
-    if (!Number.isSafeInteger(tokens) || tokens < 0)
-      throw new ContractError("INVALID_ARGUMENT", "Token quota must be a nonnegative safe integer");
-    this.database.run(
-      "INSERT INTO token_budget_limits(workspace_id,project_id,tokens) VALUES(?,?,?) ON CONFLICT(workspace_id,project_id) DO UPDATE SET tokens=excluded.tokens",
-      workspaceId,
-      projectId,
-      tokens,
-    );
-  }
-  /** Cumulative project token quota; `limit: null` means the operator configured none. */
-  tokenBudget(workspaceId: string, projectId: string) {
-    const limit =
-      this.database.get<{ tokens: number }>(
-        "SELECT tokens FROM token_budget_limits WHERE workspace_id=? AND project_id=?",
-        workspaceId,
-        projectId,
-      )?.tokens ?? null;
-    const used =
-      this.database.get<{ tokens: number }>(
-        "SELECT COALESCE(SUM(CASE WHEN state='reserved' THEN reserved_tokens ELSE COALESCE(charged_tokens,CASE WHEN json_type(usage_json,'$.inputTokens')='integer' AND json_type(usage_json,'$.outputTokens')='integer' THEN CAST(json_extract(usage_json,'$.inputTokens') AS INTEGER)+CAST(json_extract(usage_json,'$.outputTokens') AS INTEGER) ELSE CASE WHEN reserved_tokens=0 THEN 100000 ELSE reserved_tokens END END) END),0) AS tokens FROM budget_reservations WHERE workspace_id=? AND project_id=? AND state<>'released'",
-        workspaceId,
-        projectId,
-      )?.tokens ?? 0;
-    return { limit, used, remaining: limit === null ? null : Math.max(0, limit - used) };
-  }
   async reserve(request: BudgetReserveRequest): Promise<BudgetReserveResult> {
     if (request.estimate !== "unknown") integerMoney(request.estimate);
     const tokens = request.reservedTokens ?? 0;
@@ -170,55 +116,7 @@ export class SqliteBudgetLedger implements BudgetLedger {
           request.workspaceId,
           request.projectId,
         )?.count ?? 0;
-      if (active >= 2) return { ok: false, reasonCode: "quota_exceeded", remaining: "unknown" };
-      const tokenRemaining = this.tokenBudget(request.workspaceId, request.projectId).remaining;
-      if (tokenRemaining !== null && tokens > tokenRemaining)
-        return { ok: false, reasonCode: "budget_exhausted", remaining: "unknown" };
-      const limit = this.database.get<{ amount: string; currency: string; scale: number }>(
-        "SELECT amount,currency,scale FROM budget_limits WHERE workspace_id=? AND project_id=?",
-        request.workspaceId,
-        request.projectId,
-      );
-      if (limit) {
-        if (request.estimate === "unknown")
-          return { ok: false, reasonCode: "budget_exhausted", remaining: "unknown" };
-        if (request.estimate.currency !== limit.currency || request.estimate.scale !== limit.scale)
-          throw new ContractError("INVALID_ARGUMENT", "Budget currencies and scales must match");
-        const rows = this.database.all<{
-          state: string;
-          estimate_json: string;
-          cost_json: string | null;
-        }>(
-          "SELECT state,estimate_json,cost_json FROM budget_reservations WHERE workspace_id=? AND project_id=? AND state<>'released'",
-          request.workspaceId,
-          request.projectId,
-        );
-        let used = 0n;
-        for (const row of rows) {
-          const cost = JSON.parse(
-            row.state === "reserved" ? row.estimate_json : (row.cost_json ?? '"unknown"'),
-          ) as Money | "unknown";
-          if (cost === "unknown")
-            return { ok: false, reasonCode: "budget_exhausted", remaining: "unknown" };
-          if (cost.currency !== limit.currency || cost.scale !== limit.scale)
-            throw new ContractError(
-              "INVALID_ARGUMENT",
-              "Stored usage denomination differs from budget",
-            );
-          used += integerMoney(cost);
-        }
-        const remaining = BigInt(limit.amount) > used ? BigInt(limit.amount) - used : 0n;
-        if (integerMoney(request.estimate) > remaining)
-          return {
-            ok: false,
-            reasonCode: "budget_exhausted",
-            remaining: {
-              amount: remaining.toString(),
-              currency: limit.currency,
-              scale: limit.scale,
-            },
-          };
-      }
+      if (active >= 2) return { ok: false, reasonCode: "quota_exceeded" };
       const reservationId = randomUUID();
       this.database.run(
         "INSERT INTO budget_reservations(workspace_id,id,created_at,project_id,purpose,provider,model,estimate_json,idempotency_key,state,data_json,reserved_tokens) VALUES(?,?,?,?,?,?,?,?,?,'reserved',?,?)",

@@ -122,11 +122,11 @@ describe("policy-controlled model requests", () => {
     expect(result.cost).toBe("unknown");
   });
 
-  it("admits an unpriced model when the ledger has room and refuses it before the call when the budget is exhausted", async () => {
-    const exhausted = await fixture(undefined, new TestBudgetLedger(0n));
+  it("admits an unpriced model and refuses it before the call only when every compute slot is held", async () => {
+    const exhausted = await fixture(undefined, new TestBudgetLedger(0));
     await expect(exhausted.gateway.complete(testRequest)).rejects.toMatchObject({
       code: "QUOTA_EXCEEDED",
-      details: { reasonCode: "budget_exhausted" },
+      details: { reasonCode: "quota_exceeded" },
     });
     expect(exhausted.counts().completions).toBe(0);
     const open = await fixture();
@@ -660,8 +660,8 @@ describe("policy-controlled model requests", () => {
     expect(cancelled.ledger.settlements.every((entry) => entry.cost === "unknown")).toBe(true);
   });
 
-  it("atomic reservations cannot spend the last unit twice", async () => {
-    const f = await fixture(undefined, new TestBudgetLedger(1n));
+  it("atomic compute-slot reservations admit one call at a time when one slot exists", async () => {
+    const f = await fixture(undefined, new TestBudgetLedger(1));
     const results = await Promise.allSettled(
       Array.from({ length: 8 }, () => f.gateway.complete({ ...testRequest, cache: false })),
     );
@@ -864,7 +864,7 @@ describe("policy-controlled model requests", () => {
     expect(declared?.reservedTokens).toBeLessThan(FALLBACK_OUTPUT_RESERVATION_TOKENS);
   });
 
-  it("reserves priced input plus maximum output, settles actual usage, and denies exhausted budget", async () => {
+  it("reserves priced input plus maximum output and settles actual usage", async () => {
     const f = await fixture();
     const configured = f.options.providers[0];
     if (!configured) throw new Error("Fixture provider missing");
@@ -884,14 +884,6 @@ describe("policy-controlled model requests", () => {
     const result = await priced.complete(testRequest);
     expect(result.cost).toEqual({ amount: "40", currency: "USD", scale: 6 });
     expect(f.ledger.spent).toBe(40n);
-    const denied = new ModelGateway({
-      ...f.options,
-      providers: [{ ...configured, prices: pricing }],
-      budgetLedger: new TestBudgetLedger(1n),
-    });
-    await expect(denied.complete({ ...testRequest, cache: false })).rejects.toMatchObject({
-      code: "QUOTA_EXCEEDED",
-    });
     expect(f.counts().completions).toBe(1);
   });
 

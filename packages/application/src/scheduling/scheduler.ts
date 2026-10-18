@@ -33,7 +33,6 @@ import {
 } from "./store.js";
 
 const LEASE_NAME = "scheduler";
-const DAY_MS = 86_400_000;
 const OCCURRENCE_CAP = 100_000;
 const AUTO_PAUSE_EVALUATION_MS = 30_000;
 const iso = (ms: number): string => new Date(ms).toISOString();
@@ -342,7 +341,7 @@ export class Scheduler {
     const store = this.storeFor(schedule.workspaceId);
     const definition = this.revision(store, schedule)?.definition;
     if (!definition) return false;
-    const limit = definition.budget.autoPauseAfterFailures;
+    const limit = definition.autoPauseAfterFailures;
     const recent = store.recentDispatched(schedule.workspaceId, schedule.id, limit);
     if (recent.length < limit) return false;
     const system = this.systemApplication(schedule.workspaceId, apps);
@@ -777,17 +776,6 @@ export class Scheduler {
     frozen: FiringFrozen,
   ): Promise<"dispatched" | "other"> {
     const { definition, firing, store, schedule, nowMs } = drive;
-    const dayStart = Math.floor(nowMs / DAY_MS) * DAY_MS;
-    const today = store.dispatchedSince(firing.workspaceId, firing.scheduleId, iso(dayStart));
-    const { budget } = definition;
-    const runsToday = today.reduce((sum, item) => sum + item.data.memberCount, 0);
-    if (
-      today.length >= budget.maxFiresPerDay ||
-      runsToday + frozen.requests.length > budget.maxRunsPerDay
-    ) {
-      this.decide(drive, "skipped", "budget_exhausted", "The daily firing or run budget is spent");
-      return "other";
-    }
     if (definition.secrets.onChange === "pause") {
       const previous = store.recentDispatched(firing.workspaceId, firing.scheduleId, 1)[0];
       const before = previous?.data.frozen?.secretFingerprint;

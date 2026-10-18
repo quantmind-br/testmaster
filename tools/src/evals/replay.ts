@@ -21,12 +21,8 @@ import { diagnosticUtility, unsupportedClaimsForRun, writeEvalProfile } from "./
 import type { M3Ledger, PlannedCase } from "./m3-scoring.js";
 import { emptyLedger, scoreM3 } from "./m3-scoring.js";
 
-export const smokeLimits = {
-  cases: 4,
-  calls: 8,
-  conservativeTokens: 200000,
-  outputReservation: 8192,
-} as const;
+/** Output size the smoke profile declares, which sizes the recorded conservative charge estimate. */
+export const smokeOutputReservation = 8192;
 export interface ReplayOptions {
   model?: boolean;
   caseIds?: string[];
@@ -35,7 +31,6 @@ export interface SmokeState {
   calls: number;
   generationCalls: number;
   inventoryCalls: number;
-  conservativeTokens: number;
   stopped: string | null;
   wire: {
     model: string;
@@ -49,7 +44,10 @@ export interface SmokeForwarder {
   baseUrl: string;
   close(): Promise<void>;
 }
-/** Enforces admission before forwarding, including repairs and retries inside the gateway. */
+/**
+ * Pins destination, model and configuration of every forwarded call, including gateway repairs
+ * and retries.
+ */
 export function smokeFetch(
   delegate: typeof fetch,
   state: SmokeState,
@@ -65,13 +63,8 @@ export function smokeFetch(
       state.stopped = "unexpected_network_destination";
       throw new Error(state.stopped);
     }
-    let reservation = 0;
     let wire: SmokeState["wire"][number] | undefined;
     if (url.pathname.endsWith("/chat/completions")) {
-      if (state.generationCalls >= smokeLimits.calls) {
-        state.stopped = "smoke_call_limit";
-        throw new Error(state.stopped);
-      }
       if (typeof init?.body !== "string")
         throw new Error("Smoke requires inspectable request body");
       const payload = JSON.parse(init.body) as Record<string, unknown>;
@@ -80,11 +73,7 @@ export function smokeFetch(
         throw new Error(state.stopped);
       }
       const promptBytes = Buffer.byteLength(canonicalJson(payload));
-      reservation = promptBytes + smokeLimits.outputReservation;
-      if (state.conservativeTokens + reservation > smokeLimits.conservativeTokens) {
-        state.stopped = "smoke_token_limit";
-        throw new Error(state.stopped);
-      }
+      const reservation = promptBytes + smokeOutputReservation;
       wire = {
         model: "qwen3.8-flash",
         reasoningEffort: "medium",
@@ -100,7 +89,6 @@ export function smokeFetch(
     state.calls++;
     if (wire) state.generationCalls++;
     else state.inventoryCalls++;
-    state.conservativeTokens += reservation;
     try {
       const response = await delegate(input, init);
       if (wire) wire.status = response.status;
@@ -284,8 +272,6 @@ export async function replayM3(
     ids.some((id) => !retained.some((row) => row.id === id))
   )
     throw new Error("Replay case selection invalid");
-  if (options.model && ids.length > smokeLimits.cases)
-    throw new Error("Model smoke allows at most four cases");
   const directory = join(
     root,
     "evals/results",
@@ -296,7 +282,6 @@ export async function replayM3(
     calls: 0,
     generationCalls: 0,
     inventoryCalls: 0,
-    conservativeTokens: 0,
     stopped: null,
     wire: [],
   };
@@ -367,7 +352,7 @@ export async function replayM3(
                 model: "qwen3.8-flash",
                 capabilities: {
                   contextTokens: 128000,
-                  maxOutputTokens: smokeLimits.outputReservation,
+                  maxOutputTokens: smokeOutputReservation,
                 },
               },
               { reasoning_effort: "medium" },
@@ -401,16 +386,6 @@ export async function replayM3(
           };
           if (options.model) {
             const project = app.tests.get(app.runs.get(runId).testId).projectId;
-            const existingCharge =
-              app.database.get<{ used: number }>(
-                "SELECT COALESCE(SUM(CASE WHEN state='reserved' THEN reserved_tokens ELSE COALESCE(charged_tokens,reserved_tokens) END),0) AS used FROM budget_reservations WHERE workspace_id=? AND project_id=? AND state<>'released'",
-                app.context.workspaceId,
-                project,
-              )?.used ?? 0;
-            app.usage.setBudget(project, {
-              tokens:
-                Number(existingCharge) + smokeLimits.conservativeTokens - state.conservativeTokens,
-            });
             const before = new Set(
               app.usage.get({ projectId: project }).calls.map((call) => call.id),
             );

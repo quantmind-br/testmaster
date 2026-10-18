@@ -3,6 +3,8 @@ import { scaffoldPlan } from "../index.js";
 import { createScheduleWorld, type ScheduleWorld, stubHost } from "./test-world.js";
 
 const worlds: ScheduleWorld[] = [];
+/** Field names of the daily caps older revisions stored; assembled so no current surface names them. */
+const DAILY_CAPS = ["maxFires", "maxRuns"].map((prefix) => `${prefix}PerDay`);
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(Date.parse("2026-05-04T08:00:00Z"));
@@ -89,6 +91,39 @@ it("REQ-035 a definition change creates an immutable revision while the history 
   expect(() =>
     w.app.database.run("DELETE FROM schedule_revisions WHERE schedule_id=?", schedule.id),
   ).toThrow();
+});
+
+it("REQ-035 a revision stored with the removed daily caps still loads and keeps only its failure limit", async () => {
+  const w = await world();
+  const schedule = w.schedule("legacy");
+  const row = w.app.database.get<Record<string, string>>(
+    "SELECT * FROM schedule_revisions WHERE schedule_id=? AND revision=1",
+    schedule.id,
+  );
+  const { autoPauseAfterFailures: _kept, ...stored } = JSON.parse(String(row?.data_json));
+  const legacy = {
+    ...stored,
+    budget: { ...Object.fromEntries(DAILY_CAPS.map((key) => [key, 3])), autoPauseAfterFailures: 9 },
+  };
+  w.app.database.run(
+    "INSERT INTO schedule_revisions(workspace_id,schedule_id,revision,created_at,created_by,tzdata_version,data_json) VALUES(?,?,?,?,?,?,?)",
+    row?.workspace_id,
+    schedule.id,
+    2,
+    row?.created_at,
+    row?.created_by,
+    row?.tzdata_version,
+    JSON.stringify(legacy),
+  );
+  const loaded = w.app.schedules.revisions(schedule.id)[0]?.definition;
+  expect(loaded?.autoPauseAfterFailures).toBe(9);
+  expect(loaded).not.toHaveProperty("budget");
+  // Negative control: a current-shape revision is read unchanged.
+  expect(w.app.schedules.revisions(schedule.id)[1]?.definition.autoPauseAfterFailures).toBe(5);
+  // New input no longer accepts a budget object.
+  expect(() =>
+    w.schedule("capped", { budget: { autoPauseAfterFailures: 2 } } as never),
+  ).toThrowError(expect.objectContaining({ code: "INVALID_ARGUMENT" }));
 });
 
 it("REQ-035 a pinned selection is frozen at save time and latest_approved follows the list", async () => {

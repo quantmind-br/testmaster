@@ -308,7 +308,7 @@ async function fixture(
   };
   ctx.entities.insert("StepResult", { ...step, workspaceId: ws });
   const complete = vi.fn(async (_input: unknown) => {
-    throw new ContractError("QUOTA_EXCEEDED", "No budget");
+    throw new ContractError("QUOTA_EXCEEDED", "Model service refused the call");
   });
   const model = {
     complete,
@@ -1436,7 +1436,6 @@ it("a reading refused because the project's compute slots were busy reaches the 
   f.complete.mockRejectedValueOnce(
     new ContractError("QUOTA_EXCEEDED", "Two model calls of this project are already running", {
       reasonCode: "quota_exceeded",
-      remaining: "unknown",
     }),
   );
   const busy = await f.service.analyze(f.run.id, { model: true });

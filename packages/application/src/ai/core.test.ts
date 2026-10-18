@@ -163,14 +163,10 @@ it("needs no consent: a permitted provider is called directly, source injection 
   expect(f.counts().completions).toBe(1);
   expect(f.payloads[0]).not.toHaveProperty("tools");
   expect(f.app.usage.get({ projectId: f.projectId }).unknownCostCalls).toBe(1);
-  // An unpriced model is refused once the project has a monetary budget limit.
-  f.app.model.ledger.setLimit(f.app.context.workspaceId, f.projectId, {
-    amount: "1000",
-    currency: "USD",
-    scale: 6,
-  });
-  await expect(f.app.model.complete(input)).rejects.toMatchObject({ code: "QUOTA_EXCEEDED" });
-  expect(f.counts().completions).toBe(1);
+  // An unpriced model is never refused for its missing price: the next call is sent and its cost stays unknown.
+  await f.app.model.complete({ ...input, data: "Return Money JSON again" });
+  expect(f.counts().completions).toBe(2);
+  expect(f.app.usage.get({ projectId: f.projectId }).unknownCostCalls).toBe(2);
 });
 it("uses profile reasoning effort unless an application call overrides it", async () => {
   const f = await fixture("xhigh");
@@ -1797,7 +1793,7 @@ it("an exploration does not count a slow model answer against its time budget an
   const request = {
     projectId: f.projectId,
     url,
-    budget: { steps: 5, modelCalls: 5, timeMs: 1000 },
+    budget: { steps: 5, timeMs: 1000 },
   };
   sandbox(async (input) => {
     resolved.push(await input.resolveAction?.("explore-0", page("/", [link("/orders")])));
@@ -1834,7 +1830,7 @@ it("an exploration of several features pauses its whole time budget while any mo
     projectId: f.projectId,
     url,
     featureIds: [login.id, orders.id],
-    budget: { steps: 10, modelCalls: 10, timeMs: 2000 },
+    budget: { steps: 10, timeMs: 2000 },
   };
   const pages = [page("/login", [link("/login/forgot")]), page("/orders", [link("/orders/new")])];
   let next = 0;
@@ -1871,7 +1867,7 @@ it("only the caller's cancellation cuts an exploration's model call", async () =
   const request = {
     projectId: f.projectId,
     url,
-    budget: { steps: 5, modelCalls: 5, timeMs: 1000 },
+    budget: { steps: 5, timeMs: 1000 },
   };
   sandbox(async (input) => {
     resolved.push(

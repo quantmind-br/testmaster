@@ -8,7 +8,7 @@ import { DemoBanner } from "./components/demo-banner";
 import { ImpactPanel } from "./components/impact-panel";
 import { RunStateSummary } from "./components/run-state";
 import { demoQuotaPolicyId, isDemoWorkspace } from "./lib/demo";
-import { budgetImpact, environmentImpact } from "./lib/impact";
+import { environmentImpact } from "./lib/impact";
 import { describeRunState } from "./lib/run-state";
 import { createScopedSelection, planBulkAction, selectionForScope } from "./lib/selection";
 import { applyFilters, searchRows, stableOrder, tableEmptiness } from "./lib/table-model";
@@ -250,10 +250,6 @@ describe("impact of settings changes", () => {
     const impacts = environmentImpact(before, { ...before });
     expect(impacts[0]?.text).toBe("No setting changed; nothing will be saved.");
     expect(impacts[2]?.level).toBe("none");
-  });
-
-  it("UX-047 states how a lifetime token budget change affects cost", () => {
-    expect(budgetImpact(1000, 5000)[1]?.text).toContain("was 1,000");
   });
 
   it("UX-047 renders every impact with a text label and shape, never colour alone", () => {

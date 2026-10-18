@@ -6,7 +6,7 @@ These pages are part of the server-profile portal. Every call they make is a pub
 
 - **Environments.** Editing an environment shows, before the save dialog, what the change does to reproducibility (a new environment revision is created and earlier results are not recomputed), cost and data protection (production flag, target origin). A save always creates a new revision; earlier revisions stay readable at `GET /environments/{id}/revisions` (variables are never returned there). If someone else changed the environment first, the save fails with `REVISION_CONFLICT`, nothing is overwritten and the page offers "Reload latest".
 - **Model providers.** A read-only list of the providers the configuration offers, each with its endpoint origin, whether it is remote, its models and whether the operator policy allows it ("Allowed by policy" or "Blocked by policy"). There is no per-project or per-category consent to give or revoke: the allowlist in `policy.json` decides which provider can receive the minimised, redacted context of a model-assisted request, and credentials, secrets, environment values, private keys, storage state and raw traces are never sent. Data already sent to a provider is not recalled.
-- **Token budget.** The lifetime token budget is validated at the field, its impact is shown, and the limit is enforced by the server.
+- **Model usage.** Measured model calls, input and output tokens and artifact storage of the project, read from `GET /usage`. Nothing limits them: there is no token or money budget to set.
 - **Limits.** The execution limits table is read-only and comes from `GET /capabilities`. Values the server does not report are labelled "Not reported", never invented.
 
 ## Secrets (`/secrets`)

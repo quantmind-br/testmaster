@@ -30,13 +30,6 @@ interface Registration {
     model: string;
   };
   decoding?: { reasoning_effort?: "low" | "medium" | "high" };
-  budget: {
-    maxTokens: number;
-    maxWallTimeMs: number;
-    perModelCommandConservativeTokens: number;
-    normalizationConservativeTokens?: number;
-    planConservativeTokens?: number;
-  };
 }
 function registeredReasoningEffort(
   registration: Registration,
@@ -88,30 +81,6 @@ class EvaluationFailure extends Error {
     super(message);
   }
 }
-function deriveCommandConservativeTokens(args: string[], registration: Registration): number {
-  if (args[0] === "requirement" && args[1] === "normalize") {
-    if (registration.budget.normalizationConservativeTokens !== undefined) {
-      return registration.budget.normalizationConservativeTokens;
-    }
-    if (registration.budget.perModelCommandConservativeTokens !== undefined) {
-      return registration.budget.perModelCommandConservativeTokens;
-    }
-    throw new EvaluationFailure(
-      "budget_unaccountable",
-      "Cannot derive conservative upper bound for normalization before network",
-      { args },
-    );
-  }
-  if (args[0] === "plan" && args[1] === "generate") {
-    return (
-      registration.budget.planConservativeTokens ??
-      registration.budget.perModelCommandConservativeTokens ??
-      6 * (100000 + 8192)
-    );
-  }
-  return registration.budget.perModelCommandConservativeTokens ?? 6 * (100000 + 8192);
-}
-
 export async function runEvaluation(
   root: string,
   preregistrationCommit: string,
@@ -260,35 +229,11 @@ export async function runEvaluation(
     );
     let phase = "setup";
     let trialCharge = 0;
-    let previousCallCount = 0;
-    const unmeasuredReservations: number[] = [];
     const command = async (
       args: string[],
       modelCommand = false,
       allowFailure = false,
-      finalizing = false,
     ): Promise<Json> => {
-      const remaining = registration.budget.maxWallTimeMs - (performance.now() - started);
-      if (!finalizing && remaining <= 0)
-        throw new EvaluationFailure(
-          "wall_time_exhausted",
-          "Preregistered wall deadline reached",
-          { elapsedMs: performance.now() - started },
-          "wall_time_exhausted",
-        );
-      if (modelCommand) {
-        const requiredTokens = deriveCommandConservativeTokens(args, registration);
-        if (chargedTokens + requiredTokens > registration.budget.maxTokens)
-          throw new EvaluationFailure(
-            "budget_exhausted",
-            "Insufficient conservative token reservation",
-            { chargedTokens, requiredTokens },
-            "budget_exhausted",
-          );
-        chargedTokens += requiredTokens;
-        trialCharge += requiredTokens;
-        unmeasuredReservations.push(requiredTokens);
-      }
       const before = performance.now();
       const record: CommandRecord = {
         args,
@@ -306,21 +251,8 @@ export async function runEvaluation(
         [join(root, "apps/cli/dist/main.js"), ...args, "--output", "json", "--no-color"],
         { cwd, env: environment, stdio: ["ignore", "pipe", "pipe"] },
       );
-      let deadlineReached = false;
-      // A model command is never cut: it runs until the model answers. The trial wall time only
-      // stops the commands that do no model work and keeps later commands from starting.
-      const limitMs = modelCommand
-        ? null
-        : Math.max(1, Math.min(finalizing ? 30000 : remaining, 600000));
-      const timer =
-        limitMs === null
-          ? undefined
-          : setTimeout(() => {
-              deadlineReached = true;
-              child.kill("SIGTERM");
-            }, limitMs);
-      const hardTimer =
-        limitMs === null ? undefined : setTimeout(() => child.kill("SIGKILL"), limitMs + 15000);
+      // No command is cut: each one runs until it exits, and only an explicit cancellation of the
+      // evaluation stops it.
       child.stdout.on("data", (chunk: Buffer) => {
         record.stdout += redact(chunk.toString());
       });
@@ -337,8 +269,6 @@ export async function runEvaluation(
           });
         });
       } finally {
-        clearTimeout(timer);
-        clearTimeout(hardTimer);
         record.durationMs = performance.now() - before;
       }
       try {
@@ -347,13 +277,6 @@ export async function runEvaluation(
         /* Malformed CLI output is recorded as a pipeline error. */
       }
       if (modelCommand) await settle();
-      if (deadlineReached)
-        throw new EvaluationFailure(
-          "wall_time_exhausted",
-          "Command cancelled at deadline",
-          record,
-          "wall_time_exhausted",
-        );
       if (!record.envelope)
         throw new EvaluationFailure(
           "malformed_cli_output",
@@ -386,7 +309,7 @@ export async function runEvaluation(
       return Array.isArray(payload) ? { items: payload } : object(payload);
     };
     const settle = async () => {
-      const usage = await command(["usage"], false, false, true);
+      const usage = await command(["usage"]);
       trial.usage = usage;
       const calls = rows(usage.calls);
       const measured = calls.reduce((total, call) => {
@@ -397,21 +320,8 @@ export async function runEvaluation(
           (typeof tokens.outputTokens === "number" ? tokens.outputTokens : 8192)
         );
       }, 0);
-      if (
-        calls.length > previousCallCount &&
-        calls.every(
-          (call) =>
-            typeof object(call.usage).inputTokens === "number" &&
-            typeof object(call.usage).outputTokens === "number",
-        )
-      ) {
-        unmeasuredReservations.pop();
-        const pendingReservations = unmeasuredReservations.reduce((sum, v) => sum + v, 0);
-        const settled = measured + pendingReservations;
-        chargedTokens += settled - trialCharge;
-        trialCharge = settled;
-      }
-      previousCallCount = calls.length;
+      chargedTokens += measured - trialCharge;
+      trialCharge = measured;
       usage["eval:chargedTokens"] = trialCharge;
     };
     try {
@@ -480,7 +390,6 @@ export async function runEvaluation(
         reviewer: "preregistered external rule-based evaluator",
         humanReview: false,
       });
-      await command(["budget", "set", "--tokens", String(registration.budget.maxTokens)]);
       phase = "sources";
       const revisions: string[] = [];
       for (const [basename, role, format] of [
@@ -762,7 +671,6 @@ export async function runEvaluation(
         evidence: failure.evidence,
         exclusion: failure.exclusion,
       });
-      if (["budget_exhausted", "wall_time_exhausted"].includes(failure.code)) stopReason = failure;
     } finally {
       try {
         await settle();
@@ -882,7 +790,7 @@ export async function runEvaluation(
     `- Returned proposal validity: ${metric(report.proposalValidity)}`,
     `- Healthy unavailable replays: ${report.healthyUnavailable}`,
     `- Excluded trials (conditional only): ${report.exclusions.length}; errors: ${report.errors.length}`,
-    `- Conservative/settled token charge: ${chargedTokens}/${registration.budget.maxTokens}; measured tokens: ${JSON.stringify(tokens)}`,
+    `- Settled token charge: ${chargedTokens}; measured tokens: ${JSON.stringify(tokens)}`,
     `- Cost: ${JSON.stringify(report.cost)}; unknown-price calls: ${unknownCostCalls}`,
     `- Wall duration: ${Math.round(report.durationMs)} ms; stop: ${report.stopReason}`,
     "",
@@ -954,17 +862,6 @@ export async function checkPreregistration(
     .map((entry) => entry.id);
   if (order.some((id, index) => ids[index] !== id))
     throw new Error("Preregistered seeded ordering differs");
-  if (
-    registration.budget.maxTokens <= 0 ||
-    registration.budget.maxWallTimeMs <= 0 ||
-    registration.budget.perModelCommandConservativeTokens !== 6 * (100000 + 8192)
-  )
-    throw new Error("Invalid preregistered budget");
-  if (
-    registration.budget.normalizationConservativeTokens !== undefined &&
-    registration.budget.normalizationConservativeTokens !== 7 * 6 * (100000 + 8192)
-  )
-    throw new Error("Invalid preregistered normalization budget");
   console.log(
     JSON.stringify({
       mode: "check",

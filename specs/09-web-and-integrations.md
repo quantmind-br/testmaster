@@ -57,7 +57,7 @@ Navegação principal: workspace/projeto → overview → sources/requirements �
 ### 3.1 Jornada inicial sem caminhos inseguros implícitos
 
 1. Escolher modo local ou conectar a servidor self-hosted, sem sugerir que um token TestSprite é utilizável.
-2. Criar/selecionar workspace e projeto, verificar autorização e orçamento de recursos.
+2. Criar/selecionar workspace e projeto, verificar autorização e limites de recursos.
 3. Selecionar fonte: pasta/repositório autorizado, PRD em Markdown/texto, OpenAPI, GraphQL, Postman ou conjunto importado. Mostrar formato, tamanho, checksum e política de upload antes de enviar.
 4. Detectar tipo de aplicação e sugerir destino, porta e comandos de preparação. Sugestões são editáveis e não executadas automaticamente.
 5. Verificar Docker rootless e runner suportado. Modo process local só é permitido por opt-in inseguro explícito, com aviso e política do administrador; nunca é fallback após falha de sandbox.
@@ -84,7 +84,7 @@ A tela mostra cards e tabela com origem, requisito-alvo, intenção, prioridade,
 | UX-015 | Aceitação requer seleção explícita e validação estrutural/semântica, com preview das revisões a criar. | LLM indisponível não impede aceitar proposta persistida válida; proposta inválida não vira teste ativo. |
 | UX-016 | Aceitação parcial é atômica por unidade declarada, idempotente e preserva itens não selecionados. | Aceitar A/B de A/B/C e reenviar mesma operação não duplica testes; C permanece pendente. |
 | UX-017 | Alterações humanas e LLM têm autoria/proveniência distintas; deduplicação mostra similaridade sem destruir intenção. | Dois cenários parecidos podem permanecer; aceitar duplicata produz aviso e decisão explícita. |
-| UX-018 | Gerar/retomar tem cancelamento e orçamento visível; source novo não invalida silenciosamente a geração anterior. | Geração interrompida conserva fases completas; proposta antiga mostra source stale e exige revisão. |
+| UX-018 | Gerar/retomar tem cancelamento e consumo visível; source novo não invalida silenciosamente a geração anterior. | Geração interrompida conserva fases completas; proposta antiga mostra source stale e exige revisão. |
 | UX-019 | Nenhuma proposta gerada vira teste ativo em CI por aceitação implícita. | A aceitação é decisão explícita de qualquer principal com permissão de escrita (humano ou agente), registrada com o principal; sem permissão a prévia informa `write_permission_required`; aceitação anterior não é herdada pela CI. |
 
 ## 4. Autoria, edição e versionamento
@@ -145,9 +145,9 @@ A matriz comparativa pode ordenar por novos defeitos, flakiness observada, dura�
 | UX-044 | Fonte possui revisão/hash, tipo, data de import, owner, exclusões e status de atualização. | Nova OpenAPI exibe endpoints alterados e testes potencialmente stale sem apagar fonte anterior. |
 | UX-045 | Auth suporta referências a secrets, contas dedicadas e credenciais estáticas desde M1; refresh/OTP/MFA/checkpoints autorizados chegam em M4. | Token expirado identifica falha de auth; interação/OTP não atendida não vira assertion de negócio, não mascara failure já comprovada e não é anunciada como capability entregue antes de M4. |
 | UX-046 | Secret write não devolve valor; rotação mantém histórico de referência/versionamento sem expor segredo. | Formulário mostra masked/unset, não preenche valor antigo; secret não aparece em export, URL, toast ou replay. |
-| UX-047 | Alterar ambiente/policy/LLM mostra impacto em reprodutibilidade, custos e proteção de dados. | Escolher provider remoto mostra provider, endpoint, categorias de dados que o contexto mínimo pode conter e orçamento aplicável, sem gate adicional de opt-in; provider fora da allowlist aparece com o motivo e não é selecionável; execução passada não é recalculada. |
+| UX-047 | Alterar ambiente/policy/LLM mostra impacto em reprodutibilidade, custos e proteção de dados. | Escolher provider remoto mostra provider, endpoint e categorias de dados que o contexto mínimo pode conter, sem gate adicional de opt-in; provider fora da allowlist aparece com o motivo e não é selecionável; execução passada não é recalculada. |
 | UX-048 | Exclusão/retention diferencia remover referência, arquivar teste e expirar artifact; objetos imutáveis têm tombstone auditável quando necessário. | Histórico não apresenta “nunca existiu” para evidência expirada; deleção não contorna retenção legal configurada. |
-| UX-049 | Schedule define timezone IANA, cron, destino, lista/revisões, overlap, budget e política de secrets. | DST, backlog, revogação e overlap são apresentados; schedule expirado não executa em novo destino por fallback. |
+| UX-049 | Schedule define timezone IANA, cron, destino, lista/revisões, overlap, limite de falhas e política de secrets. | DST, backlog, revogação e overlap são apresentados; schedule expirado não executa em novo destino por fallback. |
 | UX-050 | Audit trail exibe ator humano/agente/integration, operação, escopo, resultado e correlation ID sem secret. | Administrador consegue relacionar acceptance, dispatch, secret rotation e check remoto sem acessar segredo. |
 
 ## 7. Acessibilidade, usabilidade e ausência de sucesso falso
@@ -344,10 +344,10 @@ A migração não preserva semântica proprietária de auto-healing, `codeVersio
 |---|---|---|
 | M0 | Contratos de status/revisão, UX flows, matriz de permissões, namespace, threat model de integration/import. | Nenhum adapter sem binding/dedupe/security aprovado; schemas são a referência única. |
 | M1 | CLI determinística local, exports JSON/JUnit, deep links locais e fluxos de evidência concebidos. | Browser/API reais, sandbox e imutabilidade; não exigir web para usar core. |
-| M2 | Discovery/PRD/proposals, MCP e skills; revisão e aceitação parcial. | Fonte rastreável, injection isolation, allowlist de providers e orçamento; CLI/MCP completos antes de UI paralela. |
+| M2 | Discovery/PRD/proposals, MCP e skills; revisão e aceitação parcial. | Fonte rastreável, injection isolation, allowlist de providers e accounting de uso; CLI/MCP completos antes de UI paralela. |
 | M3 | Comparação/evidência/healing strict, Action/CI e checks básicos. | Commit binding, JUnit não-verde para bloqueios, original failure preservado. |
 | M4 | Web self-hosted/team, settings/sources/auth dinâmica, listas cross-project, schedules/notificações e GitHub App/previews multi-provider; enrollment/heartbeat de workers. | Autorização server-side, a11y, concurrency, histórico, secret store, auth checkpoints, fork safety e commit binding; registro de worker não implica distribuição completa. |
-| M5 | Tunnels, workers distribuídos, matriz/modos avançados, memória e Jira/Linear. | Fencing/partições, allowlists, budgets, aprovações e gates visual/security/load; sem execução destrutiva implícita. |
+| M5 | Tunnels, workers distribuídos, matriz/modos avançados, memória e Jira/Linear. | Fencing/partições, allowlists, limites de recurso, aprovações e gates visual/security/load; sem execução destrutiva implícita. |
 | M6 | SSO OIDC/SAML/SCIM, plugins, portabilidade/import-export nativo/TestSprite revisado, migration/backup/install governance e GA de integrações suportadas. | Matriz real de compatibilidade, isolamento/versionamento de plugins, docs/release/rollback, acessibilidade e manutenção aprovadas. |
 
 Conclusão de uma feature exige: contrato persistido e erro recuperável; callsites CLI/MCP/web coerentes; autorização e audit; prova determinística quando aplicável; jornada real do usuário; documentation de limitações e policy; e gates de [10-validation.md](10-validation.md) satisfeitos. Ausência de uma prova de fornecedor não permite omitir capacidade anunciada: registrar como objetivo e avaliar independentemente. Esta especificação não contém medições, resultados de conta SaaS ou execução de produto.

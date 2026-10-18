@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import { useMe } from "../components/app-shell";
 import { ProjectPage } from "../features/project-page";
-import { BudgetSection } from "../features/settings/budget";
 import { EnvironmentsSection } from "../features/settings/environments";
 import { LimitsSection } from "../features/settings/limits";
 import { LlmSection } from "../features/settings/llm";
+import { UsageSection } from "../features/settings/usage";
 import type { PortalRoute } from "./types";
 
 function ProjectSettings(): ReactNode {
@@ -20,7 +20,7 @@ function ProjectSettings(): ReactNode {
             reloadProject={reload}
           />
           <LlmSection project={project} />
-          <BudgetSection project={project} me={me} />
+          <UsageSection project={project} />
           <LimitsSection />
         </>
       )}

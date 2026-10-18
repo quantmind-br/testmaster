@@ -9,7 +9,7 @@ export function assertRegistrationUnchanged(current: Uint8Array, committed: Uint
     createHash("sha256").update(committed).digest("hex")
   )
     throw new Error(
-      "Preregistration changed after commit (including thresholds, selection or budget); version and commit a distinct round before execution",
+      "Preregistration changed after commit (including thresholds or selection); version and commit a distinct round before execution",
     );
 }
 export async function committedRegistration(

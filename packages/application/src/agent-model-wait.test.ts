@@ -90,7 +90,7 @@ async function agentRun(spentWaitingForModel: boolean) {
       runId,
     );
   vi.spyOn(AgentModeService.prototype, "session").mockReturnValue({
-    runnerInput: { resolveSteps: [], exploration: false, mutationStepIds: [], maxRequests: 1 },
+    runnerInput: { resolveSteps: [], exploration: false, mutationStepIds: [] },
     resolveAction: async () => {
       vi.advanceTimersByTime(WAIT_MS);
       shiftFirstAttempt();

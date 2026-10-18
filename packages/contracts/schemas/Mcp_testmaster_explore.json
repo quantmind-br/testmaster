@@ -28,11 +28,10 @@
     },
     "budget": {
       "additionalProperties": false,
-      "description": "Exploration budget; modelCalls must not exceed steps",
+      "description": "Exploration envelope: browser steps and time",
       "type": "object",
       "required": [
         "steps",
-        "modelCalls",
         "timeMs"
       ],
       "properties": {
@@ -41,12 +40,6 @@
           "maximum": 100,
           "type": "integer",
           "description": "Browser steps, 1..100"
-        },
-        "modelCalls": {
-          "minimum": 1,
-          "maximum": 100,
-          "type": "integer",
-          "description": "Model calls, 1..steps"
         },
         "timeMs": {
           "minimum": 1000,

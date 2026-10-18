@@ -375,9 +375,6 @@ const handlers: Record<string, RouteHandler> = {
       ...(query.until ? { until: query.until } : {}),
     }),
   ),
-  "POST /projects/{id}/budget": h(({ app, id, body }) =>
-    app.usage.setBudget(id, body as { tokens: number }),
-  ),
   "GET /revisions/{id}/code": h(({ app, id }) => {
     const revision = app.revisions.get(id);
     return app.codeExport.export(revision.testId, {

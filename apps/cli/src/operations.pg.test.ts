@@ -123,7 +123,7 @@ it("M4-02 operates a server deployment from the host CLI: status, admission, ale
     "enabled",
   );
 
-  expect((await invoke(["ops", "alert-rules", ...server(path)])).body.data.items).toHaveLength(11);
+  expect((await invoke(["ops", "alert-rules", ...server(path)])).body.data.items).toHaveLength(10);
   expect((await invoke(["ops", "alerts", "list", ...server(path)])).body.data.items).toEqual([]);
   const preview = await invoke(["ops", "reconcile", "preview", ...server(path)]);
   expect(preview.body.data).toMatchObject({ kind: "reconcile", state: "completed" });

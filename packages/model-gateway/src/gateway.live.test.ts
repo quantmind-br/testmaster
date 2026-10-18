@@ -8,7 +8,7 @@ it("QuantForge qwen3.8-flash returns locally validated JSON and measured usage",
   expect(process.env.QUANTFORGE_API_KEY).toBeTruthy();
   const records: ModelCallRecord[] = [];
   const endpoint = "https://api.quantforge.com.br/v1";
-  const ledger = new TestBudgetLedger(10n);
+  const ledger = new TestBudgetLedger();
   const gateway = new ModelGateway({
     providers: [
       {

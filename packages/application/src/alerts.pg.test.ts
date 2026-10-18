@@ -1,5 +1,4 @@
 import { readFile } from "node:fs/promises";
-import { SqliteBudgetLedger } from "@testmaster/persistence";
 import { afterEach, expect, it } from "vitest";
 import { type AlertProbes, alertRuleCatalog, alertRules } from "./alerts.js";
 import { addWorkspace, type OpsStack, opsStack, seedRun } from "./ops.testkit.js";
@@ -153,37 +152,6 @@ const scenarios: Record<string, Scenario> = {
     raise: () => ({ ...healthy, auditWritable: () => false }),
     clear: (_stack, now) => ({ now, probes: healthy }),
   },
-  budget_exhausted: {
-    async raise(stack) {
-      const project = stack.workspace.projects.create({ name: "Budgeted" });
-      const ledger = new SqliteBudgetLedger(db(stack));
-      ledger.setTokenLimit(stack.workspaceId, String(project.id), 100);
-      const reserved = await ledger.reserve({
-        workspaceId: stack.workspaceId,
-        projectId: String(project.id),
-        purpose: "plan",
-        provider: "p",
-        model: "m",
-        estimate: "unknown",
-        reservedTokens: 100,
-        idempotencyKey: "budget-exhaust",
-      });
-      if (!reserved.ok) throw new Error("Expected the reservation to fit the limit");
-      return healthy;
-    },
-    clear(stack, now) {
-      const row = db(stack).get<{ project_id: string }>(
-        "SELECT project_id FROM token_budget_limits WHERE workspace_id=?",
-        stack.workspaceId,
-      );
-      new SqliteBudgetLedger(db(stack)).setTokenLimit(
-        stack.workspaceId,
-        String(row?.project_id),
-        100_000,
-      );
-      return { now, probes: healthy };
-    },
-  },
   cancellation_stuck: {
     raise(stack, now) {
       liveWorker(stack, now);
@@ -301,8 +269,6 @@ it("OPS-028 dlq_not_empty fires from a synthetic condition with its outbox event
   firesAndResolves("dlq_not_empty"));
 it("OPS-028 audit_unavailable fires from a synthetic condition with its outbox event and audit row, then resolves", () =>
   firesAndResolves("audit_unavailable"));
-it("OPS-028 budget_exhausted fires from a synthetic condition with its outbox event and audit row, then resolves", () =>
-  firesAndResolves("budget_exhausted"));
 it("OPS-028 cancellation_stuck fires from a synthetic condition with its outbox event and audit row, then resolves", () =>
   firesAndResolves("cancellation_stuck"));
 it("OPS-028 tenant_violation fires from a synthetic condition with its outbox event and audit row, then resolves", () =>

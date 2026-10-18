@@ -103,6 +103,19 @@ export function decodeSchedule(row: Row): StoredSchedule {
     updatedAt: String(row.updated_at),
   };
 }
+/**
+ * Revisions are immutable (a trigger refuses UPDATE), so a revision written while the daily firing and
+ * run caps existed keeps its stored `budget` object. Reading maps it to the current shape: only the
+ * failure limit survives, as the top-level `autoPauseAfterFailures`; the removed caps are dropped.
+ */
+function currentDefinition(stored: unknown): ScheduleDefinition {
+  const { budget, ...definition } = stored as ScheduleDefinition & {
+    budget?: { autoPauseAfterFailures: number };
+  };
+  return budget
+    ? { ...definition, autoPauseAfterFailures: budget.autoPauseAfterFailures }
+    : definition;
+}
 export function decodeRevision(row: Row): ScheduleRevisionView {
   return {
     id: `${String(row.schedule_id)}@${Number(row.revision)}`,
@@ -111,7 +124,7 @@ export function decodeRevision(row: Row): ScheduleRevisionView {
     createdAt: String(row.created_at),
     createdBy: String(row.created_by),
     tzdataVersion: String(row.tzdata_version),
-    definition: JSON.parse(String(row.data_json)) as ScheduleDefinition,
+    definition: currentDefinition(JSON.parse(String(row.data_json))),
   } as ScheduleRevisionView;
 }
 export function decodeFiring(row: Row): StoredFiring {
@@ -343,16 +356,6 @@ export class ScheduleStore {
         firing.id,
       ).changes > 0
     );
-  }
-  dispatchedSince(workspaceId: string, scheduleId: string, sinceIso: string): StoredFiring[] {
-    return this.database
-      .all(
-        "SELECT * FROM schedule_firings WHERE workspace_id=? AND schedule_id=? AND state='dispatched' AND decided_at>=? ORDER BY fire_instant DESC,id DESC",
-        workspaceId,
-        scheduleId,
-        sinceIso,
-      )
-      .map(decodeFiring);
   }
   /**
    * Moves the evaluation cursor without touching `version`, so a user's If-Match is never

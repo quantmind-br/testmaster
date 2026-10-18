@@ -45,7 +45,7 @@ export const toolRules: Record<keyof typeof mcpTools, readonly string[]> = {
   ],
   testmaster_explore: [
     "Browser exploration of features: take `featureIds` from testmaster://projects/{projectId}/features?match=.",
-    "`budget`: steps 1..100, modelCalls 1..steps, timeMs 1000..300000. timeMs bounds browser time only; a model call is never cut.",
+    "`budget`: steps 1..100, timeMs 1000..300000. timeMs bounds browser time only; a model call is never cut.",
     "`provider`/`model` pick the model; `mutationActions` are approved form steps the exploration may perform.",
     "A failed exploration names its cause in `testmaster:errorMessage`.",
   ],

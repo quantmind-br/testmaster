@@ -57,7 +57,6 @@ export interface RunnerInput {
     resolveSteps: string[];
     exploration?: boolean;
     mutationStepIds: string[];
-    maxRequests: number;
     mutationActions?: PlanStep[];
     /**
      * Exploration only. The first observation must offer at least one action (an observed

@@ -9,17 +9,16 @@ import type {
   TokenUsage,
 } from "./types.js";
 
-/** Atomic synchronous mutation before any await: deterministic budget-race oracle. */
+/** Atomic synchronous mutation before any await: deterministic compute-slot race oracle. */
 export class TestBudgetLedger implements BudgetLedger {
   spent = 0n;
   reserved = 0n;
   readonly reservations = new Map<string, Cost>();
   readonly settlements: { usage: TokenUsage; cost: Cost }[] = [];
-  constructor(private readonly limit = 1_000_000n) {}
+  constructor(private readonly slots = Number.POSITIVE_INFINITY) {}
   async reserve(r: BudgetReservationInput): Promise<BudgetReservationResult> {
     const amount = r.estimate === "unknown" ? 1n : BigInt(r.estimate.amount);
-    if (this.spent + this.reserved + amount > this.limit)
-      return { ok: false, reasonCode: "budget_exhausted", remaining: "unknown" };
+    if (this.reservations.size >= this.slots) return { ok: false, reasonCode: "quota_exceeded" };
     const id = `reservation-${this.reservations.size}-${crypto.randomUUID()}`;
     this.reservations.set(id, r.estimate);
     this.reserved += amount;

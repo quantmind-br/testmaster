@@ -153,8 +153,8 @@ export class ModelGateway {
         );
     }
     const price = provider.prices?.[input.model];
-    // A model without a price table entry is priced "unknown": the budget ledger refuses it only
-    // while the project has a monetary budget limit, and token quotas apply either way.
+    // A model without a price table entry is priced "unknown": the call proceeds and its cost is
+    // recorded as unknown, never as zero.
     if (
       price &&
       (!/^[A-Z]{3}$/u.test(price.currency) ||
@@ -335,10 +335,8 @@ export class ModelGateway {
         if (!reservation.ok)
           throw new ContractError(
             "QUOTA_EXCEEDED",
-            reservation.reasonCode === "quota_exceeded"
-              ? "Two model calls of this project are already running, the most it runs at once; retry when one finishes"
-              : "Model budget exceeded",
-            { reasonCode: reservation.reasonCode, remaining: reservation.remaining },
+            "Two model calls of this project are already running, the most it runs at once; retry when one finishes",
+            { reasonCode: reservation.reasonCode },
           );
         if (signal.aborted) {
           await this.options.budgetLedger.release(

@@ -10870,82 +10870,6 @@
         }
       }
     },
-    "/projects/{id}/budget": {
-      "post": {
-        "operationId": "post__projects_id_budget",
-        "tags": [
-          "M2"
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "x-scope": "usage:A",
-        "x-milestone": "M2",
-        "responses": {
-          "200": {
-            "description": "Successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "schemaVersion",
-                    "requestId",
-                    "data",
-                    "warnings"
-                  ],
-                  "properties": {
-                    "schemaVersion": {
-                      "const": "1.0.0"
-                    },
-                    "requestId": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/UsageReport"
-                    },
-                    "warnings": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "Canonical error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TokenBudgetInput"
-              }
-            }
-          }
-        }
-      }
-    },
     "/audit-events": {
       "get": {
         "operationId": "get__audit_events",
@@ -59226,77 +59150,6 @@
                 "patternProperties": {
                   "^(.*)$": {
                     "$ref": "#/components/schemas/BootstrapReceipt/$defs/T0"
-                  }
-                }
-              }
-            ]
-          }
-        }
-      },
-      "BudgetInput": {
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "budget"
-        ],
-        "properties": {
-          "budget": {
-            "anyOf": [
-              {
-                "type": "null"
-              },
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "number"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/BudgetInput/$defs/T0"
-                }
-              },
-              {
-                "type": "object",
-                "patternProperties": {
-                  "^(.*)$": {
-                    "$ref": "#/components/schemas/BudgetInput/$defs/T0"
-                  }
-                }
-              }
-            ]
-          }
-        },
-        "$defs": {
-          "T0": {
-            "anyOf": [
-              {
-                "type": "null"
-              },
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "number"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/BudgetInput/$defs/T0"
-                }
-              },
-              {
-                "type": "object",
-                "patternProperties": {
-                  "^(.*)$": {
-                    "$ref": "#/components/schemas/BudgetInput/$defs/T0"
                   }
                 }
               }
@@ -143399,11 +143252,10 @@
           },
           "budget": {
             "additionalProperties": false,
-            "description": "Exploration budget; modelCalls must not exceed steps",
+            "description": "Exploration envelope: browser steps and time",
             "type": "object",
             "required": [
               "steps",
-              "modelCalls",
               "timeMs"
             ],
             "properties": {
@@ -143412,12 +143264,6 @@
                 "maximum": 100,
                 "type": "integer",
                 "description": "Browser steps, 1..100"
-              },
-              "modelCalls": {
-                "minimum": 1,
-                "maximum": 100,
-                "type": "integer",
-                "description": "Model calls, 1..steps"
               },
               "timeMs": {
                 "minimum": 1000,
@@ -143557,19 +143403,6 @@
             "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
             "type": "string",
             "description": "A completed, failed run of a code candidate: repairs that candidate from the run's failed steps. Exclusive with proposalIds and revisionIds"
-          },
-          "budget": {
-            "additionalProperties": false,
-            "description": "Optional model-call budget",
-            "type": "object",
-            "properties": {
-              "modelCalls": {
-                "minimum": 1,
-                "maximum": 20,
-                "type": "integer",
-                "description": "Model calls, 1..20; default 10"
-              }
-            }
           },
           "provider": {
             "minLength": 1,
@@ -203304,7 +203137,7 @@
               "overlap",
               "replaceTimeoutSeconds",
               "dependsOn",
-              "budget",
+              "autoPauseAfterFailures",
               "secrets",
               "healingPolicy",
               "expiresAt",
@@ -203636,31 +203469,10 @@
                   }
                 }
               },
-              "budget": {
-                "additionalProperties": false,
-                "type": "object",
-                "required": [
-                  "maxFiresPerDay",
-                  "maxRunsPerDay",
-                  "autoPauseAfterFailures"
-                ],
-                "properties": {
-                  "maxFiresPerDay": {
-                    "minimum": 1,
-                    "maximum": 1440,
-                    "type": "integer"
-                  },
-                  "maxRunsPerDay": {
-                    "minimum": 1,
-                    "maximum": 100000,
-                    "type": "integer"
-                  },
-                  "autoPauseAfterFailures": {
-                    "minimum": 1,
-                    "maximum": 100,
-                    "type": "integer"
-                  }
-                }
+              "autoPauseAfterFailures": {
+                "minimum": 1,
+                "maximum": 100,
+                "type": "integer"
               },
               "secrets": {
                 "additionalProperties": false,
@@ -204088,26 +203900,10 @@
               }
             }
           },
-          "budget": {
-            "additionalProperties": false,
-            "type": "object",
-            "properties": {
-              "maxFiresPerDay": {
-                "minimum": 1,
-                "maximum": 1440,
-                "type": "integer"
-              },
-              "maxRunsPerDay": {
-                "minimum": 1,
-                "maximum": 100000,
-                "type": "integer"
-              },
-              "autoPauseAfterFailures": {
-                "minimum": 1,
-                "maximum": 100,
-                "type": "integer"
-              }
-            }
+          "autoPauseAfterFailures": {
+            "minimum": 1,
+            "maximum": 100,
+            "type": "integer"
           },
           "secrets": {
             "additionalProperties": false,
@@ -204445,26 +204241,10 @@
               }
             }
           },
-          "budget": {
-            "additionalProperties": false,
-            "type": "object",
-            "properties": {
-              "maxFiresPerDay": {
-                "minimum": 1,
-                "maximum": 1440,
-                "type": "integer"
-              },
-              "maxRunsPerDay": {
-                "minimum": 1,
-                "maximum": 100000,
-                "type": "integer"
-              },
-              "autoPauseAfterFailures": {
-                "minimum": 1,
-                "maximum": 100,
-                "type": "integer"
-              }
-            }
+          "autoPauseAfterFailures": {
+            "minimum": 1,
+            "maximum": 100,
+            "type": "integer"
           },
           "secrets": {
             "additionalProperties": false,
@@ -204759,7 +204539,7 @@
               "overlap",
               "replaceTimeoutSeconds",
               "dependsOn",
-              "budget",
+              "autoPauseAfterFailures",
               "secrets",
               "healingPolicy",
               "expiresAt",
@@ -205091,31 +204871,10 @@
                   }
                 }
               },
-              "budget": {
-                "additionalProperties": false,
-                "type": "object",
-                "required": [
-                  "maxFiresPerDay",
-                  "maxRunsPerDay",
-                  "autoPauseAfterFailures"
-                ],
-                "properties": {
-                  "maxFiresPerDay": {
-                    "minimum": 1,
-                    "maximum": 1440,
-                    "type": "integer"
-                  },
-                  "maxRunsPerDay": {
-                    "minimum": 1,
-                    "maximum": 100000,
-                    "type": "integer"
-                  },
-                  "autoPauseAfterFailures": {
-                    "minimum": 1,
-                    "maximum": 100,
-                    "type": "integer"
-                  }
-                }
+              "autoPauseAfterFailures": {
+                "minimum": 1,
+                "maximum": 100,
+                "type": "integer"
               },
               "secrets": {
                 "additionalProperties": false,
@@ -286817,20 +286576,6 @@
         "type": "string",
         "$defs": {}
       },
-      "TokenBudgetInput": {
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "tokens"
-        ],
-        "properties": {
-          "tokens": {
-            "minimum": 0,
-            "type": "integer"
-          }
-        },
-        "$defs": {}
-      },
       "TokenCreated": {
         "additionalProperties": false,
         "type": "object",
@@ -287940,7 +287685,7 @@
           "componentAccounting",
           "runs",
           "storageBytes",
-          "lifetimeBudget"
+          "reservations"
         ],
         "properties": {
           "query": {
@@ -288624,121 +288369,26 @@
             "minimum": 0,
             "type": "integer"
           },
-          "lifetimeBudget": {
+          "reservations": {
             "additionalProperties": false,
             "type": "object",
             "required": [
-              "scope",
-              "remaining",
-              "tokenBudget",
-              "reservations"
+              "reserved",
+              "settled",
+              "released"
             ],
             "properties": {
-              "scope": {
-                "const": "project_lifetime",
-                "type": "string"
+              "reserved": {
+                "minimum": 0,
+                "type": "integer"
               },
-              "remaining": {
-                "anyOf": [
-                  {
-                    "additionalProperties": false,
-                    "type": "object",
-                    "required": [
-                      "amount",
-                      "currency",
-                      "scale"
-                    ],
-                    "properties": {
-                      "amount": {
-                        "pattern": "^\\d+$",
-                        "type": "string"
-                      },
-                      "currency": {
-                        "pattern": "^[A-Z]{3}$",
-                        "type": "string"
-                      },
-                      "scale": {
-                        "minimum": 0,
-                        "maximum": 18,
-                        "type": "integer"
-                      }
-                    }
-                  },
-                  {
-                    "const": "unknown",
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+              "settled": {
+                "minimum": 0,
+                "type": "integer"
               },
-              "tokenBudget": {
-                "anyOf": [
-                  {
-                    "additionalProperties": false,
-                    "type": "object",
-                    "required": [
-                      "limit",
-                      "used",
-                      "remaining"
-                    ],
-                    "properties": {
-                      "limit": {
-                        "anyOf": [
-                          {
-                            "minimum": 0,
-                            "type": "integer"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "used": {
-                        "minimum": 0,
-                        "type": "integer"
-                      },
-                      "remaining": {
-                        "anyOf": [
-                          {
-                            "minimum": 0,
-                            "type": "integer"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      }
-                    }
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "reservations": {
-                "additionalProperties": false,
-                "type": "object",
-                "required": [
-                  "reserved",
-                  "settled",
-                  "released"
-                ],
-                "properties": {
-                  "reserved": {
-                    "minimum": 0,
-                    "type": "integer"
-                  },
-                  "settled": {
-                    "minimum": 0,
-                    "type": "integer"
-                  },
-                  "released": {
-                    "minimum": 0,
-                    "type": "integer"
-                  }
-                }
+              "released": {
+                "minimum": 0,
+                "type": "integer"
               }
             }
           }

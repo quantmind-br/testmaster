@@ -118,16 +118,8 @@ const DependencyInput = P.Obj({
   condition: P.Enum(["passed", "failed", "terminal"]),
   timeoutSeconds: Type.Integer({ minimum: 1, maximum: 86400 }),
 });
-const BudgetInput = P.Obj({
-  maxFiresPerDay: Type.Optional(Type.Integer({ minimum: 1, maximum: 1440 })),
-  maxRunsPerDay: Type.Optional(Type.Integer({ minimum: 1, maximum: 100000 })),
-  autoPauseAfterFailures: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
-});
-const Budget = P.Obj({
-  maxFiresPerDay: Type.Integer({ minimum: 1, maximum: 1440 }),
-  maxRunsPerDay: Type.Integer({ minimum: 1, maximum: 100000 }),
-  autoPauseAfterFailures: Type.Integer({ minimum: 1, maximum: 100 }),
-});
+/** This many consecutive failed gates pause the schedule (`auto_paused_failures`). */
+const AutoPauseAfterFailures = Type.Integer({ minimum: 1, maximum: 100 });
 const SecretsPolicyInput = P.Obj({ onChange: P.Enum(["use_current", "pause"]) });
 const Destinations = P.Obj({
   integrationIds: Type.Array(Type.String({ pattern: `^int_${P.uuidPattern}$` }), {
@@ -140,7 +132,7 @@ const definitionFields = {
   overlap: Type.Optional(P.Enum(["forbid", "allow", "replace"])),
   replaceTimeoutSeconds: Type.Optional(Type.Integer({ minimum: 1, maximum: 86400 })),
   dependsOn: Type.Optional(Type.Array(DependencyInput, { maxItems: 16 })),
-  budget: Type.Optional(BudgetInput),
+  autoPauseAfterFailures: Type.Optional(AutoPauseAfterFailures),
   secrets: Type.Optional(SecretsPolicyInput),
   /** Scheduled runs replay; healing may propose but never apply unattended. */
   healingPolicy: Type.Optional(P.Enum(["off", "propose"])),
@@ -157,7 +149,7 @@ export const ScheduleDefinition = P.Obj({
   overlap: P.Enum(["forbid", "allow", "replace"]),
   replaceTimeoutSeconds: Type.Integer({ minimum: 1, maximum: 86400 }),
   dependsOn: Type.Array(DependencyInput),
-  budget: Budget,
+  autoPauseAfterFailures: AutoPauseAfterFailures,
   secrets: SecretsPolicyInput,
   healingPolicy: P.Enum(["off", "propose"]),
   expiresAt: nullable(P.Timestamp),

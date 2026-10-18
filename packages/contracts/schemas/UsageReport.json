@@ -20,7 +20,7 @@
     "componentAccounting",
     "runs",
     "storageBytes",
-    "lifetimeBudget"
+    "reservations"
   ],
   "properties": {
     "query": {
@@ -704,121 +704,26 @@
       "minimum": 0,
       "type": "integer"
     },
-    "lifetimeBudget": {
+    "reservations": {
       "additionalProperties": false,
       "type": "object",
       "required": [
-        "scope",
-        "remaining",
-        "tokenBudget",
-        "reservations"
+        "reserved",
+        "settled",
+        "released"
       ],
       "properties": {
-        "scope": {
-          "const": "project_lifetime",
-          "type": "string"
+        "reserved": {
+          "minimum": 0,
+          "type": "integer"
         },
-        "remaining": {
-          "anyOf": [
-            {
-              "additionalProperties": false,
-              "type": "object",
-              "required": [
-                "amount",
-                "currency",
-                "scale"
-              ],
-              "properties": {
-                "amount": {
-                  "pattern": "^\\d+$",
-                  "type": "string"
-                },
-                "currency": {
-                  "pattern": "^[A-Z]{3}$",
-                  "type": "string"
-                },
-                "scale": {
-                  "minimum": 0,
-                  "maximum": 18,
-                  "type": "integer"
-                }
-              }
-            },
-            {
-              "const": "unknown",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "settled": {
+          "minimum": 0,
+          "type": "integer"
         },
-        "tokenBudget": {
-          "anyOf": [
-            {
-              "additionalProperties": false,
-              "type": "object",
-              "required": [
-                "limit",
-                "used",
-                "remaining"
-              ],
-              "properties": {
-                "limit": {
-                  "anyOf": [
-                    {
-                      "minimum": 0,
-                      "type": "integer"
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                },
-                "used": {
-                  "minimum": 0,
-                  "type": "integer"
-                },
-                "remaining": {
-                  "anyOf": [
-                    {
-                      "minimum": 0,
-                      "type": "integer"
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                }
-              }
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "reservations": {
-          "additionalProperties": false,
-          "type": "object",
-          "required": [
-            "reserved",
-            "settled",
-            "released"
-          ],
-          "properties": {
-            "reserved": {
-              "minimum": 0,
-              "type": "integer"
-            },
-            "settled": {
-              "minimum": 0,
-              "type": "integer"
-            },
-            "released": {
-              "minimum": 0,
-              "type": "integer"
-            }
-          }
+        "released": {
+          "minimum": 0,
+          "type": "integer"
         }
       }
     }

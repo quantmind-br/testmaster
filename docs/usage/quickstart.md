@@ -188,8 +188,8 @@ hold; null while a listed hold blocks removal) from `backupExpiryDeadlineAt` (la
 backup hold expiry). `deadlineReason` explains deferral; neither field promises immediate backup
 erasure. Local Run artifacts are addressable only after publication; distributed in-flight worker
 uploads and S3 version removal remain M4 scope.
-Usage filters apply to immutable model-call totals; lifetime project reservations/budgets remain
-separately labelled `lifetimeBudget`. Unknown tokens/costs stay unknown; money is grouped by
+Usage filters apply to immutable model-call totals; the ledger's reservation counts by state are reported
+separately as `reservations`. Unknown tokens/costs stay unknown; money is grouped by
 currency and scale. Reasoning/cache are disclosed components, not extra input/output charges.
 `estimatedCosts` uses each call's frozen `priceTableVersion`; changing current prices never
 revalues historical rows. `billedCosts` is empty and `billingReconciliation.status` is
@@ -208,9 +208,8 @@ operator policy `~/.config/testmaster/policy.json` (`allowedModelProviders`). A 
 policy never receives a byte; there is no per-project, per-provider or per-data-class opt-in step beyond
 it, and repository files cannot enable a provider. Credentials, secrets, environment values, private keys,
 storage state and raw traces are never sent, and what is sent is minimised and redacted. A model without a
-price table runs with its cost recorded as `unknown` unless a monetary project budget exists, in which case
-the call is refused before it is sent because the ceiling could not be enforced. No token or monetary ceiling
-applies unless you set one. The current live validation model is `qwen3.8-flash` on QuantForge, selected
+price table runs with its cost recorded as `unknown`. No token or monetary ceiling exists: a model call is
+never refused for what was already used. The current live validation model is `qwen3.8-flash` on QuantForge, selected
 explicitly by the operator. Provider availability is checked at execution time; configuring a model does not
 establish generation quality.
 
@@ -247,7 +246,6 @@ when configured; it still omits token ceilings, sampling parameters and `enable_
 
 ```bash
 echo '{"allowedModelProviders":["quantforge"]}' > ~/.config/testmaster/policy.json
-testmaster budget set --tokens 12000000                    # optional cumulative project token quota
 testmaster source add PRD.md --role prd --format markdown
 testmaster source add openapi.yaml --role api --format openapi
 testmaster discover --scope codebase                      # or --scope diff --base <ref> --head <ref>; bounded receipt, --full for everything
@@ -261,7 +259,7 @@ testmaster plan accept "$BATCH_ID" --only <proposal-a>,<proposal-b> --expected-v
 testmaster test run "$TEST_ID" --mode agent --wait         # resolves flagged steps into typed actions
 testmaster test run "$TEST_ID" --revision "$CANDIDATE" --wait   # deterministic replay of the candidate
 testmaster test revision promote "$CANDIDATE" --expected-version <n>
-testmaster usage                                           # model calls, tokens, budget; unknown cost stays unknown
+testmaster usage                                           # model calls, tokens, reservations; unknown cost stays unknown
 ```
 
 Heal with a specific model using

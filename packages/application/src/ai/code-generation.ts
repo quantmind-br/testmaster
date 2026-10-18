@@ -83,9 +83,6 @@ export interface CodeGenerationInput {
    * the Run's failed steps. Exclusive with `proposalIds` and `revisionIds`.
    */
   runId?: string;
-  budget?: {
-    modelCalls?: number;
-  };
   /** Model provider; absent: the first allowed provider. Validated before any model call. */
   provider?: string;
   /** Model id; absent: the provider's first structured-output model. Validated before any call. */
@@ -281,18 +278,8 @@ export class CodeGenerationService {
         ? await this.repairTarget(input.projectId, input.runId, importer)
         : undefined;
     const revisions = repair ? [String(repair.revision.id)] : this.selectedRevisions(input);
-    const maximum = input.budget?.modelCalls ?? 10;
-    if (
-      !Number.isInteger(maximum) ||
-      maximum < 1 ||
-      maximum > 20 ||
-      !revisions.length ||
-      revisions.length > maximum
-    )
-      throw new ContractError(
-        "INVALID_ARGUMENT",
-        "Code generation selection exceeds the model-call budget",
-      );
+    if (!revisions.length)
+      throw new ContractError("INVALID_ARGUMENT", "Code generation selection is empty");
     // An explicit model is refused here, before any revision is read for a paid call.
     const models = new ModelService(this.ctx, this.config);
     const choice = models.select(

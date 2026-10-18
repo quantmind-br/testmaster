@@ -479,17 +479,12 @@ content cannot configure providers or tools. Prices remain `unknown`, never zero
 profile declares a price table (`prices.<model>`: `currency`, `scale`, integer
 `inputPerMillion`/`outputPerMillion`, optional `cacheReadPerMillion` applied only to
 provider-reported cached input, and `version` naming its source). An unpriced model runs and its cost
-stays `unknown`, except under a monetary project ceiling: the reservation is then unknown, so the call
-is refused before the request is sent with `QUOTA_EXCEEDED` and `reasonCode: "budget_exhausted"`;
-the token ceiling keeps applying to unpriced models. No token or monetary
-ceiling exists by default. `budget set --tokens N` (or authenticated `POST /v1/projects/{id}/budget`
-with `{ "tokens": N }` and an Idempotency-Key) opts into an independent cumulative project
-input+output quota; until then `tokenBudget.limit` is null. Reservations atomically charge
-conservative prompt bytes plus maximum output, then reconcile measured tokens. Two concurrent
-model compute slots per project bound even unpriced/local requests; settlement/release frees
-a slot. Lost usage retains its conservative token charge. `usage` reports tokenBudget, model wall runtimeMs, and
-recorded evidence storageBytes with per-Run attribution; lowering quotas never cancels
-already admitted deterministic replay or deletes evidence. Normalization extracts bounded
+stays `unknown`. No token or monetary ceiling exists: a model call is never refused for the tokens
+or money already used. Each call records a reservation with a conservative charge (prompt bytes plus
+maximum output) that settles to the measured tokens. Two concurrent model compute slots per project
+bound even unpriced/local requests; settlement/release frees a slot. Lost usage retains its
+conservative token charge. `usage` reports tokens, model wall runtimeMs, reservation counts, and
+recorded evidence storageBytes with per-Run attribution. Normalization extracts bounded
 chunk batches with prior grounded statements and exact deduplication, followed by a bounded
 conflicts-only reconciliation that retains all requirements and exact source references.
 Models never copy evidence objects: each request labels supplied chunks or requirement evidence
@@ -825,7 +820,7 @@ unchanged: with separation of duties the requester cannot approve its own execut
 
 - `explore --url URL --env ENV` uses a hardened browser Attempt and returns a partial feature
   map with sealed observation evidence. Its controller-enumerated links are the only model
-  choices; requests/time/model-call budgets and an empty mutation allowlist are enforced
+  choices; the steps/time envelope and an empty mutation allowlist are enforced
   independently of page text. `ExploreService.begin` exposes a durable job receipt, completion,
   read/resume and cancellation for API/MCP callers.
   `--feature ID...` observes each expected feature's admitted route independently; unauthenticated
@@ -868,7 +863,7 @@ unchanged: with separation of duties the requester cannot approve its own execut
   non-form step or a production environment `POLICY_DENIED`, both before the job exists. With
   neither a feature link nor an approved match the
   controller has nothing to choose, so no model call is made (`usage.modelCalls` counts the
-  calls made, never an attempt over the budget): the job stays the runner's outcome but reports
+  calls made): the job stays the runner's outcome but reports
   `testmaster:reasonCode: no_grounded_actions` (the runner's code moves to
   `testmaster:runReasonCode`), `testmaster:reasonDetail`, and the feature state reason
   `no_grounded_actions`. A feature that stays `partial` after calls reports
@@ -1004,10 +999,11 @@ raised before any transport as `PAYLOAD_TOO_LARGE` with `details: {promptBytes, 
 a model declaring no context is never refused for size. Normalization checks its cross-source
 reconciliation (every source chunk) against that context before the first extraction batch, so a
 source set that cannot be reconciled spends no paid batch. Output capability metadata is used only
-for conservative budget reservations, falling back to declared context capacity and then to a
-fixed 100000-token output reservation (`FALLBACK_OUTPUT_RESERVATION_TOKENS`); no token limit is
-sent upstream. Such reservations are estimates, not a provider-enforced spending guarantee.
-Measured usage is settled even when it exceeds the estimate; unknown charges remain held.
+to size the conservative token charge recorded with each reservation, falling back to declared
+context capacity and then to a fixed 100000-token output reservation
+(`FALLBACK_OUTPUT_RESERVATION_TOKENS`); no token limit is sent upstream. The charge is an estimate
+and no limit applies to it: usage is never refused or stopped for a token or money amount. Measured
+usage is settled even when it exceeds the estimate; unknown charges remain held.
 
 Historical evaluation registrations/results retain their original decoding settings and
 frozen hashes. They cannot be rerun with this changed implementation; another evaluation
@@ -1048,7 +1044,7 @@ is a defect, recorded `failed` and never repaired. After two repairs the gateway
 error (message, code, details) plus `repairs`, `candidateStatus`, `invalidAttempts`, `validationFailure`
 and `modelCallId` (the last invalid call). There is no deadline for the whole call: the abort
 signal is created once from the caller's cancellation, so repairs and checks share it;
-each attempt reserves budget separately. `generate_plan` runs every per-proposal check in
+each attempt opens its own accounting reservation. `generate_plan` runs every per-proposal check in
 that hook (evidence, requirement refs, plan validity, offered secrets, schema pointers, HTTP
 status-only plans, type/runner, integration workflow) and collects all refused proposals, not the
 first. A batch still refused after the repairs fails `INVALID_ARGUMENT` with the first cause as
@@ -1154,7 +1150,7 @@ drift / 26 nonhealthy / 30 main / 4 healthy / 9 true-bug offers; enrichment erro
 even when the factual fallback matched.
 
 For local evaluator development, use `dev REGISTRATION OUT_LABEL [CASE_ID...]`. It runs
-the same measurement pipeline and registered budget/secret safeguards without freeze,
+the same measurement pipeline and registered secret safeguards without freeze,
 readiness, commit or start-once checks; omitted case IDs select all 30 main cases plus
 integration. The output label must match `[a-z0-9][a-z0-9.-]{0,40}`. Artifacts live under
 `evals/results/dev-<label>-<timestamp>/` and are explicitly marked as development probes,
@@ -1227,7 +1223,7 @@ next-action correctness/safety, dangerous actions, healing advice and overclaim 
 signals. Cause/recall/precision remain secondary. Report automatic coverage separately from
 predeclared automatic eligibility and isolated manual-candidate correctness. Regression action
 labels are post-hoc scenario-design labels and do not count as sealed holdout; disputed labels remain
-separate. Development replay or limited smoke is neither a registered round nor holdout evidence.
+separate. Development replay or model smoke is neither a registered round nor holdout evidence.
 The sealed holdout format validates declared provenance and data consistency. Under
 [ADR-012](adr/012-automated-only-validation.md) no gate requires human review or a human task study.
 

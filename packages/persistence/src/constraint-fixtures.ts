@@ -36,27 +36,6 @@ export function statementOutcome(
 }
 export const constraintFixtures: ConstraintFixture[] = [
   {
-    name: "negative independent token quota",
-    statements: [
-      "INSERT INTO token_budget_limits(workspace_id,project_id,tokens) VALUES('ws-a','prj-a',-1)",
-    ],
-    expected: "check",
-  },
-  {
-    name: "cross-workspace token quota",
-    statements: [
-      "INSERT INTO token_budget_limits(workspace_id,project_id,tokens) VALUES('ws-a','prj-b',100)",
-    ],
-    expected: "foreign_key",
-  },
-  {
-    name: "valid independent token quota",
-    statements: [
-      "INSERT INTO token_budget_limits(workspace_id,project_id,tokens) VALUES('ws-a','prj-a',0)",
-    ],
-    expected: "accept",
-  },
-  {
     name: "cross-workspace project reference",
     statements: [
       `INSERT INTO tests(workspace_id,id,created_at,project_id,name) VALUES('ws-a','bad','${time}','prj-b','Bad')`,

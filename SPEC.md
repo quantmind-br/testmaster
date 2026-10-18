@@ -31,7 +31,7 @@ Este documento resolve decisões comuns. As especificações especializadas deta
 3. Código e planos exportáveis. O usuário consegue reproduzir scripts com Playwright/pytest e runtime documentado, sem licença online.
 4. BYOK: provedores cloud ou modelos locais por interface declarada. “OpenAI-compatible” não implica suporte a todas as capacidades; negociação explícita.
 5. Equivalência de recursos de colaboração, monitoring, UI, automação e integrações faz parte do produto completo M6; fases iniciais não serão anunciadas como paridade completa.
-6. Sem subscrição paga interna obrigatória. Medir consumo e aplicar orçamento; não copiar artificialmente limites comerciais do TestSprite.
+6. Sem subscrição paga interna obrigatória. Medir consumo, sem orçamento que recuse ou interrompa trabalho ([ADR-026](docs/adr/026-budget-removal.md)); não copiar artificialmente limites comerciais do TestSprite.
 7. Implementação independente. Apache-2.0 é a licença **recomendada** para o código original; escolha final do mantenedor antes da primeira publicação. Não foi criado arquivo LICENSE que pressuponha titularidade ou nome legal.
 8. Não executar pentest, fuzzing destrutivo, pagamento real ou exclusão em produção sem política e autorização explícitas sobre o alvo.
 9. Não prometer conformidade SOC 2, pentest completo, ausência de bugs, cobertura total ou correção automática infalível.
@@ -54,7 +54,7 @@ Este documento resolve decisões comuns. As especificações especializadas deta
 | INV-012 | Aceitar subset de propostas preserva não selecionadas. Descartar exige ação específica. |
 | INV-013 | Cobertura de requisito, rota, operação, código e execução são métricas separadas; desconhecido nunca é zero nem 100%. |
 | INV-014 | Resultado de PR pertence ao commit e deployment observados. Resultado de SHA antigo não aprova SHA novo. |
-| INV-015 | Extensões não podem ignorar sandbox, redaction, timeout, cancelamento, orçamento ou autorização. |
+| INV-015 | Extensões não podem ignorar sandbox, redaction, timeout, cancelamento ou autorização. |
 
 ## 4. Superfícies e distribuição
 

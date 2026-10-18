@@ -713,7 +713,6 @@ it("no tool input is a top-level combinator, generate_tests shows every property
   }
   const input = (name: string) => tools.find((tool) => tool.name === name)?.inputSchema;
   expect(Object.keys(input("testmaster_generate_tests")?.properties ?? {}).sort()).toEqual([
-    "budget",
     "model",
     "proposalIds",
     "provider",
@@ -732,12 +731,11 @@ it("generate_tests requires proposalIds or revisionIds at runtime and accepts ei
   expect(neither.error?.code).toBe("INVALID_ARGUMENT");
   expect(neither.error?.message).toContain("proposalIds or revisionIds");
   expect(JSON.stringify(neither.error?.details.issues)).toContain("proposalIds or revisionIds");
-  // Control: revisionIds with provider, model and budget passes validation and fails on the unknown revision.
+  // Control: revisionIds with provider and model passes validation and fails on the unknown revision.
   const withRevisions = await f.call("testmaster_generate_tests", {
     revisionIds: ["rev_019bf434-20c0-7000-8000-000000000001"],
     provider: "p",
     model: "m",
-    budget: { modelCalls: 2 },
   });
   expect(withRevisions.error?.code).toBe("NOT_FOUND");
   // runId repairs one failed candidate alone; with revisionIds it is refused before any lookup.
@@ -982,7 +980,7 @@ it("explore refuses an unknown model before it creates a job", async () => {
     projectId: f.init.projectId,
     envId: f.init.environmentId,
     featureIds: [],
-    budget: { steps: 5, modelCalls: 5, timeMs: 60000 },
+    budget: { steps: 5, timeMs: 60000 },
   };
   const refused = await f.call("testmaster_explore", { ...args, provider: "missing" });
   expect(refused.error?.code).toBe("CAPABILITY_UNAVAILABLE");
@@ -1006,7 +1004,7 @@ it("explore forwards approved mutationActions and refuses an invalid or non-form
     projectId: f.init.projectId,
     envId: f.init.environmentId,
     featureIds: [],
-    budget: { steps: 5, modelCalls: 5, timeMs: 60000 },
+    budget: { steps: 5, timeMs: 60000 },
   };
   const stop = new Error("stop before any browser work");
   const begin = vi.spyOn(Object.getPrototypeOf(f.app.explore), "begin").mockImplementation(() => {

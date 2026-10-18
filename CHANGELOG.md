@@ -11,6 +11,29 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 
 - MCP tools now carry action-oriented descriptions (what the tool does, when to use it, which tool comes next); `testmaster_get_run` states it returns a summary only and points to evidence and analysis before naming a cause.
 
+### Budget removal ([ADR-026](docs/adr/026-budget-removal.md))
+
+No budget can refuse, pause, skip or stop work any more: the user decides the work is to be done, and a budget only interrupted it midway. Usage accounting is unchanged: model calls, tokens, cost (`unknown` when unpriced, never zero), runtime and storage are still recorded and reported by `testmaster usage`.
+
+- Removed the project token quota, the monetary project ceiling and the budget refusal of model-call reservations. A reservation is an accounting record; the only refusal left is the compute concurrency limit of two running model calls per project (`QUOTA_EXCEEDED`, `reasonCode: quota_exceeded`). An unpriced model is no longer refused under a monetary limit, because that limit is gone.
+- Removed `testmaster budget set`, `POST /v1/projects/{id}/budget` and the `TokenBudgetInput` and unused `BudgetInput` contracts. The portal token-budget form and the proposals-page budget line are removed; settings show read-only model usage and storage. `UsageReport.lifetimeBudget` is replaced by `reservations: {reserved, settled, released}`.
+- Removed the `budget_exhausted` alert rule and its runbook, and the dry-run `costsModelBudget` flag.
+- Removed the code-generation limit of 10 (at most 20) model calls per call and the `budget` argument of `testmaster_generate_tests`: generation covers the whole selection.
+- Removed `--max-model-calls` from `testmaster explore` and `budget.modelCalls` from `testmaster_explore`. An exploration is bounded by its browser `steps` and `timeMs` only, and its planned step count is `steps`.
+- Removed the cap of 50 action-resolution model calls in agent mode and the runner's agent request counter. The runner still refuses a non-action step in an agent flow with `security_precondition_failed` ("Agent step is not an action").
+- Removed the schedule daily caps `maxFiresPerDay` and `maxRunsPerDay` (CLI `--max-fires-per-day`, `--max-runs-per-day`, portal inputs): a schedule no longer skips a firing for budget. Breaking: `autoPauseAfterFailures` moved from `budget.autoPauseAfterFailures` to a top-level schedule field (API, CLI `--auto-pause-after-failures`, portal); a `budget` object in a schedule definition is refused. Revisions saved with the old `budget` object still load: the daily caps are ignored and the failure limit is kept; stored bytes are untouched.
+- The evaluation harness and the replay smoke no longer refuse or stop on a token or call count: the conservative token reservation, `smoke_call_limit`, `smoke_token_limit`, the logical-command and transport-attempt limits and the round budget validation are removed. Token usage is still settled and reported.
+- The eval runners (`evals run` and the M3 round) no longer have a wall-clock deadline: `budget.maxWallTimeMs` is gone, no command is killed after 10 minutes or at the round deadline (cleanup commands were cut after 30 s), and no trial is skipped as `wall_time_exhausted`. Frozen registrations that still contain `budget` parse unchanged; the field is ignored. `wall_time_exhausted` stays readable in older ledgers.
+- `budget_exhausted` stays readable in runs, attempts, batches, firings and receipts written by older versions; nothing produces it any more.
+
+### Agent guidance installer recovers a dead installer's lock ([ADR-027](docs/adr/027-agent-skill-lock-recovery.md))
+
+- `testmaster agent install|remove --yes` no longer fails with `lock_busy` forever after an installer was killed mid-apply (for example by `SIGPIPE` when its output was piped to `head`). The lock is now published complete, as `{pid, host, token, startedAt}`, with an exclusive link, and a lock whose `pid` no longer exists on this host is reclaimed under an exclusive `.testmaster/agent-skills.lock.reclaim` guard. A live owner, another host's lock and an empty lock left by an earlier version still return `lock_busy`, whose `details.path` now names the lock file to remove when no installer is running; an owner removes only the lock that carries its own token.
+
+### Requirement interpretation journey
+
+- The portal journey for a reworded requirement re-normalizes on other evidence: a requirement restated on exactly the same chunks is carried unchanged and logs no interpretation change, so the journey failed waiting for an entry the product correctly no longer writes.
+
 ### Suggestions from the Dokploy agent runs
 
 Features and behavior changes the operator approved after seven Dokploy agent runs.
@@ -110,11 +133,11 @@ Found when the WeKnora agent could not parse a plan batch: omp shows only the fi
 ### Model calls have no deadline
 
 - A model request runs until the provider answers: the gateway has no deadline (`ModelRequest.deadlineMs` is gone) and the provider transport disables undici's 300 s header and body timeouts. Only a caller cancellation (Ctrl-C, client disconnect, run or job cancel) stops a call; it is `PRECONDITION_FAILED "Model request cancelled"` and names the recorded request as `lastModelCallId`. A model call is never `UPSTREAM_TIMEOUT`.
-- No surface accepts a model deadline any more: `budget.deadlineMs` is removed from `testmaster_generate_plan`, `testmaster_generate_tests` (budget keeps `modelCalls`), `testmaster_analyze_run` and `testmaster_propose_healing`, `--deadline-ms` from `run analyze` and `heal propose`, `budget` from `AnalysisInput`, `HealingInput` and the REST proposal-generation body, and the deadline field from the portal's proposal generation.
+- No surface accepts a model deadline any more: `budget.deadlineMs` is removed from `testmaster_generate_plan`, `testmaster_generate_tests`, `testmaster_analyze_run` and `testmaster_propose_healing`, `--deadline-ms` from `run analyze` and `heal propose`, `budget` from `AnalysisInput`, `HealingInput` and the REST proposal-generation body, and the deadline field from the portal's proposal generation.
 - Analysis and healing jobs renew their lease while the model call runs (60 s lease, renewed every 15 s), so a long call never loses its job; a second caller waits for the job to settle instead of giving up after the old deadline, and a holder that stopped lets its lease expire.
 - The wait for a model answer is not charged to any execution deadline. An agent-mode attempt pauses its attempt clock (`AttemptClock`, shared by the host docker executor and the runner harness) while the host resolves an action, and re-arms the remaining time on the answer; the worker records each wait as `attempt.model_wait` and leaves it out of the run's `executionTimeoutMs`, so a retried attempt keeps its time. `testmaster_explore` `timeMs` bounds browser time only, a multi-feature exploration pauses its whole budget while any model call is pending, and only the caller's cancellation cuts its model call.
 - The REST routes that run a model (proposal generation and refinement, `POST /runs/{id}/analysis`, `POST /runs/{id}/healing-proposals`, requirement normalization) and `POST /mcp` turn off the server's 30 s socket idle timeout for their connection; other routes keep it (`ServerOptions.connectionTimeoutMs`).
-- The eval runner never kills a model command; its trial wall time only stops commands that do no model work and keeps later commands from starting. The development smoke forwarder relays model calls without a timeout.
+- The eval runner never kills a model command. The development smoke forwarder relays model calls without a timeout.
 
 ### Third WeKnora agent run
 
@@ -625,3 +648,4 @@ and rollback means restoring a backup taken before the upgrade.
 | 21 | `onboarding_remove_consents` | `2734105e8a81` | Removes `choices.consents` from stored setup-wizard state (`operational_state` keys `onboarding:*`); every other field, the version and the saved history are preserved (ADR-024) |
 | 22 | `terminal_runner` | `28f7197ad66a` | Lets `test_revisions` accept runner kind `terminal` for plan type `cli`: the SQLite table is rebuilt with its rows, indexes, immutability and contract triggers preserved, and the PostgreSQL migration (checksum prefix `ce2f4babc5f1`) replaces the inline CHECK and the contract projection constraint (ADR-025) |
 | 23 | `artifact_storage_key` | `a47270a215b6` | Widens the `artifacts` contract constraint on `storage_key` from 200 to 4096 characters (a relative path built from plan step ids and output names): SQLite replaces the contract triggers after validating existing rows, and the PostgreSQL migration (checksum prefix `916906a0a8e8`) replaces the projection CHECK |
+| 24 | `remove_model_budgets` | `8821438c30c0` | Drops `token_budget_limits` and `budget_limits`: no token or monetary budget exists; `budget_reservations`, `model_calls` and `usage_entries` stay as the accounting ledger (ADR-026) |

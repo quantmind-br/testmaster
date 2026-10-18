@@ -9,7 +9,7 @@ import { checkPreregistration } from "./run.js";
 type FrozenRegistration = {
   graduation: { minPrimaryWilsonLower: number };
   dataset: { holdout: string[] };
-  budget: { maxTokens: number };
+  budget: { maxWallTimeMs: number };
 };
 
 it("refuses changed thresholds, removed cases and changed budgets before round execution", async () => {
@@ -23,7 +23,7 @@ it("refuses changed thresholds, removed cases and changed budgets before round e
       value.dataset.holdout.pop();
     },
     (value: FrozenRegistration) => {
-      value.budget.maxTokens *= 2;
+      value.budget.maxWallTimeMs *= 2;
     },
   ]) {
     const current = JSON.parse(committed.toString());

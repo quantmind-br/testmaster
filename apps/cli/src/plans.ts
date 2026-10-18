@@ -131,7 +131,6 @@ export function planCommands(program: Command, runtime: Runtime): void {
               : "the project's configured model",
             partialGeneration: options.partial === true,
             sendsRequirementsToModel: true,
-            costsModelBudget: true,
             records: "one proposal batch; no test is created until proposals are accepted",
           },
         ],

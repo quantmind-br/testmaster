@@ -264,7 +264,7 @@ const ModelCallView = P.Obj({
 });
 
 /**
- * Body of GET /usage and POST /projects/{id}/budget (`UsageService.get`). `query` echoes the
+ * Body of GET /usage (`UsageService.get`). `query` echoes the
  * validated filters. `tokens` turns null as soon as one call lacks that count, `measuredTokens`
  * sums only the known counts, and `cost` is `"unknown"` when any call has no price.
  */
@@ -306,23 +306,11 @@ const UsageReport = P.Obj({
     }),
   ),
   storageBytes: P.Nonnegative,
-  lifetimeBudget: P.Obj({
-    scope: Type.Literal("project_lifetime"),
-    /** Null without a project filter or a monetary limit; `"unknown"` when a charge cannot be compared. */
-    remaining: Type.Union([DecimalMoney, Type.Literal("unknown"), Type.Null()]),
-    /** Null without a project filter; `limit`/`remaining` are null while no token quota is set. */
-    tokenBudget: nullable(
-      P.Obj({
-        limit: nullable(P.Nonnegative),
-        used: P.Nonnegative,
-        remaining: nullable(P.Nonnegative),
-      }),
-    ),
-    reservations: P.Obj({
-      reserved: P.Nonnegative,
-      settled: P.Nonnegative,
-      released: P.Nonnegative,
-    }),
+  /** Reservation rows of the usage ledger by state; a released reservation never became usage. */
+  reservations: P.Obj({
+    reserved: P.Nonnegative,
+    settled: P.Nonnegative,
+    released: P.Nonnegative,
   }),
 });
 

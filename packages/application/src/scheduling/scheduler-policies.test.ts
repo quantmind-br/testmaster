@@ -321,26 +321,23 @@ it("OPS-016 a crash after the batch was admitted but before the firing was recor
   expect(dispatched(w, schedule.id)[0]?.batchId).toBe(admitted?.id);
 });
 
-it("OPS-017 the daily firing budget skips further occurrences and a run of failed gates pauses the schedule", async () => {
+it("OPS-017 a run of failed gates pauses the schedule and no daily cap ever skips a firing", async () => {
   const w = await world();
   setClock("2026-05-04T10:00:00Z");
-  const budget = w.schedule("budget", {
+  const steady = w.schedule("steady", {
     trigger: every10,
     overlap: "allow",
-    budget: { maxFiresPerDay: 1 },
   });
   const failing = w.schedule("failing", {
     trigger: every10,
     overlap: "allow",
-    budget: { autoPauseAfterFailures: 2 },
+    autoPauseAfterFailures: 2,
   });
   const scheduler = w.scheduler();
   await tickAt(scheduler, "2026-05-04T10:10:10Z");
   await tickAt(scheduler, "2026-05-04T10:20:10Z");
-  expect(dispatched(w, budget.id)).toHaveLength(1);
-  expect(firings(w, budget.id).find((fire) => fire.state === "skipped")).toMatchObject({
-    reasonCode: "budget_exhausted",
-  });
+  expect(dispatched(w, steady.id)).toHaveLength(2);
+  expect(firings(w, steady.id).filter((fire) => fire.state === "skipped")).toEqual([]);
   for (const fire of dispatched(w, failing.id)) w.finish(String(fire.batchId), "failed");
   await tickAt(scheduler, "2026-05-04T10:20:50Z");
   expect(w.app.schedules.get(failing.id)).toMatchObject({
@@ -348,7 +345,7 @@ it("OPS-017 the daily firing budget skips further occurrences and a run of faile
     pauseReason: "auto_paused_failures",
   });
   // Negative control: passing gates never pause.
-  expect(w.app.schedules.get(budget.id).state).toBe("active");
+  expect(w.app.schedules.get(steady.id).state).toBe("active");
 });
 
 it("OPS-017 an expired schedule pauses with a reason and stops firing", async () => {

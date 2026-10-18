@@ -130,17 +130,7 @@ async function definitionOf(runtime: Runtime, options: Options): Promise<Schedul
   const selection = selectionOf(options);
   const misfire = misfireOf(options);
   const dependsOn = dependenciesOf(options);
-  const maxFires = number(options, "maxFiresPerDay");
-  const maxRuns = number(options, "maxRunsPerDay");
   const autoPause = number(options, "autoPauseAfterFailures");
-  const budget =
-    maxFires !== undefined || maxRuns !== undefined || autoPause !== undefined
-      ? {
-          ...(maxFires !== undefined ? { maxFiresPerDay: maxFires } : {}),
-          ...(maxRuns !== undefined ? { maxRunsPerDay: maxRuns } : {}),
-          ...(autoPause !== undefined ? { autoPauseAfterFailures: autoPause } : {}),
-        }
-      : undefined;
   const onChange = string(options, "secretsOnChange");
   const heal = string(options, "heal");
   const overlap = string(options, "overlap");
@@ -158,7 +148,7 @@ async function definitionOf(runtime: Runtime, options: Options): Promise<Schedul
     ...(overlap ? { overlap: overlap as "forbid" | "allow" | "replace" } : {}),
     ...(replaceTimeout !== undefined ? { replaceTimeoutSeconds: replaceTimeout } : {}),
     ...(dependsOn ? { dependsOn } : {}),
-    ...(budget ? { budget: { ...base.budget, ...budget } } : {}),
+    ...(autoPause !== undefined ? { autoPauseAfterFailures: autoPause } : {}),
     ...(onChange ? { secrets: { onChange: onChange as "use_current" | "pause" } } : {}),
     ...(heal ? { healingPolicy: heal as "off" | "propose" } : {}),
     ...(expiresAt ? { expiresAt } : {}),
@@ -189,8 +179,6 @@ function definitionOptions(command: Command): Command {
       "Wait for another schedule (repeatable)",
       collect,
     )
-    .option("--max-fires-per-day <count>", "Budget: firings per day", integer)
-    .option("--max-runs-per-day <count>", "Budget: Runs per day", integer)
     .option(
       "--auto-pause-after-failures <count>",
       "Pause after consecutive failed firings",

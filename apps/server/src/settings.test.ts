@@ -326,35 +326,22 @@ it("UX-047 lists the model providers over HTTP without exposing credentials or a
   expect(unknown.statusCode).toBe(404);
 });
 
-it("UX-047 exposes the lifetime token budget and storage bytes and refuses budget changes to viewers", async () => {
+it("UX-047 exposes measured usage and storage bytes and has no budget route", async () => {
   const f = await fixture();
   const projectId = f.init.projectId;
   const owner = await f.actor("org_owner", ["R", "W", "A"]);
   const viewer = await f.actor("viewer", ["R", "A"]);
-  const before = await f.call("GET", `/usage?projectId=${projectId}`, viewer.token);
-  expect(before.statusCode, before.body).toBe(200);
-  expect(before.json().data).toMatchObject({ storageBytes: expect.any(Number) });
-  expect(before.json().data.lifetimeBudget).toHaveProperty("tokenBudget");
-  const denied = await f.call("POST", `/projects/${projectId}/budget`, viewer.token, {
-    payload: { tokens: 5 },
+  const usage = await f.call("GET", `/usage?projectId=${projectId}`, viewer.token);
+  expect(usage.statusCode, usage.body).toBe(200);
+  expect(usage.json().data).toMatchObject({
+    storageBytes: expect.any(Number),
+    reservations: { reserved: 0, settled: 0, released: 0 },
   });
-  expect(denied.statusCode).toBe(403);
-  const set = await f.call("POST", `/projects/${projectId}/budget`, owner.token, {
+  expect(usage.json().data).not.toHaveProperty("lifetimeBudget");
+  const gone = await f.call("POST", `/projects/${projectId}/budget`, owner.token, {
     payload: { tokens: 777 },
   });
-  expect(set.statusCode, set.body).toBe(200);
-  expect(set.json().data.lifetimeBudget.tokenBudget).toEqual({
-    limit: 777,
-    used: 0,
-    remaining: 777,
-  });
-  expect(set.json().data).toMatchObject({ storageBytes: expect.any(Number) });
-  const after = await f.call("GET", `/usage?projectId=${projectId}`, viewer.token);
-  expect(after.json().data.lifetimeBudget.tokenBudget).toEqual({
-    limit: 777,
-    used: 0,
-    remaining: 777,
-  });
+  expect(gone.statusCode).toBe(404);
 });
 
 it("M4-05 lists environment revisions over HTTP newest first and answers every portal settings route", async () => {

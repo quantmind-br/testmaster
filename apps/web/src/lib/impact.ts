@@ -95,21 +95,3 @@ export function environmentImpact(
   });
   return impacts;
 }
-
-export function budgetImpact(before: number | null, after: number): readonly Impact[] {
-  return [
-    {
-      area: "Reproducibility",
-      level: "none",
-      text: "No effect on recorded results or on how tests replay.",
-    },
-    {
-      area: "Cost",
-      level: "info",
-      text: `Sets the lifetime token budget of this project to ${after.toLocaleString("en-US")} tokens${
-        before === null ? "" : ` (was ${before.toLocaleString("en-US")})`
-      }. Model calls that would exceed it are refused before they are sent. Past usage is not recalculated.`,
-    },
-    { area: "Data protection", level: "none", text: "No change to what is sent to providers." },
-  ];
-}

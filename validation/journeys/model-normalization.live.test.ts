@@ -11,7 +11,6 @@ it.each([1, 2, 3])(
       `model-normalization-reference-shop-${trial}`,
       async (session) => {
         await configureModel(session);
-        await session.command(["budget", "set", "--tokens", "2000000"]);
         const prd = await source(
           session,
           "PRD.md",

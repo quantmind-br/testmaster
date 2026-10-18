@@ -267,7 +267,7 @@ Cada PR deve concluir um comportamento utilizável ou um invariant testável. Ev
 | Qualidade LLM variável | Providers pinados quando possível, holdout/intervalos, modo sem LLM | claim da configuração não avaliada |
 | Cloud/IdP/provider de teste ausente | Preparar fixtures locais; obter ambiente real autorizado para smoke | suporte GA dessa integração, não core local |
 | Licença/domínio/registry legal | Maintainer decide antes da publicação; não assumir marca/titular | release público, não implementação local |
-| Custos e amostras de benchmark | Pré-registrar budget/stopping rule; resultado partial honesto | claim estatístico sem n suficiente |
+| Custos e amostras de benchmark | Pré-registrar stopping rule e tamanho; resultado partial honesto | claim estatístico sem n suficiente |
 | Referência TestSprite muda | Atualizar SOURCES por versão e divergência, não copiar API privada | claim de paridade atualizada |
 | Compatibilidade cross-platform | Validar OS/browser/runtime reais e publicar matrix | anúncio de plataforma não executada |
 | Escopo completo amplo | Entregas por gates, sem omitir itens da matriz | chamar M1 de substituto completo |

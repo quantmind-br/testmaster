@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { Command } from "commander";
-import { type Runtime, required, string } from "./runtime.js";
+import { type Runtime, string } from "./runtime.js";
 
 export function usageCommands(program: Command, runtime: Runtime): void {
   runtime.bind(
@@ -29,13 +29,5 @@ export function usageCommands(program: Command, runtime: Runtime): void {
       }
       return { data };
     },
-  );
-  runtime.bind(
-    program.command("budget").command("set").requiredOption("--tokens <count>"),
-    async (rt, _args, options) => ({
-      data: (await rt.app()).usage.setBudget(await rt.project(options), {
-        tokens: Number(required(options, "tokens")),
-      }),
-    }),
   );
 }

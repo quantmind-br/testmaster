@@ -5,7 +5,7 @@ import { expect, it } from "vitest";
 import { controlledShop, healthPlan, items, journey, object, text } from "./harness.js";
 import { source } from "./m2-support.js";
 
-it("VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run and attributed evidence", async () => {
+it("VAL-009 model usage is recorded and never stops or cancels an admitted Docker Run", async () => {
   let completions = 0;
   let release: (() => void) | undefined;
   const received = Promise.withResolvers<void>();
@@ -23,11 +23,14 @@ it("VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run 
     const input = JSON.parse(user?.content ?? "{}").untrustedData as {
       chunks: { evidenceId: string }[];
     };
-    completions++;
-    received.resolve();
-    await new Promise<void>((resolve) => {
-      release = resolve;
-    });
+    const call = ++completions;
+    if (call === 1) {
+      // Hold the first call open while the admitted Docker Run proceeds.
+      received.resolve();
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+    }
     response.end(
       JSON.stringify({
         model: "accounting-model",
@@ -38,8 +41,8 @@ it("VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run 
               content: JSON.stringify({
                 requirements: [
                   {
-                    key: "health",
-                    text: "Health reports ok",
+                    key: `health-${call}`,
+                    text: `Health reports ok (${call})`,
                     acceptanceCriteria: ["GET /health status is ok"],
                     evidenceIds: [input.chunks[0]?.evidenceId],
                     originKind: "explicit",
@@ -115,43 +118,38 @@ it("VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run 
             text(object(prd.revision).id),
           ];
           expect(completions).toBe(0);
-          await session.command(["budget", "set", "--tokens", "100000"]);
           const test = await session.createTest(healthPlan());
           await session.worker();
           const admitted = await session.command(["test", "run", text(test.id)]);
           const runId = text(admitted.runId);
           const generating = session.start(normalize);
           await received.promise;
-          await session.command(["budget", "set", "--tokens", "30"]);
           release?.();
-          const stopped = await generating.result;
-          expect(stopped.exitCode, stopped.stdout).toBe(12);
-          expect(object(object(stopped.json).error).code).toBe("QUOTA_EXCEEDED");
-          expect(completions).toBe(1);
-          expect(items((await session.command(["requirement", "list"])).items)).toHaveLength(0);
+          const finished = await generating.result;
+          // No token or money limit exists: the model work runs to completion.
+          expect(finished.exitCode, finished.stdout).toBe(0);
+          expect(completions).toBeGreaterThanOrEqual(1);
           const run = await session.observe(runId, (value) => value.phase === "completed");
           expect(run.outcome).toBe("passed");
           const evidence = await session.command(["artifact", "get", runId]);
           const manifest = object(evidence.manifest);
           expect(items(manifest.entries).some((entry) => entry.state === "available")).toBe(true);
           const usage = await session.command(["usage", "--project", text(identity.projectId)]);
-          expect(object(usage.tokens)).toMatchObject({ inputTokens: 20, outputTokens: 10 });
-          expect(object(object(usage.lifetimeBudget).tokenBudget)).toMatchObject({
-            used: 30,
-            remaining: 0,
-          });
-          expect(usage.unknownCostCalls).toBe(1);
+          expect(object(usage.tokens).inputTokens).toBeGreaterThanOrEqual(20);
+          expect(object(usage.tokens).outputTokens).toBeGreaterThanOrEqual(10);
+          expect(Number(object(usage.reservations).settled)).toBeGreaterThanOrEqual(1);
+          expect(Number(usage.unknownCostCalls)).toBeGreaterThanOrEqual(1);
           expect(Number(usage.runtimeMs)).toBeGreaterThan(0);
           expect(Number(usage.storageBytes)).toBeGreaterThan(0);
           expect(
             items(usage.runs).find((value) => value.runId === runId)?.storageBytes,
           ).toBeGreaterThan(0);
           session.oracles.push({
-            check: "modelQuotaDoesNotCancelDeterministicRun",
+            check: "modelUsageDoesNotStopDeterministicRun",
             runId,
             outcome: run.outcome,
             modelCalls: completions,
-            tokenBudget: object(usage.lifetimeBudget).tokenBudget,
+            reservations: usage.reservations,
             runtimeMs: usage.runtimeMs,
             storageBytes: usage.storageBytes,
             integrity: evidence.integrity ?? "verified-by-bundle-reader",
@@ -161,11 +159,11 @@ it("VAL-009 token exhaustion mid-normalization preserves an admitted Docker Run 
         }
       },
       {
-        class: "budget-accounting-e2e",
+        class: "model-usage-accounting-e2e",
         runner: "real-cli-docker-and-local-provider",
         externalDependency: "local-reference-shop-and-openai-compatible-http-double",
         limitations: [
-          "HTTP double exercises accounting and exhaustion only, not model quality; deterministic target and sandbox are real.",
+          "HTTP double exercises accounting only, not model quality; deterministic target and sandbox are real.",
         ],
       },
     );

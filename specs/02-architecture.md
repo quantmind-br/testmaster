@@ -34,7 +34,7 @@ flowchart TD
 | `application` | transações, autorização, jobs, comandos/query | executar código não confiável |
 | `persistence` | SQLite/PostgreSQL repos, migrations, outbox | modificar conteúdo imutável |
 | `planner` | fontes, mapa, requisitos, proposals, diff scope | promover comportamento observado a requisito desejado sem origem |
-| `model-gateway` | provider capabilities, budgets, structured output, audit | fallback externo silencioso ou armazenar segredo em prompts |
+| `model-gateway` | provider capabilities, usage accounting, structured output, audit | fallback externo silencioso ou armazenar segredo em prompts |
 | `worker-supervisor` | lease, sandbox, timeout/cancel, secret injection, artifacts | aceitar alteração de política do código testado |
 | `runner-playwright` | ações/assertions, traces, eventos de step | publicar passed ignorando runner supervisor |
 | `runner-http` | requests determinísticos, schema, captures | usar eval na interpolação |
@@ -44,7 +44,7 @@ flowchart TD
 | `analysis` | rules/LLM hypothesis, failure kind, healing proposal | sobrescrever resultado terminal |
 | `reporting` | JSON/HTML/Markdown/JUnit/Allure export | recalcular verdict de fonte divergente |
 | `cli`, `mcp`, `api`, `web` | adaptar interfaces | regra exclusiva invisível às demais superfícies |
-| `integrations` | webhook/CI/notifiers/issue trackers | despachar fora de autorização/budget |
+| `integrations` | webhook/CI/notifiers/issue trackers | despachar fora de autorização |
 
 ## 3. Organização proposta do código
 
@@ -112,8 +112,8 @@ Esta árvore é destino arquitetural, não exige criar pacotes vazios no primeir
 ### Execute
 
 1. Resolver seleção/revisões/ambiente e validar capabilities.
-2. Verificar autorização, destino, auth refs, DAG e orçamento; não fazer login/probe destrutivo nesta fase.
-3. Transação cria Run/BatchRun + budget reservation + outbox; idempotency receipt retornado.
+2. Verificar autorização, destino, auth refs e DAG; não fazer login/probe destrutivo nesta fase.
+3. Transação cria Run/BatchRun + outbox; idempotency receipt retornado.
 4. Dispatcher adquire lease com fencing token e snapshot imutável.
 5. Supervisor preflight de conectividade controlada, provisiona contexto e resolves secrets mínimos.
 6. Runner emite eventos ordenados; supervisor persiste batches limitados, recebe artifacts em stream.

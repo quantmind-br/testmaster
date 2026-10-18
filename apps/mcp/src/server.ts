@@ -1398,7 +1398,6 @@ export class TestMasterMcp {
             ...(revisions ? { revisionIds: revisions } : {}),
             ...(proposals ? { proposalIds: proposals } : {}),
             ...(runId !== undefined ? { runId } : {}),
-            ...(args.budget ? { budget: args.budget as { modelCalls?: number } } : {}),
             ...(typeof args.provider === "string" ? { provider: args.provider } : {}),
             ...(typeof args.model === "string" ? { model: args.model } : {}),
           },
@@ -1477,7 +1476,7 @@ export class TestMasterMcp {
             ...(Array.isArray(args.mutationActions)
               ? { mutationActions: args.mutationActions as PlanStep[] }
               : {}),
-            budget: args.budget as { steps: number; timeMs: number; modelCalls: number },
+            budget: args.budget as { steps: number; timeMs: number },
           });
           jobId = begun.job.id;
           const completion = begun.completion.then(() => {}).catch(() => {});

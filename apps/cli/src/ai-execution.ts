@@ -105,7 +105,6 @@ export function explorationCommands(program: Command, runtime: Runtime): void {
         "JSON array (max 20) of typed form steps the controller may select when one matches an observed control",
       )
       .option("--max-steps <count>", "Action budget", integer, 5)
-      .option("--max-model-calls <count>", "Model budget", integer, 5)
       .option("--time-budget-ms <ms>", "Wall-clock budget", integer, 60000),
     async (rt, _args, options) => {
       const projectId = await rt.project(options);
@@ -137,7 +136,6 @@ export function explorationCommands(program: Command, runtime: Runtime): void {
             ...(mutationActions ? { mutationActions } : {}),
             budget: {
               steps: Number(options.maxSteps),
-              modelCalls: Number(options.maxModelCalls),
               timeMs: Number(options.timeBudgetMs),
             },
           },

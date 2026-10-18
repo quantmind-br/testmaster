@@ -3,7 +3,7 @@
 - Status: accepted
 - Date: 2026-10-05
 - Scope: approved M0–M2 implementation plan; later profiles remain capability-gated.
-- Amended by: [ADR-024](024-consent-removal.md) (the project/provider/data-class consent requirement below is removed; the provider allowlist and budget reservation stay).
+- Amended by: [ADR-024](024-consent-removal.md) (the project/provider/data-class consent requirement below is removed; the provider allowlist stays), [ADR-026](026-budget-removal.md) (the budget reservation below is an accounting record, never a refusal).
 
 ## Context
 

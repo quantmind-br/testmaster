@@ -11,7 +11,7 @@ Contrato superior: [SPEC.md](../SPEC.md). Fontes e conflitos: [REPORT.md](../REP
 | QA | Revisar intenção, cobertura e teste | importar PRD/spec → explorar → revisar mapa/plano → aprovar → executar matriz |
 | DevOps | Gate confiável no commit certo | deployment SHA → suite pinned → resultados completos → check/JUnit/artefatos |
 | Maintainer self-hosted | Operar sem dependência proprietária | instalar → credenciais locais → backup → upgrade/restore → observar worker |
-| Líder de equipe | Governança e rastreabilidade | roles → aprovadores → histórico/audit → budgets → métricas com denominador |
+| Líder de equipe | Governança e rastreabilidade | roles → aprovadores → histórico/audit → consumo → métricas com denominador |
 
 ## 2. Matriz de cobertura do produto
 
@@ -53,13 +53,13 @@ Cada ID tem aceite operacional; referências E-* são evidências no catálogo. 
 | REQ-032 | CI genérico/GitHub Action | JUnit/artifacts, exit agregado, zero testes e skipped falham por padrão; instalação pinada | P1 | M3 | E06 |
 | REQ-033 | GitHub App/preview | assinatura e dedupe webhooks, SHA-bound deployment, check/comment idempotente, fork seguro | P1 | M4 | E16,E39 |
 | REQ-034 | Listas cross-project | ordered membership e env pin, execução gera BatchRun snapshot independente da edição posterior | P1 | M4 | E17 |
-| REQ-035 | Schedules | cron5/timezone/DST/misfire/overlap, histórico, pause/resume, auto-pause e orçamento | P1 | M4 | E15,E17 |
+| REQ-035 | Schedules | cron5/timezone/DST/misfire/overlap, histórico, pause/resume e auto-pause | P1 | M4 | E15,E17 |
 | REQ-036 | Portal completo | setup/review/edit/run/live/history/artifacts/graphs/settings/admin, sem API privada alternativa | P1 | M4 | E31–E39 |
 | REQ-037 | Túneis | cloud worker → loopback autorizado, TLS, TTL, lease, revocation/ownership e múltiplas runs | P1 | M5 | E17 |
 | REQ-038 | Worker remoto | registro/labels/capabilities/cancel/heartbeat/leases; runner privado não exige abrir LAN pública | P1 | M4 | E01; extensão independente |
 | REQ-039 | Equipes/RBAC | workspace/org/membership/tokens scoped, audit, ownership de projetos, negação cross-tenant | P1 | M4 | E18 |
 | REQ-040 | SSO/SCIM | OIDC/SAML e provisionamento/deprovisionamento, sessões revogadas, break-glass auditado | P2 | M6 | E18 (anunciado) |
-| REQ-041 | Budgets/uso | tokens/tempo/storage/estimativa vs medido; quota e reserva atômicas; unknown ≠ zero | P1 | M2 | E18; design OSS |
+| REQ-041 | Uso | tokens/tempo/storage/estimativa vs medido; slots de compute e reserva atômicos; unknown ≠ zero | P1 | M2 | E18; design OSS |
 | REQ-042 | Slack/email/webhook | entrega assinada, retries/DLQ/dedupe, eventos falha/recuperação/órfãos, sem segredos | P1 | M4 | E18 |
 | REQ-043 | Jira/Linear | importar requisitos com proveniência, criar/vincular issue aprovada, roundtrip auditado | P2 | M5 | E18 (anunciado) |
 | REQ-044 | Memória IA | fatos aprovados por projeto/workspace, origem/TTL, não instruções; isolamento/forget/invalidar por versão | P2 | M5 | E18 (anunciado) |

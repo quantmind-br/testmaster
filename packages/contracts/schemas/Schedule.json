@@ -117,7 +117,7 @@
         "overlap",
         "replaceTimeoutSeconds",
         "dependsOn",
-        "budget",
+        "autoPauseAfterFailures",
         "secrets",
         "healingPolicy",
         "expiresAt",
@@ -449,31 +449,10 @@
             }
           }
         },
-        "budget": {
-          "additionalProperties": false,
-          "type": "object",
-          "required": [
-            "maxFiresPerDay",
-            "maxRunsPerDay",
-            "autoPauseAfterFailures"
-          ],
-          "properties": {
-            "maxFiresPerDay": {
-              "minimum": 1,
-              "maximum": 1440,
-              "type": "integer"
-            },
-            "maxRunsPerDay": {
-              "minimum": 1,
-              "maximum": 100000,
-              "type": "integer"
-            },
-            "autoPauseAfterFailures": {
-              "minimum": 1,
-              "maximum": 100,
-              "type": "integer"
-            }
-          }
+        "autoPauseAfterFailures": {
+          "minimum": 1,
+          "maximum": 100,
+          "type": "integer"
         },
         "secrets": {
           "additionalProperties": false,

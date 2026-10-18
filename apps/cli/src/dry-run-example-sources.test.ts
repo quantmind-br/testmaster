@@ -127,7 +127,6 @@ it("REQ-029 plan generate --dry-run validates its selection, reports the paid op
         type: "auto",
         requirements: [requirementId],
         model: "p1/m1",
-        costsModelBudget: true,
       },
     ],
   });

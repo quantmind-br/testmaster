@@ -6,8 +6,8 @@ route catalog. Text from sources, models, plans, DOM and reports is always rende
 
 ## Generating and resuming
 
-- **Proposals** (`/projects/:projectId/proposals`) shows the approved requirements, the project's token
-  budget (or "No limit set"), the number of model calls so far and the batches of the project.
+- **Proposals** (`/projects/:projectId/proposals`) shows the approved requirements, the number of model
+  calls so far and the batches of the project.
 - **Generate proposals** needs approved requirements and a model provider the operator policy allows. Generation has no time limit and the
   portal sends none: it runs until the provider answers. Cancelling closes the request; the
   server cancels the model call when the connection drops, and nothing is stored. Sources and requirements
@@ -74,7 +74,7 @@ only as healing. Promoting a revision records `revision.promoted` in the audit t
 ## Refinement chat (REQ-054)
 
 `POST /v1/proposals/{id}/refinements` and `POST /v1/tests/{id}/refinements` send a message to the model through
-the normal `ModelService` (provider allowlist, budget and the usage ledger apply). The answer is a **new proposal**
+the normal `ModelService` (provider allowlist and the usage ledger apply). The answer is a **new proposal**
 with its own batch (`origin: refinement`), reviewed and accepted like any other; it never edits a revision.
 The refinement may add assertions, but it may not remove or weaken a required one (`assertion_weakened`) and
 a reply that changes nothing is refused (`no_change`). Turns are stored append-only; text in the chat is data

@@ -17,7 +17,7 @@ export const definitionDefaults = {
   },
   overlap: "forbid",
   replaceTimeoutSeconds: 600,
-  budget: { maxFiresPerDay: 1440, maxRunsPerDay: 5000, autoPauseAfterFailures: 5 },
+  autoPauseAfterFailures: 5,
   secrets: { onChange: "use_current" },
   healingPolicy: "off",
 } as const;
@@ -56,7 +56,10 @@ export function buildDefinition(
       base?.replaceTimeoutSeconds ??
       definitionDefaults.replaceTimeoutSeconds,
     dependsOn: input.dependsOn ?? base?.dependsOn ?? [],
-    budget: { ...definitionDefaults.budget, ...base?.budget, ...input.budget },
+    autoPauseAfterFailures:
+      input.autoPauseAfterFailures ??
+      base?.autoPauseAfterFailures ??
+      definitionDefaults.autoPauseAfterFailures,
     secrets: input.secrets ?? base?.secrets ?? definitionDefaults.secrets,
     healingPolicy: input.healingPolicy ?? base?.healingPolicy ?? definitionDefaults.healingPolicy,
     expiresAt,

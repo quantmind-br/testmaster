@@ -30,7 +30,7 @@ Envelope de sucesso: `{schemaVersion, requestId, data, warnings:[]}`. Envelope d
 | 504 | UPSTREAM_TIMEOUT | condicionado | consultar receipt antes de repetir efeito |
 | 500 | INTERNAL | não automático | requestId, nenhum traceback secreto |
 
-Não retry de 401/403, validation, policy, crédito/orçamento esgotado, producer cycle nem execução que possa ter causado efeito não idempotente. Deadline total limita request+backoff+retry.
+Não retry de 401/403, validation, policy, crédito do provedor esgotado, producer cycle nem execução que possa ter causado efeito não idempotente. Deadline total limita request+backoff+retry.
 
 ## 3. Catálogo de endpoints
 
@@ -88,8 +88,8 @@ Não retry de 401/403, validation, policy, crédito/orçamento esgotado, produce
 | GET `/runs/{id}/bundle` | manifest do snapshot exato, signed urls limitadas | artifacts:R | M1 |
 | GET `/artifacts/{id}` | stream, range bytes, etag hash | artifacts:R | M1 |
 | GET `/runs/{id}/analysis` | análise existente com camadas, hipóteses e refs; sem nova chamada de modelo | runs:R | M3 |
-| POST `/runs/{id}/analysis` | job explícito/reanálise, budget | analysis:X | M3 |
-| POST `/runs/{id}/healing-proposals` | candidate policy/budget | healing:W | M3 |
+| POST `/runs/{id}/analysis` | job explícito/reanálise | analysis:X | M3 |
+| POST `/runs/{id}/healing-proposals` | candidate policy | healing:W | M3 |
 | GET `/healing-proposals/{id}/review` | HealingReview read-only, before/after, identidade, bloqueios, assertions, aprovação e verificação | healing:R | M3 |
 | POST `/healing-proposals/{id}/approve` | candidate version, deciding principal (the authenticated caller, human or agent); verify Run | healing:W | M3 |
 | POST `/healing-proposals/{id}/reject` | reason | healing:W | M3 |
@@ -102,9 +102,9 @@ Não retry de 401/403, validation, policy, crédito/orçamento esgotado, produce
 | GET/POST `/suites` | membership ordered/env mappings | suites:R/W | M4 |
 | GET/PATCH/DELETE `/suites/{id}` | If-Match; archive | suites:R/W | M4 |
 | POST `/suites/{id}/runs` | selection snapshot; BatchRun | runs:X | M4 |
-| GET/POST `/schedules` | cron/timezone/target/overlap/budget | schedules:R/W | M4 |
+| GET/POST `/schedules` | cron/timezone/target/overlap/autoPauseAfterFailures | schedules:R/W | M4 |
 | GET/PATCH/DELETE `/schedules/{id}` | pause/resume/version/archive | schedules:R/W | M4 |
-| GET `/schedules/{id}/firings` | skipped/misfire/overlap/budget e batch refs | schedules:R | M4 |
+| GET `/schedules/{id}/firings` | skipped/misfire/overlap e batch refs | schedules:R | M4 |
 | GET `/resources` | created/orphan/cleaned, filtro run | runs:R | M2 |
 | POST `/resources/{id}/cleanup` | approved compensation + owner proof | cleanup:X | M2 |
 | GET/POST/DELETE `/tunnels` (item `/{id}`) | binding, TTL, exact loopback; secret create-only | tunnel:X | M5 |

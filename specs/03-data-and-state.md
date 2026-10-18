@@ -37,7 +37,7 @@ Schema público `1.0.0`; IDs `<prefix>_<uuid>`; UUIDv7 preferido, v4 permitido n
 | Analysis `ana` | runId, snapshotId, facts, hypotheses/support, failureKind, confidence, modelCallId, diagnosis | revisão separada de Run; diagnosis obrigatório em novas escritas, opcional só no legado; camadas e suporte não alteram outcome |
 | HealingProposal `hea` | failedRunId, baseRevisionId, candidateRevisionId, diff, preservedAssertionsHash, status | proposed/approved/rejected/verified; promotion por CAS |
 | HealingReview (projeção, sem ID novo) | proposalId, changes, identity, automation, preservedAssertions, risk, riskBasis, verification, approval, evidenceRefs, limitations | derivada de planos/evidências imutáveis; scoped por projeto; leitura não aplica cura nem enfraquece CAS/policy |
-| Schedule `sch` | targetId, cron, timezone, nextFireAt, overlapPolicy, budget, state | firing único por scheduledAt; história não apagada ao pausar |
+| Schedule `sch` | targetId, cron, timezone, nextFireAt, overlapPolicy, autoPauseAfterFailures, state | firing único por scheduledAt; história não apagada ao pausar |
 | ModelCall `mdl` | purpose, provider, model, promptHash, inputRefs, tokens, cost, latency, outcome | prompt bruto somente opt-in/redacted; unknown usage preservado |
 | AuditEvent `aud` | actor, action, resourceId, requestId, beforeHash, afterHash, timestamp | append-only, sem secrets; retenção independente |
 | IdempotencyReceipt `idr` | tenant, actorScope, operation, key, requestHash, responseRef, expiresAt | mesma key/body retorna original; key/body diferente conflito |
@@ -62,7 +62,7 @@ queued → preparing → running → collecting → analyzing → terminal
 running/collecting ─→ inconclusive (cannot determine required result)
 ```
 
-`terminal ∈ passed|failed|blocked|cancelled|inconclusive`. `status` projeta phase enquanto não terminal e outcome depois. Internamente `phase ∈ queued|preparing|running|collecting|analyzing|completed`, `outcome` nullable até conclusão. `collecting` inclui teardown; `analysisStatus` pode permanecer pending em análise posterior sem reabrir Run. Análise LLM não segura job indefinidamente: ao budget expirar, rule-based evidence finaliza e hipóteses podem chegar como Analysis posterior.
+`terminal ∈ passed|failed|blocked|cancelled|inconclusive`. `status` projeta phase enquanto não terminal e outcome depois. Internamente `phase ∈ queued|preparing|running|collecting|analyzing|completed`, `outcome` nullable até conclusão. `collecting` inclui teardown; `analysisStatus` pode permanecer pending em análise posterior sem reabrir Run. A Run não espera a análise LLM, que não tem deadline nem orçamento: rule-based evidence finaliza e hipóteses podem chegar como Analysis posterior.
 
 | Condição | Outcome | Razão |
 |---|---|---|

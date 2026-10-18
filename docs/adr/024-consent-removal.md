@@ -3,6 +3,7 @@
 - Status: accepted
 - Date: 2026-10-14
 - Amends: [ADR-007](007-structured-output.md) (consent requirement), [ADR-009](009-agent-targets.md) (skill wording)
+- Amended by: [ADR-026](026-budget-removal.md) (the monetary budget mentioned in decision 2 no longer exists)
 - Scope: model gateway, settings, integrations, onboarding, agent guidance, restore and the specifications that required consent.
 
 ## Context

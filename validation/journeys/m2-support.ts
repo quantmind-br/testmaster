@@ -54,7 +54,6 @@ export async function configureModel(session: Journey): Promise<string> {
     JSON.stringify({ allowedModelProviders: [provider] }),
   );
   const identity = await session.init("http://127.0.0.1:8080");
-  await session.command(["budget", "set", "--tokens", "100000"]);
   session.oracles.push({
     check: "modelConfiguration",
     provider,
@@ -62,7 +61,6 @@ export async function configureModel(session: Journey): Promise<string> {
     reasoningEffort: "medium",
     contextTokens: 128000,
     outputReservationTokens: 8192,
-    tokenBudget: 100000,
   });
   return text(identity.projectId);
 }

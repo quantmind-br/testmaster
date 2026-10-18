@@ -23,7 +23,7 @@ Each alert carries `owner` and `runbook` (`docs/operations/alerts.md#<rule id>`)
 
 * **platform-operator**: runs the host, PostgreSQL, storage, workers and the backup agent.
 * **security-owner**: owns isolation, tenancy, egress and secrets decisions.
-* **workspace-admin**: owns workspace budgets, integrations and queue policy.
+* **workspace-admin**: owns workspace integrations and queue policy.
 
 Severity means urgency: **critical** act immediately and open an incident; **high** act within the
 working day and open an incident when impact is confirmed; **medium** act within the week. Stop
@@ -39,7 +39,6 @@ never change a Run's verdict to make a dashboard green, and never export secret 
 | [`backup_failing`](#backup_failing) | high | platform-operator |
 | [`dlq_not_empty`](#dlq_not_empty) | medium | workspace-admin |
 | [`audit_unavailable`](#audit_unavailable) | critical | security-owner |
-| [`budget_exhausted`](#budget_exhausted) | medium | workspace-admin |
 | [`cancellation_stuck`](#cancellation_stuck) | high | platform-operator |
 | [`tenant_violation`](#tenant_violation) | critical | security-owner |
 | [`egress_denied`](#egress_denied) | high | security-owner |
@@ -181,23 +180,6 @@ never change a Run's verdict to make a dashboard green, and never export secret 
   export verifies, the alert resolves.
 * **Escalation:** immediately open an incident (`other` or `isolation_loss`, critical); the window
   without audit is declared unknown, never "no data affected" without evidence.
-
-## budget_exhausted
-
-* **Owner:** workspace-admin
-* **Severity:** medium
-* **Trigger:** a model token or currency budget of a workspace or project is used up.
-* **Impact:** generation, analysis and healing stop with an explicit reason; deterministic Runs already
-  admitted continue and keep their verdict.
-* **First actions:**
-  1. Review the usage ledger (known and unknown cost shown separately) and the model calls that
-     consumed it.
-  2. Decide to wait for the budget period, raise the limit with a recorded decision, or leave AI
-     disabled. Do not work around the budget by switching models without a price table.
-* **Verification:** the next generation request is admitted under the new limit, or is refused with
-  the same explicit reason; the alert resolves when budget is available.
-* **Escalation:** an unexpected spike (cost not explained by planned work): incident
-  (`ai_degradation`, medium) and review of the provider and its price table.
 
 ## cancellation_stuck
 

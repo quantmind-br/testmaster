@@ -70,19 +70,6 @@ export interface M3Registration {
     capabilities?: { contextTokens: number; maxOutputTokens: number };
   };
   decoding: { reasoning_effort: string };
-  budget: {
-    maxTokens: number;
-    maxWallTimeMs: number;
-    /**
-     * Frozen preregistrations carry this field, so it stays parseable and checked. It no longer
-     * bounds a model call: a model request has no deadline and only cancellation stops it.
-     */
-    commandDeadlineMs: number;
-    maxLogicalCommands: number;
-    maxTransportAttempts: number;
-    outputReservation: number;
-    maxInputTokens: number;
-  };
   readiness: {
     controlsPath: string | null;
     controlsHash: string | null;
@@ -141,7 +128,8 @@ interface Round {
   transportAttempts: number;
   consecutiveTransportFailures: number;
   stopReason: string | null;
-  pending: { caseId: string; reservation: number } | null;
+  /** `reservation` is written only by older versions, which reserved tokens before each command. */
+  pending: { caseId: string; reservation?: number } | null;
   development?: true;
   planned?: PlannedCase[];
 }
@@ -310,20 +298,6 @@ function validateMeasurementInputs(registration: M3Registration, corpus: Corpus)
       ))
   )
     throw new Error("Invalid provider capabilities");
-  const budget = registration.budget;
-  if (
-    !budget ||
-    ![
-      budget.maxTokens,
-      budget.maxWallTimeMs,
-      budget.commandDeadlineMs,
-      budget.maxLogicalCommands,
-      budget.maxTransportAttempts,
-      budget.outputReservation,
-      budget.maxInputTokens,
-    ].every((value) => Number.isSafeInteger(value) && value > 0)
-  )
-    throw new Error("Invalid round budget");
   if (
     !corpus ||
     !Array.isArray(corpus.cases) ||
@@ -395,19 +369,6 @@ export async function checkM3(root: string, registrationPath: string) {
     registration.provider.kind !== "openai-compatible"
   )
     throw new Error("Unapproved provider or generation controls");
-  const b = registration.budget;
-  if (
-    b.maxTokens !== 10000000 ||
-    b.maxWallTimeMs !== 7200000 ||
-    ![180000, 600000].includes(b.commandDeadlineMs) ||
-    b.maxLogicalCommands !==
-      corpus.cases.filter((row) => row.group !== "integration").length * 2 +
-        corpus.cases.filter((row) => row.group === "integration").length ||
-    b.maxTransportAttempts !== b.maxLogicalCommands * 6 ||
-    b.outputReservation !== 8192 ||
-    b.maxInputTokens !== 100000
-  )
-    throw new Error("Unapproved round budget");
   const driver = await loadCorpusDriver(root, corpus);
   await assertFrozenFiles(root, corpus.baseFiles);
   await assertFrozenFiles(root, registration.frozenFiles);
@@ -443,9 +404,6 @@ export async function checkM3(root: string, registrationPath: string) {
       registration.readiness.implementationFrozen &&
       registration.readiness.controlsPath !== null &&
       Boolean(registration.readiness.policyProbesPath),
-    maximumLocalAdmissionProjection:
-      b.maxLogicalCommands * 6 * (b.maxInputTokens + b.outputReservation),
-    remoteBilledSpendHardBound: false,
   };
 }
 interface ControlRun {
@@ -672,7 +630,6 @@ export async function implementationManifest(root: string, r: M3Registration) {
         files,
         provider: r.provider,
         decoding: r.decoding,
-        budget: r.budget,
         seed: 17,
         healingPolicy: "apply",
       }),
@@ -1762,10 +1719,12 @@ export async function settleM3(root: string, directory: string) {
     }
     if (round.pending?.caseId === label.id) {
       ledger.status = "error";
-      ledger.usage.conservativeCharge = Math.max(
-        ledger.usage.conservativeCharge,
-        round.pending.reservation,
-      );
+      // Rounds interrupted under older versions recorded a reservation for the command.
+      if (round.pending.reservation !== undefined)
+        ledger.usage.conservativeCharge = Math.max(
+          ledger.usage.conservativeCharge,
+          round.pending.reservation,
+        );
       ledger.errors.push({
         phase: "interrupted",
         code: "unknown_paid_completion",
@@ -1947,15 +1906,11 @@ async function executeRound(
   if (!process.env[r.provider.apiKeyEnv]) round.stopReason = "missing_key";
   for (const item of ordered) {
     const ledger = ledgers.find((row) => row.id === item.id)!;
-    if (Date.now() >= Date.parse(round.startedAt) + r.budget.maxWallTimeMs)
-      round.stopReason ??= "wall_time_exhausted";
     if (round.stopReason) continue;
     let app: Application | undefined;
     let shop: Shop | undefined;
     let phase = "setup";
     try {
-      const deadline = Date.parse(round.startedAt) + r.budget.maxWallTimeMs;
-      const remaining = () => Math.max(0, deadline - Date.now());
       shop = await fixture.startCase(root, corpus, item, "healthy", 0, canary);
       const port = Number(new URL(shop.url).port);
       const setupResult = await setup(root, item, shop.url, guarded);
@@ -2029,35 +1984,20 @@ async function executeRound(
         );
         if (wireRecords.some((row) => forbidden.some((value) => row.data_json.includes(value))))
           throw new Error("secret_escape");
-        const budget = app!.database.get<{ used: number }>(
+        const charged = app!.database.get<{ used: number }>(
           "SELECT COALESCE(SUM(CASE WHEN state='reserved' THEN reserved_tokens ELSE COALESCE(charged_tokens,reserved_tokens) END),0) AS used FROM budget_reservations WHERE workspace_id=? AND project_id=? AND state<>'released'",
           app!.context.workspaceId,
           setupResult.projectId,
         );
-        projectCharge = Number(budget?.used ?? 0);
+        projectCharge = Number(charged?.used ?? 0);
       };
       const paid = async <T>(operation: () => Promise<T>) => {
         if (round.stopReason) throw new Error(round.stopReason);
-        if (!remaining()) throw new Error("wall_time_exhausted");
-        if (round.logicalCommands >= r.budget.maxLogicalCommands)
-          throw new Error("logical_command_limit");
         await reconcile();
-        const attempts = ledgers.reduce(
-          (n, row) => n + ((row.records.calls ?? []) as unknown[]).length,
-          0,
-        );
-        if (attempts + 6 > r.budget.maxTransportAttempts)
-          throw new Error("transport_attempt_limit");
-        const reserve = 6 * (r.budget.maxInputTokens + r.budget.outputReservation),
-          remainingTokens = r.budget.maxTokens - round.chargedTokens;
-        if (remainingTokens < reserve) throw new Error("budget_exhausted");
-        app!.usage.setBudget(setupResult.projectId, { tokens: projectCharge + remainingTokens });
         const before = projectCharge;
         const beforeCallCount = ((ledger.records.calls ?? []) as unknown[]).length;
         round.logicalCommands++;
-        round.pending = { caseId: item.id, reservation: reserve };
-        round.chargedTokens += reserve;
-        ledger.usage.conservativeCharge += reserve;
+        round.pending = { caseId: item.id };
         await flush();
         let transportFailed = false;
         try {
@@ -2086,8 +2026,8 @@ async function executeRound(
             0,
           );
           const delta = projectCharge - before;
-          round.chargedTokens += delta - reserve;
-          ledger.usage.conservativeCharge += delta - reserve;
+          round.chargedTokens += delta;
+          ledger.usage.conservativeCharge += delta;
           round.pending = null;
           await flush();
         }
@@ -2525,13 +2465,9 @@ async function executeRound(
             : "pipeline_error",
         ...errorRecord(error, forbidden),
       });
-      if (
-        /secret_escape|terminal_rewrite|unsafe_autoapply|false_repair|budget_exhausted|wall_time_exhausted|logical_command_limit|transport_attempt_limit/.test(
-          message,
-        )
-      )
+      if (/secret_escape|terminal_rewrite|unsafe_autoapply|false_repair/.test(message))
         round.stopReason = message.match(
-          /secret_escape|terminal_rewrite|unsafe_autoapply|false_repair|budget_exhausted|wall_time_exhausted|logical_command_limit|transport_attempt_limit/,
+          /secret_escape|terminal_rewrite|unsafe_autoapply|false_repair/,
         )![0]!;
     } finally {
       if (leakageGuard.state.invalid) round.stopReason ??= "leakage";

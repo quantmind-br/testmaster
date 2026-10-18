@@ -6,6 +6,7 @@ export const exclusionCodes = [
   "worker_lost",
   "provider_transport",
   "provider_timeout",
+  // Legacy: only results recorded by older versions carry it; no current code produces it.
   "budget_exhausted",
   "wall_time_exhausted",
   "missing_key",

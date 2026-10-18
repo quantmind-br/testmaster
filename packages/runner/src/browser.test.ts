@@ -1669,7 +1669,6 @@ function exploring(
       resolveSteps: ["explore-0"],
       exploration: true,
       mutationStepIds: [],
-      maxRequests: 1,
       ...agent,
     },
   });

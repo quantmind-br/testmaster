@@ -104,12 +104,6 @@ it("refuses a previously started registration even when its observations are mis
   await mkdir(join(root, "evals/results", `${r.id}-2026-10-06T00-00-00Z`), { recursive: true });
   await expect(assertNotStarted(root, r.id)).rejects.toThrow("already started");
 });
-it("refuses changed generation controls and quotas before dispatch", async () => {
-  const { root, path, r } = await fixtureCopy();
-  r.budget.maxTokens++;
-  await writeFile(join(root, path), JSON.stringify(r));
-  await expect(checkM3(root, path)).rejects.toThrow("budget");
-});
 it("refuses hand-populated control booleans without retained run/step/oracle evidence", async () => {
   const { root, path } = await fixtureCopy();
   const control = "controls.json";
@@ -184,7 +178,6 @@ async function developmentFixture() {
   const fixture = await fixtureCopy();
   fixture.r.provider.apiKeyEnv = "TESTMASTER_M3_DEV_UNSET_KEY";
   fixture.r.provider.baseUrl = "http://127.0.0.1:1/v1";
-  fixture.r.budget.maxTokens = 1;
   await writeFile(
     join(fixture.root, fixture.path),
     JSON.stringify({
@@ -208,7 +201,7 @@ it("refuses unsafe dev labels and unknown IDs before creating results or a start
     code: "ENOENT",
   });
 });
-it.each(["provider", "decoding", "budget", "corpus"])(
+it.each(["provider", "decoding", "corpus"])(
   "requires structurally valid dev %s even though freeze gates are skipped",
   async (field) => {
     const { root, path } = await developmentFixture();
@@ -559,6 +552,37 @@ it("settles interrupted reserved calls without dispatch or releasing unknown cha
   });
   await expect(settleM3(root, directory)).rejects.toThrow("Only interrupted");
 });
+it("settles an interrupted command recorded without a reservation", async () => {
+  const root = await mkdtemp(join(tmpdir(), "tm-m3-settle-"));
+  temporary.push(root);
+  const directory = "evals/results/m3-interrupted-no-reservation";
+  await mkdir(join(root, directory), { recursive: true });
+  const item = plannedCases()[0]!;
+  await writeFile(join(root, directory, `${item.id}.json`), JSON.stringify(emptyLedger(item)));
+  await writeFile(
+    join(root, directory, "round.json"),
+    JSON.stringify({
+      registrationId: "m3-interrupted-no-reservation",
+      registrationHash: "hash",
+      commit: "commit",
+      directory,
+      startedAt: new Date().toISOString(),
+      status: "started",
+      chargedTokens: 0,
+      logicalCommands: 1,
+      consecutiveTransportFailures: 0,
+      stopReason: null,
+      pending: { caseId: item.id },
+    }),
+  );
+  await settleM3(root, directory);
+  const ledger = JSON.parse(await readFile(join(root, directory, `${item.id}.json`), "utf8"));
+  expect(ledger).toMatchObject({
+    status: "error",
+    usage: { conservativeCharge: 0 },
+    errors: [{ code: "unknown_paid_completion" }],
+  });
+});
 
 it("loads an external driver and derives cohort counts without reference-shop case identities", async () => {
   const { root, path, r } = await fixtureCopy();
@@ -588,8 +612,6 @@ it("loads an external driver and derives cohort counts without reference-shop ca
   });
   await writeFile(join(root, r.corpus), bytes);
   r.frozenFiles[r.corpus] = createHash("sha256").update(bytes).digest("hex");
-  r.budget.maxLogicalCommands = cases.length * 2;
-  r.budget.maxTransportAttempts = r.budget.maxLogicalCommands * 6;
   await writeFile(join(root, path), JSON.stringify(r));
   expect(await checkM3(root, path)).toMatchObject({
     plannedMainCases: 2,

@@ -150,7 +150,6 @@ const supplemental = {
     ),
   }),
   Empty: P.Obj({}),
-  TokenBudgetInput: P.Obj({ tokens: P.Nonnegative }),
   Binary: Type.String({ contentEncoding: "base64" }),
   Health: P.Obj({ status: P.Enum(["alive", "ready", "unavailable"]) }),
   ProjectInput: P.Obj({
@@ -290,7 +289,6 @@ const supplemental = {
   }),
   CancelInput: P.Obj({ reason: Type.Optional(P.Description) }),
   RerunInput: P.Obj({ environmentId: Type.Optional(P.id("env")) }),
-  BudgetInput: P.Obj({ budget: P.Json }),
   ExpectedVersionInput: P.Obj({ expectedVersion: P.Version }),
   RunComparisonRequest: P.Obj({
     leftRunId: P.id("run"),

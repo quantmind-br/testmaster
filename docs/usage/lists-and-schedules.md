@@ -168,7 +168,7 @@ firing history. A clock that jumps forward does not cause an avalanche: the same
   satisfied only by a passed gate: blocked and inconclusive batches never satisfy it. An unmet dependency becomes a
   `blocked` firing with `upstream_failed`.
 
-### Authority, pausing and budgets
+### Authority and pausing
 
 - A schedule is created with the caller's credential and never runs as an administrator. If the owner is
   disabled or loses the rights the schedule needs, it **pauses with a reason** (`owner_revoked`) and the next
@@ -177,8 +177,9 @@ firing history. A clock that jumps forward does not cause an avalanche: the same
 - Other pause reasons: `manual`, `auto_paused_failures` (after `autoPauseAfterFailures` consecutive failed
   firings, default 5), `secret_changed` (when `secrets.onChange` is `pause` and a secret the tests use changes)
   and `expired` (after `expiresAt`; an expired schedule never runs against a changed destination).
-- Budgets bound the damage of a mistake: `maxFiresPerDay` (default 1440), `maxRunsPerDay` (default 5000). Over
-  budget the firing is `skipped` with `budget_exhausted`.
+- A schedule has no daily cap: every occurrence the trigger, overlap and dependency rules admit is dispatched.
+  Revisions saved by older versions with a daily firing or run cap still load; the caps are ignored and
+  only the failure limit is kept. New definitions that send a `budget` object are refused.
 - Scheduled runs are replay runs with healing `off` or `propose`; healing is never applied unattended, and a
   list with exclusions is never partially dispatched on a schedule: the firing is `blocked` instead.
 - `schedule.misfire` and `schedule.paused` events are written to the outbox in the same transaction as the state
@@ -201,7 +202,7 @@ with its outcome:
 | --- | --- |
 | `claimed` / `waiting` | A scheduler owns the occurrence; it waits for a dependency or the admission to finish. |
 | `dispatched` | A batch was admitted; its ID is shown. |
-| `skipped` | Nothing ran by policy (daylight-saving gap, budget, archived, expired, misfire `skip`). |
+| `skipped` | Nothing ran by policy (daylight-saving gap, archived, expired, misfire `skip`). |
 | `misfire` | The occurrence was missed beyond the grace period; `missedCount` says how many it covers. |
 | `overlap` | The previous batch was still active (`forbid`). |
 | `blocked` | A precondition failed (revoked owner, unmet dependency, an excluded list member). |

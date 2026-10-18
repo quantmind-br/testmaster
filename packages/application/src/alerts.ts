@@ -5,7 +5,6 @@ import {
   AuditRepository,
   OutboxRepository,
   type PersistenceDatabase,
-  SqliteBudgetLedger,
 } from "@testmaster/persistence";
 import { authoringTransaction } from "./authoring.js";
 import type { ServiceContext } from "./context.js";
@@ -236,33 +235,6 @@ export const alertRuleCatalog: Record<string, RuleDefinition> = {
               detail: {},
             },
           ];
-    },
-  },
-  budget_exhausted: {
-    title: "Project token budget exhausted",
-    severity: "medium",
-    owner: "workspace-admin",
-    description: "The cumulative token quota of a project is fully used; model calls are refused.",
-    threshold: { remainingTokens: 0 },
-    find(environment) {
-      const ledger = new SqliteBudgetLedger(environment.database);
-      return environment.database
-        .all<{ project_id: string }>(
-          "SELECT project_id FROM token_budget_limits WHERE workspace_id=?",
-          environment.workspaceId,
-        )
-        .flatMap((row) => {
-          const budget = ledger.tokenBudget(environment.workspaceId, row.project_id);
-          return budget.limit !== null && budget.remaining === 0
-            ? [
-                {
-                  subject: row.project_id,
-                  summary: "Project token budget is exhausted",
-                  detail: { limit: budget.limit, used: budget.used },
-                },
-              ]
-            : [];
-        });
     },
   },
   cancellation_stuck: {

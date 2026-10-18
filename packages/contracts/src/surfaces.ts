@@ -340,7 +340,6 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   // Authenticated by the route itself with the worker credential (tm_wrk_), never by a user session.
   ["POST", "/workers/{id}/heartbeat", "signature", "M4", "HeartbeatInput", "Worker"],
   ["GET", "/usage", "usage:R", "M2", "Empty", "UsageReport"],
-  ["POST", "/projects/{id}/budget", "usage:A", "M2", "TokenBudgetInput", "UsageReport"],
   ["GET", "/audit-events", "audit:A", "M4", "Empty", "AuditEntry"],
   [
     "POST",
@@ -772,13 +771,12 @@ export const mcpTools = {
       budget: Obj(
         {
           steps: d(Type.Integer({ minimum: 1, maximum: 100 }), "Browser steps, 1..100"),
-          modelCalls: d(Type.Integer({ minimum: 1, maximum: 100 }), "Model calls, 1..steps"),
           timeMs: d(
             Type.Integer({ minimum: 1000, maximum: 300000 }),
             "Time budget in ms, 1000..300000",
           ),
         },
-        { description: "Exploration budget; modelCalls must not exceed steps" },
+        { description: "Exploration envelope: browser steps and time" },
       ),
       provider: Type.Optional(
         d(Name, "Model provider id for action resolution; absent: first allowed provider"),
@@ -885,16 +883,6 @@ export const mcpTools = {
         d(
           id("run"),
           "A completed, failed run of a code candidate: repairs that candidate from the run's failed steps. Exclusive with proposalIds and revisionIds",
-        ),
-      ),
-      budget: Type.Optional(
-        Obj(
-          {
-            modelCalls: Type.Optional(
-              d(Type.Integer({ minimum: 1, maximum: 20 }), "Model calls, 1..20; default 10"),
-            ),
-          },
-          { description: "Optional model-call budget" },
         ),
       ),
       provider: Type.Optional(

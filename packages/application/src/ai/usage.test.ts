@@ -92,7 +92,7 @@ it("filtered usage reconciles immutable ledger rows, unknown costs and disclosed
   expect(all.cost).toBe("unknown");
   expect(all.estimatedCosts).toEqual([{ currency: "USD", scale: 6, amount: "12" }]);
   expect(all.tokens.inputTokens! + all.tokens.outputTokens!).toBe(60);
-  expect(all.lifetimeBudget.scope).toBe("project_lifetime");
+  expect(all.reservations).toEqual({ reserved: 0, settled: 0, released: 0 });
   const uncertain = aggregateUsage([
     { ...base, usage: { inputTokens: null, outputTokens: 20, reasoningTokens: null } },
   ]);

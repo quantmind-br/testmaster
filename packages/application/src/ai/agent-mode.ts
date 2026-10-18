@@ -56,7 +56,6 @@ export class AgentModeService {
       );
     const resolveSteps = raw as string[];
     const resolved = new Map<string, PlanStep>();
-    let calls = 0;
     return {
       runnerInput: {
         resolveSteps,
@@ -64,11 +63,10 @@ export class AgentModeService {
         mutationStepIds: plan.steps
           .filter((step) => step.risk === "write" || step.risk === "destructive")
           .map((step) => step.id),
-        maxRequests: Math.min(resolveSteps.length, 50),
       },
       resolveAction: async (stepId: string, value: unknown) => {
-        if (!resolveSteps.includes(stepId) || ++calls > 50)
-          throw new ContractError("POLICY_DENIED", "Resolution request is not admitted");
+        if (!resolveSteps.includes(stepId))
+          throw new ContractError("POLICY_DENIED", "Step is not flagged for action resolution");
         const observation = validateObservation(value, origins);
         const result = await new ModelService(this.ctx, this.config).complete<{
           index: number | null;

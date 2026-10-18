@@ -92,6 +92,8 @@ const reasonGroups: ReadonlyArray<{ codes: readonly string[]; mapping: ReasonMap
     mapping: { effect: "evidence", gate: "evaluate", exit: 1, reporter: "error" },
   },
   {
+    // `budget_exhausted` is produced only by older versions: no token or money limit exists any
+    // more, but persisted runs, attempts, batches and firings still carry it.
     codes: ["budget_exhausted", "quota_exceeded"],
     mapping: { effect: "none", gate: "unchanged", exit: 12, reporter: "error" },
   },

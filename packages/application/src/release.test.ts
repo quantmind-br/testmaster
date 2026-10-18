@@ -193,6 +193,10 @@ it.skipIf(postgresParity)(
     old.exec(
       "CREATE TABLE consents (workspace_id TEXT NOT NULL, id TEXT NOT NULL, created_at TEXT NOT NULL, version INTEGER NOT NULL DEFAULT 1 CHECK(version>=1), data_json TEXT NOT NULL DEFAULT '{}', project_id TEXT NOT NULL, provider_id TEXT NOT NULL, data_classes_json TEXT NOT NULL, granted_at TEXT NOT NULL, revoked_at TEXT, allow_unknown_cost INTEGER NOT NULL DEFAULT 0 CHECK(allow_unknown_cost IN (0,1)), PRIMARY KEY(workspace_id,id), FOREIGN KEY(workspace_id) REFERENCES workspaces(id) DEFERRABLE INITIALLY DEFERRED, FOREIGN KEY(workspace_id,project_id) REFERENCES projects(workspace_id,id) DEFERRABLE INITIALLY DEFERRED, UNIQUE(workspace_id,project_id,provider_id)) STRICT",
     );
+    // Migration 24 removed the budget tables; the previous release still had them.
+    old.exec(
+      "CREATE TABLE budget_limits (workspace_id TEXT NOT NULL, id TEXT NOT NULL, created_at TEXT NOT NULL, version INTEGER NOT NULL DEFAULT 1 CHECK(version>=1), data_json TEXT NOT NULL DEFAULT '{}', project_id TEXT NOT NULL, currency TEXT NOT NULL, scale INTEGER NOT NULL CHECK(scale BETWEEN 0 AND 18), amount TEXT NOT NULL, PRIMARY KEY(workspace_id,id), FOREIGN KEY(workspace_id) REFERENCES workspaces(id) DEFERRABLE INITIALLY DEFERRED, FOREIGN KEY(workspace_id,project_id) REFERENCES projects(workspace_id,id) DEFERRABLE INITIALLY DEFERRED, UNIQUE(workspace_id,project_id)) STRICT; CREATE TABLE token_budget_limits (workspace_id TEXT NOT NULL, project_id TEXT NOT NULL, tokens INTEGER NOT NULL CHECK(tokens>=0), PRIMARY KEY(workspace_id,project_id), FOREIGN KEY(workspace_id,project_id) REFERENCES projects(workspace_id,id) DEFERRABLE INITIALLY DEFERRED) STRICT",
+    );
     old.run(
       "INSERT INTO workers(workspace_id,id,created_at,state,last_heartbeat_at) VALUES(?, 'wrk_previous',?, 'ready',?)",
       initialized.workspaceId,

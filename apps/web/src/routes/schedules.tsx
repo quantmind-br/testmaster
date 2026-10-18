@@ -56,11 +56,7 @@ interface Definition {
   readonly overlap: string;
   readonly replaceTimeoutSeconds: number;
   readonly dependsOn: readonly Dependency[];
-  readonly budget: {
-    readonly maxFiresPerDay: number;
-    readonly maxRunsPerDay: number;
-    readonly autoPauseAfterFailures: number;
-  };
+  readonly autoPauseAfterFailures: number;
   readonly secrets: { readonly onChange: string };
   readonly healingPolicy: string;
   readonly expiresAt: string | null;
@@ -399,12 +395,8 @@ function ScheduleDetailPage(): ReactNode {
             </dd>
             <dt>Overlap</dt>
             <dd>{data.definition.overlap}</dd>
-            <dt>Budget per day</dt>
-            <dd>
-              {data.definition.budget.maxFiresPerDay} firings,{" "}
-              {data.definition.budget.maxRunsPerDay} runs; pause after{" "}
-              {data.definition.budget.autoPauseAfterFailures} failed firings
-            </dd>
+            <dt>Pause after</dt>
+            <dd>{data.definition.autoPauseAfterFailures} consecutive failed firings</dd>
             <dt>When a secret changes</dt>
             <dd>
               {data.definition.secrets.onChange === "pause"
@@ -549,8 +541,6 @@ interface FormState {
   catchUpWindowSeconds: string;
   overlap: string;
   replaceTimeoutSeconds: string;
-  maxFiresPerDay: string;
-  maxRunsPerDay: string;
   autoPauseAfterFailures: string;
   secretsOnChange: string;
   healingPolicy: string;
@@ -580,9 +570,7 @@ function initialState(existing: ScheduleView | null): FormState {
     catchUpWindowSeconds: String(definition?.misfire.catchUpWindowSeconds ?? 86400),
     overlap: definition?.overlap ?? "forbid",
     replaceTimeoutSeconds: String(definition?.replaceTimeoutSeconds ?? 600),
-    maxFiresPerDay: String(definition?.budget.maxFiresPerDay ?? 1440),
-    maxRunsPerDay: String(definition?.budget.maxRunsPerDay ?? 5000),
-    autoPauseAfterFailures: String(definition?.budget.autoPauseAfterFailures ?? 5),
+    autoPauseAfterFailures: String(definition?.autoPauseAfterFailures ?? 5),
     secretsOnChange: definition?.secrets.onChange ?? "use_current",
     healingPolicy: definition?.healingPolicy ?? "off",
     expiresAt: definition?.expiresAt ?? "",
@@ -633,8 +621,6 @@ function buildBody(state: FormState, keepSelection: boolean): Built {
       1,
       "Replace timeout must be a whole number of seconds.",
     ],
-    ["maxFiresPerDay", "schedule-max-fires", 1, "Firings per day must be a whole number."],
-    ["maxRunsPerDay", "schedule-max-runs", 1, "Runs per day must be a whole number."],
     ["autoPauseAfterFailures", "schedule-auto-pause", 1, "Failure limit must be a whole number."],
   ];
   const parsed: Record<string, number> = {};
@@ -672,11 +658,7 @@ function buildBody(state: FormState, keepSelection: boolean): Built {
     overlap: state.overlap,
     replaceTimeoutSeconds: parsed.replaceTimeoutSeconds,
     dependsOn: state.dependsOn,
-    budget: {
-      maxFiresPerDay: parsed.maxFiresPerDay,
-      maxRunsPerDay: parsed.maxRunsPerDay,
-      autoPauseAfterFailures: parsed.autoPauseAfterFailures,
-    },
+    autoPauseAfterFailures: parsed.autoPauseAfterFailures,
     secrets: { onChange: state.secretsOnChange },
     healingPolicy: state.healingPolicy,
     expiresAt: expiresAt === "" ? null : expiresAt,
@@ -1118,23 +1100,7 @@ function ScheduleFormBody({
           </button>
         </fieldset>
         <fieldset>
-          <legend>Budget and safety</legend>
-          <TextField
-            label="Firings per day"
-            name="schedule-max-fires"
-            type="number"
-            value={state.maxFiresPerDay}
-            onChange={(value) => set("maxFiresPerDay", value)}
-            error={error("schedule-max-fires")}
-          />
-          <TextField
-            label="Runs per day"
-            name="schedule-max-runs"
-            type="number"
-            value={state.maxRunsPerDay}
-            onChange={(value) => set("maxRunsPerDay", value)}
-            error={error("schedule-max-runs")}
-          />
+          <legend>Safety</legend>
           <TextField
             label="Pause after consecutive failed firings"
             name="schedule-auto-pause"

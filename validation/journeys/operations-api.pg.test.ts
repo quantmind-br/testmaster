@@ -76,7 +76,7 @@ it("M4-02 serves the operations routes over HTTPS: the owner pauses admission, a
   expect(viewerReconcile.status).toBe(403);
   const alerts = await owner.request("GET", "/v1/alert-rules");
   expect(alerts.status).toBe(200);
-  expect(alerts.json<{ data: { items: unknown[] } }>().data.items.length).toBe(11);
+  expect(alerts.json<{ data: { items: unknown[] } }>().data.items.length).toBe(10);
 });
 
 it("NFR-010 exposes opt-in Prometheus metrics for the caller's own workspace without tenant-identifying labels", async () => {

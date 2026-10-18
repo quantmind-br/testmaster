@@ -282,7 +282,7 @@ describe("project settings", () => {
   it("UX-047 UX-007 lists the model providers read-only with the policy verdict, has no data-sharing controls and does not serve the removed model-consent routes", async () => {
     const { page, diagnostics } = await portal(stack.owner);
     await page.goto(`/projects/${projectId}/settings`);
-    await page.getByRole("form", { name: "Token budget" }).waitFor();
+    await page.getByLabel("Current usage").waitFor();
     const local = page.getByRole("article", { name: "Provider fake-local" });
     await local.waitFor();
     expect(await local.innerText()).toContain("Allowed by policy");
@@ -314,33 +314,20 @@ describe("project settings", () => {
     allRequests.push(...diagnostics.requests);
   });
 
-  it("UX-047 UX-054 sets the token budget with a field-bound error, an impact statement and a persisted limit", async () => {
+  it("UX-047 shows measured model usage and storage with no budget control and no budget route", async () => {
     const { page, diagnostics } = await portal(stack.owner);
     await page.goto(`/projects/${projectId}/settings`);
-    const form = page.getByRole("form", { name: "Token budget" });
-    await form.waitFor();
-    expect(await page.getByText("Not set (no token limit)").count()).toBeGreaterThan(0);
-    await form.getByRole("textbox", { name: "Lifetime token budget" }).fill("lots");
-    await form.getByRole("button", { name: "Set token budget" }).click();
-    const summary = page.getByTestId("error-summary");
-    await summary.waitFor();
-    expect(await summary.textContent()).toContain("whole number of tokens");
-    expect(
-      await form
-        .getByRole("textbox", { name: "Lifetime token budget" })
-        .getAttribute("aria-invalid"),
-    ).toBe("true");
-    expect(await page.getByRole("dialog").count()).toBe(0);
-    await form.getByRole("textbox", { name: "Lifetime token budget" }).fill("250000");
-    expect(await form.getByTestId("impact-panel").innerText()).toContain("250,000 tokens");
-    await form.getByRole("button", { name: "Set token budget" }).click();
-    await page.getByRole("dialog").getByRole("button", { name: "Set budget" }).click();
-    await page.getByRole("dialog").waitFor({ state: "detached" });
-    await page.getByText("250,000").first().waitFor();
-    const usage = await apiGet<{ lifetimeBudget: { tokenBudget: { limit: number | null } } }>(
-      `/usage?projectId=${projectId}`,
-    );
-    expect(usage.lifetimeBudget.tokenBudget.limit).toBe(250000);
+    const usage = page.getByLabel("Current usage");
+    await usage.waitFor();
+    const text = await usage.innerText();
+    expect(text).toContain("Model calls recorded");
+    expect(text).toContain("Artifact storage");
+    expect(await page.locator("main").innerText()).not.toMatch(/token budget|Set budget/iu);
+    expect(await page.getByRole("form", { name: "Token budget" }).count()).toBe(0);
+    const gone = await stack
+      .ownerClient()
+      .mutate("POST", `/v1/projects/${projectId}/budget`, { tokens: 250000 });
+    expect([404, 405]).toContain(gone.status);
     allRequests.push(...diagnostics.requests);
   });
 
@@ -805,7 +792,6 @@ describe("keyboard, reflow and the route catalog", () => {
       "PATCH /environments/{id}",
       "GET /environments/{id}/revisions",
       "GET /projects/{id}/model-providers",
-      "POST /projects/{id}/budget",
       "POST /secrets/{id}/rotate",
       "GET /secrets/{id}/history",
       "DELETE /tests/{id}",

@@ -9,7 +9,7 @@ import type { SmokeState } from "./replay.js";
 import {
   replayM3,
   smokeFetch,
-  smokeLimits,
+  smokeOutputReservation,
   startSmokeForwarder,
   withRetainedCopy,
 } from "./replay.js";
@@ -23,7 +23,6 @@ function smokeState(): SmokeState {
     calls: 0,
     generationCalls: 0,
     inventoryCalls: 0,
-    conservativeTokens: 0,
     stopped: null,
     wire: [],
   };
@@ -65,31 +64,24 @@ it("rejects symbolic links rather than following retained paths outside the copy
   await symlink("/tmp", join(original, "outside"));
   await expect(withRetainedCopy(original, async () => true)).rejects.toThrow("symbolic links");
 });
-it("admits gateway byte reservations before forwarding and counts repair calls", async () => {
+it("forwards every generation call, including repairs, without a call or token limit", async () => {
   const state = smokeState();
   const delegate = vi.fn(async () => new Response("{}"));
   const guarded = smokeFetch(delegate, state, "https://provider.test/v1");
-  const reservation =
-    Buffer.byteLength(canonicalJson(JSON.parse(body))) + smokeLimits.outputReservation;
+  const reservation = Buffer.byteLength(canonicalJson(JSON.parse(body))) + smokeOutputReservation;
+  const generationCalls = 40;
   await guarded("https://provider.test/v1/models");
-  for (let i = 0; i < smokeLimits.calls; i++)
+  for (let i = 0; i < generationCalls; i++)
     await guarded("https://provider.test/v1/chat/completions", { method: "POST", body });
-  expect(state.conservativeTokens).toBe(reservation * smokeLimits.calls);
-  await expect(
-    guarded("https://provider.test/v1/chat/completions", { method: "POST", body }),
-  ).rejects.toThrow("smoke_call_limit");
-  expect(delegate).toHaveBeenCalledTimes(9);
-  expect(state).toMatchObject({ calls: 9, inventoryCalls: 1, generationCalls: 8 });
-});
-it("refuses requests crossing conservative token limit before any forwarding", async () => {
-  const state = smokeState();
-  state.conservativeTokens = smokeLimits.conservativeTokens - 1;
-  const delegate = vi.fn(async () => new Response("{}"));
-  const guarded = smokeFetch(delegate, state, "https://provider.test/v1");
-  await expect(
-    guarded("https://provider.test/v1/chat/completions", { method: "POST", body }),
-  ).rejects.toThrow("smoke_token_limit");
-  expect(delegate).not.toHaveBeenCalled();
+  expect(delegate).toHaveBeenCalledTimes(generationCalls + 1);
+  expect(state).toMatchObject({
+    calls: generationCalls + 1,
+    inventoryCalls: 1,
+    generationCalls,
+    stopped: null,
+  });
+  expect(state.wire).toHaveLength(generationCalls);
+  expect(state.wire.every((wire) => wire.reservation === reservation)).toBe(true);
 });
 it("stops immediately at provider failure and refuses model or effort substitution", async () => {
   const state = smokeState();

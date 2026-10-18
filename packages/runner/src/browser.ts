@@ -244,7 +244,6 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
   let expectedDownloadPage: Page | undefined;
   let result: RunnerResult = { outcome: "inconclusive", reasonCode: "insufficient_evidence" };
   const attemptTime = runtime.clock.stopwatch();
-  let agentRequests = 0;
   let activeAgentStep: string | undefined;
   let activeMutationAllowed = false;
   let explorationStopped = false;
@@ -1319,11 +1318,8 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
   async function resolveAgentStep(step: PlanStep): Promise<PlanStep | null> {
     const agent = runtime.input.agent;
     if (!agent?.resolveSteps.includes(step.id)) return step;
-    if (step.kind !== "action" || ++agentRequests > agent.maxRequests)
-      throw new RuntimeError(
-        "security_precondition_failed",
-        "Agent request budget or action boundary exceeded",
-      );
+    if (step.kind !== "action")
+      throw new RuntimeError("security_precondition_failed", "Agent step is not an action");
     if (explorationStopped) return null;
     const { observed, settled } = await observeSettled(step);
     const first = observationCount++ === 0;
