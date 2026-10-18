@@ -23,6 +23,7 @@ import {
 import { homedir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { startBroker } from "./broker.mjs";
 import { startProxy } from "./proxy.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -180,8 +181,20 @@ export async function runSession(spec, directory) {
       filter: (path) => !excluded.has(relative(spec.app.source, path).split("/")[0]),
     });
   } else {
-    await run("git", ["clone", "--quiet", "--shared", "--no-checkout", spec.app.repo, ws]);
-    await run("git", ["-C", ws, "checkout", "--quiet", "--detach", spec.app.commit]);
+    // A shallow copy of the frozen commit: no alternates pointing back into the source checkout,
+    // which the agent's sandbox hides.
+    await run("git", ["init", "--quiet", ws]);
+    await run("git", [
+      "-C",
+      ws,
+      "fetch",
+      "--quiet",
+      "--depth",
+      "1",
+      spec.app.repo,
+      spec.app.commit,
+    ]);
+    await run("git", ["-C", ws, "checkout", "--quiet", "--detach", "FETCH_HEAD"]);
   }
 
   // HOME: the TestMaster model profile and policy (no key: `apiKeyEnv` names the variable), the
@@ -193,25 +206,57 @@ export async function runSession(spec, directory) {
   const agentHome = join(home, ".omp", "agent");
   mkdirSync(agentHome, { recursive: true });
 
-  // `testmaster` on PATH is the CLI collector.
-  const wrapper = join(bin, "testmaster");
-  writeFileSync(
-    wrapper,
-    `#!/bin/sh\nexec "${process.execPath}" "${join(here, "cli-wrapper.mjs")}" "$@"\n`,
-  );
-  chmodSync(wrapper, 0o755);
+  // `testmaster` on PATH (and the MCP server command) is the broker client: the command runs
+  // outside the agent's sandbox, which hides this checkout (see broker-client.mjs).
+  const tmp = join(directory, "tmp");
+  mkdirSync(tmp, { recursive: true });
+  const client = join(bin, "broker-client.mjs");
+  cpSync(join(here, "broker-client.mjs"), client);
   const user = userEnv(home);
-  mkdirSync(join(directory, "tmp"), { recursive: true });
   const env = {
     ...user,
-    TMPDIR: join(directory, "tmp"),
+    TMPDIR: tmp,
     PATH: `${bin}:${user.PATH}`,
+    ...(spec.app.env ?? {}),
+  };
+  // Outside the sandbox, a command still sees the session's /tmp at /tmp, as the agent does.
+  const privateTmp = (cwd, command) => [
+    "--dev-bind",
+    "/",
+    "/",
+    "--bind",
+    tmp,
+    "/tmp",
+    "--chdir",
+    cwd,
+    "--",
+    process.execPath,
+    ...command,
+  ];
+  const collector = {
     SURFACE_REAL_CLI: realCli,
     SURFACE_CLI_LOG: join(directory, "cli.ndjson"),
     SURFACE_CLI_CAPTURE: join(directory, "cli"),
     ...(spec.app.secretsFile ? { SURFACE_SECRETS: spec.app.secretsFile } : {}),
-    ...(spec.app.env ?? {}),
   };
+  let mcpServe = null;
+  const broker = await startBroker((header) => {
+    if (header.kind === "cli")
+      return {
+        command: "bwrap",
+        args: privateTmp(header.cwd, [join(here, "cli-wrapper.mjs"), ...header.argv]),
+        env: { ...header.env, ...collector },
+      };
+    if (header.kind === "mcp" && mcpServe)
+      return { command: "bwrap", args: privateTmp(ws, mcpServe), env };
+    throw new Error(`no ${header.kind} surface in this session`);
+  });
+  const wrapper = join(bin, "testmaster");
+  writeFileSync(
+    wrapper,
+    `#!/bin/sh\nexec "${process.execPath}" "${client}" "${broker.socket}" cli "$@"\n`,
+  );
+  chmodSync(wrapper, 0o755);
 
   // Setup identical in every arm: the workspace is initialized for the target, and a token exists
   // for the MCP server. Not logged as agent calls (the CLI is run directly).
@@ -230,7 +275,7 @@ export async function runSession(spec, directory) {
   await setup(["token", "issue", "--token-file", tokenFile]);
 
   if (spec.arm.mcp !== "none") {
-    const serve = [
+    mcpServe = [
       join(here, "mcp-proxy.mjs"),
       "--log",
       join(directory, "mcp.ndjson"),
@@ -254,7 +299,12 @@ export async function runSession(spec, directory) {
       JSON.stringify(
         {
           mcpServers: {
-            testmaster: { command: process.execPath, args: serve, timeout: 0, enabled: true },
+            testmaster: {
+              command: process.execPath,
+              args: [client, broker.socket, "mcp"],
+              timeout: 0,
+              enabled: true,
+            },
           },
         },
         null,
@@ -304,17 +354,26 @@ export async function runSession(spec, directory) {
     `@${promptFile}`,
   ];
   const started = Date.now();
-  // A private /tmp per session: agents write scratch files to fixed /tmp paths, which would leak
-  // between sessions (concurrent or later ones) and contaminate them. It is the session's own
-  // `tmp/`, also its TMPDIR, so paths TestMaster hands to Docker exist on the host too.
+  // The agent's sandbox: the host's home is an empty tmpfs except the session's own HOME,
+  // workspace, PATH directory and /tmp, so neither this checkout, the harness state of other
+  // sessions, nor the operator's configuration can inform (or contaminate) a session. A private
+  // /tmp per session: agents write scratch files to fixed /tmp paths, which would leak between
+  // sessions. It is the session's own `tmp/`, also its TMPDIR, so paths TestMaster hands to
+  // Docker exist on the host too.
   const child = spawn(
     "bwrap",
     [
       "--dev-bind",
       "/",
       "/",
+      "--tmpfs",
+      homedir(),
+      "--ro-bind",
+      OMP,
+      OMP,
+      ...[home, join(directory, "ws"), bin, tmp].flatMap((path) => ["--bind", path, path]),
       "--bind",
-      join(directory, "tmp"),
+      tmp,
       "/tmp",
       "--chdir",
       ws,
@@ -329,6 +388,7 @@ export async function runSession(spec, directory) {
   const exit = await new Promise((resolve) =>
     child.on("close", (code, signal) => resolve({ code, signal })),
   );
+  await broker.close();
   await proxy.close();
   await Promise.all([events, stderr].map((stream) => new Promise((r) => stream.end(r))));
 

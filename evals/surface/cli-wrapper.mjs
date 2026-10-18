@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// CLI collector installed as `testmaster` on the session PATH. It runs the real CLI with the same
+// CLI collector the session broker runs for each `testmaster` call of the agent, outside its
+// sandbox (see broker-client.mjs). It runs the real CLI with the same
 // argv, stdin and environment, passes stdout and stderr through unchanged and appends one NDJSON
 // record per invocation: argv (with seeded secret values replaced), exit code, output bytes and
 // the error code of a failing JSON envelope. With SURFACE_CLI_CAPTURE it also keeps each

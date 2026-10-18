@@ -6,7 +6,7 @@
 //
 // Usage: node evals/surface/report.mjs ROUND_DIRECTORY
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 
 const directory = resolve(process.argv[2]);
 const prereg = JSON.parse(readFileSync(join(directory, "preregistration.json"), "utf8"));
@@ -125,7 +125,7 @@ const analysis = { round: prereg.round, sessions: sessions.length, byModel: {} }
 const lines = [];
 lines.push(`# Surface experiment — ${prereg.round}`, "");
 lines.push(
-  `Preregistration: \`evals/surface/rounds/${prereg.round}/preregistration.json\` (commit \`${prereg.commit}\`, build \`${prereg.buildHash.slice(0, 16)}…\`).`,
+  `Preregistration: \`${relative(resolve(import.meta.dirname, "../.."), join(directory, "preregistration.json"))}\` (commit \`${prereg.commit}\`, build \`${prereg.buildHash.slice(0, 16)}…\`).`,
   `Sessions recorded: ${sessions.length} of ${prereg.arms.length * models.length * prereg.apps.reduce((total, app) => total + app.seeds.length, 0)} planned.`,
   "",
 );
