@@ -4632,6 +4632,7 @@
                   },
                   "resource": {
                     "additionalProperties": false,
+                    "description": "Declares the resource this request creates so a cleanup entry can delete it. Needs both handle and ownerProof, and a top-level cleanup entry whose resourceRef is this step's id; otherwise the cleanup never runs (cleanup_never_runs)",
                     "type": "object",
                     "required": [
                       "resourceType",
@@ -4728,11 +4729,13 @@
                       },
                       "handle": {
                         "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
-                        "type": "string"
+                        "type": "string",
+                        "description": "JSON pointer to the new resource's id in this request's response"
                       },
                       "ownerProof": {
                         "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
-                        "type": "string"
+                        "type": "string",
+                        "description": "JSON pointer to a response field proving the run's account owns the resource (creator, user or tenant id)"
                       }
                     }
                   }
@@ -7902,7 +7905,8 @@
           "resourceRef": {
             "minLength": 1,
             "maxLength": 200,
-            "type": "string"
+            "type": "string",
+            "description": "Id of the request step that creates the resource and declares input.resource with handle and ownerProof"
           },
           "operation": {
             "const": "request",
@@ -8974,6 +8978,7 @@
               },
               "resource": {
                 "additionalProperties": false,
+                "description": "Declares the resource this request creates so a cleanup entry can delete it. Needs both handle and ownerProof, and a top-level cleanup entry whose resourceRef is this step's id; otherwise the cleanup never runs (cleanup_never_runs)",
                 "type": "object",
                 "required": [
                   "resourceType",
@@ -9070,11 +9075,13 @@
                   },
                   "handle": {
                     "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
-                    "type": "string"
+                    "type": "string",
+                    "description": "JSON pointer to the new resource's id in this request's response"
                   },
                   "ownerProof": {
                     "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
-                    "type": "string"
+                    "type": "string",
+                    "description": "JSON pointer to a response field proving the run's account owns the resource (creator, user or tenant id)"
                   }
                 }
               }
@@ -10169,7 +10176,8 @@
                   }
                 }
               }
-            ]
+            ],
+            "description": "Cleanup runs after the steps, also when a step already deleted the resource: accept the deletion route's answer for a missing resource too (for example statusIn [200, 404])"
           },
           "deadlineMs": {
             "minimum": 1,
@@ -14772,6 +14780,7 @@
                 },
                 "resource": {
                   "additionalProperties": false,
+                  "description": "Declares the resource this request creates so a cleanup entry can delete it. Needs both handle and ownerProof, and a top-level cleanup entry whose resourceRef is this step's id; otherwise the cleanup never runs (cleanup_never_runs)",
                   "type": "object",
                   "required": [
                     "resourceType",
@@ -14868,11 +14877,13 @@
                     },
                     "handle": {
                       "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
-                      "type": "string"
+                      "type": "string",
+                      "description": "JSON pointer to the new resource's id in this request's response"
                     },
                     "ownerProof": {
                       "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
-                      "type": "string"
+                      "type": "string",
+                      "description": "JSON pointer to a response field proving the run's account owns the resource (creator, user or tenant id)"
                     }
                   }
                 }

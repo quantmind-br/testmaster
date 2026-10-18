@@ -1215,6 +1215,7 @@ it("a failed Run of a revision that is not the active one is refused before any 
     code: "PRECONDITION_FAILED",
     details: {
       reason: "revision_not_active",
+      reasonCode: "revision_not_active",
       revisionId: f.candidate.id,
       activeRevisionId: f.test.activeRevisionId,
       nextAction: expect.stringContaining("test revision create"),
@@ -1223,6 +1224,29 @@ it("a failed Run of a revision that is not the active one is refused before any 
   expect(f.complete).not.toHaveBeenCalled();
   expect(f.jobs.forTarget(f.app.context.workspaceId, "healing", other.id)).toHaveLength(0);
   expect(f.app.database.all("SELECT id FROM healing_proposals")).toHaveLength(0);
+});
+it("a failed Run of a code revision is refused before any job or model call, naming the reason in both fields", async () => {
+  const f = await generationFixture(abstention);
+  const original = f.app.revisions.get(String(f.test.activeRevisionId));
+  const { id: _revisionId, ...revisionFields } = original;
+  const code = entity(f.app.context, "rev", {
+    ...revisionFields,
+    ordinal: 3,
+    plan: null,
+    runnerKind: "playwright",
+    origin: "imported",
+    parentId: null,
+  });
+  f.app.context.entities.insert("TestRevision", code);
+  const { id: _runId, ...runFields } = f.failed;
+  const run = entity(f.app.context, "run", { ...runFields, revisionId: code.id });
+  f.app.context.entities.insert("Run", run);
+  await expect(f.service.propose(run.id)).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+    details: { reason: "code_revision", reasonCode: "code_revision" },
+  });
+  expect(f.complete).not.toHaveBeenCalled();
+  expect(f.jobs.forTarget(f.app.context.workspaceId, "healing", run.id)).toHaveLength(0);
 });
 it("a failure the rules classify as a product defect abstains without a model call and keeps the attempt", async () => {
   const f = await generationFixture(abstention);

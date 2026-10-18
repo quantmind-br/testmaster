@@ -11,6 +11,17 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 
 - MCP tools now carry action-oriented descriptions (what the tool does, when to use it, which tool comes next); `testmaster_get_run` states it returns a summary only and points to evidence and analysis before naming a cause.
 
+### Fourth Dokploy agent run
+
+Found when an omp agent drove the pipeline on Dokploy a fourth time: 30 tests in a suite, run twice, 26 passed both times; the 4 failures are the product's own OpenAPI response schemas (empty closed objects for `project.all` and `project.create` 200, a 401 without the required `code`, a 400 with a `data` field its closed schema forbids).
+
+- The plan contract can be read over MCP: `testmaster://schemas/{name}{?offset}` serves the JSON Schema of a public contract (the ones `packages/contracts/schemas/` holds, such as `ExecutablePlan` and `Step`) as byte pages like other large JSON resources, `testmaster://schemas` lists the names, and an unknown name is refused with the names near it. The rules of `testmaster_save_test`, `testmaster_edit_plan` and `testmaster_validate_document` point to them and state how a plan declares a created resource (`input.resource` with `handle` and `ownerProof`) and its `cleanup`; the plan schema describes those fields. Before, the agent found `Step.json` in the installation and the cleanup declaration in the planner's compiled prompt.
+- Plan generation asks the model to name, in the proposal's warnings, each creating step it left without cleanup and that the resource is left behind (prompt `plan-8-cleanup-disclosure`). Before, 13 of 22 proposals created Dokploy projects with no cleanup and no warning.
+- `testmaster://tests/{id}/revisions` returns `testVersion`, the test's current version that `testmaster_promote_revision` takes as `expectedVersion`; the promote rule and input say where to read it (a revision's own `version` is not it).
+- The analysis of a failed Playwright code run (imported or generated) gives the page-state next step instead of the response-evidence one: the runner is taken from the revision when there is no plan.
+- The `code_revision` and `revision_not_active` healing refusals carry `details.reasonCode` like `healing_not_indicated`, next to `details.reason`.
+- Docs: `artifact get` checks the hash of every available entry (a mismatch fails with `BUNDLE_INTEGRITY_ERROR`) and has no integrity flag of its own; completeness is each entry's `state`, and `testmaster_get_evidence` reports `integrity`. The steps resource says that passed steps carry no `reasonCode`.
+
 ### Third Dokploy agent run
 
 Found when an omp agent drove the pipeline on Dokploy a third time: 23 tests in a suite, 21 passed; the 2 failures are the product's own OpenAPI error schemas (a 401 without the required `code`, a 400 with `data` and `issues` fields its closed schema forbids).

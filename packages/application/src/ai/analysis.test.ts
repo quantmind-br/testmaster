@@ -1888,6 +1888,28 @@ it("model next steps may cite a verified Run handle without establishing a hypot
   expect(analysis.diagnosis?.healing).toEqual(factual.diagnosis?.healing);
 });
 
+it("a failed Playwright code run is advised to collect page state, not response evidence", async () => {
+  const f = await fixture({ code: true, step: { planStepId: "imported-test-0" } });
+  f.complete.mockImplementationOnce(async () => ({
+    modelCallId: f.modelCallId,
+    output: {
+      failureKind: "product_bug",
+      hypotheses: [
+        { text: "Observed mismatch", supports: ["E2"], contradicts: [], confidence: 0.5 },
+      ],
+      recommendedAction: "fix_product",
+      fixTargetHandle: null,
+      limitations: [],
+      nextSteps: [{ action: "collect_more_evidence", evidence: ["E1"] }],
+      evidenceGaps: [],
+    },
+  }));
+  const analysis = await f.service.analyze(f.run.id, { model: true });
+  const text = analysis.diagnosis?.nextSteps.at(-1)?.text;
+  expect(text).toContain("Collect the page state and execution evidence");
+  expect(text).not.toContain("response");
+});
+
 it("model next steps are rendered by the application and dropped when they do not fit the recorded cause", async () => {
   const f = await fixture();
   const factual = await f.service.analyze(f.run.id);

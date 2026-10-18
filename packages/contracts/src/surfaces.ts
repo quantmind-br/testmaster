@@ -700,7 +700,10 @@ export const mcpTools = {
         Enum(["ExecutablePlan", "ProjectConfig", "RunRequest"]),
         "Contract to validate against",
       ),
-      document: d(Json, "The document to validate; it is neither stored nor run"),
+      document: d(
+        Json,
+        "The document to validate; neither stored nor run. A plan's schema is the resource testmaster://schemas/ExecutablePlan",
+      ),
     }),
     output: "DocumentValidationResult",
   },
@@ -1070,7 +1073,7 @@ export const mcpTools = {
         // Validated as an ExecutablePlan by the service; inlining the recursive Step schema would
         // make the advertised tool schema hundreds of kilobytes. testmaster_validate_document checks one.
         Type.Object({}, { additionalProperties: true }),
-        "Replacement ExecutablePlan (kind executable); the requirement and evidence references of the proposal are kept",
+        "Replacement ExecutablePlan (kind executable); the proposal's requirement and evidence references are kept. Schema: testmaster://schemas/ExecutablePlan (steps: testmaster://schemas/Step)",
       ),
       expectedVersion: d(Version, "Proposal version being edited, for optimistic concurrency"),
     }),
@@ -1081,7 +1084,7 @@ export const mcpTools = {
     input: Obj({
       plan: d(
         Type.Object({}, { additionalProperties: true }),
-        "ExecutablePlan to store; it is linted exactly like a plan file of the CLI",
+        "ExecutablePlan to store, linted like a CLI plan file. Schema: testmaster://schemas/ExecutablePlan (steps: testmaster://schemas/Step); check one with testmaster_validate_document",
       ),
       projectId: Type.Optional(
         d(id("prj"), "Create a new test in this project; give projectId or testId"),
@@ -1138,7 +1141,7 @@ export const mcpTools = {
       revisionId: d(id("rev"), "Candidate revision to make the active one of its test"),
       expectedVersion: d(
         Version,
-        "Current version of the test (test.version from testmaster_save_test)",
+        "Current version of the test: testVersion of testmaster://tests/{id}/revisions, or version of testmaster://tests/{id}",
       ),
       reason: Type.Optional(
         d(

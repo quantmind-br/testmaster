@@ -79,13 +79,18 @@ testmaster test scaffold --type frontend > testmaster_tests/login.plan.json   # 
 testmaster test lint --plan testmaster_tests/login.plan.json                   # offline validation
 testmaster test create --plan testmaster_tests/login.plan.json --output json   # immutable revision
 testmaster test run "$TEST_ID" --wait --output json                              # replay mode, heal off
-testmaster artifact get "$RUN_ID" --out .testmaster/failure                     # verified bundle copy
+testmaster artifact get "$RUN_ID" --out .testmaster/failure                     # evidence bundle copy, hash-checked
 testmaster report export "$RUN_ID" --format junit --out report.xml              # json|markdown|html|junit|allure
 # fix the application outside TestMaster, then replay the same revision
 testmaster test rerun "$TEST_ID" --wait --output json
 ```
 
 `--type cli` scaffolds a terminal-runner plan for a command-line or TUI program; see [Terminal tests](terminal-tests.md).
+
+`artifact get` has no integrity flag in its JSON: it succeeds only when every entry it could read matches its manifest
+hash (a mismatch fails with `BUNDLE_INTEGRITY_ERROR`), but an entry that is expired, missing or truncated is not
+copied, and that is not a failure. Read completeness in `data.manifest.entries[].state` (`available` or not); MCP
+`testmaster_get_evidence` reports `integrity` and the partial state directly.
 
 `testmaster init` writes `testmaster.config.json` in the working directory and binds that directory to the
 project. Run again in the same workspace, it keeps an existing file (unless `--overwrite`) and writes an absent

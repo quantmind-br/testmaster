@@ -8,7 +8,13 @@ import { promisify } from "node:util";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { Application, entity, HealingService, scaffoldPlan } from "@testmaster/application";
-import { ajv, ContractError, mcpToolCatalog } from "@testmaster/contracts";
+import {
+  ajv,
+  ContractError,
+  jsonSchema,
+  mcpToolCatalog,
+  schemaCatalog,
+} from "@testmaster/contracts";
 import { afterEach, expect, it, vi } from "vitest";
 import { createMcpServer } from "./server.js";
 
@@ -504,6 +510,7 @@ it("the artifact and code-file templates are advertised with reserved expansion"
   );
   expect(templates).toContain("testmaster://runs/{id}/artifacts/{+path}{?attemptId,offset}");
   expect(templates).toContain("testmaster://revisions/{id}/code/{+path}{?format,offset}");
+  expect(templates).toContain("testmaster://schemas/{name}{?offset}");
 });
 
 it("analyze_code returns the snapshot with its scan summary", async () => {
@@ -1792,10 +1799,18 @@ it("the test and revision list resources show which revision is active and keep 
   });
   const listed = await readJson<{
     activeRevisionId: string;
+    testVersion: number;
     total: number;
     revisions: Record<string, unknown>[];
   }>(f, `testmaster://tests/${test.id}/revisions`);
   expect(listed).toMatchObject({ activeRevisionId: test.activeRevisionId, total: 2 });
+  // The promote expectedVersion is the test's, not a revision's own `version` (always 1).
+  const current = f.app.tests.get(test.id);
+  expect(listed.testVersion).toBe(current.version);
+  expect(await readJson(f, `testmaster://tests/${test.id}`)).toMatchObject({
+    version: listed.testVersion,
+  });
+  expect(listed.revisions.every((revision) => revision.version === 1)).toBe(true);
   expect(
     listed.revisions.map((revision) => [revision.id, revision.active, revision.hasPlan]),
   ).toEqual([
@@ -1808,6 +1823,59 @@ it("the test and revision list resources show which revision is active and keep 
       uri: "testmaster://tests/tst_019bf434-20c0-7000-8000-000000000001/revisions",
     }),
   ).rejects.toMatchObject({ code: -32002 });
+});
+
+it("the schemas resource serves the JSON Schema of a public contract as byte pages and refuses an unknown name", async () => {
+  const f = await fixture();
+  const read = async (uri: string) =>
+    (await f.client.readResource({ uri })).contents[0] as Record<string, unknown>;
+  const whole = JSON.stringify(jsonSchema("ExecutablePlan"));
+  const first = await read("testmaster://schemas/ExecutablePlan");
+  const meta = first._meta as Record<string, unknown>;
+  expect(first.mimeType).toBe("application/json");
+  // The plan contract is far larger than one page: the first read says where the byte pages are.
+  expect(Buffer.byteLength(whole)).toBeGreaterThan(32768);
+  expect(meta["testmaster:sizeBytes"]).toBe(Buffer.byteLength(whole));
+  const parts: string[] = [];
+  for (let next: string | null = String(meta["testmaster:textPages"]); next; ) {
+    const page = await read(next);
+    const pageMeta = page._meta as Record<string, unknown>;
+    expect(Buffer.byteLength(String(page.text))).toBeLessThanOrEqual(32768);
+    expect(pageMeta["testmaster:sha256"]).toBe(createHash("sha256").update(whole).digest("hex"));
+    parts.push(String(page.text));
+    next = pageMeta["testmaster:next"] as string | null;
+  }
+  expect(parts.length).toBeGreaterThan(1);
+  expect(parts.join("")).toBe(whole);
+  expect(JSON.parse(parts.join(""))).toMatchObject({ type: "object" });
+  // A smaller contract is one page.
+  const step = await readJson<Record<string, unknown>>(f, "testmaster://schemas/Step");
+  expect(step).toEqual(jsonSchema("Step"));
+
+  // The names are listed across pages, and an unknown or mistyped one is refused with the names near it.
+  const listed: { name: string; resource: string }[] = [];
+  for (let uri: string | null = "testmaster://schemas"; uri; ) {
+    const page: { schemas: { name: string; resource: string }[]; next: string | null } =
+      await readJson(f, uri);
+    listed.push(...page.schemas);
+    uri = page.next;
+  }
+  expect(listed.map((entry) => entry.name)).toEqual(Object.keys(schemaCatalog).sort());
+  expect(listed).toContainEqual({
+    name: "ExecutablePlan",
+    resource: "testmaster://schemas/ExecutablePlan",
+  });
+  await expect(read("testmaster://schemas/executableplan")).rejects.toMatchObject({
+    code: -32002,
+    message: expect.stringContaining("similar names are ExecutablePlan"),
+  });
+  await expect(read("testmaster://schemas/NoSuchContract")).rejects.toMatchObject({
+    code: -32002,
+    message: expect.stringContaining("testmaster://schemas"),
+  });
+  await expect(read("testmaster://schemas/ExecutablePlan/Step")).rejects.toMatchObject({
+    code: -32002,
+  });
 });
 
 it("the source resources list a project's sources and read one without its chunks", async () => {

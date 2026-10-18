@@ -1,5 +1,12 @@
 import type { mcpTools } from "@testmaster/contracts";
 
+/** The plan contract is not in the tool schema (it would add hundreds of KB); agents read it as a resource. */
+const PLAN_SCHEMA_RULE =
+  "The plan is an `ExecutablePlan`: its JSON Schema is the resource testmaster://schemas/ExecutablePlan and the shape of one step is testmaster://schemas/Step. The plan schema is about 190 KB, past what a client shows of one read: read it as text pages, `?offset=0` and then the offset plus the UTF-8 bytes of each page read, until a page is shorter than 32768 bytes, and concatenate them. testmaster_validate_document with `schema: ExecutablePlan` checks a plan before it is stored.";
+/** The one declaration that makes a created resource deleted; the planner prompt carries the same rule. */
+const PLAN_CLEANUP_RULE =
+  'A plan that creates a resource it must delete declares it twice: the creating request step sets `input.resource` {resourceType, correlationKey, handle (JSON pointer to the new id in the response), ownerProof (JSON pointer to a response field proving the account owns it)}, and a top-level `cleanup` entry sets `resourceRef` to that step id, a request (`operation: request`, whatever method the deletion route takes) that passes {"variableRef": "<step id>.handle"} in its path or body, and a `successPredicate`. Without both pointers and the entry the cleanup never runs (`cleanup_never_runs`). Cleanup also runs after a step already deleted the resource, so its predicate accepts the missing-resource answer too (`statusIn [200, 404]`).';
+
 /**
  * The rules of each MCP tool, served at `testmaster://tools/{name}`. A tool description stays a
  * short summary (what, when, next); everything an agent needs to call the tool right lives here,
@@ -13,6 +20,8 @@ export const toolRules: Record<keyof typeof mcpTools, readonly string[]> = {
   ],
   testmaster_validate_document: [
     "`schema` names the contract: ExecutablePlan, ProjectConfig or RunRequest. Nothing is stored or run.",
+    PLAN_SCHEMA_RULE,
+    PLAN_CLEANUP_RULE,
     "A plan is checked against its contract and the plan rules (predicates per runner, negative checks before render, step references).",
     "A jsonSchema `sourceRevisionId` and pointer are resolved only when the plan is saved: testmaster_save_test and testmaster_edit_plan refuse a pointer that reaches no schema.",
   ],
@@ -130,12 +139,16 @@ export const toolRules: Record<keyof typeof mcpTools, readonly string[]> = {
   ],
   testmaster_edit_plan: [
     "Replaces the plan of a still-proposed proposal at the proposal's own `expectedVersion`; the plan is validated and the requirement and evidence references stay.",
+    PLAN_SCHEMA_RULE,
+    PLAN_CLEANUP_RULE,
     "Returns the Proposal itself (read `result.version`, not `result.proposal.version`) plus `batchVersion`: every edit raises it, and testmaster_review_plan takes it.",
     "A stale version is REVISION_CONFLICT with the current plan and both versions.",
   ],
   testmaster_save_test: [
     "Stores a plan as a new test (`projectId`) or as a candidate revision of a test (`testId`, optional `parentRevisionId`).",
     "`plan.requirementRefs` is required (`[]` when none); the plan is linted like `test create`.",
+    PLAN_SCHEMA_RULE,
+    PLAN_CLEANUP_RULE,
     "A new test's first revision is active at once; a `testId` revision stays a candidate (`active: false`) and `nextActions` names the run and promote calls.",
   ],
   testmaster_import_code: [
@@ -146,7 +159,7 @@ export const toolRules: Record<keyof typeof mcpTools, readonly string[]> = {
     "Use it to fix a failed generated candidate by hand: read its files at testmaster://revisions/{id}/code, write the corrected file in the project, import it with `testId`, replay, promote.",
   ],
   testmaster_promote_revision: [
-    "Makes a candidate revision active at `expectedVersion` (the test's `version`); an optional reason is recorded.",
+    "Makes a candidate revision active at `expectedVersion` (the test's current `version`: `testVersion` of testmaster://tests/{id}/revisions, or `version` of testmaster://tests/{id}; a revision's own `version` is not it, and runs raise the test version, so read it fresh); an optional reason is recorded.",
     "A generated candidate needs a passing deterministic replay first (testmaster_run_tests with `revisionId`); a healed one is promoted by testmaster_approve_healing.",
     "A test still named after its replaced active plan takes the promoted plan's name.",
   ],

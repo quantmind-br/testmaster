@@ -50,13 +50,13 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_reject_healing:
     "Reject a reviewed healing proposal with a required reason, recorded with the reviewer and time; nothing is applied. Write scope; audited.",
   testmaster_edit_plan:
-    "Replace the plan of a still-proposed proposal at its expectedVersion (validated; references kept). Returns the Proposal itself plus batchVersion, which testmaster_review_plan takes next.",
+    "Replace the plan (ExecutablePlan, schema at testmaster://schemas/ExecutablePlan) of a still-proposed proposal at its expectedVersion (validated; references kept). Returns the Proposal plus batchVersion, which testmaster_review_plan takes.",
   testmaster_save_test:
-    "Store a plan as a new test (projectId) or a candidate revision of a test (testId); plan.requirementRefs is required ([] if none). A new test is active at once; a candidate needs promotion.",
+    "Store a plan (ExecutablePlan, schema at testmaster://schemas/ExecutablePlan) as a new test (projectId) or a candidate revision of a test (testId); requirementRefs is required ([] if none). A new test is active at once; a candidate needs promotion.",
   testmaster_import_code:
     "Import Playwright (.ts) or pytest (.py) code as a new test (projectId) or a candidate code revision of a test (testId), checked like `test import`. A candidate needs a passing replay, then promotion.",
   testmaster_promote_revision:
-    "Make a candidate revision active at expectedVersion (test.version); an optional reason is recorded. A generated candidate needs a passing replay first; healed: testmaster_approve_healing.",
+    "Make a candidate revision active at expectedVersion (testVersion of testmaster://tests/{id}/revisions); an optional reason is recorded. A generated candidate needs a passing replay first; healed: testmaster_approve_healing.",
   testmaster_archive_test:
     "Archive a test at expectedVersion (test.version): it leaves active use, its history and evidence stay, no unarchive exists; an optional reason is recorded.",
   testmaster_save_suite:

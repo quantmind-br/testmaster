@@ -593,6 +593,7 @@ export class HealingService {
     if (!revision.plan)
       throw new ContractError("PRECONDITION_FAILED", "Healing requires a declarative plan", {
         reason: "code_revision",
+        reasonCode: "code_revision",
       });
     const base = validate<ExecutablePlan>("ExecutablePlan", revision.plan);
     if (base.runner === "terminal")
@@ -609,6 +610,7 @@ export class HealingService {
         "Healing derives a new revision from the test's active revision, and this Run replayed a different revision",
         {
           reason: "revision_not_active",
+          reasonCode: "revision_not_active",
           revisionId: revision.id,
           activeRevisionId: test.activeRevisionId ?? null,
           nextAction:

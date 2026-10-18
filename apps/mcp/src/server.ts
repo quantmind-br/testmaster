@@ -59,6 +59,7 @@ import {
   type SuiteInput,
   type SuitePatchInput,
   type SuiteRunInput,
+  schemaCatalog,
   validate,
   validateDocument,
 } from "@testmaster/contracts";
@@ -161,6 +162,8 @@ const RESOURCE_COLLECTIONS: Readonly<Record<string, string>> = {
   runs: "testmaster://runs/{id}/result, /manifest, /steps, /report and /artifacts/{+path}",
   batches: "testmaster://batches/{id}/report",
   requirements: "testmaster://requirements/{projectId or requirementId}",
+  schemas:
+    "testmaster://schemas (the names) and testmaster://schemas/{name} (the JSON Schema of one public contract, such as ExecutablePlan or Step)",
   tools: "testmaster://tools/{name} (the rules of a tool, by its name in tools/list)",
 };
 /**
@@ -646,7 +649,7 @@ export class TestMasterMcp {
         [
           "testmaster://runs/{id}/steps{?attemptId,cursor,offset}",
           "Run steps",
-          "Recorded step results of a run (every attempt, or one attemptId) in execution order, up to 50 a page within 32 KiB; follow next. A code run's steps (imported-test-N, imported-step-N, pytest node ids) carry a title with what the test framework called them (expect.toHaveURL, a test.step name, the test title)",
+          "Recorded step results of a run (every attempt, or one attemptId) in execution order, up to 50 a page within 32 KiB; follow next. A passed step carries no reasonCode (read it only on failed steps). A code run's steps (imported-test-N, imported-step-N, pytest node ids) carry a title with what the test framework called them (expect.toHaveURL, a test.step name, the test title)",
         ],
         [
           "testmaster://revisions/{id}",
@@ -676,7 +679,7 @@ export class TestMasterMcp {
         [
           "testmaster://tests/{id}/revisions{?cursor,offset}",
           "Test revisions",
-          "Revisions of a test in ordinal order without their plans, each marked active or candidate, up to 100 a page within 32 KiB; read one at testmaster://revisions/{id}",
+          "Revisions of a test in ordinal order without their plans, each marked active or candidate, up to 100 a page within 32 KiB; read one at testmaster://revisions/{id}. testVersion is the test's version: the expectedVersion of testmaster_promote_revision (a revision's own version is not it)",
         ],
         [
           "testmaster://projects/{projectId}/tests{?tag,priority,status,cursor,offset}",
@@ -717,6 +720,16 @@ export class TestMasterMcp {
           "testmaster://runs/{id}/artifacts/{+path}{?attemptId,offset}",
           "Verified artifact page",
           "Bytes of a verified artifact with the artifact's own mimeType: text for JSON, text and other textual types (cut on UTF-8 character boundaries), blob (base64) for binary types; the path may be written with plain slashes (browser/steps/x.json) or with each slash encoded as %2F; _meta carries next, offset and sizeBytes",
+        ],
+        [
+          "testmaster://schemas{?cursor,offset}",
+          "Contract schema names",
+          "The names of the public contracts (ExecutablePlan, Step, ProjectConfig, ...), up to 100 a page within 32 KiB; each entry names its schema resource; follow next",
+        ],
+        [
+          "testmaster://schemas/{name}{?offset}",
+          "Contract schema",
+          "The JSON Schema of a public contract by name: ExecutablePlan (a plan for testmaster_save_test and testmaster_edit_plan, about 190 KB), Step (one plan step), ProjectConfig, RunRequest. Read a large one as text pages: offset=0, then add each page's UTF-8 bytes until a page is under 32768 bytes",
         ],
         [
           "testmaster://tools/{name}",
@@ -2395,6 +2408,10 @@ export class TestMasterMcp {
       case "requirements":
         if (parts.length === 1) return { json: this.requirementResource(id) };
         break;
+      case "schemas":
+        if (parts.length === 0) return { json: this.schemaNames(url), page: true };
+        if (parts.length === 1) return { json: this.contractSchema(id) };
+        break;
       case "tools":
         if (parts.length === 1 && Object.hasOwn(toolRules, id))
           return toolRulesPage(id as ToolName);
@@ -2587,11 +2604,40 @@ export class TestMasterMcp {
     return this.listPage(revisions, LIST_PAGE, `revisions:${testId}`, url, (page) => ({
       testId,
       activeRevisionId: test.activeRevisionId,
+      testVersion: test.version,
       total: page.total,
       returned: page.items.length,
       revisions: page.items,
       next: this.pageLink(`testmaster://tests/${testId}/revisions`, {}, page.cursor),
     }));
+  }
+  /** The names of the public contracts whose JSON Schema is served at `testmaster://schemas/{name}`. */
+  private schemaNames(url: URL) {
+    const names = Object.keys(schemaCatalog).sort();
+    return this.listPage(names, LIST_PAGE, "schemas", url, (page) => ({
+      total: page.total,
+      returned: page.items.length,
+      schemas: page.items.map((name) => ({ name, resource: `testmaster://schemas/${name}` })),
+      next: this.pageLink("testmaster://schemas", {}, page.cursor),
+    }));
+  }
+  /** The standalone JSON Schema of one public contract: the one `packages/contracts/schemas/{name}.json` holds. */
+  private contractSchema(name: string): Record<string, unknown> {
+    if (Object.hasOwn(schemaCatalog, name)) return jsonSchema(name);
+    const wanted = name.toLowerCase();
+    const close = Object.keys(schemaCatalog)
+      .filter((known) => {
+        const lower = known.toLowerCase();
+        return lower.includes(wanted) || wanted.includes(lower);
+      })
+      .sort()
+      .slice(0, 10);
+    const shown = name.length > 100 ? `${name.slice(0, 100)}...` : name;
+    const similar = close.length ? `similar names are ${close.join(", ")}; ` : "";
+    throw new ContractError(
+      "NOT_FOUND",
+      `Unknown schema ${shown}: ${similar}names are case-sensitive and every one is listed at testmaster://schemas`,
+    );
   }
   /** The code of a revision as the CLI `test export` and GET /revisions/{id}/code read it. */
   private async exportRevision(id: string, requested: string | null) {

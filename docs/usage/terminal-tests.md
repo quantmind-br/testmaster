@@ -358,7 +358,8 @@ directory is the attempt's `work` directory; `cwd` is relative to it and cannot 
 
 ## Reading the evidence
 
-After `test run --wait`, inspect the steps and download the verified bundle:
+After `test run --wait`, inspect the steps and copy the evidence bundle (every entry it copies is hash-checked; see
+below for what that does and does not prove):
 
 ```bash
 testmaster run get "$RUN_ID" --output json
@@ -366,6 +367,10 @@ testmaster run steps "$RUN_ID" --output json
 testmaster artifact get "$RUN_ID" --out .testmaster/failure
 testmaster report export "$RUN_ID" --format html --out report.html
 ```
+
+`artifact get` has no integrity flag in its JSON. Success means every available entry matched its manifest hash (a
+mismatch fails with `BUNDLE_INTEGRITY_ERROR`); it does not mean the bundle is complete, so read
+`data.manifest.entries[].state` for entries that are not `available`. MCP `testmaster_get_evidence` reports `integrity`.
 
 Terminal evidence, all passed through the secret redactor before it is stored:
 

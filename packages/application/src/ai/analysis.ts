@@ -299,6 +299,8 @@ type CollectedEvidence = {
   snapshotId: Analysis["snapshotId"];
   limitations: string[];
   plan: ExecutablePlan | null;
+  /** The runner that executed the revision: its plan's, or the kind of its code (a code revision has no plan). */
+  runner: string;
   /** Requirements of the plan the revision verifies: its own, or the plan a code revision came from. */
   requirementRefs: string[];
 };
@@ -2220,6 +2222,7 @@ export class AnalysisService {
       snapshotId,
       limitations: [...new Set(limitations)],
       plan,
+      runner: plan?.runner ?? String(revision.runnerKind),
       requirementRefs: [
         ...new Set(governingPlan(this.ctx, String(revision.id))?.requirementRefs ?? []),
       ],
@@ -2900,7 +2903,7 @@ export class AnalysisService {
         next(
           location === null && missing.length
             ? `Find out why no result was recorded for plan step${missing.length === 1 ? "" : "s"} ${named(missingIds)}${foreign.length ? `; results were recorded under ${named(foreignIds)}, which the frozen plan does not contain, so compare those ids with the plan's` : ""}, then rerun the test.`
-            : collectEvidenceText(location, collected.plan?.runner),
+            : collectEvidenceText(location, collected.runner),
           failed ? [failed.ref] : supports,
         );
       }
@@ -3884,11 +3887,7 @@ export class AnalysisService {
         )
       )
         modelSteps.push({
-          text: entry.text(
-            location,
-            collected.plan?.runner,
-            fatalDeniedOrigins(collected.evidence),
-          ),
+          text: entry.text(location, collected.runner, fatalDeniedOrigins(collected.evidence)),
           source: "model",
           evidenceRefs: resolve(step.evidence),
         });

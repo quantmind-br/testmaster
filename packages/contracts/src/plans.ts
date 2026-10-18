@@ -17,6 +17,10 @@ import {
   Value,
 } from "./primitives.js";
 
+/** Adds the agent-facing description of a property without changing its validation. */
+const described = <T extends TSchema>(schema: T, description: string): T =>
+  ({ ...schema, description }) as T;
+
 export const Locator = Type.Recursive((Self) => {
   const scope = {
     container: Type.Optional(Self),
@@ -203,12 +207,28 @@ export const RequestInput = Obj({
   ),
   capture: Type.Optional(Type.Array(Capture)),
   resource: Type.Optional(
-    Obj({
-      resourceType: Name,
-      correlationKey: Value,
-      handle: Type.Optional(JsonPointer),
-      ownerProof: Type.Optional(JsonPointer),
-    }),
+    Obj(
+      {
+        resourceType: Name,
+        correlationKey: Value,
+        handle: Type.Optional(
+          described(
+            JsonPointer,
+            "JSON pointer to the new resource's id in this request's response",
+          ),
+        ),
+        ownerProof: Type.Optional(
+          described(
+            JsonPointer,
+            "JSON pointer to a response field proving the run's account owns the resource (creator, user or tenant id)",
+          ),
+        ),
+      },
+      {
+        description:
+          "Declares the resource this request creates so a cleanup entry can delete it. Needs both handle and ownerProof, and a top-level cleanup entry whose resourceRef is this step's id; otherwise the cleanup never runs (cleanup_never_runs)",
+      },
+    ),
   ),
 });
 /** Named keys of the terminal runner; `Ctrl+<A-Z>` and `Alt+<A-Za-z0-9>` are matched by pattern. */
@@ -437,10 +457,16 @@ export const DependencyBinding = Obj({
 });
 const buildCleanup = <E extends TSchema>(expectation: E) =>
   Obj({
-    resourceRef: Name,
+    resourceRef: described(
+      Name,
+      "Id of the request step that creates the resource and declares input.resource with handle and ownerProof",
+    ),
     operation: Type.Literal("request"),
     input: RequestInput,
-    successPredicate: expectation,
+    successPredicate: described(
+      expectation,
+      "Cleanup runs after the steps, also when a step already deleted the resource: accept the deletion route's answer for a missing resource too (for example statusIn [200, 404])",
+    ),
     deadlineMs: Positive,
     required: Type.Boolean(),
   });
