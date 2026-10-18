@@ -1,0 +1,70 @@
+[
+  {
+    "id": "dk-project-list",
+    "task": "Listing projects: after a project is created with `POST /api/project.create` (a `name` and a `description`), `GET /api/project.all` with the API key answers 200 with a JSON array that contains that project, with its `projectId`, `name` and `description` as created.",
+    "mutant": {
+      "rules": [
+        {
+          "method": "GET",
+          "path": "^/api/project\\.all$",
+          "actions": [{ "type": "json", "pointer": "", "op": "replace", "value": [] }]
+        }
+      ]
+    }
+  },
+  {
+    "id": "dk-project-update",
+    "task": "Updating a project: `POST /api/project.update` with a `projectId`, a new `name` and a new `description` answers 200 with the updated project, whose `name` and `description` are the new values, and `GET /api/project.one?projectId=<id>` afterwards returns the same new values.",
+    "mutant": {
+      "rules": [
+        {
+          "method": "POST",
+          "path": "^/api/project\\.update$",
+          "actions": [{ "type": "json", "pointer": "/name", "op": "replace", "value": "Untitled project" }]
+        }
+      ]
+    }
+  },
+  {
+    "id": "dk-default-environment",
+    "task": "Every new project has one default environment: right after `POST /api/project.create`, `GET /api/environment.byProjectId?projectId=<id>` answers 200 with an array holding exactly one environment, named `production`, whose `isDefault` is true.",
+    "mutant": {
+      "rules": [
+        {
+          "method": "GET",
+          "path": "^/api/environment\\.byProjectId$",
+          "actions": [
+            { "type": "json", "pointer": "/0/name", "op": "replace", "value": "development" },
+            { "type": "json", "pointer": "/0/isDefault", "op": "replace", "value": false }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "dk-session-identity",
+    "task": "The API key identifies its organization: `GET /api/user.session` with a valid `x-api-key` answers 200 with a `session.activeOrganizationId` equal to the `id` of the organization that `GET /api/organization.all` returns, while the same request without the header, or with an invalid key, answers 401.",
+    "mutant": {
+      "rules": [
+        {
+          "method": "GET",
+          "path": "^/api/user\\.session$",
+          "actions": [{ "type": "json", "pointer": "/session/activeOrganizationId", "op": "replace", "value": "org-unknown" }]
+        }
+      ]
+    }
+  },
+  {
+    "id": "dk-application-idle",
+    "task": "A new application record is idle because nothing was deployed: after `POST /api/application.create` (a `name`, a `description` and the `environmentId` of a project's environment), `GET /api/application.one?applicationId=<id>` answers 200 with the same `name`, `description` and `environmentId` and with `applicationStatus` equal to `idle`. Never deploy or start the application; remove it afterwards with `POST /api/application.delete`.",
+    "mutant": {
+      "rules": [
+        {
+          "method": "GET",
+          "path": "^/api/application\\.one$",
+          "actions": [{ "type": "json", "pointer": "/applicationStatus", "op": "replace", "value": "running" }]
+        }
+      ]
+    }
+  }
+]

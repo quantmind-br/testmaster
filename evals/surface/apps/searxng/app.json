@@ -1,0 +1,25 @@
+{
+  "name": "searxng",
+  "role": "development",
+  "repo": "~/dev/searxng-tm",
+  "commit": "2a6fc07be3760543c7b6d1d1bfe62f5765d5d9d6",
+  "upstream": "http://127.0.0.1:20411",
+  "health": "/healthz",
+  "context": "You are in the repository of SearXNG, a privacy-respecting metasearch engine (Python, Flask). It has no OpenAPI specification: the search API is documented in `docs/dev/search_api.rst` and the routes are in `searx/webapp.py`. It is running at {targetUrl} (HTML UI at `/`, `/search`, `/preferences`; JSON, CSV and RSS output through `/search?format=json|csv|rss`; metadata at `/healthz`, `/config`, `/opensearch.xml`). The instance has no accounts or login. Its settings enable the html, json, csv and rss formats and exactly one engine, the offline `demo offline` engine (`searx/engines/demo_offline.py`, shortcut `demo`), so no search needs internet access; the demo engine's results are generic key/value items whose caption carries a counter that changes between requests. Autocomplete and the rate limiter are off.",
+  "frozen": {
+    "images": [
+      {
+        "name": "searxng/searxng:2026.10.17-2a6fc07be",
+        "digest": "sha256:79180616c984f39524f6f27f19625a46f82c8ad4aa6a2e553db52b14e1b4a768"
+      }
+    ],
+    "compose": "/home/diogo/dev/testmaster/evals/surface/apps/searxng/compose.yml",
+    "composeSha256": "842cb74cee4ab4a82e3bd9a8053bd87b0be1b70ee778fdc2a05e269ce9c309b6",
+    "composeNote": "The container searxng-tm-app was created with docker run; compose.yml records the same definition and is not used to start it.",
+    "settings": "/home/diogo/.local/state/testmaster-preservation/searxng-agent-round1-20261017/searxng-etc/settings.yml",
+    "settingsSha256": "8066629a21f522cfb5cb81bf0c16e2b45c88fe4f6428ef68d6b54f2d7aa24a9b",
+    "ports": { "app": 20411, "container": 8080 },
+    "dataSeed": "No accounts and no data: the instance is stateless apart from the per-client preferences cookies. Only the offline `demo offline` engine is enabled (use_default_settings with engines.keep_only: [] plus the demo_offline engine); limiter, image_proxy and autocomplete are off; search formats html, json, csv, rss.",
+    "proxyPort": 20421
+  }
+}

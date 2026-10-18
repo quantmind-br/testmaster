@@ -1,0 +1,12 @@
+{
+  "name": "reference-shop",
+  "role": "calibration",
+  "source": "fixtures/reference-shop",
+  "sourceExclude": ["node_modules"],
+  "start": {
+    "command": ["node", "src/server.js", "--port", "{port}"],
+    "cwd": "fixtures/reference-shop",
+    "mutantEnv": "REFERENCE_SHOP_MUTANT"
+  },
+  "context": "You are in the source directory of Reference Shop, a small synthetic web shop (Node.js, `src/index.js` serves the HTTP API and `src/shop.html` the browser UI). Its product requirements are in `artifacts/PRD.md` and its API in `artifacts/openapi.yaml`. The shop is running at {targetUrl} (UI at `/`, API under `/api/` and at the root). It has no seeded user accounts: create the accounts a test needs through its own API."
+}

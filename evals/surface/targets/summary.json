@@ -1,0 +1,477 @@
+{
+  "omp": {
+    "target": "omp",
+    "agentVersion": "omp/18.12.1",
+    "status": "measured",
+    "mainRequestSeq": 1,
+    "requestPath": "/v1/chat/completions",
+    "requestBytes": 40378,
+    "systemBytes": 21795,
+    "toolCount": 11,
+    "toolCountFlattened": 11,
+    "toolBytes": 17719,
+    "testmasterTools": {
+      "count": 37,
+      "injection": "summary",
+      "bytes": 13429,
+      "asToolDefinitions": 0,
+      "asPromptText": 37,
+      "withDescription": 37,
+      "withInputSchema": 0,
+      "withOutputSchema": 0,
+      "serverListedInPrompt": 37,
+      "inputSchemaIdAnywhere": false,
+      "outputSchemaIdAnywhere": false
+    },
+    "skillLoaded": "on-demand",
+    "skillEvidence": {
+      "bodyMarkers": {
+        "Cleanup of data a browser step creates: a form that adds a project has no creating request step": false,
+        "One-shot tests: a plan that sets": false
+      },
+      "descriptionMarker": true,
+      "advertisedLines": [
+        "- testmaster: Uses TestMaster CLI or MCP to prepare sources, decide on test proposals, run authorized…"
+      ],
+      "instructionsBlockMarker": true
+    },
+    "promptTokens": 10528,
+    "cachedTokens": 10240,
+    "cachedTokensReported": true,
+    "uncachedTokens": 288,
+    "reportedUsage": {
+      "prompt_tokens": 10528,
+      "total_tokens": 10544,
+      "completion_tokens": 16,
+      "prompt_tokens_details.cached_tokens": 10240,
+      "prompt_tokens_details.text_tokens": 10528,
+      "completion_tokens_details.reasoning_tokens": 12,
+      "completion_tokens_details.text_tokens": 16
+    },
+    "evidence": {
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "installerPreviewBytes": 40667,
+      "skillReplaced": [
+        {
+          "path": ".omp/skills/testmaster/SKILL.md",
+          "installedSha256": "9dd228df19a7d2b49770c50a493a7bf28445e770b1d3a40bb7f50a780768ff81",
+          "a0Sha256": "e622bb6bd0e43fddfc9fe7c7768d6b2320f17733081a63008a2cef78dd86665a"
+        }
+      ],
+      "modelRequests": 1,
+      "modelRequestSummary": [
+        {
+          "seq": 1,
+          "path": "/v1/chat/completions",
+          "status": 200,
+          "requestBytes": 40378,
+          "toolCount": 11
+        }
+      ],
+      "mcpToolsListServed": 1,
+      "mcpToolsListFromA0Snapshot": true,
+      "mcpToolCalls": 0,
+      "mcpToolsListAnsweredBeforeMeasuredRequest": true
+    }
+  },
+  "pi": {
+    "target": "pi",
+    "agentVersion": "1.3.0",
+    "status": "measured",
+    "note": "Default MCP exposure is codemode (pi docs/mcp.md): server tools are never declared to the model, only the server name is listed under <mcp_servers>; pi connects the server in the background, so tools/list was answered after the first request here.",
+    "cacheNote": "cachedTokens is the provider's prefix cache, warmed by earlier identical runs of this script; promptTokens (cached + uncached) is independent of it",
+    "mainRequestSeq": 1,
+    "requestPath": "/v1/chat/completions",
+    "requestBytes": 9703,
+    "systemBytes": 4569,
+    "toolCount": 5,
+    "toolCountFlattened": 5,
+    "toolBytes": 4777,
+    "testmasterTools": {
+      "count": 0,
+      "injection": "none",
+      "detail": "no TestMaster tool or tool name in the request",
+      "bytes": 0,
+      "asToolDefinitions": 0,
+      "asPromptText": 0,
+      "withDescription": 0,
+      "withInputSchema": 0,
+      "withOutputSchema": 0,
+      "serverListedInPrompt": 1,
+      "inputSchemaIdAnywhere": false,
+      "outputSchemaIdAnywhere": false
+    },
+    "skillLoaded": "on-demand",
+    "skillEvidence": {
+      "bodyMarkers": {
+        "Cleanup of data a browser step creates: a form that adds a project has no creating request step": false,
+        "One-shot tests: a plan that sets": false
+      },
+      "descriptionMarker": true,
+      "advertisedLines": [],
+      "instructionsBlockMarker": true
+    },
+    "promptTokens": 2557,
+    "cachedTokens": 2048,
+    "cachedTokensReported": true,
+    "uncachedTokens": 509,
+    "reportedUsage": {
+      "prompt_tokens": 2557,
+      "total_tokens": 2587,
+      "completion_tokens": 30,
+      "prompt_tokens_details.cached_tokens": 2048,
+      "prompt_tokens_details.text_tokens": 2557,
+      "completion_tokens_details.reasoning_tokens": 26,
+      "completion_tokens_details.text_tokens": 30
+    },
+    "evidence": {
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "installerPreviewBytes": 40677,
+      "skillReplaced": [
+        {
+          "path": ".pi/skills/testmaster/SKILL.md",
+          "installedSha256": "9dd228df19a7d2b49770c50a493a7bf28445e770b1d3a40bb7f50a780768ff81",
+          "a0Sha256": "e622bb6bd0e43fddfc9fe7c7768d6b2320f17733081a63008a2cef78dd86665a"
+        }
+      ],
+      "modelRequests": 1,
+      "modelRequestSummary": [
+        {
+          "seq": 1,
+          "path": "/v1/chat/completions",
+          "status": 200,
+          "requestBytes": 9703,
+          "toolCount": 5
+        }
+      ],
+      "mcpToolsListServed": 1,
+      "mcpToolsListFromA0Snapshot": true,
+      "mcpToolCalls": 0,
+      "mcpToolsListAnsweredBeforeMeasuredRequest": false
+    }
+  },
+  "claude": {
+    "target": "claude",
+    "agentVersion": "2.1.302 (Claude Code)",
+    "status": "measured",
+    "mainRequestSeq": 1,
+    "requestPath": "/v1/messages?beta=true",
+    "requestBytes": 127604,
+    "systemBytes": 15041,
+    "toolCount": 60,
+    "toolCountFlattened": 60,
+    "toolBytes": 110087,
+    "testmasterTools": {
+      "count": 37,
+      "injection": "input",
+      "bytes": 60232,
+      "asToolDefinitions": 37,
+      "asPromptText": 0,
+      "withDescription": 37,
+      "withInputSchema": 36,
+      "withOutputSchema": 0,
+      "serverListedInPrompt": 0,
+      "inputSchemaIdAnywhere": true,
+      "outputSchemaIdAnywhere": false
+    },
+    "skillLoaded": "on-demand",
+    "skillEvidence": {
+      "bodyMarkers": {
+        "Cleanup of data a browser step creates: a form that adds a project has no creating request step": false,
+        "One-shot tests: a plan that sets": false
+      },
+      "descriptionMarker": false,
+      "advertisedLines": [
+        "- testmaster"
+      ],
+      "instructionsBlockMarker": true
+    },
+    "promptTokens": 36918,
+    "cachedTokens": 32768,
+    "cachedTokensReported": true,
+    "uncachedTokens": 4150,
+    "reportedUsage": {
+      "input_tokens": 4150,
+      "output_tokens": 19,
+      "cache_read_input_tokens": 32768
+    },
+    "evidence": {
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "installerPreviewBytes": 40688,
+      "skillReplaced": [
+        {
+          "path": ".claude/skills/testmaster/SKILL.md",
+          "installedSha256": "9dd228df19a7d2b49770c50a493a7bf28445e770b1d3a40bb7f50a780768ff81",
+          "a0Sha256": "e622bb6bd0e43fddfc9fe7c7768d6b2320f17733081a63008a2cef78dd86665a"
+        }
+      ],
+      "modelRequests": 1,
+      "modelRequestSummary": [
+        {
+          "seq": 1,
+          "path": "/v1/messages?beta=true",
+          "status": 200,
+          "requestBytes": 127604,
+          "toolCount": 60
+        }
+      ],
+      "mcpToolsListServed": 1,
+      "mcpToolsListFromA0Snapshot": true,
+      "mcpToolCalls": 0,
+      "mcpToolsListAnsweredBeforeMeasuredRequest": true
+    }
+  },
+  "codex": {
+    "target": "codex",
+    "agentVersion": "codex-cli 0.163.0",
+    "status": "measured",
+    "mainRequestSeq": 1,
+    "requestPath": "/v1/responses",
+    "requestBytes": 85000,
+    "systemBytes": 19816,
+    "toolCount": 13,
+    "toolCountFlattened": 53,
+    "toolBytes": 61704,
+    "testmasterTools": {
+      "count": 37,
+      "injection": "input",
+      "bytes": 41880,
+      "asToolDefinitions": 37,
+      "asPromptText": 0,
+      "withDescription": 37,
+      "withInputSchema": 36,
+      "withOutputSchema": 0,
+      "serverListedInPrompt": 0,
+      "inputSchemaIdAnywhere": false,
+      "outputSchemaIdAnywhere": false
+    },
+    "skillLoaded": "on-demand",
+    "skillEvidence": {
+      "bodyMarkers": {
+        "Cleanup of data a browser step creates: a form that adds a project has no creating request step": false,
+        "One-shot tests: a plan that sets": false
+      },
+      "descriptionMarker": true,
+      "advertisedLines": [
+        "- testmaster: Uses TestMaster CLI or MCP to prepare sources, decide on test proposals, run authorized deterministic tests, and inspect verified evidence. The ag"
+      ],
+      "instructionsBlockMarker": true
+    },
+    "promptTokens": 20605,
+    "cachedTokens": 19456,
+    "cachedTokensReported": true,
+    "uncachedTokens": 1149,
+    "reportedUsage": {
+      "input_tokens": 20605,
+      "input_tokens_details.cached_tokens": 19456,
+      "output_tokens": 23,
+      "output_tokens_details.reasoning_tokens": 19,
+      "total_tokens": 20628
+    },
+    "evidence": {
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "installerPreviewBytes": 40687,
+      "skillReplaced": [
+        {
+          "path": ".agents/skills/testmaster/SKILL.md",
+          "installedSha256": "9dd228df19a7d2b49770c50a493a7bf28445e770b1d3a40bb7f50a780768ff81",
+          "a0Sha256": "e622bb6bd0e43fddfc9fe7c7768d6b2320f17733081a63008a2cef78dd86665a"
+        }
+      ],
+      "modelRequests": 1,
+      "modelRequestSummary": [
+        {
+          "seq": 1,
+          "path": "/v1/responses",
+          "status": 200,
+          "requestBytes": 85000,
+          "toolCount": 13
+        }
+      ],
+      "mcpToolsListServed": 1,
+      "mcpToolsListFromA0Snapshot": true,
+      "mcpToolCalls": 0,
+      "mcpToolsListAnsweredBeforeMeasuredRequest": true
+    }
+  },
+  "cline": {
+    "target": "cline",
+    "agentVersion": "3.0.62",
+    "status": "measured",
+    "mainRequestSeq": 1,
+    "requestPath": "/v1/chat/completions",
+    "requestBytes": 82401,
+    "systemBytes": 4915,
+    "toolCount": 63,
+    "toolCountFlattened": 63,
+    "toolBytes": 77162,
+    "testmasterTools": {
+      "count": 37,
+      "injection": "input",
+      "bytes": 59011,
+      "asToolDefinitions": 37,
+      "asPromptText": 0,
+      "withDescription": 37,
+      "withInputSchema": 36,
+      "withOutputSchema": 0,
+      "serverListedInPrompt": 0,
+      "inputSchemaIdAnywhere": true,
+      "outputSchemaIdAnywhere": false
+    },
+    "skillLoaded": "on-demand",
+    "skillEvidence": {
+      "bodyMarkers": {
+        "Cleanup of data a browser step creates: a form that adds a project has no creating request step": false,
+        "One-shot tests: a plan that sets": false
+      },
+      "descriptionMarker": false,
+      "advertisedLines": [
+        "Available skills: testmaster."
+      ],
+      "instructionsBlockMarker": true
+    },
+    "promptTokens": 25264,
+    "cachedTokens": 23552,
+    "cachedTokensReported": true,
+    "uncachedTokens": 1712,
+    "reportedUsage": {
+      "prompt_tokens": 25264,
+      "total_tokens": 25281,
+      "completion_tokens": 17,
+      "prompt_tokens_details.cached_tokens": 23552,
+      "prompt_tokens_details.text_tokens": 25264,
+      "completion_tokens_details.reasoning_tokens": 14,
+      "completion_tokens_details.text_tokens": 17
+    },
+    "evidence": {
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "installerPreviewBytes": 40728,
+      "skillReplaced": [
+        {
+          "path": ".cline/skills/testmaster/SKILL.md",
+          "installedSha256": "9dd228df19a7d2b49770c50a493a7bf28445e770b1d3a40bb7f50a780768ff81",
+          "a0Sha256": "e622bb6bd0e43fddfc9fe7c7768d6b2320f17733081a63008a2cef78dd86665a"
+        }
+      ],
+      "modelRequests": 1,
+      "modelRequestSummary": [
+        {
+          "seq": 1,
+          "path": "/v1/chat/completions",
+          "status": 200,
+          "requestBytes": 82401,
+          "toolCount": 63
+        }
+      ],
+      "mcpToolsListServed": 1,
+      "mcpToolsListFromA0Snapshot": true,
+      "mcpToolCalls": 0,
+      "mcpToolsListAnsweredBeforeMeasuredRequest": true
+    }
+  },
+  "copilot": {
+    "target": "copilot",
+    "agentVersion": "GitHub Copilot CLI 1.0.60",
+    "status": "measured",
+    "mainRequestSeq": 1,
+    "requestPath": "/v1/chat/completions",
+    "requestBytes": 119451,
+    "systemBytes": 25848,
+    "toolCount": 55,
+    "toolCountFlattened": 55,
+    "toolBytes": 92593,
+    "testmasterTools": {
+      "count": 37,
+      "injection": "input",
+      "bytes": 63373,
+      "asToolDefinitions": 37,
+      "asPromptText": 0,
+      "withDescription": 37,
+      "withInputSchema": 36,
+      "withOutputSchema": 0,
+      "serverListedInPrompt": 0,
+      "inputSchemaIdAnywhere": true,
+      "outputSchemaIdAnywhere": false
+    },
+    "skillLoaded": "on-demand",
+    "skillEvidence": {
+      "bodyMarkers": {
+        "Cleanup of data a browser step creates: a form that adds a project has no creating request step": false,
+        "One-shot tests: a plan that sets": false
+      },
+      "descriptionMarker": true,
+      "advertisedLines": [],
+      "instructionsBlockMarker": true
+    },
+    "promptTokens": 34248,
+    "cachedTokens": 27648,
+    "cachedTokensReported": true,
+    "uncachedTokens": 6600,
+    "reportedUsage": {
+      "prompt_tokens": 34248,
+      "total_tokens": 34263,
+      "completion_tokens": 15,
+      "prompt_tokens_details.cached_tokens": 27648,
+      "prompt_tokens_details.text_tokens": 34248,
+      "completion_tokens_details.reasoning_tokens": 11,
+      "completion_tokens_details.text_tokens": 15
+    },
+    "evidence": {
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "installerPreviewBytes": 40755,
+      "skillReplaced": [
+        {
+          "path": ".github/skills/testmaster/SKILL.md",
+          "installedSha256": "9dd228df19a7d2b49770c50a493a7bf28445e770b1d3a40bb7f50a780768ff81",
+          "a0Sha256": "e622bb6bd0e43fddfc9fe7c7768d6b2320f17733081a63008a2cef78dd86665a"
+        }
+      ],
+      "modelRequests": 1,
+      "modelRequestSummary": [
+        {
+          "seq": 1,
+          "path": "/v1/chat/completions",
+          "status": 200,
+          "requestBytes": 119451,
+          "toolCount": 55
+        }
+      ],
+      "mcpToolsListServed": 2,
+      "mcpToolsListFromA0Snapshot": true,
+      "mcpToolCalls": 0,
+      "mcpToolsListAnsweredBeforeMeasuredRequest": true
+    }
+  },
+  "cursor-agent": {
+    "target": "cursor-agent",
+    "agentVersion": "2026.10.16-e3cb207",
+    "status": "unmeasurable",
+    "reason": "Not measurable without a Cursor account and not retargetable to QuantForge. cursor-agent has no OpenAI/Anthropic-compatible base-URL option (--help matches for base url/openai/anthropic/custom model/byok: 0); --endpoint only retargets Cursor's own API: with a stub endpoint, a fake key and --print the only request was POST /auth/exchange_user_api_key (Cursor auth exchange, answered 401), so no model request was ever sent; unauthenticated 'cursor-agent status' prints 'Not logged in'. [INFERENCE] Even when logged in, the prompt would go to Cursor's proprietary backend and not through a model endpoint the proxy can record.",
+    "evidenceFile": "targets/cursor-agent/probe.json"
+  },
+  "antigravity": {
+    "target": "antigravity",
+    "agentVersion": "antigravity 2.24.0-1",
+    "status": "unmeasurable",
+    "reason": "Not measurable headlessly. Antigravity is an Electron IDE (package antigravity 2.24.0-1): its 'antigravity' entry point starts the GUI application (observed: 'Starting app (v2.24.0)', no exit, no prompt/print mode) and its agent runs inside the IDE through a bundled language_server that needs a Google OAuth login and speaks Google's Cloud Code (ccpa) protocol; the language_server has endpoint flags (--cloud_code_endpoint, --inference_api_server_url, --model_api_client_type=ccpa|gemini, --headless), but it is started and fed by the IDE's extension host; running a session without the GUI would need a Google login or GUI automation, both outside the rules of this measurement (no vendor login, no editing real agent config).",
+    "evidenceFile": "targets/antigravity/probe.json"
+  }
+}

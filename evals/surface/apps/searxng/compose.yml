@@ -1,0 +1,16 @@
+# Frozen definition of the container `searxng-tm-app` that the surface experiment targets. The
+# container was created with `docker run` (no compose file existed); this file records the same
+# definition and is not used to start anything. Settings: only the offline `demo offline` engine,
+# formats html/json/csv/rss, autocomplete and limiter off (see app.json frozen.settingsSha256).
+services:
+  searxng-tm-app:
+    container_name: searxng-tm-app
+    image: searxng/searxng@sha256:79180616c984f39524f6f27f19625a46f82c8ad4aa6a2e553db52b14e1b4a768
+    ports:
+      - "127.0.0.1:20411:8080"
+    volumes:
+      - /home/diogo/.local/state/testmaster-preservation/searxng-agent-round1-20261017/searxng-etc:/etc/searxng
+      - searxng-cache:/var/cache/searxng
+    restart: "no"
+volumes:
+  searxng-cache:

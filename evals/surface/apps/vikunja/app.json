@@ -1,0 +1,37 @@
+{
+  "name": "vikunja",
+  "role": "holdout",
+  "repo": "~/dev/vikunja-tm",
+  "commit": "a16be96aa454671fdf213b0fbe411dd38a098418",
+  "upstream": "http://127.0.0.1:20711",
+  "health": "/api/v1/info",
+  "context": "You are in the source directory of Vikunja v2.7.0, an open-source task and project manager (Go backend in `pkg/`, Vue frontend in `frontend/`, SQLite database). Its REST API is described by a Swagger 2.0 document at `pkg/swagger/swagger.json` (also served at `/api/v1/docs.json`). Vikunja is running at {targetUrl} (web UI at `/`, REST API under `/api/v1/`). Authenticate API calls with the header `Authorization: Bearer <token>`, where the token is either a long-lived API token (`tk_...`) or the JWT returned by `POST /api/v1/login`. Self-registration (`POST /api/v1/register`) is enabled, so a test may create additional users. A pre-created user account exists; the instance holds no other data, so a test creates the projects, tasks and other resources it needs through the API.",
+  "secretsFile": "~/.local/state/testmaster-surface/apps/vikunja/secrets.json",
+  "agentEnv": {
+    "VIKUNJA_ADMIN_USERNAME": "adminUsername",
+    "VIKUNJA_ADMIN_PASSWORD": "adminPassword",
+    "VIKUNJA_API_TOKEN": "apiToken"
+  },
+  "secretsNote": "The pre-created user is named in the environment variable `VIKUNJA_ADMIN_USERNAME` and its password is in `VIKUNJA_ADMIN_PASSWORD`; a long-lived API token for that user (all permissions) is in `VIKUNJA_API_TOKEN`.",
+  "frozen": {
+    "version": "v2.7.0",
+    "images": [
+      {
+        "name": "vikunja/vikunja:2.7.0",
+        "digest": "sha256:e2204a1c1c6a81e833c2b3a5442be182ca2335b54c2e7e37578cc3fe12a27cfc"
+      }
+    ],
+    "compose": "/home/diogo/.local/state/testmaster-surface/apps/vikunja/compose.yml",
+    "composeSha256": "4772799688db94372b52321207f7912caa47375483a42abbffdf7b2c56e4f928",
+    "ports": {
+      "app": 20711
+    },
+    "proxyPort": 20721,
+    "publicUrl": "http://127.0.0.1:20721/",
+    "database": "SQLite in the named volume tm-holdout-vikunja_vikunja-db (container path /db/vikunja.db); uploaded files in tm-holdout-vikunja_vikunja-files",
+    "apiSpec": "pkg/swagger/swagger.json (Swagger 2.0, 128 paths)",
+    "dataSeed": "Fresh database created by compose on first start; one local user `tmadmin` (id 1, email tmadmin@example.com, an ordinary user, `is_admin` false) registered through POST /api/v1/register, one API token `tm-holdout-agent-token` (all route permissions, expires 2030-01-01) created through PUT /api/v1/tokens. Credentials live only in secretsFile. The only data are the default `Inbox` project (id 1) and the built-in `My Open Tasks` saved filter. Registration stays enabled, mailer disabled. The seed-verification run (5 seeds) was done on a database that was then destroyed and recreated with this seed.",
+    "start": "docker compose -f /home/diogo/.local/state/testmaster-surface/apps/vikunja/compose.yml up -d",
+    "stop": "docker compose -f /home/diogo/.local/state/testmaster-surface/apps/vikunja/compose.yml down"
+  }
+}

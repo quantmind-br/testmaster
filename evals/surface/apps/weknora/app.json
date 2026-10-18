@@ -1,0 +1,31 @@
+{
+  "name": "weknora",
+  "role": "development",
+  "repo": "~/dev/WeKnora-tm",
+  "commit": "50a7934e9f512cb930efe144b860f7a10e9338c6",
+  "upstream": "http://127.0.0.1:20511",
+  "health": "/api/v1/auth/config",
+  "context": "You are in the repository of WeKnora, a knowledge-base (RAG) platform: a Go (Gin) back-end in `cmd/` and `internal/` (routes in `internal/router/`, handlers in `internal/handler/`) and a Vue front-end in `frontend/`. Its REST API is described by the Swagger 2.0 files `docs/swagger.json` and `docs/swagger.yaml` (`basePath` `/api/v1`); the swagger can differ from the handlers, so confirm behavior against the running application. The application is running at {targetUrl}: the web UI is served at `/` and the API under `{targetUrl}/api/v1/` (same origin; the UI's nginx forwards `/api/` to the back-end; the back-end's own `/health` is not routed at this origin, where it answers the UI's HTML page). Authentication is a JWT: `POST /api/v1/auth/login` returns `token` and `refresh_token`, and the API takes `Authorization: Bearer <token>`. Registration is open (`POST /api/v1/auth/register` with `username`, `email`, `password`) and every new user gets its own workspace (tenant), so a test can create the accounts it needs; use unique e-mail addresses and usernames. No language model, embedding model or document reader is configured, so chat, semantic search and document import/parsing are unavailable and out of scope. The instance's data persists across sessions: create your own users and resources and do not assume an empty list.",
+  "secretsFile": "~/.local/state/testmaster-surface/apps/weknora/secrets.json",
+  "agentEnv": {
+    "WEKNORA_USER_EMAIL": "WEKNORA_USER_EMAIL",
+    "WEKNORA_USER_NAME": "WEKNORA_USER_NAME",
+    "WEKNORA_USER_PASSWORD": "WEKNORA_USER_PASSWORD"
+  },
+  "secretsNote": "A registered user already exists: its e-mail address is in the environment variable `WEKNORA_USER_EMAIL`, its username in `WEKNORA_USER_NAME` and its password in `WEKNORA_USER_PASSWORD`; log in with them at `{targetUrl}/login` or `POST {targetUrl}/api/v1/auth/login`. You can also register other users.",
+  "frozen": {
+    "images": [
+      { "name": "weknora-tm-app:local", "digest": "sha256:d9bc3f86f89b5aeacec1d9f7ae7a5f3a19ce5582b34077559e3ca5011db30a93" },
+      { "name": "weknora-tm-ui:local", "digest": "sha256:ebf4f7e6325cc6bf0b571c1a04a8defb1cb35373be85e41ebcf0c73b4ab9edc8" },
+      { "name": "paradedb/paradedb:v0.22.2-pg17", "digest": "sha256:af585013f97f622715de01e48d00558f7edf17055d7b40deafc9f98ca8d99a56" },
+      { "name": "redis:7.0-alpine", "digest": "sha256:c9d92d840fd011c908f040592857c724ae6d877f2aba5c40ad963276507386b2" }
+    ],
+    "compose": "/home/diogo/.local/state/testmaster-surface/apps/weknora/compose.yml",
+    "composeSha256": "b590816493b04b841009c4df2ba6de799dc887c6238d739b985b17fa45173ba9",
+    "composeNote": "Byte-identical copy of ~/.local/state/testmaster-preservation/weknora-setup-20261017/compose.yml; infrastructure secrets in infra.env next to it (mode 0600). Started with: docker compose -f compose.yml --env-file infra.env up -d",
+    "ports": { "ui": 20511, "app": 20512 },
+    "dataSeed": "Fresh volumes (postgres-data, data-files) created at first start of this stack; AUTO_MIGRATE applied schema version 114; registration open (DISABLE_REGISTRATION=false). Accounts: tm-agent@example.com / tm-agent (workspace 10000), registered through POST /api/v1/auth/register with the password stored in secretsFile; plus three throwaway users (probeNNN@example.com, pNNN@example.com, workspaces 10001-10002, one knowledge base deleted) created while verifying the seeds. No other data; no models configured.",
+    "proxyOrigin": "The proxy fronts the UI (20511), whose nginx forwards /api/ to the app, so browser and API share one origin. The back-end's /health is only at 20512 and is not reachable through the UI origin.",
+    "proxyPort": 20521
+  }
+}

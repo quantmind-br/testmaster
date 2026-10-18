@@ -1,0 +1,75 @@
+[
+  {
+    "id": "sx-hash-answer",
+    "task": "The hash plugin answers hash queries: `GET /search?q=sha256 abc&format=json` returns HTTP 200 with a JSON body whose `answers` list contains an answer stating the SHA-256 digest of `abc`, `ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad`.",
+    "mutant": {
+      "rules": [
+        {
+          "method": "GET",
+          "path": "^/search$",
+          "actions": [
+            {
+              "type": "text",
+              "from": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+              "to": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ae"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "sx-empty-query",
+    "task": "A JSON search with an empty query is rejected: `GET /search?q=&format=json` (the `q` parameter present but empty) answers HTTP 400 with a JSON body whose `error` field is `No query`.",
+    "mutant": {
+      "rules": [
+        {
+          "method": "GET",
+          "path": "^/search$",
+          "query": { "q": "", "format": "json" },
+          "actions": [{ "type": "status", "status": 200 }]
+        }
+      ]
+    }
+  },
+  {
+    "id": "sx-rss-media-type",
+    "task": "The RSS output format declares an XML media type: `GET /search?q=test&format=rss` answers HTTP 200 with a `Content-Type` header that names an XML media type (for example `text/xml`), and its body is an RSS 2.0 document (`<rss version=\"2.0\">` with a `<channel>` titled `SearXNG search: test`).",
+    "mutant": {
+      "rules": [
+        {
+          "method": "GET",
+          "path": "^/search$",
+          "query": { "format": "rss" },
+          "actions": [{ "type": "dropHeader", "name": "content-type" }]
+        }
+      ]
+    }
+  },
+  {
+    "id": "sx-preferences-persist",
+    "task": "Saved preferences persist across visits: a client that submits the preferences form (`POST /preferences`, form fields such as `simple_style=dark` and `method=POST`) is redirected to the home page, and when it later requests `GET /preferences` with the cookies it received, the page shows its choices selected (the `simple_style` option `dark` and the `method` option `POST` marked `selected`) instead of the defaults.",
+    "mutant": {
+      "rules": [
+        {
+          "method": "POST",
+          "path": "^/preferences$",
+          "actions": [{ "type": "dropHeader", "name": "set-cookie" }]
+        }
+      ]
+    }
+  },
+  {
+    "id": "sx-config-engines",
+    "task": "The instance configuration endpoint lists the enabled engines: `GET /config` returns HTTP 200 with a JSON body whose `engines` array contains exactly one engine, named `demo offline` with shortcut `demo`, `enabled` true and categories `[\"general\"]`.",
+    "mutant": {
+      "rules": [
+        {
+          "method": "GET",
+          "path": "^/config$",
+          "actions": [{ "type": "json", "pointer": "/engines", "op": "emptyArray" }]
+        }
+      ]
+    }
+  }
+]

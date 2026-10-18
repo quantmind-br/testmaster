@@ -1,0 +1,27 @@
+[
+  {
+    "id": "rs-health",
+    "task": "The health endpoint reports the service healthy: `GET /health` answers HTTP 200 with a JSON body whose `status` is `ok` (requirement SHOP-HEALTH-001).",
+    "mutant": { "env": { "REFERENCE_SHOP_MUTANT": "health-degraded" } }
+  },
+  {
+    "id": "rs-paging",
+    "task": "Offset pagination of the product catalog (`GET /products` with `offset` and `limit`) enumerates every product exactly once: walking the pages returns each product id once and no product is skipped (requirement SHOP-PAGING-001).",
+    "mutant": { "env": { "REFERENCE_SHOP_MUTANT": "pagination-skip" } }
+  },
+  {
+    "id": "rs-password",
+    "task": "Registration refuses an empty password: `POST /users` with an empty password is rejected and creates no account or session (requirement SHOP-AUTH-001, API side).",
+    "mutant": { "env": { "REFERENCE_SHOP_MUTANT": "no-password-validation" } }
+  },
+  {
+    "id": "rs-price",
+    "task": "Order totals are exact integer cents: three Precision Widgets at 1005 cents each total 3015 cents in the order a signed-in user places (requirement SHOP-PRICE-001).",
+    "mutant": { "env": { "REFERENCE_SHOP_MUTANT": "price-rounding" } }
+  },
+  {
+    "id": "rs-product-update",
+    "task": "Updating a product changes it: after a signed-in user updates a product's name or price through the API, reading the product back returns the new values.",
+    "mutant": { "env": { "REFERENCE_SHOP_MUTANT": "products-update-ignored" } }
+  }
+]

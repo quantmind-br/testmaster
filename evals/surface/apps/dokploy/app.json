@@ -1,0 +1,27 @@
+{
+  "name": "dokploy",
+  "role": "development",
+  "repo": "~/dev/dokploy-tm",
+  "commit": "a0e0574bcd3664ea6ae528fa89ea98300c69e242",
+  "upstream": "http://127.0.0.1:20611",
+  "health": "/api/settings.health",
+  "context": "You are in the source directory of Dokploy v0.30.6, a self-hosted deployment platform (Next.js with tRPC, a REST API generated from the tRPC routers, better-auth, PostgreSQL). It is running at {targetUrl} (web UI and API on the same origin). The REST API lives under `/api/<router>.<procedure>` (for example `/api/project.all`): queries are GET requests with the input in the query string, mutations are POST requests with a JSON body, and the API authenticates with the `x-api-key` header. Its OpenAPI 3.1 document is `openapi.json` at the repository root (it is known to deviate from the running app in places: trust observed behavior over it); the tRPC routers are in `apps/dokploy/server/api/routers/` and the pages in `apps/dokploy/pages/`. The instance has one seeded account, the owner of its only organization; `/register` is closed, and the sign-in page is at `/`. The instance can reach the Docker daemon of this machine, so never deploy, start, stop, redeploy or rebuild anything and never call the `docker.*`, `swarm.*`, `cluster.*`, `server.*`, `compose.*`, `registry.*`, `mounts.*`, `backup.*`, `schedule.*` or database routers (`postgres.*`, `mysql.*`, `mariadb.*`, `mongo.*`, `redis.*`, `libsql.*`) or any `settings.*` route that changes anything; records in the Dokploy database (projects, environments, application records) are safe to create, read, change and delete.",
+  "secretsFile": "~/.local/state/testmaster-surface/apps/dokploy/secrets.json",
+  "agentEnv": {
+    "DOKPLOY_ADMIN_EMAIL": "DOKPLOY_ADMIN_EMAIL",
+    "DOKPLOY_ADMIN_PASSWORD": "DOKPLOY_ADMIN_PASSWORD",
+    "DOKPLOY_API_KEY": "DOKPLOY_API_KEY"
+  },
+  "secretsNote": "The owner account signs in with the email in the environment variable `DOKPLOY_ADMIN_EMAIL` and the password in `DOKPLOY_ADMIN_PASSWORD`; an API key of that user, for the `x-api-key` header, is in `DOKPLOY_API_KEY`.",
+  "frozen": {
+    "images": [
+      { "name": "dokploy-tm:local", "digest": "sha256:0f77a3c3cf7421665d7b25d5d91993f4439accb8f7a86db933613415e4c4c8f4" },
+      { "name": "postgres:16-alpine", "digest": "sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea" }
+    ],
+    "compose": "/home/diogo/.local/state/testmaster-surface/apps/dokploy/compose.yml",
+    "composeSha256": "bfaed3fba178402c6d8e9ddf464fcef52261508e8fc8836b70e4639cf6d49a67",
+    "ports": { "app": 20611, "proxy": 20621 },
+    "proxyPort": 20621,
+    "dataSeed": "Fresh PostgreSQL volume (compose project dokploy-surface, started with DOKPLOY_TM_DB_PASSWORD/DOKPLOY_TM_AUTH_SECRET from compose.env beside the compose file). The owner account (first sign-up, Surface Admin) and one API key named surface-agent (rate limit off, no expiry) were created through POST /api/auth/sign-up/email and the user.createApiKey tRPC mutation; no projects, applications or other records exist. The credentials are in the secretsFile. BETTER_AUTH_URL is http://127.0.0.1:20621 (the proxy origin). The image build is the Dockerfile.tm of dokploy-setup-20261017 at the recorded commit; the compose differs from that file only in the compose project and container names and BETTER_AUTH_URL. The Docker swarm of the host is inactive: Dokploy logs a swarm unhandledRejection at startup and keeps serving."
+  }
+}

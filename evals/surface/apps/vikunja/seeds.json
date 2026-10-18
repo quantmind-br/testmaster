@@ -1,0 +1,63 @@
+[
+  {
+    "id": "auth-current-user",
+    "task": "`GET /api/v1/user` returns the authenticated user: with a valid `Authorization: Bearer <API token>` header it answers 200 with a JSON body whose `username` is the token owner's username, and the same request without credentials, or with a malformed or unknown token, is rejected with 401 and no user data.",
+    "mutant": {
+      "rules": [
+        { "method": "GET", "path": "^/api/v1/user$", "actions": [{ "type": "status", "status": 200 }] }
+      ]
+    }
+  },
+  {
+    "id": "project-read-back",
+    "task": "Creating a project with `PUT /api/v1/projects` and a JSON body `{\"title\", \"description\"}` answers 201 with the new project's `id`; reading it back with `GET /api/v1/projects/{id}` returns 200 and the same `title` and `description` that were stored, with the creating user as `owner`.",
+    "mutant": {
+      "rules": [
+        {
+          "method": "GET",
+          "path": "^/api/v1/projects/\\d+$",
+          "actions": [{ "type": "json", "pointer": "/description", "op": "replace", "value": "" }]
+        }
+      ]
+    }
+  },
+  {
+    "id": "task-mark-done",
+    "task": "In a project the test created, create a task with `PUT /api/v1/projects/{id}/tasks`, then mark it done with `POST /api/v1/tasks/{taskId}` and a JSON body that sets `done` to true (keep the `title`). The response is 200 with `done` true and `done_at` set to a real timestamp (no longer `0001-01-01T00:00:00Z`), and `GET /api/v1/tasks/{taskId}` afterwards also reports `done` true.",
+    "mutant": {
+      "rules": [
+        {
+          "method": "POST",
+          "path": "^/api/v1/tasks/\\d+$",
+          "actions": [{ "type": "json", "pointer": "/done", "op": "replace", "value": false }]
+        }
+      ]
+    }
+  },
+  {
+    "id": "task-list-pagination",
+    "task": "After creating three tasks in a project the test created, `GET /api/v1/tasks?per_page=2&page=1` answers 200 with a JSON array of at most 2 tasks and a numeric `X-Pagination-Total-Pages` response header that is at least 2 (it counts the pages of all tasks the user can see), together with an `X-Pagination-Result-Count` header equal to the number of tasks in the body.",
+    "mutant": {
+      "rules": [
+        {
+          "method": "GET",
+          "path": "^/api/v1/tasks$",
+          "actions": [{ "type": "dropHeader", "name": "X-Pagination-Total-Pages" }]
+        }
+      ]
+    }
+  },
+  {
+    "id": "task-comment-author",
+    "task": "Adding a comment with `PUT /api/v1/tasks/{taskId}/comments` and a JSON body `{\"comment\": \"...\"}` on a task the test created answers 201 with the stored `comment` text, an `id`, and an `author` object whose `username` is the commenting user; `GET /api/v1/tasks/{taskId}/comments` then lists that comment.",
+    "mutant": {
+      "rules": [
+        {
+          "method": "PUT",
+          "path": "^/api/v1/tasks/\\d+/comments$",
+          "actions": [{ "type": "json", "pointer": "/author", "op": "remove" }]
+        }
+      ]
+    }
+  }
+]

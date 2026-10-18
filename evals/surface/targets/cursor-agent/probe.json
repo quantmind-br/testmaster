@@ -1,0 +1,23 @@
+{
+  "collectedAt": "2026-10-18T16:03:39.567Z",
+  "helpProviderOptions": [],
+  "helpEndpointOption": [
+    "  -e, --endpoint <url>         Target API endpoint URL (can also use",
+    "                               CURSOR_API_ENDPOINT env var) (default:",
+    "                               CURSOR_API_ENDPOINT)"
+  ],
+  "statusWithoutLogin": "Not logged in",
+  "printModeWithFakeKeyAndStubEndpoint": {
+    "exitCode": 1,
+    "output": "\u001b[33m⚠ Warning: The provided API key is invalid.\u001b[0m\nThe API key was loaded from the CURSOR_API_KEY environment variable.\nPlease check you have the right key, create a new one, or authenticate without it.",
+    "requestsReceivedByStub": [
+      {
+        "method": "POST",
+        "url": "/auth/exchange_user_api_key",
+        "contentType": "application/json",
+        "bodyBytes": 2,
+        "bodyText": "{}"
+      }
+    ]
+  }
+}

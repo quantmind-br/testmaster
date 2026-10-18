@@ -1,0 +1,70 @@
+[
+  {
+    "id": "wk-token-refresh",
+    "task": "Token refresh: `POST /api/v1/auth/refresh` with the JSON body `{\"refreshToken\": <the refresh_token returned by login>}` answers HTTP 200 with a non-empty `access_token` string, and that new access token authenticates `GET /api/v1/auth/me` (HTTP 200).",
+    "mutant": {
+      "rules": [
+        {
+          "method": "POST",
+          "path": "^/api/v1/auth/refresh$",
+          "actions": [{ "type": "json", "pointer": "/access_token", "op": "replace", "value": "" }]
+        }
+      ]
+    }
+  },
+  {
+    "id": "wk-register-validation",
+    "task": "Registration validation: `POST /api/v1/auth/register` with a syntactically invalid e-mail address (for example `not-an-email`) and an otherwise valid username and password is refused with HTTP 400, and no account is created (logging in with that e-mail and password is also refused).",
+    "mutant": {
+      "rules": [
+        {
+          "method": "POST",
+          "path": "^/api/v1/auth/register$",
+          "actions": [{ "type": "status", "status": 201 }]
+        }
+      ]
+    }
+  },
+  {
+    "id": "wk-kb-update",
+    "task": "Updating a knowledge base: for a signed-in user's knowledge base, `PUT /api/v1/knowledge-bases/{id}` with a new `name` and a new `description` answers HTTP 200 with `data.name` and `data.description` equal to the new values, and `GET /api/v1/knowledge-bases/{id}` then returns the same new values.",
+    "mutant": {
+      "rules": [
+        {
+          "method": "PUT",
+          "path": "^/api/v1/knowledge-bases/[^/]+$",
+          "actions": [
+            { "type": "json", "pointer": "/data/name", "op": "replace", "value": "" },
+            { "type": "json", "pointer": "/data/description", "op": "replace", "value": "" }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "wk-kb-delete",
+    "task": "Deleting a knowledge base: `DELETE /api/v1/knowledge-bases/{id}` of a signed-in user's own knowledge base answers HTTP 200 with `success` true, after which `GET /api/v1/knowledge-bases/{id}` answers HTTP 404 and the knowledge base no longer appears in `GET /api/v1/knowledge-bases`.",
+    "mutant": {
+      "rules": [
+        {
+          "method": "GET",
+          "path": "^/api/v1/knowledge-bases/[^/]+$",
+          "actions": [{ "type": "status", "status": 200 }]
+        }
+      ]
+    }
+  },
+  {
+    "id": "wk-kb-tags-total",
+    "task": "Knowledge base tags: after a signed-in user creates three tags with distinct names in one of their knowledge bases (`POST /api/v1/knowledge-bases/{id}/tags` with `{\"name\": ...}`), `GET /api/v1/knowledge-bases/{id}/tags` answers HTTP 200 with `data.total` equal to 3 and `data.data` listing the three tag names.",
+    "mutant": {
+      "rules": [
+        {
+          "method": "GET",
+          "path": "^/api/v1/knowledge-bases/[^/]+/tags$",
+          "actions": [{ "type": "json", "pointer": "/data/total", "op": "replace", "value": 0 }]
+        }
+      ]
+    }
+  }
+]
