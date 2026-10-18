@@ -1,0 +1,89 @@
+{
+  "round": "c0-reference-shop",
+  "purpose": "Calibration (PLAN.md §10, Prática): validate the instrument on the deterministic fixture before development rounds. Its results inform no acceptance decision.",
+  "commit": "609e337b7b022a46bb379fdb620d70ee179c5bdf",
+  "buildHash": "035e70fa691b13aac1f9057293ae1e4442ff7f700a9205809b05b5bb4aee4396",
+  "protocol": "evals/surface/preregistration.json",
+  "protocolSha256": "8ef5bfdb0d52f583ca389cdcdb6c6bb248caf8645428af0ab091f28fa30f2429",
+  "stateDirectory": "~/.local/state/testmaster-surface",
+  "orderSeed": 20261018,
+  "agentUpstream": "https://api.quantforge.com.br",
+  "taskTemplate": "evals/surface/task-template.md",
+  "taskTemplateSha256": "efe231d875af3d46e599d8b80dfdc4e132fc9408b235e7668ee4cb70af1fa388",
+  "a0ToolsList": "evals/surface/a0/tools-list.json",
+  "a0ToolsListSha256": "0afeef59a6eb373d1b56255e54079331ae058cc102cd09825f13262d8241f4c0",
+  "internal": {
+    "provider": "quantforge",
+    "model": "gpt-6.1-sol"
+  },
+  "arms": [
+    {
+      "id": "A0",
+      "mcp": "a0",
+      "skillDir": "evals/surface/skills/a0",
+      "skillSha256": "e6583432ab347ca96909404f07e69d4bc298e428291ee8915a3f3e6e8f4d6a4d"
+    },
+    {
+      "id": "A1",
+      "mcp": "current",
+      "skillDir": "evals/surface/skills/a0",
+      "skillSha256": "e6583432ab347ca96909404f07e69d4bc298e428291ee8915a3f3e6e8f4d6a4d"
+    },
+    {
+      "id": "A2",
+      "mcp": "current",
+      "skillDir": "packages/application/skill-content/2.0.0",
+      "skillSha256": "f6a652e11a230e840a3c7597705f9ae90c1e1de7b95c519d20d268ca66903403"
+    },
+    {
+      "id": "A3",
+      "mcp": "none",
+      "skillDir": "packages/application/skill-content/2.0.0",
+      "skillSha256": "f6a652e11a230e840a3c7597705f9ae90c1e1de7b95c519d20d268ca66903403"
+    }
+  ],
+  "models": [
+    {
+      "id": "qwen3.8-flash",
+      "thinking": null
+    }
+  ],
+  "apps": [
+    {
+      "name": "reference-shop",
+      "seeds": [
+        "rs-health",
+        "rs-paging",
+        "rs-password",
+        "rs-price",
+        "rs-product-update"
+      ],
+      "upstreamPort": 20331,
+      "mutantPort": 20332,
+      "proxyPort": 20341,
+      "concurrency": 4
+    }
+  ],
+  "analysis": {
+    "control": "A0",
+    "treatments": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "primaryTreatment": "A3",
+    "bootstrapReplicates": 10000,
+    "bootstrapSeed": 20261018,
+    "thresholds": {
+      "T1surfaceMax": 3000,
+      "TtotalRatioMax": 0.7,
+      "invalidRateDeltaUpperMax": 0.03,
+      "fabricationsDeltaUpperMax": 0,
+      "stepsToGreenRatioMax": 1.15
+    },
+    "abandonment": {
+      "invalidRateDeltaPointMin": 0.1
+    }
+  },
+  "instrumentChecksBefore": "pilot (/tmp/pilot) and driver smokes smoke-driver, smoke-driver-2, smoke-driver-3 (rs-health, A0 and A3, qwen3.8-flash) found and fixed harness defects: a session directory below the private /tmp, the agent reading the TestMaster checkout and host processes, TestMaster runtime sockets hidden from Docker by the private /tmp. None of their results is used."
+}
