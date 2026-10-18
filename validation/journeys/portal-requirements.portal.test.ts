@@ -244,8 +244,15 @@ describe("requirements review", () => {
   });
 
   it("UX-012 a re-normalization that rewords a requirement shows the interpretation change with the text before and after", async () => {
+    // The rewording rests on other evidence (both sources); a requirement restated on exactly the
+    // same chunks is carried unchanged and logs no interpretation change.
     model.setOutput({
-      requirements: [statement("r-true", "Healthy is true when the database answers", 1, "ok")],
+      requirements: [
+        {
+          ...statement("r-true", "Healthy is true when the database answers", 1, "ok"),
+          evidenceIds: ["E1", "E2"],
+        },
+      ],
       conflicts: [],
       openQuestions: [],
     });
@@ -253,6 +260,7 @@ describe("requirements review", () => {
     await page.goto(`/projects/${projectId}/requirements`);
     await page.getByRole("heading", { level: 1, name: "Requirements" }).waitFor();
     await page.getByLabel(/desired\.md/).check();
+    await page.getByLabel(/code\.md/).check();
     await page.getByRole("button", { name: "Normalize" }).click();
     const history = page.getByTestId("history");
     await history.getByText("Interpretation changed").first().waitFor();
