@@ -1,6 +1,6 @@
 import { closeSync, constants, fstatSync, mkdirSync, openSync } from "node:fs";
 import type { FileHandle } from "node:fs/promises";
-import { open, rename, rm, unlink } from "node:fs/promises";
+import { link, open, rename, rm, unlink } from "node:fs/promises";
 import { isAbsolute, resolve, win32 } from "node:path";
 
 export class UnsafePathError extends Error {
@@ -140,6 +140,17 @@ export class ConfinedRoot {
     const b = this.parent(to, true);
     try {
       await rename(`/proc/self/fd/${a.fd}/${a.name}`, `/proc/self/fd/${b.fd}/${b.name}`);
+    } finally {
+      a.close();
+      b.close();
+    }
+  }
+  /** Exclusive publication: fails with EEXIST instead of replacing an existing `to`. */
+  async link(from: string, to: string): Promise<void> {
+    const a = this.parent(from, false);
+    const b = this.parent(to, true);
+    try {
+      await link(`/proc/self/fd/${a.fd}/${a.name}`, `/proc/self/fd/${b.fd}/${b.name}`);
     } finally {
       a.close();
       b.close();

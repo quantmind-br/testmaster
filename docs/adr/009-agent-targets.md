@@ -3,7 +3,7 @@
 - Status: accepted
 - Date: 2026-10-05
 - Scope: approved M0–M2 implementation plan; later profiles remain capability-gated.
-- Amended by: [ADR-023](023-pi-omp-agent-targets.md) (adds the `pi` and `omp` targets).
+- Amended by: [ADR-023](023-pi-omp-agent-targets.md) (adds the `pi` and `omp` targets), [ADR-027](027-agent-skill-lock-recovery.md) (recovers a lock whose owner died).
 
 ## Context
 

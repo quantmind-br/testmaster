@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { FileHandle } from "node:fs/promises";
 import { lstat, readFile, rename, unlink } from "node:fs/promises";
+import { hostname } from "node:os";
 import { dirname, resolve } from "node:path";
 import { ConfinedRoot, UnsafePathError } from "@testmaster/evidence";
 import {
@@ -36,6 +37,115 @@ interface InternalPlan {
 const previews = new WeakMap<AgentSkillPlan, InternalPlan>();
 const receipts = new WeakMap<AgentSkillReceipt, InternalPlan>();
 const contentUrl = new URL("../../skill-content/1.0.0/SKILL.md", import.meta.url);
+const LOCK_PATH = ".testmaster/agent-skills.lock";
+const RECLAIM_GUARD_PATH = ".testmaster/agent-skills.lock.reclaim";
+
+type LockState = { kind: "absent" } | { kind: "held" } | { kind: "stale" };
+
+async function readLockFile(root: ConfinedRoot, path: string): Promise<string> {
+  const file = await root.openFile(path);
+  try {
+    return await file.readFile("utf8");
+  } finally {
+    await file.close();
+  }
+}
+function processAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "EPERM";
+  }
+}
+async function inspectLock(root: ConfinedRoot): Promise<LockState> {
+  let content: string;
+  try {
+    content = await readLockFile(root, LOCK_PATH);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return { kind: "absent" };
+    // A second link exists only while a live installer is publishing its lock.
+    if (error instanceof UnsafePathError) return { kind: "held" };
+    throw error;
+  }
+  let owner: { pid?: unknown; host?: unknown };
+  try {
+    owner = JSON.parse(content) as typeof owner;
+  } catch {
+    // This installer never publishes an empty or partial lock, but an earlier one wrote its owner
+    // after creating the file: such a lock may belong to a live installer and stays for the operator.
+    return { kind: "held" };
+  }
+  // Another host's process cannot be checked from here.
+  if (owner.host !== undefined && owner.host !== hostname()) return { kind: "held" };
+  if (typeof owner.pid !== "number") return { kind: "held" };
+  return processAlive(owner.pid) ? { kind: "held" } : { kind: "stale" };
+}
+/**
+ * Removes a lock whose owner died; true when the lock is gone. Reclaimers take an exclusive guard
+ * for the check and the unlink, so no other reclaimer can replace the lock in between, and an
+ * installer can only publish a lock once the stale one is gone.
+ */
+async function reclaimStaleLock(root: ConfinedRoot): Promise<boolean> {
+  let guard: FileHandle;
+  try {
+    guard = await root.openFile(RECLAIM_GUARD_PATH, true);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EEXIST") return false;
+    throw error;
+  }
+  try {
+    const state = await inspectLock(root);
+    if (state.kind === "stale") await root.unlink(LOCK_PATH);
+    return state.kind !== "held";
+  } finally {
+    await guard.close();
+    await root.unlink(RECLAIM_GUARD_PATH);
+  }
+}
+/** Publishes a lock that names its owner from the first byte; null when a live installer holds it. */
+async function acquireLock(root: ConfinedRoot): Promise<string | null> {
+  const token = randomUUID();
+  const temporary = `${LOCK_PATH}.${token}.tmp`;
+  const file = await root.openFile(temporary, true);
+  try {
+    await file.writeFile(
+      JSON.stringify({
+        pid: process.pid,
+        host: hostname(),
+        token,
+        startedAt: new Date().toISOString(),
+      }),
+    );
+    await file.sync();
+  } finally {
+    await file.close();
+  }
+  try {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await root.link(temporary, LOCK_PATH);
+        return token;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+        if (attempt > 0 || !(await reclaimStaleLock(root))) return null;
+      }
+    }
+  } finally {
+    await root.unlink(temporary);
+  }
+}
+/** Removes the lock only while it is still the one this installer published. */
+async function releaseLock(root: ConfinedRoot, token: string): Promise<void> {
+  let owner: { token?: unknown };
+  try {
+    owner = JSON.parse(await readLockFile(root, LOCK_PATH)) as typeof owner;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+    throw error;
+  }
+  if (owner.token === token) await root.unlink(LOCK_PATH);
+}
 
 function failure(
   target: AgentTarget,
@@ -270,19 +380,17 @@ async function applyPlan(plan: AgentSkillPlan): Promise<AgentSkillApplyResult> {
       "Plan must come from planAgentSkills in this process",
     );
   let root: ConfinedRoot | undefined;
-  let lock: FileHandle | undefined;
-  const lockPath = ".testmaster/agent-skills.lock";
+  let token: string | null = null;
   try {
     root = new ConfinedRoot(internal.root);
-    try {
-      lock = await root.openFile(lockPath, true);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "EEXIST")
-        return failure(internal.target, "lock_busy", "Another installer owns the workspace lock");
-      throw error;
-    }
-    await lock.writeFile(JSON.stringify({ pid: process.pid, startedAt: new Date().toISOString() }));
-    await lock.sync();
+    token = await acquireLock(root);
+    if (!token)
+      return failure(
+        internal.target,
+        "lock_busy",
+        "Another installer owns the workspace lock; if no installer is running, remove the lock file",
+        LOCK_PATH,
+      );
     for (const item of internal.snapshots) {
       const current = await snapshot(root, item.path);
       if (!same(current.bytes, item.bytes) || current.mode !== item.mode)
@@ -338,10 +446,7 @@ async function applyPlan(plan: AgentSkillPlan): Promise<AgentSkillApplyResult> {
   } catch (error) {
     return caught(internal.target, error);
   } finally {
-    if (lock && root) {
-      await lock.close();
-      await root.unlink(lockPath);
-    }
+    if (token && root) await releaseLock(root, token);
     root?.close();
   }
 }

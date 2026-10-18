@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import {
   chmod,
   link,
@@ -10,7 +11,7 @@ import {
   symlink,
   writeFile,
 } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { hostname, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -180,6 +181,48 @@ describe.each(AGENT_TARGETS)("J14 %s", (target) => {
       code: "ENOENT",
     });
   });
+});
+
+it("takes over a lock left by a dead installer and never one held by a live process", async () => {
+  const lock = ".testmaster/agent-skills.lock";
+  const dead = spawnSync(process.execPath, ["-e", ""]).pid;
+  const deadOwners = [
+    JSON.stringify({ pid: dead, startedAt: "2026-10-18T00:00:00Z" }),
+    JSON.stringify({ pid: dead, host: hostname(), token: "gone" }),
+  ];
+  for (const stale of deadOwners) {
+    const root = await workspace();
+    await seed(root, lock, stale);
+    await install(root, "claude");
+    expect(await getAgentSkillStatus({ root, target: "claude" })).toMatchObject({
+      status: "installed",
+    });
+    await expect(lstat(join(root, lock))).rejects.toMatchObject({ code: "ENOENT" });
+  }
+  const busy: [string, string | null][] = [
+    // A live owner on this host, and one on a host whose processes cannot be checked.
+    [JSON.stringify({ pid: process.pid, host: hostname(), token: "other" }), null],
+    [JSON.stringify({ pid: dead, host: `${hostname()}-other`, token: "other" }), null],
+    // An earlier installer created the file before writing its owner: it may still be running.
+    ["", null],
+    // Another installer is reclaiming this stale lock right now.
+    [deadOwners[1] as string, ""],
+  ];
+  for (const [held, guard] of busy) {
+    const root = await workspace();
+    await seed(root, lock, held);
+    if (guard !== null) await seed(root, `${lock}.reclaim`, guard);
+    const preview = await planAgentSkills({ root, target: "claude" });
+    if (!preview.ok) throw new Error(JSON.stringify(preview));
+    expect(await applyAgentSkills(preview.plan)).toMatchObject({
+      ok: false,
+      reasonCode: "lock_busy",
+    });
+    expect(await readFile(join(root, lock), "utf8")).toBe(held);
+    expect(await getAgentSkillStatus({ root, target: "claude" })).toMatchObject({
+      status: "not_installed",
+    });
+  }
 });
 
 it("refuses stale previews and rollback over subsequent human edits", async () => {
