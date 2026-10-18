@@ -174,6 +174,39 @@ it("reports a failed expect step with the same error mapping and a passed test w
   expect(sent[3]?.payload).not.toHaveProperty("error");
 });
 
+it("classifies an expect step cut off by the test timeout as assertion_timeout, and a genuine mismatch as assertion_mismatch", async () => {
+  const timeoutStep = {
+    category: "expect",
+    title: "expect.toBeVisible",
+    error: { message: "Error: Test timeout of 30000ms exceeded.", location },
+  };
+  const mismatchStep = {
+    category: "expect",
+    title: "expect.toBe",
+    error: { message: matcherMessage('"OK"', '"Gone"'), location },
+  };
+  const test = { expectedStatus: "passed", title: "health" };
+  const result = { status: "passed", errors: [], duration: 1, attachments: [] };
+  const sent = await report((reporter) => {
+    reporter.onTestBegin(test as never);
+    for (const step of [timeoutStep, mismatchStep]) {
+      reporter.onStepBegin(test as never, result as never, step as never);
+      reporter.onStepEnd(test as never, result as never, step as never);
+    }
+  });
+  const finished = sent.filter((message) => message.type === "step.finished");
+  expect(finished[0]?.payload).toMatchObject({
+    stepId: "imported-step-1",
+    status: "failed",
+    reasonCode: "assertion_timeout",
+  });
+  expect(finished[1]?.payload).toMatchObject({
+    stepId: "imported-step-2",
+    status: "failed",
+    reasonCode: "assertion_mismatch",
+  });
+});
+
 it("reports a failure once, on the innermost step, and not again on the test.step and the test around it", async () => {
   const error = { message: matcherMessage("200", "401"), location };
   const test = { expectedStatus: "passed", title: "health" };

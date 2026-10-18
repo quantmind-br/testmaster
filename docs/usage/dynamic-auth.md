@@ -137,7 +137,8 @@ A form login that posts a JSON body and keeps the session cookie:
   `username` replaces `secrets.username`, and sending `secrets` with a username replaces the plain one.
 - `testmaster --dry-run auth-profile create --file <path>` validates the file locally; nothing is stored.
 - Bind the profile to an environment (`testmaster env update <env id> --auth-ref <profile id> --expected-version <n>`), then
-  `auth-profile test-login <id> --environment <env id>` signs in once without storing anything else.
+  `auth-profile test-login <id> --environment <env id>` signs in once without storing anything else (a static
+  kind has no login, so it is only checked locally; see "Signing in").
 
 ## Origins
 
@@ -154,7 +155,12 @@ A form login that posts a JSON body and keeps the session cookie:
   required), the MCP tool `testmaster_test_auth_login`,
   `POST /v1/auth-profiles/{id}/test-login`, or the profile page) signs in once and reports an outcome
   (`authenticated`, `failed`, `blocked`, `checkpoint_required`). It never saves a draft, revision or proposal
-  (`draftsChanged` is always `false`) and never creates a checkpoint, because no Run waits for it.
+  (`draftsChanged` is always `false`) and never creates a checkpoint, because no Run waits for it. A real
+  sign-in happens for the form, oauth, oidc, manual and browser kinds. The static kinds (basic, bearer,
+  api-key, cookie) have no login: the receipt is `authenticated` after a local check (the secret is present,
+  not revoked, and the profile is bound to the environment's origins), no request is sent to the target, and
+  its `detail` says so. The target has not accepted the credential until a Run uses it; a Run the target
+  rejects reports `manual_auth_required`.
 - **Refresh is single-flight and bounded.** Concurrent Runs share one in-flight sign-in or refresh per profile,
   also across server processes (a database lease). A failed refresh starts a cooldown
   (`refreshPolicy.cooldownSeconds`, default 60 s); it is never retried in a loop, and after

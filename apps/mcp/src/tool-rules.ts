@@ -2,7 +2,7 @@ import type { mcpTools } from "@testmaster/contracts";
 
 /** The plan contract is not in the tool schema (it would add hundreds of KB); agents read it as a resource. */
 const PLAN_SCHEMA_RULE =
-  "The plan is an `ExecutablePlan`: its JSON Schema is the resource testmaster://schemas/ExecutablePlan and the shape of one step is testmaster://schemas/Step. The plan schema is about 190 KB, past what a client shows of one read: read it as text pages, `?offset=0` and then the offset plus the UTF-8 bytes of each page read, until a page is shorter than 32768 bytes, and concatenate them. testmaster_validate_document with `schema: ExecutablePlan` checks a plan before it is stored.";
+  "The plan is an `ExecutablePlan`: its JSON Schema is the resource testmaster://schemas/ExecutablePlan and the shape of one step is testmaster://schemas/Step. The plan schema is about 190 KB, past what a client shows of one read, so a read without `offset` returns a small pointer document (`name`, `sizeBytes`, `sha256`, `textPages.first`) instead: read the schema as text pages, `?offset=0` and then the offset plus the UTF-8 bytes of each page read, until a page is shorter than 32768 bytes, and concatenate them (they are exactly the schema; check `sha256`). testmaster_validate_document with `schema: ExecutablePlan` checks a plan before it is stored.";
 /** The one declaration that makes a created resource deleted; the planner prompt carries the same rule. */
 const PLAN_CLEANUP_RULE =
   'A plan that creates a resource it must delete declares it twice: the creating request step sets `input.resource` {resourceType, correlationKey, handle (JSON pointer to the new id in the response), ownerProof (JSON pointer to a response field proving the account owns it)}, and a top-level `cleanup` entry sets `resourceRef` to that step id, a request (`operation: request`, whatever method the deletion route takes) that passes {"variableRef": "<step id>.handle"} in its path or body, and a `successPredicate`. Without both pointers and the entry the cleanup never runs (`cleanup_never_runs`). Cleanup also runs after a step already deleted the resource, so its predicate accepts the missing-resource answer too (`statusIn [200, 404]`).';
@@ -84,7 +84,7 @@ export const toolRules: Record<keyof typeof mcpTools, readonly string[]> = {
     "Runs `testIds` with `environmentId`, or a suite (`suiteId`, replay only), in the sandbox; `mode` defaults to replay.",
     "`revisionId` runs that exact revision (a candidate, generated or healed) of the single test in `testIds`; pin several revisions in a testmaster_save_suite list.",
     "`jobId` re-reads an existing batch and needs no other argument.",
-    "`wait: true` blocks until `timeoutMs`; reaching it is UPSTREAM_TIMEOUT with `details.runsContinue`: the runs go on, poll testmaster_get_run.",
+    "`wait: true` blocks until `timeoutMs` (1800000 ms, 30 minutes, when omitted); reaching it is UPSTREAM_TIMEOUT with `details.runsContinue` and `details.jobId`: the runs go on. Call testmaster_run_tests again with only that `jobId` and `wait: true`, or poll testmaster_get_run; never repeat the original arguments, which admits a new batch.",
     "`limits.stepTimeoutMs` only shortens steps, never lengthens one.",
   ],
   testmaster_get_run: [
@@ -219,7 +219,7 @@ export const toolRules: Record<keyof typeof mcpTools, readonly string[]> = {
     "`serverLog: {kind: \"docker\", container}` opts in to reading the application server's docker log: the lines written during each attempt are stored, scrubbed of secrets, as the evidence logs/server.log, and testmaster_analyze_run cites its error lines. `serverLog: null` stops it. TestMaster only reads the log; the container must run on the host's docker.",
   ],
   testmaster_test_auth_login: [
-    "Signs in once with an auth profile bound to an environment and reports the outcome: authenticated, failed, blocked or checkpoint_required.",
+    "Signs in once with an auth profile bound to an environment and reports the outcome: authenticated, failed, blocked or checkpoint_required. A static credential (basic, bearer, api-key, cookie) is only checked locally: `authenticated` then means present, not revoked and origin-bound, no request reaches the target, and `detail` says so; a Run reports a key the target refuses as `manual_auth_required`.",
     "Saves no draft or revision and never returns credentials. Scope X, like `auth-profile test-login`.",
   ],
 };

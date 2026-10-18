@@ -816,6 +816,9 @@ const supplemental = {
         reasonCode: Type.Union([P.Name, Type.Null()]),
         message: P.Description,
         modelCallId: Type.Union([P.id("mdl"), Type.Null()]),
+        /** The provider and model that answered; present only when a model call produced the analysis. */
+        provider: Type.Optional(P.Name),
+        model: Type.Optional(P.Name),
       }),
     ),
   }),

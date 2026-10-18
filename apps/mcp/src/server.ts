@@ -60,6 +60,7 @@ import {
   type SuitePatchInput,
   type SuiteRunInput,
   schemaCatalog,
+  similarSchemaNames,
   validate,
   validateDocument,
 } from "@testmaster/contracts";
@@ -227,7 +228,18 @@ interface MemberMatch {
  * `page` marks a JSON page document of this server, which may gain a `textPages` pointer.
  */
 type BytePayload = { bytes: Buffer; mimeType: string; meta: Record<string, unknown> };
-type ResourcePayload = { json: unknown; page?: true } | BytePayload;
+type ResourcePayload =
+  | {
+      json: unknown;
+      page?: true;
+      /**
+       * Fields of the document read in place of a whole one larger than a resource page, when no
+       * `offset` is given: they, the size, the digest and where the byte pages are. Offset reads
+       * serve the whole document's bytes.
+       */
+      pointer?: Record<string, unknown>;
+    }
+  | BytePayload;
 /** The items of one list page, how many the list has, and the cursor of the following page. */
 interface ListPage<T> {
   total: number;
@@ -290,7 +302,7 @@ function candidateReceipt<T extends { id: string }>(app: Application, testId: st
         ],
   };
 }
-/** The rules page of a tool: its description as the summary, then every rule. */
+/** The rules page of a tool: its description as the summary, then every rule and every argument. */
 function toolRulesPage(name: ToolName): ResourcePayload {
   const text = [
     `# ${name}`,
@@ -301,8 +313,29 @@ function toolRulesPage(name: ToolName): ResourcePayload {
     "",
     ...toolRules[name].map((rule) => `- ${rule}`),
     "",
+    ...argumentsSection(name),
   ].join("\n");
   return { bytes: Buffer.from(text), mimeType: "text/markdown", meta: {} };
+}
+/** The arguments of a tool as its input schema declares them, one line each, so no name is guessed. */
+function argumentsSection(name: ToolName): string[] {
+  const tool = mcpToolCatalog.find((item) => item.name === name);
+  const schema = (tool ? jsonSchema(tool.inputSchema) : {}) as SchemaNode;
+  const required = new Set(schema.required ?? []);
+  const lines = Object.entries(schema.properties ?? {}).map(([property, node]) => {
+    const detail = `${required.has(property) ? "required" : "optional"}, ${argumentType(node)}`;
+    return `- \`${property}\` (${detail})${node.description ? `: ${node.description}` : ""}`;
+  });
+  return ["## Arguments", "", ...(lines.length ? lines : ["- none"]), ""];
+}
+/** The type of one argument: its allowed values, `array of` its items, or its JSON type (`object` stays one word). */
+function argumentType(node: SchemaNode): string {
+  if (node.$ref) return "json";
+  if (node.enum) return node.enum.map((value) => JSON.stringify(value)).join(" | ");
+  if (node.const !== undefined) return JSON.stringify(node.const);
+  if (node.anyOf) return [...new Set(node.anyOf.map(argumentType))].join(" | ");
+  if (node.type === "array") return node.items ? `array of ${argumentType(node.items)}` : "array";
+  return node.type ?? "any";
 }
 /** Length of the longest prefix of `page` that does not end inside a UTF-8 sequence. */
 function utf8PrefixLength(page: Buffer): number {
@@ -319,6 +352,9 @@ interface SchemaNode {
   properties?: Record<string, SchemaNode>;
   items?: SchemaNode;
   anyOf?: SchemaNode[];
+  type?: string;
+  $ref?: string;
+  required?: string[];
   enum?: unknown[];
   const?: unknown;
   description?: string;
@@ -358,7 +394,10 @@ function object(value: unknown): Record<string, unknown> {
 /** One line of the text content that says what became of a requested model reading. */
 function formatModelStatus(status: AnalysisModelStatus | undefined): string | null {
   if (!status) return null;
-  return `Model reading: ${status.state}${status.reasonCode ? ` (${status.reasonCode})` : ""}: ${status.message}`;
+  const by = status.model
+    ? ` by ${status.provider ? `${status.provider}/` : ""}${status.model}`
+    : "";
+  return `Model reading: ${status.state}${by}${status.reasonCode ? ` (${status.reasonCode})` : ""}: ${status.message}`;
 }
 /**
  * The lines of a generated batch an agent must not miss: the requirements the model declined and
@@ -729,7 +768,7 @@ export class TestMasterMcp {
         [
           "testmaster://schemas/{name}{?offset}",
           "Contract schema",
-          "The JSON Schema of a public contract by name: ExecutablePlan (a plan for testmaster_save_test and testmaster_edit_plan, about 190 KB), Step (one plan step), ProjectConfig, RunRequest. Read a large one as text pages: offset=0, then add each page's UTF-8 bytes until a page is under 32768 bytes",
+          "The JSON Schema of a public contract by name: ExecutablePlan (a plan for testmaster_save_test and testmaster_edit_plan, about 190 KB), Step (one plan step), ProjectConfig, RunRequest. A schema over 32768 bytes is read as text pages: a read without offset returns a pointer (name, sizeBytes, sha256, textPages.first); read offset=0, then add each page's UTF-8 bytes until a page is under 32768 bytes, and concatenate",
         ],
         [
           "testmaster://tools/{name}",
@@ -960,7 +999,9 @@ export class TestMasterMcp {
       if (Date.now() >= deadline)
         throw new ContractError(
           "UPSTREAM_TIMEOUT",
-          "Wait deadline exceeded; the runs continue. Poll testmaster_get_run or repeat the call to read the receipt",
+          typeof resume.jobId === "string"
+            ? `Wait deadline exceeded; the runs continue. Call testmaster_run_tests again with only jobId ${resume.jobId} and wait: true to wait on this batch (or testmaster_get_run per run); repeating the original arguments admits a new batch`
+            : "Wait deadline exceeded; the runs continue. Call testmaster_get_run with wait: true (or without it) to read the receipt",
           { runIds, waitTimeout: true, runsContinue: true, ...resume },
         );
       await progress(++count, "Waiting for durable runs");
@@ -2265,12 +2306,28 @@ export class TestMasterMcp {
    * A JSON document as text. One larger than a resource page stays whole for clients that read it
    * whole: a page document of this server (only possible when its one item is larger) names first,
    * in `textPages`, where to read it as byte pages, and every JSON document names them in `_meta`.
-   * `offset` serves those pages: the same text cut on character boundaries, which concatenate to it.
+   * A document with a `pointer` (a contract schema) is not served whole: without `offset` its
+   * pointer document says where the byte pages are, because a client that cuts a read does not
+   * show that it did. `offset` serves the pages: the same text cut on character boundaries, which
+   * concatenate to it.
    */
   private jsonPages(url: URL, payload: Extract<ResourcePayload, { json: unknown }>): BytePayload {
     const offset = pageOffset(url);
     let text = Buffer.from(JSON.stringify(payload.json));
     const oversized = text.length > RESOURCE_PAGE_BYTES;
+    if (oversized && payload.pointer && offset === null)
+      return {
+        bytes: Buffer.from(
+          JSON.stringify({
+            ...payload.pointer,
+            sizeBytes: text.length,
+            sha256: createHash("sha256").update(text).digest("hex"),
+            textPages: this.textPagesPointer(url),
+          }),
+        ),
+        mimeType: "application/json",
+        meta: { "testmaster:sizeBytes": text.length, "testmaster:textPages": atOffset(url, 0) },
+      };
     if (oversized && payload.page)
       text = Buffer.from(
         JSON.stringify({ textPages: this.textPagesPointer(url), ...(payload.json as object) }),
@@ -2292,7 +2349,7 @@ export class TestMasterMcp {
     return {
       first: atOffset(url, 0),
       pageBytes: RESOURCE_PAGE_BYTES,
-      rule: `This page is larger than ${RESOURCE_PAGE_BYTES} bytes, which some clients cut: read first as text pages (cut on UTF-8 character boundaries), each next one at _meta testmaster:next or at offset plus that page's UTF-8 byte length, and concatenate them before parsing. Keep the expires parameter: the pages expire with this page's cursors`,
+      rule: `This document is larger than ${RESOURCE_PAGE_BYTES} bytes, which some clients cut: read first as text pages (cut on UTF-8 character boundaries), each next one at _meta testmaster:next or at offset plus that page's UTF-8 byte length, and concatenate them before parsing. Keep the expires parameter: the pages expire with this page's cursors`,
     };
   }
   private async document(url: URL, uri: string): Promise<ResourcePayload> {
@@ -2410,7 +2467,7 @@ export class TestMasterMcp {
         break;
       case "schemas":
         if (parts.length === 0) return { json: this.schemaNames(url), page: true };
-        if (parts.length === 1) return { json: this.contractSchema(id) };
+        if (parts.length === 1) return { json: this.contractSchema(id), pointer: { name: id } };
         break;
       case "tools":
         if (parts.length === 1 && Object.hasOwn(toolRules, id))
@@ -2624,14 +2681,7 @@ export class TestMasterMcp {
   /** The standalone JSON Schema of one public contract: the one `packages/contracts/schemas/{name}.json` holds. */
   private contractSchema(name: string): Record<string, unknown> {
     if (Object.hasOwn(schemaCatalog, name)) return jsonSchema(name);
-    const wanted = name.toLowerCase();
-    const close = Object.keys(schemaCatalog)
-      .filter((known) => {
-        const lower = known.toLowerCase();
-        return lower.includes(wanted) || wanted.includes(lower);
-      })
-      .sort()
-      .slice(0, 10);
+    const close = similarSchemaNames(name);
     const shown = name.length > 100 ? `${name.slice(0, 100)}...` : name;
     const similar = close.length ? `similar names are ${close.join(", ")}; ` : "";
     throw new ContractError(

@@ -52,6 +52,15 @@ it("SDK handshake advertises contract schemas, records protocol and dispatches M
         );
         for (const cited of `${description} ${rules?.text}`.match(/testmaster_[a-z_]+/g) ?? [])
           expect(catalogNames.has(cited), `${tool.name} cites ${cited}`).toBe(true);
+        // Every argument of the tool is named on its rules page, so none has to be guessed.
+        for (const [property, node] of Object.entries(tool.inputSchema.properties ?? {})) {
+          const required = (tool.inputSchema.required ?? []).includes(property);
+          expect(rules?.text, `${tool.name}.${property}`).toContain(
+            `- \`${property}\` (${required ? "required" : "optional"}, `,
+          );
+          if (node && typeof node === "object" && "description" in node)
+            expect(rules?.text, `${tool.name}.${property}`).toContain(String(node.description));
+        }
       }
       await expect(
         client.readResource({ uri: "testmaster://tools/testmaster_nothing" }),
@@ -59,6 +68,15 @@ it("SDK handshake advertises contract schemas, records protocol and dispatches M
         code: -32002,
         message: expect.stringContaining("testmaster://tools/{name}"),
       });
+      const [bootstrap] = (
+        await client.readResource({ uri: "testmaster://tools/testmaster_bootstrap" })
+      ).contents as { text?: string }[];
+      expect(bootstrap?.text).toMatch(/\n## Arguments\n\n- `projectRoot` \(required, string\): /);
+      const [review] = (
+        await client.readResource({ uri: "testmaster://tools/testmaster_review_plan" })
+      ).contents as { text?: string }[];
+      expect(review?.text).toContain("- `acceptIds` (required, array of string): ");
+      expect(review?.text).toContain("- `reason` (optional, string): ");
       const getRun = tools.find((tool) => tool.name === "testmaster_get_run")?.description ?? "";
       expect(getRun).toContain("testmaster_get_evidence");
       expect(getRun).toContain("testmaster_analyze_run");

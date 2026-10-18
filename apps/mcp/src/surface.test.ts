@@ -1830,27 +1830,45 @@ it("the schemas resource serves the JSON Schema of a public contract as byte pag
   const read = async (uri: string) =>
     (await f.client.readResource({ uri })).contents[0] as Record<string, unknown>;
   const whole = JSON.stringify(jsonSchema("ExecutablePlan"));
+  const wholeSha = createHash("sha256").update(whole).digest("hex");
   const first = await read("testmaster://schemas/ExecutablePlan");
   const meta = first._meta as Record<string, unknown>;
   expect(first.mimeType).toBe("application/json");
-  // The plan contract is far larger than one page: the first read says where the byte pages are.
+  // The plan contract is far larger than one page, and a client that cuts a read does not show it:
+  // a read without offset is a small pointer document, never the schema cut short.
   expect(Buffer.byteLength(whole)).toBeGreaterThan(32768);
+  expect(Buffer.byteLength(String(first.text))).toBeLessThan(4096);
+  const pointer = JSON.parse(String(first.text)) as {
+    name: string;
+    sizeBytes: number;
+    sha256: string;
+    textPages: { first: string; pageBytes: number };
+  };
+  expect(pointer).toMatchObject({
+    name: "ExecutablePlan",
+    sizeBytes: Buffer.byteLength(whole),
+    sha256: wholeSha,
+    textPages: { pageBytes: 32768 },
+  });
+  expect(pointer).not.toHaveProperty("$defs");
   expect(meta["testmaster:sizeBytes"]).toBe(Buffer.byteLength(whole));
+  expect(meta["testmaster:textPages"]).toBe(pointer.textPages.first);
   const parts: string[] = [];
-  for (let next: string | null = String(meta["testmaster:textPages"]); next; ) {
+  for (let next: string | null = pointer.textPages.first; next; ) {
     const page = await read(next);
     const pageMeta = page._meta as Record<string, unknown>;
     expect(Buffer.byteLength(String(page.text))).toBeLessThanOrEqual(32768);
-    expect(pageMeta["testmaster:sha256"]).toBe(createHash("sha256").update(whole).digest("hex"));
+    expect(pageMeta["testmaster:sha256"]).toBe(wholeSha);
     parts.push(String(page.text));
     next = pageMeta["testmaster:next"] as string | null;
   }
   expect(parts.length).toBeGreaterThan(1);
   expect(parts.join("")).toBe(whole);
   expect(JSON.parse(parts.join(""))).toMatchObject({ type: "object" });
-  // A smaller contract is one page.
-  const step = await readJson<Record<string, unknown>>(f, "testmaster://schemas/Step");
-  expect(step).toEqual(jsonSchema("Step"));
+  expect(createHash("sha256").update(parts.join("")).digest("hex")).toBe(pointer.sha256);
+  // A contract of one page stays whole, with no pointer.
+  const config = await readJson<Record<string, unknown>>(f, "testmaster://schemas/ProjectConfig");
+  expect(config).toEqual(jsonSchema("ProjectConfig"));
 
   // The names are listed across pages, and an unknown or mistyped one is refused with the names near it.
   const listed: { name: string; resource: string }[] = [];

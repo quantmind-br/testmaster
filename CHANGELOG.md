@@ -11,6 +11,19 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 
 - MCP tools now carry action-oriented descriptions (what the tool does, when to use it, which tool comes next); `testmaster_get_run` states it returns a summary only and points to evidence and analysis before naming a cause.
 
+### Fifth Dokploy agent run
+
+Found when an omp agent drove the pipeline on Dokploy a fifth time: 28 tests in a suite, 25 passed; the 3 failures are the product's own OpenAPI response schemas.
+
+- `testmaster_test_auth_login` and `auth-profile test-login` no longer let a static credential (basic, bearer, api-key, cookie) pass for a verified one: such a profile is only checked locally (present, not revoked, bound to the environment's origins) and no request reaches the target, so its `authenticated` receipt now says so in `detail`, with `manual_auth_required` as the Run's verdict for a credential the target refuses. The web panel shows the detail; specs/05 and the dynamic-auth docs say a real sign-in happens only for form, OAuth, OIDC, manual and browser profiles.
+- The analysis of a failed code step that recorded no compared value (an imported or generated Playwright test) reports its `expected` and `observed` as null instead of the text `"null"`; a plan step that observed JSON null still shows `"null"`.
+- A model reading's `modelStatus` names the `provider` and `model` of the recorded call, and the `testmaster_analyze_run` text line says who answered.
+- An imported Playwright step cut by the test timeout (`Test timeout of 30000ms exceeded`) is `assertion_timeout`, like its test, instead of `assertion_mismatch`, and a code run whose failed assertions all timed out ends `failed/assertion_timeout`. The runner image is rebuilt.
+- `testmaster://tools/{name}` ends with an `## Arguments` section listing each input argument of the tool (required or optional, type, description). Before, the rules named no argument and agents learned `projectRoot`, `acceptIds` and `left`/`right` from validation errors.
+- The `testmaster_run_tests` wait deadline says to call again with the `jobId` of its details and `wait: true` (or `testmaster_get_run`), because repeating the original arguments admits a new batch; the `timeoutMs` description states its 30-minute default.
+- A contract schema larger than one resource page (`ExecutablePlan`, `Step`) read without `offset` returns a small pointer (`name`, `sizeBytes`, `sha256`, `textPages.first`) instead of the whole document, so a client that cuts reads at 50 KiB never takes a cut schema for a whole one; offset pages still concatenate to the exact schema.
+- New `testmaster contract schema <name> [--out PATH]` prints or writes the JSON Schema of a public contract; an unknown name is `NOT_FOUND` with the names near it.
+
 ### Fourth Dokploy agent run
 
 Found when an omp agent drove the pipeline on Dokploy a fourth time: 30 tests in a suite, run twice, 26 passed both times; the 4 failures are the product's own OpenAPI response schemas (empty closed objects for `project.all` and `project.create` 200, a 401 without the required `code`, a 400 with a `data` field its closed schema forbids).

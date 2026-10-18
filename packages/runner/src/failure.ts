@@ -7,6 +7,7 @@ const VALUE_LIMIT = 2000;
 const EXPECTED = /^\s*Expected\b[^:\n]*:[ \t]*(\S.*)$/mu;
 const RECEIVED = /^\s*Received\b[^:\n]*:[ \t]*(\S.*)$/mu;
 const ASSERTION = /^\s*(?:(?:Error: )?expect\(|AssertionError\b)/u;
+const TIMEOUT = /\b(?:Test timeout of|Timeout) \d+ms exceeded\b/u;
 
 /** The parts of Playwright's `TestError` a failure report uses. */
 export interface PlaywrightFailure {
@@ -40,6 +41,14 @@ function comparedValue(printed: string | undefined): { value: unknown } | undefi
  */
 export function isAssertionFailure(failure: PlaywrightFailure | undefined): boolean {
   return ASSERTION.test(stripVTControlCharacters(failure?.message ?? failure?.value ?? ""));
+}
+/**
+ * Whether Playwright's own message says the test, or the action or expect the step ran, ran out
+ * of time ("Test timeout of 30000ms exceeded", "locator.click: Timeout 5000ms exceeded"). A step
+ * interrupted by the test timeout carries that message although the step itself did not time out.
+ */
+export function isTimeoutFailure(failure: PlaywrightFailure | undefined): boolean {
+  return TIMEOUT.test(stripVTControlCharacters(failure?.message ?? failure?.value ?? ""));
 }
 function errorCode(message: string, assertion: boolean): string {
   if (assertion) return "assertion_mismatch";

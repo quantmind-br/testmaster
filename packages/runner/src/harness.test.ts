@@ -292,4 +292,13 @@ describe("importedResult", () => {
     });
     expect(importedResult({ ...none, failures: 1 }, cancelled)).toEqual(cancelled);
   });
+  it("times out when every failed assertion timed out, and mismatches when any did not", () => {
+    const failed = { steps: 2, failures: 2, exitCode: 1 };
+    expect(
+      importedResult({ ...failed, assertionFailures: 2, assertionTimeouts: 2 }, undefined),
+    ).toEqual({ outcome: "failed", reasonCode: "assertion_timeout" });
+    expect(
+      importedResult({ ...failed, assertionFailures: 2, assertionTimeouts: 1 }, undefined),
+    ).toEqual({ outcome: "failed", reasonCode: "assertion_mismatch" });
+  });
 });

@@ -73,6 +73,9 @@ export interface AnalysisModelStatus {
   reasonCode: string | null;
   message: string;
   modelCallId: string | null;
+  /** The provider and model that answered; set only when a model call produced the analysis. */
+  provider?: string;
+  model?: string;
 }
 /**
  * Status of a reading that produced no model analysis. A model that cannot be used at all (not
@@ -1733,13 +1736,26 @@ export class AnalysisService {
   }
   /** What became of the model reading that ended in `analysis`; read from the model job's receipt. */
   modelStatus(analysis: Analysis): AnalysisModelStatus {
-    if (analysis.source === "model")
+    if (analysis.source === "model") {
+      const row = analysis.modelCallId
+        ? this.ctx.database.get(
+            "SELECT data_json FROM model_calls WHERE workspace_id=? AND id=?",
+            this.ctx.workspaceId,
+            analysis.modelCallId,
+          )
+        : undefined;
+      const call = row
+        ? (JSON.parse(String(row.data_json)) as { provider?: string; model?: string })
+        : undefined;
       return {
         state: "used",
         reasonCode: null,
         message: "A model call produced this analysis.",
         modelCallId: analysis.modelCallId,
+        ...(call?.provider ? { provider: call.provider } : {}),
+        ...(call?.model ? { model: call.model } : {}),
       };
+    }
     const stored = this.modelReceipts(analysis.runId).find(
       (receipt) => receipt.analysisId === analysis.id,
     )?.modelStatus as AnalysisModelStatus | undefined;
@@ -2512,10 +2528,13 @@ export class AnalysisService {
       ? collected.evidence.find((item) => item.executionError)
       : undefined;
     const recordedError = recorded?.executionError;
-    // A failed step with a null value observed null; an inconclusive or blocked step recorded no
-    // comparison, so an empty value there is absent, not the text "null".
+    // A failed plan step with a null value observed null; an inconclusive or blocked step recorded
+    // no comparison, and an imported code step carries no expected or observed value at all, so an
+    // empty value there is absent, not the text "null".
     const compared = (value: unknown): string | null =>
-      localized === failed || value != null ? evidenceRendering(value, secrets) : null;
+      value != null || (localized === failed && !localized?.codeOperation)
+        ? evidenceRendering(value, secrets)
+        : null;
     const observation: Diagnosis["observation"] =
       run.outcome === "passed"
         ? gateFailedPass

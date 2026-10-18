@@ -236,6 +236,7 @@ it("M4-03 SEC-022 test-login authenticates through the vault and saves no draft,
   expect(receipt).toMatchObject({
     outcome: "authenticated",
     reasonCode: null,
+    detail: null,
     credentialRoles: ["session"],
     draftsChanged: false,
   });
@@ -253,6 +254,39 @@ it("M4-03 SEC-022 test-login authenticates through the vault and saves no draft,
     headers: { cookie: "session=forged" },
   });
   expect(forged.status).toBe(401);
+});
+
+it("SEC-022 test-login of a static credential says no request was sent to the target", async () => {
+  const current = await lab();
+  const token = await current.secret("static-token", "static-bearer-token-0001");
+  const key = await current.secret("static-key", defaults.apiKey);
+  const bearer = await current.profile({
+    name: "static-bearer",
+    kind: "bearer",
+    config: {},
+    secrets: { token },
+  });
+  const apiKey = await current.profile({
+    name: "static-api-key",
+    kind: "api-key",
+    config: { header: "x-api-key" },
+    secrets: { key },
+  });
+  const env = current.environment("static-env", [bearer.id, apiKey.id]);
+  const requestsBefore = current.site.requests.length;
+  for (const profile of [bearer, apiKey]) {
+    const receipt = await current.app.authProfiles.testLogin(profile.id, env.id);
+    expect(receipt).toMatchObject({ outcome: "authenticated", reasonCode: null });
+    expect(receipt.detail).toContain("No request was sent to the target");
+    expect(receipt.detail).toContain("manual_auth_required");
+  }
+  // The detail is true: the target saw nothing.
+  expect(current.site.requests).toHaveLength(requestsBefore);
+  // Negative control: a blocked static receipt keeps its own refusal detail, not the success note.
+  await current.app.secrets.remove(token);
+  const revoked = await current.app.authProfiles.testLogin(bearer.id, env.id);
+  expect(revoked).toMatchObject({ outcome: "blocked", reasonCode: "credential_revoked" });
+  expect(revoked.detail).not.toContain("No request was sent");
 });
 
 it("M4-03 REQ-018 reports a rejected login and does not hammer the target while it cools down", async () => {

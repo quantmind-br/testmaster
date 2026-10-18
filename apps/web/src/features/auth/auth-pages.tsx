@@ -538,7 +538,10 @@ function TestLoginSection({
   return (
     <section aria-labelledby="test-login-heading">
       <h2 id="test-login-heading">Test sign-in</h2>
-      <p>Signs in once with the stored credentials. A test saves no draft, revision or proposal.</p>
+      <p>
+        Signs in once with the stored credentials; a static credential (basic, bearer, API key,
+        cookie) is only checked locally. A test saves no draft, revision or proposal.
+      </p>
       <ActionError message={action.error} />
       <EnvironmentSelect
         projectId={profile.projectId}
@@ -578,6 +581,7 @@ function TestLoginSection({
             ? ` Credentials prepared: ${receipt.credentialRoles.join(", ")}.`
             : ""}{" "}
           Nothing was saved to any test, revision or proposal.
+          {receipt.detail ? ` ${receipt.detail}` : ""}
         </p>
       ) : null}
     </section>

@@ -55,6 +55,17 @@ export function jsonSchema(name: string): Record<string, unknown> {
   document.$schema = "https://json-schema.org/draft/2020-12/schema";
   return document;
 }
+/** The catalog names that contain, or are contained in, a mistyped one (case-insensitive), at most 10, sorted. */
+export function similarSchemaNames(name: string): string[] {
+  const wanted = name.toLowerCase();
+  return Object.keys(schemaCatalog)
+    .filter((known) => {
+      const lower = known.toLowerCase();
+      return lower.includes(wanted) || wanted.includes(lower);
+    })
+    .sort()
+    .slice(0, 10);
+}
 export function parseStrictJson(bytes: Uint8Array | string, maxBytes = 1048576): unknown {
   const buffer = typeof bytes === "string" ? Buffer.from(bytes, "utf8") : bytes;
   if (buffer.byteLength > maxBytes)

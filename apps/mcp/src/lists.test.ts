@@ -164,9 +164,16 @@ it("run_tests wait deadline is UPSTREAM_TIMEOUT with resume details and the rece
     timeoutMs: 1,
   });
   expect(timed.isError).toBe(true);
-  const error = timed.body.error as { code: string; details: Record<string, unknown> };
+  const error = timed.body.error as {
+    code: string;
+    message: string;
+    details: Record<string, unknown>;
+  };
   expect(error.code).toBe("UPSTREAM_TIMEOUT");
   expect(error.details).toMatchObject({ waitTimeout: true, runsContinue: true });
+  // The message points to the batch to wait on, not to the original arguments, which would admit another.
+  expect(error.message).toContain(String(error.details.jobId));
+  expect(error.message).toContain("wait: true");
   const runIds = error.details.runIds as string[];
   expect(runIds).toHaveLength(1);
   const jobId = String(error.details.jobId);

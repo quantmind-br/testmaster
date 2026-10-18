@@ -12,7 +12,7 @@ import {
   failureKind,
   vetAttachment,
 } from "./code-evidence.js";
-import { describeFailure, isAssertionFailure } from "./failure.js";
+import { describeFailure, isAssertionFailure, isTimeoutFailure } from "./failure.js";
 
 /** A failure already reported on a step, and whether it was a failed assertion. */
 interface NotedFailure {
@@ -159,7 +159,9 @@ export default class TestMasterReporter implements Reporter {
         : undefined;
     this.send("step.finished", {
       ...data,
-      ...(error ? { ...failedVerdict(assertion, false), ...failure } : { status: "passed" }),
+      ...(error
+        ? { ...failedVerdict(assertion, isTimeoutFailure(error)), ...failure }
+        : { status: "passed" }),
       durationMs: step.duration,
       evidencePaths: [],
     });

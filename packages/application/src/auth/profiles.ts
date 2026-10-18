@@ -67,6 +67,14 @@ const requiredRoles = {
   "api-key": ["key"],
   cookie: ["cookie"],
 } as const satisfies Partial<Record<AuthKind, readonly string[]>>;
+/**
+ * A static kind (basic, bearer, api-key, cookie) has no login: testing it only resolves the stored
+ * credential, so the receipt must not read as the target having accepted it.
+ */
+const STATIC_TEST_DETAIL =
+  "The stored credential was resolved locally (present, not revoked, bound to the environment's origins). " +
+  "No request was sent to the target, so the target has not accepted it yet; " +
+  "a Run that the target rejects reports manual_auth_required.";
 
 /** Verifies the caller's own password; throws the generic `UNAUTHENTICATED` on mismatch. */
 export type StepUp = (password: string, operation: string) => Promise<void>;
@@ -625,8 +633,9 @@ export class AuthProfilesService {
   // --- Session operations -----------------------------------------------------------------------
 
   /**
-   * Performs a real login or refresh against the environment and reports the outcome. It saves no
-   * draft, revision or proposal: the only state it can change is the profile's own session.
+   * Performs a real login or refresh against the environment for the login kinds and reports the
+   * outcome; a static kind only resolves its stored credential locally and says so in `detail`. It
+   * saves no draft, revision or proposal: the only state it can change is the profile's own session.
    */
   async testLogin(id: string, environmentId: string): Promise<AuthTestLoginReceipt> {
     const profile = requireEntity(this.ctx, "AuthProfile", id) as StoredAuthProfile;
@@ -683,7 +692,13 @@ export class AuthProfilesService {
             state.credentials.storageState?.expiresAt ?? null,
           );
         }
-        return receipt("authenticated", null, null, result.roles, result.expiresAt);
+        return receipt(
+          "authenticated",
+          null,
+          profile.kind in requiredRoles ? STATIC_TEST_DETAIL : null,
+          result.roles,
+          result.expiresAt,
+        );
       } catch (error) {
         if (!(error instanceof AuthBlocked)) throw error;
         const checkpointRequired = error.details.checkpointRequired === true;

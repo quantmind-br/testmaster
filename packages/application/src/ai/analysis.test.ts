@@ -1342,12 +1342,22 @@ it("a requested reading reports its status: used, abstained by a rule, or unavai
     },
   }));
   const used = await f.service.analyze(f.run.id, { model: true, provider: "fake" });
+  const call = JSON.parse(
+    String(
+      f.ctx.database.get("SELECT data_json FROM model_calls WHERE id=?", f.modelCallId)?.data_json,
+    ),
+  ) as { provider: string; model: string };
   expect(f.service.modelStatus(used)).toEqual({
     state: "used",
     reasonCode: null,
     message: expect.any(String),
     modelCallId: f.modelCallId,
+    // The receipt names who answered, from the recorded call.
+    provider: call.provider,
+    model: call.model,
   });
+  expect(call.provider).toEqual(expect.any(String));
+  expect(call.model).toEqual(expect.any(String));
 });
 it("a missing provider credential is an unavailable model reading, and the retry reaches the model once the key is set", async () => {
   const f = await fixture();
@@ -3794,6 +3804,29 @@ it("code steps are named by their reporter id, and a failed test and its failing
     "imported-code": "playwright_run",
   });
   expect(analysis.facts.filter((item) => item.text.includes("Received: 1"))).toHaveLength(1);
+});
+it("a failed code step that recorded no values reports none, and a plan step that observed JSON null reports the text null", async () => {
+  // Imported code steps carry no expected or observed value: the reporter records only the error.
+  const code = await fixture({
+    code: true,
+    step: {
+      planStepId: "imported-test-0",
+      expected: null,
+      observed: null,
+      error: { code: "assertion_timeout", message: "Test timeout of 30000ms exceeded." },
+    },
+  });
+  const observation = (await code.service.analyze(code.run.id, {})).diagnosis?.observation;
+  expect(observation).toMatchObject({
+    stepId: "imported-test-0",
+    operation: "playwright_test",
+    expected: null,
+    observed: null,
+  });
+  // Control: a plan assertion that recorded a null value did observe null.
+  const plan = await fixture({ step: { observed: null } });
+  const planObservation = (await plan.service.analyze(plan.run.id, {})).diagnosis?.observation;
+  expect(planObservation).toMatchObject({ stepId: "price", expected: "10", observed: "null" });
 });
 /** Another persisted step of the fixture's attempt, with the fields it overrides. */
 function addStep(

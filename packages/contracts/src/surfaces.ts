@@ -946,7 +946,7 @@ export const mcpTools = {
       timeoutMs: Type.Optional(
         d(
           Type.Integer({ minimum: 1, maximum: 6000000 }),
-          "Wait deadline in ms; runs continue after it",
+          "Wait deadline in ms, default 1800000 (30 min); runs continue after it",
         ),
       ),
     }),

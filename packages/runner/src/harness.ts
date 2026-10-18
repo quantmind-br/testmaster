@@ -175,18 +175,28 @@ export interface ImportedTally {
   steps: number;
   failures: number;
   assertionFailures: number;
+  /** How many of the assertion failures were timeouts (`assertion_timeout`). */
+  assertionTimeouts?: number;
   exitCode: number | null;
 }
 /**
  * The verdict on the whole imported code. Only a failed assertion (or a timeout) is a verdict on
- * the target. When the steps that did not pass all ended on an error the test code threw, no
- * assertion judged the target and the attempt is inconclusive, not a mismatch.
+ * the target; when every failed assertion timed out, the run timed out too. When the steps that did
+ * not pass all ended on an error the test code threw, no assertion judged the target and the
+ * attempt is inconclusive, not a mismatch.
  */
 export function importedResult(
   tally: ImportedTally,
   aborted: RunnerResult | undefined,
 ): RunnerResult {
-  if (tally.assertionFailures > 0) return { outcome: "failed", reasonCode: "assertion_mismatch" };
+  if (tally.assertionFailures > 0)
+    return {
+      outcome: "failed",
+      reasonCode:
+        tally.assertionTimeouts === tally.assertionFailures
+          ? "assertion_timeout"
+          : "assertion_mismatch",
+    };
   if (aborted) return aborted;
   return tally.steps > 0 && tally.failures === 0 && tally.exitCode === 0
     ? { outcome: "passed", reasonCode: "assertions_satisfied" }
@@ -249,6 +259,7 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
   let count = 0;
   let failures = 0;
   let assertionFailures = 0;
+  let assertionTimeouts = 0;
   const failureEvidence = new FailureEvidence(runtime);
   let queue = Promise.resolve();
   const child = fork(
@@ -301,8 +312,10 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
           "reasonCode" in payload &&
           (payload.reasonCode === "assertion_mismatch" ||
             payload.reasonCode === "assertion_timeout")
-        )
+        ) {
           assertionFailures++;
+          if (payload.reasonCode === "assertion_timeout") assertionTimeouts++;
+        }
       }
       // A step cites only the artifacts the harness itself recorded for it.
       const published =
@@ -352,7 +365,7 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
     });
     await queue;
     return importedResult(
-      { steps: count, failures, assertionFailures, exitCode: code },
+      { steps: count, failures, assertionFailures, assertionTimeouts, exitCode: code },
       abortVerdict(runtime.signal),
     );
   } finally {
