@@ -11,6 +11,10 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 
 - MCP tools now carry action-oriented descriptions (what the tool does, when to use it, which tool comes next); `testmaster_get_run` states it returns a summary only and points to evidence and analysis before naming a cause.
 
+### MCP catalog no longer inlines output schemas
+
+- Breaking: `tools/list` no longer advertises an `outputSchema` for any tool. Three tools (`testmaster_edit_plan`, `testmaster_save_test`, `testmaster_import_code`) inlined the whole `ExecutablePlan` in theirs, about 254 KB each, and the catalog was 982,964 bytes; it is now 62,688 bytes (`node tools/surface-size.mjs`). The rules page `testmaster://tools/{name}` names the result contract under `## Result`, `testmaster://schemas/{name}` serves it, and the server still validates every `structuredContent` against it before answering. A test fails when an advertised schema inlines `ExecutablePlan` or exceeds 12 KB, and the catalog size ceiling is lowered to the measured value.
+
 ### Budget removal ([ADR-026](docs/adr/026-budget-removal.md))
 
 No budget can refuse, pause, skip or stop work any more: the user decides the work is to be done, and a budget only interrupted it midway. Usage accounting is unchanged: model calls, tokens, cost (`unknown` when unpriced, never zero), runtime and storage are still recorded and reported by `testmaster usage`.

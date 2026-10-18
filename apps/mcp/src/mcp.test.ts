@@ -85,7 +85,6 @@ it("SDK handshake advertises contract schemas, records protocol and dispatches M
       expect(approve).not.toMatch(/grant|HealingProposal:approve/);
       for (const tool of tools) {
         expect(tool.inputSchema.type).toBe("object");
-        expect(tool.outputSchema?.type).toBe("object");
         const schema = { ...tool.inputSchema };
         delete schema.$id;
         expect(() => validateAgainstSchema(schema, {})).not.toThrowError(

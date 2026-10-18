@@ -145,17 +145,18 @@ const annotations: Record<ToolName, Annotations> = {
   testmaster_approve_execution: ADDITIVE,
   testmaster_cancel_run: { ...DESTRUCTIVE, idempotentHint: true },
 };
-/** The exact `tools/list` payload; the surface-size measurement reads this same function. */
+/**
+ * The exact `tools/list` payload; the surface-size measurement reads this same function. No tool
+ * announces an `outputSchema`: three of them would inline the whole `ExecutablePlan` (about 254 KB
+ * each) and the protocol allows omitting it. The result contract of each tool is named on its rules
+ * page (`testmaster://tools/{name}`) and served at `testmaster://schemas/{name}`; the server still
+ * validates every result against it before answering.
+ */
 export function listedTools() {
   return mcpToolCatalog.map((tool) => ({
     name: tool.name,
     description: toolDescriptions[tool.name as ToolName],
     inputSchema: jsonSchema(tool.inputSchema) as { type: "object" },
-    // Several tools share an output schema; a client compiling every outputSchema needs distinct ids.
-    outputSchema: {
-      ...(jsonSchema(tool.outputSchema) as { type: "object" }),
-      $id: `urn:testmaster:${tool.name}:output`,
-    },
     annotations: annotations[tool.name as ToolName],
   }));
 }
@@ -316,8 +317,9 @@ function candidateReceipt<T extends { id: string }>(app: Application, testId: st
         ],
   };
 }
-/** The rules page of a tool: its description as the summary, then every rule and every argument. */
+/** The rules page of a tool: its description as the summary, then every rule, every argument and the result contract. */
 function toolRulesPage(name: ToolName): ResourcePayload {
+  const output = mcpToolCatalog.find((item) => item.name === name)?.outputSchema;
   const text = [
     `# ${name}`,
     "",
@@ -328,6 +330,12 @@ function toolRulesPage(name: ToolName): ResourcePayload {
     ...toolRules[name].map((rule) => `- ${rule}`),
     "",
     ...argumentsSection(name),
+    "## Result",
+    "",
+    output
+      ? `The result (\`structuredContent\`, repeated as the last text block) is a \`${output}\`: its JSON Schema is testmaster://schemas/${output}.`
+      : "- none",
+    "",
   ].join("\n");
   return { bytes: Buffer.from(text), mimeType: "text/markdown", meta: {} };
 }

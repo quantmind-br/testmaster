@@ -9,7 +9,6 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { Application, entity, HealingService, scaffoldPlan } from "@testmaster/application";
 import {
-  ajv,
   ContractError,
   jsonSchema,
   mcpToolCatalog,
@@ -85,22 +84,9 @@ it("resources/list exposes project ids next to runs", async () => {
   expect(listed).toContain(`testmaster://projects/${f.init.projectId}`);
 });
 
-it("tools/list advertises unique output ids, described inputs and the annotation classes", async () => {
+it("tools/list advertises described inputs and the annotation classes", async () => {
   const f = await fixture();
   const tools = (await f.client.listTools()).tools;
-  const ids = tools.map((tool) => String(tool.outputSchema?.$id));
-  expect(new Set(ids).size).toBe(tools.length);
-  // A client that compiles every output schema in one validator must not meet a duplicate id.
-  const compiled: string[] = [];
-  try {
-    for (const tool of tools) {
-      ajv.compile(tool.outputSchema as Record<string, unknown>);
-      compiled.push(String(tool.outputSchema?.$id));
-    }
-  } finally {
-    for (const id of compiled) ajv.removeSchema(id);
-  }
-  expect(compiled).toHaveLength(tools.length);
   const undescribed = tools.flatMap((tool) =>
     Object.entries(tool.inputSchema.properties ?? {})
       .filter(([, schema]) => !(schema as { description?: string }).description)
@@ -130,7 +116,7 @@ it("tools/list advertises unique output ids, described inputs and the annotation
 // The catalog size lock: the `tools/list` payload is one JSON-RPC response, so a client with a
 // message limit or one that forwards it whole to a model pays every byte. The ceiling only goes
 // down: lower it to the measured value (`node tools/surface-size.mjs`) after each shrink.
-const TOOLS_LIST_CEILING_BYTES = 982_964;
+const TOOLS_LIST_CEILING_BYTES = 62_688;
 
 it("tools/list serves the measured catalog and stays under the catalog size ceiling", async () => {
   const f = await fixture();
@@ -138,6 +124,55 @@ it("tools/list serves the measured catalog and stays under the catalog size ceil
   expect(served).toEqual(listedTools());
   const wireBytes = Buffer.byteLength(JSON.stringify({ tools: listedTools() }));
   expect(wireBytes).toBeLessThanOrEqual(TOOLS_LIST_CEILING_BYTES);
+});
+
+/** Every object node of a JSON Schema document. */
+function* schemaNodes(value: unknown): Generator<Record<string, unknown>> {
+  if (Array.isArray(value)) {
+    for (const item of value) yield* schemaNodes(item);
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+  const node = value as Record<string, unknown>;
+  yield node;
+  for (const child of Object.values(node)) yield* schemaNodes(child);
+}
+
+it("no announced schema inlines the ExecutablePlan contract and none exceeds 12 KB", () => {
+  // The plan contract is served as a resource (tool-rules.ts); inlining it adds about 254 KB to
+  // every schema that reaches it. Its fingerprint is its exact set of top-level properties.
+  const plan = (schemaCatalog.ExecutablePlan as { properties: Record<string, unknown> }).properties;
+  const fingerprint = Object.keys(plan).sort().join(",");
+  const offenders = listedTools().flatMap((tool) =>
+    Object.entries(tool)
+      .filter(([key]) => key.endsWith("Schema"))
+      .flatMap(([key, schema]) => {
+        const bytes = Buffer.byteLength(JSON.stringify(schema));
+        const inlined = [...schemaNodes(schema)].some(
+          (node) =>
+            node.properties !== null &&
+            typeof node.properties === "object" &&
+            Object.keys(node.properties).sort().join(",") === fingerprint,
+        );
+        return [
+          ...(inlined ? [`${tool.name}.${key} inlines ExecutablePlan`] : []),
+          ...(bytes > 12 * 1024 ? [`${tool.name}.${key} is ${bytes} bytes`] : []),
+        ];
+      }),
+  );
+  expect(offenders).toEqual([]);
+});
+
+it("a tool's rules page names its result contract, and that contract is served as a schema", async () => {
+  const f = await fixture();
+  const read = async (uri: string) =>
+    String((await f.client.readResource({ uri })).contents[0]?.text);
+  const rules = await read("testmaster://tools/testmaster_capabilities");
+  expect(rules).toContain(
+    "is a `CapabilityManifest`: its JSON Schema is testmaster://schemas/CapabilityManifest.",
+  );
+  const schema = JSON.parse(await read("testmaster://schemas/CapabilityManifest"));
+  expect(schema).toEqual(jsonSchema("CapabilityManifest"));
 });
 
 it("argument errors name the tool, list each issue once and name the allowed values", async () => {
