@@ -68,6 +68,27 @@ export function reportedUsage(text) {
   return usage;
 }
 
+/** The model the provider says answered (its fingerprint), from a JSON body or an SSE stream. */
+export function reportedModel(text) {
+  let model = null;
+  const lines = text.includes("data:")
+    ? text
+        .split("\n")
+        .filter((line) => line.startsWith("data:"))
+        .map((line) => line.slice(5).trim())
+    : [text];
+  for (const line of lines) {
+    try {
+      const value = JSON.parse(line);
+      const reported = value?.model ?? value?.response?.model ?? value?.message?.model;
+      if (typeof reported === "string") model = reported;
+    } catch {
+      // Not JSON (for example the SSE terminator `[DONE]`).
+    }
+  }
+  return model;
+}
+
 function flatten(value, prefix = "") {
   const out = {};
   for (const [key, item] of Object.entries(value)) {
@@ -145,6 +166,7 @@ export async function startProxy({ upstream, directory, marker = [] }) {
         status: upstreamResponse.statusCode,
         responseBytes: Buffer.byteLength(text),
         usage: reportedUsage(text),
+        responseModel: reportedModel(text),
         finishedAt: new Date().toISOString(),
       });
     } catch (error) {
@@ -156,6 +178,7 @@ export async function startProxy({ upstream, directory, marker = [] }) {
         error: String(error?.message ?? error),
         responseBytes: Buffer.byteLength(text),
         usage: reportedUsage(text),
+        responseModel: reportedModel(text),
       });
       if (!response.headersSent) response.writeHead(502, { "content-type": "application/json" });
       response.end(JSON.stringify({ error: { message: "surface proxy upstream failure" } }));
