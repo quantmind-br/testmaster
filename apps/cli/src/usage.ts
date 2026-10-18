@@ -1,5 +1,3 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
 import type { Command } from "commander";
 import { type Runtime, string } from "./runtime.js";
 
@@ -22,11 +20,11 @@ export function usageCommands(program: Command, runtime: Runtime): void {
         ...(string(options, "until") ? { until: string(options, "until")! } : {}),
       });
       const out = string(options, "out");
-      if (out) {
-        const path = rt.path(out);
-        await mkdir(dirname(path), { recursive: true, mode: 0o700 });
-        await writeFile(path, JSON.stringify(data, null, 2), { mode: 0o600, flag: "wx" });
-      }
+      if (out)
+        await rt.writeOutput(out, JSON.stringify(data, null, 2), {
+          mode: 0o600,
+          createParents: true,
+        });
       return { data };
     },
   );

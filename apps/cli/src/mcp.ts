@@ -18,6 +18,8 @@ export function mcpCommands(program: Command, runtime: Runtime): void {
     .option("--port <port>", "Loopback HTTP port", "8080")
     .action(async (_options, command: Command) => {
       const options = command.optsWithGlobals();
+      // `--dry-run` answers with its receipt before the server authenticates or opens anything.
+      if (await runtime.startCommand(command, [])) return;
       runtime.options = options;
       runtime.emitted = true;
       const app = await Application.open({

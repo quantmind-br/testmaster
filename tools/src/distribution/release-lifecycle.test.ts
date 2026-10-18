@@ -42,7 +42,11 @@ async function candidate(root: string, name: string, migrationCount: number, ima
   }
   for (const resource of RUNTIME_RESOURCES) {
     await mkdir(dirname(join(source, resource)), { recursive: true });
-    if (resource === "packages/contracts/schemas" || resource.includes("migrations/"))
+    if (
+      resource === "packages/contracts/schemas" ||
+      resource === "packages/application/skill-content" ||
+      resource.includes("migrations/")
+    )
       await mkdir(join(source, resource), { recursive: true });
     else await writeFile(join(source, resource), "fixture resource");
   }

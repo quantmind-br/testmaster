@@ -16,7 +16,7 @@ const cli = join(repo, "apps/cli/dist/main.js");
 const resultPath = join(repo, "validation/results/agent-target-loaders.json");
 const PI_MARKER = "Read .pi/skills/testmaster/SKILL.md before planning";
 const OMP_MARKER = "Read .omp/skills/testmaster/SKILL.md before planning";
-const OMP_SKILL_HEADING = "# TestMaster verification workflow";
+const OMP_SKILL_HEADING = "# TestMaster CLI";
 
 const tmp = await mkdtemp(join(tmpdir(), "tm-agent-loaders-"));
 const ws = join(tmp, "repo");

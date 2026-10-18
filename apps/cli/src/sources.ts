@@ -2,6 +2,7 @@ import { basename } from "node:path";
 import { refuseInvalidSource } from "@testmaster/application";
 import { ContractError } from "@testmaster/contracts";
 import { type Command, Option } from "commander";
+import { listOrPage, withPaging } from "./paging.js";
 import { integer, type Options, type Runtime, required, string, version } from "./runtime.js";
 
 type SourceFormat = "markdown" | "text" | "prd-json" | "pdf" | "openapi" | "graphql" | "postman";
@@ -63,9 +64,17 @@ export function sourceCommands(program: Command, runtime: Runtime): void {
       return { data: null };
     },
   );
-  runtime.bind(group.command("list"), async (rt, _args, options) => ({
-    data: await (await rt.app()).sources.list(await rt.project(options)),
-  }));
+  runtime.bind(withPaging(group.command("list"), 100), async (rt, _args, options) => {
+    const projectId = await rt.project(options);
+    return {
+      data: await listOrPage(
+        rt,
+        (await rt.app()).sources.list(projectId),
+        `sources:${projectId}`,
+        options,
+      ),
+    };
+  });
   runtime.bind(group.command("get <id>"), async (rt, args) => ({
     data: await (await rt.app()).sources.get(String(args[0])),
   }));

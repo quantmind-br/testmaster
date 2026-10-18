@@ -4,6 +4,14 @@ import { exitCodeForRun } from "@testmaster/domain";
 import { type Command, Option } from "commander";
 import { environmentId, waitForRun } from "./execution.js";
 import {
+  isPaged,
+  listOrPage,
+  OUT_DESCRIPTION,
+  pageOf,
+  withPaging,
+  writeJsonOut,
+} from "./paging.js";
+import {
   collect,
   dryRunReport,
   integer,
@@ -142,12 +150,50 @@ export function planCommands(program: Command, runtime: Runtime): void {
       );
     },
   );
-  runtime.bind(group.command("list"), async (rt, _args, options) => ({
-    data: await (await rt.app()).proposals.list(await rt.project(options)),
-  }));
-  runtime.bind(group.command("get <batch-id>"), async (rt, args) => ({
-    data: await (await rt.app()).proposals.detail(String(args[0])),
-  }));
+  runtime.bind(withPaging(group.command("list"), 100), async (rt, _args, options) => {
+    const projectId = await rt.project(options);
+    return {
+      data: await listOrPage(
+        rt,
+        (await rt.app()).proposals.list(projectId),
+        `plan-batches:${projectId}`,
+        options,
+      ),
+    };
+  });
+  runtime.bind(
+    withPaging(
+      group
+        .command("get <batch-id>")
+        .description(
+          "A proposal batch with its proposals. A batch holds whole plans: --limit/--cursor pages the proposals (the MCP resource serves 10 a page) and --out writes the whole batch to a file",
+        )
+        .option("--out <path>", OUT_DESCRIPTION),
+      10,
+    ),
+    async (rt, args, options) => {
+      const id = String(args[0]);
+      const out = string(options, "out");
+      if (out !== undefined && isPaged(options))
+        throw new ContractError(
+          "INVALID_ARGUMENT",
+          "--out cannot be combined with --limit or --cursor",
+        );
+      const detail = (await rt.app()).proposals.detail(id);
+      if (out !== undefined) return { data: await writeJsonOut(rt, out, detail) };
+      if (!isPaged(options)) return { data: detail };
+      const page = await pageOf(rt, detail.proposals, `plan-batch:${id}`, options);
+      return {
+        data: {
+          batch: detail.batch,
+          total: page.total,
+          returned: page.returned,
+          proposals: page.items,
+          nextCursor: page.nextCursor,
+        },
+      };
+    },
+  );
   runtime.bind(
     group
       .command("trial <batch-id>")

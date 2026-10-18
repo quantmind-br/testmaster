@@ -65,7 +65,9 @@ describe.each(AGENT_TARGETS)("J14 %s", (target) => {
     expect(await readFile(join(root, adapter.instructionsPath))).toEqual(foreign);
     expect(await readdir(root)).not.toContain(".testmaster");
     if (!preview.ok) return;
-    expect(preview.plan.changes.length).toBe(2);
+    // The managed instructions section plus every file of the skill tree (new install: all created).
+    expect(preview.plan.changes.length).toBe(preview.plan.files.length + 1);
+    expect(preview.plan.files.every((file) => file.action === "create")).toBe(true);
     const result = await applyAgentSkills(preview.plan);
     expect(result.ok).toBe(true);
     if (!result.ok || !result.backupDirectory) return;

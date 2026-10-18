@@ -1,0 +1,21 @@
+# Pipeline
+
+Run in the workspace directory with `--output json`. `data.x` is a field of the JSON envelope. `NAME` is the environment name.
+
+0. `testmaster init --mode local --base-url URL`, then `testmaster capabilities` and `testmaster doctor`.
+1. `testmaster bootstrap --target-url URL` -> `data.environment.name` is NAME, `data.projectId`. Write `data.proposedConfig` to `testmaster.config.json` yourself; nothing is written or contacted.
+2. `testmaster source add PATH --role prd|api-spec|code-summary` -> `data.revision.id` (svr_) feeds step 3. Add API specs and secrets before step 5: the model is offered only what exists.
+   `testmaster discover --scope codebase` -> `data.job.id` (dsc_), `data.status`; `testmaster feature list` reads its features. `job wait JOB_ID` waits.
+3. `testmaster requirement normalize --source-revision SVR_ID` -> `data.requirements[].id` and `.version`, `data.conflicts[]`, `data.version` (snapshot version) and `data.sourceSnapshotId`.
+4. Decide every requirement yourself; inference never approves. One decision file (`testmaster requirement review --example` prints it):
+   `testmaster requirement review --file review.json` -> `expectedVersion` in the file is `data.version` of step 3 (or of the last review); the receipt has `results` (refused items), `version`, `sourceSnapshotId`, `unresolvedConflictIds`.
+   One at a time: `testmaster requirement approve REQ_ID --expected-version N`, `requirement update`, `requirement reject REQ_ID --reason TEXT --expected-version N`, `requirement adjudicate CONFLICT_ID --selected-requirement REQ_ID --reason TEXT --expected-version N`. N = that requirement's `version` from `requirement list`; for `adjudicate`, the snapshot `version`.
+5. `testmaster plan generate --type auto --requirement REQ_ID` -> `data.id` (pbt_) is BATCH_ID. Omit `--source-snapshot` to use the current one; if given, it is `sourceSnapshotId` from the last review receipt.
+   `testmaster plan get BATCH_ID --limit 10` -> `data.batch.version`, `data.proposals[].id` (pro_), `.version`, `.state`, `.validation`, `data.nextCursor` (`--cursor C`). `--out FILE` writes everything instead of printing it.
+6. `testmaster plan trial BATCH_ID --env NAME` replays proposals, no model call: `data.trials[]` has `proposalId`, `outcome`, `gate`, `failedSteps`. A wrong pointer or value shows here.
+   `testmaster plan edit PRO_ID --plan FILE --expected-version N` -> N = that proposal's `version` from `plan get`; every edit raises the batch version. `plan edit --example --type backend|frontend|cli` prints a plan. Repeat step 6 until sound.
+7. `testmaster plan accept BATCH_ID --only PRO_ID,PRO_ID --expected-version N --idempotency-key KEY --reason TEXT` -> N is `data.batch.version` from a fresh `plan get` (after the last edit), or `data.batchVersion` of the last accept. KEY is any unique string you pick. Receipt: `data.acceptedProposals[]` = `{proposalId, testId, revisionId}`; `data.retained` stay for later; `plan reject` takes the same flags.
+   Accepted plans are active tests and already run. Optional: `testmaster test generate --proposal PRO_ID` -> `data.candidates[].id` (rev_), `.testId`; replay with `test run TEST_ID --revision REV_ID --env NAME --wait`, then `testmaster test revision promote REV_ID --expected-version N` (N = `data.version` of `test get TEST_ID`).
+8. `testmaster test run TEST_ID --env NAME --wait` -> `data.receipt.runId` (run_), `data.run.gate`, `.outcome`, `.cleanupOutcome`, `.reasonCode`. Exit 0 needs gate passed; several IDs add `members` and `batch`. Without `--wait`, `testmaster run wait RUN_ID` joins it; exit 7 is not a failure.
+9. `testmaster run steps RUN_ID`, `testmaster artifact get RUN_ID --out DIR` (see `references/evidence.md`), then `testmaster run analyze RUN_ID` -> `data.recommendedAction`: `fix_product` fix the application outside TestMaster, `fix_test` see `references/healing.md`, `fix_environment`, `review_contract`, `collect_more_evidence`. `run analysis RUN_ID` re-reads it.
+   After a fix: `testmaster test rerun TEST_ID --wait` replays the same revision.

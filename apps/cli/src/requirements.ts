@@ -1,6 +1,7 @@
-import { readFile } from "node:fs/promises";
-import { ContractError, parseStrictJson } from "@testmaster/contracts";
+import type { RequirementReviewInput } from "@testmaster/application";
+import { ContractError, parseStrictJson, validate } from "@testmaster/contracts";
 import type { Command } from "commander";
+import { listOrPage, withPaging } from "./paging.js";
 import {
   collect,
   dryRunReport,
@@ -13,6 +14,9 @@ import {
   version,
 } from "./runtime.js";
 
+/** Requirements per page named in the `--limit` help, the size of the other list pages. */
+const LIST_PAGE = 100;
+
 async function patch(runtime: Runtime, options: Options) {
   const file = string(options, "file");
   const text = string(options, "text");
@@ -23,7 +27,7 @@ async function patch(runtime: Runtime, options: Options) {
       "--file cannot be combined with --text or --criterion",
     );
   if (file) {
-    const value = parseStrictJson(await readFile(runtime.path(file)));
+    const value = parseStrictJson(await runtime.readInput(file));
     if (!value || typeof value !== "object" || Array.isArray(value))
       throw new ContractError("INVALID_ARGUMENT", "Requirement patch must be an object");
     const record = value as Record<string, unknown>;
@@ -47,6 +51,23 @@ async function patch(runtime: Runtime, options: Options) {
   };
 }
 
+/**
+ * The decision of `--file`: the review contract of the MCP tool, whose project is `--project`
+ * (`projectId`, resolved by the caller, only completes the contract check).
+ */
+function reviewInput(file: Uint8Array, projectId: string): RequirementReviewInput {
+  const value = parseStrictJson(file);
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new ContractError("INVALID_ARGUMENT", "Review decision must be an object");
+  if ("projectId" in value)
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      "The decision file does not name the project: select it with --project",
+    );
+  validate("Mcp_testmaster_review_requirements", { ...value, projectId });
+  return value as RequirementReviewInput;
+}
+
 export function requirementCommands(program: Command, runtime: Runtime): void {
   const group = program.command("requirement");
   runtime.bind(
@@ -65,9 +86,13 @@ export function requirementCommands(program: Command, runtime: Runtime): void {
       }),
     }),
   );
-  runtime.bind(group.command("list"), async (rt, _args, options) => ({
-    data: await (await rt.app()).requirements.list(await rt.project(options)),
-  }));
+  runtime.bind(withPaging(group.command("list"), LIST_PAGE), async (rt, _args, options) => {
+    const projectId = await rt.project(options);
+    const requirements = await (await rt.app()).requirements.list(projectId);
+    return {
+      data: await listOrPage(rt, requirements, `requirements:${projectId}`, options),
+    };
+  });
   runtime.bind(group.command("get <id>"), async (rt, args) => ({
     data: await (await rt.app()).requirements.get(String(args[0])),
   }));
@@ -182,5 +207,55 @@ export function requirementCommands(program: Command, runtime: Runtime): void {
         expectedVersion: version(options),
       }),
     }),
+  );
+  runtime.bind(
+    group
+      .command("review")
+      .description(
+        "Apply one combined, versioned review decision from --file (edits, conflict decisions, rejections, approvals, in that order)",
+      )
+      .requiredOption(
+        "--file <path>",
+        "JSON decision: expectedVersion (the requirement snapshot version), and any of update, adjudicate, reject, approve and reason; `--example` prints one",
+      ),
+    async (rt, _args, options) => {
+      const projectId = await rt.project(options);
+      const input = reviewInput(await rt.readInput(required(options, "file")), projectId);
+      const receipt = (await rt.app()).requirements.applyReview(projectId, input);
+      return {
+        data: receipt,
+        warnings: receipt.results
+          .filter((item) => !item.ok)
+          .map(
+            (item) =>
+              `${item.action} ${item.id} refused: ${item.error?.code}: ${item.error?.message}`,
+          ),
+      };
+    },
+    async (rt, _args, options) => {
+      const input = reviewInput(
+        await rt.readInput(required(options, "file")),
+        // Only the contract check needs a project here: a dry run opens no application.
+        "prj_00000000-0000-4000-8000-000000000000",
+      );
+      return dryRunReport(
+        [
+          {
+            operation: "requirement.review",
+            expectedVersion: input.expectedVersion,
+            edits: input.update?.length ?? 0,
+            conflictDecisions: input.adjudicate?.length ?? 0,
+            rejections: input.reject?.length ?? 0,
+            approvals: input.approve?.length ?? 0,
+            records:
+              "each decision audited and logged on its requirement; the snapshot version and fingerprint move once per applied decision",
+          },
+        ],
+        [
+          `the requirement snapshot must still be at version ${input.expectedVersion}`,
+          "every cited requirement and conflict must exist in the project",
+        ],
+      );
+    },
   );
 }

@@ -15,6 +15,7 @@ import {
 } from "@testmaster/application";
 import {
   ContractError,
+  errorBody,
   errorRegistry,
   INBOUND_WEBHOOK_MAX_BYTES,
   parseStrictJson,
@@ -354,26 +355,14 @@ export function createServer(options: ServerOptions): FastifyInstance {
     reply.code(metadata.httpStatus).send({
       schemaVersion: "1.0.0",
       requestId: request.id,
-      error: {
-        code: failure.code,
-        message: failure.message,
-        retryable: metadata.retryable,
-        details: failure.details,
-        nextActions: [],
-      },
+      error: errorBody(failure),
     });
   });
   app.setNotFoundHandler((request, reply) =>
     reply.code(404).send({
       schemaVersion: "1.0.0",
       requestId: request.id,
-      error: {
-        code: "NOT_FOUND",
-        message: "Route not found",
-        retryable: false,
-        details: {},
-        nextActions: [],
-      },
+      error: errorBody({ code: "NOT_FOUND", message: "Route not found" }),
     }),
   );
   app.get("/v1/openapi.json", async (_request, reply) =>

@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { ContractError, type PlanStep, parseStrictJson } from "@testmaster/contracts";
 import { type Command, Option } from "commander";
 import { candidateReceipt } from "./revisions.js";
@@ -72,20 +72,33 @@ export function codeCommands(group: Command, runtime: Runtime): void {
       .addOption(codeFormatOption("Framework to generate code for"))
       .option(
         "--out <path>",
-        "New directory inside the workspace (the working directory, never the application data directory); it must not exist yet",
+        "New directory inside the workspace (the working directory, never the application data directory); it must not exist yet. Every file is written there and only each file's path, bytes and sha256 are printed",
       )
       .option("--revision <id>")
       .option("--async"),
-    async (rt, args, options) => ({
-      data: await (await rt.app()).codeExport.export(String(args[0]), {
+    async (rt, args, options) => {
+      const out = string(options, "out");
+      const exported = await (await rt.app()).codeExport.export(String(args[0]), {
         format: codeFormat(options),
-        ...(string(options, "out") ? { out: string(options, "out") as string } : {}),
+        ...(out ? { out } : {}),
         ...(string(options, "revision")
           ? { revisionId: string(options, "revision") as string }
           : {}),
         ...(options.async ? { async: true } : {}),
-      }),
-    }),
+      });
+      if (!out) return { data: exported };
+      const { files, ...rest } = exported;
+      return {
+        data: {
+          ...rest,
+          files: Object.entries(files).map(([path, content]) => ({
+            path,
+            bytes: Buffer.byteLength(content),
+            sha256: createHash("sha256").update(content).digest("hex"),
+          })),
+        },
+      };
+    },
   );
 }
 export function explorationCommands(program: Command, runtime: Runtime): void {
@@ -113,7 +126,7 @@ export function explorationCommands(program: Command, runtime: Runtime): void {
       const actionsFile = string(options, "mutationActions");
       let mutationActions: PlanStep[] | undefined;
       if (actionsFile) {
-        const parsed = parseStrictJson(await readFile(rt.path(actionsFile)));
+        const parsed = parseStrictJson(await rt.readInput(actionsFile));
         if (!Array.isArray(parsed))
           throw new ContractError(
             "INVALID_ARGUMENT",

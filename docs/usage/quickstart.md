@@ -262,6 +262,24 @@ testmaster test revision promote "$CANDIDATE" --expected-version <n>
 testmaster usage                                           # model calls, tokens, reservations; unknown cost stays unknown
 ```
 
+`testmaster bootstrap --target-url <url> [--root <directory>] [--scope codebase|diff] [--mode replay|agent]` is the
+CLI of MCP `testmaster_bootstrap`: it creates or finds the project bound to a root inside the workspace directory
+(the workspace directory by default; a root outside it is `FORBIDDEN`), adds an environment for the target origin
+when the project has none, and prints `projectId`, a proposed `testmaster.config.json`, the environment, a
+preflight and next actions. It is idempotent per root, never writes a file (write `proposedConfig` yourself) and
+never sends a request to the target; an environment aimed at another origin is reported with the `env update`
+command, never retargeted.
+
+`testmaster job get|wait|cancel <id>` reads the durable jobs behind the model operations: `job_` ids (analysis,
+healing, normalization, delivery) and `dsc_` ids (discovery, exploration). A batch id (`bat_`) is followed with
+`run wait` and `report export`. `job get` prints the kind, state and, once the job ended, its stored result.
+`job wait` blocks with no deadline (a model call has none; `--request-timeout` does not apply) and exits 0 when the
+job completed and 1 when it was cancelled, failed or needs settlement; Ctrl-C detaches and never cancels it.
+`job cancel <id> --reason <text>` asks the job to stop and prints its state: a request is not a stop, so confirm
+with `job get` that the state is `cancelled`. A queued auxiliary job is cancelled at once and a running exploration
+is stopped by the process that runs it; a job a process holds that has no cancellation point (a running analysis or
+healing call, which may already be billed) is refused with `PRECONDITION_FAILED` and left untouched.
+
 Heal with a specific model using
 `testmaster heal propose "$RUN_ID" --provider quantforge --model <id>`; without them the first
 allowed provider's first structured-output model is used. `heal propose` refuses a failed Run
@@ -749,7 +767,14 @@ Artifact and code-file resources take the path with plain slashes
 or with each slash encoded as `%2F`; both read the same bytes.
 
 Agent skill files are written atomically inside managed markers, with backups under
-`.testmaster/agent-backups/`; edited managed blocks are reported as drift, never overwritten.
+`.testmaster/agent-backups/`; edited managed blocks are reported as drift, never overwritten. The skill is
+a tree (`SKILL.md` plus the files below it, such as `references/*.md`) installed into the agent's skill
+directory with a `.testmaster-manifest.json` recording the SHA-256 and size of every installed file. The
+preview (`plan.files` in the JSON envelope) lists each file as `create`, `update`, `unchanged`, `remove` or
+`keep`; install refuses a reference file edited since installation and names it, and `remove` deletes the
+files that still match, keeps an edited one and reports it, and removes the directories it emptied.
+
+The installed skill is version 2.0.0 and documents one route, the CLI, for agents with a shell: `SKILL.md` (authority, the nine-step pipeline, exit codes, the three inviolable rules, an index) and `references/` (pipeline, plan authoring, evidence, auth and secrets, healing, approvals), which an agent loads only when the task needs them. The 1.0.0 text (CLI and MCP in one file) stays in `packages/application/skill-content/1.0.0/` as evaluation content and is no longer installed; copies installed from it report `outdated` until `agent install --yes` runs again.
 
 ## Not available in M0–M2
 

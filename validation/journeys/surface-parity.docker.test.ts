@@ -8,7 +8,14 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { Application, issueLocalToken } from "@testmaster/application";
-import { ContractError, validateDocument } from "@testmaster/contracts";
+import {
+  ContractError,
+  type ErrorCode as ContractErrorCode,
+  type ErrorBody,
+  errorBody,
+  errorRegistry,
+  validateDocument,
+} from "@testmaster/contracts";
 import { expect, it } from "vitest";
 import { cli, controlledShop, eventually, journey, object, text } from "./harness.js";
 import { invalidDocuments } from "./invalid-documents.js";
@@ -21,15 +28,36 @@ async function freePort(): Promise<number> {
   await new Promise<void>((resolve) => server.close(() => resolve()));
   return address.port;
 }
-function errorOf(result: unknown) {
-  return object(object(result).error);
+interface Operation {
+  name: string;
+  /** The code every surface must answer with, so a shared wrong failure cannot pass as parity. */
+  code: ContractErrorCode;
+  cli: string[];
+  rest: { method: string; path: string; body?: unknown; ifMatch?: number };
+  mcp: { tool: string; args: Record<string, unknown> };
 }
+/**
+ * The `error` of a CLI or REST error envelope. The envelope's `requestId` is transport-specific (a
+ * per-invocation correlation id) and is only required to exist; nothing else may sit beside
+ * `schemaVersion` and `error`.
+ */
+function errorOf(result: unknown) {
+  const { requestId, schemaVersion, error, ...rest } = object(result);
+  expect(typeof requestId).toBe("string");
+  expect(schemaVersion).toBe("1.0.0");
+  expect(rest).toEqual({});
+  return object(error);
+}
+/** The `error` of an MCP tool result: its JSON text carries the body alone, with no envelope. */
 function mcpError(result: { content: unknown }) {
   const content = result.content as { text?: string }[];
-  return errorOf(JSON.parse(String(content[0]?.text)));
+  expect(content).toHaveLength(1);
+  const { error, ...rest } = object(JSON.parse(String(content[0]?.text)));
+  expect(rest).toEqual({});
+  return object(error);
 }
 
-it("shared invalid corpus is rejected identically by built CLI, real server start, stdio MCP and HTTP MCP without authoring writes", async () => {
+it("shared invalid corpus and unknown-resource operations get the same error body from built CLI, real server start, stdio MCP and HTTP MCP without authoring writes", async () => {
   await journey(
     "surface-invalid-corpus",
     async (session) => {
@@ -110,49 +138,161 @@ it("shared invalid corpus is rejected identically by built CLI, real server star
             expect(result.structuredContent).toEqual({ validated: true, schema: fixture.schema });
           }
         }
-        for (const fixture of invalidDocuments()) {
+        /**
+         * Runs one operation on every surface and returns each surface's error body, normalized
+         * only where the transport owns the field: the `requestId` of the CLI and REST envelope
+         * (a per-invocation correlation id, `cli_<uuid>` or the server's `X-Correlation-ID`) is
+         * dropped, and so is the envelope itself (`schemaVersion` is checked); MCP carries the body
+         * alone as its tool result, with no envelope and no timestamps. Everything inside the body
+         * (code, message, retryable, details, nextActions) is compared as is.
+         */
+        const bodies = async (operation: Operation) => {
           // REST plus MCP HTTP each consume an authenticated request token.
           await delay(2200);
-          let expected: Record<string, unknown> | undefined;
+          const command = await session.start(operation.cli).result;
+          const response = await fetch(`http://127.0.0.1:${port}/v1${operation.rest.path}`, {
+            method: operation.rest.method,
+            headers: {
+              Authorization: `Bearer ${token}`,
+              ...(operation.rest.method === "GET" ? {} : { "Idempotency-Key": randomUUID() }),
+              ...(operation.rest.body === undefined ? {} : { "Content-Type": "application/json" }),
+              ...(operation.rest.ifMatch === undefined
+                ? {}
+                : { "If-Match": `"${operation.rest.ifMatch}"` }),
+            },
+            ...(operation.rest.body === undefined
+              ? {}
+              : { body: JSON.stringify(operation.rest.body) }),
+          });
+          const mcp: Record<string, unknown>[] = [];
+          for (const client of clients) {
+            const result = await client.callTool({
+              name: operation.mcp.tool,
+              arguments: operation.mcp.args,
+            });
+            expect(result.isError, operation.name).toBe(true);
+            mcp.push(mcpError(result));
+          }
+          return {
+            cli: { exit: command.exitCode, body: errorOf(command.json) },
+            rest: { status: response.status, body: errorOf(await response.json()) },
+            stdio: mcp[0],
+            http: mcp[1],
+          };
+        };
+        const assertEqualBodies = async (operation: Operation, expected?: ErrorBody) => {
+          const found = await bodies(operation);
+          const code = expected?.code ?? operation.code;
+          // The body is the same on all four surfaces, including `retryable` and `nextActions`.
+          expect(found.cli.body, `${operation.name} cli`).toEqual(expected ?? found.rest.body);
+          expect(found.rest.body, `${operation.name} rest`).toEqual(found.cli.body);
+          expect(found.stdio, `${operation.name} stdio mcp`).toEqual(found.cli.body);
+          expect(found.http, `${operation.name} http mcp`).toEqual(found.cli.body);
+          expect(found.cli.body.code, operation.name).toBe(code);
+          // The transport maps the same code to its own status: HTTP status and CLI exit code.
+          expect(found.rest.status, operation.name).toBe(errorRegistry[code].httpStatus);
+          expect(found.cli.exit, operation.name).toBe(errorRegistry[code].cliExit);
+        };
+        for (const fixture of invalidDocuments()) {
+          let expected: ErrorBody | undefined;
           try {
             validateDocument(fixture.schema, fixture.document);
           } catch (error) {
             expect(error).toBeInstanceOf(ContractError);
-            const failure = error as ContractError;
-            expected = { code: failure.code, details: failure.details };
+            expected = errorBody(error as ContractError);
           }
           expect(expected, fixture.name).toBeDefined();
           if (!expected) throw new Error(`Invalid fixture accepted: ${fixture.name}`);
           const path = join(session.cwd, "invalid.json");
           await writeFile(path, JSON.stringify(fixture.document));
-          const command = await session.start([
-            "contract",
-            "validate",
-            "--schema",
-            fixture.schema,
-            "--document",
-            path,
-          ]).result;
-          expect(errorOf(command.json), fixture.name).toMatchObject(expected);
-          const response = await fetch(`http://127.0.0.1:${port}/v1/contracts/validate`, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-              "Idempotency-Key": randomUUID(),
+          await assertEqualBodies(
+            {
+              name: fixture.name,
+              code: expected.code,
+              cli: ["contract", "validate", "--schema", fixture.schema, "--document", path],
+              rest: {
+                method: "POST",
+                path: "/contracts/validate",
+                body: { schema: fixture.schema, document: fixture.document },
+              },
+              mcp: {
+                tool: "testmaster_validate_document",
+                args: { schema: fixture.schema, document: fixture.document },
+              },
             },
-            body: JSON.stringify({ schema: fixture.schema, document: fixture.document }),
-          });
-          expect(errorOf(await response.json()), fixture.name).toMatchObject(expected);
-          for (const client of clients) {
-            const result = await client.callTool({
-              name: "testmaster_validate_document",
-              arguments: { schema: fixture.schema, document: fixture.document },
-            });
-            expect(result.isError, fixture.name).toBe(true);
-            expect(mcpError(result), fixture.name).toMatchObject(expected);
-          }
+            expected,
+          );
         }
+        // The same equality for operations that reach the application with an unknown resource.
+        const missing = (prefix: string) => `${prefix}_00000000-0000-4000-8000-000000000001`;
+        const operations: Operation[] = [
+          {
+            name: "run-get-unknown",
+            code: "NOT_FOUND",
+            cli: ["run", "get", missing("run")],
+            rest: { method: "GET", path: `/runs/${missing("run")}` },
+            mcp: { tool: "testmaster_get_run", args: { runId: missing("run") } },
+          },
+          {
+            name: "run-cancel-unknown",
+            code: "NOT_FOUND",
+            cli: ["run", "cancel", missing("run")],
+            rest: { method: "POST", path: `/runs/${missing("run")}/cancel`, body: {} },
+            mcp: {
+              tool: "testmaster_cancel_run",
+              args: { runId: missing("run"), reason: "surface parity" },
+            },
+          },
+          {
+            name: "run-analysis-unknown",
+            code: "NOT_FOUND",
+            cli: ["run", "analysis", missing("run")],
+            rest: { method: "GET", path: `/runs/${missing("run")}/analysis` },
+            mcp: { tool: "testmaster_get_analysis", args: { runId: missing("run") } },
+          },
+          {
+            name: "test-archive-unknown",
+            code: "NOT_FOUND",
+            cli: ["test", "archive", missing("tst"), "--expected-version", "1"],
+            rest: { method: "DELETE", path: `/tests/${missing("tst")}`, ifMatch: 1 },
+            mcp: {
+              tool: "testmaster_archive_test",
+              args: { testId: missing("tst"), expectedVersion: 1 },
+            },
+          },
+          {
+            name: "source-archive-unknown",
+            code: "NOT_FOUND",
+            cli: ["source", "archive", missing("src"), "--expected-version", "1"],
+            rest: { method: "DELETE", path: `/sources/${missing("src")}`, ifMatch: 1 },
+            mcp: {
+              tool: "testmaster_archive_source",
+              args: { sourceId: missing("src"), expectedVersion: 1 },
+            },
+          },
+          {
+            name: "run-analyze-unknown",
+            code: "NOT_FOUND",
+            cli: ["run", "analyze", missing("run")],
+            rest: { method: "POST", path: `/runs/${missing("run")}/analysis`, body: {} },
+            mcp: { tool: "testmaster_analyze_run", args: { runId: missing("run") } },
+          },
+          {
+            name: "run-analyze-provider-without-model",
+            code: "INVALID_ARGUMENT",
+            cli: ["run", "analyze", missing("run"), "--provider", "quantforge"],
+            rest: {
+              method: "POST",
+              path: `/runs/${missing("run")}/analysis`,
+              body: { provider: "quantforge" },
+            },
+            mcp: {
+              tool: "testmaster_analyze_run",
+              args: { runId: missing("run"), provider: "quantforge" },
+            },
+          },
+        ];
+        for (const operation of operations) await assertEqualBodies(operation);
         expect(app.database.all("SELECT id FROM tests")).toHaveLength(baseline);
         expect(app.database.all("SELECT id FROM runs")).toHaveLength(0);
         expect(app.database.all("SELECT id FROM sources")).toHaveLength(0);
@@ -184,7 +324,7 @@ it("shared invalid corpus is rejected identically by built CLI, real server star
           ]),
         );
         session.oracles.push({
-          check: "sameErrorCodeRulePath",
+          check: "sameErrorBody",
           surfaces: ["built-cli", "server-start", "stdio-mcp", "http-mcp"],
           cases: invalidDocuments().map((f) => f.name),
           authoringWrites: 0,
@@ -204,7 +344,7 @@ it("shared invalid corpus is rejected identically by built CLI, real server star
       ],
     },
   );
-}, 180000);
+}, 360000);
 
 it("fabricated MCP calls are denied and audited with actor and command identity", async () => {
   await journey("surface-mcp-denials", async (session) => {

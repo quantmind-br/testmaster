@@ -92,7 +92,7 @@ export class ConfinedRoot {
       throw e;
     }
   }
-  async openFile(path: string, write = false): Promise<FileHandle> {
+  async openFile(path: string, write = false, mode = 0o600): Promise<FileHandle> {
     const parent = this.parent(path, write);
     try {
       const file = await open(
@@ -100,7 +100,7 @@ export class ConfinedRoot {
         constants.O_NOFOLLOW |
           (write ? constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL : constants.O_RDONLY) |
           constants.O_NONBLOCK,
-        0o600,
+        mode,
       );
       const stat = fstatSync(file.fd);
       if (!stat.isFile() || stat.nlink !== 1) {

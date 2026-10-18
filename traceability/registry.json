@@ -354,7 +354,7 @@
       "scenario": [
         "future major ExecutablePlan on real POST /v1/projects/{id}/tests",
         "unknown enum shared corpus",
-        "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus is rejected identically by built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
+        "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus and unknown-resource operations get the same error body from built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
       ],
       "oracle": [
         "HTTP400 INVALID_ARGUMENT with /plan/schemaVersion const issue; unknown enum never admitted; no authoring writes"
@@ -367,10 +367,10 @@
       "note": "Actual authoring endpoint receives an otherwise valid plan with schemaVersion2.0.0. Structured positive/negative links share a real paired-control scenario; distinct protected assertions retained.",
       "coverage": {
         "positive": [
-          "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus is rejected identically by built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
+          "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus and unknown-resource operations get the same error body from built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
         ],
         "negative": [
-          "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus is rejected identically by built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
+          "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus and unknown-resource operations get the same error body from built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
         ],
         "criticalAssertions": [
           {
@@ -379,7 +379,7 @@
           },
           {
             "path": "validation/journeys/surface-parity.docker.test.ts",
-            "assertion": "expect(errorOf(command.json), fixture.name).toMatchObject(expected);"
+            "assertion": "expect(found.cli.body, `${operation.name} cli`).toEqual(expected ?? found.rest.body);"
           }
         ]
       }
@@ -1063,7 +1063,7 @@
       "status": "verified",
       "scenario": [
         "shared invalid corpus is rejected identically by built CLI, real server start, stdio MCP and HTTP MCP without authoring writes",
-        "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus is rejected identically by built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
+        "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus and unknown-resource operations get the same error body from built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
       ],
       "oracle": [
         "15 invalid plan/config/request documents retain exact canonical error code and details including JSON-pointer rule paths across all four transports; valid document positive controls; no tests/sources/runs written"
@@ -1081,10 +1081,10 @@
       "note": "Parity is exercised through the read-only document-validation commands using the same catalog as mutation admission. MCP rejection audit is an intentional security write, not an authoring effect. Structured positive/negative links share a real paired-control scenario; distinct protected assertions retained.",
       "coverage": {
         "positive": [
-          "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus is rejected identically by built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
+          "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus and unknown-resource operations get the same error body from built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
         ],
         "negative": [
-          "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus is rejected identically by built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
+          "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus and unknown-resource operations get the same error body from built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
         ],
         "criticalAssertions": [
           {
@@ -1093,7 +1093,7 @@
           },
           {
             "path": "validation/journeys/surface-parity.docker.test.ts",
-            "assertion": "expect(errorOf(command.json), fixture.name).toMatchObject(expected);"
+            "assertion": "expect(found.cli.body, `${operation.name} cli`).toEqual(expected ?? found.rest.body);"
           }
         ]
       }
@@ -1318,7 +1318,7 @@
       "scenario": [
         "real transport shared-document positive/negative controls",
         "publishes byte-identical generated artifacts and valid OpenAPI",
-        "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus is rejected identically by built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
+        "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus and unknown-resource operations get the same error body from built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
       ],
       "oracle": [
         "same validator on CLI/REST/MCP; generated schema/OpenAPI bytes and documented examples pass existing conformance suite"
@@ -1336,10 +1336,10 @@
       "note": "Generated artifacts regenerated with node packages/contracts/dist/generate.js. Structured positive/negative links share a real paired-control scenario; distinct protected assertions retained.",
       "coverage": {
         "positive": [
-          "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus is rejected identically by built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
+          "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus and unknown-resource operations get the same error body from built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
         ],
         "negative": [
-          "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus is rejected identically by built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
+          "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus and unknown-resource operations get the same error body from built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
         ],
         "criticalAssertions": [
           {
@@ -1348,7 +1348,7 @@
           },
           {
             "path": "validation/journeys/surface-parity.docker.test.ts",
-            "assertion": "expect(errorOf(command.json), fixture.name).toMatchObject(expected);"
+            "assertion": "expect(found.cli.body, `${operation.name} cli`).toEqual(expected ?? found.rest.body);"
           }
         ]
       }
@@ -4547,7 +4547,7 @@
           },
           {
             "path": "validation/journeys/j14-agent-skills.test.ts",
-            "assertion": "expect(object(preview.plan).changes).toHaveLength(2);"
+            "assertion": "expect(object(preview.plan).changes).toHaveLength(files.length + 1);"
           },
           {
             "path": "validation/journeys/j14-agent-skills.test.ts",
@@ -4567,7 +4567,7 @@
           },
           {
             "path": "validation/journeys/j14-agent-skills.test.ts",
-            "assertion": "expect(section?.version).toBe(\"1.0.0\");"
+            "assertion": "expect(section?.version).toBe(AGENT_SKILL_VERSION);"
           },
           {
             "path": "validation/journeys/j14-agent-skills.test.ts",
@@ -4631,11 +4631,11 @@
           },
           {
             "path": "validation/journeys/j14-agent-skills.test.ts",
-            "assertion": "expect(inspectManagedSection(await readFile(path)).section?.version).toBe(\"1.0.0\");"
+            "assertion": "expect(inspectManagedSection(await readFile(path)).section?.version).toBe(\n        AGENT_SKILL_VERSION,\n      );"
           },
           {
             "path": "validation/journeys/j14-agent-skills.test.ts",
-            "assertion": "expect(inspectManagedSection(await readFile(skill), true).section?.version).toBe(\"1.0.0\");"
+            "assertion": "expect(inspectManagedSection(await readFile(skill), true).section?.version).toBe(\n        AGENT_SKILL_VERSION,\n      );"
           },
           {
             "path": "validation/journeys/j14-agent-skills.test.ts",
@@ -4756,7 +4756,7 @@
         "criticalAssertions": [
           {
             "path": "validation/journeys/j14-agent-skills.test.ts",
-            "assertion": "expect(await readFile(path)).toEqual(Buffer.concat([foreignBefore, foreignAfter]));\n      await expect(lstat(skill)).rejects.toMatchObject({ code: \"ENOENT\" });"
+            "assertion": "expect(await readFile(path)).toEqual(Buffer.concat([foreignBefore, foreignAfter]));\n      // Removal takes every file of the tree and the directories it emptied.\n      await expect(lstat(skill)).rejects.toMatchObject({ code: \"ENOENT\" });"
           },
           {
             "path": "packages/application/src/agent-skills/installer.test.ts",
@@ -7466,7 +7466,7 @@
       "status": "verified",
       "scenario": [
         "shared invalid corpus cross-surface acceptance",
-        "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus is rejected identically by built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
+        "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus and unknown-resource operations get the same error body from built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
       ],
       "oracle": [
         "actual built CLI, server-start REST, SDK stdio and HTTP reject same documents and accept valid controls"
@@ -7479,10 +7479,10 @@
       "note": "Closes identified cross-surface catalog acceptance gap. Structured positive/negative links share a real paired-control scenario; distinct protected assertions retained.",
       "coverage": {
         "positive": [
-          "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus is rejected identically by built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
+          "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus and unknown-resource operations get the same error body from built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
         ],
         "negative": [
-          "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus is rejected identically by built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
+          "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus and unknown-resource operations get the same error body from built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
         ],
         "criticalAssertions": [
           {
@@ -7491,7 +7491,7 @@
           },
           {
             "path": "validation/journeys/surface-parity.docker.test.ts",
-            "assertion": "expect(errorOf(command.json), fixture.name).toMatchObject(expected);"
+            "assertion": "expect(found.cli.body, `${operation.name} cli`).toEqual(expected ?? found.rest.body);"
           }
         ]
       }
@@ -11123,7 +11123,7 @@
       "status": "verified",
       "scenario": [
         "same-document interoperability across four real transports",
-        "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus is rejected identically by built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
+        "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus and unknown-resource operations get the same error body from built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
       ],
       "oracle": ["exact error code/details parity and valid controls"],
       "evidence": [
@@ -11134,10 +11134,10 @@
       "note": "Closes assigned interoperability gap; standalone export belongs to ExportStandalone slice. Structured positive/negative links share a real paired-control scenario; distinct protected assertions retained.",
       "coverage": {
         "positive": [
-          "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus is rejected identically by built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
+          "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus and unknown-resource operations get the same error body from built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
         ],
         "negative": [
-          "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus is rejected identically by built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
+          "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus and unknown-resource operations get the same error body from built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
         ],
         "criticalAssertions": [
           {
@@ -11146,7 +11146,7 @@
           },
           {
             "path": "validation/journeys/surface-parity.docker.test.ts",
-            "assertion": "expect(errorOf(command.json), fixture.name).toMatchObject(expected);"
+            "assertion": "expect(found.cli.body, `${operation.name} cli`).toEqual(expected ?? found.rest.body);"
           }
         ]
       }
@@ -17048,7 +17048,7 @@
           },
           {
             "path": "validation/journeys/j14-agent-skills.test.ts",
-            "assertion": "expect(object(preview.plan).changes).toHaveLength(2);"
+            "assertion": "expect(object(preview.plan).changes).toHaveLength(files.length + 1);"
           },
           {
             "path": "validation/journeys/j14-agent-skills.test.ts",
@@ -17068,7 +17068,7 @@
           },
           {
             "path": "validation/journeys/j14-agent-skills.test.ts",
-            "assertion": "expect(section?.version).toBe(\"1.0.0\");"
+            "assertion": "expect(section?.version).toBe(AGENT_SKILL_VERSION);"
           },
           {
             "path": "validation/journeys/j14-agent-skills.test.ts",
@@ -17132,11 +17132,11 @@
           },
           {
             "path": "validation/journeys/j14-agent-skills.test.ts",
-            "assertion": "expect(inspectManagedSection(await readFile(path)).section?.version).toBe(\"1.0.0\");"
+            "assertion": "expect(inspectManagedSection(await readFile(path)).section?.version).toBe(\n        AGENT_SKILL_VERSION,\n      );"
           },
           {
             "path": "validation/journeys/j14-agent-skills.test.ts",
-            "assertion": "expect(inspectManagedSection(await readFile(skill), true).section?.version).toBe(\"1.0.0\");"
+            "assertion": "expect(inspectManagedSection(await readFile(skill), true).section?.version).toBe(\n        AGENT_SKILL_VERSION,\n      );"
           },
           {
             "path": "validation/journeys/j14-agent-skills.test.ts",
@@ -18468,7 +18468,7 @@
       "status": "verified",
       "scenario": [
         "fabricated MCP calls are denied and audited with actor and command identity",
-        "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus is rejected identically by built CLI, real server start, stdio MCP and HTTP MCP without authoring writes",
+        "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus and unknown-resource operations get the same error body from built CLI, real server start, stdio MCP and HTTP MCP without authoring writes",
         "validation/journeys/surface-parity.docker.test.ts::fabricated MCP calls are denied and audited with actor and command identity"
       ],
       "oracle": [
@@ -18482,7 +18482,7 @@
       "note": "Audit stores actor/tool identity and safe outcome hash, never argument contents.",
       "coverage": {
         "positive": [
-          "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus is rejected identically by built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
+          "validation/journeys/surface-parity.docker.test.ts::shared invalid corpus and unknown-resource operations get the same error body from built CLI, real server start, stdio MCP and HTTP MCP without authoring writes"
         ],
         "negative": [
           "validation/journeys/surface-parity.docker.test.ts::fabricated MCP calls are denied and audited with actor and command identity"
@@ -18514,19 +18514,19 @@
           },
           {
             "path": "validation/journeys/surface-parity.docker.test.ts",
-            "assertion": "expect(errorOf(command.json), fixture.name).toMatchObject(expected);"
+            "assertion": "expect(found.cli.body, `${operation.name} cli`).toEqual(expected ?? found.rest.body);"
           },
           {
             "path": "validation/journeys/surface-parity.docker.test.ts",
-            "assertion": "expect(errorOf(await response.json()), fixture.name).toMatchObject(expected);"
+            "assertion": "expect(found.rest.body, `${operation.name} rest`).toEqual(found.cli.body);"
           },
           {
             "path": "validation/journeys/surface-parity.docker.test.ts",
-            "assertion": "expect(result.isError, fixture.name).toBe(true);"
+            "assertion": "expect(result.isError, operation.name).toBe(true);"
           },
           {
             "path": "validation/journeys/surface-parity.docker.test.ts",
-            "assertion": "expect(mcpError(result), fixture.name).toMatchObject(expected);"
+            "assertion": "expect(found.stdio, `${operation.name} stdio mcp`).toEqual(found.cli.body);"
           },
           {
             "path": "validation/journeys/surface-parity.docker.test.ts",

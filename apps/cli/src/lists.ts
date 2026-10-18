@@ -1,4 +1,3 @@
-import { readFile } from "node:fs/promises";
 import {
   ContractError,
   type SuiteInput,
@@ -81,7 +80,9 @@ async function selectionOf(
       "A list is either dynamic (--binding) or fixed (--member), not both",
     );
   if (file) {
-    const selection = JSON.parse(await readFile(runtime.path(file), "utf8")) as SuiteSelection;
+    const selection = JSON.parse(
+      (await runtime.readInput(file)).toString("utf8"),
+    ) as SuiteSelection;
     validate("SuiteInput", { name: "selection-file", selection });
     return selection;
   }

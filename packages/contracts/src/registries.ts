@@ -168,6 +168,37 @@ export class ContractError extends Error {
     this.issues = issues;
   }
 }
+/**
+ * The one error body every surface carries, in the `ErrorEnvelope` of REST and the CLI (beside
+ * `schemaVersion` and `requestId`) and as the whole `error` of an MCP tool result. Producing it in
+ * one place is what keeps the surfaces equal: a field an agent acts on (`code`, `retryable`,
+ * `details`) cannot differ between them. `retryable` is a boolean, as `ErrorEnvelope` declares:
+ * only a code the registry marks `true` is retryable as is, a `"conditional"` one is not.
+ */
+export interface ErrorBody {
+  code: ErrorCode;
+  message: string;
+  retryable: boolean;
+  details: Record<string, unknown>;
+  nextActions: [];
+}
+export function errorBody(error: {
+  code: ErrorCode;
+  message: string;
+  details?: Record<string, unknown>;
+  issues?: readonly ValidationIssue[];
+}): ErrorBody {
+  return {
+    code: error.code,
+    message: error.message,
+    retryable: errorRegistry[error.code].retryable === true,
+    details: {
+      ...error.details,
+      ...(error.issues?.length ? { issues: error.issues } : {}),
+    },
+    nextActions: [],
+  };
+}
 export interface Capability {
   id: string;
   enabled: boolean;

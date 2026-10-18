@@ -22,7 +22,7 @@ export function reportCommands(program: Command, runtime: Runtime): void {
       const exported = await (await rt.app()).reports.export(
         String(args[0]),
         format,
-        out ? rt.path(out) : undefined,
+        out ? await rt.confinedPath(out) : undefined,
       );
       return {
         data: exported,

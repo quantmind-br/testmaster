@@ -1,4 +1,3 @@
-import { readFile, writeFile } from "node:fs/promises";
 import {
   ContractError,
   jsonSchema,
@@ -29,7 +28,7 @@ export function contractCommands(program: Command, runtime: Runtime): void {
     async (rt, _args, options) => ({
       data: validateDocument(
         required(options, "schema"),
-        parseStrictJson(await readFile(rt.path(required(options, "document"))), 10 * 1024 * 1024),
+        parseStrictJson(await rt.readInput(required(options, "document")), 10 * 1024 * 1024),
       ),
     }),
   );
@@ -46,15 +45,17 @@ export function contractCommands(program: Command, runtime: Runtime): void {
       const out = string(options, "out");
       if (!out) return { data: schema };
       const text = `${JSON.stringify(schema)}\n`;
+      let path: string;
       try {
-        await writeFile(rt.path(out), text, { flag: "wx" });
+        path = await rt.writeOutput(out, text, { mode: 0o666 });
       } catch (error) {
+        if (error instanceof ContractError) throw error;
         throw new ContractError("INVALID_ARGUMENT", "--out must name a file that does not exist", {
           field: "out",
           reason: (error as NodeJS.ErrnoException).code ?? "unwritable",
         });
       }
-      return { data: { name, path: rt.path(out), sizeBytes: Buffer.byteLength(text) } };
+      return { data: { name, path, sizeBytes: Buffer.byteLength(text) } };
     },
   );
 }

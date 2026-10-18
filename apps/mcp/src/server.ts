@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { lstat, readFile, realpath } from "node:fs/promises";
-import { basename, isAbsolute, join, relative, resolve } from "node:path";
+import { readFile, realpath } from "node:fs/promises";
+import { resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -19,7 +19,9 @@ import {
 import {
   type AnalysisModelStatus,
   type Application,
+  bootstrapProject,
   codeAnalysisReceipt,
+  confineToRoots,
   correlationId,
   type EnvironmentPatch,
   entity,
@@ -27,15 +29,16 @@ import {
   formatReviewDecision,
   formatReviewRisk,
   formatReviewStatus,
+  generateTests,
+  insideRoot,
   isWriterContention,
   type PlanGenerationType,
+  type RequirementReviewInput,
   refuseInvalidSource,
-  requirementRejection,
   retryWriterContention,
   runVerdict,
   SignedCursorCodec,
   type SourceAddInput,
-  supersedingConflict,
   withRequirementStatus,
 } from "@testmaster/application";
 import {
@@ -46,13 +49,13 @@ import {
   type BatchRequest,
   ContractError,
   type ExecutablePlan,
+  errorBody,
   type HealingAbstention,
   type HealingReview,
   jsonSchema,
   type McpRunResult,
   mcpToolCatalog,
   type PlanStep,
-  parseStrictJson,
   RUNNER_VERSION,
   type Run,
   SCHEMA_VERSION,
@@ -146,6 +149,55 @@ const annotations: Record<ToolName, Annotations> = {
   testmaster_cancel_run: { ...DESTRUCTIVE, idempotentHint: true },
 };
 /**
+ * Tools whose nested input contract is large (PLAN.md §8 Phase 1 item 3, option D): clients that
+ * forward every input schema to the model pay for each nested property on every turn. They
+ * announce their top-level arguments only; the nested contract is on the rules page and served at
+ * `testmaster://schemas/Mcp_<tool>`, and every call is still validated against the full contract.
+ */
+const SHALLOW_INPUT_TOOLS: ReadonlySet<string> = new Set<ToolName>([
+  "testmaster_save_auth_profile",
+  "testmaster_save_suite",
+  "testmaster_review_requirements",
+  "testmaster_update_environment",
+  "testmaster_explore",
+  "testmaster_run_tests",
+]);
+/**
+ * A top-level argument reduced to its type, description and allowed values: nested properties,
+ * patterns and bounds stay in the full contract, which every call is still validated against.
+ */
+function shallowArgument(schema: SchemaNode): SchemaNode {
+  const literals =
+    schema.enum ??
+    (schema.anyOf?.length && schema.anyOf.every((branch) => "const" in branch)
+      ? schema.anyOf.map((branch) => branch.const)
+      : undefined);
+  return {
+    ...(schema.type ? { type: schema.type } : {}),
+    ...(schema.type === "array" && schema.items?.type
+      ? { items: { type: schema.items.type } }
+      : {}),
+    ...(literals ? { enum: literals } : {}),
+    ...(schema.description ? { description: schema.description } : {}),
+  };
+}
+function announcedInput(tool: { name: string; inputSchema: string }): { type: "object" } {
+  const schema = jsonSchema(tool.inputSchema) as unknown as SchemaNode & {
+    type: "object";
+    additionalProperties?: boolean;
+  };
+  if (!SHALLOW_INPUT_TOOLS.has(tool.name)) return schema;
+  return {
+    type: "object",
+    properties: Object.fromEntries(
+      Object.entries(schema.properties ?? {}).map(([key, value]) => [key, shallowArgument(value)]),
+    ),
+    ...(schema.required ? { required: schema.required } : {}),
+    ...(schema.additionalProperties === false ? { additionalProperties: false } : {}),
+    $comment: `Nested argument contracts: testmaster://tools/${tool.name} and testmaster://schemas/${tool.inputSchema}`,
+  } as { type: "object" };
+}
+/**
  * The exact `tools/list` payload; the surface-size measurement reads this same function. No tool
  * announces an `outputSchema`: three of them would inline the whole `ExecutablePlan` (about 254 KB
  * each) and the protocol allows omitting it. The result contract of each tool is named on its rules
@@ -156,7 +208,7 @@ export function listedTools() {
   return mcpToolCatalog.map((tool) => ({
     name: tool.name,
     description: toolDescriptions[tool.name as ToolName],
-    inputSchema: jsonSchema(tool.inputSchema) as { type: "object" },
+    inputSchema: announcedInput(tool),
     annotations: annotations[tool.name as ToolName],
   }));
 }
@@ -658,11 +710,14 @@ export class TestMasterMcp {
             },
           );
           const data = {
-            error: {
+            error: errorBody({
               code: failure.code,
               message: failure.message,
+              issues: failure.issues,
+              // `auditRecorded` is MCP-only: only a tool call has an error audit write that can
+              // lose to writer contention (docs/adr/002-storage.md), and it must not hide the error.
               details: audited ? failure.details : { ...failure.details, auditRecorded: false },
-            },
+            }),
           };
           return {
             isError: true,
@@ -886,21 +941,11 @@ export class TestMasterMcp {
     void job.finally(() => this.jobs.delete(job));
   }
   async confined(path: string): Promise<string> {
-    const absolute = resolve(this.options.application.config.cwd, path);
-    const approved = await Promise.all(this.options.roots.map((root) => realpath(root)));
-    const inside = (root: string, target: string) => {
-      const rel = relative(root, target);
-      return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
-    };
-    if (!approved.some((root) => inside(root, absolute)))
-      throw new ContractError("FORBIDDEN", "Path is outside approved roots", {
-        approvedRoots: approved,
-      });
-    const canonical = await realpath(absolute);
-    if (!approved.some((root) => inside(root, canonical)))
-      throw new ContractError("FORBIDDEN", "Symlink escapes approved roots", {
-        approvedRoots: approved,
-      });
+    const { absolute, canonical } = await confineToRoots(
+      path,
+      this.options.application.config.cwd,
+      this.options.roots,
+    );
     if (this.server.getClientCapabilities()?.roots) {
       const clientRoots = (await this.server.listRoots()).roots.map((root) => {
         try {
@@ -910,7 +955,7 @@ export class TestMasterMcp {
         }
       });
       const canonicalRoots = await Promise.all(clientRoots.map((root) => realpath(root)));
-      if (!canonicalRoots.some((root) => inside(root, absolute) && inside(root, canonical)))
+      if (!canonicalRoots.some((root) => insideRoot(root, absolute) && insideRoot(root, canonical)))
         throw new ContractError("FORBIDDEN", "Path is outside client roots", {
           clientRoots: canonicalRoots,
         });
@@ -1122,20 +1167,12 @@ export class TestMasterMcp {
           );
         return this.result(String(args.runId));
       }
-      case "testmaster_get_analysis": {
-        const analysis = app.analysis.get(String(args.runId));
-        if (!analysis) throw new ContractError("NOT_FOUND", "Run analysis unavailable");
-        return analysis;
-      }
+      case "testmaster_get_analysis":
+        return app.analysis.stored(String(args.runId));
       case "testmaster_analyze_run": {
         // `model` is the switch (true) or the model id of the reading; provider only refines it.
         const model = args.model;
         const requested = model === true || typeof model === "string";
-        if (args.provider !== undefined && !requested)
-          throw new ContractError(
-            "INVALID_ARGUMENT",
-            "provider requires model (true or a model id)",
-          );
         const analysis = await app.analysis.analyze(String(args.runId), {
           model: requested,
           ...(typeof args.provider === "string" ? { provider: args.provider } : {}),
@@ -1351,97 +1388,24 @@ export class TestMasterMcp {
           ...(typeof args.reason === "string" ? { reason: args.reason } : {}),
         });
       case "testmaster_generate_tests": {
-        const revisions = args.revisionIds as string[] | undefined;
-        const proposals = args.proposalIds as string[] | undefined;
-        const runId = typeof args.runId === "string" ? args.runId : undefined;
-        // The schema is a flat object so clients show every property; this is the "one of" rule.
-        if (runId !== undefined && (revisions || proposals)) {
-          const issues = [
-            {
-              path: "/runId",
-              rule: "not",
-              message: "runId cannot be combined with proposalIds or revisionIds",
-            },
-          ];
-          throw new ContractError(
-            "INVALID_ARGUMENT",
-            "runId repairs the candidate of one failed run and cannot be combined with proposalIds or revisionIds",
-            { issues },
-            issues,
-          );
-        }
-        if (!revisions && !proposals && runId === undefined) {
-          const issues = [
-            {
-              path: "",
-              rule: "required",
-              message: "must have proposalIds or revisionIds, or runId",
-            },
-          ];
-          throw new ContractError(
-            "INVALID_ARGUMENT",
-            "Provide proposalIds or revisionIds (at least one, all from one project), or the runId of a failed code candidate run",
-            { issues },
-            issues,
-          );
-        }
-        const projects = new Set<string>();
-        if (runId !== undefined)
-          projects.add(String(app.tests.get(String(app.runs.get(runId).testId)).projectId));
-        for (const id of revisions ?? [])
-          projects.add(String(app.tests.get(String(app.revisions.get(id).testId)).projectId));
-        for (const id of proposals ?? []) {
-          const proposal = app.context.entities.get("Proposal", app.context.workspaceId, id);
-          if (!proposal) throw new ContractError("NOT_FOUND", "Proposal unavailable");
-          const batch = app.proposals.get(String(proposal.batchId));
-          app.context.authorize("X", String(batch.projectId));
-          projects.add(String(batch.projectId));
-        }
-        if (projects.size !== 1)
-          throw new ContractError(
-            "INVALID_ARGUMENT",
-            "Provide proposalIds or revisionIds that belong to a single project",
-          );
-        const result = await app.codeGeneration.generate(
+        // The schema is a flat object so clients show every property; generateTests owns the "one of" rule.
+        const result = await generateTests(
+          app,
           {
-            projectId: [...projects][0] as string,
-            ...(revisions ? { revisionIds: revisions } : {}),
-            ...(proposals ? { proposalIds: proposals } : {}),
-            ...(runId !== undefined ? { runId } : {}),
-            ...(typeof args.provider === "string" ? { provider: args.provider } : {}),
-            ...(typeof args.model === "string" ? { model: args.model } : {}),
+            revisionIds: args.revisionIds as string[] | undefined,
+            proposalIds: args.proposalIds as string[] | undefined,
+            runId: typeof args.runId === "string" ? args.runId : undefined,
+            provider: typeof args.provider === "string" ? args.provider : undefined,
+            model: typeof args.model === "string" ? args.model : undefined,
           },
           signal,
         );
-        // Candidates come back as revision ids only; name the test and the proposal each belongs to.
-        const proposalOfRevision = new Map<string, string>();
-        for (const proposalId of proposals ?? []) {
-          const extensions = app.context.entities.get(
-            "Proposal",
-            app.context.workspaceId,
-            proposalId,
-          )?.extensions as Record<string, unknown> | undefined;
-          const accepted =
-            extensions?.["testmaster:candidateRevisionId"] ?? extensions?.candidateRevisionId;
-          if (typeof accepted === "string") proposalOfRevision.set(accepted, proposalId);
-        }
         return {
           requested: result.requested,
-          candidates: result.candidates.map((candidate) => {
-            const proposalId = proposalOfRevision.get(String(candidate.parentId));
-            const repairedFromRunId = (
-              candidate.extensions as Record<string, unknown> | undefined
-            )?.["testmaster:repairedFromRunId"];
-            return {
-              id: candidate.id,
-              testId: candidate.testId,
-              testName: app.tests.get(String(candidate.testId)).name,
-              sourceRevisionId: candidate.parentId,
-              ...(proposalId ? { proposalId } : {}),
-              ...(typeof repairedFromRunId === "string" ? { repairedFromRunId } : {}),
-              code: `testmaster://revisions/${candidate.id}/code`,
-            };
-          }),
+          candidates: result.candidates.map((candidate) => ({
+            ...candidate,
+            code: `testmaster://revisions/${candidate.id}/code`,
+          })),
           validationErrors: result.validationErrors,
         };
       }
@@ -1801,119 +1765,22 @@ export class TestMasterMcp {
       ...(detail.requirementsReset ? { requirementsReset: detail.requirementsReset } : {}),
     };
   }
-  /**
-   * Applies edits, then conflict decisions, then rejections, then approvals, each at the
-   * requirement's current version after one check of the snapshot version. Nothing awaits in
-   * between, so no other writer interleaves; a refused item is reported and the rest still
-   * applies.
-   */
+  /** Edits, conflict decisions, rejections and approvals at one snapshot version; see RequirementsService.applyReview. */
   private reviewRequirements(args: Arguments, app: Application) {
-    const projectId = String(args.projectId);
-    const service = app.requirements;
-    const before = service.snapshot(projectId);
-    if (before.version !== args.expectedVersion)
-      throw new ContractError(
-        "REVISION_CONFLICT",
-        "Requirement snapshot changed since it was read",
-        {
-          expectedVersion: Number(args.expectedVersion),
-          currentVersion: before.version,
-          sourceSnapshotId: before.fingerprint,
-        },
-      );
-    const rejections = (args.reject ?? []) as { requirementId: string; reason: string }[];
-    const contradicting = ((args.approve ?? []) as string[]).filter((id) =>
-      rejections.some((item) => item.requirementId === id),
-    );
-    if (contradicting.length)
-      throw new ContractError(
-        "INVALID_ARGUMENT",
-        "A requirement cannot be approved and rejected in the same call",
-        { requirementIds: contradicting },
-      );
-    type ReviewAction = "update" | "adjudicate" | "reject" | "approve";
-    const results: {
-      action: ReviewAction;
-      id: string;
-      ok: boolean;
-      error: { code: string; message: string } | null;
-    }[] = [];
-    const attempt = (action: ReviewAction, id: string, run: () => void) => {
-      try {
-        run();
-        results.push({ action, id, ok: true, error: null });
-      } catch (error) {
-        if (!(error instanceof ContractError)) throw error;
-        results.push({
-          action,
-          id,
-          ok: false,
-          error: { code: error.code, message: error.message },
-        });
-      }
-    };
-    const current = (id: string) => {
-      const requirement = service.get(id);
-      if (requirement.extensions?.["testmaster:projectId"] !== projectId)
-        throw new ContractError("NOT_FOUND", "Requirement does not exist in this project", {
-          requirementId: id,
-        });
-      return requirement;
-    };
-    // One reason covers the call's edits and approvals; rejections and conflict decisions carry their own.
-    const reason = typeof args.reason === "string" ? args.reason : undefined;
-    for (const item of (args.update ?? []) as {
-      requirementId: string;
-      text?: string;
-      acceptanceCriteria?: string[];
-    }[])
-      attempt("update", item.requirementId, () => {
-        const { requirementId, ...patch } = item;
-        if (!Object.keys(patch).length)
-          throw new ContractError("INVALID_ARGUMENT", "An edit needs text or acceptanceCriteria");
-        service.update(requirementId, patch, Number(current(requirementId).version), reason);
-      });
-    for (const item of (args.adjudicate ?? []) as {
-      conflictId: string;
-      selectedRequirementId: string;
-      reason: string;
-    }[])
-      attempt("adjudicate", item.conflictId, () => {
-        current(item.selectedRequirementId);
-        service.adjudicate(projectId, {
-          ...item,
-          expectedVersion: service.snapshot(projectId).version,
-        });
-      });
-    for (const item of rejections)
-      attempt("reject", item.requirementId, () => {
-        const requirement = current(item.requirementId);
-        service.reject(item.requirementId, item.reason, Number(requirement.version));
-      });
-    for (const id of (args.approve ?? []) as string[])
-      attempt("approve", id, () => {
-        const requirement = current(id);
-        // Approving twice would only issue a second approval and change the fingerprint again.
-        if (!requirement.approval) service.approve(id, Number(requirement.version), reason);
-      });
-    const after = service.snapshot(projectId);
-    return {
-      results,
-      sourceSnapshotId: after.fingerprint,
-      version: after.version,
-      // A requirement that lost a conflict decision is superseded: it is never approved nor planned.
-      pendingApprovalIds: after.requirements
-        .filter(
-          (item) =>
-            !item.approval &&
-            !requirementRejection(item) &&
-            !supersedingConflict(item.id, after.conflicts),
-        )
-        .map((item) => item.id),
-      unresolvedConflictIds: after.conflicts
-        .filter((item) => !item.resolution)
-        .map((item) => item.id),
-    };
+    return app.requirements.applyReview(String(args.projectId), {
+      expectedVersion: Number(args.expectedVersion),
+      ...(args.update
+        ? { update: args.update as NonNullable<RequirementReviewInput["update"]> }
+        : {}),
+      ...(args.adjudicate
+        ? { adjudicate: args.adjudicate as NonNullable<RequirementReviewInput["adjudicate"]> }
+        : {}),
+      ...(args.reject
+        ? { reject: args.reject as NonNullable<RequirementReviewInput["reject"]> }
+        : {}),
+      ...(args.approve ? { approve: args.approve as string[] } : {}),
+      ...(typeof args.reason === "string" ? { reason: args.reason } : {}),
+    });
   }
   /** A secret's value from a confined file or the server's environment, never from an argument. */
   private async secretValue(args: Arguments): Promise<string> {
@@ -1987,204 +1854,44 @@ export class TestMasterMcp {
       .find((item) => item.id === environment.activeRevisionId);
     return { environment, revision };
   }
-  /**
-   * Finds or creates the project of an approved root. A root is bound to its project by the
-   * `project.id` of its `testmaster.config.json` or by a stored mapping, so repeated calls agree.
-   * Nothing is written to the root and the target is never contacted.
-   */
+  /** Finds or creates the project of an approved root; see `bootstrapProject`. */
   private async bootstrap(args: Arguments, app: Application) {
-    let target: URL;
-    try {
-      target = new URL(String(args.target));
-    } catch {
-      throw new ContractError("INVALID_ARGUMENT", "target must be an http(s) URL", {
-        field: "target",
-      });
-    }
-    if (!["http:", "https:"].includes(target.protocol) || target.username || target.password)
-      throw new ContractError(
-        "INVALID_ARGUMENT",
-        "target must be an http(s) URL without credentials",
-        {
-          field: "target",
-        },
-      );
-    const root = await this.confined(String(args.projectRoot));
-    const configFile = join(root, "testmaster.config.json");
-    let configPresent = false;
-    let configuredId: string | undefined;
-    try {
-      const info = await lstat(configFile);
-      if (info.isFile() && info.size <= 1048576) {
-        configPresent = true;
-        const parsed = parseStrictJson(await readFile(configFile));
-        const section =
-          parsed && typeof parsed === "object" && "project" in parsed ? parsed.project : undefined;
-        const id =
-          section && typeof section === "object" && "id" in section ? section.id : undefined;
-        if (typeof id === "string") configuredId = id;
-      }
-    } catch {
-      // The file is only a hint: a missing, unreadable or invalid one falls through to the stored mapping.
-    }
-    const known = (id: string | undefined) => {
-      if (!id) return undefined;
-      try {
-        return app.projects.get(id);
-      } catch (error) {
-        if (error instanceof ContractError && error.code === "NOT_FOUND") return undefined;
-        throw error;
-      }
-    };
-    const configured = known(configuredId);
-    const boundProject = app.projects.boundTo(root);
-    // The project the config file names binds the root, so it is found again once the file is gone.
-    if (configured && boundProject?.id !== configured.id)
-      app.projects.bindRoot(root, configured.id);
-    let project = configured ?? boundProject;
-    if (!project) {
-      const name = basename(root) || "Local project";
-      // Same derivation as ProjectsService.create, so a clash is detected before the write.
-      const slug = name
-        .normalize("NFC")
-        .toLowerCase()
-        .replace(/[^\p{L}\p{N}]+/gu, "-")
-        .replace(/^-|-$/g, "");
-      const clash = app.projects.list().find((item) => item.slug === slug);
-      if (clash)
-        throw new ContractError(
-          "PRECONDITION_FAILED",
-          "A project with this name already exists but is not bound to this root",
-          { projectId: clash.id, slug },
-        );
-      project = app.database.withTx(() => {
-        const created = app.projects.create({ name, slug });
-        app.projects.bindRoot(root, created.id);
-        return created;
-      });
-    }
-    const base = app.config.effectiveConfig.config;
-    const loopback =
-      target.hostname === "localhost" ||
-      target.hostname === "[::1]" ||
-      /^127\./.test(target.hostname);
-    const scope = args.scope as string[];
-    const environmentConfig = {
-      ...base.environment,
-      baseUrl: String(args.target),
-      networkProfile: loopback ? ("local-loopback" as const) : ("public" as const),
-    };
-    const { match, stale, created } = this.bootstrapEnvironment(
+    const scope = args.scope as ("codebase" | "diff")[];
+    const {
+      configFile,
+      configPresent,
+      bound,
+      origin,
+      stale,
+      root: _root,
+      ...receipt
+    } = await bootstrapProject(
       app,
-      project.id,
-      target.origin,
-      environmentConfig,
-    );
-    const isOrigin = target.pathname === "/" && !target.search && !target.hash;
-    const bound = configuredId === project.id;
-    return {
-      projectId: project.id,
-      proposedConfig: {
-        ...base,
-        project: { name: String(project.name), id: project.id },
-        environment: environmentConfig,
-        execution: { ...base.execution, mode: args.mode },
+      {
+        projectRoot: String(args.projectRoot),
+        target: String(args.target),
+        scope,
+        mode: args.mode as "replay" | "agent",
       },
-      ...(match
-        ? {
-            environment: {
-              id: match.id,
-              name: match.name,
-              version: Number(match.version),
-              created,
-            },
-          }
-        : {}),
-      preflight: [
-        { check: "approved_root", passed: true },
-        { check: "target_is_http_url", passed: true },
-        { check: "target_has_no_credentials", passed: true },
-        { check: "target_is_origin", passed: isOrigin },
-        { check: "config_file_present", passed: configPresent },
-        { check: "config_matches_project", passed: bound },
-        { check: "environment_targets_target", passed: Boolean(match) },
-      ],
+      (path) => this.confined(path),
+    );
+    return {
+      ...receipt,
       nextActions: [
         ...(stale
           ? [
-              `Environment ${stale.name} targets ${stale.origins.join(", ")}, not ${target.origin}; bootstrap never retargets one. Retarget it with testmaster_update_environment {environmentId: ${stale.id}, expectedVersion: ${Number(stale.version)}, baseUrl: ${target.origin}}`,
+              `Environment ${stale.name} targets ${stale.origins.join(", ")}, not ${origin}; bootstrap never retargets one. Retarget it with testmaster_update_environment {environmentId: ${stale.id}, expectedVersion: ${stale.version}, baseUrl: ${origin}}`,
             ]
           : []),
         ...(bound
           ? []
           : configPresent
-            ? [`Set project.id to ${project.id} in ${configFile}`]
+            ? [`Set project.id to ${receipt.projectId} in ${configFile}`]
             : [`Write proposedConfig as ${configFile} (bootstrap never writes a file)`]),
         "Add sources with testmaster_add_source",
         `Run testmaster_analyze_code on this root (${scope.join(", ")})`,
       ],
     };
-  }
-  /**
-   * The active environment of a project that targets `origin`. A project with no active environment gets
-   * one named like `testmaster init` names it (`local`) and becomes its default; an environment aimed at
-   * another origin is reported as `stale` and never changed.
-   */
-  private bootstrapEnvironment(
-    app: Application,
-    projectId: string,
-    origin: string,
-    settings: {
-      networkProfile: "local-loopback" | "public";
-      locale?: string | undefined;
-      timezone?: string | undefined;
-    },
-  ) {
-    return app.database.withTx(() => {
-      const all = app.environments.list(projectId);
-      const active = all
-        .filter((environment) => !environment.archivedAt)
-        .map((environment) => ({
-          environment,
-          origins:
-            app.environments
-              .revisions(environment.id)
-              .find((revision) => revision.id === environment.activeRevisionId)?.targetOrigins ??
-            [],
-        }));
-      const found = active.find((item) => item.origins.includes(origin));
-      if (found) return { match: found.environment, stale: undefined, created: false };
-      const first = active[0];
-      if (first) {
-        const project = app.projects.get(projectId);
-        const chosen =
-          active.find((item) => item.environment.id === project.defaultEnvironmentId) ?? first;
-        return {
-          match: undefined,
-          stale: {
-            id: chosen.environment.id,
-            name: chosen.environment.name,
-            version: chosen.environment.version,
-            origins: chosen.origins,
-          },
-          created: false,
-        };
-      }
-      const taken = new Set(all.map((environment) => environment.name));
-      let name = "local";
-      for (let n = 2; taken.has(name); n++) name = `local-${n}`;
-      const environment = app.environments.create({
-        projectId,
-        name,
-        baseUrl: origin,
-        networkProfile: settings.networkProfile,
-        ...(settings.locale ? { locale: settings.locale } : {}),
-        ...(settings.timezone ? { timezone: settings.timezone } : {}),
-      });
-      const { version } = app.projects.get(projectId);
-      app.environments.setDefault(projectId, environment.id, version ?? 1);
-      return { match: environment, stale: undefined, created: true };
-    });
   }
   /**
    * A page of a run's evidence manifest; `pageBytes` bounds the whole page, as a resource read
@@ -2915,30 +2622,14 @@ export class TestMasterMcp {
   private features(projectId: string, match: string | undefined, url: URL) {
     const app = this.options.application;
     app.projects.get(projectId);
-    if (match !== undefined && match.length > 200)
-      throw new ContractError("INVALID_ARGUMENT", "match must be at most 200 characters", {
-        field: "match",
-      });
+    const listed = app.discovery.listFeatures(projectId, match);
     const binding = `features:${projectId}:${match ?? ""}`;
-    // LIKE with an escaped pattern is the substring test both SQL engines share.
-    const filter = match === undefined ? "" : " AND lower(stable_key) LIKE ? ESCAPE '\\'";
-    const pattern =
-      match === undefined ? [] : [`%${match.toLowerCase().replace(/[\\%_]/g, "\\$&")}%`];
-    const stale = app.discovery.staleFeatureIds(projectId);
-    const listed = app.database
-      .all<{ id: string; stable_key: string }>(
-        `SELECT id, stable_key FROM features WHERE workspace_id=? AND project_id=?${filter} ORDER BY stable_key, id`,
-        app.context.workspaceId,
-        projectId,
-        ...pattern,
-      )
-      .filter((row) => !stale.has(row.id));
     return this.listPage(listed, FEATURE_PAGE, binding, url, (page) => ({
       projectId,
       ...(match === undefined ? {} : { match }),
       total: page.total,
       returned: page.items.length,
-      features: page.items.map((row) => ({ id: row.id, stableKey: row.stable_key })),
+      features: page.items,
       next:
         page.cursor === null
           ? null

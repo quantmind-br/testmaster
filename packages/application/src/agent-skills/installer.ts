@@ -1,20 +1,33 @@
 import { randomUUID } from "node:crypto";
 import type { FileHandle } from "node:fs/promises";
-import { lstat, readFile, rename, unlink } from "node:fs/promises";
+import { lstat, rename, rmdir, unlink } from "node:fs/promises";
 import { hostname } from "node:os";
-import { dirname, resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { ConfinedRoot, UnsafePathError } from "@testmaster/evidence";
 import {
   AGENT_SKILL_VERSION,
+  agentSkillHash,
   inspectManagedSection,
   renderManagedSection,
   renderOwnedSkill,
 } from "./managed.js";
 import { AGENT_TARGET_ADAPTERS, type AgentTarget } from "./targets.js";
+import {
+  manifestEntry,
+  parseManifest,
+  readSkillTree,
+  renderManifest,
+  SKILL_ENTRY_NAME,
+  SKILL_MANIFEST_NAME,
+  type SkillManifestEntry,
+} from "./tree.js";
 import type {
   AgentSkillApplyResult,
   AgentSkillChange,
   AgentSkillFailure,
+  AgentSkillFile,
+  AgentSkillFileAction,
   AgentSkillPlan,
   AgentSkillPlanResult,
   AgentSkillReason,
@@ -22,10 +35,14 @@ import type {
   AgentSkillStatusResult,
 } from "./types.js";
 
+type SnapshotRole = "instructions" | "skill" | "file" | "manifest";
 interface Snapshot {
   path: string;
   bytes: Buffer | null;
   mode: number;
+  role: SnapshotRole;
+  /** A drifted file that removal leaves in place. */
+  kept?: true;
 }
 interface InternalPlan {
   root: string;
@@ -36,7 +53,7 @@ interface InternalPlan {
 }
 const previews = new WeakMap<AgentSkillPlan, InternalPlan>();
 const receipts = new WeakMap<AgentSkillReceipt, InternalPlan>();
-const contentUrl = new URL("../../skill-content/1.0.0/SKILL.md", import.meta.url);
+const contentUrl = new URL(`../../skill-content/${AGENT_SKILL_VERSION}/`, import.meta.url);
 const LOCK_PATH = ".testmaster/agent-skills.lock";
 const RECLAIM_GUARD_PATH = ".testmaster/agent-skills.lock.reclaim";
 
@@ -184,24 +201,49 @@ function caught(target: AgentTarget, error: unknown): AgentSkillFailure {
     unsafe ? "Unsafe workspace path or file type" : "Filesystem operation failed",
   );
 }
-async function snapshot(root: ConfinedRoot, path: string): Promise<Snapshot> {
+async function snapshot(root: ConfinedRoot, path: string, role: SnapshotRole): Promise<Snapshot> {
   let file: FileHandle;
   try {
     file = await root.openFile(path);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT")
-      return { path, bytes: null, mode: 0o600 };
+      return { path, bytes: null, mode: 0o600, role };
     throw error;
   }
   try {
     const stat = await file.stat();
-    return { path, bytes: await file.readFile(), mode: stat.mode & 0o777 };
+    return { path, bytes: await file.readFile(), mode: stat.mode & 0o777, role };
   } finally {
     await file.close();
   }
 }
 function same(a: Buffer | null, b: Buffer | null): boolean {
   return a === null || b === null ? a === b : a.equals(b);
+}
+function describeFiles(internal: InternalPlan): AgentSkillFile[] {
+  const files: AgentSkillFile[] = [];
+  for (const [index, item] of internal.snapshots.entries()) {
+    if (item.role === "instructions") continue;
+    const after = internal.after[index] ?? null;
+    if (item.bytes === null && after === null) continue;
+    const action: AgentSkillFileAction = item.kept
+      ? "keep"
+      : item.bytes === null
+        ? "create"
+        : after === null
+          ? "remove"
+          : same(item.bytes, after)
+            ? "unchanged"
+            : "update";
+    files.push({
+      path: item.path,
+      action,
+      sha256: after ? agentSkillHash(after) : null,
+      size: after ? after.length : null,
+      ...(item.kept ? { reason: "drifted" as const } : {}),
+    });
+  }
+  return files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }
 function publish(internal: InternalPlan): AgentSkillPlanResult {
   const changes: AgentSkillChange[] = [];
@@ -232,6 +274,7 @@ function publish(internal: InternalPlan): AgentSkillPlanResult {
     operation: internal.operation,
     version: AGENT_SKILL_VERSION,
     changes,
+    files: describeFiles(internal),
   };
   previews.set(plan, internal);
   return { ok: true, reasonCode: changes.length ? "ready" : "unchanged", plan };
@@ -242,6 +285,8 @@ export async function planAgentSkills(options: {
   root: string;
   target: AgentTarget;
   operation?: "install" | "remove";
+  /** Directory holding the skill tree to install; defaults to the tree shipped for AGENT_SKILL_VERSION. */
+  contentDirectory?: string;
 }): Promise<AgentSkillPlanResult> {
   const { target } = options;
   const adapter = AGENT_TARGET_ADAPTERS[target];
@@ -260,56 +305,168 @@ export async function planAgentSkills(options: {
   let root: ConfinedRoot | undefined;
   try {
     root = new ConfinedRoot(resolve(options.root));
-    const snapshots = [
-      await snapshot(root, adapter.instructionsPath),
-      await snapshot(root, adapter.skillPath),
-    ];
-    const after: (Buffer | null)[] = [];
-    const skillContent = operation === "install" ? await readFile(contentUrl) : null;
-    for (const [index, item] of snapshots.entries()) {
-      const bytes = item.bytes ?? Buffer.alloc(0);
-      const inspected = inspectManagedSection(bytes, index === 1);
-      if (inspected.reasonCode)
-        return failure(
-          target,
-          inspected.reasonCode,
-          "Managed content is not safe to modify",
-          item.path,
-        );
-      const section = inspected.section;
-      if (index === 1 && item.bytes && !section)
-        return failure(target, "unowned_skill", "Skill path contains unowned content", item.path);
-      if (operation === "remove") {
-        after.push(
-          !section
-            ? item.bytes
-            : index === 1
-              ? null
-              : Buffer.concat([bytes.subarray(0, section.start), bytes.subarray(section.end)]),
-        );
-      } else if (index === 1) {
-        after.push(renderOwnedSkill(skillContent as Buffer, AGENT_SKILL_VERSION));
-      } else {
-        const body = Buffer.from(
-          `\n\n## TestMaster\n\nUse the TestMaster CLI/MCP for verification and drive the whole pipeline yourself with your own token scopes; no user authorization is requested. Read ${adapter.skillPath} before planning or running tests. Inspect capabilities and JSON receipts; admission is not passed. Review decisions are explicit, audited and yours to make. Never pass secrets on argv or weaken assertions. Verify exact snapshot evidence hashes; partial/stale evidence is not proof.\n`,
-        );
-        const managed = renderManagedSection(body, AGENT_SKILL_VERSION);
-        after.push(
-          section
-            ? Buffer.concat([
-                bytes.subarray(0, section.start),
-                managed,
-                bytes.subarray(section.end),
-              ])
-            : Buffer.concat([item.bytes ?? Buffer.from(adapter.instructionsPrefix), managed]),
-        );
-      }
+    const skillDirectory = dirname(adapter.skillPath);
+    const instructions = await snapshot(root, adapter.instructionsPath, "instructions");
+    const skill = await snapshot(root, adapter.skillPath, "skill");
+    const manifest = await snapshot(root, `${skillDirectory}/${SKILL_MANIFEST_NAME}`, "manifest");
+    const inspectedInstructions = inspectManagedSection(instructions.bytes ?? Buffer.alloc(0));
+    if (inspectedInstructions.reasonCode)
+      return failure(
+        target,
+        inspectedInstructions.reasonCode,
+        "Managed content is not safe to modify",
+        instructions.path,
+      );
+    const inspectedSkill = inspectManagedSection(skill.bytes ?? Buffer.alloc(0), true);
+    if (inspectedSkill.reasonCode)
+      return failure(
+        target,
+        inspectedSkill.reasonCode,
+        "Managed content is not safe to modify",
+        skill.path,
+      );
+    if (skill.bytes && !inspectedSkill.section)
+      return failure(target, "unowned_skill", "Skill path contains unowned content", skill.path);
+    // An install by the single-file installer has no manifest: its tree is the owned SKILL.md alone.
+    let recorded: SkillManifestEntry[] = [];
+    if (manifest.bytes) {
+      const parsed = parseManifest(manifest.bytes);
+      if (!parsed)
+        return failure(target, "managed_drift", "Install manifest is not valid", manifest.path);
+      recorded = parsed.filter((entry) => entry.path !== SKILL_ENTRY_NAME);
     }
-    return publish({ root: resolve(options.root), target, operation, snapshots, after });
+    const recordedByPath: Record<string, SkillManifestEntry> = {};
+    for (const entry of recorded) recordedByPath[`${skillDirectory}/${entry.path}`] = entry;
+
+    const files: Snapshot[] = [];
+    const filesAfter: (Buffer | null)[] = [];
+    let manifestAfter: Buffer | null = manifest.bytes;
+    let skillAfter: Buffer | null;
+    let instructionsAfter: Buffer | null;
+    const instructionBytes = instructions.bytes ?? Buffer.alloc(0);
+    const instructionSection = inspectedInstructions.section;
+    if (operation === "remove") {
+      for (const entry of recorded) {
+        const item = await snapshot(root, `${skillDirectory}/${entry.path}`, "file");
+        // A file that no longer matches what was installed belongs to the user now.
+        const drifted = item.bytes !== null && agentSkillHash(item.bytes) !== entry.sha256;
+        files.push(drifted ? { ...item, kept: true } : item);
+        filesAfter.push(drifted ? item.bytes : null);
+      }
+      manifestAfter = null;
+      skillAfter = inspectedSkill.section ? null : skill.bytes;
+      instructionsAfter = !instructionSection
+        ? instructions.bytes
+        : Buffer.concat([
+            instructionBytes.subarray(0, instructionSection.start),
+            instructionBytes.subarray(instructionSection.end),
+          ]);
+    } else {
+      const tree = await readSkillTree(options.contentDirectory ?? fileURLToPath(contentUrl));
+      const entry = tree.find((file) => file.path === SKILL_ENTRY_NAME);
+      if (!entry)
+        return failure(target, "invalid_input", `Skill content has no ${SKILL_ENTRY_NAME}`);
+      skillAfter = renderOwnedSkill(entry.bytes, AGENT_SKILL_VERSION);
+      const shipped = tree.filter((file) => file !== entry);
+      const drifted: string[] = [];
+      for (const file of shipped) {
+        const item = await snapshot(root, `${skillDirectory}/${file.path}`, "file");
+        if (item.bytes && !item.bytes.equals(file.bytes)) {
+          const entryRecord = recordedByPath[item.path];
+          if (!entryRecord)
+            return failure(
+              target,
+              "unowned_skill",
+              "Skill path contains unowned content",
+              item.path,
+            );
+          if (agentSkillHash(item.bytes) !== entryRecord.sha256) drifted.push(item.path);
+        }
+        files.push(item);
+        filesAfter.push(file.bytes);
+      }
+      // Files of an earlier version that this version no longer ships.
+      const shippedPaths = new Set(shipped.map((file) => file.path));
+      for (const record of recorded) {
+        if (shippedPaths.has(record.path)) continue;
+        const item = await snapshot(root, `${skillDirectory}/${record.path}`, "file");
+        if (item.bytes && agentSkillHash(item.bytes) !== record.sha256) drifted.push(item.path);
+        files.push(item);
+        filesAfter.push(null);
+      }
+      if (drifted.length)
+        return {
+          ...failure(
+            target,
+            "managed_drift",
+            `Installed skill files differ from the install manifest: ${drifted.join(", ")}`,
+            drifted[0],
+          ),
+          paths: drifted,
+        };
+      manifestAfter = renderManifest(AGENT_SKILL_VERSION, [
+        manifestEntry(SKILL_ENTRY_NAME, skillAfter),
+        ...shipped.map((file) => manifestEntry(file.path, file.bytes)),
+      ]);
+      const body = Buffer.from(
+        `\n\n## TestMaster\n\nUse the TestMaster CLI/MCP for verification and drive the whole pipeline yourself with your own token scopes; no user authorization is requested. Read ${adapter.skillPath} before planning or running tests. Inspect capabilities and JSON receipts; admission is not passed. Review decisions are explicit, audited and yours to make. Never pass secrets on argv or weaken assertions. Verify exact snapshot evidence hashes; partial/stale evidence is not proof.\n`,
+      );
+      const managed = renderManagedSection(body, AGENT_SKILL_VERSION);
+      instructionsAfter = instructionSection
+        ? Buffer.concat([
+            instructionBytes.subarray(0, instructionSection.start),
+            managed,
+            instructionBytes.subarray(instructionSection.end),
+          ])
+        : Buffer.concat([instructions.bytes ?? Buffer.from(adapter.instructionsPrefix), managed]);
+    }
+    // Applied in this order: an interrupted run never leaves the owned entry point (or the
+    // pointer to it) ahead of the files it refers to.
+    return publish({
+      root: resolve(options.root),
+      target,
+      operation,
+      snapshots: [...files, manifest, skill, instructions],
+      after: [...filesAfter, manifestAfter, skillAfter, instructionsAfter],
+    });
   } catch (error) {
     return caught(target, error);
   } finally {
     root?.close();
+  }
+}
+
+/**
+ * Removes the directories of a skill tree that a removal emptied, deepest first. Only the skill
+ * directory and the directories below it are candidates: its ancestors (`.claude/skills`) are shared
+ * with other skills and are never touched. A directory that still holds foreign or kept files stays.
+ */
+async function removeEmptyDirectories(
+  root: ConfinedRoot,
+  skillDirectory: string,
+  removed: readonly string[],
+): Promise<void> {
+  const candidates = new Set<string>();
+  for (const path of removed)
+    for (
+      let directory = dirname(path);
+      directory === skillDirectory || directory.startsWith(`${skillDirectory}/`);
+      directory = dirname(directory)
+    )
+      candidates.add(directory);
+  const deepestFirst = [...candidates].sort((a, b) => b.split("/").length - a.split("/").length);
+  for (const directory of deepestFirst) {
+    const parentPath = dirname(directory);
+    const parent = parentPath === "." ? root : root.openDirectory(parentPath);
+    try {
+      await rmdir(`/proc/self/fd/${parent.fd}/${basename(directory)}`);
+      await parent.sync();
+    } catch (error) {
+      if (!["ENOTEMPTY", "EEXIST", "ENOENT"].includes((error as NodeJS.ErrnoException).code ?? ""))
+        throw error;
+    } finally {
+      if (parent !== root) parent.close();
+    }
   }
 }
 
@@ -392,7 +549,7 @@ async function applyPlan(plan: AgentSkillPlan): Promise<AgentSkillApplyResult> {
         LOCK_PATH,
       );
     for (const item of internal.snapshots) {
-      const current = await snapshot(root, item.path);
+      const current = await snapshot(root, item.path, item.role);
       if (!same(current.bytes, item.bytes) || current.mode !== item.mode)
         return failure(internal.target, "stale_preview", "File changed since preview", item.path);
     }
@@ -406,6 +563,7 @@ async function applyPlan(plan: AgentSkillPlan): Promise<AgentSkillApplyResult> {
         reasonCode: "unchanged",
         backupDirectory: null,
         changes: [],
+        files: describeFiles(internal),
       };
     const backupDirectory = `.testmaster/agent-backups/${new Date().toISOString().replaceAll(":", "-")}-${randomUUID()}`;
     root.mkdirExclusive(backupDirectory);
@@ -431,6 +589,15 @@ async function applyPlan(plan: AgentSkillPlan): Promise<AgentSkillApplyResult> {
       const bytes = internal.after[index] ?? null;
       if (!same(item.bytes, bytes)) await atomicReplace(root, item.path, bytes, item.mode);
     }
+    await removeEmptyDirectories(
+      root,
+      dirname(AGENT_TARGET_ADAPTERS[internal.target].skillPath),
+      internal.snapshots
+        .filter(
+          (item, index) => item.role !== "instructions" && item.bytes && !internal.after[index],
+        )
+        .map((item) => item.path),
+    );
     const published = publish(internal);
     if (!published.ok) return published;
     const receipt: AgentSkillReceipt = {
@@ -439,6 +606,7 @@ async function applyPlan(plan: AgentSkillPlan): Promise<AgentSkillApplyResult> {
       reasonCode: internal.operation === "install" ? "installed" : "removed",
       backupDirectory,
       changes: published.plan.changes,
+      files: published.plan.files,
     };
     receipts.set(receipt, internal);
     previews.delete(plan);
@@ -477,6 +645,7 @@ export function planAgentSkillRollback(receipt: AgentSkillReceipt): AgentSkillPl
 export async function getAgentSkillStatus(options: {
   root: string;
   target: AgentTarget;
+  contentDirectory?: string;
 }): Promise<AgentSkillStatusResult> {
   const preview = await planAgentSkills(options);
   if (!preview.ok) {
@@ -491,13 +660,16 @@ export async function getAgentSkillStatus(options: {
         status: preview.reasonCode === "managed_drift" ? "drifted" : "conflict",
         reasonCode: preview.reasonCode,
         version: AGENT_SKILL_VERSION,
-        paths: preview.path ? [preview.path] : [],
+        paths: preview.paths ?? (preview.path ? [preview.path] : []),
       };
     return preview;
   }
   const internal = previews.get(preview.plan) as InternalPlan;
   const present = internal.snapshots.some(
-    (item, index) => item.bytes && inspectManagedSection(item.bytes, index === 1).section,
+    (item) =>
+      (item.role === "instructions" || item.role === "skill") &&
+      item.bytes &&
+      inspectManagedSection(item.bytes, item.role === "skill").section,
   );
   const status = !present
     ? "not_installed"

@@ -1,4 +1,3 @@
-import { readFile } from "node:fs/promises";
 import { ContractError } from "@testmaster/contracts";
 import type { Command } from "commander";
 import { collect, type Options, type Runtime, string, strings } from "./runtime.js";
@@ -19,7 +18,7 @@ async function secretValue(runtime: Runtime, options: Options): Promise<string> 
   }
   // Editors, `echo` and `openssl rand > file` append a line terminator that is not part of the
   // secret. Exactly one is removed; inner newlines and any further trailing ones are kept.
-  return (await readFile(runtime.path(file as string), "utf8")).replace(/\r?\n$/, "");
+  return (await runtime.readInput(file as string)).toString("utf8").replace(/\r?\n$/, "");
 }
 export function secretCommands(program: Command, runtime: Runtime): void {
   const group = program.command("secret").alias("secrets");

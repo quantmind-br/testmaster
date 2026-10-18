@@ -1,4 +1,3 @@
-import { readFile, writeFile } from "node:fs/promises";
 import type { AuthProfileInput, AuthProfilePatch } from "@testmaster/contracts";
 import { ContractError } from "@testmaster/contracts";
 import type { Command } from "commander";
@@ -6,7 +5,9 @@ import { integer, type Options, type Runtime, required, string, version } from "
 
 /** Reads a JSON object from `--file`; credentials never travel on the command line. */
 async function jsonFile(runtime: Runtime, opts: Options): Promise<Record<string, unknown>> {
-  const parsed: unknown = JSON.parse(await readFile(runtime.path(required(opts, "file")), "utf8"));
+  const parsed: unknown = JSON.parse(
+    (await runtime.readInput(required(opts, "file"))).toString("utf8"),
+  );
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
     throw new ContractError("INVALID_ARGUMENT", "--file must contain a JSON object");
   return parsed as Record<string, unknown>;
@@ -122,10 +123,7 @@ export function authProfileCommands(program: Command, runtime: Runtime): void {
         password,
         ...ttl(opts),
       });
-      await writeFile(rt.path(required(opts, "out")), exported.storageState, {
-        flag: "wx",
-        mode: 0o600,
-      });
+      await rt.writeOutput(required(opts, "out"), exported.storageState, { mode: 0o600 });
       const { storageState: _omitted, ...receipt } = exported;
       return { data: receipt };
     },

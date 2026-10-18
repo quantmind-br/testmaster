@@ -62,7 +62,7 @@ export const RUNTIME_RESOURCES = [
   "packages/persistence/migrations/postgres",
   "containers/images.lock.json",
   "containers/seccomp_profile.json",
-  "packages/application/skill-content/1.0.0/SKILL.md",
+  "packages/application/skill-content",
 ] as const;
 /**
  * Workspace packages contribute only their built output, so repository-private directories

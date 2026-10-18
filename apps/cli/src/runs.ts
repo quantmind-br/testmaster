@@ -1,11 +1,64 @@
-import { runVerdict } from "@testmaster/application";
+import { setTimeout as sleep } from "node:timers/promises";
+import { type Application, runVerdict, SignedCursorCodec } from "@testmaster/application";
 import { ContractError } from "@testmaster/contracts";
 import { exitCodeForRun } from "@testmaster/domain";
 import { formatDiagnosisSummary } from "@testmaster/reporting";
 import type { Command } from "commander";
 import { waitForRun } from "./execution.js";
-import { integer, type Runtime, seconds, string } from "./runtime.js";
+import { integer, type Result, type Runtime, seconds, string } from "./runtime.js";
 
+/** Steps per page by default: the page size of the MCP resource `testmaster://runs/{id}/steps`. */
+const STEP_PAGE = 50;
+/** How often `run events --follow` reads the events recorded since the last one (no overall deadline). */
+const FOLLOW_INTERVAL_MS = 100;
+
+function stepOffset(id: string): number {
+  const offset = Number(id);
+  if (!Number.isSafeInteger(offset) || offset < 0)
+    throw new ContractError("INVALID_ARGUMENT", "Invalid cursor offset");
+  return offset;
+}
+
+function write(stream: NodeJS.WritableStream, text: string): Promise<void> {
+  const { promise, resolve, reject } = Promise.withResolvers<void>();
+  stream.write(text, (error) => (error ? reject(error) : resolve()));
+  return promise;
+}
+
+/**
+ * Writes each event of the run as one NDJSON line as soon as it is recorded and ends when the run
+ * has completed, with the exit code of `run wait`. Only the operator's interruption stops it
+ * earlier; there is no deadline. The phase is read before the events, so every event recorded up
+ * to completion (the `run.completed` event is written with the phase) is streamed before the end.
+ */
+async function followEvents(
+  rt: Runtime,
+  app: Application,
+  id: string,
+  afterSeq: number | undefined,
+): Promise<Result> {
+  rt.receipts.push({ runId: id, ownership: "worker" });
+  let seq = afterSeq ?? -1;
+  for (;;) {
+    const run = app.runs.get(id);
+    for (const event of app.runs.events(id, seq)) {
+      await write(rt.stdout, `${JSON.stringify(event)}\n`);
+      seq = Number(event.seq);
+    }
+    if (rt.signal) throw rt.interrupted();
+    if (run.phase === "completed") {
+      const completed = app.runs.events(id).find((event) => event.type === "run.completed");
+      const reasonCode = (completed?.payload as { reasonCode?: string } | undefined)?.reasonCode;
+      return {
+        data: null,
+        text: "",
+        exit: exitCodeForRun({ gate: run.gate, outcome: run.outcome, reasonCode }),
+      };
+    }
+    await sleep(FOLLOW_INTERVAL_MS, undefined, { signal: rt.controller.signal }).catch(() => {});
+    if (rt.signal) throw rt.interrupted();
+  }
+}
 export function runCommands(program: Command, runtime: Runtime): void {
   const group = program.command("run").alias("runs");
   runtime.bind(group.command("list"), async (rt) => ({ data: await (await rt.app()).runs.list() }));
@@ -53,20 +106,27 @@ export function runCommands(program: Command, runtime: Runtime): void {
         if (value === "0") return 0;
         return integer(value);
       })
-      .option("--format <format>", "json or ndjson", "json"),
+      .option("--format <format>", "json or ndjson", "json")
+      .option(
+        "--follow",
+        "Keep streaming events as they are recorded until the run completes (requires --format ndjson)",
+      ),
     async (rt, args, options) => {
       const format = string(options, "format");
       if (format !== "json" && format !== "ndjson")
         throw new ContractError("INVALID_ARGUMENT", "Events format must be json or ndjson");
+      if (options.follow === true && format !== "ndjson")
+        throw new ContractError("INVALID_ARGUMENT", "--follow requires --format ndjson");
       if (format === "ndjson" && rt.output === "json")
         throw new ContractError(
           "INVALID_ARGUMENT",
           "NDJSON streaming cannot be combined with JSON envelope output",
         );
-      const events = await (await rt.app()).runs.events(
-        String(args[0]),
-        typeof options.afterSeq === "number" ? options.afterSeq : undefined,
-      );
+      const app = await rt.app();
+      const id = String(args[0]);
+      const afterSeq = typeof options.afterSeq === "number" ? options.afterSeq : undefined;
+      if (options.follow === true) return followEvents(rt, app, id, afterSeq);
+      const events = await app.runs.events(id, afterSeq);
       return {
         data: events,
         ...(format === "ndjson"
@@ -79,9 +139,41 @@ export function runCommands(program: Command, runtime: Runtime): void {
       };
     },
   );
-  runtime.bind(group.command("steps <id>").option("--attempt <id>"), async (rt, args, options) => ({
-    data: await (await rt.app()).runs.steps(String(args[0]), string(options, "attempt")),
-  }));
+  runtime.bind(
+    group
+      .command("steps <id>")
+      .option("--attempt <id>", "Only the steps of this attempt")
+      .option("--limit <count>", `Steps per page (default ${STEP_PAGE})`, integer)
+      .option("--cursor <cursor>", "The nextCursor of the previous page"),
+    async (rt, args, options) => {
+      const app = await rt.app();
+      const id = String(args[0]);
+      const attemptId = string(options, "attempt");
+      const steps = app.runs.steps(id, attemptId);
+      const codec = new SignedCursorCodec(app);
+      const binding = `cli:steps:${id}:${attemptId ?? ""}:${app.context.principalId}`;
+      const cursor = string(options, "cursor");
+      const offset = cursor === undefined ? 0 : stepOffset(codec.decode(cursor, binding).id);
+      if (offset > steps.length) throw new ContractError("INVALID_ARGUMENT", "Invalid page cursor");
+      const end = Math.min(
+        steps.length,
+        offset + (typeof options.limit === "number" ? options.limit : STEP_PAGE),
+      );
+      return {
+        data: {
+          runId: id,
+          ...(attemptId === undefined ? {} : { attemptId }),
+          total: steps.length,
+          returned: end - offset,
+          steps: steps.slice(offset, end),
+          nextCursor:
+            end < steps.length
+              ? codec.encode({ binding, id: String(end), createdAt: "", cutoff: "" })
+              : null,
+        },
+      };
+    },
+  );
   runtime.bind(
     group
       .command("analyze <id>")
@@ -112,8 +204,7 @@ export function runCommands(program: Command, runtime: Runtime): void {
     },
   );
   runtime.bind(group.command("analysis <id>"), async (rt, args) => {
-    const analysis = (await rt.app()).analysis.get(String(args[0]));
-    if (!analysis) throw new ContractError("NOT_FOUND", "Run analysis unavailable");
+    const analysis = (await rt.app()).analysis.stored(String(args[0]));
     return { data: analysis, text: formatDiagnosisSummary(analysis) };
   });
   runtime.bind(

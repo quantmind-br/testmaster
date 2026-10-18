@@ -936,13 +936,18 @@ it("save_auth_profile takes the username as a plain value, says it is not masked
   ]);
 });
 
-it("save_auth_profile advertises the config keys per kind and rejects a malformed config naming its fields", async () => {
+it("save_auth_profile serves the config keys per kind and rejects a malformed config naming its fields", async () => {
   const f = await fixture();
-  type Node = { properties?: Record<string, Node>; required?: string[] };
-  const input = (await f.client.listTools()).tools.find(
+  type Node = { properties?: Record<string, Node>; required?: string[]; $comment?: string };
+  // The announced schema lists the top-level arguments only; its comment names the full contract.
+  const announced = (await f.client.listTools()).tools.find(
     (tool) => tool.name === "testmaster_save_auth_profile",
   )?.inputSchema as Node | undefined;
-  const config = input?.properties?.config;
+  const uri = announced?.$comment?.match(/testmaster:\/\/schemas\/\S+/)?.[0];
+  expect(uri).toBe("testmaster://schemas/Mcp_testmaster_save_auth_profile");
+  const contents = (await f.client.readResource({ uri: String(uri) })).contents[0];
+  const input = JSON.parse(String(contents?.text)) as Node;
+  const config = input.properties?.config;
   expect(Object.keys(config?.properties ?? {})).toEqual(
     expect.arrayContaining(["http", "browser", "adapter", "issuer", "redirectUris", "header"]),
   );

@@ -8,15 +8,17 @@ import { artifactCommands } from "./artifacts.js";
 import { auditCommands } from "./audit.js";
 import { authProfileCommands } from "./auth-profiles.js";
 import { backupCommands } from "./backups.js";
+import { bootstrapCommands } from "./bootstrap.js";
 import { ciCommands } from "./ci.js";
 import { contractCommands } from "./contracts.js";
 import { databaseCommands } from "./database.js";
 import { discoveryCommands } from "./discovery.js";
 import { environmentCommands } from "./environments.js";
-import { exampleFor, leafCommand } from "./examples.js";
+import { declareExampleVariants, exampleFor, leafCommand } from "./examples.js";
 import { githubCommands } from "./github.js";
 import { healingCommands } from "./heal.js";
 import { imageCommands } from "./images.js";
+import { jobCommands } from "./jobs.js";
 import { suiteCommands } from "./lists.js";
 import { mcpCommands } from "./mcp.js";
 import { operationsCommands } from "./operations.js";
@@ -70,11 +72,13 @@ export function createCli(runtime: Runtime): Command {
     );
   setupCommands(program, runtime);
   projectCommands(program, runtime);
+  bootstrapCommands(program, runtime);
   environmentCommands(program, runtime);
   secretCommands(program, runtime);
   authProfileCommands(program, runtime);
   testCommands(program, runtime);
   runCommands(program, runtime);
+  jobCommands(program, runtime);
   artifactCommands(program, runtime);
   reportCommands(program, runtime);
   workerCommands(program, runtime);
@@ -104,6 +108,7 @@ export function createCli(runtime: Runtime): Command {
   remoteCommands(program, runtime);
   githubCommands(program, runtime);
   unavailableCommands(program, runtime);
+  declareExampleVariants(program);
   return program;
 }
 
@@ -154,7 +159,7 @@ export async function runCli(
       argv.includes("--example") && !argv.includes("--help") && !argv.includes("-h")
         ? leafCommand(program, argv)
         : undefined;
-    if (example) runtime.pending = { data: exampleFor(example) };
+    if (example) runtime.pending = { data: exampleFor(example, argv) };
     else await program.parseAsync(argv, { from: "user" });
     if (!runtime.pending) {
       if (runtime.signal) throw runtime.interrupted();

@@ -1,5 +1,4 @@
 import { createHash, randomBytes } from "node:crypto";
-import { writeFile } from "node:fs/promises";
 import { setTimeout as delay } from "node:timers/promises";
 import {
   type Application,
@@ -278,10 +277,10 @@ export function serverCommands(program: Command, runtime: Runtime): void {
       .option("--out <path>", "New key file (mode 0600); an existing file is never replaced")
       .description("Create a 32-byte master or backup key file and print only its key id"),
     async (rt, _args, options) => {
-      const path = rt.path(required(options, "out"));
       const key = randomBytes(32);
+      let path: string;
       try {
-        await writeFile(path, key, { flag: "wx", mode: 0o600 });
+        path = await rt.writeOutput(required(options, "out"), key, { mode: 0o600 });
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code === "EEXIST")
           throw new ContractError("PRECONDITION_FAILED", "Key file already exists");

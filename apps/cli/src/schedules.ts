@@ -1,4 +1,3 @@
-import { readFile } from "node:fs/promises";
 import { compileTrigger } from "@testmaster/application";
 import {
   ContractError,
@@ -124,7 +123,7 @@ function dependenciesOf(options: Options): Dependency[] | undefined {
 async function definitionOf(runtime: Runtime, options: Options): Promise<SchedulePatchInput> {
   const file = string(options, "file");
   const base = file
-    ? (JSON.parse(await readFile(runtime.path(file), "utf8")) as SchedulePatchInput)
+    ? (JSON.parse((await runtime.readInput(file)).toString("utf8")) as SchedulePatchInput)
     : {};
   const trigger = triggerOf(options);
   const selection = selectionOf(options);

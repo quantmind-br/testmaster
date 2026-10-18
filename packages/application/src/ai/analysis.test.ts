@@ -904,6 +904,19 @@ it("lost paid lease settles with unknown usage and never reissues enrichment", a
   });
   expect(f.service.get(f.run.id)).toMatchObject({ source: "rules", parentId: null });
 });
+it("stored() refuses a Run without analysis as NOT_FOUND naming the Run, and returns the analysis once it exists", async () => {
+  const f = await fixture();
+  expect(f.service.get(f.run.id)).toBeNull();
+  expect(() => f.service.stored(f.run.id)).toThrowError(
+    expect.objectContaining({
+      code: "NOT_FOUND",
+      message: "Run analysis does not exist",
+      details: { runId: f.run.id },
+    }),
+  );
+  const analyzed = await f.service.analyze(f.run.id, {});
+  expect(f.service.stored(f.run.id).id).toBe(analyzed.id);
+});
 it("approved-schema mismatch takes precedence over generic business mismatch", async () => {
   const f = await fixture({ schema: true });
   expect(await f.service.analyze(f.run.id, {})).toMatchObject({

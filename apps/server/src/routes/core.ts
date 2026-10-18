@@ -387,11 +387,7 @@ const handlers: Record<string, RouteHandler> = {
     app.approvals.create(body as unknown as Parameters<typeof app.approvals.create>[0]),
   ),
   "POST /approvals/{id}/revoke": h(({ app, id }) => app.approvals.revoke(id)),
-  "GET /runs/{id}/analysis": h(({ app, id }) => {
-    const analysis = app.analysis.get(id);
-    if (!analysis) throw new ContractError("NOT_FOUND", "Analysis does not exist", { runId: id });
-    return analysis;
-  }),
+  "GET /runs/{id}/analysis": h(({ app, id }) => app.analysis.stored(id)),
   "POST /runs/{id}/analysis": h(({ app, id, body, reply }) => {
     holdConnectionOpen(reply);
     return app.analysis.analyze(id, body as Parameters<typeof app.analysis.analyze>[1]);

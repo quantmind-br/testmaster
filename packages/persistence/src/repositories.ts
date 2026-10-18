@@ -893,6 +893,30 @@ export class AuxiliaryLeaseRepository {
       return { requeued, settlementRequired };
     });
   }
+  /**
+   * Cancels a job no process holds (`queued`) and records `result`; null when the job is held,
+   * settled or unknown. A leased job is never cancelled from outside: its holder owns the model
+   * call, which may already be billed.
+   */
+  cancelQueued(
+    workspaceId: string,
+    jobId: string,
+    result: Record<string, unknown>,
+  ): AuxiliaryJob | null {
+    const apply = (): AuxiliaryJob | null => {
+      const job = this.get(workspaceId, jobId);
+      if (job?.state !== "queued") return null;
+      const changed = this.database.run(
+        "UPDATE job_leases SET state='cancelled',lease_owner=NULL,lease_expires_at=NULL,data_json=? WHERE workspace_id=? AND id=? AND state='queued' AND fence=?",
+        canonicalJson({ payload: job.payload, progress: job.progress, result }),
+        workspaceId,
+        jobId,
+        job.fence,
+      );
+      return changed.changes ? this.get(workspaceId, jobId) : null;
+    };
+    return this.database.inTransaction ? apply() : this.database.withTx(apply);
+  }
   /** Settles a `reconciliation_required` job with a recorded result; never reissues the call. */
   settle(workspaceId: string, jobId: string, result: Record<string, unknown>): AuxiliaryJob {
     const apply = (): AuxiliaryJob => {

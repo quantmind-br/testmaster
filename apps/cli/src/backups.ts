@@ -50,7 +50,9 @@ export function backupCommands(program: Command, runtime: Runtime): void {
     async (rt, _args, options) => {
       if (options.mode === "server") return serverBackupCreate(rt);
       return {
-        data: await (await rt.app()).backups.create(rt.path(required(options, "out"))),
+        data: await (await rt.app()).backups.create(
+          await rt.confinedPath(required(options, "out")),
+        ),
       };
     },
   );
@@ -68,11 +70,15 @@ export function backupCommands(program: Command, runtime: Runtime): void {
       ),
     async (rt, args, options) => {
       if (options.mode === "server")
-        return serverBackupRestore(rt, rt.path(String(args[0])), options.keepSchema === true);
+        return serverBackupRestore(
+          rt,
+          await rt.confinedPath(String(args[0])),
+          options.keepSchema === true,
+        );
       return {
         data: await (await rt.app()).backups.restore(
-          rt.path(String(args[0])),
-          rt.path(required(options, "out")),
+          await rt.confinedPath(String(args[0])),
+          await rt.confinedPath(required(options, "out")),
           { keepSchema: options.keepSchema === true },
         ),
       };

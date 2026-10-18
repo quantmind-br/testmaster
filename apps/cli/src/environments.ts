@@ -1,5 +1,6 @@
 import { ContractError } from "@testmaster/contracts";
 import type { Command } from "commander";
+import { listOrPage, withPaging } from "./paging.js";
 import {
   collect,
   integer,
@@ -102,9 +103,17 @@ export function environmentCommands(program: Command, runtime: Runtime): void {
       baseUrl: required(opts, "baseUrl"),
     }),
   }));
-  runtime.bind(group.command("list"), async (rt, _args, opts) => ({
-    data: await (await rt.app()).environments.list(await rt.project(opts)),
-  }));
+  runtime.bind(withPaging(group.command("list"), 100), async (rt, _args, opts) => {
+    const projectId = await rt.project(opts);
+    return {
+      data: await listOrPage(
+        rt,
+        (await rt.app()).environments.list(projectId),
+        `environments:${projectId}`,
+        opts,
+      ),
+    };
+  });
   runtime.bind(group.command("get <id-or-name>"), async (rt, args, opts) => ({
     data: await (await rt.app()).environments.get(String(args[0]), await rt.project(opts)),
   }));

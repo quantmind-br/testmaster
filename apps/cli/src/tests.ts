@@ -1,13 +1,15 @@
-import { scaffoldPlan } from "@testmaster/application";
+import { generateTests, scaffoldPlan } from "@testmaster/application";
 import { ContractError } from "@testmaster/contracts";
 import { batchExitCode, exitCodeForGate, exitCodeForRun } from "@testmaster/domain";
 import { importCode as validateCode } from "@testmaster/planner";
 import type { Command } from "commander";
 import { codeCommands, codeFormat, importCode } from "./ai-execution.js";
 import { environmentId } from "./execution.js";
+import { listOrPage, withPaging } from "./paging.js";
 import { revisionCommands } from "./revisions.js";
 import {
   collect,
+  dryRunReport,
   integer,
   type Options,
   type Runtime,
@@ -18,6 +20,9 @@ import {
 } from "./runtime.js";
 import { selectionCommands } from "./selection.js";
 import { testExecutionCommands } from "./test-execution.js";
+
+/** Tests per page the MCP list resource of a project's tests serves; named in the `--limit` help. */
+const LIST_PAGE = 100;
 
 function metadata(options: Options) {
   const name = string(options, "name");
@@ -112,24 +117,101 @@ export function testCommands(program: Command, runtime: Runtime): void {
     },
   );
   runtime.bind(
-    group
-      .command("list")
-      .option("--tag <tag>", "Tag (repeatable)", collect)
-      .option("--priority <priority>", "Priority (repeatable)", collect)
-      .option("--status <status>", "Status (repeatable)", collect),
+    withPaging(
+      group
+        .command("list")
+        .option("--tag <tag>", "Tag (repeatable)", collect)
+        .option("--priority <priority>", "Priority (repeatable)", collect)
+        .option("--status <status>", "Status (repeatable)", collect),
+      LIST_PAGE,
+    ),
     async (rt, _args, options) => {
-      const tests = await (await rt.app()).tests.list(await rt.project(options));
+      const projectId = await rt.project(options);
+      const tests = await (await rt.app()).tests.list(projectId);
       const tags = strings(options, "tag");
       const priorities = strings(options, "priority");
       const statuses = strings(options, "status");
+      const matching = tests.filter(
+        (test) =>
+          (!tags.length || tags.some((tag) => test.tags.includes(tag))) &&
+          (!priorities.length || priorities.includes(test.priority)) &&
+          (!statuses.length || statuses.includes(test.archivedAt ? "archived" : "active")),
+      );
+      // The cursor is bound to the list and its filters, so a page of another filter is refused.
+      const binding = `tests:${projectId}:${JSON.stringify([tags, priorities, statuses])}`;
+      return { data: await listOrPage(rt, matching, binding, options) };
+    },
+  );
+  runtime.bind(
+    group
+      .command("generate")
+      .description(
+        "Generate code candidates from accepted proposals, existing revisions, or the failed run of a candidate; every candidate is inactive until a passing replay and `test revision promote`",
+      )
+      .option("--proposal <id>", "Accepted proposal (repeatable)", collect)
+      .option("--revision <id>", "Revision to regenerate code for (repeatable)", collect)
+      .option(
+        "--run <id>",
+        "Completed, failed run of a code candidate: repairs it from the run's failed steps (not with --proposal or --revision)",
+      )
+      .option("--provider <id>", "Model provider; absent: the first allowed provider")
+      .option("--model <id>", "Model id; absent: the provider's first structured-output model"),
+    async (rt, _args, options) => {
+      const proposals = strings(options, "proposal");
+      const revisions = strings(options, "revision");
+      const result = await generateTests(
+        await rt.app(),
+        {
+          proposalIds: proposals.length ? proposals : undefined,
+          revisionIds: revisions.length ? revisions : undefined,
+          runId: string(options, "run"),
+          provider: string(options, "provider"),
+          model: string(options, "model"),
+        },
+        rt.controller.signal,
+      );
       return {
-        data: tests.filter(
-          (test) =>
-            (!tags.length || tags.some((tag) => test.tags.includes(tag))) &&
-            (!priorities.length || priorities.includes(test.priority)) &&
-            (!statuses.length || statuses.includes(test.archivedAt ? "archived" : "active")),
+        data: {
+          requested: result.requested,
+          candidates: result.candidates.map((candidate) => ({
+            ...candidate,
+            exportCommand: `testmaster test export ${candidate.testId} --revision ${candidate.id} --format playwright --out <new-directory>`,
+          })),
+          validationErrors: result.validationErrors,
+        },
+        warnings: result.validationErrors.map(
+          (failure) => `No candidate for ${failure.path}: ${failure.message}`,
         ),
       };
+    },
+    (_rt, _args, options) => {
+      const hasSelection =
+        strings(options, "proposal").length ||
+        strings(options, "revision").length ||
+        string(options, "run");
+      if (!hasSelection)
+        throw new ContractError(
+          "INVALID_ARGUMENT",
+          "Provide --proposal or --revision (at least one, all from one project), or --run",
+        );
+      if (
+        string(options, "run") &&
+        (strings(options, "proposal").length || strings(options, "revision").length)
+      )
+        throw new ContractError(
+          "INVALID_ARGUMENT",
+          "--run repairs the candidate of one failed run and cannot be combined with --proposal or --revision",
+        );
+      return dryRunReport(
+        [
+          {
+            operation: "test.generate",
+            records:
+              "one inactive candidate revision per generated test and one recorded model call per attempt; the model has no deadline",
+          },
+        ],
+        ["the selection must belong to one project and the model provider must be allowed"],
+      );
     },
   );
   runtime.bind(group.command("get <id>").alias("show"), async (rt, args) => ({

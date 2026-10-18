@@ -97,6 +97,7 @@ import {
   IntegrationsService,
   integrationProviders,
 } from "./integrations/index.js";
+import { JobsService } from "./jobs.js";
 import {
   defaultPublicOrigin,
   NotificationsService,
@@ -298,6 +299,8 @@ export class Application {
   readonly testDrafts: TestDraftsService;
   readonly usage: UsageService;
   readonly explore: ExploreService;
+  /** Reads, waits for and cancels the durable jobs behind the model operations. */
+  readonly jobs: JobsService;
   readonly agentMode: AgentModeService;
   readonly codeImport: CodeImportService;
   readonly codeExport: CodeExportService;
@@ -521,6 +524,7 @@ export class Application {
     this.testDrafts = new TestDraftsService(this.context);
     this.usage = new UsageService(this.context);
     this.explore = new ExploreService(this.context, config);
+    this.jobs = new JobsService(this.context, this.explore, this.discovery);
     this.agentMode = new AgentModeService(this.context, config);
     this.codeImport = new CodeImportService(this.context, config);
     this.codeExport = new CodeExportService(this.context, config);

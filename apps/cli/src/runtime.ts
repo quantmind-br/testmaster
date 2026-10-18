@@ -1,11 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { readdir, readFile } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
   Application,
   dryRunPlan,
+  entity,
   lintPlan,
   readServerConfig,
+  retryWriterContention,
   type ServerConfig,
 } from "@testmaster/application";
 import {
@@ -13,10 +15,16 @@ import {
   capabilityRegistry,
   type ErrorCode,
   type ExecutablePlan,
-  errorRegistry,
+  errorBody,
 } from "@testmaster/contracts";
-import { exitCodeForError } from "@testmaster/domain";
+import { exitCodeForError, semanticHash } from "@testmaster/domain";
 import { Command, Option } from "commander";
+import {
+  confineServicePath,
+  readConfinedFile,
+  type WriteConfinedOptions,
+  writeConfinedFile,
+} from "./files.js";
 import {
   commandPath,
   RemoteClient,
@@ -136,6 +144,13 @@ export type Handler = (
   args: unknown[],
   options: Options,
 ) => Promise<Result> | Result;
+/** Error codes that refuse a command itself, as the MCP server's `DENIED_CODES` do for a tool. */
+const deniedCodes: Record<string, true> = {
+  INVALID_ARGUMENT: true,
+  UNAUTHENTICATED: true,
+  FORBIDDEN: true,
+  POLICY_DENIED: true,
+};
 export class Runtime {
   readonly controller = new AbortController();
   readonly requestId = `cli_${randomUUID()}`;
@@ -149,6 +164,8 @@ export class Runtime {
   private receipted = false;
   private refusedDryRun: DryRunReceipt | undefined;
   private failed = false;
+  /** True once a command's audit record could not be written; the error envelope says so. */
+  private auditUnrecorded = false;
   pending: Result | undefined;
   /** Set by `init`, the one command that may start a workspace inside an initialized tree. */
   allowNestedWorkspace = false;
@@ -163,6 +180,34 @@ export class Runtime {
   }
   path(path: string): string {
     return resolve(string(this.options, "cwd") ?? process.cwd(), path);
+  }
+  /**
+   * The bytes of one existing regular file named by a user path. A symbolic link anywhere on the
+   * path, a directory, or a file with several hard links is refused with `FORBIDDEN`.
+   */
+  readInput(path: string): Promise<Buffer> {
+    return readConfinedFile(this.path(path));
+  }
+  /**
+   * Creates one new file named by a user path and returns its absolute path. It never replaces an
+   * existing file (`EEXIST` propagates) and refuses a symbolic link anywhere on the path.
+   */
+  async writeOutput(
+    path: string,
+    data: string | Uint8Array,
+    options?: WriteConfinedOptions,
+  ): Promise<string> {
+    const absolute = this.path(path);
+    await writeConfinedFile(absolute, data, options);
+    return absolute;
+  }
+  /**
+   * The absolute form of a user path that an application service opens by itself (a directory, an
+   * output the service creates): refused with `FORBIDDEN` when a symbolic link is on the way or is
+   * the path itself. The path may not exist yet.
+   */
+  confinedPath(path: string): Promise<string> {
+    return confineServicePath(this.path(path));
   }
   interrupt(signal: NodeJS.Signals): void {
     if (!this.signal) {
@@ -242,10 +287,10 @@ export class Runtime {
     return project.id;
   }
   async plan(path: string): Promise<ExecutablePlan> {
-    return lintPlan(await readFile(this.path(path)));
+    return lintPlan(await this.readInput(path));
   }
   async lintDirectory(path: string): Promise<unknown> {
-    const root = this.path(path);
+    const root = await this.confinedPath(path);
     const entries = await readdir(root, { recursive: true, withFileTypes: true });
     const files = entries
       .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
@@ -257,7 +302,7 @@ export class Runtime {
     const errors = [];
     for (const file of files) {
       try {
-        plans.push({ path: file, plan: lintPlan(await readFile(file)) });
+        plans.push({ path: file, plan: lintPlan(await this.readInput(file)) });
       } catch (error) {
         errors.push({ path: file, ...errorData(error) });
       }
@@ -280,7 +325,7 @@ export class Runtime {
       }
       const plan = string(this.options, "plan");
       const directory = string(this.options, "dir");
-      if (plan) dryRunPlan(await readFile(this.path(plan)));
+      if (plan) dryRunPlan(await this.readInput(plan));
       if (directory) await this.lintDirectory(directory);
       if (plan || directory) return dryRunReceipt(true, null);
       return dryRunReceipt(false, {
@@ -294,37 +339,104 @@ export class Runtime {
       throw error;
     }
   }
+  /**
+   * Reads the parsed command line and answers the global `--dry-run` with its receipt, which is
+   * true when it did: the command's handler then never runs, so it cannot authenticate, open the
+   * database, call a model or change anything. Every command, bound or not, calls this first.
+   */
+  async startCommand(parsed: Command, args: unknown[], prepare?: Handler): Promise<boolean> {
+    this.options = parsed.optsWithGlobals();
+    this.output =
+      this.options.json === true ? "json" : this.options.output === "json" ? "json" : "text";
+    // A command that declares its own `--dry-run` option implements it; the global one stays out.
+    if (this.options.dryRun !== true || parsed.options.some((o) => o.long === "--dry-run"))
+      return false;
+    this.pending = { data: await this.dryRun(parsed, args, prepare) };
+    return true;
+  }
   bind(command: Command, handler: Handler, prepare?: Handler): Command {
     command.action(async (...args: unknown[]) => {
       const parsed = args.at(-1);
       if (!(parsed instanceof Command))
         throw new ContractError("INTERNAL", "Command context is missing");
-      this.options = parsed.optsWithGlobals();
-      this.output =
-        this.options.json === true ? "json" : this.options.output === "json" ? "json" : "text";
-      // A command that declares its own `--dry-run` option implements it; the global one stays out.
-      if (this.options.dryRun === true && !parsed.options.some((o) => o.long === "--dry-run")) {
-        this.pending = { data: await this.dryRun(parsed, args, prepare) };
-        return;
-      }
+      if (await this.startCommand(parsed, args, prepare)) return;
       const path = commandPath(parsed);
-      const target = remoteExempt.has(path) ? null : await remoteTarget(this.options);
-      if (target) {
-        const remote = remoteHandlers[path];
-        if (!remote) throw unavailableRemote(path);
-        const timeout =
-          typeof this.options.requestTimeout === "number" ? this.options.requestTimeout : undefined;
-        const client = new RemoteClient(target, this.requestId, this.controller.signal, timeout);
-        const outcome = await remote(client, args, this.options);
-        if (this.signal) throw this.interrupted();
-        this.pending = outcome;
-        return;
+      try {
+        await this.dispatch(path, args, handler);
+      } catch (error) {
+        await this.audit(path, errorData(error).code);
+        throw error;
       }
-      const result = await handler(this, args, this.options);
-      if (this.signal) throw this.interrupted();
-      this.pending = result;
+      if (!(await this.audit(path, "completed")) && this.pending)
+        this.pending = {
+          ...this.pending,
+          warnings: [
+            ...(this.pending.warnings ?? []),
+            "The audit record of this command could not be written (writer busy or storage failed)",
+          ],
+        };
     });
     return command;
+  }
+  /** Runs the command locally, or against the `--endpoint` server when one is selected. */
+  private async dispatch(path: string, args: unknown[], handler: Handler): Promise<void> {
+    const target = remoteExempt.has(path) ? null : await remoteTarget(this.options);
+    if (target) {
+      const remote = remoteHandlers[path];
+      if (!remote) throw unavailableRemote(path);
+      const timeout =
+        typeof this.options.requestTimeout === "number" ? this.options.requestTimeout : undefined;
+      const client = new RemoteClient(target, this.requestId, this.controller.signal, timeout);
+      const outcome = await remote(client, args, this.options);
+      if (this.signal) throw this.interrupted();
+      this.pending = outcome;
+      return;
+    }
+    const result = await handler(this, args, this.options);
+    if (this.signal) throw this.interrupted();
+    this.pending = result;
+  }
+  /**
+   * Appends the invocation's audit record to the workspace the command opened: `cli.command.denied`
+   * for the refusals the MCP server also audits as denied (see `auditToolError`),
+   * `cli.command.failed` for any other error and `cli.command.completed` for success. Like the
+   * MCP record it carries the actor, the command path, a hash of the outcome and the request id
+   * the envelope reports, never the arguments. A command that never opened the application (a
+   * remote one, a refusal before the workspace was read) has no workspace to record in, and a
+   * `--dry-run` must not change state, so neither is recorded. Returns false when the record
+   * could not be written, which the failing command's envelope reports as `auditRecorded: false`.
+   */
+  private async audit(command: string, outcome: "completed" | ErrorCode): Promise<boolean> {
+    const app = this.application;
+    if (!app || this.options.dryRun === true) return true;
+    const action =
+      outcome === "completed"
+        ? "cli.command.completed"
+        : deniedCodes[outcome] === true
+          ? "cli.command.denied"
+          : "cli.command.failed";
+    try {
+      await retryWriterContention(
+        () =>
+          app.context.entities.insert(
+            "AuditEvent",
+            entity(app.context, "aud", {
+              actor: app.context.principalId,
+              action,
+              resourceId: command.slice(0, 200),
+              requestId: this.requestId,
+              beforeHash: null,
+              afterHash: semanticHash({ command, outcome }),
+              timestamp: new Date().toISOString(),
+            }),
+          ),
+        { signal: this.controller.signal },
+      );
+      return true;
+    } catch {
+      this.auditUnrecorded = true;
+      return false;
+    }
   }
   emit(result: Result): void {
     if (this.emitted) return;
@@ -351,12 +463,13 @@ export class Runtime {
     this.failed = true;
     const actual = this.signal ? this.interrupted() : error;
     const data = errorData(actual);
+    if (this.auditUnrecorded) data.details = { ...data.details, auditRecorded: false };
     const code = data.code;
     const envelope = {
       schemaVersion: "1.0.0",
       requestId: this.requestId,
       ...(this.refusedDryRun ? { data: this.refusedDryRun } : {}),
-      error: { ...data, retryable: errorRegistry[code].retryable === true, nextActions: [] },
+      error: errorBody(data),
     };
     if (this.output === "json") this.stdout.write(`${JSON.stringify(envelope)}\n`);
     else {

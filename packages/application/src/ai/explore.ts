@@ -102,6 +102,10 @@ export class ExploreService {
     );
     return job;
   }
+  /** True while this process runs the exploration: only its holder can stop it. */
+  running(id: string): boolean {
+    return ExploreService.controllers.has(id);
+  }
   cancel(id: string) {
     const job = this.get(id);
     this.ctx.authorize(

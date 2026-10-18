@@ -1,4 +1,3 @@
-import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
 import { ContractError } from "@testmaster/contracts";
 import type { Command } from "commander";
@@ -12,12 +11,12 @@ export function artifactCommands(program: Command, runtime: Runtime): void {
       .requiredOption("--mime-type <type>")
       .option("--name <name>"),
     async (rt, args, options) => {
-      const path = rt.path(String(args[0]));
+      const path = String(args[0]);
       return {
         data: await (await rt.app()).artifacts.importFixtureInput({
           projectId: await rt.project(),
           name: string(options, "name") ?? basename(path),
-          bytes: await readFile(path),
+          bytes: await rt.readInput(path),
           mimeType: string(options, "mimeType") as string,
         }),
       };

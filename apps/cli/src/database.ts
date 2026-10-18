@@ -89,7 +89,7 @@ export function databaseCommands(program: Command, runtime: Runtime): void {
       const seconds = Number(string(options, "drainTimeout"));
       const result = await upgradeLocalProfile({
         dataDir: config.dataDir,
-        backupDir: rt.path(required(options, "backupOut")),
+        backupDir: await rt.confinedPath(required(options, "backupOut")),
         drainTimeoutMs: Number.isFinite(seconds) && seconds >= 0 ? seconds * 1000 : 60000,
       });
       return { data: result, warnings: result.receipt.warnings };

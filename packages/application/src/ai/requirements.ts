@@ -34,6 +34,32 @@ type NormalizeInput = {
   onProgress?: (progress: NormalizeProgress) => void;
 };
 
+export type RequirementReviewAction = "update" | "adjudicate" | "reject" | "approve";
+/** One combined, versioned review decision: every list is optional and may be empty. */
+export interface RequirementReviewInput {
+  /** The snapshot version the decisions are based on. */
+  expectedVersion: number;
+  update?: { requirementId: string; text?: string; acceptanceCriteria?: string[] }[];
+  adjudicate?: { conflictId: string; selectedRequirementId: string; reason: string }[];
+  reject?: { requirementId: string; reason: string }[];
+  approve?: string[];
+  /** Recorded on each edited or approved requirement. */
+  reason?: string;
+}
+/** The outcome of each decision of one review, then where the snapshot stands. */
+export interface RequirementReviewReceipt {
+  results: {
+    action: RequirementReviewAction;
+    id: string;
+    ok: boolean;
+    error: { code: string; message: string } | null;
+  }[];
+  sourceSnapshotId: string;
+  version: number;
+  pendingApprovalIds: string[];
+  unresolvedConflictIds: string[];
+}
+
 const MAX_ORIGINS = 50;
 const MAX_EXCERPT = 600;
 const MAX_CHANGES = 100;
@@ -754,6 +780,105 @@ export class RequirementsService {
         },
       ]);
       return snapshot;
+    });
+  }
+  /**
+   * Applies, at one snapshot version, edits, then conflict decisions, then rejections, then
+   * approvals, each at the requirement's current version. The version check and every item run in
+   * one transaction, so no other writer interleaves and a stale `expectedVersion` changes
+   * nothing. A refused item is reported in `results` and the other items still apply.
+   */
+  applyReview(projectId: string, input: RequirementReviewInput): RequirementReviewReceipt {
+    return authoringTransaction(this.ctx, () => {
+      const before = this.snapshot(projectId);
+      if (before.version !== input.expectedVersion)
+        throw new ContractError(
+          "REVISION_CONFLICT",
+          "Requirement snapshot changed since it was read",
+          {
+            expectedVersion: input.expectedVersion,
+            currentVersion: before.version,
+            sourceSnapshotId: before.fingerprint,
+          },
+        );
+      const rejections = input.reject ?? [];
+      const contradicting = (input.approve ?? []).filter((id) =>
+        rejections.some((item) => item.requirementId === id),
+      );
+      if (contradicting.length)
+        throw new ContractError(
+          "INVALID_ARGUMENT",
+          "A requirement cannot be approved and rejected in the same call",
+          { requirementIds: contradicting },
+        );
+      const results: RequirementReviewReceipt["results"] = [];
+      const attempt = (action: RequirementReviewAction, id: string, run: () => void) => {
+        try {
+          run();
+          results.push({ action, id, ok: true, error: null });
+        } catch (error) {
+          if (!(error instanceof ContractError)) throw error;
+          results.push({
+            action,
+            id,
+            ok: false,
+            error: { code: error.code, message: error.message },
+          });
+        }
+      };
+      const current = (id: string) => {
+        const requirement = this.get(id);
+        if (this.project(requirement) !== projectId)
+          throw new ContractError("NOT_FOUND", "Requirement does not exist in this project", {
+            requirementId: id,
+          });
+        return requirement;
+      };
+      // One reason covers the call's edits and approvals; rejections and conflict decisions carry their own.
+      for (const item of input.update ?? [])
+        attempt("update", item.requirementId, () => {
+          const { requirementId, ...patch } = item;
+          if (!Object.keys(patch).length)
+            throw new ContractError("INVALID_ARGUMENT", "An edit needs text or acceptanceCriteria");
+          this.update(requirementId, patch, Number(current(requirementId).version), input.reason);
+        });
+      for (const item of input.adjudicate ?? [])
+        attempt("adjudicate", item.conflictId, () => {
+          current(item.selectedRequirementId);
+          this.adjudicate(projectId, {
+            ...item,
+            expectedVersion: this.snapshot(projectId).version,
+          });
+        });
+      for (const item of rejections)
+        attempt("reject", item.requirementId, () => {
+          const requirement = current(item.requirementId);
+          this.reject(item.requirementId, item.reason, Number(requirement.version));
+        });
+      for (const id of input.approve ?? [])
+        attempt("approve", id, () => {
+          const requirement = current(id);
+          // Approving twice would only issue a second approval and change the fingerprint again.
+          if (!requirement.approval) this.approve(id, Number(requirement.version), input.reason);
+        });
+      const after = this.snapshot(projectId);
+      return {
+        results,
+        sourceSnapshotId: after.fingerprint,
+        version: after.version,
+        // A requirement that lost a conflict decision is superseded: it is never approved nor planned.
+        pendingApprovalIds: after.requirements
+          .filter(
+            (item) =>
+              !item.approval &&
+              !requirementRejection(item) &&
+              !supersedingConflict(item.id, after.conflicts),
+          )
+          .map((item) => item.id),
+        unresolvedConflictIds: after.conflicts
+          .filter((item) => !item.resolution)
+          .map((item) => item.id),
+      };
     });
   }
   /** The normalized PRD for review: each statement with the spans it came from, and what changed. */

@@ -8,12 +8,7 @@ import { promisify } from "node:util";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { Application, entity, HealingService, scaffoldPlan } from "@testmaster/application";
-import {
-  ContractError,
-  jsonSchema,
-  mcpToolCatalog,
-  schemaCatalog,
-} from "@testmaster/contracts";
+import { ContractError, jsonSchema, mcpToolCatalog, schemaCatalog } from "@testmaster/contracts";
 import { afterEach, expect, it, vi } from "vitest";
 import { createMcpServer, listedTools } from "./server.js";
 
@@ -116,7 +111,7 @@ it("tools/list advertises described inputs and the annotation classes", async ()
 // The catalog size lock: the `tools/list` payload is one JSON-RPC response, so a client with a
 // message limit or one that forwards it whole to a model pays every byte. The ceiling only goes
 // down: lower it to the measured value (`node tools/surface-size.mjs`) after each shrink.
-const TOOLS_LIST_CEILING_BYTES = 62_688;
+const TOOLS_LIST_CEILING_BYTES = 48_080;
 
 it("tools/list serves the measured catalog and stays under the catalog size ceiling", async () => {
   const f = await fixture();

@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { promisify } from "node:util";
 import {
   Application,
@@ -135,12 +135,11 @@ export function ciCommands(program: Command, runtime: Runtime): void {
         manifestSha256: required(options, "runtimeManifestSha256"),
         targetUrl: required(options, "targetUrl"),
       });
-      const path = rt.path(string(options, "workflowFile") ?? ".github/workflows/testmaster.yml");
-      await mkdir(dirname(path), { recursive: true, mode: 0o700 });
-      await writeFile(path, content, {
-        mode: 0o600,
-        flag: options.overwrite === true ? "w" : "wx",
-      });
+      const path = await rt.writeOutput(
+        string(options, "workflowFile") ?? ".github/workflows/testmaster.yml",
+        content,
+        { mode: 0o600, createParents: true, replace: options.overwrite === true },
+      );
       return {
         data: {
           path,

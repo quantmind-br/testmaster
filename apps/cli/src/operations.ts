@@ -345,7 +345,7 @@ export function serverBackupCommands(group: Command, runtime: Runtime): void {
     modeConfig(group.command("verify <path>")).description("Verify one server backup end to end"),
     async (rt, args) => {
       const { server } = await settingsOf(rt);
-      return { data: await verifyServerBackup(rt.path(String(args[0])), server) };
+      return { data: await verifyServerBackup(await rt.confinedPath(String(args[0])), server) };
     },
   );
   runtime.bind(

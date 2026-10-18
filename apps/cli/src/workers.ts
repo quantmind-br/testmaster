@@ -1,18 +1,18 @@
-import { readFile, stat } from "node:fs/promises";
+import { stat } from "node:fs/promises";
 import { ContractError } from "@testmaster/contracts";
 import { type Command, Option } from "commander";
 import type { Runtime } from "./runtime.js";
 import { runServerWorkers } from "./server.js";
 
 /** The token file must be private to the operator running the worker (mode 0600). */
-async function readEnrollmentToken(path: string): Promise<string> {
-  const info = await stat(path);
+async function readEnrollmentToken(rt: Runtime, path: string): Promise<string> {
+  const info = await stat(await rt.confinedPath(path));
   if ((info.mode & 0o077) !== 0)
     throw new ContractError(
       "PRECONDITION_FAILED",
       "Enrollment token file must not be readable by group or others",
     );
-  return (await readFile(path, "utf8")).trim();
+  return (await rt.readInput(path)).toString("utf8").trim();
 }
 
 /** One stderr line once the worker claims, so a supervisor can wait for it (stdout keeps the result). */
@@ -49,7 +49,7 @@ export function workerCommands(program: Command, runtime: Runtime): void {
         if (typeof options.enrollTokenFile === "string") {
           const { workspaceId, workerId, resumed } = application
             .controllerScope()
-            .workerPool.enroll(await readEnrollmentToken(options.enrollTokenFile));
+            .workerPool.enroll(await readEnrollmentToken(rt, options.enrollTokenFile));
           rt.stderr.write(
             `worker ${workerId} ${resumed ? "resumed" : "enrolled"} in ${workspaceId}\n`,
           );

@@ -1764,6 +1764,12 @@ export class AnalysisService {
     );
     return row ? (JSON.parse(String(row.data_json)) as Analysis) : null;
   }
+  /** The stored analysis of a Run, the one refusal every surface answers when there is none. */
+  stored(runId: string): Analysis {
+    const analysis = this.get(runId);
+    if (!analysis) throw new ContractError("NOT_FOUND", "Run analysis does not exist", { runId });
+    return analysis;
+  }
   analysisStatus(runId: string): AnalysisStatus {
     const analysis = this.get(runId);
     if (

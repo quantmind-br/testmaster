@@ -452,6 +452,32 @@ export class DiscoveryService {
     for (const id of current) found.delete(id);
     return found;
   }
+  /**
+   * The project's current features ordered by stable key, optionally narrowed by a case-insensitive
+   * key substring. Features that only an earlier analysis found stay stored (requirements and
+   * explorations cite their ids) but are not listed: exploring them would spend work on routes the
+   * code no longer has.
+   */
+  listFeatures(projectId: string, match?: string): { id: string; stableKey: string }[] {
+    if (match !== undefined && match.length > 200)
+      throw new ContractError("INVALID_ARGUMENT", "match must be at most 200 characters", {
+        field: "match",
+      });
+    // LIKE with an escaped pattern is the substring test both SQL engines share.
+    const filter = match === undefined ? "" : " AND lower(stable_key) LIKE ? ESCAPE '\\'";
+    const pattern =
+      match === undefined ? [] : [`%${match.toLowerCase().replace(/[\\%_]/g, "\\$&")}%`];
+    const stale = this.staleFeatureIds(projectId);
+    return this.ctx.database
+      .all<{ id: string; stable_key: string }>(
+        `SELECT id, stable_key FROM features WHERE workspace_id=? AND project_id=?${filter} ORDER BY stable_key, id`,
+        this.ctx.workspaceId,
+        projectId,
+        ...pattern,
+      )
+      .filter((row) => !stale.has(row.id))
+      .map((row) => ({ id: row.id, stableKey: row.stable_key }));
+  }
   private jobsNewestFirst(projectId: string): { job: StoredJob; state: DiscoveryState }[] {
     this.ctx.authorize("R", projectId);
     requireEntity(this.ctx, "Project", projectId);

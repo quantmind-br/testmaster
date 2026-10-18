@@ -20,7 +20,7 @@ ADR-009 requires every adapter to follow the agent's official project convention
 | `pi` / pi coding agent 1.2.0 | `<cwd>/.pi/APPEND_SYSTEM.md` is appended to the system prompt; loaded only after the project is trusted; a project file replaces `~/.pi/agent/APPEND_SYSTEM.md` | `.pi/APPEND_SYSTEM.md` | `.pi/skills/<name>/SKILL.md`, loaded only after project trust → `.pi/skills/testmaster/SKILL.md` |
 | `omp` / oh-my-pi 18.10.4 | `.omp/RULES.md` is a sticky always-apply rule rendered into the system prompt; user `~/.omp/agent/RULES.md` and the nearest project `.omp/RULES.md` both apply | `.omp/RULES.md` | `.omp/skills/<name>/SKILL.md`, found from the cwd through its ancestors; needs `name` and `description` → `.omp/skills/testmaster/SKILL.md` |
 
-The payload (`packages/application/skill-content/1.0.0/SKILL.md`), `AGENT_SKILL_VERSION` and the installer contract of ADR-009 are unchanged. The new adapters record `accessedAt` `2026-10-13`.
+The payload (the skill tree `packages/application/skill-content/<AGENT_SKILL_VERSION>/`, ADR-009), `AGENT_SKILL_VERSION` and the installer contract of ADR-009 are unchanged. The new adapters record `accessedAt` `2026-10-13`.
 
 ### Rejected paths
 
