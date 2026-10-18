@@ -30,6 +30,8 @@ const FABRICATED_PARSER_REASONS = new Set([
 ]);
 /** Identifiers TestMaster mints: a prefix and a UUID. */
 const ID_PATTERN = /\b[a-z]{2,6}_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/g;
+/** A model request of an agent turn: it carries the agent's tools (omp's side requests do not). */
+export const isAgentTurn = (request) => (request.toolCount ?? 0) > 0;
 
 const lines = (file) =>
   existsSync(file)
@@ -88,8 +90,11 @@ export function sessionMetrics(directory, options = {}) {
   const fidelity = json(join(directory, "fidelity.json"));
   const floor = json(join(directory, "floor.json"));
 
-  // Tokens: one record per model request of the driving agent.
-  const usage = requests.map((request) => ({
+  // Tokens: one record per agent turn. omp's side requests (no tools, no system prompt, such as
+  // compressing a skill description into a routing hint) are not turns of the task; they are
+  // reported apart.
+  const side = requests.filter((request) => !isAgentTurn(request));
+  const usage = requests.filter(isAgentTurn).map((request) => ({
     prompt: request.usage?.prompt_tokens ?? null,
     cached: request.usage?.["prompt_tokens_details.cached_tokens"] ?? 0,
     completion: request.usage?.completion_tokens ?? 0,
@@ -306,8 +311,13 @@ export function sessionMetrics(directory, options = {}) {
     seed: session?.seed,
     agentExit: session?.agentExit ?? null,
     wallClockMs: session?.wallClockMs ?? null,
-    turns: requests.length,
-    failedModelRequests: usage.filter((item) => item.status !== 200).length,
+    turns: usage.length,
+    failedModelRequests: requests.filter((request) => request.status !== 200).length,
+    sideRequests: side.length,
+    sidePromptTokens: side.reduce(
+      (total, request) => total + (request.usage?.prompt_tokens ?? 0),
+      0,
+    ),
     missingUsage,
     T1: usage[0]?.prompt ?? null,
     T1floor: floor?.floorPromptTokens ?? null,

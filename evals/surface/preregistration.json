@@ -41,10 +41,10 @@
     "targetState": "target data persists across the sessions of a round (no reset); each seed's task is written to be valid on a shared, growing data set"
   },
   "metrics": {
-    "T1": "prompt_tokens of the agent's first model request (provider usage)",
-    "T1floor": "prompt_tokens of request 1 replayed without the MCP routes, MCP server instructions and the skill line (floor.mjs): omp's own system prompt and the task",
+    "T1": "prompt_tokens of the agent's first turn (provider usage). A turn is a model request carrying the agent's tools; omp's side requests without tools (for example compressing a skill description into a routing hint) are not turns, and are reported apart as sideRequests and sidePromptTokens",
+    "T1floor": "prompt_tokens of the first turn replayed without the MCP routes, MCP server instructions and the skill line (floor.mjs): omp's own system prompt and the task",
     "T1surface": "T1 − T1floor: what the TestMaster surface adds to the first prompt",
-    "Ttotal": "sum of prompt_tokens over every model request of the session, cached tokens included (primary)",
+    "Ttotal": "sum of prompt_tokens over every turn of the session, cached tokens included (primary)",
     "Tbilled": "Ttotal − cached prompt tokens + 0.1 × cached prompt tokens (the cached-token price weight; completion tokens are reported separately)",
     "calls": "CLI invocations of `testmaster` by the agent plus MCP tools/call requests",
     "invalidRate": "invalid / calls. Invalid: CLI exit 5 or 6, or an MCP error whose code is INVALID_ARGUMENT, PAYLOAD_TOO_LARGE, IDEMPOTENCY_CONFLICT, RUN_IN_FLIGHT, REVISION_CONFLICT, PRECONDITION_REQUIRED, PRECONDITION_FAILED or CURSOR_EXPIRED (the codes the registry maps to exits 5 and 6), or a JSON-RPC -32602 / -32601 (primary)",

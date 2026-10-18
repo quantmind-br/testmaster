@@ -6,9 +6,10 @@
 // parts removed (the MCP tool routes and server instructions sections, and the skill's entry in
 // the skills list), and the provider's reported prompt_tokens is the floor. One model call per
 // session; it has no deadline (premise 1). The answer is read only for its usage.
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { request } from "node:https";
 import { join } from "node:path";
+import { isAgentTurn } from "./metrics.mjs";
 import { reportedUsage } from "./proxy.mjs";
 
 /** Removes the TestMaster surface from omp's system prompt text. */
@@ -26,9 +27,17 @@ export function stripSurface(system) {
 
 /** Measures the floor of the session in `directory` and writes floor.json. */
 export async function measureFloor(directory, { upstream, apiKey }) {
-  const requests = join(directory, "model", "requests");
-  const first = readdirSync(requests).sort()[0];
-  const body = JSON.parse(readFileSync(join(requests, first), "utf8"));
+  // The first agent turn: omp also sends side requests without tools or system prompt (for
+  // example compressing a skill description into a routing hint), which can come first.
+  const records = readFileSync(join(directory, "model", "model-requests.ndjson"), "utf8")
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+  const first = records.filter(isAgentTurn).sort((left, right) => left.seq - right.seq)[0];
+  if (!first) throw new Error(`${directory}: no agent turn to measure the floor from`);
+  const body = JSON.parse(
+    readFileSync(join(directory, "model", "requests", `${first.seq}.json`), "utf8"),
+  );
   const system = body.messages[0];
   const text =
     typeof system.content === "string"
