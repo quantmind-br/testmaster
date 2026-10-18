@@ -142482,6 +142482,50 @@
                     }
                   ]
                 },
+                "gate": {
+                  "anyOf": [
+                    {
+                      "const": "pending",
+                      "type": "string"
+                    },
+                    {
+                      "const": "passed",
+                      "type": "string"
+                    },
+                    {
+                      "const": "failed",
+                      "type": "string"
+                    },
+                    {
+                      "const": "not_applicable",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "cleanupOutcome": {
+                  "anyOf": [
+                    {
+                      "const": "not_required",
+                      "type": "string"
+                    },
+                    {
+                      "const": "pending",
+                      "type": "string"
+                    },
+                    {
+                      "const": "passed",
+                      "type": "string"
+                    },
+                    {
+                      "const": "failed",
+                      "type": "string"
+                    },
+                    {
+                      "const": "inconclusive",
+                      "type": "string"
+                    }
+                  ]
+                },
                 "reasonCode": {
                   "anyOf": [
                     {

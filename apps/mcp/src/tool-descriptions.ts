@@ -22,7 +22,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_generate_plan:
     "Generate plan proposals (not tests) from the approved snapshot (sourceSnapshotId); provider/model pick the model. Add secrets, auth profiles and API specs first. Proposals: testmaster://plan-batches/{batchId}.",
   testmaster_trial_plan:
-    "Replay proposed plans of a batch against environmentId before review, with no model call; nothing is accepted. Returns per proposal the outcome and the failed steps (expected, observed). Next: testmaster_edit_plan or testmaster_review_plan.",
+    "Replay proposed plans of a batch against environmentId before review, with no model call; nothing is accepted. Returns per proposal the outcome, gate and the failed steps (expected, observed). Next: testmaster_edit_plan or testmaster_review_plan.",
   testmaster_review_plan:
     "Accept or reject proposals at expectedVersion = the batch version; an optional reason is kept. Returns acceptedProposals {proposalId, testId, revisionId}. Next: testmaster_run_tests.",
   testmaster_generate_tests:

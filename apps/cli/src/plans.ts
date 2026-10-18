@@ -1,5 +1,5 @@
 import type { PlanGenerationType } from "@testmaster/application";
-import { ContractError, type PlanTrialReceipt, type Run } from "@testmaster/contracts";
+import { ContractError, type PlanTrialReceipt } from "@testmaster/contracts";
 import { exitCodeForRun } from "@testmaster/domain";
 import { type Command, Option } from "commander";
 import { environmentId, waitForRun } from "./execution.js";
@@ -26,9 +26,26 @@ function selection(options: Options): string[] {
   return ids;
 }
 
-/** A tried proposal exits like its run: 0 only when the gate passed. */
-function trialExit(run: Run): number {
-  return exitCodeForRun({ outcome: run.outcome, gate: run.gate });
+type TrialItem = PlanTrialReceipt["trials"][number];
+
+/** A tried proposal exits like its run (`run wait`): 0 only when the gate passed. */
+function trialExit(trial: TrialItem): number {
+  if (!trial.tried || !trial.gate) return 0;
+  return exitCodeForRun({
+    gate: trial.gate,
+    outcome: trial.outcome,
+    reasonCode: trial.reasonCode,
+  });
+}
+
+/** Names each tried proposal whose gate did not pass, including a passed one whose cleanup failed. */
+function gateWarnings(receipt: PlanTrialReceipt): string[] {
+  return receipt.trials
+    .filter((trial) => trialExit(trial) !== 0)
+    .map(
+      (trial) =>
+        `${trial.proposalId} ${trial.planName}: gate ${trial.gate} (outcome ${trial.outcome ?? "none"}, cleanup ${trial.cleanupOutcome}), run ${trial.runId}`,
+    );
 }
 
 /** One line per proposal, then one indented line per step that did not pass. */
@@ -37,17 +54,18 @@ function planTrialText(receipt: PlanTrialReceipt): string {
   const lines = receipt.trials.flatMap((trial) => {
     if (!trial.tried) return [`${trial.proposalId} ${trial.planName}: not tried (${trial.reason})`];
     return [
-      `${trial.proposalId} ${trial.planName}: ${trial.outcome ?? "no outcome"}${trial.reasonCode ? ` (${trial.reasonCode})` : ""}, run ${trial.runId}`,
+      `${trial.proposalId} ${trial.planName}: ${trial.outcome ?? "no outcome"}${trial.reasonCode ? ` (${trial.reasonCode})` : ""}, gate ${trial.gate}, cleanup ${trial.cleanupOutcome}, run ${trial.runId}`,
       ...trial.failedSteps.map(
         (step) =>
           `  ${step.stepId} ${step.status}${step.reasonCode ? ` ${step.reasonCode}` : ""}: expected ${value(step.expected)}, observed ${value(step.observed)}${step.message ? ` - ${step.message}` : ""}`,
       ),
     ];
   });
-  return [
+  const text = [
     `Trial of ${receipt.batchId} (version ${receipt.batchVersion}) on ${receipt.environmentId}`,
     ...lines,
   ].join("\n");
+  return `${text}\n`;
 }
 
 export function planCommands(program: Command, runtime: Runtime): void {
@@ -155,13 +173,12 @@ export function planCommands(program: Command, runtime: Runtime): void {
         await waitForRun(rt, app, item.run.runId, options, item.run.ownership);
       }
       const data = app.planTrials.receipt(admission);
-      const failed = data.trials.find(
-        (trial) => trial.tried && trial.runId && trialExit(app.runs.get(trial.runId)) !== 0,
-      );
+      const warnings = gateWarnings(data);
       return {
         data,
         text: planTrialText(data),
-        exit: failed?.runId ? trialExit(app.runs.get(failed.runId)) : 0,
+        exit: data.trials.map(trialExit).find((code) => code !== 0) ?? 0,
+        ...(warnings.length ? { warnings } : {}),
       };
     },
   );

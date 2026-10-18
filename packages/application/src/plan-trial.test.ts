@@ -18,7 +18,7 @@ afterEach(async () => {
  * Stands in for the sandbox: a jsonEquals step whose pointer is not `/status` reads nothing, as
  * the runner does on a body `{"status": "ok"}`; every other step passes.
  */
-function fakeRunner(executed: ExecutablePlan[]) {
+function fakeRunner(executed: ExecutablePlan[], cleanupOutcome = "not_required") {
   vi.spyOn(AttemptExecutor.prototype, "execute").mockImplementation(async (input) => {
     const plan = input.plan as ExecutablePlan;
     executed.push(plan);
@@ -67,7 +67,7 @@ function fakeRunner(executed: ExecutablePlan[]) {
     const finished = await emit("runner.finished", {
       outcome,
       reasonCode,
-      cleanupOutcome: "not_required",
+      cleanupOutcome,
     });
     return { outcome, reasonCode, logDropped: 0, events: [finished] };
   });
@@ -178,6 +178,61 @@ it("replays proposed plans before acceptance and reports the failed step of a wr
   expect(modelCalls(f.app)).toBe(calls);
   expect(f.app.proposals.detail(f.batchId)).toEqual(before);
   expect(receipt.batchVersion).toBe(before.batch.version);
+  f.app.close();
+});
+
+it("reports the failed gate and cleanup outcome of a trial whose assertions passed but whose required cleanup failed", async () => {
+  const f = await fixture();
+  fakeRunner([], "failed");
+  const proposalId = f.propose("/status");
+  const [proposal] = f.app.proposals.detail(f.batchId).proposals;
+  if (!proposal) throw new Error("Proposal missing");
+  const plan = structuredClone(proposal.plan) as ExecutablePlan;
+  const create = plan.steps[0];
+  if (create?.kind !== "action" || !("method" in create.input)) throw new Error("Bad plan");
+  create.input = {
+    ...create.input,
+    method: "POST",
+    resource: {
+      resourceType: "health",
+      correlationKey: { literal: "h" },
+      handle: "/status",
+      ownerProof: "/status",
+    },
+  };
+  plan.cleanup = [
+    {
+      resourceRef: "get-health",
+      operation: "request",
+      input: { method: "DELETE", pathSegments: [{ literal: "health" }] },
+      successPredicate: { predicate: "statusIn", values: [200] },
+      deadlineMs: 1000,
+      required: true,
+    },
+  ];
+  const version = Number(proposal.version ?? 1);
+  f.app.context.entities.update("Proposal", f.app.context.workspaceId, proposalId, version, {
+    ...proposal,
+    plan,
+    version: version + 1,
+  });
+
+  const admission = await f.app.planTrials.admit(f.batchId, {
+    environmentId: f.init.environmentId,
+  });
+  const runIds = admission.items.flatMap((item) => (item.run ? [item.run.runId] : []));
+  await f.app.worker.run({ ephemeral: true, runIds });
+  const [trial] = f.app.planTrials.receipt(admission).trials;
+  expect(trial?.reason).toBeUndefined();
+
+  // Cleanup is not a step, so only the gate says why this passed trial does not pass.
+  expect(trial).toMatchObject({
+    tried: true,
+    outcome: "passed",
+    gate: "failed",
+    cleanupOutcome: "failed",
+    failedSteps: [],
+  });
   f.app.close();
 });
 

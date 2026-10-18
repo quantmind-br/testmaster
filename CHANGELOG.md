@@ -11,6 +11,18 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 
 - MCP tools now carry action-oriented descriptions (what the tool does, when to use it, which tool comes next); `testmaster_get_run` states it returns a summary only and points to evidence and analysis before naming a cause.
 
+### Third Dokploy agent run
+
+Found when an omp agent drove the pipeline on Dokploy a third time: 23 tests in a suite, 21 passed; the 2 failures are the product's own OpenAPI error schemas (a 401 without the required `code`, a 400 with `data` and `issues` fields its closed schema forbids).
+
+- `plan trial` exited 1 with nine passed trials and nothing on stderr: one trial's required cleanup failed, which fails its gate, and the receipt did not say so. Each tried proposal of `PlanTrialReceipt` (CLI and `testmaster_trial_plan`) now carries its run's `gate` and `cleanupOutcome`, the text output prints them, each trial whose gate did not pass is named in `warnings` (stderr in text output), and the exit code follows the reason registry like `run wait` (a `missing_secret` trial now exits 6, not 1).
+- A model reading of `run analyze` whose paid-call mark met a local writer busy with another process (`writer_contention`) was stored as a final rules-only analysis, and every later request, `--model` included, returned it without reaching the model. Such a reading is now not final, like a missing key: the next request reaches the model. A contention after the paid call was marked as started stays final, so a paid call is never reissued. A healing request that met the same contention says to propose again instead of to fix the provider configuration.
+- An MCP tool error whose audit write met a busy writer turned into a JSON-RPC `-32603` that hid the tool's own error. The audit write now waits for the writer like the worker loops do, and the tool error is returned either way (`details.auditRecorded: false` when the audit could still not be written).
+- `report export <batchId>` named the batch's first member as `runId` in its receipt; the receipt now names `batchId` for a batch report and `runId` for a run report.
+- `testmaster_generate_plan` starts its text content with each requirement the model declined (`extensions['testmaster:unsupportedRequirements']`) and each proposal refused after repair, so an agent reading only `refusedProposals` no longer takes a declined requirement for a silent omission.
+- Plan generation tells the model that cleanup runs also after a step of the plan deleted the resource, so its `successPredicate` accepts the not-found answer (prompt `plan-7-cleanup-after-delete`); specs/03 now states, like specs/11, that 404 counts as removed only when the cleanup predicate accepts it.
+- Docs: a fixed list keeps the revisions it pinned after `test revision promote` (`suite run --help` says so, and lists-and-schedules shows `suite update --selection-file`); a running worker, like `mcp serve`, reads `testmaster.config.json` only when it starts; the model reads no screenshot, DOM or HTML.
+
 ### Second Dokploy agent run
 
 Found when an omp agent drove the pipeline on Dokploy a second time, on an empty database: 15 tests, 12 passed; the 3 failures are the product's own OpenAPI response schemas (an empty closed object for `project.create` 200, no `data`/`issues` on 400, a required `code` the 401 never sends).

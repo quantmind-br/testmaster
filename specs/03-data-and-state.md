@@ -141,7 +141,7 @@ Runner image digest, browser version, dependencies lock hash, capability manifes
 - Múltiplos producers sem binding explícito = erro de validação. Diferente do comportamento documentado do TestSprite de escolher um producer.
 - Producer falhou: consumers blocked; cleanup pode usar recursos registrados antes da falha com ownership comprovado.
 - Retry após criação de recurso exige chave idempotente/dedupe comprovada ou novo namespace isolado. Limpar antes de retry não garante ausência de efeito em serviços externos.
-- Cleanup ordena reversamente dependências de recursos, não simplesmente lista de testes. 404 idempotente considerado removido; 202 exige polling limitado quando contrato exigir confirmação; 403/409/5xx não são “limpo”.
+- Cleanup ordena reversamente dependências de recursos, não simplesmente lista de testes. 404 conta como removido quando o `successPredicate` da entrada de cleanup o aceita ([contrato](11-contract-details.md)): o cleanup roda também depois de um step do próprio plano ter apagado o recurso, então esse plano declara o 404 no predicado; 202 exige polling limitado quando contrato exigir confirmação; 403/409/5xx não são “limpo”.
 - Não reutilizar variáveis de run anterior implicitamente ao `--skip-dependencies`; exigir fixture snapshot ainda válido, mesmo target/tenant e TTL explícito.
 
 ## 8. Aceite

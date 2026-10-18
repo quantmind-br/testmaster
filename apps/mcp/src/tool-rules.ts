@@ -51,7 +51,7 @@ export const toolRules: Record<keyof typeof mcpTools, readonly string[]> = {
   testmaster_trial_plan: [
     "Runs the plan of each selected proposal (default: every proposal of the batch) in the sandbox exactly like a replay run, healing off, origin `trial`; no model is called and no proposal or batch version changes.",
     "Only `proposed` proposals with a valid executable plan are tried; the others come back `tried: false` with the `reason` (accepted, rejected, invalid, intent plan, depends on another test's captures, refused admission).",
-    "Each tried proposal returns `runId`, `outcome`, `reasonCode` and `failedSteps` `{stepId, status, reasonCode, message, expected, observed}` of the last attempt; read the run with testmaster_get_evidence or testmaster_analyze_run like any run.",
+    "Each tried proposal returns `runId`, `outcome`, `gate`, `cleanupOutcome`, `reasonCode` and `failedSteps` `{stepId, status, reasonCode, message, expected, observed}` of the last attempt; a passed outcome still fails the gate when required cleanup did not pass (cleanup is not a step). Read the run with testmaster_get_evidence or testmaster_analyze_run like any run.",
     "A failed trial is a question, not a verdict: a wrong JSON pointer or value is a plan defect (fix it with testmaster_edit_plan and try again), a failure the requirement predicts is a product defect (keep the plan).",
     "The call returns when the runs completed. Trial runs live on a hidden test per proposal that never appears in test listings, suites, selection, coverage or the feature map and cannot be run otherwise; accepting the proposal creates the real test.",
   ],

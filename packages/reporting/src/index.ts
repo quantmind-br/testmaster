@@ -2,7 +2,6 @@ import type {
   Analysis,
   ArtifactManifest,
   Attempt,
-  BatchRun,
   BundleMeta,
   CoverageMetrics,
   ExecutionMetrics,
@@ -98,7 +97,6 @@ export interface ReportSnapshot {
     targetBinding: "local-checkout" | "github-deployment" | "unbound";
   };
   runs: readonly ReportRun[];
-  batch?: BatchRun;
   coverage?: CoverageMetrics;
   executionMetrics?: ExecutionMetrics;
   selection: {

@@ -247,6 +247,9 @@ const supplemental = {
         reason: Type.Optional(P.Description),
         runId: Type.Optional(P.id("run")),
         outcome: Type.Optional(Type.Union([P.Outcome, Type.Null()])),
+        /** The run's gate: a passed outcome still fails it when required cleanup did not pass. */
+        gate: Type.Optional(P.Gate),
+        cleanupOutcome: Type.Optional(P.CleanupOutcome),
         reasonCode: Type.Optional(P.Enum(reasonCodes)),
         /** The steps of the last attempt that did not pass, scrubbed like every step result. */
         failedSteps: Type.Array(

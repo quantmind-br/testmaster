@@ -1431,6 +1431,38 @@ it("a reading refused because the project's compute slots were busy reaches the 
   expect(retried).toMatchObject({ source: "model", modelCallId: f.modelCallId });
   expect(f.complete).toHaveBeenCalledTimes(2);
 });
+it("a reading that met a busy local writer before the paid call reaches the model on the next request", async () => {
+  const f = await fixture();
+  const mark = f.service.jobs.mark.bind(f.service.jobs);
+  vi.spyOn(f.service.jobs, "mark").mockImplementationOnce(() => {
+    throw new ContractError("UNAVAILABLE", "Local writer is busy; retry the operation", {
+      reasonCode: "writer_contention",
+      retryable: true,
+    });
+  });
+  const busy = await f.service.analyze(f.run.id, { model: true });
+  expect(f.complete).not.toHaveBeenCalled();
+  expect(f.service.modelStatus(busy)).toMatchObject({
+    state: "abstained",
+    reasonCode: "writer_contention",
+  });
+  vi.mocked(f.service.jobs.mark).mockImplementation(mark);
+  f.complete.mockImplementationOnce(async () => ({
+    modelCallId: f.modelCallId,
+    output: {
+      failureKind: "unknown",
+      hypotheses: [],
+      recommendedAction: "collect_more_evidence",
+      fixTargetHandle: null,
+      limitations: [],
+      nextSteps: [],
+      evidenceGaps: [],
+    },
+  }));
+  const retried = await f.service.analyze(f.run.id, { model: true });
+  expect(retried).toMatchObject({ source: "model", modelCallId: f.modelCallId });
+  expect(f.complete).toHaveBeenCalledTimes(1);
+});
 it("a model reading that outlasts the job lease keeps its lease and is stored", async () => {
   const f = await fixture();
   vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });

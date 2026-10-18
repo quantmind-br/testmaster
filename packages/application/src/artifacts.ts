@@ -776,14 +776,24 @@ export class ReportsService {
   ) {
     return auditedOperation(this.ctx, "report.export", id, async () => {
       const snapshot = await this.snapshot(id);
-      return this.exportCaptured(snapshot, format, out);
+      // The receipt names what was exported: the batch for a batch report, never its first member.
+      const target = id.startsWith("bat_") ? { batchId: id } : { runId: id };
+      return this.exportCaptured(snapshot, format, target, out);
     });
   }
   async exportCaptured(
     snapshot: ReportSnapshot,
     format: "json" | "markdown" | "html" | "junit" | "allure",
+    target: { runId: string } | { batchId: string },
     out?: string,
-  ) {
+  ): Promise<{
+    runId?: string;
+    batchId?: string;
+    format: typeof format;
+    snapshotId: string;
+    out?: string;
+    content?: string | Record<string, string>;
+  }> {
     this.ctx.authorize("R");
     for (const entry of snapshot.runs) {
       const run = this.runs.get(entry.run.id);
@@ -819,18 +829,8 @@ export class ReportsService {
         for (const [name, value] of Object.entries(content))
           await writeFile(join(path, name), value, { mode: 0o600 });
       }
-      return {
-        runId: snapshot.batch?.id ?? snapshot.runs[0]?.run.id ?? null,
-        format,
-        out: path,
-        snapshotId: snapshot.snapshotId,
-      };
+      return { ...target, format, out: path, snapshotId: snapshot.snapshotId };
     }
-    return {
-      runId: snapshot.batch?.id ?? snapshot.runs[0]?.run.id ?? null,
-      format,
-      content,
-      snapshotId: snapshot.snapshotId,
-    };
+    return { ...target, format, content, snapshotId: snapshot.snapshotId };
   }
 }

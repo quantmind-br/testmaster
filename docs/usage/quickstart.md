@@ -137,11 +137,14 @@ Optional enrichment is explicit: use
 allows; a model reading has no deadline and runs until the provider answers. Only sanitized execution
 summaries and bounded measurements cross that boundary, including the text, acceptance criteria and
 review state of the requirements the failed test maps to, not raw
-trace/video or sensitive captures. Choose the model with `--provider ID --model-id ID`; an unknown
+trace/video, screenshots, DOM or HTML, or sensitive captures: the model reads no image, so a cause
+visible only in a screenshot stays `cause_unknown`. Choose the model with `--provider ID --model-id ID`; an unknown
 choice is refused before any work. Model refusal/failure retains the factual predecessor and records a
 limitation in a separate immutable analysis that stays `source: "rules"` (it never claims to be model
-output). Identical requests reuse their stored receipt;
-interrupted paid calls are not reissued.
+output). Identical requests reuse their stored receipt; interrupted paid calls are not reissued. A
+reading that ended before anything was sent (missing key, undeclared model, busy compute slots, or a
+local database writer busy with another process before the paid call started) is not final: the next
+request reaches the model.
 
 The model never changes a cause the rules derived from observed evidence. One exception only lowers it:
 when a failed assertion made the rules say `product_bug` and the model reports that the observation
@@ -487,8 +490,8 @@ line in the hypothesis. The container's log is shared by every run against it: w
 reading the same container had an attempt overlapping this one (`concurrency` above 1), the analysis names those runs,
 adds a limitation and attributes no line to this run, so it never concludes `product_bug` from the log. Set
 `execution.concurrency` to 1 in `testmaster.config.json` when the log should explain each failure. The CLI reads the
-file on every command; a running `testmaster mcp serve` read it when it started, so restart the MCP server (in an
-agent, reload its MCP connection) after the edit. MCP:
+file on every command; a running `testmaster mcp serve` or `testmaster worker start` read it when it started, so
+restart the worker and the MCP server (in an agent, reload its MCP connection) after the edit. MCP:
 `testmaster_update_environment {serverLog: {kind: "docker", container}}`, `null` stops it.
 
 ## Selective reruns and read-only preview

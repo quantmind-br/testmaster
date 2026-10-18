@@ -12,7 +12,10 @@ A list is an ordered selection of tests with an **explicit environment for every
 - **Dynamic filter.** Projects, each with an environment and an optional filter (tags, priorities, name
   contains). It is resolved again every time it is used and selects the active, executable revision of each test.
 - **Fixed snapshot.** A pinned set of `TestRevision`s with their environments. It never changes when tests are
-  edited; create a new list to pin newer revisions.
+  edited, and promoting a new revision of a member (`test revision promote`) does not change it either: the list
+  keeps running the revision it pinned. To run the promoted one, save the selection with the new `revisionId`
+  (`suite update <id> --selection-file <file> --expected-version <n>`, MCP `testmaster_save_suite`) or create a new
+  list.
 
 Two projects may both have an environment named `staging`. They are different environments with different
 origins and secrets, and a list never shares a credential between them: the expansion carries one mapping row

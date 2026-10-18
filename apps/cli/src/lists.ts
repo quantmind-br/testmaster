@@ -252,7 +252,7 @@ export function suiteCommands(program: Command, runtime: Runtime): void {
     group
       .command("run <id>")
       .description(
-        "Admit one frozen BatchRun for the list; follow each member with `run wait <runId>` (receipt memberRuns), then `report export <batchId>`",
+        "Admit one frozen BatchRun for the list (a fixed list runs the revisions it pinned, not later promotions); follow each member with `run wait <runId>` (receipt memberRuns), then `report export <batchId>`",
       )
       .option(
         "--confirm-exclusion <key>",

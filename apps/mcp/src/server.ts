@@ -27,9 +27,11 @@ import {
   formatReviewDecision,
   formatReviewRisk,
   formatReviewStatus,
+  isWriterContention,
   type PlanGenerationType,
   refuseInvalidSource,
   requirementRejection,
+  retryWriterContention,
   runVerdict,
   SignedCursorCodec,
   type SourceAddInput,
@@ -355,6 +357,32 @@ function formatModelStatus(status: AnalysisModelStatus | undefined): string | nu
   if (!status) return null;
   return `Model reading: ${status.state}${status.reasonCode ? ` (${status.reasonCode})` : ""}: ${status.message}`;
 }
+/**
+ * The lines of a generated batch an agent must not miss: the requirements the model declined and
+ * the proposals refused after repair, which the batch keeps only in its extensions.
+ */
+function formatBatchGaps(batch: Record<string, unknown>): string | null {
+  const extensions = (batch.extensions ?? {}) as Record<string, unknown>;
+  const declined = (extensions["testmaster:unsupportedRequirements"] ?? []) as {
+    requirementId: string;
+    reason: string;
+  }[];
+  const refused = (extensions["testmaster:refusedProposals"] ?? []) as {
+    requirementIds: string[];
+    reasonCode: string;
+  }[];
+  if (!declined.length && !refused.length) return null;
+  return [
+    ...declined.map(
+      (item) =>
+        `Declined ${item.requirementId} (extensions['testmaster:unsupportedRequirements']): ${item.reason}`,
+    ),
+    ...refused.map(
+      (item) =>
+        `Refused proposal for ${item.requirementIds.join(", ")} (extensions['testmaster:refusedProposals']): ${item.reasonCode}`,
+    ),
+  ].join("\n");
+}
 /** The text content of a healing abstention: a normal result, so never an error. */
 function formatHealingAbstention(abstention: HealingAbstention): string {
   return [
@@ -517,7 +545,9 @@ export class TestMasterMcp {
                               ]),
                         ].join("\n");
                       })()
-                    : null;
+                    : tool.name === "testmaster_generate_plan"
+                      ? formatBatchGaps(data)
+                      : null;
           const json = JSON.stringify(data);
           if (
             tool.name === "testmaster_normalize_requirements" &&
@@ -562,9 +592,23 @@ export class TestMasterMcp {
             error instanceof ContractError
               ? error
               : new ContractError("INTERNAL", "MCP operation failed");
-          this.auditToolError(request.params.name, extra.requestId, failure.code);
+          // A busy writer must not turn the tool's own error into a JSON-RPC failure: the audit
+          // write waits for the writer like a worker loop does, and the error is returned either way.
+          const audited = await retryWriterContention(() =>
+            this.auditToolError(request.params.name, extra.requestId, failure.code),
+          ).then(
+            () => true,
+            (auditError: unknown) => {
+              if (!isWriterContention(auditError)) throw auditError;
+              return false;
+            },
+          );
           const data = {
-            error: { code: failure.code, message: failure.message, details: failure.details },
+            error: {
+              code: failure.code,
+              message: failure.message,
+              details: audited ? failure.details : { ...failure.details, auditRecorded: false },
+            },
           };
           return {
             isError: true,

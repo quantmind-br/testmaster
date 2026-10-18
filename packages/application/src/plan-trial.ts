@@ -120,6 +120,8 @@ export class PlanTrialService {
         tried: true,
         runId: run.id,
         outcome: run.outcome ?? null,
+        gate: run.gate,
+        cleanupOutcome: run.cleanupOutcome,
         ...(verdict.reasonCode ? { reasonCode: verdict.reasonCode } : {}),
         failedSteps: this.failedSteps(run.id),
       };

@@ -100,6 +100,17 @@ function abstentionStatus(error: unknown): AnalysisModelStatus {
     modelCallId: null,
   };
 }
+/**
+ * A model reading that ended before anything was sent and that the next request should evaluate
+ * again: a model-service refusal (configuration, credentials, inventory, quota), or a busy local
+ * writer before the paid call was marked as started, which says nothing about the reading.
+ */
+function unsentReading(reasonCode: unknown, paidCallStarted: unknown): boolean {
+  return (
+    unsentModelReasons.has(String(reasonCode)) ||
+    (reasonCode === "writer_contention" && paidCallStarted !== true)
+  );
+}
 export type AnalysisStatus = Run["analysisStatus"];
 export type AnalysisEvidenceRef = Analysis["facts"][number]["evidenceRefs"][number];
 type ModelOutput = {
@@ -4019,8 +4030,9 @@ export class AnalysisService {
           )
             throw error;
           const status = abstentionStatus(error);
+          const started = this.jobs.get(this.ctx.workspaceId, job.jobId)?.progress.paidCallStarted;
           // Nothing was sent to the provider, so the next request for this reading reopens the job.
-          if (unsentModelReasons.has(String(status.reasonCode)))
+          if (unsentReading(status.reasonCode, started))
             this.jobs.mark(fence, { paidCallStarted: false });
           analysis = this.limited(
             factual,
@@ -4120,13 +4132,13 @@ export class AnalysisService {
       configHash,
       options: input as Record<string, unknown>,
     });
-    // A reading refused before anything was sent (no API key, model not configured) is not final:
-    // once the configuration is fixed, the same request reaches the model.
+    // A reading refused before anything was sent (no API key, model not configured, a busy local
+    // writer) is not final: the same request reaches the model once the cause is gone.
     const refusal = job.result?.modelStatus as AnalysisModelStatus | undefined;
     return this.drive(
       job.state === "completed" &&
         !job.progress.paidCallStarted &&
-        unsentModelReasons.has(String(refusal?.reasonCode))
+        unsentReading(refusal?.reasonCode, job.progress.paidCallStarted)
         ? this.jobs.reopenUnpaid(this.ctx.workspaceId, job.jobId, new Date().toISOString())
         : job,
       run,

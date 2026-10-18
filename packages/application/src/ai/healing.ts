@@ -931,12 +931,14 @@ export class HealingService {
         );
         modelCallId = call ? String(call.id) : null;
       }
+      // A busy local writer before the paid call was marked as started sent nothing either.
+      const reasonCode = error instanceof ContractError ? String(error.details.reasonCode) : "";
       const unsentReason =
         phase === "model" &&
         modelCallId === null &&
-        error instanceof ContractError &&
-        unsentModelReasons.has(String(error.details.reasonCode))
-          ? String(error.details.reasonCode)
+        (unsentModelReasons.has(reasonCode) ||
+          (reasonCode === "writer_contention" && current?.progress.paidCallStarted !== true))
+          ? reasonCode
           : null;
       // All diagnostic details are code-owned; schema errors can contain model values.
       const detail =
@@ -1006,9 +1008,12 @@ export class HealingService {
           ...modelFacts,
           ...(phase === "model"
             ? {
-                nextAction: unsentReason
-                  ? "Nothing was sent to the model; fix the provider configuration and propose again for this Run"
-                  : "This Run's healing request is final; pass --provider/--model when healing the next eligible failed Run",
+                nextAction:
+                  unsentReason === "writer_contention"
+                    ? "Nothing was sent to the model; the local database was busy, so propose again for this Run"
+                    : unsentReason
+                      ? "Nothing was sent to the model; fix the provider configuration and propose again for this Run"
+                      : "This Run's healing request is final; pass --provider/--model when healing the next eligible failed Run",
               }
             : {}),
         },
