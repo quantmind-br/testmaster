@@ -150,6 +150,8 @@ export class Runtime {
   private refusedDryRun: DryRunReceipt | undefined;
   private failed = false;
   pending: Result | undefined;
+  /** Set by `init`, the one command that may start a workspace inside an initialized tree. */
+  allowNestedWorkspace = false;
   readonly stdout: NodeJS.WritableStream;
   readonly stderr: NodeJS.WritableStream;
   constructor(
@@ -197,6 +199,7 @@ export class Runtime {
         correlationId: this.requestId,
         ...(cwd ? { cwd } : {}),
         ...(configPath ? { configPath: this.path(configPath) } : {}),
+        ...(this.allowNestedWorkspace ? { allowNestedWorkspace: true } : {}),
         ...(profile ? { profile } : {}),
       }).then((app) => {
         this.application = app;

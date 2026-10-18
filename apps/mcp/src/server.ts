@@ -150,7 +150,7 @@ const RESOURCE_NOT_FOUND = -32002;
 /** Templates that read each resource collection, named in the error of an unknown resource. */
 const RESOURCE_COLLECTIONS: Readonly<Record<string, string>> = {
   projects:
-    "testmaster://projects/{id}, testmaster://projects/{id}/features, /tests, /sources, /environments and /plan-batches",
+    "testmaster://projects/{id}, testmaster://projects/{id}/features, /tests, /sources, /environments and /plan-batches; the requirements of a project are at testmaster://requirements/{projectId}",
   tests: "testmaster://tests/{id} and testmaster://tests/{id}/revisions",
   revisions:
     "testmaster://revisions/{id}, testmaster://revisions/{id}/plan and testmaster://revisions/{id}/code",

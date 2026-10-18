@@ -16,6 +16,8 @@ An environment may list `additionalOrigins`: exact http(s) origins (no wildcard,
 
 Browser route interception aborts a request to an unapproved origin. A passive subresource (`image`, `font`, `stylesheet` or `media`, `GET`/`HEAD`, canonicalizable URL) is aborted and recorded without failing the run; every other denial (document, script, XHR/fetch, WebSocket, EventSource, manifest, popup, ambiguous URL, other method) ends the run `blocked/egress_denied`. Each denial is reported once per origin and resource type per attempt as an `egress.denied` runner event and appended to `logs/egress.ndjson` with layer `browser_route`; only the origin is recorded, never the path or query.
 
+A frame navigation is authorized like a document request; its URL fragment is ignored, as it never reaches the server, and Chromium's error page shown in a frame whose request was aborted is not checked (it makes no request, and the aborted request was already recorded). A frame denial is a fatal denial: it is recorded with the denied origin and ends the run `blocked/egress_denied` even when the step had already ended `inconclusive` because the page closed.
+
 A page WebSocket is mapped to its HTTP origin (`ws` to `http`, `wss` to `https`) and checked against the same attempt origins: an approved socket is connected to the server through the proxy, any other is closed with code 1008 and denied as a `websocket` request.
 
 ## Consequences

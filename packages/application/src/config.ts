@@ -1,7 +1,7 @@
-import { constants } from "node:fs";
+import { constants, existsSync } from "node:fs";
 import { type FileHandle, open } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import {
   ContractError,
   defaults,
@@ -504,4 +504,40 @@ export async function resolveConfig(options: ResolveConfigOptions = {}): Promise
     profilePolicy,
     ...(overrides.length ? { overrides } : {}),
   };
+}
+
+/** The nearest ancestor of `cwd` holding the `testmaster.config.json` that `init` writes. */
+function initializedAncestor(cwd: string): string | undefined {
+  for (let directory = dirname(cwd); ; directory = dirname(directory)) {
+    if (existsSync(join(directory, "testmaster.config.json"))) return directory;
+    if (directory === dirname(directory)) return undefined;
+  }
+}
+/**
+ * Refuses to open an implicit workspace inside a directory tree that `init` already set up, so a
+ * command run from a subdirectory cannot silently create an empty second data directory. An
+ * explicit `cwd`, `configPath` or `TESTMASTER_DATA_DIR`, a directory that already holds its own
+ * configuration or database, and `init` itself (which may start a nested workspace) are exempt.
+ */
+export function assertNotInsideWorkspace(options: ResolveConfigOptions, config: ResolvedConfig) {
+  const env = options.env ?? process.env;
+  if (
+    options.cwd !== undefined ||
+    options.configPath !== undefined ||
+    env.TESTMASTER_DATA_DIR !== undefined ||
+    existsSync(join(config.cwd, "testmaster.config.json")) ||
+    existsSync(join(config.dataDir, "testmaster.db"))
+  )
+    return;
+  const root = initializedAncestor(config.cwd);
+  if (root === undefined) return;
+  throw new ContractError(
+    "PRECONDITION_FAILED",
+    `${config.cwd} is inside the TestMaster workspace initialized at ${root}; run the command there or pass --cwd ${root}`,
+    {
+      reasonCode: "outside_workspace_root",
+      workspaceRoot: root,
+      nextActions: [`testmaster --cwd ${root} <command>`, `cd ${root}`],
+    },
+  );
 }

@@ -1,4 +1,4 @@
-import { ContractError } from "@testmaster/contracts";
+import { ContractError, type ExecutablePlan } from "@testmaster/contracts";
 import { semanticHash, uuidV7IdGenerator } from "@testmaster/domain";
 import { EntityRepository, PersistenceDatabase } from "@testmaster/persistence";
 import { afterEach, describe, expect, it } from "vitest";
@@ -101,6 +101,88 @@ describe("authoring services", () => {
     // An explicit test name is not the plan's, so a promotion keeps it.
     const named = tests.create({ plan: scaffoldPlan("backend"), name: "Release gate: health" });
     expect(promoteRenamed(named.id, "Another plan name").name).toBe("Release gate: health");
+  });
+  it("refuses a cleanup the runner can never perform and an unbound handle when saving a test or a revision", async () => {
+    const ctx = await context();
+    new ProjectsService(ctx).create({ name: "Shop" });
+    const tests = new TestsService(ctx);
+    const revisions = new RevisionsService(ctx);
+    const base = scaffoldPlan("backend");
+    const planWith = (resource: Record<string, unknown>, cleanup: boolean): ExecutablePlan => ({
+      ...base,
+      steps: [
+        ...base.steps,
+        {
+          id: "create-item",
+          kind: "action",
+          operation: "request",
+          description: "Create the item",
+          input: {
+            method: "POST",
+            pathSegments: [{ literal: "items" }],
+            resource: { resourceType: "item", correlationKey: { literal: "k" }, ...resource },
+          },
+        },
+      ],
+      ...(cleanup
+        ? {
+            cleanup: [
+              {
+                resourceRef: "create-item",
+                operation: "request" as const,
+                input: {
+                  method: "DELETE" as const,
+                  pathSegments: [{ literal: "items" }, { variableRef: "create-item.handle" }],
+                },
+                successPredicate: { predicate: "statusIn" as const, values: [204] },
+                deadlineMs: 1000,
+                required: true,
+              },
+            ],
+          }
+        : {}),
+    });
+    const reasonOf = (action: () => unknown): unknown => {
+      try {
+        action();
+      } catch (error) {
+        expect(error).toBeInstanceOf(ContractError);
+        return (error as ContractError).details.reasonCode;
+      }
+      throw new Error("Expected a refusal");
+    };
+    const orphaning = planWith({ handle: "/id" }, true);
+    expect(reasonOf(() => lintPlan(JSON.stringify(orphaning)))).toBe("cleanup_never_runs");
+    expect(reasonOf(() => tests.create({ plan: orphaning }))).toBe("cleanup_never_runs");
+    const test = tests.create({ plan: base });
+    expect(
+      reasonOf(() => revisions.create(test.id, orphaning, test.activeRevisionId as string)),
+    ).toBe("cleanup_never_runs");
+    // Nothing was stored by the refusals.
+    expect(revisions.list(test.id)).toHaveLength(1);
+    // Control: both pointers declared, the same plan is saved.
+    const complete = planWith({ handle: "/id", ownerProof: "/owner" }, true);
+    expect(() => lintPlan(JSON.stringify(complete))).not.toThrow();
+    expect(revisions.create(test.id, complete, test.activeRevisionId as string).ordinal).toBe(2);
+    // A reference to a handle that is captured only with ownerProof is refused without a cleanup too.
+    const handleOnly = planWith({ handle: "/id" }, false);
+    const referencing: ExecutablePlan = {
+      ...handleOnly,
+      steps: [
+        ...handleOnly.steps,
+        {
+          id: "read-item",
+          kind: "action",
+          operation: "request",
+          description: "Read the item",
+          input: {
+            method: "GET",
+            pathSegments: [{ literal: "items" }, { variableRef: "create-item.handle" }],
+          },
+        },
+      ],
+    };
+    expect(reasonOf(() => tests.create({ plan: referencing }))).toBe("handle_not_captured");
   });
   it("creates immutable environment snapshots and rolls back stale updates", async () => {
     const ctx = await context();

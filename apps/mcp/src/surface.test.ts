@@ -315,6 +315,15 @@ it("an unknown resource names the URI and the template that reads what was meant
   await expect(f.client.readResource({ uri: guessed })).rejects.toMatchObject({
     message: expect.stringContaining("testmaster://revisions/{id}"),
   });
+  // The requirements of a project are not under projects/{id}.
+  await expect(
+    f.client.readResource({
+      uri: `testmaster://projects/${f.init.projectId}/requirements`,
+    }),
+  ).rejects.toMatchObject({
+    code: -32002,
+    message: expect.stringContaining("testmaster://requirements/{projectId}"),
+  });
   // The echoed URI is bounded.
   const long = `testmaster://nowhere/${"x".repeat(5000)}`;
   const error = await f.client.readResource({ uri: long }).catch((caught: Error) => caught);

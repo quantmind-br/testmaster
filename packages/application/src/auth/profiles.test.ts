@@ -313,6 +313,52 @@ it("M4-03 SEC-023 a secret that lost its authorization for the login origin is n
   expect(current.site.counters.logins).toBe(loginsBefore);
 });
 
+it("SEC-023 a login URL the network profile refuses is denied naming only the origin, and nothing is sent", async () => {
+  const current = await lab();
+  const profile = await formProfile(current);
+  const env = current.environment("egress-env", [profile.id]);
+  // The login URL moves to a private address after creation (creation itself refuses it); the
+  // profile's secrets follow it, so only the local-loopback network profile stands in the way.
+  const denied = "http://10.255.255.1:9";
+  const update = (table: string, id: string, edit: (data: Record<string, unknown>) => void) => {
+    const row = current.app.database.get(`SELECT data_json FROM ${table} WHERE id=?`, id);
+    const data = JSON.parse(String(row?.data_json)) as Record<string, unknown>;
+    edit(data);
+    current.app.database.run(
+      `UPDATE ${table} SET data_json=? WHERE id=?`,
+      JSON.stringify(data),
+      id,
+    );
+  };
+  update("auth_profiles", profile.id, (data) => {
+    (data.config as { http: { loginUrl: string } }).http.loginUrl =
+      `${denied}/api/login?token=url-canary`;
+  });
+  for (const secret of Object.values(stored(current, profile.id).secrets))
+    update("secret_references", String(secret), (data) => {
+      data.allowedOrigins = [denied];
+    });
+  const receipt = await current.app.authProfiles.testLogin(profile.id, env.id);
+  expect(receipt).toMatchObject({ outcome: "blocked", reasonCode: "egress_denied" });
+  expect(receipt.detail).toBe(
+    `origin_denied: Login endpoint is not allowed: ${denied} (address_denied:private)`,
+  );
+  expect(receipt.detail).not.toContain("url-canary");
+  const engine = current.app.authProfiles.engine;
+  const environment = current.app.authProfiles.environment(env.id).environment;
+  await expect(
+    engine.ensure(stored(current, profile.id), environment, {
+      interactive: false,
+      explicit: true,
+    }),
+  ).rejects.toMatchObject({
+    reasonCode: "egress_denied",
+    details: { origin: denied, reason: expect.any(String) },
+  });
+  // Negative control: the refusal came before any credential left the host.
+  expect(current.site.counters.logins).toBe(0);
+});
+
 it("M4-03 SEC-023 two simultaneous logins of one profile share a single login against the target", async () => {
   const current = await lab();
   const profile = await formProfile(current);

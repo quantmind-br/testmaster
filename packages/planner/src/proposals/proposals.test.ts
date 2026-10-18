@@ -85,6 +85,44 @@ it("refuses a cleanup the runner can never perform and names the missing resourc
     validateProposalPlan(withCleanup(create({ handle: "/id", ownerProof: "/owner" }))).cleanup,
   ).toHaveLength(1);
 });
+it("refuses a reference to a resource handle that is captured only with ownerProof", async () => {
+  const base = (await fixture("backend")) as ExecutablePlan;
+  const withHandleRead = (resource: Record<string, unknown>): ExecutablePlan => ({
+    ...base,
+    steps: [
+      ...base.steps,
+      {
+        id: "create",
+        kind: "action",
+        operation: "request",
+        description: "Create the item",
+        input: {
+          method: "POST",
+          pathSegments: [{ literal: "items" }],
+          resource: { resourceType: "item", correlationKey: { literal: "k" }, ...resource },
+        },
+      },
+      {
+        id: "read",
+        kind: "action",
+        operation: "request",
+        description: "Read the item",
+        input: {
+          method: "GET",
+          pathSegments: [{ literal: "items" }, { variableRef: "create.handle" }],
+        },
+      },
+    ],
+  });
+  expect(() => validateProposalPlan(withHandleRead({ handle: "/id" }))).toThrow(
+    expect.objectContaining({
+      details: expect.objectContaining({ reasonCode: "handle_not_captured" }),
+    }),
+  );
+  expect(
+    validateProposalPlan(withHandleRead({ handle: "/id", ownerProof: "/owner" })).steps,
+  ).toHaveLength(base.steps.length + 2);
+});
 
 type Step = ExecutablePlan["steps"][number];
 const assertion = (id: string, input: Record<string, unknown>, expectation: unknown): Step =>

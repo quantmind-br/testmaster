@@ -21,7 +21,7 @@ export function mcpCommands(program: Command, runtime: Runtime): void {
       runtime.options = options;
       runtime.emitted = true;
       const app = await Application.open({
-        cwd: resolve(string(options, "cwd") ?? process.cwd()),
+        ...(string(options, "cwd") ? { cwd: resolve(String(options.cwd)) } : {}),
         ...(string(options, "config") ? { configPath: String(options.config) } : {}),
         ...(string(options, "profile") ? { profile: String(options.profile) } : {}),
       });

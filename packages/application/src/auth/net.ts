@@ -28,13 +28,29 @@ export interface AuthResponse {
   headers: Readonly<Record<string, string | string[] | undefined>>;
   body: string;
 }
-/** Destination refused before any byte left the host. */
+/** Scheme, host and port of a destination; never its path, query, fragment or credentials. */
+function originOf(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return parsed.protocol;
+    return parsed.origin.slice(0, 200);
+  } catch {
+    return "unparsable";
+  }
+}
+/** Destination refused before any byte left the host; names the refused origin and never the rest of the URL. */
 export class EgressDenied extends ContractError {
-  constructor(reason: string) {
+  readonly origin: string;
+  readonly reason: string;
+  constructor(reason: string, url: string) {
+    const origin = originOf(url);
     super("POLICY_DENIED", "Authentication request denied by the egress policy", {
       reasonCode: "egress_denied",
       reason,
+      origin,
     });
+    this.origin = origin;
+    this.reason = reason;
   }
 }
 
@@ -79,7 +95,7 @@ export class AuthNetwork {
       )
         throw new PolicyDenied("origin_denied");
     } catch (error) {
-      throw new EgressDenied(error instanceof PolicyDenied ? error.reason : "invalid_url");
+      throw new EgressDenied(error instanceof PolicyDenied ? error.reason : "invalid_url", url);
     }
   }
   async send(input: AuthRequest): Promise<AuthResponse> {
@@ -89,10 +105,13 @@ export class AuthNetwork {
         (await lookup(hostname, { all: true })).map((entry) => entry.address),
       );
     } catch (error) {
-      throw new EgressDenied(error instanceof PolicyDenied ? error.reason : "dns_failed");
+      throw new EgressDenied(
+        error instanceof PolicyDenied ? error.reason : "dns_failed",
+        input.url,
+      );
     }
     if (target.protocol === "http" && this.policy.networkProfile === "public")
-      throw new EgressDenied("insecure_transport");
+      throw new EgressDenied("insecure_transport", input.url);
     const send = target.protocol === "https" ? httpsRequest : httpRequest;
     const url = new URL(target.url);
     return await new Promise<AuthResponse>((resolve, reject) => {

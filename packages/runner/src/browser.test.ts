@@ -1852,6 +1852,86 @@ it("reports a fatal egress denial, not the closed page it causes, while a URL as
     expect.objectContaining({ origin: "https://news.example.test", disposition: "fatal" }),
   ]);
 });
+function navigateFrameOnClick(url: string): void {
+  context.page.onClick = () => context.page.emit("framenavigated", { url: () => url });
+}
+it("authorizes a frame of an approved additional origin although Playwright appends a URL fragment", async () => {
+  const attempt = runtime([click, assertion]);
+  attempt.input.networkPolicy.allowedOrigins.push("https://js.example.test");
+  attempt.input.networkPolicy.additionalOrigins = ["https://js.example.test"];
+  navigateFrameOnClick("https://js.example.test/v3/controller.html#url=https%3A%2F%2Ffixture.test");
+  expect(await runBrowser(attempt)).toMatchObject({
+    outcome: "passed",
+    reasonCode: "assertions_satisfied",
+  });
+  expect(egressEvents()).toEqual([]);
+});
+it("keeps about:blank frames out of the egress check and still refuses an unapproved frame origin with a fragment", async () => {
+  navigateFrameOnClick("about:blank");
+  expect(await runBrowser(runtime([click, assertion]))).toMatchObject({ outcome: "passed" });
+  navigateFrameOnClick("https://js.example.test/v3/controller.html#url=1");
+  expect(await runBrowser(runtime([click, assertion]))).toMatchObject({
+    outcome: "blocked",
+    reasonCode: "egress_denied",
+  });
+});
+it("leaves Chromium's error page of an aborted frame out of the egress log", async () => {
+  navigateFrameOnClick("chrome-error://chromewebdata/");
+  expect(await runBrowser(runtime([click, assertion]))).toMatchObject({ outcome: "passed" });
+  expect(egressEvents()).toEqual([]);
+});
+it("blocks the run when a frame navigates to an unapproved origin, records it and names only the origin", async () => {
+  navigateFrameOnClick("https://tracker.example.test/embed?id=url-canary#frag-canary");
+  expect(await runBrowser(runtime([click, assertion]))).toMatchObject({
+    outcome: "blocked",
+    reasonCode: "egress_denied",
+  });
+  expect(egressEvents()).toEqual([
+    expect.objectContaining({
+      stepId: "click",
+      origin: "https://tracker.example.test",
+      resourceType: "document",
+      disposition: "fatal",
+      count: 1,
+    }),
+  ]);
+  expect(JSON.stringify(egressEvents())).not.toContain("url-canary");
+  expect(JSON.stringify(egressEvents())).not.toContain("frag-canary");
+  const finished = events.find(
+    (event) => event.type === "step.finished" && event.payload.stepId === "click",
+  )?.payload as { status: string; reasonCode: string; error?: { message: string } };
+  expect(finished).toMatchObject({ status: "blocked", reasonCode: "egress_denied" });
+  expect(finished.error?.message).toBe(
+    "Frame navigation is not authorized: https://tracker.example.test",
+  );
+});
+it("ends blocked, not inconclusive, when a frame denial lands after the closed-page error already ended the step", async () => {
+  const attempt = runtime([click, assertion]);
+  context.page
+    .locator("submit")
+    .click.mockRejectedValue(
+      new Error("locator.click: Target page, context or browser has been closed"),
+    );
+  // The denial arrives while the step result is being reported, after the step was mapped to inconclusive.
+  const emit = vi.mocked(attempt.protocol.emit);
+  const report = emit.getMockImplementation() as (type: string, payload: unknown) => Promise<void>;
+  emit.mockImplementation(async (type: string, payload: unknown) => {
+    await report(type, payload);
+    if (type === "step.finished")
+      context.page.emit("framenavigated", { url: () => "https://tracker.example.test/embed#a" });
+  });
+  expect(await runBrowser(attempt)).toMatchObject({
+    outcome: "blocked",
+    reasonCode: "egress_denied",
+  });
+  expect(
+    events.find((event) => event.type === "step.finished" && event.payload.stepId === "click")
+      ?.payload,
+  ).toMatchObject({ status: "inconclusive", reasonCode: "insufficient_evidence" });
+  expect(egressEvents()).toEqual([
+    expect.objectContaining({ origin: "https://tracker.example.test", disposition: "fatal" }),
+  ]);
+});
 it("resolves expected URLs with the navigate rules and refuses a relative one without a base", () => {
   expect(resolveExpectedUrl("/a?x=1", "http://h.test/base/")).toBe("http://h.test/a?x=1");
   expect(resolveExpectedUrl("a", "http://h.test/base/")).toBe("http://h.test/base/a");

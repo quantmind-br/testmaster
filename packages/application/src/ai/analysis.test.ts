@@ -3505,6 +3505,35 @@ it("a failure localizes to the first inconclusive step and never prints a placeh
   expect(JSON.stringify(unlocalized.diagnosis)).not.toContain("step unavailable");
   expect(unlocalized.diagnosis?.nextSteps[0]?.text).toContain("for the step that stopped the Run");
 });
+it("a run whose only non-passed step is inconclusive reports that step, its reason code and its error in the observation", async () => {
+  const message = "page.goto: net::ERR_ABORTED at https://target.invalid/menu";
+  const f = await fixture({
+    step: {
+      planStepId: "request",
+      status: "inconclusive",
+      reasonCode: "insufficient_evidence",
+      expected: null,
+      observed: null,
+      error: { code: "Error", message },
+    },
+  });
+  const analysis = await f.service.analyze(f.run.id, {});
+  const observation = analysis.diagnosis?.observation;
+  // The observation names the step the localization names, not "no failed step result".
+  expect(analysis.diagnosis?.conclusion.text).toContain("localized to step request");
+  expect(observation).toMatchObject({ stepId: "request", operation: "request" });
+  expect(observation?.summary).toContain("was inconclusive: insufficient_evidence");
+  expect(observation?.summary).toContain(`(runner message: ${message})`);
+  expect(observation?.summary).not.toContain("no failed");
+  expect(observation?.evidenceRefs[0]).toMatchObject({ stepId: f.step.id });
+  // No value was compared, so the step is not misreported as a null observed value.
+  expect(observation).toMatchObject({ expected: null, observed: null });
+  expect(observation?.absence).not.toBe("null_value");
+  // The error also reaches the facts the model reads.
+  expect(analysis.facts.map((fact) => fact.text)).toContain(
+    `Step request (request) was inconclusive: insufficient_evidence (runner message: ${message}).`,
+  );
+});
 const labelPlan = (value: string): ExecutablePlan =>
   ({
     schemaVersion: "1.0.0",

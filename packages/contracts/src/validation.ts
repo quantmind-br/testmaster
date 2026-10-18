@@ -512,7 +512,11 @@ export function validateDocument(
       sizeBytes,
     });
   const checked = validate(schema, document);
-  if (schema === "ExecutablePlan") assertNoNegativeBeforeRender(checked as ExecutablePlan);
+  if (schema === "ExecutablePlan") {
+    assertNoNegativeBeforeRender(checked as ExecutablePlan);
+    assertCleanupRuns(checked as ExecutablePlan);
+    assertHandleCaptured(checked as ExecutablePlan);
+  }
   return { validated: true, schema };
 }
 /** Canonical JSON (keys sorted recursively) of a locator without its container: the element it selects. */
@@ -931,6 +935,102 @@ export function assertNoNegativeBeforeRender(plan: ExecutablePlan): void {
         .map(({ message }) => message)
         .join("; ")}`,
       { reasonCode: "negative_before_render", issues },
+      issues,
+    );
+}
+/** Request steps of a plan by id, with their JSON pointer; frames are searched too. */
+function requestSteps(
+  steps: readonly PlanStep[],
+  path = "/steps",
+  found = new Map<string, { step: Extract<PlanStep, { operation: "request" }>; path: string }>(),
+): typeof found {
+  steps.forEach((step, index) => {
+    if (step.operation === "request") found.set(step.id, { step, path: `${path}/${index}` });
+    if (step.operation === "frame")
+      requestSteps(step.input.childSteps, `${path}/${index}/input/childSteps`, found);
+  });
+  return found;
+}
+/**
+ * Authoring check, not run when a stored plan executes. A declared cleanup the runner can never
+ * perform: it deletes only a resource whose creating request step declares `input.resource` with
+ * both `handle` and `ownerProof`, and leaves any other resource orphaned, which fails the gate of
+ * a test that passed.
+ */
+export function assertCleanupRuns(plan: ExecutablePlan): void {
+  const requests = requestSteps(plan.steps);
+  const issues = (plan.cleanup ?? []).flatMap((cleanup, index) => {
+    const creator = requests.get(cleanup.resourceRef);
+    if (!creator?.step.input.resource)
+      return [
+        {
+          path: `/cleanup/${index}/resourceRef`,
+          rule: "cleanupResource",
+          message: `Cleanup ${index} names "${cleanup.resourceRef}", which is not a request step that declares input.resource; the runner deletes only a resource its creating request declares`,
+        },
+      ];
+    const { handle, ownerProof } = creator.step.input.resource;
+    const missing = [
+      handle === undefined ? "handle" : [],
+      ownerProof === undefined ? "ownerProof" : [],
+    ].flat();
+    return missing.length
+      ? [
+          {
+            path: `${creator.path}/input/resource`,
+            rule: "cleanupResource",
+            message: `Step "${creator.step.id}" creates the resource cleanup ${index} deletes but its input.resource lacks ${missing.join(" and ")}: JSON pointers into the creation response to the resource id (handle) and to a field that proves the run's account owns it (ownerProof, such as the creator or tenant id). Without them the runner never runs the cleanup and the resource is left orphaned`,
+          },
+        ]
+      : [];
+  });
+  if (issues.length)
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      issues.map((issue) => issue.message).join("; "),
+      { reasonCode: "cleanup_never_runs", issues },
+      issues,
+    );
+}
+/**
+ * Authoring check, not run when a stored plan executes (a stored plan keeps loading; its reference
+ * to an unbound handle fails the run as before). The runner binds `<step>.handle` only when the
+ * resource declares both `handle` and `ownerProof`, so a reference to it otherwise is a variable
+ * that is never set. A capture named `handle` on the same step binds it too.
+ */
+export function assertHandleCaptured(plan: ExecutablePlan): void {
+  const unbound = new Set<string>();
+  const bound = new Set<string>((plan.dependsOn ?? []).map((binding) => binding.consumerInput));
+  for (const [id, { step }] of requestSteps(plan.steps)) {
+    const { resource } = step.input;
+    if (resource && (resource.handle === undefined || resource.ownerProof === undefined))
+      unbound.add(`${id}.handle`);
+    if ((step.input.capture ?? []).some((capture) => capture.name === "handle"))
+      bound.add(`${id}.handle`);
+  }
+  if (!unbound.size) return;
+  const issues: ValidationIssue[] = [];
+  const walk = (value: unknown, path: string): void => {
+    if (Array.isArray(value)) {
+      for (const [index, item] of value.entries()) walk(item, `${path}/${index}`);
+    } else if (value && typeof value === "object") {
+      const object = value as Record<string, unknown>;
+      const ref = object.variableRef;
+      if (typeof ref === "string" && unbound.has(ref) && !bound.has(ref))
+        issues.push({
+          path: `${path}/variableRef`,
+          rule: "binding",
+          message: `"${ref}" is never set: the runner captures a resource's handle only when its input.resource declares both handle and ownerProof (a JSON pointer to a field that proves the run's account owns it); declare ownerProof on step "${ref.slice(0, -".handle".length)}" or capture the id with input.capture`,
+        });
+      for (const [key, item] of Object.entries(object)) walk(item, `${path}/${key}`);
+    }
+  };
+  walk(plan, "");
+  if (issues.length)
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      issues.map((issue) => issue.message).join("; "),
+      { reasonCode: "handle_not_captured", issues },
       issues,
     );
 }

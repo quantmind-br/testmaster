@@ -75,6 +75,15 @@ export interface EnsureResult {
 function parseConfig<T>(name: string, profile: StoredAuthProfile): T {
   return validate<T>(name, profile.config);
 }
+/** The refusal the operator sees: it names the refused origin (never a path or query) and why. */
+function egressBlocked(endpoint: string, denied: EgressDenied): AuthBlocked {
+  return new AuthBlocked(
+    "egress_denied",
+    `${endpoint} endpoint is not allowed: ${denied.origin} (${denied.reason})`,
+    "origin_denied",
+    { origin: denied.origin, reason: denied.reason },
+  );
+}
 
 export class AuthEngine {
   constructor(
@@ -690,8 +699,7 @@ export class AuthEngine {
         this.succeed(profile);
       });
     } catch (error) {
-      if (error instanceof EgressDenied)
-        throw new AuthBlocked("egress_denied", "Login endpoint is not allowed", "origin_denied");
+      if (error instanceof EgressDenied) throw egressBlocked("Login", error);
       const kind = error instanceof AuthBlocked ? error.details.kind : undefined;
       if (
         error instanceof AuthBlocked &&
@@ -930,12 +938,7 @@ export class AuthEngine {
         });
       });
     } catch (error) {
-      if (error instanceof EgressDenied)
-        throw new AuthBlocked(
-          "egress_denied",
-          "Identity provider endpoint is not allowed",
-          "origin_denied",
-        );
+      if (error instanceof EgressDenied) throw egressBlocked("Identity provider", error);
       if (error instanceof TokenError)
         throw new AuthBlocked(
           "manual_auth_required",
@@ -1325,12 +1328,7 @@ export class AuthEngine {
           "provider_rejected",
           { providerError: error.code },
         );
-      if (error instanceof EgressDenied)
-        throw new AuthBlocked(
-          "egress_denied",
-          "Identity provider endpoint is not allowed",
-          "origin_denied",
-        );
+      if (error instanceof EgressDenied) throw egressBlocked("Identity provider", error);
       throw error;
     }
   }

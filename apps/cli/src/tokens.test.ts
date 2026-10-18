@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, stat, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Writable } from "node:stream";
@@ -111,4 +111,50 @@ it("token issue requires --token-file and a valid scope", async () => {
   expect(invalid.exit).toBe(5);
   expect(invalid.document.error?.code).toBe("INVALID_ARGUMENT");
   await expect(stat(join(cwd, "x.token"))).rejects.toThrow();
+});
+
+it("token issue refuses a token directory under a group- or other-writable parent and names it", async () => {
+  const { cwd, invoke } = await fixture();
+  const shared = join(cwd, "shared");
+  await mkdir(join(shared, "tokens"), { recursive: true });
+  await chmod(shared, 0o775);
+  const refused = await invoke("token", "issue", "--token-file", "shared/tokens/agent.token");
+  expect(refused.exit).toBe(6);
+  expect(refused.document.error).toMatchObject({
+    code: "PRECONDITION_FAILED",
+    message: expect.stringContaining(`${shared} is writable by group or others`),
+    details: {
+      reasonCode: "unsafe_token_directory",
+      directory: shared,
+      reason: "group_or_other_writable",
+      tokenFile: join(shared, "tokens", "agent.token"),
+      nextActions: expect.arrayContaining([`chmod go-w ${shared}`]),
+    },
+  });
+  // This is a directory problem, not a secret-storage one, and nothing was written.
+  expect(refused.stdout).not.toContain("Secure secret storage");
+  expect(refused.stdout).not.toContain("ephemeral");
+  await expect(stat(join(shared, "tokens", "agent.token"))).rejects.toThrow();
+
+  // The same path issues once the offending directory is private.
+  await chmod(shared, 0o700);
+  const issued = await invoke("token", "issue", "--token-file", "shared/tokens/agent.token");
+  expect(issued.exit).toBe(0);
+  expect((await stat(join(shared, "tokens", "agent.token"))).mode & 0o777).toBe(0o600);
+});
+
+it("token issue explains a token directory that is a symbolic link", async () => {
+  const { cwd, invoke } = await fixture();
+  await mkdir(join(cwd, "real"), { mode: 0o700 });
+  await symlink(join(cwd, "real"), join(cwd, "link"));
+  const refused = await invoke("token", "issue", "--token-file", "link/agent.token");
+  expect(refused.exit).toBe(6);
+  expect(refused.document.error).toMatchObject({
+    code: "PRECONDITION_FAILED",
+    details: {
+      reasonCode: "unsafe_token_directory",
+      directory: join(cwd, "link"),
+      reason: "symlink_or_not_directory",
+    },
+  });
 });

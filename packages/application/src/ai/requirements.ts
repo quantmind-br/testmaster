@@ -1,7 +1,11 @@
 import { ContractError, type Requirement, type RequirementReview } from "@testmaster/contracts";
 import { canonicalJson, semanticHash } from "@testmaster/domain";
 import { AuditRepository, type EntityDocument } from "@testmaster/persistence";
-import type { SourceEvidenceRef, SourceParseResult } from "@testmaster/planner";
+import type {
+  NormalizedRequirements,
+  SourceEvidenceRef,
+  SourceParseResult,
+} from "@testmaster/planner";
 import { authoringTransaction, decisionReason } from "../authoring.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "../context.js";
 import type { ModelService } from "./model.js";
@@ -224,6 +228,53 @@ export function requirementContentHash(value: Requirement): string {
     sourceRefs: value.sourceRefs,
   });
 }
+/**
+ * The distinct chunk content hashes a requirement cites, as one comparable value; null when it cites
+ * none or cites evidence without a content hash, which cannot be compared.
+ */
+function citedEvidenceKey(refs: readonly { contentHash?: string }[]): string | null {
+  if (!refs.length || refs.some((ref) => ref.contentHash === undefined)) return null;
+  return [...new Set(refs.map((ref) => ref.contentHash))].sort().join(",");
+}
+/**
+ * Pairs each normalized item with the requirement of the current snapshot it restates, one to one.
+ * Chunk content hashes are stable across source revisions, so two requirements that cite exactly
+ * the same chunks rest on the same evidence even when the model words them differently. Among the
+ * requirements citing the same chunks, an equal model key is preferred, then an equal text, then
+ * the order. A rejected requirement is never paired: a rejection is final, and normalizing again
+ * proposes the statement anew. Returns the prior requirement by item index.
+ */
+function matchPriorRequirements(
+  items: NormalizedRequirements["requirements"],
+  prior: readonly Requirement[],
+): Map<number, Requirement> {
+  const byEvidence = new Map<string, Requirement[]>();
+  for (const value of prior) {
+    const evidence = citedEvidenceKey(value.sourceRefs);
+    if (evidence === null || requirementRejection(value)) continue;
+    byEvidence.set(evidence, [...(byEvidence.get(evidence) ?? []), value]);
+  }
+  type Item = NormalizedRequirements["requirements"][number];
+  const passes: ((item: Item, value: Requirement) => boolean)[] = [
+    (item, value) => requirementKey(value) === item.key,
+    (item, value) => value.text === item.text,
+    () => true,
+  ];
+  const matched = new Map<number, Requirement>();
+  const taken = new Set<Requirement>();
+  for (const accepts of passes)
+    for (const [index, item] of items.entries()) {
+      const evidence = citedEvidenceKey(item.sourceRefs);
+      if (matched.has(index) || evidence === null) continue;
+      const found = byEvidence
+        .get(evidence)
+        ?.find((value) => !taken.has(value) && accepts(item, value));
+      if (!found) continue;
+      matched.set(index, found);
+      taken.add(found);
+    }
+  return matched;
+}
 /** The content hash of each requirement, recorded on a proposal batch to tell later which ones changed. */
 export function requirementContentHashes(
   requirements: readonly Requirement[],
@@ -323,7 +374,16 @@ export class RequirementsService {
           { diff: { before: snapshotDigest(before), current: snapshotDigest(current) } },
         );
       const byKey: Record<string, string> = {};
-      const requirements = normalized.requirements.map((item) => {
+      // A statement resting on exactly the evidence of a requirement already in the snapshot is that
+      // requirement: its id, approval and wording stand, and so do the proposals that cite it.
+      const carried = matchPriorRequirements(normalized.requirements, current.requirements);
+      const carriedIds = new Set([...carried.values()].map((item) => item.id));
+      const requirements: Requirement[] = normalized.requirements.map((item, index) => {
+        const prior = carried.get(index);
+        if (prior) {
+          byKey[item.key] = prior.id;
+          return prior;
+        }
         const codeOnly =
           item.sourceRefs.length > 0 &&
           item.sourceRefs.every((ref) => codeRevisionIds.has(ref.sourceRevisionId));
@@ -395,9 +455,9 @@ export class RequirementsService {
         fingerprint: snapshot.fingerprint,
         inputs,
       });
-      const previousByKey = new Map(
-        current.requirements.map((item) => [requirementKey(item), item]),
-      );
+      // A carried requirement is neither added nor removed: it is the same requirement.
+      const replaced = current.requirements.filter((item) => !carriedIds.has(item.id));
+      const previousByKey = new Map(replaced.map((item) => [requirementKey(item), item]));
       const nextKeys = new Set(requirements.map((item) => requirementKey(item)));
       appendRequirementLog(this.ctx, input.projectId, [
         {
@@ -406,6 +466,7 @@ export class RequirementsService {
           sourceRevisionIds: input.sourceRevisionIds,
         },
         ...requirements.flatMap((item): RequirementLogInput[] => {
+          if (carriedIds.has(item.id)) return [];
           const previous = previousByKey.get(requirementKey(item));
           const after = describeRequirement(item);
           const common = {
@@ -419,7 +480,7 @@ export class RequirementsService {
             ? []
             : [{ kind: "interpretation_changed", before, after, ...common }];
         }),
-        ...current.requirements
+        ...replaced
           .filter((item) => !nextKeys.has(requirementKey(item)))
           .map(
             (item): RequirementLogInput => ({

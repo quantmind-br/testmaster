@@ -202,7 +202,8 @@ function assertionHealing(stepId: string): Diagnosis["healing"] {
  * `assertion_timeout` is the reason code of every step that ran out of time on a live page; on an
  * action it means the action's target never appeared. An `assertion_mismatch` with no expected or
  * observed value means the runner refused the step before comparing anything (an ambiguous locator,
- * a response that is not JSON), and only its message names why.
+ * a response that is not JSON), and only its message names why. The same holds for an inconclusive
+ * or blocked step (an aborted navigation, for example): it compared nothing.
  */
 function runnerMessageGloss(planStep: PlanStep | undefined, step: StepResult): string {
   if (!planStep || !step.error) return "";
@@ -214,6 +215,9 @@ function runnerMessageGloss(planStep: PlanStep | undefined, step: StepResult): s
     return ` (an action, not an assertion: ${message})`;
   if (step.reasonCode === "assertion_mismatch" && step.expected == null && step.observed == null)
     return ` (no value was compared: ${message})`;
+  // An inconclusive or blocked step compared nothing; its message is the only account of why.
+  if (step.status === "inconclusive" || step.status === "blocked")
+    return ` (runner message: ${message})`;
   return "";
 }
 /**
@@ -2482,12 +2486,22 @@ export class AnalysisService {
       gaps.push(
         `${timedOut.process.lingeringProcesses} process(es) outlived process ${timedOut.processId}; their state after the sweep is not recorded.`,
       );
+    // The first step that did not pass: a failed step, else an inconclusive or blocked one (for
+    // example a navigation aborted before any assertion ran). The observation reports this same
+    // step; it records no compared value, so it is never read as a null value (`absence` above
+    // follows `failed` only).
+    const localized =
+      failed ?? steps.find((item) => ["inconclusive", "blocked"].includes(item.step!.status));
     // A pass whose gate failed (evidence not published, unavailable entries) is not "no failure".
     const gateFailedPass = run.outcome === "passed" && run.gate === "failed";
     const recorded = gateFailedPass
       ? collected.evidence.find((item) => item.executionError)
       : undefined;
     const recordedError = recorded?.executionError;
+    // A failed step with a null value observed null; an inconclusive or blocked step recorded no
+    // comparison, so an empty value there is absent, not the text "null".
+    const compared = (value: unknown): string | null =>
+      localized === failed || value != null ? evidenceRendering(value, secrets) : null;
     const observation: Diagnosis["observation"] =
       run.outcome === "passed"
         ? gateFailedPass
@@ -2504,38 +2518,34 @@ export class AnalysisService {
             }
           : null
         : {
-            stepId: failed?.step?.planStepId ?? null,
-            operation: failed?.planStep?.operation ?? failed?.codeOperation ?? null,
-            summary: failed
-              ? stepSummary(failed, secrets)
-              : `Run ${run.outcome}; no failed step result is available.`,
-            expected: failed
+            stepId: localized?.step?.planStepId ?? null,
+            operation: localized?.planStep?.operation ?? localized?.codeOperation ?? null,
+            summary: localized
+              ? stepSummary(localized, secrets)
+              : `Run ${run.outcome}; no failed, inconclusive or blocked step result is available.`,
+            expected: localized
               ? timedOut
                 ? `Process ${timedOut.processId} exits within its step time limit`
                 : codeThrown
                   ? null
-                  : (locatorSeen?.expected ?? evidenceRendering(failed.step!.expected, secrets))
+                  : (locatorSeen?.expected ?? compared(localized.step!.expected))
               : null,
-            observed: failed
+            observed: localized
               ? timedOut
                 ? terminalObserved(timedOut.process)
                 : codeThrown
                   ? null
-                  : (locatorSeen?.observed ?? evidenceRendering(failed.step!.observed, secrets))
+                  : (locatorSeen?.observed ?? compared(localized.step!.observed))
               : null,
             absence,
-            evidenceRefs: failed
+            evidenceRefs: localized
               ? [
-                  failed.ref,
+                  localized.ref,
                   ...(timedOut ? [timedOut.ref] : []),
                   ...(locatorSeen ? [locatorSeen.ref] : []),
                 ]
               : supports,
           };
-    // The first step that did not pass: a failed step, else an inconclusive or blocked one (for
-    // example a navigation aborted before any assertion ran).
-    const localized =
-      failed ?? steps.find((item) => ["inconclusive", "blocked"].includes(item.step!.status));
     const location = localized?.step?.planStepId ?? null;
     const assertionStep =
       location !== null &&

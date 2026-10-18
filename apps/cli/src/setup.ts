@@ -24,6 +24,7 @@ export function setupCommands(program: Command, runtime: Runtime): void {
       if (options.mode === "server") unavailable("server");
       if (options.mode !== "local")
         throw new ContractError("INVALID_ARGUMENT", "Mode must be local or server");
+      rt.allowNestedWorkspace = true;
       const app = await rt.app();
       const name = string(options, "name");
       const baseUrl = string(options, "baseUrl");

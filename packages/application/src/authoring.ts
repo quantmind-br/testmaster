@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { isIP } from "node:net";
 import {
+  assertCleanupRuns,
+  assertHandleCaptured,
   assertNoNegativeBeforeRender,
   ContractError,
   type Environment,
@@ -268,6 +270,8 @@ export function attemptAdditionalOrigins(
 export function lintPlan(bytes: Uint8Array | string): ExecutablePlan {
   const plan = materializePlanDefaults(parseAndValidate<ExecutablePlan>("ExecutablePlan", bytes));
   assertNoNegativeBeforeRender(plan);
+  assertCleanupRuns(plan);
+  assertHandleCaptured(plan);
   return plan;
 }
 export function scaffoldPlan(type: "frontend" | "backend" | "cli"): ExecutablePlan {

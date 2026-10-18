@@ -6,7 +6,7 @@ import type { Application, AuthorizationIdentity, PermissionGrant } from "./appl
 import { auditSecurity } from "./audit.js";
 import type { Scope } from "./context.js";
 import { sha256Hex } from "./passwords.js";
-import { privateDirectory } from "./secrets.js";
+import { privateDirectory, UnsafeDirectoryError } from "./secrets.js";
 import { authenticateBearer, insertToken, mintToken } from "./tokens.js";
 
 export interface TokenIssuance {
@@ -122,6 +122,31 @@ export function resolveIssuance(app: Application, options: TokenIssuance): Resol
   }
   return { scopes, expiresAt, grants, explicitGrants: options.grants !== undefined };
 }
+/** Opens the token directory, turning a failed safety check into an actionable refusal. */
+async function tokenDirectory(app: Application, tokenPath: string) {
+  try {
+    return await privateDirectory(dirname(tokenPath));
+  } catch (error) {
+    if (!(error instanceof UnsafeDirectoryError)) throw error;
+    const suggested = join(app.config.home, ".local", "share", "testmaster", "server.token");
+    const chmod =
+      error.reason === "group_or_other_writable" ? `chmod go-w ${error.directory}` : null;
+    const actions = [...(chmod ? [chmod] : []), `testmaster token issue --token-file ${suggested}`];
+    throw new ContractError(
+      "PRECONDITION_FAILED",
+      `Token file directory ${dirname(tokenPath)} is not private: ${error.directory} ${error.problem}. ` +
+        "A token file must live under directories owned by you that no one else can write to. " +
+        `${chmod ? `Run \`${chmod}\`, or choose` : "Choose"} a token file under a private directory such as ${dirname(suggested)}`,
+      {
+        reasonCode: "unsafe_token_directory",
+        tokenFile: tokenPath,
+        directory: error.directory,
+        reason: error.reason,
+        nextActions: actions,
+      },
+    );
+  }
+}
 export async function issueLocalToken(
   app: Application,
   options: TokenIssuance & { tokenPath?: string } = {},
@@ -131,7 +156,7 @@ export async function issueLocalToken(
   const { scopes, expiresAt, grants, explicitGrants } = resolveIssuance(app, options);
   const tokenPath =
     options.tokenPath ?? join(app.config.home, ".local", "share", "testmaster", "server.token");
-  const directory = await privateDirectory(dirname(tokenPath));
+  const directory = await tokenDirectory(app, tokenPath);
   const path = `/proc/self/fd/${directory.fd}/${basename(tokenPath)}`;
   try {
     try {

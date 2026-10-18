@@ -167,8 +167,9 @@ it("UX-012 records interpretation changes, edits, approvals and approval resets 
   const kinds = () => f.app.requirements.review(f.projectId).changes.map((entry) => entry.kind);
   expect(kinds()).toEqual(expect.arrayContaining(["normalized", "requirement_added"]));
   expect(kinds()).not.toContain("interpretation_changed");
-  // A second normalization that words the same key differently and drops another key.
-  f.setOutput(output(statement("health", "Health reports healthy", handle)));
+  // A second normalization that words the same key differently, resting on other evidence (the
+  // same evidence would carry the requirement unchanged), and drops another key.
+  f.setOutput(output(statement("health", "Health reports healthy", 1)));
   await normalize();
   const changes = f.app.requirements.review(f.projectId).changes;
   const changed = changes.find((entry) => entry.kind === "interpretation_changed");

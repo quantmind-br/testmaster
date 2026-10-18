@@ -285,10 +285,12 @@ second group of proposals with another reason).
 A plan that creates a resource and deletes it in `cleanup` must let the runner prove the resource is its own: the
 creating request step sets `input.resource` with `handle` (JSON pointer to the new id in the creation response) and
 `ownerProof` (JSON pointer to a field proving the run's account owns it, such as the creator or tenant id), and the
-cleanup deletes `{"variableRef": "<step id>.handle"}`. Without both pointers the runner never sends the cleanup, the
-resource is left orphaned and the gate fails, so generation, `plan edit`, `plan trial` and the plan validation route
-refuse such a plan (`cleanup_never_runs`). Generated cleanup paths get the specification's server path prefix
-(`basePath` or the server URL path) like request paths.
+cleanup deletes `{"variableRef": "<step id>.handle"}`. Without both pointers the runner never sends the cleanup and
+never binds `<step id>.handle`, so the declared cleanup leaves the resource orphaned and the gate fails. Generation,
+`plan edit`, `plan trial`, the plan validation route, `testmaster_validate_document`, `contract validate`,
+`testmaster_save_test`, `test create` and `test revision create` refuse such a plan (`cleanup_never_runs`, and
+`handle_not_captured` for a reference to a handle that is never bound). Generated cleanup paths get the
+specification's server path prefix (`basePath` or the server URL path) like request paths.
 
 Exact flags: `testmaster <group> <command> --help`.
 
@@ -602,6 +604,14 @@ testmaster agent install --target claude             # preview; add --yes to app
 
 `token issue` works on the local profile only; repeating it for the same file reuses the token, and a
 different `--scope` set needs another file. On a server profile, tokens come from `/v1/tokens` or the portal.
+
+Register the server with the client's request timeout turned off. A model call has no deadline, so
+`testmaster_normalize_requirements`, `testmaster_generate_plan`, `testmaster_generate_tests`,
+`testmaster_analyze_run` and `testmaster_propose_healing` can take minutes, and a client that gives up first
+loses the answer even though the server finishes the call. In omp, set `"timeout": 0` on the server entry of
+`mcp.json` (the default is 30 s; `OMP_MCP_TIMEOUT_MS=0` does the same for every server). Start the server in the
+initialized repository, or pass `--cwd <repository>` before `mcp serve` (`testmaster --cwd <repository> mcp
+serve ...`): the workspace is the directory the command runs in.
 
 An agent with that token can run the whole pipeline through MCP without asking a person for anything:
 `testmaster_bootstrap`, `testmaster_analyze_code`, `testmaster_add_source` (a file inside an approved root; an

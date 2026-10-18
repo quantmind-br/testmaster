@@ -74,6 +74,7 @@ import { BackupsService } from "./backups.js";
 import { CiService } from "./ci.js";
 import { ComparisonsService } from "./comparisons.js";
 import {
+  assertNotInsideWorkspace,
   exportEffectiveConfig,
   type ResolveConfigOptions,
   type ResolvedConfig,
@@ -192,6 +193,8 @@ export interface ApplicationOptions extends ResolveConfigOptions {
   migrationsDir?: string;
   /** Overrides the GitHub API origin and clocks (tests, GitHub Enterprise Server). */
   github?: GithubRuntimeOptions;
+  /** `init` may start a workspace inside a directory tree that is already initialized. */
+  allowNestedWorkspace?: boolean;
 }
 interface SharedRuntime {
   controllers: ControllerRegistry;
@@ -598,6 +601,8 @@ export class Application {
   readonly retention: RetentionService;
   static async open(options: ApplicationOptions = {}): Promise<Application> {
     const resolved = await resolveConfig(options);
+    if (!options.server && !options.allowNestedWorkspace)
+      assertNotInsideWorkspace(options, resolved);
     // The server profile keeps evidence under its configured root, not the project directory.
     const config = options.server
       ? { ...resolved, dataDir: filesystemRoot(options.server.storage) }

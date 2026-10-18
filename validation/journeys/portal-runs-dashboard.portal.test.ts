@@ -58,7 +58,12 @@ const flowPlan = {
             sensitive: true,
           },
         ],
-        resource: { resourceType: "order", correlationKey: { literal: "order-1" }, handle: "/id" },
+        resource: {
+          resourceType: "order",
+          correlationKey: { literal: "order-1" },
+          handle: "/id",
+          ownerProof: "/owner",
+        },
       },
     },
     {

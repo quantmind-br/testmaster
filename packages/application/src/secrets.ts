@@ -121,14 +121,54 @@ async function keychain(
   return promise;
 }
 
+export type UnsafeDirectoryReason =
+  | "not_owned"
+  | "group_or_other_writable"
+  | "symlink_or_not_directory"
+  | "inaccessible";
+/** A directory on a private path failed the ownership, permission or type check. */
+export class UnsafeDirectoryError extends Error {
+  constructor(
+    /** The path segment that failed, which may be an ancestor of the requested directory. */
+    readonly directory: string,
+    readonly reason: UnsafeDirectoryReason,
+    /** Human-readable predicate completing "<directory> ...". */
+    readonly problem: string,
+  ) {
+    super(`${directory} ${problem}`);
+    this.name = "UnsafeDirectoryError";
+  }
+}
+function unreadableDirectory(
+  directory: string,
+  error: unknown,
+  action: "opened" | "created" | "made private",
+): UnsafeDirectoryError {
+  const code = (error as NodeJS.ErrnoException).code;
+  if (action === "opened" && (code === "ELOOP" || code === "ENOTDIR"))
+    return new UnsafeDirectoryError(
+      directory,
+      "symlink_or_not_directory",
+      "is a symbolic link or not a directory",
+    );
+  return new UnsafeDirectoryError(
+    directory,
+    "inaccessible",
+    `cannot be ${action}${typeof code === "string" ? ` (${code})` : ""}`,
+  );
+}
 // Pin every directory through an open FD. /proc/self/fd paths keep subsequent operations
 // confined even if an ancestor is renamed; O_NOFOLLOW prevents symlink substitution.
+// Failures throw UnsafeDirectoryError naming the offending segment; vault callers map them
+// through `vaultDirectory`, the token issuer reports them to the operator.
 export async function privateDirectory(path: string): Promise<FileHandle> {
   let handle = await open("/", constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
+  let current = "/";
   try {
     const segments = resolve(path).split("/").filter(Boolean);
     for (let index = 0; index < segments.length; index++) {
       const segment = segments[index];
+      current = `/${segments.slice(0, index + 1).join("/")}`;
       const childPath = `/proc/self/fd/${handle.fd}/${segment}`;
       let child: FileHandle;
       try {
@@ -137,11 +177,13 @@ export async function privateDirectory(path: string): Promise<FileHandle> {
           constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW,
         );
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw unavailable();
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT")
+          throw unreadableDirectory(current, error, "opened");
         try {
           await mkdir(childPath, { mode: 0o700 });
         } catch (creation) {
-          if ((creation as NodeJS.ErrnoException).code !== "EEXIST") throw creation;
+          if ((creation as NodeJS.ErrnoException).code !== "EEXIST")
+            throw unreadableDirectory(current, creation, "created");
         }
         child = await open(
           childPath,
@@ -151,24 +193,45 @@ export async function privateDirectory(path: string): Promise<FileHandle> {
       const stat = await child.stat();
       const uid = process.getuid?.();
       const last = index === segments.length - 1;
-      if (
+      const foreign =
         (uid !== undefined && stat.uid !== uid && stat.uid !== 0) ||
-        ((stat.mode & 0o022) !== 0 && !(stat.uid === 0 && (stat.mode & 0o1000) !== 0)) ||
-        (last && uid !== undefined && stat.uid !== uid)
-      ) {
+        (last && uid !== undefined && stat.uid !== uid);
+      const writable = (stat.mode & 0o022) !== 0 && !(stat.uid === 0 && (stat.mode & 0o1000) !== 0);
+      if (foreign || writable) {
         await child.close();
-        throw unavailable();
+        throw foreign
+          ? new UnsafeDirectoryError(current, "not_owned", "is not owned by you")
+          : new UnsafeDirectoryError(
+              current,
+              "group_or_other_writable",
+              "is writable by group or others",
+            );
       }
       // A directory that is already private needs no chmod, which also lets a deployment mount it read-only.
-      if (last && (stat.mode & 0o777) !== 0o700) await child.chmod(0o700);
+      if (last && (stat.mode & 0o777) !== 0o700) {
+        try {
+          await child.chmod(0o700);
+        } catch (error) {
+          await child.close();
+          throw unreadableDirectory(current, error, "made private");
+        }
+      }
       await handle.close();
       handle = child;
     }
     return handle;
-  } catch {
+  } catch (error) {
     await handle.close();
-    throw unavailable();
+    throw error instanceof UnsafeDirectoryError
+      ? error
+      : unreadableDirectory(current, error, "opened");
   }
+}
+/** Vault storage reports any unusable directory as unavailable secure storage. */
+function vaultDirectory(path: string): Promise<FileHandle> {
+  return privateDirectory(path).catch(() => {
+    throw unavailable();
+  });
 }
 async function readPrivate(directory: FileHandle, name: string, maxBytes: number): Promise<Buffer> {
   const handle = await open(
@@ -257,7 +320,7 @@ function masterKeyUnavailable(): ContractError {
   });
 }
 async function vaultKey(layout: VaultLayout, allowCreate: boolean): Promise<Buffer> {
-  const directory = await privateDirectory(layout.keyDirectory).catch((error: unknown) => {
+  const directory = await vaultDirectory(layout.keyDirectory).catch((error: unknown) => {
     throw layout.profile === "server" ? masterKeyUnavailable() : error;
   });
   try {
@@ -268,7 +331,7 @@ async function vaultKey(layout: VaultLayout, allowCreate: boolean): Promise<Buff
       if (layout.profile === "server") throw masterKeyUnavailable();
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       if (!allowCreate) throw unavailable();
-      const vault = await privateDirectory(layout.dataDirectory);
+      const vault = await vaultDirectory(layout.dataDirectory);
       try {
         if ((await readdir(`/proc/self/fd/${vault.fd}`)).some((name) => name.endsWith(".vault")))
           throw unavailable();
@@ -381,11 +444,11 @@ async function vaultLock(layout: VaultLayout): Promise<VaultLock> {
 }
 /** The cross-process lock file; a live holder in another process is refused as busy. */
 async function vaultFileLock(layout: VaultLayout): Promise<VaultLock> {
-  const directory = await privateDirectory(layout.keyDirectory);
+  const directory = await vaultDirectory(layout.keyDirectory);
   let lockDirectory = directory;
   if (layout.lockDirectory !== layout.keyDirectory)
     try {
-      lockDirectory = await privateDirectory(layout.lockDirectory);
+      lockDirectory = await vaultDirectory(layout.lockDirectory);
     } catch (error) {
       await directory.close();
       throw error;
@@ -460,7 +523,7 @@ async function vaultWrite(
   let directory: FileHandle | undefined;
   try {
     key = await vaultKey(layout, allowCreate);
-    directory = await privateDirectory(layout.dataDirectory);
+    directory = await vaultDirectory(layout.dataDirectory);
     const nonce = randomBytes(12);
     const keyId = createHash("sha256").update(key).digest("hex");
     const cipher = createCipheriv("aes-256-gcm", key, nonce);
@@ -493,7 +556,7 @@ async function vaultRead(
   version: number,
 ): Promise<string> {
   // Missing key after restore must fail, never create a replacement key when reading.
-  const keys = await privateDirectory(layout.keyDirectory).catch((error: unknown) => {
+  const keys = await vaultDirectory(layout.keyDirectory).catch((error: unknown) => {
     throw layout.profile === "server" ? masterKeyUnavailable() : error;
   });
   let key: Buffer | undefined;
@@ -504,7 +567,7 @@ async function vaultRead(
     });
     if (key.length !== 32)
       throw layout.profile === "server" ? masterKeyUnavailable() : unavailable();
-    directory = await privateDirectory(layout.dataDirectory);
+    directory = await vaultDirectory(layout.dataDirectory);
     const stored = await readPrivate(directory, vaultName(id, version), MAX_SECRET_BYTES * 2);
     let bytes = stored;
     if (stored[0] === 123) {
@@ -552,7 +615,7 @@ async function erase(layout: VaultLayout, reference: SecretMetadata): Promise<vo
   if (reference.provider === "secret-tool") {
     await keychain("clear", reference.workspaceId, reference.id, reference.secretVersion);
   } else if (reference.provider === "vault") {
-    const directory = await privateDirectory(layout.dataDirectory);
+    const directory = await vaultDirectory(layout.dataDirectory);
     try {
       await unlink(
         `/proc/self/fd/${directory.fd}/${vaultName(reference.id, reference.secretVersion)}`,
@@ -588,7 +651,7 @@ export async function vaultHealth(layout: VaultLayout): Promise<SecretBackendHea
   try {
     await vaultWrite(layout, probeWorkspace, id, 1, canary, layout.profile === "local");
     const matches = (await vaultRead(layout, probeWorkspace, id, 1)) === canary;
-    const directory = await privateDirectory(layout.dataDirectory);
+    const directory = await vaultDirectory(layout.dataDirectory);
     try {
       await unlink(`/proc/self/fd/${directory.fd}/${vaultName(id, 1)}`);
     } finally {
@@ -1237,7 +1300,7 @@ export class SecretsService {
   async keyStatus(): Promise<{ activeKeyId: string; retiredKeyIds: string[] }> {
     this.ctx.authorize("A");
     const key = await vaultKey(this.layout, false);
-    const directory = await privateDirectory(this.layout.keyDirectory);
+    const directory = await vaultDirectory(this.layout.keyDirectory);
     try {
       let retiredKeyIds: string[] = [];
       try {
@@ -1260,7 +1323,7 @@ export class SecretsService {
       let directory: FileHandle;
       let old: Buffer;
       try {
-        directory = await privateDirectory(this.layout.dataDirectory);
+        directory = await vaultDirectory(this.layout.dataDirectory);
         old = await vaultKey(this.layout, false);
       } catch (error) {
         await lock.release();
@@ -1366,7 +1429,7 @@ export class SecretsService {
       let directory: FileHandle;
       let key: Buffer;
       try {
-        directory = await privateDirectory(this.layout.dataDirectory);
+        directory = await vaultDirectory(this.layout.dataDirectory);
         key = await vaultKey(this.layout, false);
       } catch (error) {
         await lock.release();

@@ -284,8 +284,11 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
     return selected;
   }
   function authorizeFrame(frame: Frame): void {
-    const url = frame.url();
-    if (url !== "about:blank") authorizeUrl(runtime, url);
+    // Playwright appends the URL fragment to `frame.url()`; it never reaches the server or the proxy.
+    const url = frame.url().split("#", 1)[0] ?? "";
+    // A frame whose navigation was aborted shows Chromium's own error page, drawn without any
+    // request; the route handler already recorded the aborted request.
+    if (url !== "about:blank" && !url.startsWith("chrome-error:")) authorizeUrl(runtime, url);
   }
   async function rejectAmbiguous(locator: Locator): Promise<void> {
     const count = await locator.count();
@@ -1530,7 +1533,17 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       try {
         authorizeFrame(frame);
       } catch {
-        deny("Frame navigation is not authorized");
+        // A frame is a document request that the route handler no longer sees once it is committed,
+        // so the denial is recorded here like a denied subrequest: origin only, never path or query.
+        const url = frame.url();
+        denials.record({
+          stepId: currentStepId ?? "attempt",
+          url,
+          method: "GET",
+          resourceType: "document",
+          disposition: "fatal",
+        });
+        deny(runtime.scrub(`Frame navigation is not authorized: ${deniedOrigin(url)}`));
       }
     });
   }
@@ -1687,7 +1700,13 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       }
     }
     result = await runtime.runSteps(plan.steps, withEvidence);
-    if (violation && result.outcome === "passed")
+    // A denial closes the context, so a pending call may already have been mapped to inconclusive
+    // by the closed-page error; the denial is the cause. A genuine failed assertion stands.
+    if (
+      violation &&
+      (result.outcome === "passed" ||
+        (result.outcome === "inconclusive" && !runtime.signal.aborted))
+    )
       result = { outcome: violation.outcome, reasonCode: violation.reasonCode };
   } catch (error) {
     const aborted = abortVerdict(runtime.signal);
