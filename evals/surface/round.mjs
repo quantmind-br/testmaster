@@ -122,6 +122,9 @@ function assertRegistered(prereg) {
   }
   const a0 = sha256(readFileSync(join(repo, prereg.a0ToolsList)));
   if (a0 !== prereg.a0ToolsListSha256) throw new Error(`A0 tools/list hashes ${a0}`);
+  const protocol = sha256(readFileSync(join(repo, "evals/surface/preregistration.json")));
+  if (protocol !== prereg.protocolSha256)
+    throw new Error(`The protocol evals/surface/preregistration.json hashes ${protocol}`);
   const template = sha256(readFileSync(join(repo, prereg.taskTemplate)));
   if (template !== prereg.taskTemplateSha256) throw new Error(`Task template hashes ${template}`);
 }

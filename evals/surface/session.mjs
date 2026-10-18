@@ -219,14 +219,22 @@ export async function runSession(spec, directory) {
     PATH: `${bin}:${user.PATH}`,
     ...(spec.app.env ?? {}),
   };
-  // Outside the sandbox, a command still sees the session's /tmp at /tmp, as the agent does.
+  // Outside the sandbox, a command still sees the session's /tmp at /tmp, as the agent does,
+  // except TestMaster's runtime root: it hands sockets below it to Docker, whose daemon resolves
+  // bind sources on the host's /tmp.
+  const runtimeRoot = `/tmp/testmaster-runtime-${process.getuid()}`;
+  mkdirSync(runtimeRoot, { recursive: true, mode: 0o700 });
   const privateTmp = (cwd, command) => [
+    "--die-with-parent",
     "--dev-bind",
     "/",
     "/",
     "--bind",
     tmp,
     "/tmp",
+    "--bind",
+    runtimeRoot,
+    runtimeRoot,
     "--chdir",
     cwd,
     "--",
@@ -356,16 +364,25 @@ export async function runSession(spec, directory) {
   const started = Date.now();
   // The agent's sandbox: the host's home is an empty tmpfs except the session's own HOME,
   // workspace, PATH directory and /tmp, so neither this checkout, the harness state of other
-  // sessions, nor the operator's configuration can inform (or contaminate) a session. A private
+  // sessions, nor the operator's configuration can inform (or contaminate) a session. Its own
+  // PID namespace and no Docker socket: the host's process list and containers name other
+  // projects' paths (TestMaster still runs Docker, from outside, through the broker). A private
   // /tmp per session: agents write scratch files to fixed /tmp paths, which would leak between
-  // sessions. It is the session's own `tmp/`, also its TMPDIR, so paths TestMaster hands to
-  // Docker exist on the host too.
+  // sessions.
+  const dockerSockets = ["/run/docker.sock", `/run/user/${process.getuid()}/docker.sock`].filter(
+    (path) => existsSync(path),
+  );
   const child = spawn(
     "bwrap",
     [
+      "--die-with-parent",
+      "--unshare-pid",
       "--dev-bind",
       "/",
       "/",
+      "--proc",
+      "/proc",
+      ...dockerSockets.flatMap((path) => ["--ro-bind", "/dev/null", path]),
       "--tmpfs",
       homedir(),
       "--ro-bind",
