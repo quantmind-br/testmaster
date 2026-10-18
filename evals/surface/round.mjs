@@ -301,8 +301,17 @@ async function main() {
           },
           directory,
         );
+        // An agent that never reached its model is a harness failure, not a session result.
+        if (!existsSync(join(directory, "model", "model-requests.ndjson"))) {
+          renameSync(directory, `${directory}.harness-failed-${Date.now()}`);
+          throw new Error(`${planned.id}: the agent made no model request (see agent.stderr)`);
+        }
         const tests = (await sessionCli(record, ["test", "list"])).envelope?.data ?? [];
         const runs = (await sessionCli(record, ["run", "list"])).envelope?.data ?? [];
+        // Every revision of every test, for the weakened-assertion review (metrics.mjs).
+        for (const test of tests)
+          test.revisions =
+            (await sessionCli(record, ["test", "revision", "list", test.id])).envelope?.data ?? [];
         writeFileSync(done, JSON.stringify({ tests, runs }, null, 2));
         await floorOf(directory);
         log(

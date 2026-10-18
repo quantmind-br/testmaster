@@ -144,7 +144,7 @@ const adapters = {
               quantforge: {
                 baseUrl: `${ctx.proxy}/v1`,
                 api: "openai-completions",
-                apiKey: "$" + ctx.apiKeyEnv,
+                apiKey: `$${ctx.apiKeyEnv}`,
                 authHeader: true,
                 name: "quantforge",
                 // QuantForge rejects the "developer" role and reports streaming usage on request.

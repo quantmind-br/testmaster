@@ -8,7 +8,7 @@
 //   events.jsonl                  the agent's own event stream (turns, tool calls, tool results)
 //   session.json                  the session record: spec, hashes, timing, exit
 // Nothing here stops a session: the agent runs until it ends its turn (premise 1).
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   chmodSync,
@@ -163,6 +163,9 @@ function modelsYml(proxyUrl, model) {
 export async function runSession(spec, directory) {
   if (existsSync(directory) && readdirSync(directory).length > 0)
     throw new Error(`Session directory ${directory} is not empty`);
+  // The session's /tmp is a bind mount over the host's: a directory below /tmp would vanish.
+  if (resolve(directory).startsWith("/tmp/"))
+    throw new Error(`Session directory ${directory} must not be below /tmp`);
   const home = join(directory, "home");
   const ws = join(directory, "ws", spec.app.name);
   const bin = join(directory, "bin");
