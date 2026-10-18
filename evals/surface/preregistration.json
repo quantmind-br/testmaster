@@ -5,7 +5,7 @@
   "operatorDecisions": {
     "shellLessClients": "not on the roadmap (PLAN.md §13 question 1): the Phase 4 decision is between 5a and 5b",
     "remotePipeline": "not a requirement (question 2)",
-    "models": "two agent models, qwen3.8-flash and muse-spark (QuantForge), driven by omp (question 3)",
+    "models": "two agent models driven by omp (question 3): the operator named qwen3.8-flash and muse-spark (QuantForge). On 2026-10-18 the QuantForge Alibaba token plan exhausted its monthly quota during round c0 (qwen3.8-flash and qwen3.8-max refused until 2026-11-06 16:00 UTC), and the operator replaced qwen3.8-flash with gpt-6.1-sol",
     "leastPrivilege": "real least privilege is not a requirement (question 4)",
     "spending": "paid calls authorized without limit; there is no token, cost or session budget"
   },
@@ -21,7 +21,7 @@
   "control": "A0",
   "primaryTreatment": "A3",
   "models": [
-    { "id": "qwen3.8-flash", "thinking": "omp default (no --thinking flag)" },
+    { "id": "gpt-6.1-sol", "thinking": "omp default (no --thinking flag)" },
     { "id": "muse-spark-1.3-contributor", "thinking": "omp default (no --thinking flag)" }
   ],
   "internalModel": "TestMaster's own model calls use provider quantforge, model gpt-6.1-sol, in every arm and model (the task prompt names them)",
@@ -81,6 +81,7 @@
     "T1 threshold applies to T1surface, not T1: omp's own system prompt and the task (≈ 8.3k tokens, measured in the pilot) exceed 3000 before any TestMaster surface; the criterion is about the surface",
     "Ttotal and stepsToGreen ratios are geometric means of per-seed ratios (PLAN.md says 'paired by seed' without fixing the estimator)",
     "skill 1.0.0 is no longer in the product (removed in Phase 3); A0 and A1 use its frozen copy, hash-checked",
+    "gpt-6.1-sol is both an agent model and TestMaster's internal model: in its sessions the same model writes the calls and answers TestMaster's own requests (normalization, plans, analysis), so a difference between the two agent models also contains that coupling; the internal model stays the same in every arm, so arm comparisons within a model are unaffected",
     "the A0 'current catalog' is replayed from the frozen Phase 0 tools/list on the round's build, so A0 calls run the current implementation behind the old announced schemas"
   ],
   "harnessProperties": [

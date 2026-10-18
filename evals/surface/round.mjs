@@ -309,6 +309,20 @@ async function main() {
           renameSync(directory, `${directory}.harness-failed-${Date.now()}`);
           throw new Error(`${planned.id}: the agent made no model request (see agent.stderr)`);
         }
+        // An agent that ended on a refused model request (quota, outage) was stopped by its
+        // provider, not by the task: not a result, and a provider down stops the round (protocol
+        // stopRules.midRound). Its session reruns when the round is resumed.
+        const requests = readFileSync(join(directory, "model", "model-requests.ndjson"), "utf8")
+          .split("\n")
+          .filter(Boolean)
+          .map((line) => JSON.parse(line));
+        const last = requests.at(-1);
+        if (record.agentExit.code !== 0 && last?.status !== 200) {
+          renameSync(directory, `${directory}.provider-failed-${Date.now()}`);
+          throw new Error(
+            `${planned.id}: the provider refused model request ${last?.seq} (HTTP ${last?.status}); the round stops`,
+          );
+        }
         const tests = (await sessionCli(record, ["test", "list"])).envelope?.data ?? [];
         const runs = (await sessionCli(record, ["run", "list"])).envelope?.data ?? [];
         // Every revision of every test, for the weakened-assertion review (metrics.mjs).
