@@ -11,6 +11,15 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 
 - MCP tools now carry action-oriented descriptions (what the tool does, when to use it, which tool comes next); `testmaster_get_run` states it returns a summary only and points to evidence and analysis before naming a cause.
 
+### Sixth Dokploy agent run
+
+Found when an omp agent drove the pipeline on Dokploy a sixth time: 30 tests in a suite, run twice, 25 passed both times; the 5 failures are the product's own OpenAPI response schemas.
+
+- A failed Playwright `expect` whose matcher stopped before reading a value (a strict mode violation on an ambiguous locator prints `Expected: visible` and no `Received:` line) records no `expected` value. Before, the step stored `expected: "visible"` beside a null `observed`, as if a comparison had happened. The runner image is rebuilt.
+- Route coverage's scope says it counts `navigate` steps of declarative browser plans only: code revisions carry no plan and their navigation is not recorded. The quickstart says so beside operation coverage.
+- The `testmaster_run_tests` rules say a batch with `wait: true` needs no worker (the server runs it, suites included) and that one without `wait` is refused unless a worker is live.
+- The skill says the plan schema is about 190 KB as compact JSON and that `testmaster contract schema` prints it indented (about 650 KB on stdout); `--out PATH` writes the compact document.
+
 ### Fifth Dokploy agent run
 
 Found when an omp agent drove the pipeline on Dokploy a fifth time: 28 tests in a suite, 25 passed; the 3 failures are the product's own OpenAPI response schemas.

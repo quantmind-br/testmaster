@@ -33,6 +33,20 @@ it("parses JSON and text comparison values and skips multi-line ones", () => {
   expect(multiline).not.toHaveProperty("expected");
   expect(multiline).not.toHaveProperty("observed");
 });
+it("takes no compared value from a matcher that stopped before reading one", () => {
+  const failure = describeFailure(
+    {
+      message:
+        "Error: expect(locator).toBeVisible() failed\n\nLocator: getByText('Invalid email or password')\nExpected: visible\nError: strict mode violation: getByText('Invalid email or password') resolved to 2 elements",
+    },
+    "/",
+    "?",
+    true,
+  );
+  expect(failure.error.code).toBe("assertion_mismatch");
+  expect(failure).not.toHaveProperty("expected");
+  expect(failure).not.toHaveProperty("observed");
+});
 it("keeps the message within the wire limit and the long value within its own", () => {
   const long = "x".repeat(5000);
   const failure = describeFailure(

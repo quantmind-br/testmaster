@@ -84,6 +84,7 @@ export const toolRules: Record<keyof typeof mcpTools, readonly string[]> = {
     "Runs `testIds` with `environmentId`, or a suite (`suiteId`, replay only), in the sandbox; `mode` defaults to replay.",
     "`revisionId` runs that exact revision (a candidate, generated or healed) of the single test in `testIds`; pin several revisions in a testmaster_save_suite list.",
     "`jobId` re-reads an existing batch and needs no other argument.",
+    "No worker is needed with `wait: true`: when no worker is live (`testmaster worker start`), this server runs the batch itself, suites included. Without `wait` the batch is refused (PRECONDITION_FAILED) unless a worker is live, because nothing would run it.",
     "`wait: true` blocks until `timeoutMs` (1800000 ms, 30 minutes, when omitted); reaching it is UPSTREAM_TIMEOUT with `details.runsContinue` and `details.jobId`: the runs go on. Call testmaster_run_tests again with only that `jobId` and `wait: true`, or poll testmaster_get_run; never repeat the original arguments, which admits a new batch.",
     "`limits.stepTimeoutMs` only shortens steps, never lengthens one.",
   ],

@@ -435,7 +435,9 @@ that does not compile or is empty. Write only what the approved criteria say, ne
 step does not count toward operation coverage, and `test export` refuses it (exported code has no JSON Schema validator).
 Operation coverage counts an operation's response only when a passed `jsonSchema` step of a declarative plan checked it
 with a `statusIn` of the same status; code revisions (exported or authored Playwright, Python) carry no plan steps and
-never count, even when their own code validates the schema.
+never count, even when their own code validates the schema. Route coverage likewise lists the targets of `navigate`
+steps of declarative browser plans that ran: the navigation a code revision makes is not recorded, so code tests never
+add routes to it.
 
 ## Third-party subresources and additional origins
 

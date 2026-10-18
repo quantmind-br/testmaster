@@ -58,7 +58,9 @@ function errorCode(message: string, assertion: boolean): string {
  * What Playwright says about a failed test or step: the message with its source location, and
  * the expected and received values a matcher printed ("Expected: 200" / "Received: 404"). A
  * failure with no matcher output (a locator timeout, a thrown error) has no comparison, and none
- * is invented. `testDir` makes the location relative to the staged code.
+ * is invented. A matcher that stopped before reading a value (a strict mode violation on an
+ * ambiguous locator) prints its "Expected:" line but no "Received:" line; it compared nothing, so
+ * neither value is taken. `testDir` makes the location relative to the staged code.
  */
 export function describeFailure(
   failure: PlaywrightFailure | undefined,
@@ -71,8 +73,9 @@ export function describeFailure(
   const location = failure?.location
     ? `\n    at ${relative(testDir, failure.location.file)}:${failure.location.line}:${failure.location.column}`
     : "";
-  const expected = comparedValue(EXPECTED.exec(message)?.[1]);
-  const observed = comparedValue(RECEIVED.exec(message)?.[1]);
+  const received = RECEIVED.exec(message);
+  const expected = received ? comparedValue(EXPECTED.exec(message)?.[1]) : undefined;
+  const observed = comparedValue(received?.[1]);
   return {
     error: {
       code: errorCode(message, assertion),

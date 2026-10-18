@@ -119,7 +119,7 @@ export function reportCoverage(ctx: ServiceContext, snapshot: ReportSnapshot): C
       covered: visitedRoutes,
       declared: null,
       scope:
-        "Observed navigation; discovery is partial and total application route inventory is unknown",
+        "Navigate steps of declarative browser plans that ran; code revisions (exported or authored Playwright, Python) carry no plan and their navigation is not recorded; discovery is partial and total application route inventory is unknown",
     },
     operation: {
       covered: coveredOperations,
