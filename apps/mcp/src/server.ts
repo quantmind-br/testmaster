@@ -253,6 +253,17 @@ function fittingCount(available: number, fits: (count: number) => boolean): numb
   }
   return low;
 }
+/** The `offset` of a byte-page read, or null when the URI has none. */
+function pageOffset(url: URL): number | null {
+  const raw = url.searchParams.get("offset");
+  if (raw === null) return null;
+  const offset = Number(raw);
+  if (!Number.isSafeInteger(offset) || offset < 0)
+    throw new ContractError("INVALID_ARGUMENT", "offset must be a non-negative integer", {
+      field: "offset",
+    });
+  return offset;
+}
 /** The same resource URI, with the cursor expiry its page was rendered with, read at a byte offset. */
 function atOffset(url: URL, offset: number): string {
   const link = new URL(url.href);
@@ -579,14 +590,14 @@ export class TestMasterMcp {
           "Evidence manifest page of a run, within 32 KiB; follow nextCursor",
         ],
         [
-          "testmaster://runs/{id}/report{?format,cursor}",
+          "testmaster://runs/{id}/report{?format,cursor,offset}",
           "Committed report",
-          "Committed report as text pages (cut on UTF-8 character boundaries); concatenate the pages, then parse. format: json (default), junit, markdown or html; Allure needs the CLI. _meta carries next, offset and sizeBytes",
+          "Committed report as text pages (cut on UTF-8 character boundaries); concatenate the pages, then parse. format: json (default), junit, markdown or html; Allure needs the CLI. testmaster_open_report names each format's sizeBytes: read offset=0, then offset += the bytes of the page read, until sizeBytes",
         ],
         [
-          "testmaster://batches/{id}/report{?format,cursor}",
+          "testmaster://batches/{id}/report{?format,cursor,offset}",
           "Batch report",
-          "One report over every member run of a run_tests batch (its batchId/jobId). JSON puts the summary (selection, completeness, executionMetrics counts and rates, coverage, gate) before runs[], so the first page carries the verdict. Same text paging and formats as a run report; _meta testmaster:batch lists the member runs",
+          "One report over every member run of a run_tests batch (its batchId/jobId). JSON puts the summary (selection, completeness, executionMetrics counts and rates, coverage, gate) before runs[], so the first page carries the verdict. Same formats and offset paging as a run report; _meta testmaster:batch lists the member runs",
         ],
         [
           "testmaster://runs/{id}/steps{?attemptId,cursor,offset}",
@@ -1105,7 +1116,26 @@ export class TestMasterMcp {
           args.batchId !== undefined
             ? `testmaster://batches/${args.batchId}/report`
             : `testmaster://runs/${args.runId}/report`;
-        return { location, formats: reportFormats(location) };
+        // Each format is measured whole, so a client that sees only the text of a read can tell a
+        // page of a larger report from the report.
+        const reportId = String(args.batchId ?? args.runId);
+        const sizes = Object.fromEntries(
+          await Promise.all(
+            (Object.keys(REPORT_MEDIA_TYPES) as ReportFormat[]).map(
+              async (format) =>
+                [format, (await this.reportBytes(reportId, format)).length] as const,
+            ),
+          ),
+        ) as Record<ReportFormat, number>;
+        return {
+          location,
+          formats: reportFormats(location),
+          sizes,
+          paging: {
+            pageBytes: RESOURCE_PAGE_BYTES,
+            rule: `A read returns at most ${RESOURCE_PAGE_BYTES} bytes of one format; sizes[format] is its whole length in UTF-8 bytes, so a read shorter than that is a page, not the report. Read the format URI with offset=0 (?offset=0, or &offset=0 after ?format=), then offset = offset + the UTF-8 byte length of the page read (pages end on character boundaries, so it can be a little under ${RESOURCE_PAGE_BYTES}), until offset equals sizes[format]; concatenate the pages before parsing. The same pages are at _meta testmaster:next, with testmaster:sha256 of the whole text`,
+          },
+        };
       }
       case "testmaster_bootstrap":
         return this.bootstrap(args, app);
@@ -2181,12 +2211,7 @@ export class TestMasterMcp {
    * `offset` serves those pages: the same text cut on character boundaries, which concatenate to it.
    */
   private jsonPages(url: URL, payload: Extract<ResourcePayload, { json: unknown }>): BytePayload {
-    const raw = url.searchParams.get("offset");
-    const offset = raw === null ? null : Number(raw);
-    if (offset !== null && (!Number.isSafeInteger(offset) || offset < 0))
-      throw new ContractError("INVALID_ARGUMENT", "offset must be a non-negative integer", {
-        field: "offset",
-      });
+    const offset = pageOffset(url);
     let text = Buffer.from(JSON.stringify(payload.json));
     const oversized = text.length > RESOURCE_PAGE_BYTES;
     if (oversized && payload.page)
@@ -2425,24 +2450,11 @@ export class TestMasterMcp {
       );
     // A batch id is checked before anything is read, so a run id never opens a batch report.
     const batch = collection === "batches" ? app.batches.get(id) : null;
-    const report = await app.reports.export(id, format as ReportFormat);
-    const serialized = Buffer.from(
-      typeof report.content === "string" ? report.content : JSON.stringify(report.content),
-    );
-    // JSON keeps the cursor binding it always had; another format is another document.
-    const binding = format === "json" ? `report:${id}` : `report:${id}:${format}`;
-    const offset = this.decodeCursor(url.searchParams.get("cursor") ?? undefined, binding);
-    // A page ends on a character boundary: clients concatenate the pages, then parse.
-    return this.textPage(
-      serialized,
-      offset,
-      REPORT_MEDIA_TYPES[format as ReportFormat],
-      (end) => {
-        const query = new URLSearchParams(format === "json" ? {} : { format });
-        query.set("cursor", this.cursor(end, binding));
-        return `testmaster://${collection}/${id}/report?${query}`;
-      },
-      batch
+    const serialized = await this.reportBytes(id, format as ReportFormat);
+    const mimeType = REPORT_MEDIA_TYPES[format as ReportFormat];
+    const meta = {
+      "testmaster:sha256": createHash("sha256").update(serialized).digest("hex"),
+      ...(batch
         ? {
             "testmaster:batch": {
               batchId: id,
@@ -2450,7 +2462,48 @@ export class TestMasterMcp {
               memberRuns: batch.memberRuns,
             },
           }
-        : { "testmaster:result": this.result(id) },
+        : { "testmaster:result": this.result(id) }),
+    };
+    const offset = pageOffset(url);
+    if (offset !== null) {
+      if (url.searchParams.has("cursor"))
+        throw new ContractError("INVALID_ARGUMENT", "Send offset or cursor, not both", {
+          fields: ["offset", "cursor"],
+        });
+      // A report page carries no cursor, so its link needs no cursor expiry.
+      return this.textPage(
+        serialized,
+        offset,
+        mimeType,
+        (end) => {
+          const link = new URL(atOffset(url, end));
+          link.searchParams.delete("expires");
+          return link.href;
+        },
+        meta,
+      );
+    }
+    // JSON keeps the cursor binding it always had; another format is another document.
+    const binding = format === "json" ? `report:${id}` : `report:${id}:${format}`;
+    const cursor = this.decodeCursor(url.searchParams.get("cursor") ?? undefined, binding);
+    // A page ends on a character boundary: clients concatenate the pages, then parse.
+    return this.textPage(
+      serialized,
+      cursor,
+      mimeType,
+      (end) => {
+        const query = new URLSearchParams(format === "json" ? {} : { format });
+        query.set("cursor", this.cursor(end, binding));
+        return `testmaster://${collection}/${id}/report?${query}`;
+      },
+      meta,
+    );
+  }
+  /** The whole text of a run's or batch's report in one format. */
+  private async reportBytes(id: string, format: ReportFormat): Promise<Buffer> {
+    const report = await this.options.application.reports.export(id, format);
+    return Buffer.from(
+      typeof report.content === "string" ? report.content : JSON.stringify(report.content),
     );
   }
   /** Recorded steps of a run, every attempt or one, in execution order. */
@@ -2551,12 +2604,7 @@ export class TestMasterMcp {
         path,
         files: Object.keys(exported.files),
       });
-    const raw = url.searchParams.get("offset");
-    const offset = raw === null ? 0 : Number(raw);
-    if (!Number.isSafeInteger(offset) || offset < 0)
-      throw new ContractError("INVALID_ARGUMENT", "offset must be a non-negative integer", {
-        field: "offset",
-      });
+    const offset = pageOffset(url) ?? 0;
     return this.textPage(
       Buffer.from(exported.files[path] as string),
       offset,

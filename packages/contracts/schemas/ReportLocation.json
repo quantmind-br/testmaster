@@ -3,7 +3,9 @@
   "type": "object",
   "required": [
     "location",
-    "formats"
+    "formats",
+    "sizes",
+    "paging"
   ],
   "properties": {
     "location": {
@@ -29,6 +31,51 @@
           "type": "string"
         },
         "junit": {
+          "type": "string"
+        }
+      }
+    },
+    "sizes": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "json",
+        "markdown",
+        "html",
+        "junit"
+      ],
+      "properties": {
+        "json": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "markdown": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "html": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "junit": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      }
+    },
+    "paging": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "pageBytes",
+        "rule"
+      ],
+      "properties": {
+        "pageBytes": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "rule": {
           "type": "string"
         }
       }

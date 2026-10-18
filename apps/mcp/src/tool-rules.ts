@@ -165,8 +165,8 @@ export const toolRules: Record<keyof typeof mcpTools, readonly string[]> = {
   ],
   testmaster_open_report: [
     "Locates a committed report: `runId` for one run, `batchId` (the run_tests batchId/jobId) for every member run.",
-    "Returns `location` (JSON) and `formats` `{json, markdown, html, junit}`, ready URIs.",
-    "Read a report as a paged text resource: follow `_meta` next and concatenate the pages before parsing.",
+    "Returns `location` (JSON), `formats` `{json, markdown, html, junit}` (ready URIs), `sizes` (each format's whole length in UTF-8 bytes) and `paging` (`pageBytes`, `rule`).",
+    "A report read is one page of at most `pageBytes`, and a page of a larger report looks like a whole document (JSON and JUnit stop mid-element): read `offset=0`, then add the UTF-8 byte length of the page read to `offset`, until `offset` equals `sizes[format]`, and concatenate the pages before parsing. `_meta` testmaster:next and testmaster:sha256 (of the whole text) repeat this for clients that show `_meta`.",
   ],
   testmaster_add_source: [
     "Imports a PRD, OpenAPI (3.0, 3.1, 3.2, Swagger 2.0), GraphQL, Postman or text file inside an approved root as a source revision; returns status and diagnostics.",

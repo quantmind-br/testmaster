@@ -64,7 +64,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_approve_execution:
     "Approve risky production actions a run was refused for (approval_required): copy details.binding, add a reason, repeat testmaster_run_tests. Bound to that run's inputs; 30 minutes; single use.",
   testmaster_open_report:
-    "Locate a committed report of a run (runId) or a run_tests batch (batchId): JSON location plus formats {json, markdown, html, junit}. Read it as a paged text resource; concatenate the pages.",
+    "Locate a committed report of a run (runId) or a run_tests batch (batchId): location, format URIs and sizes in bytes. A read is one page: read offset=0, then add the page's bytes, until sizes[format]; concatenate before parsing.",
   testmaster_add_source:
     "Import a PRD, OpenAPI, GraphQL, Postman or text file inside an approved root as a source revision; returns status, diagnostics and requirementsReset. Next: testmaster_normalize_requirements.",
   testmaster_archive_source:

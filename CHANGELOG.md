@@ -11,6 +11,16 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 
 - MCP tools now carry action-oriented descriptions (what the tool does, when to use it, which tool comes next); `testmaster_get_run` states it returns a summary only and points to evidence and analysis before naming a cause.
 
+### Second Dokploy agent run
+
+Found when an omp agent drove the pipeline on Dokploy a second time, on an empty database: 15 tests, 12 passed; the 3 failures are the product's own OpenAPI response schemas (an empty closed object for `project.create` 200, no `data`/`issues` on 400, a required `code` the 401 never sends).
+
+- A report larger than one resource page could be read only through `_meta`, which omp drops, so the agent saved the first 32 KiB of the JSON and JUnit reports as if they were whole. Report URIs now take `offset` like JSON resources (`{?format,cursor,offset}`, `testmaster:sha256` of the whole text in `_meta`), and `testmaster_open_report` returns each format's `sizes` in UTF-8 bytes and the `paging` rule (`pageBytes` 32768; read `offset=0` and add the bytes of each page until the size) next to `location` and `formats`. `open_report` now refuses a run or batch whose report cannot be exported yet.
+- Code import accepts `.exec()` on a provable regular expression (a regex literal, `new RegExp(...)`, or a `const` bound once to one of them). Every other `.exec` and every `execSync`, `spawn`, `spawnSync`, `system` and `install` call is still refused, now also through call receivers, optional calls and string keys (`CODE_IMPORT_VERSION` 1.3.0). Before, `destination.exec(page.url())` on a `RegExp` was refused as a shell call.
+- The egress proxy records the origin of a denied `CONNECT` in `logs/egress.ndjson` (`https://host:443`) instead of `origin: null`, so the denials of imported and generated Playwright code name the refused origin like the browser runner's; only an authority that cannot be canonicalized still logs `null`.
+- A transport failure of an HTTP step keeps its undici or system error code (`UND_ERR_SOCKET`, `ECONNRESET`, read from the error or its cause) as the step error code instead of `Error`; the message is unchanged.
+- `suite run --help` and the docs no longer say to follow a batch with `plan get` or `run wait`, which take a proposal batch and a Run: follow each member with `run wait <runId>` (the receipt's `memberRuns`), then `report export <batchId>`.
+
 ### First Dokploy agent run
 
 Found when an omp agent drove the pipeline on Dokploy (Next.js with a tRPC REST API and an OpenAPI 3.1 document, API-key authentication) with no human step: 17 tests, 13 passed; the 3 failures are product defects (the product's own OpenAPI declares empty `additionalProperties: false` response schemas) and the first-user registration was blocked by its Stripe.js frame (fixed below).

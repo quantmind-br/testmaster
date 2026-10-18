@@ -6,7 +6,7 @@ import { ContractError } from "@testmaster/contracts";
 import { sha256 } from "@testmaster/domain";
 import { readConfinedCodeFile } from "../code/summary.js";
 
-export const CODE_IMPORT_VERSION = "1.2.0";
+export const CODE_IMPORT_VERSION = "1.3.0";
 export const CODE_IMPORT_MAX_BYTES = 1024 * 1024;
 /**
  * Names a TypeScript candidate may not reference: not as a variable, a property name or a string
@@ -30,7 +30,7 @@ export const CODE_IMPORT_TIMEOUT_KEYS = [
 ] as const;
 /** Method names that run a shell command or install a dependency. */
 const SHELL_METHODS = ["exec", "execSync", "spawn", "spawnSync", "system", "install"] as const;
-const SHELL_CALL = new RegExp(`\\.(?:${SHELL_METHODS.join("|")})$`, "u");
+const SHELL_METHOD_NAMES: readonly string[] = SHELL_METHODS;
 const SET_TIMEOUT_CALL = /\.(?:setTimeout|setDefaultTimeout|setDefaultNavigationTimeout)$/u;
 const HOST_ACCESS_REFUSAL = "Runtime code, shell and host access are forbidden";
 /**
@@ -42,7 +42,7 @@ export const CODE_IMPORT_RULES: readonly string[] = [
   `Import only from "@playwright/test", with literal import sources and no helper files; never use dynamic import(), new Function or eval.`,
   `Never reference ${CODE_IMPORT_FORBIDDEN_NAMES.join(", ")}: not as variables, not as property names (response.global is refused) and not as string keys (x['require'] is refused). In particular never use process.env; use page.goto or request calls with relative URLs, because the runner configures baseURL.`,
   `Never access .constructor or .__proto__.`,
-  `Never call ${SHELL_METHODS.map((method) => `.${method}()`).join(", ")}.`,
+  `Never call ${SHELL_METHODS.map((method) => `.${method}()`).join(", ")}, except .exec() on a regular expression: a regex literal, new RegExp(...) or a const bound directly to one of them.`,
   `Every ${CODE_IMPORT_TIMEOUT_KEYS.join("/")} option and every setTimeout/setDefaultTimeout/setDefaultNavigationTimeout call takes a positive numeric literal.`,
   `Declare tests as test("literal name", async (...) => { ... }) with a non-empty body; never test.only, test.skip or test.fixme.`,
   `Every expect(...) takes a real observation (a response status, locator, text or url), never a literal or a constant bound to a literal; never compare a value with itself.`,
@@ -108,6 +108,97 @@ function name(value: unknown): string | undefined {
     return owner && property ? `${owner}.${property}` : undefined;
   }
   return undefined;
+}
+/** Every name a binding pattern declares (a type annotation declares nothing). */
+function patternNames(value: unknown, into: string[]): void {
+  if (!node(value)) return;
+  if (value.type === "Identifier") into.push(String(value.name));
+  else if (value.type === "ObjectPattern")
+    for (const property of value.properties as unknown[])
+      patternNames(
+        node(property) && property.type === "ObjectProperty" ? property.value : property,
+        into,
+      );
+  else if (value.type === "ArrayPattern")
+    for (const element of value.elements as unknown[]) patternNames(element, into);
+  else if (value.type === "AssignmentPattern") patternNames(value.left, into);
+  else if (value.type === "RestElement") patternNames(value.argument, into);
+  else if (value.type === "TSParameterProperty") patternNames(value.parameter, into);
+}
+const FUNCTION_NODES: readonly string[] = [
+  "FunctionDeclaration",
+  "FunctionExpression",
+  "ArrowFunctionExpression",
+  "ObjectMethod",
+  "ClassMethod",
+  "ClassPrivateMethod",
+];
+interface RegExpScope {
+  /** Names declared once in the file, with `const`, bound directly to a regex. */
+  constants: ReadonlySet<string>;
+  /** `RegExp` is declared somewhere in the file, so a `RegExp(...)` call proves nothing. */
+  rebound: boolean;
+}
+/** A regex literal, `new RegExp(...)` or `RegExp(...)`. */
+function isRegExpValue(value: unknown, rebound: boolean): boolean {
+  if (!node(value)) return false;
+  if (value.type === "RegExpLiteral") return true;
+  return (
+    (value.type === "NewExpression" || value.type === "CallExpression") &&
+    isIdentifier(value.callee, "RegExp") &&
+    !rebound
+  );
+}
+/**
+ * Finds the receivers a `.exec()` call may use: a name that is bound exactly once in the whole
+ * file (no parameter, shadowing declaration, import or loop variable of the same name), with
+ * `const`, and initialised directly with a regex literal or `RegExp(...)`.
+ */
+function regExpScope(ast: unknown): RegExpScope {
+  const declared = new Map<string, number>();
+  const candidates: { name: string; init: unknown }[] = [];
+  const bind = (value: unknown): void => {
+    const names: string[] = [];
+    patternNames(value, names);
+    for (const bound of names) declared.set(bound, (declared.get(bound) ?? 0) + 1);
+  };
+  walk(ast, (item) => {
+    bind(item.id);
+    if (FUNCTION_NODES.includes(item.type))
+      for (const param of item.params as unknown[]) bind(param);
+    if (item.type === "CatchClause") bind(item.param);
+    if (item.type === "ImportDeclaration")
+      for (const specifier of item.specifiers as Node[]) bind(specifier.local);
+    if (item.type === "VariableDeclaration" && item.kind === "const")
+      for (const declarator of item.declarations as Node[])
+        if (node(declarator.id) && declarator.id.type === "Identifier")
+          candidates.push({ name: String(declarator.id.name), init: declarator.init });
+  });
+  const constants = new Set<string>();
+  const rebound = declared.has("RegExp");
+  for (const { name: candidate, init } of candidates)
+    if (declared.get(candidate) === 1 && isRegExpValue(init, rebound)) constants.add(candidate);
+  return { constants, rebound };
+}
+/** The method a call reaches through a member access (`x.exec(...)`, `x['exec'](...)`). */
+function calledMethod(callee: unknown): { method: string; receiver: unknown } | undefined {
+  if (!node(callee)) return undefined;
+  if (callee.type !== "MemberExpression" && callee.type !== "OptionalMemberExpression")
+    return undefined;
+  const method = callee.computed ? literalKey(callee.property) : name(callee.property);
+  return method === undefined ? undefined : { method, receiver: callee.object };
+}
+/** A shell or install call; `.exec()` is allowed only on a provable RegExp receiver. */
+function isShellCall(callee: unknown, scope: RegExpScope): boolean {
+  const call = calledMethod(callee);
+  if (!call || !SHELL_METHOD_NAMES.includes(call.method)) return false;
+  if (call.method !== "exec") return true;
+  if (isRegExpValue(call.receiver, scope.rebound)) return false;
+  return !(
+    node(call.receiver) &&
+    call.receiver.type === "Identifier" &&
+    scope.constants.has(String(call.receiver.name))
+  );
 }
 const CONSTANT_NODES: Record<string, true> = {
   StringLiteral: true,
@@ -313,6 +404,7 @@ function inspectTypescript(
   const testNames = new Set<string>();
   const expectNames = new Set<string>();
   const constants = new Set<string>();
+  const regExps = regExpScope(ast);
   walk(ast, (item) => {
     if (
       item.type === "VariableDeclarator" &&
@@ -372,6 +464,11 @@ function inspectTypescript(
       (!node(item.value) || item.value.type !== "NumericLiteral" || Number(item.value.value) <= 0)
     )
       refuse("Timeouts must be positive numeric literals", item);
+    if (
+      (item.type === "CallExpression" || item.type === "OptionalCallExpression") &&
+      isShellCall(item.callee, regExps)
+    )
+      refuse("Runtime installs and shell calls are forbidden", item);
     if (item.type !== "CallExpression") return;
     const callee = name(item.callee) ?? "";
     const args = item.arguments as unknown[];
@@ -382,7 +479,6 @@ function inspectTypescript(
       (!node(args[0]) || args[0].type !== "NumericLiteral" || Number(args[0].value) <= 0)
     )
       refuse("Timeouts must be positive numeric literals", item);
-    if (SHELL_CALL.test(callee)) refuse("Runtime installs and shell calls are forbidden", item);
     const root = callee.split(".")[0] ?? "";
     if (
       testNames.has(root) &&

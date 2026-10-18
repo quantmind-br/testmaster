@@ -66,6 +66,15 @@ function boundedStream(limit: number): Transform {
     },
   });
 }
+/** Canonical origin of a CONNECT authority (`host:port`), or null when it cannot be canonicalized. */
+function connectOrigin(authority: string): string | null {
+  if (!/^(?:\[[^\]]+\]|[^:/?#@%\\\s]+):[0-9]+$/u.test(authority)) return null;
+  try {
+    return canonicalUrl(`https://${authority}`).origin;
+  } catch {
+    return null;
+  }
+}
 function validateHeaders(
   request: http.IncomingMessage,
   target: AuthorizedTarget | undefined,
@@ -229,7 +238,9 @@ export class EgressProxy {
     }
   }
   private async tunnel(request: http.IncomingMessage, socket: Socket, head: Buffer): Promise<void> {
-    let origin: string | null = null;
+    // A denial records its origin too (ADR-004), so it is derived from the authority before the
+    // policy decides; an authority that cannot be canonicalized has no origin to record.
+    let origin = connectOrigin(request.url ?? "");
     try {
       const parsed = this.options.policy.connectTarget(request.url ?? "");
       origin = parsed.origin;

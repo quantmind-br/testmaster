@@ -148,6 +148,49 @@ it("refuses forwarding headers on a CONNECT request before DNS", async () => {
   ).toContain("403");
   expect(dns).toBe(0);
 });
+it("logs the canonical origin of a denied CONNECT and leaves an approved one unchanged", async () => {
+  const upstream = await target();
+  const url = `http://fixture.test:${upstream.port}`;
+  const { socketPath, logPath } = await setup(
+    new EgressPolicy(config([url]), {
+      networkProfile: "local-loopback",
+      baseUrl: url,
+      host: "127.0.0.1",
+      port: upstream.port,
+    }),
+  );
+  const denied = (authority: string) =>
+    raw(socketPath, `CONNECT ${authority} HTTP/1.1\r\nHost: ${authority}\r\n\r\n`);
+  expect(await denied("Forbidden.test:443")).toContain("403");
+  expect(await denied("bad@host.test:443")).toContain("403");
+  const socket = connect(socketPath);
+  socket.on("error", () => {});
+  const authority = `fixture.test:${upstream.port}`;
+  socket.on("connect", () =>
+    socket.write(`CONNECT ${authority} HTTP/1.1\r\nHost: ${authority}\r\n\r\n`),
+  );
+  const response = await new Promise<string>((resolve) =>
+    socket.once("data", (chunk: Buffer) => resolve(chunk.toString())),
+  );
+  expect(response).toContain("200");
+  socket.destroy();
+  await expect
+    .poll(async () =>
+      (await readFile(logPath, "utf8"))
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line) as { origin: string | null; decision: string }),
+    )
+    .toEqual([
+      expect.objectContaining({
+        origin: "https://forbidden.test:443",
+        decision: "deny",
+        reason: "origin_denied",
+      }),
+      expect.objectContaining({ origin: null, decision: "deny", reason: "invalid_connect" }),
+      expect.objectContaining({ origin: url, decision: "allow", reason: "allowed" }),
+    ]);
+});
 it("drops forwarding headers from a forwarded request instead of refusing it, and logs only their names", async () => {
   const seen: http.IncomingHttpHeaders[] = [];
   const server = http.createServer((request, response) => {

@@ -888,7 +888,12 @@ const supplemental = {
     verificationEligible: Type.Boolean(),
     nextCursor: Type.Union([Type.String(), Type.Null()]),
   }),
-  /** Where a committed report is read: `location` is the JSON report, `formats` the ready URI of each text format. */
+  /**
+   * Where a committed report is read: `location` is the JSON report, `formats` the ready URI of each
+   * text format, `sizes` the UTF-8 bytes of each format's whole text and `paging` how to read one
+   * larger than a page by `offset`, so a client that sees only the text of a read can tell a page
+   * from the whole document.
+   */
   ReportLocation: P.Obj({
     location: Type.String(),
     formats: P.Obj({
@@ -897,6 +902,13 @@ const supplemental = {
       html: Type.String(),
       junit: Type.String(),
     }),
+    sizes: P.Obj({
+      json: P.Nonnegative,
+      markdown: P.Nonnegative,
+      html: P.Nonnegative,
+      junit: P.Nonnegative,
+    }),
+    paging: P.Obj({ pageBytes: P.Positive, rule: Type.String() }),
   }),
   /** What an added source revision came to; chunks and the inventory stay out, `diagnostics` is whole, `requirementsReset` only when it reset a requirement. */
   McpSourceReceipt: P.Obj({

@@ -251,7 +251,9 @@ export function suiteCommands(program: Command, runtime: Runtime): void {
   runtime.bind(
     group
       .command("run <id>")
-      .description("Admit one frozen BatchRun for the list; follow it with `plan get`/`run wait`")
+      .description(
+        "Admit one frozen BatchRun for the list; follow each member with `run wait <runId>` (receipt memberRuns), then `report export <batchId>`",
+      )
       .option(
         "--confirm-exclusion <key>",
         "Run the dispatchable subset and declare this exclusion (repeatable)",

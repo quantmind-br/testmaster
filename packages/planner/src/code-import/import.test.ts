@@ -65,6 +65,85 @@ it.each([
   const options = await source(prefix + body);
   await expect(importCode(options)).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
 });
+const execPrefix = "import { test, expect } from '@playwright/test';\n";
+const execTest = (before: string, observation: string) =>
+  `${execPrefix}${before}\ntest('url', async ({ page }) => { await page.goto('/'); ${observation} });\n`;
+it.each([
+  [
+    "a const bound to new RegExp",
+    'const destination = new RegExp("^/$", "u");',
+    "expect(destination.exec(page.url())).not.toBeNull();",
+  ],
+  [
+    "a const bound to RegExp()",
+    'const destination = RegExp("^/$", "u");',
+    "expect(destination.exec(page.url())).not.toBeNull();",
+  ],
+  [
+    "a typed const bound to a regex literal",
+    "const destination: RegExp = /^\\/$/u;",
+    "expect(destination.exec(page.url())).not.toBeNull();",
+  ],
+  ["a regex literal", "", "expect(/^\\/$/u.exec(page.url())).not.toBeNull();"],
+  ["new RegExp(...)", "", "expect(new RegExp('^/$', 'u').exec(page.url())).not.toBeNull();"],
+  [
+    "a string key on a const regex",
+    "const destination = /^\\/$/u;",
+    "expect(destination['exec'](page.url())).not.toBeNull();",
+  ],
+])("accepts .exec() on a provable RegExp: %s", async (_label, before, observation) => {
+  const bundle = await importCode(await source(execTest(before, observation)));
+  expect(bundle.tests).toEqual(["url"]);
+});
+it.each([
+  ["a child process handle", "const cp = make();", "cp.exec('id');"],
+  ["an unknown receiver", "", "const child = page; child.exec('id');"],
+  ["a let bound to a regex", "let re = /x/u;", "expect(re.exec(page.url())).not.toBeNull();"],
+  [
+    "a const bound to a call that is not RegExp",
+    "const re = make();",
+    "expect(re.exec(page.url())).not.toBeNull();",
+  ],
+  [
+    "a const regex shadowed by a parameter",
+    "const re = /x/u; const run = (re: { exec(text: string): void }) => re.exec('id');",
+    "run(page);",
+  ],
+  [
+    "a const regex redeclared in an inner scope",
+    "const re = /x/u;",
+    "{ const re = make(); re.exec('id'); }",
+  ],
+  [
+    "a RegExp that is rebound",
+    "const RegExp = make();",
+    "expect(new RegExp('x').exec('y')).toBe(1);",
+  ],
+  ["a call receiver", "", "expect(make().exec('x')).toBe(1);"],
+  ["an optional call", "const child = make();", "child?.exec('id');"],
+  ["a member receiver", "", "page.child.exec('id');"],
+  ["execSync", "const re = /x/u;", "foo.execSync('id');"],
+  ["spawn", "", "x.spawn('id');"],
+  ["spawnSync", "", "x.spawnSync('id');"],
+  ["system", "", "x.system('id');"],
+  ["install", "", "x.install('pkg');"],
+  ["execSync on a RegExp", "const re = /x/u;", "re.execSync('id');"],
+  ["a string key", "const child = make();", "child['exec']('id');"],
+])("still refuses shell calls: %s", async (_label, before, observation) => {
+  const body = `${before}\ntest('url', async ({ page }) => { await page.goto('/'); expect(page.url()).toContain('/'); ${observation} });\n`;
+  await expect(importCode(await source(execPrefix + body))).rejects.toMatchObject({
+    code: "INVALID_ARGUMENT",
+    message: expect.stringContaining("Runtime installs and shell calls are forbidden"),
+  });
+});
+it("reports the line of a refused shell call", async () => {
+  const error = await importCode(
+    await source(execTest("const child = make();", "child.exec('id');")),
+  ).catch((reason: unknown) => reason);
+  expect(error).toMatchObject({
+    message: "Runtime installs and shell calls are forbidden at line 3",
+  });
+});
 it("names the forbidden identifier and the line, never the code around it", async () => {
   const prefix = "import { test, expect } from '@playwright/test';\n";
   const refusal = async (body: string) =>

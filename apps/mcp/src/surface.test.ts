@@ -1634,6 +1634,101 @@ it("the report resource serves junit, markdown and html as text and refuses allu
   ).rejects.toMatchObject({ code: -32602 });
 });
 
+it("open_report names each format's size and its paging rule, and offset pages concatenate to the exported document", async () => {
+  const f = await fixture();
+  const test = f.app.tests.create({ projectId: f.init.projectId, plan: scaffoldPlan("backend") });
+  const run = f.app.runs.resolve({ testId: test.id, environmentId: f.init.environmentId });
+  Object.assign(run, { phase: "completed", status: "passed", outcome: "passed", gate: "passed" });
+  f.app.context.entities.insert("Run", run);
+  // "é" takes two bytes: json and junit each need several pages, and cuts land on boundaries.
+  const documents: Record<string, string> = {
+    json: JSON.stringify({ report: "é".repeat(40000), end: "json" }),
+    junit: `<testsuites>${"é".repeat(70000)}</testsuites>`,
+    markdown: "# Report",
+    html: "<html></html>",
+  };
+  vi.spyOn(Object.getPrototypeOf(f.app.reports), "export").mockImplementation((async (
+    _id: string,
+    format: string,
+  ) => ({ content: documents[format] })) as never);
+  const base = `testmaster://runs/${run.id}/report`;
+  const read = async (uri: string) =>
+    (await f.client.readResource({ uri })).contents[0] as Record<string, unknown>;
+
+  const opened = await f.call("testmaster_open_report", { runId: run.id });
+  expect(opened.isError).toBe(false);
+  const receipt = opened.body as {
+    location: string;
+    formats: Record<string, string>;
+    sizes: Record<string, number>;
+    paging: { pageBytes: number; rule: string };
+  };
+  expect(receipt.location).toBe(base);
+  expect(receipt.formats.junit).toBe(`${base}?format=junit`);
+  expect(receipt.sizes).toEqual({
+    json: Buffer.byteLength(documents.json as string),
+    markdown: 8,
+    html: 13,
+    junit: Buffer.byteLength(documents.junit as string),
+  });
+  expect(receipt.sizes.junit).toBeGreaterThan(receipt.paging.pageBytes);
+  expect(receipt.paging.pageBytes).toBe(32768);
+  expect(receipt.paging.rule).toContain("offset=0");
+  expect(receipt.paging.rule).toContain("sizes[format]");
+
+  // The rule, followed from the text alone: offset 0, then plus the bytes of the page read.
+  for (const format of ["json", "junit"] as const) {
+    const uri = (offset: number) =>
+      `${receipt.formats[format]}${format === "json" ? "?" : "&"}offset=${offset}`;
+    let text = "";
+    let offset = 0;
+    let pages = 0;
+    while (offset < (receipt.sizes[format] as number)) {
+      const page = await read(uri(offset));
+      const bytes = Buffer.byteLength(String(page.text));
+      expect(bytes, format).toBeGreaterThan(0);
+      expect(bytes, format).toBeLessThanOrEqual(receipt.paging.pageBytes);
+      expect((page._meta as Record<string, unknown>)["testmaster:sha256"], format).toBe(
+        createHash("sha256")
+          .update(documents[format] as string)
+          .digest("hex"),
+      );
+      text += String(page.text);
+      offset += bytes;
+      pages++;
+    }
+    expect(pages, format).toBeGreaterThan(1);
+    expect(text, format).toBe(documents[format]);
+    expect(offset, format).toBe(receipt.sizes[format]);
+    // At the size the document is read to its end.
+    const end = await read(uri(offset));
+    expect(end.text).toBe("");
+    expect((end._meta as Record<string, unknown>)["testmaster:next"]).toBeNull();
+    // Past the size, a negative or a non-numeric offset are refused.
+    for (const bad of [String(offset + 1), "-1", "1.5", "abc"])
+      await expect(
+        read(`${receipt.formats[format]}${format === "json" ? "?" : "&"}offset=${bad}`),
+      ).rejects.toMatchObject({ code: -32602 });
+  }
+
+  // A page link built from offset reads the next offset page without a cursor expiry.
+  const first = await read(`${base}?format=junit&offset=0`);
+  const link = new URL(String((first._meta as Record<string, unknown>)["testmaster:next"]));
+  expect(link.searchParams.get("offset")).toBe(String(Buffer.byteLength(String(first.text))));
+  expect(link.searchParams.get("format")).toBe("junit");
+  expect(link.searchParams.has("expires")).toBe(false);
+  expect(link.searchParams.has("cursor")).toBe(false);
+  // The cursor still pages a report, and offset and cursor are not sent together.
+  const viaCursor = await read(`${base}?format=junit`);
+  const cursorLink = new URL(
+    String((viaCursor._meta as Record<string, unknown>)["testmaster:next"]),
+  );
+  expect(cursorLink.searchParams.has("cursor")).toBe(true);
+  await expect(read(`${cursorLink.href}&offset=0`)).rejects.toMatchObject({ code: -32602 });
+  // A document within one page reads whole.
+  expect((await read(`${base}?format=markdown&offset=0`)).text).toBe("# Report");
+});
+
 it("the tests resource lists a project's tests, narrows them like test list and pages", async () => {
   const f = await fixture();
   const plan = scaffoldPlan("backend");

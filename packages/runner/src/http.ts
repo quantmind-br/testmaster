@@ -40,6 +40,19 @@ class UpstreamFailure extends Error {
     super("Egress proxy reported an upstream connection failure");
   }
 }
+/**
+ * The diagnostic code of a failed transport: the proxy-reported socket error, or the undici/system
+ * code (`UND_ERR_SOCKET`, `ECONNRESET`) on the error or its cause. Only a constant-shaped code
+ * qualifies, so a message-like value never becomes the step's error code.
+ */
+function transportErrorCode(error: unknown): string | undefined {
+  if (error instanceof UpstreamFailure)
+    return /^E[A-Z]+$/.test(error.code) ? error.code : undefined;
+  const cause = (error as { cause?: { code?: unknown } } | null)?.cause;
+  for (const code of [(error as { code?: unknown } | null)?.code, cause?.code])
+    if (typeof code === "string" && /^[A-Z][A-Z0-9_]*$/.test(code)) return code;
+  return undefined;
+}
 
 type RequestInput = Extract<PlanStep, { operation: "request" }>["input"];
 type ResourceState =
@@ -1511,7 +1524,7 @@ export class HttpEngine {
         resource && sent ? "retry_unsafe_external_effect" : "insufficient_evidence",
         "HTTP transport did not produce a complete usable response",
         "inconclusive",
-        error instanceof UpstreamFailure && /^E[A-Z]+$/.test(error.code) ? error.code : undefined,
+        transportErrorCode(error),
       );
     }
   }

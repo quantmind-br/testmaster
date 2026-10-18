@@ -471,6 +471,17 @@ it("keeps a target the egress proxy could not reach inconclusive with its socket
   });
 });
 
+it("keeps the undici or system code of a lost connection as the step error code", async () => {
+  const base = await serve((req) => req.socket.destroy());
+  const { engine } = fixture(base);
+  await expect(engine.perform(requestStep("health", []))).rejects.toMatchObject({
+    reasonCode: "insufficient_evidence",
+    outcome: "inconclusive",
+    message: "HTTP transport did not produce a complete usable response",
+    diagnosticCode: expect.stringMatching(/^(?:UND_ERR_SOCKET|ECONNRESET)$/u),
+  });
+});
+
 it("sends typed sensitive captures only over trusted IPC and keeps artifacts redacted", async () => {
   const base = await serve((_req, res) => {
     res.setHeader("X-Count", "7");

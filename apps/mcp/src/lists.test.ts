@@ -212,7 +212,7 @@ it("open_report with a batchId serves one report over both member runs with the 
   const opened = await open({ batchId });
   expect(opened.isError).toBe(false);
   const location = `testmaster://batches/${batchId}/report`;
-  expect(opened.body).toEqual({
+  expect(opened.body).toMatchObject({
     location,
     formats: {
       json: location,
@@ -220,7 +220,13 @@ it("open_report with a batchId serves one report over both member runs with the 
       html: `${location}?format=html`,
       junit: `${location}?format=junit`,
     },
+    paging: { pageBytes: 32768 },
   });
+  // Each size is the whole text of that format, the length a reader of its pages must reach.
+  for (const [format, uri] of Object.entries(opened.body.formats as Record<string, string>)) {
+    const whole = (await client.readResource({ uri })).contents[0] as Record<string, unknown>;
+    expect(opened.body.sizes[format], format).toBe(Buffer.byteLength(String(whole.text)));
+  }
   // Each listed format URI opens that format.
   const markdown = (await client.readResource({ uri: opened.body.formats.markdown })).contents[0];
   expect(markdown?.mimeType).toBe("text/markdown");

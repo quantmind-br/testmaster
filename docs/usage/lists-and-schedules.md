@@ -63,7 +63,10 @@ remote implementation fails with `CAPABILITY_UNAVAILABLE` naming the command.
 `suite run` has no `--wait`. It admits one BatchRun and returns its receipt, and needs a live worker
 (`testmaster worker start`). With none, it is refused with `PRECONDITION_FAILED` and the next actions
 `worker start` and `--queue`; `--queue` admits the BatchRun anyway and its Runs stay queued until a worker is live.
-Follow the batch with `plan get` or `run wait`.
+`run wait` takes a Run id, not the BatchRun id: follow each member with `run wait <runId>` (the ids are in the
+receipt's `memberRuns`), then export the batch report with `report export <batchId> --format <format>`. MCP
+`testmaster_run_tests` with `suiteId` and `wait: true` runs the batch in that process and waits for it, with no
+worker.
 
 ### MCP
 
