@@ -6,7 +6,7 @@ import { uuidV7IdGenerator } from "@testmaster/domain";
 import { type AttemptIds, FileEvidenceStore } from "@testmaster/evidence";
 import { afterEach, expect, it, vi } from "vitest";
 import { testProvider } from "../../model-gateway/src/test-support.js";
-import { attemptAdditionalOrigins } from "./authoring.js";
+import { attemptAdditionalOrigins, attemptIgnoredOrigins } from "./authoring.js";
 import { entity } from "./context.js";
 import {
   Application,
@@ -669,6 +669,7 @@ it("M4-05 lists environment revisions newest first and never returns variables",
       "authProfileRefs",
       "createdAt",
       "id",
+      "ignoredOrigins",
       "locale",
       "networkProfile",
       "production",
@@ -707,6 +708,7 @@ it("M4-05 lists environment revisions newest first and never returns variables",
   expect(listed.at(-1)?.id).toBe(canary.id);
   // A revision stored before the field existed reads as an empty list.
   expect(listed.at(-1)?.additionalOrigins).toEqual([]);
+  expect(listed.at(-1)?.ignoredOrigins).toEqual([]);
   expect(JSON.stringify(listed)).not.toContain("VARIABLE-CANARY");
   expect(JSON.stringify(listed)).not.toContain("variables");
 });
@@ -796,6 +798,119 @@ it.each([
     }),
   ).toThrowError(expect.objectContaining({ code }));
   expect(f.app.database.all("SELECT id FROM environment_revisions")).toHaveLength(before);
+});
+
+// ------------------------------------------------------------------ ignored origins
+
+it("stores exact ignored origins per revision only when non-empty, keeps them across updates and clears them", async () => {
+  const f = await fixture();
+  const environments = f.app.environments;
+  const ignored = ["https://js.stripe.com", "https://m.stripe.network:8443"];
+  const created = environments.create({
+    projectId: f.init.projectId,
+    name: "with-ignored",
+    ...publicEnvironment,
+    ignoredOrigins: ignored,
+  });
+  expect(environments.revisions(created.id)[0]).toMatchObject({
+    targetOrigins: ["https://app.example.test"],
+    additionalOrigins: [],
+    ignoredOrigins: ignored,
+  });
+  // Control: an environment created without the field has none, and stores no key at all, so the
+  // hash of a revision that never used the feature is the one it had before the field existed.
+  const plain = environments.create({
+    projectId: f.init.projectId,
+    name: "plain-ignored",
+    ...publicEnvironment,
+  });
+  expect(environments.revisions(plain.id)[0]?.ignoredOrigins).toEqual([]);
+  const stored = (id: string) =>
+    f.app.context.entities.get("EnvironmentRevision", f.app.context.workspaceId, id);
+  expect(stored(plain.activeRevisionId)).not.toHaveProperty("ignoredOrigins");
+  expect(stored(created.activeRevisionId)).toHaveProperty("ignoredOrigins", ignored);
+  const relocated = environments.update(created.id, { locale: "pt-BR" }, Number(created.version));
+  expect(environments.revisions(created.id)[0]?.ignoredOrigins).toEqual(ignored);
+  const replaced = environments.update(
+    created.id,
+    { ignoredOrigins: ["https://js.example.test"] },
+    Number(relocated.version),
+  );
+  const cleared = environments.update(created.id, { ignoredOrigins: [] }, Number(replaced.version));
+  expect(environments.revisions(created.id).map((entry) => entry.ignoredOrigins)).toEqual([
+    [],
+    ["https://js.example.test"],
+    ignored,
+    ignored,
+  ]);
+  expect(stored(cleared.activeRevisionId)).not.toHaveProperty("ignoredOrigins");
+});
+
+it.each([
+  ["a path", ["https://js.stripe.com/v3"]],
+  ["a query", ["https://js.stripe.com/?x=1"]],
+  ["credentials", ["https://user:pass@js.stripe.com"]],
+  ["a wildcard", ["https://*.stripe.com"]],
+  ["a non-HTTP scheme", ["ftp://js.stripe.com"]],
+  ["a bare host", ["js.stripe.com"]],
+  ["the target origin", ["https://app.example.test"]],
+  ["an additional origin", ["https://flagcdn.com"]],
+  ["a duplicate", ["https://js.stripe.com", "https://js.stripe.com:443"]],
+  ["too many origins", Array.from({ length: 33 }, (_, i) => `https://c${i}.example.test`)],
+])("refuses ignored origins with %s", async (_label, ignoredOrigins) => {
+  const f = await fixture();
+  const before = f.app.database.all("SELECT id FROM environment_revisions").length;
+  expect(() =>
+    f.app.environments.create({
+      projectId: f.init.projectId,
+      name: "refused",
+      ...publicEnvironment,
+      additionalOrigins: ["https://flagcdn.com"],
+      ignoredOrigins,
+    }),
+  ).toThrowError(expect.objectContaining({ code: "INVALID_ARGUMENT" }));
+  expect(f.app.database.all("SELECT id FROM environment_revisions")).toHaveLength(before);
+});
+
+it("refuses an update that makes an ignored origin a target or an additional origin, and stores nothing", async () => {
+  const f = await fixture();
+  const environments = f.app.environments;
+  const created = environments.create({
+    projectId: f.init.projectId,
+    name: "overlap",
+    ...publicEnvironment,
+    ignoredOrigins: ["https://js.stripe.com"],
+  });
+  const before = f.app.database.all("SELECT id FROM environment_revisions").length;
+  expect(() =>
+    environments.update(
+      created.id,
+      { additionalOrigins: ["https://js.stripe.com"] },
+      Number(created.version),
+    ),
+  ).toThrowError(expect.objectContaining({ code: "INVALID_ARGUMENT" }));
+  expect(() =>
+    environments.update(created.id, { baseUrl: "https://js.stripe.com" }, Number(created.version)),
+  ).toThrowError(expect.objectContaining({ code: "INVALID_ARGUMENT" }));
+  expect(f.app.database.all("SELECT id FROM environment_revisions")).toHaveLength(before);
+  // Control: a disjoint additional origin is accepted beside it.
+  environments.update(
+    created.id,
+    { additionalOrigins: ["https://flagcdn.com"] },
+    Number(created.version),
+  );
+  expect(environments.revisions(created.id)[0]).toMatchObject({
+    additionalOrigins: ["https://flagcdn.com"],
+    ignoredOrigins: ["https://js.stripe.com"],
+  });
+});
+
+it("applies ignored origins under every profile and never merges them into the allowlist", () => {
+  const revision = { ignoredOrigins: ["https://js.stripe.com", "http://127.0.0.1:3000"] };
+  expect(attemptIgnoredOrigins(revision, ["http://127.0.0.1:3000"])).toEqual([
+    "https://js.stripe.com",
+  ]);
+  expect(attemptIgnoredOrigins({}, ["http://127.0.0.1:3000"])).toEqual([]);
 });
 
 // ------------------------------------------------------------------ server log

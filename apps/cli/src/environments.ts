@@ -19,6 +19,7 @@ function environmentPatch(opts: Options) {
   const timezone = string(opts, "timezone");
   const authRefs = strings(opts, "authRef");
   const additionalOrigins = strings(opts, "additionalOrigin");
+  const ignoredOrigins = strings(opts, "ignoredOrigin");
   const serverLogContainer = string(opts, "serverLogContainer");
   if (opts.clearServerLog === true && serverLogContainer)
     throw new ContractError(
@@ -32,6 +33,11 @@ function environmentPatch(opts: Options) {
       "INVALID_ARGUMENT",
       "--clear-additional-origins cannot be combined with --additional-origin",
     );
+  if (opts.clearIgnoredOrigins === true && ignoredOrigins.length)
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      "--clear-ignored-origins cannot be combined with --ignored-origin",
+    );
   return {
     ...(name ? { name } : {}),
     ...(baseUrl ? { baseUrl } : {}),
@@ -41,6 +47,11 @@ function environmentPatch(opts: Options) {
       ? { additionalOrigins }
       : opts.clearAdditionalOrigins === true
         ? { additionalOrigins: [] }
+        : {}),
+    ...(ignoredOrigins.length
+      ? { ignoredOrigins }
+      : opts.clearIgnoredOrigins === true
+        ? { ignoredOrigins: [] }
         : {}),
     ...(locale ? { locale } : {}),
     ...(timezone ? { timezone } : {}),
@@ -67,6 +78,13 @@ function environmentOptions(command: Command): Command {
       [],
     )
     .option("--clear-additional-origins", "Remove every additional origin")
+    .option(
+      "--ignored-origin <origin>",
+      "Exact origin whose requests are aborted and recorded without failing the run, never reaching the network (for example a third-party script); replaces the current list (repeatable)",
+      collect,
+      [],
+    )
+    .option("--clear-ignored-origins", "Remove every ignored origin")
     .option(
       "--server-log-container <name>",
       "Docker container of the application server: the log lines it writes during each attempt become the evidence logs/server.log (opt-in)",

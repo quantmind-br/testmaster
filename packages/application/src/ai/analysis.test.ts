@@ -1063,6 +1063,25 @@ it("a passing run still surfaces an aborted passive denial as a fact without a f
   expect(analysis.hypotheses).toEqual([]);
   expect(analysis.failureKind).not.toBe("security_policy");
 });
+it("a passing run surfaces an ignored origin as a fact and never suggests it as an additional origin", async () => {
+  const f = await fixture({ passed: true });
+  recordRunnerEvent(f, 3, "egress.denied", {
+    stepId: "request",
+    origin: "https://js.stripe.com",
+    method: "GET",
+    resourceType: "script",
+    disposition: "ignored",
+    count: 2,
+  });
+  const analysis = await f.service.analyze(f.run.id, {});
+  const text = analysis.facts.map((fact) => fact.text).join("\n");
+  expect(text).toContain(
+    "The environment ignores https://js.stripe.com: 2 script requests were aborted and recorded; the run was not failed by it.",
+  );
+  expect(analysis.diagnosis?.conclusion.status).toBe("no_failure");
+  expect(analysis.hypotheses).toEqual([]);
+  expect(JSON.stringify(analysis.diagnosis?.nextSteps ?? [])).not.toContain("--additional-origin");
+});
 
 it("authorized frozen source handle persists exact snapshot path and content binding", async () => {
   const f = await fixture({ source: true });
@@ -3753,6 +3772,46 @@ it("a code test that threw instead of asserting is a test defect and the diagnos
     failureKind: "environment",
     recommendedAction: "fix_environment",
   });
+});
+it("a code locator that matched several elements or never attached is a failed locator the diagnosis names, with no healing", async () => {
+  const failedLocator = (reasonCode: "assertion_mismatch" | "assertion_timeout", message: string) =>
+    ({
+      planStepId: "imported-test-0",
+      status: "failed",
+      reasonCode,
+      expected: null,
+      observed: null,
+      error: { code: "Error", message },
+    }) satisfies Partial<StepResult>;
+  const strict = await fixture({
+    code: true,
+    step: failedLocator(
+      "assertion_mismatch",
+      "Error: locator.click: Error: strict mode violation: getByRole('button', { name: 'Two' }) resolved to 2 elements:\n    1) <button>Two</button>\n\nCall log:\n  - waiting for getByRole('button', { name: 'Two' })\n    at generated.spec.ts:9:5",
+    ),
+  });
+  const ambiguous = await strict.service.analyze(strict.run.id, {});
+  expect(ambiguous).toMatchObject({ failureKind: "test_fragility", recommendedAction: "fix_test" });
+  expect(ambiguous.diagnosis?.conclusion.status).toBe("cause_partially_supported");
+  expect(ambiguous.diagnosis?.conclusion.text).toContain("getByRole('button', { name: 'Two' })");
+  expect(ambiguous.diagnosis?.conclusion.text).toContain("matched 2 elements");
+  expect(ambiguous.diagnosis?.conclusion.text).not.toContain("does not establish a cause");
+  expect(ambiguous.diagnosis?.nextSteps[0]?.text).toContain("Narrow");
+  expect(ambiguous.diagnosis?.healing.advice).toBe("not_indicated");
+  expect(ambiguous.facts.some((item) => item.text.includes("resolved to 2 elements"))).toBe(true);
+  const never = await fixture({
+    code: true,
+    step: failedLocator(
+      "assertion_timeout",
+      "TimeoutError: locator.click: Timeout 1500ms exceeded.\nCall log:\n  - waiting for getByRole('button', { name: 'Missing' })\n    at generated.spec.ts:9:5",
+    ),
+  });
+  const missing = await never.service.analyze(never.run.id, {});
+  expect(missing).toMatchObject({ failureKind: "test_fragility", recommendedAction: "fix_test" });
+  expect(missing.diagnosis?.conclusion.text).toContain("getByRole('button', { name: 'Missing' })");
+  expect(missing.diagnosis?.conclusion.text).toContain("never matched an element");
+  expect(missing.diagnosis?.healing.advice).toBe("not_indicated");
+  expect(missing.facts.some((item) => item.text.includes("Timeout 1500ms exceeded"))).toBe(true);
 });
 it("a pytest test that raised a non-assertion exception is read like a code test that threw", async () => {
   // The Python harness names a step after its pytest node id and sends the exception's class.

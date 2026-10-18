@@ -95,6 +95,10 @@ export async function executePlan(plan: Data, initialPage: Page, request: APIReq
     finally { await handle?.dispose(); }
   }
   async function locate(spec: Data, timeout: number, base: Data = scope): Promise<Locator> {
+    const located = await locateScoped(spec, timeout, base);
+    return spec.nth === undefined ? located : located.nth(spec.nth);
+  }
+  async function locateScoped(spec: Data, timeout: number, base: Data): Promise<Locator> {
     let root = spec.pageAlias === undefined ? base : selected(spec.pageAlias);
     if (spec.frame) root = await frame(await locate(spec.frame, timeout, root), timeout);
     if (spec.container) root = await unique(await locate(spec.container, timeout, root), timeout);

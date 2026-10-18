@@ -511,6 +511,33 @@ describe("standalone deterministic code export", () => {
     expect(browserPython).toContain('observed >= expectation["value"]');
     expect(browserPython).toContain('observed <= expectation["value"]');
   });
+  it("exports nth as .nth(n) applied after scoping in both formats", async () => {
+    const frontend = await fixture("frontend");
+    frontend.steps = [
+      {
+        id: "click-second",
+        kind: "action",
+        operation: "click",
+        description: "Click the second Save",
+        input: { locator: { by: "role", role: "button", name: "Save", exact: true, nth: 1 } },
+      },
+      {
+        id: "confirm",
+        kind: "assertion",
+        operation: "assert",
+        description: "The dialog is shown",
+        input: { locator: { by: "role", role: "dialog" } },
+        expectation: { predicate: "visible" },
+      },
+    ];
+    const helpers =
+      exportCode(frontend, { format: "playwright" }).files["helpers/standalone.ts"] ?? "";
+    expect(() => parse(helpers, { sourceType: "module", plugins: ["typescript"] })).not.toThrow();
+    expect(helpers).toContain("const located = await locateScoped(spec, timeout, base);");
+    expect(helpers).toContain("spec.nth === undefined ? located : located.nth(spec.nth)");
+    const python = exportCode(frontend, { format: "pytest" }).files["standalone.py"] ?? "";
+    expect(python).toContain('located if "nth" not in spec else located.nth(spec["nth"])');
+  });
   it("refuses auth profile sessions and JSON body set entries that exported code cannot reproduce", async () => {
     const plan = await fixture("backend");
     const request = plan.steps[0];
@@ -534,6 +561,40 @@ describe("standalone deterministic code export", () => {
     };
     for (const format of ["playwright", "pytest"] as const)
       expect(() => exportCode(plan, { format })).toThrow(/JSON body set entries/u);
+  });
+  it("refuses a cleanup that finds its data by lookup, which exported code cannot perform", async () => {
+    const plan = await fixture("backend");
+    const [first] = plan.steps;
+    if (!first) throw new Error("Bad fixture");
+    plan.cleanup = [
+      {
+        resourceRef: first.id,
+        operation: "request",
+        find: {
+          resourceType: "project",
+          lookup: { method: "GET", pathSegments: [{ literal: "projects" }] },
+          itemsPointer: "/items",
+          keyPointer: "/name",
+          equals: { literal: "Run 42" },
+          handlePointer: "/id",
+          ownerProofPointer: "/owner",
+        },
+        input: {
+          method: "DELETE",
+          pathSegments: [{ literal: "projects" }, { variableRef: `${first.id}.handle` }],
+        },
+        successPredicate: { predicate: "statusIn", values: [204] },
+        deadlineMs: 1000,
+        required: true,
+      },
+    ];
+    for (const format of ["playwright", "pytest"] as const)
+      expect(() => exportCode(plan, { format })).toThrow(
+        expect.objectContaining({
+          code: "CAPABILITY_UNAVAILABLE",
+          message: expect.stringContaining("cleanup by lookup"),
+        }),
+      );
   });
 });
 

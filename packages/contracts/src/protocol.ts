@@ -85,6 +85,11 @@ export const RunnerEvent = Type.Union([
       type,
       Obj({
         resourceId: id("res"),
+        /**
+         * The plan step the resource belongs to: the creating request step, or the `resourceRef` of
+         * a cleanup entry that found it by lookup. Absent: the step being executed.
+         */
+        stepId: Type.Optional(Name),
         resourceType: Name,
         correlationKey: Name,
         handleRef: Type.Optional(Name),
@@ -93,7 +98,14 @@ export const RunnerEvent = Type.Union([
       }),
     ),
   ),
-  event("variable.captured", VariableCapture),
+  event(
+    "variable.captured",
+    Obj({
+      ...VariableCapture.properties,
+      /** The step that produced the value; absent: the step being executed. A cleanup lookup names its entry's `resourceRef`. */
+      stepId: Type.Optional(Name),
+    }),
+  ),
   event(
     "log",
     Obj({
@@ -104,8 +116,9 @@ export const RunnerEvent = Type.Union([
   /**
    * A browser request the route handler refused because its origin is outside the network policy,
    * deduplicated per origin and resource type with a count. `aborted` means a passive subresource
-   * that was dropped without failing the attempt; `fatal` means the attempt was blocked.
-   * The origin never carries path, query or credentials.
+   * that was dropped without failing the attempt; `ignored` means the origin is on the
+   * environment's `ignoredOrigins` and was dropped without failing the attempt; `fatal` means the
+   * attempt was blocked. The origin never carries path, query or credentials.
    */
   event(
     "egress.denied",
@@ -114,7 +127,7 @@ export const RunnerEvent = Type.Union([
       origin: Name,
       method: Name,
       resourceType: Name,
-      disposition: Enum(["aborted", "fatal"]),
+      disposition: Enum(["aborted", "ignored", "fatal"]),
       count: Positive,
     }),
   ),

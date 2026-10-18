@@ -44,6 +44,8 @@ export const settingsContracts = {
     targetOrigins: entities.EnvironmentRevision.properties.targetOrigins,
     /** Extra origins admitted for page subrequests; empty when the revision predates the field. */
     additionalOrigins: Type.Array(Name),
+    /** Origins whose requests are aborted and recorded without failing the run; empty when the revision predates the field. */
+    ignoredOrigins: Type.Array(Name),
     networkProfile: entities.EnvironmentRevision.properties.networkProfile,
     authProfileRefs: entities.EnvironmentRevision.properties.authProfileRefs,
     locale: Name,

@@ -63,6 +63,20 @@ describe("recorded locator equivalence", () => {
       }).equivalent,
     ).toBe(true);
   });
+  it("never proves a replacement for a locator that selects by nth, nor accepts one that does", () => {
+    const positional = evidence({
+      locator: { by: "testId", value: "checkout", nth: 0 } as Locator,
+    });
+    expect(
+      assessLocatorEquivalence([positional], [drift()], "checkout", replacement).equivalent,
+    ).toBe(false);
+    expect(
+      assessLocatorEquivalence([evidence()], [drift()], "checkout", {
+        ...replacement,
+        nth: 0,
+      } as Locator).equivalent,
+    ).toBe(false);
+  });
   it("proves named password identity without inventing an ARIA role or accepting other roleless inputs", () => {
     const password = element({
       role: "",

@@ -96,12 +96,18 @@ def run(input_path: str | None) -> int:
             code = pytest.main(["-c", "/dev/null", "--noconftest", "-p", "pytest_asyncio.plugin", "--basetemp=/tmp/pytest", "-q", *selected], plugins=[fixtures, adapter])
         finally:
             uninstall(token)
+        adapter.emit_egress_denials()
         if adapter.missing_package:
             outcome, reason = "blocked", "unsupported_capability"
         elif adapter.security_failure:
             outcome, reason = "blocked", "security_precondition_failed"
+        elif adapter.egress_denied:
+            # A denied browser request the policy does not tolerate blocks the run (SEC-011), as in the Playwright runner.
+            outcome, reason = "blocked", "egress_denied"
         elif adapter.failed:
-            outcome, reason = "failed", "assertion_mismatch"
+            # Only failures that all timed out make the run a timeout, as the Playwright harness does.
+            timed_out = adapter.timeout_count > 0 and adapter.timeout_count == adapter.failure_count
+            outcome, reason = "failed", "assertion_timeout" if timed_out else "assertion_mismatch"
         elif adapter.incomplete or code != 0:
             outcome, reason = "inconclusive", "insufficient_evidence"
         elif adapter.completed > 0:

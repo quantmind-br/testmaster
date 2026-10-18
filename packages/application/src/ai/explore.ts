@@ -13,7 +13,7 @@ import {
   validateObservation,
 } from "@testmaster/planner";
 import { AttemptExecutor } from "@testmaster/sandbox";
-import { attemptAdditionalOrigins } from "../authoring.js";
+import { attemptAdditionalOrigins, attemptIgnoredOrigins } from "../authoring.js";
 import type { ResolvedConfig } from "../config.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "../context.js";
 import { ModelService } from "./model.js";
@@ -363,6 +363,10 @@ export class ExploreService {
       origins,
       this.config.profilePolicy.offline === true,
     );
+    const ignoredOrigins = attemptIgnoredOrigins(env as { ignoredOrigins?: string[] }, [
+      ...origins,
+      ...additionalOrigins,
+    ]);
     const ids = {
       workspaceId: this.ctx.workspaceId,
       runId: uuidV7IdGenerator.next("run"),
@@ -450,6 +454,7 @@ export class ExploreService {
           networkPolicy: {
             allowedOrigins: [...origins, ...additionalOrigins],
             ...(additionalOrigins.length ? { additionalOrigins } : {}),
+            ...(ignoredOrigins.length ? { ignoredOrigins } : {}),
             baseUrl: input.url,
             networkProfile: env.networkProfile as "public" | "private" | "local-loopback",
           },

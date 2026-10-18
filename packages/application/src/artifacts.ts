@@ -13,7 +13,7 @@ import {
   type StepResult,
   validate,
 } from "@testmaster/contracts";
-import { semanticHash } from "@testmaster/domain";
+import { gateNeutralReason, semanticHash } from "@testmaster/domain";
 import {
   BundleIntegrityError,
   ConfinedRoot,
@@ -546,7 +546,12 @@ export class ReportsService {
     const batch = id.startsWith("bat_") ? requireEntity(this.ctx, "BatchRun", id) : null;
     const runIds = batch ? (batch.memberRuns as string[]) : [id];
     const entries = await this.runEntries(runIds);
-    return this.assemble(batch, runIds, entries);
+    const stored = batch?.selectionSnapshot as Record<string, unknown> | undefined;
+    const prior: { runId: string }[] = Array.isArray(stored?.priorEvidence)
+      ? stored.priorEvidence
+      : [];
+    const priorEvidence = await this.runEntries(prior.map((member) => member.runId));
+    return this.assemble(batch, runIds, entries, priorEvidence);
   }
   private async runEntries(runIds: readonly string[]): Promise<ReportRun[]> {
     const entries: ReportRun[] = [];
@@ -721,6 +726,7 @@ export class ReportsService {
     batch: EntityDocument | null,
     runIds: readonly string[],
     entries: ReportRun[],
+    priorEvidence: ReportRun[] = [],
   ): Promise<ReportSnapshot> {
     const missing = entries.flatMap((entry) =>
       entry.evidenceState === "unavailable"
@@ -731,26 +737,37 @@ export class ReportsService {
     );
     const snapshotId =
       entries[0]?.snapshot?.snapshotId ??
-      `report:${semanticHash(entries.map((entry) => ({ runId: entry.run.id, result: entry.result, errors: entry.evidenceErrors })))}`;
+      `report:${semanticHash([...entries, ...priorEvidence].map((entry) => ({ runId: entry.run.id, result: entry.result, errors: entry.evidenceErrors })))}`;
     const selection = batch?.selectionSnapshot as Record<string, unknown> | undefined;
+    const rejected = batch
+      ? (batch.rejectedMembers as { memberKey: string; reasonCode: string }[])
+      : [];
+    // A member left out for a gate-neutral reason (a one-shot test that already passed) is not part
+    // of this report's selection: its prior Run is listed as `priorEvidence` instead.
+    const notDispatched = rejected.filter((member) => !gateNeutralReason(member.reasonCode));
+    const leftOut = rejected.length - notDispatched.length;
+    const onlyPriorEvidence = !entries.length && !notDispatched.length && leftOut > 0;
     const snapshot: ReportSnapshot = {
       schemaVersion: "1.0.0",
       committedAt: entries[0]?.snapshot?.committedAt ?? new Date().toISOString(),
       snapshotId,
       title: batch ? "Batch report" : (entries[0]?.title ?? "Empty selection"),
       runs: entries,
+      ...(priorEvidence.length ? { priorEvidence } : {}),
       selection: {
-        requested: batch ? Number(batch.requestedCount) : 1,
+        requested: batch ? Number(batch.requestedCount) - leftOut : 1,
         requestedRunIds: (selection?.requestedRunIds as string[] | undefined) ?? runIds,
         duplicates: Number(selection?.duplicates ?? 0),
-        notDispatched: batch
-          ? (batch.rejectedMembers as { memberKey: string; reasonCode: string }[])
-          : [],
+        notDispatched,
         excluded: [],
-        allowEmpty: batch
-          ? Boolean((batch.selectionSnapshot as Record<string, unknown>).allowEmpty)
-          : false,
-        ...(!entries.length ? { emptyReason: "Explicitly empty selection" } : {}),
+        allowEmpty: Boolean(selection?.allowEmpty) || onlyPriorEvidence,
+        ...(!entries.length
+          ? {
+              emptyReason: onlyPriorEvidence
+                ? "Every selected test already passed once"
+                : "Explicitly empty selection",
+            }
+          : {}),
       },
       completeness: { state: missing.length ? "partial" : "complete", reasons: missing },
     };

@@ -1,6 +1,6 @@
 import type { SelectionInput } from "@testmaster/application";
 import { ContractError } from "@testmaster/contracts";
-import { batchExitCode, exitCodeForGate, exitCodeForRun } from "@testmaster/domain";
+import { batchExitCode, exitCodeForBatchGate, exitCodeForRun } from "@testmaster/domain";
 import type { Command } from "commander";
 import { environmentId, receiptResult, waitForRun } from "./execution.js";
 import { collect, type Result, type Runtime, seconds, string, strings } from "./runtime.js";
@@ -156,7 +156,7 @@ export function selectionCommands(test: Command, runtime: Runtime): void {
           data: { ...batch, selectionHash: receipt.selectionHash, excluded: receipt.excluded },
           exit: batchExitCode([
             ...receipt.allMembers.map((id) => exitCodeForRun(app.runs.get(id))),
-            exitCodeForGate(aggregate.gate),
+            exitCodeForBatchGate(aggregate.gate, receipt.notDispatched),
           ]),
         };
       } finally {

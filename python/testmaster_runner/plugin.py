@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import contextvars
+import re
 import time
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
@@ -12,6 +13,7 @@ from urllib.parse import urljoin
 import pytest
 import pytest_asyncio
 
+from .egress import EgressPolicy
 from .protocol import ProtocolClient
 
 _current: contextvars.ContextVar["PythonPlugin | None"] = contextvars.ContextVar("testmaster_plugin", default=None)
@@ -19,6 +21,24 @@ _current: contextvars.ContextVar["PythonPlugin | None"] = contextvars.ContextVar
 
 # An assertion (or an explicit `pytest.fail`) is a verdict on the target; any other exception is not.
 ASSERTION_ERRORS = (AssertionError, pytest.fail.Exception)
+
+# A locator action that matched several elements (`Locator.click: Error: strict mode violation: ...
+# resolved to 2 elements`) or timed out without ever matching one is also a verdict on the target,
+# like the declarative runner's ambiguous and never-attached locators. One that matched an element
+# but did not complete (the call log has "locator resolved to": not enabled, covered) is not.
+_STRICT_VIOLATION = re.compile(r"^\s*(?:\w*Error: )?(?:Locator\.\w+: )?(?:\w*Error: )?strict mode violation: [^\n]*\bresolved to \d+ elements?\b")
+_LOCATOR_TIMEOUT = re.compile(r"^\s*(?:[\w.]*Error: )?Locator\.\w+: (?:\w*Error: )?Timeout \d+ms exceeded\b")
+_LOCATOR_RESOLVED = re.compile(r"^\s*-\s+locator resolved to\b", re.MULTILINE)
+
+
+def locator_verdict(exc: BaseException) -> str | None:
+    """`assertion_mismatch` or `assertion_timeout` when a Playwright locator action ended in a verdict, else None."""
+    text = str(exc)
+    if _STRICT_VIOLATION.search(text):
+        return "assertion_mismatch"
+    if _LOCATOR_TIMEOUT.search(text) and not _LOCATOR_RESOLVED.search(text):
+        return "assertion_timeout"
+    return None
 
 
 # Longest title a step carries on the wire; the Playwright reporter cuts at the same length.
@@ -39,6 +59,8 @@ class PythonPlugin:
     security_failure: bool = False
     completed: int = 0
     incomplete: bool = False
+    failure_count: int = 0
+    timeout_count: int = 0
 
     def __post_init__(self) -> None:
         self._started: dict[str, float] = {}
@@ -51,6 +73,23 @@ class PythonPlugin:
         self._pytest_steps: dict[str, str] = {}
         self._assertions: set[str] = set()
         self._thrown: dict[str, tuple[str, str]] = {}
+        self._locator_verdicts: dict[str, str] = {}
+        # The browser egress policy of the fixtures; without a network policy in the input nothing is installed.
+        self.egress = EgressPolicy.from_input(self.input_data)
+
+    @property
+    def egress_denied(self) -> bool:
+        """A browser request was denied fatally (not an ignored origin, not a passive subresource): SEC-011."""
+        return bool(self.egress and self.egress.fatal)
+
+    def emit_egress_denials(self) -> None:
+        """Publishes what the fixtures' route hook denied, once per origin and resource type, on the imported-code step."""
+        if not self.egress:
+            return
+        for denial in self.egress.denials():
+            self.protocol.emit("egress.denied", {"stepId": "imported-code", **denial})
+        if self.egress.omitted:
+            self.protocol.emit("log", {"level": "warn", "message": f"egress_denials_omitted:{self.egress.omitted}"})
 
     def emit_step_start(self, nodeid: str, index: int | None = None) -> str:
         if index is None:
@@ -74,8 +113,13 @@ class PythonPlugin:
         self.protocol.emit("step.started", {"stepId": step_id, "index": index, "title": self._titles[step_id]})
         return step_id
 
-    def emit_step_finish(self, step_id: str, status: str, error: str | None = None, code: str = "pytest_failure") -> None:
+    def emit_step_finish(self, step_id: str, status: str, error: str | None = None, code: str = "pytest_failure", reason: str | None = None) -> None:
         started = self._started.pop(step_id, time.monotonic())
+        reason_code = reason or {"passed": "assertions_satisfied", "failed": "assertion_mismatch", "blocked": "unsupported_capability", "inconclusive": "insufficient_evidence"}[status]
+        if status == "failed":
+            self.failure_count += 1
+            if reason_code == "assertion_timeout":
+                self.timeout_count += 1
         payload: dict[str, Any] = {
             "stepId": step_id,
             "index": self._indexes.pop(step_id),
@@ -83,7 +127,7 @@ class PythonPlugin:
             "status": status,
             "durationMs": max(0, round((time.monotonic() - started) * 1000)),
             "evidencePaths": [],
-            "reasonCode": {"passed": "assertions_satisfied", "failed": "assertion_mismatch", "blocked": "unsupported_capability", "inconclusive": "insufficient_evidence"}[status],
+            "reasonCode": reason_code,
         }
         if error:
             payload["error"] = {"code": code, "message": error[:8000]}
@@ -95,9 +139,13 @@ class PythonPlugin:
         try:
             yield
         except BaseException as exc:
+            verdict = locator_verdict(exc)
             if isinstance(exc, ASSERTION_ERRORS):
                 self.failed = True
                 self.emit_step_finish(step_id, "failed", str(exc))
+            elif verdict:
+                self.failed = True
+                self.emit_step_finish(step_id, "failed", f"{type(exc).__name__}: {exc}", type(exc).__name__, verdict)
             else:
                 self.incomplete = True
                 self.emit_step_finish(step_id, "inconclusive", f"{type(exc).__name__}: {exc}", type(exc).__name__)
@@ -145,6 +193,8 @@ class PythonPlugin:
             return
         if call.when == "call" and isinstance(call.excinfo.value, ASSERTION_ERRORS):
             self._assertions.add(nodeid)
+        elif call.when == "call" and (verdict := locator_verdict(call.excinfo.value)):
+            self._locator_verdicts[nodeid] = verdict
         self._thrown.setdefault(nodeid, (call.excinfo.typename, self._thrown_message(call.excinfo, report)))
 
     def _thrown_message(self, excinfo: Any, report: Any) -> str:
@@ -173,12 +223,14 @@ class PythonPlugin:
         skipped = any(report.skipped for report in reports)
         assertion = nodeid in self._assertions
         self._assertions.discard(nodeid)
+        verdict = self._locator_verdicts.pop(nodeid, None)
         thrown = self._thrown.pop(nodeid, None)
-        # Only an assertion is a verdict on the target: an exception the test code raised (or one
-        # raised while setting it up) leaves the test inconclusive, like any non-assertion step.
+        # Only an assertion, or a locator action that matched several elements or never matched one,
+        # is a verdict on the target: any other exception the test code raised (or one raised while
+        # setting it up) leaves the test inconclusive, like any non-assertion step.
         status = "passed"
         if failed:
-            status = "failed" if assertion else "inconclusive"
+            status = "failed" if assertion or verdict else "inconclusive"
         elif skipped:
             status = "inconclusive"
         if failed and (self.missing_package or self.security_failure):
@@ -188,7 +240,7 @@ class PythonPlugin:
         if skipped or (failed and status == "inconclusive"):
             self.incomplete = True
         error, code = (failed, "pytest_failure") if assertion or thrown is None else (thrown[1], thrown[0])
-        self.emit_step_finish(self._pytest_steps.pop(nodeid), status, error=failed and error, code=code)
+        self.emit_step_finish(self._pytest_steps.pop(nodeid), status, error=failed and error, code=code, reason=verdict if status == "failed" else None)
 
     def fixture_page(self) -> Any:
         from playwright.sync_api import sync_playwright
@@ -198,6 +250,8 @@ class PythonPlugin:
         manager = sync_playwright().start()
         browser = manager.chromium.launch(headless=True, chromium_sandbox=True, args=args)
         context = browser.new_context(base_url=base_url if isinstance(base_url, str) else None)
+        if self.egress:
+            self.egress.guard_sync(context)
         page = context.new_page()
         try:
             yield page
@@ -215,6 +269,8 @@ class PythonPlugin:
         manager = await async_playwright().start()
         browser = await manager.chromium.launch(headless=True, chromium_sandbox=True, args=args)
         context = await browser.new_context(base_url=base_url if isinstance(base_url, str) else None)
+        if self.egress:
+            await self.egress.guard_async(context)
         page = await context.new_page()
         try:
             yield page

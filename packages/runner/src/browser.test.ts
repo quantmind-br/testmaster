@@ -37,6 +37,12 @@ class LocatorStub {
   getByTestId(value: string) {
     return this.owner.locator(`${this.key} >> ${value}`);
   }
+  /** `.nth(i)` matches the one element at index i of this locator's matches, or none past the end. */
+  nth(index: number) {
+    const picked = this.owner.locator(`${this.key} >> nth=${index}`);
+    picked.countValue = index < this.countValue ? 1 : 0;
+    return picked;
+  }
   async count() {
     return this.countValue;
   }
@@ -609,6 +615,33 @@ it("fails ambiguous actions and skips the remaining required oracle", async () =
     }),
   );
 });
+it("clicks the second of two identical buttons with nth and never reports ambiguity", async () => {
+  context.page.locator("submit").countValue = 2;
+  const second: PlanStep = {
+    ...click,
+    id: "click-second",
+    input: { locator: { by: "testId", value: "submit", nth: 1 } },
+  };
+  expect(await runBrowser(runtime([second]))).toMatchObject({ outcome: "passed" });
+  expect(context.page.locator("submit >> nth=1").click).toHaveBeenCalledOnce();
+  expect(context.page.locator("submit").click).not.toHaveBeenCalled();
+});
+it("fails an nth past the last match as a target that never attached", async () => {
+  context.page.locator("submit").countValue = 2;
+  context.page
+    .locator("submit >> nth=2")
+    .waitFor.mockRejectedValue(new errors.TimeoutError("Attachment deadline"));
+  const third: PlanStep = {
+    ...click,
+    id: "click-third",
+    input: { locator: { by: "testId", value: "submit", nth: 2 } },
+  };
+  expect(await runBrowser(runtime([third]))).toMatchObject({
+    outcome: "failed",
+    reasonCode: "assertion_timeout",
+  });
+  expect(context.page.locator("submit >> nth=2").click).not.toHaveBeenCalled();
+});
 it("selects numeric indices without treating them as typed value references", async () => {
   const select: PlanStep = {
     id: "select",
@@ -783,6 +816,76 @@ it("lets an approved additional origin through without recording a denial", asyn
   expect(approved.abort).not.toHaveBeenCalled();
   expect(egressEvents()).toEqual([]);
 });
+it.each([
+  ["script", "GET"],
+  ["xhr", "GET"],
+  ["fetch", "POST"],
+  ["document", "GET"],
+  ["image", "GET"],
+  ["eventsource", "GET"],
+  ["other", "PUT"],
+])(
+  "aborts and records a %s %s request to an ignored origin without failing the run",
+  async (type, method) => {
+    const attempt = runtime([click, assertion]);
+    attempt.input.networkPolicy.ignoredOrigins = ["https://js.example.test"];
+    const request = routeFor("https://js.example.test/v3/app.js?id=url-canary", type, method);
+    requestsOnClick(request);
+    expect(await runBrowser(attempt)).toMatchObject({
+      outcome: "passed",
+      reasonCode: "assertions_satisfied",
+    });
+    expect(request.abort).toHaveBeenCalledWith("blockedbyclient");
+    expect(request.continue).not.toHaveBeenCalled();
+    expect(egressEvents()).toEqual([
+      {
+        stepId: "click",
+        origin: "https://js.example.test",
+        method,
+        resourceType: type,
+        disposition: "ignored",
+        count: 1,
+      },
+    ]);
+    // Origin only: neither the path nor the query leaves the route handler.
+    expect(JSON.stringify(egressEvents())).not.toContain("url-canary");
+  },
+);
+it("counts ignored requests per origin and type and still blocks on an unapproved origin beside them", async () => {
+  const attempt = runtime([click, assertion]);
+  attempt.input.networkPolicy.ignoredOrigins = ["https://js.example.test"];
+  const first = routeFor("https://js.example.test/a.js", "script");
+  const second = routeFor("https://js.example.test/b.js", "script");
+  const tracker = routeFor("https://tracker.example.test/collect", "fetch");
+  requestsOnClick(first, second, tracker);
+  expect(await runBrowser(attempt)).toMatchObject({
+    outcome: "blocked",
+    reasonCode: "egress_denied",
+  });
+  expect(egressEvents()).toEqual([
+    expect.objectContaining({
+      origin: "https://js.example.test",
+      disposition: "ignored",
+      count: 2,
+    }),
+    expect.objectContaining({ origin: "https://tracker.example.test", disposition: "fatal" }),
+  ]);
+});
+it("never treats an ambiguous URL as an ignored origin", async () => {
+  const attempt = runtime([click, assertion]);
+  attempt.input.networkPolicy.ignoredOrigins = ["https://js.example.test"];
+  const ambiguous = routeFor("https://js.example.test\\@evil.example.test/a.js", "script");
+  const credentials = routeFor("https://user:pass@js.example.test/a.js", "script");
+  requestsOnClick(ambiguous, credentials);
+  expect(await runBrowser(attempt)).toMatchObject({
+    outcome: "blocked",
+    reasonCode: "egress_denied",
+  });
+  // The ignore list never covers them: both stay fatal, whatever origin they spell.
+  expect(egressEvents()).toEqual([
+    expect.objectContaining({ origin: "https://js.example.test", disposition: "fatal", count: 2 }),
+  ]);
+});
 interface SocketDouble {
   url: () => string;
   close: Mock;
@@ -876,6 +979,29 @@ it("does not blame an authorized origin when the browser cannot connect its WebS
   const message = failedStepMessages().find((text) => text.includes("could not connect"));
   expect(message).toContain("authorized origin http://fixture.test");
   expect(egressEvents()).toEqual([]);
+});
+it("closes an ignored-origin WebSocket with 1008, records it as ignored and does not deny the run", async () => {
+  const attempt = runtime([click, assertion]);
+  attempt.input.networkPolicy.ignoredOrigins = ["https://js.example.test"];
+  const ignored = socketFor("wss://js.example.test/stream?token=url-canary");
+  socketsOnClick(ignored);
+  expect(await runBrowser(attempt)).toMatchObject({
+    outcome: "passed",
+    reasonCode: "assertions_satisfied",
+  });
+  expect(ignored.connectToServer).not.toHaveBeenCalled();
+  expect(ignored.close).toHaveBeenCalledWith(expect.objectContaining({ code: 1008 }));
+  expect(egressEvents()).toEqual([
+    {
+      stepId: "click",
+      origin: "https://js.example.test",
+      method: "GET",
+      resourceType: "websocket",
+      disposition: "ignored",
+      count: 1,
+    },
+  ]);
+  expect(JSON.stringify(egressEvents())).not.toContain("url-canary");
 });
 const failedStepMessages = () =>
   events.flatMap((event) =>

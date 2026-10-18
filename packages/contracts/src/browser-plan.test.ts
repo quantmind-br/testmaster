@@ -175,6 +175,50 @@ describe("negative browser checks before the page has rendered", () => {
     ).toThrow(expect.objectContaining({ code: "INVALID_ARGUMENT" }));
   });
 
+  it("accepts nth on an action locator and a container but refuses it on a count predicate", () => {
+    const second: Json = { ...field("Home"), nth: 1 };
+    expect(() =>
+      validate(
+        "ExecutablePlan",
+        plan([navigate(), action("click", "second", { locator: second }), visible()]),
+      ),
+    ).not.toThrow();
+    // A count of a locator inside an nth container counts the target, so it stays valid.
+    const inContainer: Json = { ...field("Home"), container: { by: "css", value: "li", nth: 0 } };
+    for (const predicate of ["countEquals", "countAtLeast", "countAtMost"])
+      expect(() =>
+        validate(
+          "ExecutablePlan",
+          plan([navigate(), check("count", { locator: inContainer }, { predicate, value: 2 })]),
+        ),
+      ).not.toThrow();
+    for (const predicate of ["countEquals", "countAtLeast", "countAtMost"])
+      expect(() =>
+        validate(
+          "ExecutablePlan",
+          plan([navigate(), check("count", { locator: second }, { predicate, value: 1 })]),
+        ),
+      ).toThrow(
+        expect.objectContaining({
+          code: "INVALID_ARGUMENT",
+          issues: [
+            expect.objectContaining({
+              rule: "nthCount",
+              path: "/steps/1/input/locator/nth",
+              message: expect.stringContaining("nth selects one match"),
+            }),
+          ],
+        }),
+      );
+    // A negative index is a schema error.
+    expect(() =>
+      validate(
+        "ExecutablePlan",
+        plan([navigate(), action("click", "bad", { locator: { ...field("Home"), nth: -1 } })]),
+      ),
+    ).toThrow(expect.objectContaining({ code: "INVALID_ARGUMENT" }));
+  });
+
   it("does not flag a click that is not known to navigate or an optional negative check", () => {
     expect(flagged([navigate(), click("open_menu"), hidden()])).toEqual([]);
     const optional = hidden("gone", "Username", { required: false });

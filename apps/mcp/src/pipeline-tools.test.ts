@@ -844,6 +844,7 @@ it("save_auth_profile creates and updates a profile and update_environment binds
     expectedVersion: Number(environment.version),
     authRefs: [profile.id],
     additionalOrigins: ["https://cdn.example.test"],
+    ignoredOrigins: ["https://js.stripe.com"],
   });
   expect(bound.isError, bound.text).toBe(false);
   const updated = f.app.environments.get(environment.id);
@@ -854,6 +855,7 @@ it("save_auth_profile creates and updates a profile and update_environment binds
       id: updated.activeRevisionId,
       authProfileRefs: [profile.id],
       additionalOrigins: ["https://cdn.example.test"],
+      ignoredOrigins: ["https://js.stripe.com"],
     },
   });
   expect(f.app.environments.revisions(environment.id)[0]?.authProfileRefs).toEqual([profile.id]);
@@ -882,6 +884,7 @@ it("save_auth_profile creates and updates a profile and update_environment binds
     locale: "pt-BR",
     authProfileRefs: [profile.id],
     additionalOrigins: ["https://cdn.example.test"],
+    ignoredOrigins: ["https://js.stripe.com"],
   });
 });
 

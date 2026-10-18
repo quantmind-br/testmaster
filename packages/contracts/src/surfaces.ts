@@ -1,7 +1,7 @@
 import { type TSchema, Type } from "@sinclair/typebox";
 import { ServerLogSource } from "./entities.js";
 import { AuthConfigInput, AuthPlainUsername, authContracts } from "./m4/auth.js";
-import { SuiteFixedMember, SuiteSelection } from "./m4/lists.js";
+import { SuiteFixedMember, SuiteMemberInterval, SuiteSelection } from "./m4/lists.js";
 import { RunLimits } from "./operations.js";
 import {
   ContentDigest,
@@ -1175,6 +1175,12 @@ export const mcpTools = {
       expectedVersion: Type.Optional(d(Version, "Current list version; required with suiteId")),
       name: Type.Optional(d(Name, "List name; required to create")),
       description: Type.Optional(d(Description, "List description")),
+      memberIntervalMs: Type.Optional(
+        d(
+          SuiteMemberInterval,
+          "Minimum ms between the starts of consecutive members of a batch of this list; 0 clears; absent keeps",
+        ),
+      ),
       selection: Type.Optional(
         d(
           SuiteSelection,
@@ -1460,6 +1466,12 @@ export const mcpTools = {
         d(
           Type.Array(Type.String({ format: "uri" }), { maxItems: 32 }),
           "Exact extra origins page subrequests may reach; replaces the list, [] clears it. They never receive credentials",
+        ),
+      ),
+      ignoredOrigins: Type.Optional(
+        d(
+          Type.Array(Type.String({ format: "uri" }), { maxItems: 32 }),
+          "Exact origins whose requests are aborted and recorded without failing the run; replaces the list, [] clears it. Never reached",
         ),
       ),
       authRefs: Type.Optional(

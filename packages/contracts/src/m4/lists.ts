@@ -80,14 +80,27 @@ const SuiteMapping = P.Obj({
   memberCount: P.Nonnegative,
 });
 
+/**
+ * Minimum milliseconds between the starts (claims) of consecutive members of one batch, in batch
+ * order. Protects a stateful target from bursts (login rate limits) and keeps ordered members
+ * ordered. 0 or absent: no pacing.
+ */
+export const SuiteMemberInterval = P.Nonnegative;
+
 export const listContracts = {
   SuiteInput: P.Obj({
     name: P.Name,
     description: Type.Optional(P.Description),
     selection: SuiteSelection,
+    memberIntervalMs: Type.Optional(SuiteMemberInterval),
   }),
   SuitePatchInput: Type.Partial(
-    P.Obj({ name: P.Name, description: P.Description, selection: SuiteSelection }),
+    P.Obj({
+      name: P.Name,
+      description: P.Description,
+      selection: SuiteSelection,
+      memberIntervalMs: SuiteMemberInterval,
+    }),
   ),
   /** The effective expansion a list resolves to right now, before any BatchRun exists. */
   SuiteExpansion: P.Obj({
@@ -97,9 +110,15 @@ export const listContracts = {
     resolvedAt: P.Timestamp,
     /** Hash of members, exclusions and mapping; a run may pin it to run exactly what was previewed. */
     hash: P.ContentDigest,
+    /** Pacing the list carries (omitted when none); each admitted member run freezes it. */
+    memberIntervalMs: Type.Optional(SuiteMemberInterval),
     members: Type.Array(SuiteResolvedMember),
     exclusions: Type.Array(SuiteExclusion),
     mapping: Type.Array(SuiteMapping),
+    /** One-shot members the batch will skip because their active revision already passed (omitted when none); informational, not part of `hash`. */
+    satisfied: Type.Optional(
+      Type.Array(P.Obj({ memberKey: P.Name, testId: P.id("tst"), priorRunId: P.id("run") })),
+    ),
     /** Exclusion keys a caller must confirm to run the dispatchable subset. */
     requiresConfirmation: Type.Array(P.Name),
     dispatchable: Type.Boolean(),

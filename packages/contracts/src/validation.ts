@@ -555,6 +555,99 @@ function selfContainedLocator(value: Record<string, unknown>): boolean {
     if (locatorSelector(container as Record<string, unknown>) === own) return true;
   return false;
 }
+type CleanupFind = NonNullable<NonNullable<ExecutablePlan["cleanup"]>[number]["find"]>;
+/** Names of the captures and bindings a plan declares sensitive, the way a step refers to them. */
+function sensitiveCaptureNames(plan: ExecutablePlan): Set<string> {
+  const names = new Set<string>();
+  for (const binding of plan.dependsOn ?? [])
+    if (binding.sensitive) names.add(binding.consumerInput);
+  const visit = (steps: readonly PlanStep[]): void => {
+    for (const step of steps) {
+      if (step.operation === "frame") visit(step.input.childSteps);
+      if (step.operation === "request" || step.operation === "run") {
+        for (const capture of step.input.capture ?? [])
+          if (capture.sensitive) {
+            names.add(capture.name);
+            names.add(`${step.id}.${capture.name}`);
+          }
+        if (step.operation === "request" && step.input.resource) names.add(`${step.id}.handle`);
+      }
+    }
+  };
+  visit(plan.steps);
+  return names;
+}
+/**
+ * The rules of a cleanup entry that finds its data by lookup: the lookup only reads (GET, no body,
+ * capture or resource), the key value is plain and known before the cleanup, and the matched
+ * item's id and ownership proof are named by non-empty pointers. Every pointer's syntax is the
+ * schema's `JsonPointer` pattern.
+ */
+function validateCleanupFind(
+  find: CleanupFind,
+  path: string,
+  context: {
+    known: ReadonlySet<string>;
+    sensitive: ReadonlySet<string>;
+    handleRefs: ReadonlySet<string>;
+    reject: (path: string, rule: string, message: string) => void;
+  },
+): void {
+  const { known, sensitive, handleRefs, reject } = context;
+  const { lookup } = find;
+  if (lookup.method !== "GET")
+    reject(
+      `${path}/lookup/method`,
+      "cleanupFind",
+      `The cleanup lookup only reads: use GET, not ${lookup.method}`,
+    );
+  for (const field of ["body", "capture", "resource"] as const)
+    if (lookup[field] !== undefined)
+      reject(
+        `${path}/lookup/${field}`,
+        "cleanupFind",
+        `The cleanup lookup takes no ${field}: it only lists the items; the matched id is bound to <resourceRef>.handle`,
+      );
+  validateHeaders(lookup.headers ?? {}, `${path}/lookup/headers`, reject);
+  for (const pointer of ["handlePointer", "ownerProofPointer"] as const)
+    if (find[pointer] === "")
+      reject(
+        `${path}/${pointer}`,
+        "cleanupFind",
+        `${pointer} must point at a field of the matched item, not at the item itself`,
+      );
+  const refs = (value: unknown, at: string): void => {
+    if (Array.isArray(value)) {
+      for (const [index, item] of value.entries()) refs(item, `${at}/${index}`);
+    } else if (value && typeof value === "object") {
+      const object = value as Record<string, unknown>;
+      const ref = object.variableRef;
+      if (typeof ref === "string") {
+        if (handleRefs.has(ref))
+          reject(
+            `${at}/variableRef`,
+            "binding",
+            `"${ref}" is the id the lookup finds: it does not exist before the lookup ran`,
+          );
+        else if (!known.has(ref))
+          reject(
+            `${at}/variableRef`,
+            "binding",
+            `"${ref}" is captured by no step of the plan, so the cleanup lookup cannot use it`,
+          );
+      }
+      for (const [key, item] of Object.entries(object)) refs(item, `${at}/${key}`);
+    }
+  };
+  refs(lookup, `${path}/lookup`);
+  refs(find.equals, `${path}/equals`);
+  if ("variableRef" in find.equals && sensitive.has(find.equals.variableRef))
+    reject(
+      `${path}/equals/variableRef`,
+      "cleanupFind",
+      `"${find.equals.variableRef}" is sensitive: the value compared is stored as the resource's correlation key, which is never sensitive`,
+    );
+}
 export function validatePlanSemantics(plan: ExecutablePlan): void {
   const issues: ValidationIssue[] = [];
   const reject = (path: string, rule: string, message: string): void => {
@@ -600,6 +693,15 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
     });
   };
   visit(plan.steps, "/steps");
+  // A cleanup that finds its data by lookup binds the matched id to <resourceRef>.handle, but
+  // only after its lookup ran: the lookup and the key value may use what the steps captured.
+  const knownBeforeHandles = new Set(captures);
+  const handleRefs = new Set(
+    (plan.cleanup ?? []).flatMap((cleanup) =>
+      cleanup.find ? [`${cleanup.resourceRef}.handle`] : [],
+    ),
+  );
+  for (const ref of handleRefs) captures.add(ref);
   if (count > 200) reject("/steps", "maxItems", "At most 200 total steps");
   if (!assertion)
     reject("/steps", "requiredAssertion", "At least one required assertion is required");
@@ -702,6 +804,21 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
           "predicateInput",
           "Count requires browser locator or responseStepId",
         );
+      // `nth` narrows a locator to at most one match, so a count of it is 0 or 1 and says nothing
+      // about how many items exist. A container or frame may carry `nth`: the count is of the target.
+      const countedLocator = input.locator;
+      if (
+        ["countEquals", "countAtLeast", "countAtMost"].includes(predicate) &&
+        plan.runner === "playwright" &&
+        typeof countedLocator === "object" &&
+        countedLocator !== null &&
+        "nth" in countedLocator
+      )
+        reject(
+          `${path}/input/locator/nth`,
+          "nthCount",
+          "A count predicate cannot use a locator with nth: nth selects one match, so the count is 0 or 1. Count the unscoped locator, or put nth on a container locator",
+        );
       // Text predicates read a browser locator's text, or a whole response body as UTF-8 text.
       if (predicate === "textEquals" || predicate === "textContains") {
         if ("responseStepId" in input) {
@@ -793,11 +910,19 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
     }
   };
   walk(plan, "");
+  const sensitive = sensitiveCaptureNames(plan);
   for (const [index, cleanup] of (plan.cleanup ?? []).entries()) {
     validateHeaders(cleanup.input.headers ?? {}, `/cleanup/${index}/input/headers`, reject);
     validateRequestBody(cleanup.input, `/cleanup/${index}/input`, reject);
     validatePattern(cleanup.successPredicate, `/cleanup/${index}/successPredicate`, reject);
     validateInlineSchema(cleanup.successPredicate, `/cleanup/${index}/successPredicate`, reject);
+    if (cleanup.find)
+      validateCleanupFind(cleanup.find, `/cleanup/${index}/find`, {
+        known: knownBeforeHandles,
+        sensitive,
+        handleRefs,
+        reject,
+      });
   }
   if (issues.length)
     throw new ContractError(
@@ -970,7 +1095,45 @@ function requestSteps(
  */
 export function assertCleanupRuns(plan: ExecutablePlan): void {
   const requests = requestSteps(plan.steps);
+  const stepIds = new Set<string>();
+  const collect = (steps: readonly PlanStep[]): void => {
+    for (const step of steps) {
+      stepIds.add(step.id);
+      if (step.operation === "frame") collect(step.input.childSteps);
+    }
+  };
+  collect(plan.steps);
   const issues = (plan.cleanup ?? []).flatMap((cleanup, index) => {
+    if (cleanup.find) {
+      const path = `/cleanup/${index}/resourceRef`;
+      if (!stepIds.has(cleanup.resourceRef))
+        return [
+          {
+            path,
+            rule: "cleanupResource",
+            message: `Cleanup ${index} finds its data by lookup and names "${cleanup.resourceRef}", which is not a step of the plan; resourceRef must be the id of the step that creates the data`,
+          },
+        ];
+      if (requests.get(cleanup.resourceRef)?.step.input.resource)
+        return [
+          {
+            path,
+            rule: "cleanupResource",
+            message: `Cleanup ${index} finds its data by lookup but "${cleanup.resourceRef}" is a request step that declares input.resource: drop find to delete what that step creates, or name the step that creates the other data`,
+          },
+        ];
+      return (plan.cleanup ?? []).some(
+        (other, otherIndex) => otherIndex !== index && other.resourceRef === cleanup.resourceRef,
+      )
+        ? [
+            {
+              path,
+              rule: "cleanupResource",
+              message: `Cleanup ${index} finds its data by lookup and shares resourceRef "${cleanup.resourceRef}" with another cleanup entry; each lookup needs its own step id because the found handle is bound to <resourceRef>.handle`,
+            },
+          ]
+        : [];
+    }
     const creator = requests.get(cleanup.resourceRef);
     if (!creator?.step.input.resource)
       return [

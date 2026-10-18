@@ -47,6 +47,21 @@ list was saved:
 - Having access to project A never authorizes project B: the entries of B are excluded, and a direct run request
   for B is refused.
 
+### One-shot tests (`runPolicy: "once"`)
+
+A test whose plan sets `runPolicy: "once"` (the default is `always`) is not run again while its active
+revision has a fresh passing replay against the environment's active revision and the same destination. A list
+run, a batch, a selective run and a schedule firing skip it: the receipt lists the member in `notDispatched`
+with `already_passed_once` and the batch `priorEvidence` names the earlier Run. The skip is not a failure: the
+gate judges only the tests that ran, a batch where every test was skipped has gate `not_applicable` and exits 0,
+and the report counts the earlier passing Run for `verifiedRequirementCoverage`. The list preview
+(`GET /v1/suites/{id}/expansion`) shows the members it would skip in `satisfied`, outside the `hash`.
+
+A new environment revision, a new revision of the test, another destination or a later replay that did not pass
+runs the test again. A single `test run` of a satisfied one-shot test is refused with `PRECONDITION_FAILED`,
+reason `already_passed_once` and the prior `priorRunId`. Healing verifications, trials, flake studies and
+repetitions never skip, and a one-shot test cannot be the producer of another test's dependency.
+
 ### CLI
 
 ```bash
@@ -55,6 +70,7 @@ testmaster suite create --name nightly \
 testmaster suite get sui_…            # the list definition
 testmaster suite expand sui_…         # what a run would freeze now
 testmaster suite run sui_… --idempotency-key release-42
+testmaster suite run sui_… --wait --timeout 1800   # no worker needed; exit code = batch result
 testmaster suite run sui_… --confirm-exclusion project:prj_B --expansion-hash sha256:…
 ```
 
@@ -63,13 +79,34 @@ not a list option). `suite add|remove|update|archive` change a list; fixed snaps
 `--member <test>:<revision>:<environment>` or `--selection-file`. A command run with `--endpoint` that has no
 remote implementation fails with `CAPABILITY_UNAVAILABLE` naming the command.
 
-`suite run` has no `--wait`. It admits one BatchRun and returns its receipt, and needs a live worker
-(`testmaster worker start`). With none, it is refused with `PRECONDITION_FAILED` and the next actions
-`worker start` and `--queue`; `--queue` admits the BatchRun anyway and its Runs stay queued until a worker is live.
-`run wait` takes a Run id, not the BatchRun id: follow each member with `run wait <runId>` (the ids are in the
-receipt's `memberRuns`), then export the batch report with `report export <batchId> --format <format>`. MCP
-`testmaster_run_tests` with `suiteId` and `wait: true` runs the batch in that process and waits for it, with no
-worker.
+`suite run --wait [--timeout <seconds>] [--cancel-on-interrupt]` admits one BatchRun, follows every member to its
+end and prints what `test run --wait` prints for a batch (`{ receipt, members, batch, healing }`); its exit code is
+the batch result. It needs no worker: with none live, this process runs the members itself (an interrupt or a
+failed wait cancels them), and with one live the worker runs them and `--wait` only follows them. Without `--wait`
+it admits the BatchRun and returns the receipt, and needs a live worker (`testmaster worker start`). With none, it
+is refused with `PRECONDITION_FAILED` and the next actions `worker start`, `--wait` and `--queue`; `--queue`
+admits the BatchRun anyway and its Runs stay queued until a worker is live. `--wait` and `--queue` exclude each
+other. Without `--wait`, follow each member with `run wait <runId>` (the ids are in the receipt's `memberRuns`;
+`run wait` takes a Run id, not the BatchRun id), then export the batch report with
+`report export <batchId> --format <format>`. MCP `testmaster_run_tests` with `suiteId` and `wait: true` also runs
+the batch in that process and waits for it, with no worker.
+
+### Pacing members (`memberIntervalMs`)
+
+A list may carry `memberIntervalMs`, a nonnegative whole number of milliseconds (`suite create|update
+--member-interval-ms <ms>`, MCP `testmaster_save_suite`; `0` removes it). It is the minimum time between the
+**starts** of consecutive members of an admitted batch, in batch order, so member N+1 starts at least
+`memberIntervalMs` after member N started. Its benefit: it protects a stateful target from bursts (a login rate
+limit, a shared account or session) and keeps ordered members ordered. It applies to every way a batch runs: a
+worker, the in-process run of `--wait` and MCP `wait: true`, and scheduled firings.
+
+- A start is the claim of the member's first attempt, not its first request to the target: image and preparation
+  time come after it.
+- The interval is frozen on every run of the batch at admission, with the run before it in batch order (members a
+  dependency adds join the order). Editing the list afterwards never changes an admitted batch.
+- Members that wait stay queued, never fail; other batches are not held back. A member whose predecessor ended
+  without ever starting an attempt (blocked or cancelled while queued) does not wait for it, so one refused member
+  never stalls the rest.
 
 ### MCP
 

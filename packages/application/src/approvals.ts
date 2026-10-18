@@ -116,6 +116,13 @@ export function planRiskActions(plan: ExecutablePlan): RiskAction[] {
       risk: destructive ? "destructive" : "write",
       basis: `cleanup HTTP method ${cleanup.input.method}`,
     });
+    // The lookup lists items before anything is deleted: a read that the preview must still show.
+    if (cleanup.find)
+      actions.push({
+        stepId: `cleanup-find:${cleanup.resourceRef}`,
+        risk: "read",
+        basis: `cleanup lookup HTTP method ${cleanup.find.lookup.method}`,
+      });
   }
   return actions;
 }

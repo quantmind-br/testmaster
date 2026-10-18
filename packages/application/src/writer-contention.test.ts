@@ -14,6 +14,7 @@ const applications: Application[] = [];
 const holders: DatabaseSync[] = [];
 afterEach(async () => {
   vi.restoreAllMocks();
+  vi.useRealTimers();
   for (const holder of holders.splice(0)) holder.close();
   for (const application of applications.splice(0)) application.close();
   for (const directory of directories.splice(0))
@@ -32,7 +33,7 @@ async function contended() {
   const application = await Application.open({ cwd: directory, home: directory, env: {} });
   applications.push(application);
   await application.init();
-  // Bound each wait for the lock so contention surfaces quickly and deterministically.
+  // Bound each synchronous wait for the lock so contention surfaces quickly and deterministically.
   application.database.exec("PRAGMA busy_timeout=10");
   const holder = new DatabaseSync(application.database.path);
   holders.push(holder);
@@ -61,7 +62,7 @@ async function contended() {
   return { application, release, refused, onRefused };
 }
 
-it("retries only typed writer contention, within the budget, and stops on abort", async () => {
+it("retries only typed writer contention and rethrows anything else at once", async () => {
   let calls = 0;
   await expect(
     retryWriterContention(() => {
@@ -80,31 +81,110 @@ it("retries only typed writer contention, within the budget, and stops on abort"
     }),
   ).rejects.toBe(other);
   expect(calls).toBe(1);
+});
 
-  calls = 0;
-  await expect(
-    retryWriterContention(
-      () => {
-        calls++;
-        throw contention();
+it("keeps waiting while the writer stays held, far past the former 20 s budget, and resolves after release", async () => {
+  vi.useFakeTimers();
+  vi.spyOn(Math, "random").mockReturnValue(0.999);
+  const notices: number[] = [];
+  let released = false;
+  let calls = 0;
+  const outcome = retryWriterContention(
+    () => {
+      calls++;
+      if (!released) throw contention();
+      return "done";
+    },
+    { onContended: (elapsedMs) => notices.push(elapsedMs) },
+  );
+  let settled = false;
+  outcome.then(
+    () => {
+      settled = true;
+    },
+    () => {
+      settled = true;
+    },
+  );
+  await vi.advanceTimersByTimeAsync(60_000);
+  // Full jitter is capped at 1 s, so a held writer is retried about once a second, never failed.
+  expect(settled).toBe(false);
+  expect(calls).toBeGreaterThan(30);
+  // The observability callback fires exactly once, after 5 s of waiting.
+  expect(notices).toHaveLength(1);
+  expect(notices[0]).toBeGreaterThanOrEqual(5000);
+  released = true;
+  await vi.advanceTimersByTimeAsync(1000);
+  await expect(outcome).resolves.toBe("done");
+});
+
+it("a throwing observability callback never turns the wait into a failure", async () => {
+  vi.useFakeTimers();
+  vi.spyOn(Math, "random").mockReturnValue(0.999);
+  let released = false;
+  const outcome = retryWriterContention(
+    () => {
+      if (!released) throw contention();
+      return "done";
+    },
+    {
+      onContended: () => {
+        throw new Error("log sink down");
       },
-      { budgetMs: 200 },
-    ),
-  ).rejects.toMatchObject({ code: "UNAVAILABLE", details: { reasonCode: "writer_contention" } });
-  expect(calls).toBeGreaterThan(1);
+    },
+  );
+  await vi.advanceTimersByTimeAsync(7000);
+  released = true;
+  await vi.advanceTimersByTimeAsync(1000);
+  await expect(outcome).resolves.toBe("done");
+});
 
+it("abort ends the wait promptly and rethrows the last typed refusal", async () => {
+  vi.useFakeTimers();
+  const refusal = contention();
   const controller = new AbortController();
+  let calls = 0;
+  const outcome = retryWriterContention(
+    () => {
+      calls++;
+      throw refusal;
+    },
+    { signal: controller.signal },
+  );
+  const assertion = expect(outcome).rejects.toBe(refusal);
+  await vi.advanceTimersByTimeAsync(300);
+  const attempts = calls;
+  expect(attempts).toBeGreaterThan(0);
+  controller.abort();
+  await assertion;
+  expect(calls).toBe(attempts);
+
+  const aborted = new AbortController();
+  aborted.abort();
   calls = 0;
   await expect(
     retryWriterContention(
       () => {
         calls++;
-        controller.abort();
         throw contention();
       },
-      { budgetMs: 60_000, signal: controller.signal },
+      { signal: aborted.signal },
     ),
   ).rejects.toMatchObject({ details: { reasonCode: "writer_contention" } });
+  expect(calls).toBe(1);
+});
+
+it("never waits while the caller's own transaction is open", async () => {
+  let calls = 0;
+  await expect(
+    retryWriterContention(
+      () => {
+        calls++;
+        throw contention();
+      },
+      { inTransaction: () => true },
+    ),
+  ).rejects.toMatchObject({ code: "INTERNAL", details: { reasonCode: "wait_in_transaction" } });
   expect(calls).toBe(1);
 });
 
@@ -114,22 +194,30 @@ it("a worker survives transient writer contention and drains cleanly once the wr
   f.onRefused.current = (count) => {
     if (count === 3) f.release();
   };
-  await expect(
-    f.application.worker.run({ ephemeral: true, runIds: [], writerContentionBudgetMs: 30_000 }),
-  ).resolves.toMatchObject({ drained: true });
+  await expect(f.application.worker.run({ ephemeral: true, runIds: [] })).resolves.toMatchObject({
+    drained: true,
+  });
   expect(f.refused.length).toBeGreaterThanOrEqual(3);
 });
 
-it("a worker whose contention outlasts the budget fails with the typed retryable error instead of dying silently", async () => {
+it("a worker whose writer stays contended keeps waiting instead of failing, and drains once the writer is free", async () => {
   const f = await contended();
-  await expect(
-    f.application.worker.run({ ephemeral: true, runIds: [], writerContentionBudgetMs: 200 }),
-  ).rejects.toMatchObject({
-    code: "UNAVAILABLE",
-    details: { reasonCode: "writer_contention", retryable: true },
-  });
-  expect(f.refused.length).toBeGreaterThan(1);
+  let settled = false;
+  const running = f.application.worker.run({ ephemeral: true, runIds: [] });
+  running.then(
+    () => {
+      settled = true;
+    },
+    () => {
+      settled = true;
+    },
+  );
+  const deadline = Date.now() + 10_000;
+  while (f.refused.length < 6 && Date.now() < deadline) await delay(20);
+  expect(f.refused.length).toBeGreaterThanOrEqual(6);
+  expect(settled).toBe(false);
   f.release();
+  await expect(running).resolves.toMatchObject({ drained: true });
 });
 
 it("a contended worker stops promptly when its signal aborts", async () => {
@@ -142,10 +230,9 @@ it("a contended worker stops promptly when its signal aborts", async () => {
       ephemeral: true,
       runIds: [],
       signal: controller.signal,
-      writerContentionBudgetMs: 60_000,
     }),
   ).rejects.toMatchObject({ details: { reasonCode: "writer_contention" } });
-  expect(Date.now() - started).toBeLessThan(5000);
+  expect(Date.now() - started).toBeLessThan(2000);
   f.release();
 });
 
@@ -161,7 +248,6 @@ it("worker registration at startup survives writer contention and creates exactl
   const controller = new AbortController();
   const running = f.application.worker.run({
     signal: controller.signal,
-    writerContentionBudgetMs: 30_000,
   });
   // The worker row appears only once registration got through the contention.
   const deadline = Date.now() + 10_000;

@@ -32,6 +32,10 @@ export interface BatchAggregate {
   allMembers: readonly BatchMember[];
   gate: Gate;
 }
+/** Whether a reason leaves the batch gate unchanged (registry `gate: "unchanged"`). */
+export function gateNeutralReason(reasonCode: string | null | undefined): boolean {
+  return reasonCode ? reasonRegistry[reasonCode]?.gate === "unchanged" : false;
+}
 export function aggregateBatch(
   members: readonly BatchMember[],
   allowEmpty = false,
@@ -80,10 +84,17 @@ export function aggregateBatch(
   };
   const accepted = requestedMembers.filter((member) => member.runId !== null).length;
   const notDispatched = requestedMembers.length - accepted;
-  const required = allMembers.filter((member) => member.requested || member.required);
-  const gate: Gate = !requestedMembers.length
+  // A member left out for a reason whose registry gate is `unchanged` (a one-shot test that already
+  // passed) neither fails nor passes the batch: the gate judges the members that were dispatched.
+  const judged = allMembers.filter(
+    (member) => !(member.runId === null && gateNeutralReason(member.reasonCode)),
+  );
+  const judgedRequested = judged.filter((member) => member.requested);
+  const judgedNotDispatched = judgedRequested.filter((member) => member.runId === null).length;
+  const required = judged.filter((member) => member.requested || member.required);
+  const gate: Gate = !judgedRequested.length
     ? "not_applicable"
-    : notDispatched || required.some((member) => member.gate === "failed" || !member.runId)
+    : judgedNotDispatched || required.some((member) => member.gate === "failed" || !member.runId)
       ? "failed"
       : required.some((member) => member.gate === "pending")
         ? "pending"
@@ -202,6 +213,22 @@ export function exitCodeForError(code: ErrorCode): number {
 }
 export function exitCodeForGate(gate: Gate, wait = true): number {
   return !wait ? 0 : gate === "passed" ? 0 : 1;
+}
+/**
+ * Exit code of a batch gate. A `not_applicable` gate exits like any gate that did not pass, unless
+ * every requested member was left out for a gate-neutral reason that itself exits 0 (every one-shot
+ * test of the batch already passed): nothing failed and nothing was left unverified.
+ */
+export function exitCodeForBatchGate(
+  gate: Gate,
+  notDispatched: readonly { reasonCode: string }[],
+): number {
+  const leftOutOnly =
+    notDispatched.length > 0 &&
+    notDispatched.every(
+      ({ reasonCode }) => gateNeutralReason(reasonCode) && reasonRegistry[reasonCode]?.exit === 0,
+    );
+  return gate === "not_applicable" && leftOutOnly ? 0 : exitCodeForGate(gate);
 }
 export function exitCodeForRun(
   run: {

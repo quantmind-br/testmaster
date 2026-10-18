@@ -100,6 +100,12 @@ const reasonGroups: ReadonlyArray<{ codes: readonly string[]; mapping: ReasonMap
     mapping: { effect: "none", gate: "unchanged", exit: 1, reporter: "skipped" },
   },
   {
+    // A one-shot test whose active revision already passed against the environment's active
+    // revision: left out of the batch by design, so it neither fails the gate nor the exit code.
+    codes: ["already_passed_once"],
+    mapping: { effect: "none", gate: "unchanged", exit: 0, reporter: "skipped" },
+  },
+  {
     codes: ["cleanup_failed", "cleanup_inconclusive"],
     mapping: { effect: "cleanup", gate: "evaluate", exit: 1, reporter: "error" },
   },

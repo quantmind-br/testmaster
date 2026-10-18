@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { BatchReceipt, Role, SuiteSelection } from "@testmaster/contracts";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { Application, scaffoldPlan } from "./index.js";
 
 const roots: string[] = [];
@@ -442,4 +442,78 @@ it("REQ-034 a suite run reports the BatchReceipt of the batch gate and never pas
   );
   expect(receipt.requested).toBe(receipt.accepted + receipt.notDispatched.length);
   expect(["failed", "blocked", "inconclusive", "pending"]).toContain(receipt.gate);
+});
+
+it("REQ-034 a list with memberIntervalMs freezes the pacing and the batch-order predecessor on every member run and the claim filter releases a member only after the interval", async () => {
+  const { app, init, dynamic } = await world();
+  const suite = app.suites.create({ name: "paced", selection: dynamic(), memberIntervalMs: 500 });
+  expect(app.suites.expansion(suite.id)).toMatchObject({ memberIntervalMs: 500 });
+  const receipt = await app.suites.run(suite.id, {}, { wait: true });
+  const ids = receipt.allMembers;
+  expect(ids).toHaveLength(4);
+  const cell = (id: string) => app.runs.get(id).matrixCell as Record<string, unknown>;
+  expect(ids.map((id) => cell(id).memberIntervalMs)).toEqual([500, 500, 500, 500]);
+  expect(ids.map((id) => cell(id).memberPredecessorRunId)).toEqual([null, ...ids.slice(0, 3)]);
+  const batch = app.context.entities.get("BatchRun", init.workspaceId, receipt.batchId);
+  expect(frozenSuite(batch)).toMatchObject({ memberIntervalMs: 500 });
+  // Clearing the pacing later never alters the admitted batch; 0 removes it from the list.
+  app.suites.update(suite.id, { memberIntervalMs: 0 }, Number(suite.version));
+  expect(app.suites.get(suite.id).memberIntervalMs).toBeUndefined();
+  expect(cell(ids[1] as string).memberIntervalMs).toBe(500);
+  // Negative control: a batch of the unpaced list carries no pacing at all.
+  const plain = await app.suites.run(suite.id, {}, { wait: true });
+  expect(plain.allMembers.map((id) => cell(id).memberPredecessorRunId)).toEqual([
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+  ]);
+
+  // The worker's claim filter, with a deterministic clock.
+  // memberIntervalReady is the worker's private claim-filter predicate; the loop calls it per candidate.
+  const worker = app.worker as unknown as { memberIntervalReady(runId: string): boolean };
+  const ready = (id: string) => worker.memberIntervalReady(id);
+  const startAttempt = (runId: string, startedAt: string) => {
+    const job = app.database.get(
+      "SELECT id FROM job_leases WHERE workspace_id=? AND resource_id=?",
+      init.workspaceId,
+      runId,
+    );
+    app.database.run(
+      "INSERT INTO attempts(workspace_id,id,created_at,run_id,number,phase,started_at,job_id,fence,lease_owner) VALUES(?,?,?,?,?,?,?,?,?,?)",
+      init.workspaceId,
+      `att_${runId}`,
+      startedAt,
+      runId,
+      1,
+      "preparing",
+      startedAt,
+      String(job?.id),
+      1,
+      "worker-test",
+    );
+  };
+  const [first, second, third] = ids as [string, string, string, string];
+  const start = Date.parse("2026-10-18T12:00:00.000Z");
+  vi.useFakeTimers({ toFake: ["Date"] });
+  try {
+    vi.setSystemTime(start);
+    expect(ready(first)).toBe(true);
+    expect(ready(second)).toBe(false);
+    startAttempt(first, new Date(start).toISOString());
+    expect(ready(second)).toBe(false);
+    vi.setSystemTime(start + 499);
+    expect(ready(second)).toBe(false);
+    vi.setSystemTime(start + 500);
+    expect(ready(second)).toBe(true);
+    // The chain is transitive: the third waits for the second's start, not the first's.
+    expect(ready(third)).toBe(false);
+    startAttempt(second, new Date(start + 500).toISOString());
+    vi.setSystemTime(start + 999);
+    expect(ready(third)).toBe(false);
+    vi.setSystemTime(start + 1000);
+    expect(ready(third)).toBe(true);
+  } finally {
+    vi.useRealTimers();
+  }
 });

@@ -115,6 +115,7 @@ export interface EnvironmentInput {
   timezone?: string;
   production?: boolean;
   additionalOrigins?: string[];
+  ignoredOrigins?: string[];
   authRefs?: string[];
   /** Opt-in server log source; null clears it on update. */
   serverLog?: ServerLogSource | null;
@@ -253,6 +254,47 @@ function additionalOrigins(
   return result;
 }
 /**
+ * Exact origins whose requests are aborted and recorded without failing a run. Same grammar as
+ * `additionalOrigins` (bare http(s) origin, no wildcard), unique, and disjoint from every
+ * `reserved` origin (target and additional origins). No network-profile check: they never
+ * receive egress.
+ */
+function ignoredOrigins(value: unknown, reserved: readonly string[]): string[] {
+  if (!Array.isArray(value) || value.length > MAX_ADDITIONAL_ORIGINS)
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      `ignoredOrigins must be an array of at most ${MAX_ADDITIONAL_ORIGINS} origins`,
+      { field: "ignoredOrigins" },
+    );
+  const reservedOrigins = new Set(reserved.map((entry) => canonicalUrl(entry).origin));
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const item of value) {
+    const invalid = (message: string, reason: string): ContractError =>
+      new ContractError("INVALID_ARGUMENT", message, { field: "ignoredOrigins", reason });
+    if (typeof item !== "string") throw invalid("Each ignored origin must be a string", "type");
+    if (item.includes("*")) throw invalid("Ignored origins cannot contain wildcards", "wildcard");
+    const normalized = origin(item, "Ignored origin");
+    let canonical: CanonicalTarget;
+    try {
+      canonical = canonicalUrl(normalized);
+    } catch (error) {
+      if (error instanceof PolicyDenied)
+        throw invalid(
+          `Ignored origin is refused by the network policy (${error.reason})`,
+          error.reason,
+        );
+      throw error;
+    }
+    if (reservedOrigins.has(canonical.origin))
+      throw invalid("Ignored origin equals a target or additional origin", "overlap");
+    if (seen.has(canonical.origin)) throw invalid("Ignored origin is duplicated", "duplicate");
+    seen.add(canonical.origin);
+    result.push(normalized);
+  }
+  return result;
+}
+/**
  * Extra subrequest origins to merge into an attempt's network policy. They widen only the egress
  * policy: they are neither target origins (secret and profile bindings, approvals) nor admitted
  * when the profile is offline, which allows authorized local targets only.
@@ -264,6 +306,17 @@ export function attemptAdditionalOrigins(
 ): string[] {
   if (offline) return [];
   return (revision.additionalOrigins ?? []).filter((extra) => !targetOrigins.includes(extra));
+}
+/**
+ * Origins the browser aborts and records without failing the attempt. Unlike additional origins
+ * they are never added to the allowlist; the list applies under every profile because it only
+ * narrows behavior. An origin that is also allowed is dropped, so "ignored" is never ambiguous.
+ */
+export function attemptIgnoredOrigins(
+  revision: { ignoredOrigins?: readonly string[] | undefined },
+  allowedOrigins: readonly string[],
+): string[] {
+  return (revision.ignoredOrigins ?? []).filter((ignored) => !allowedOrigins.includes(ignored));
 }
 
 /** Strict, bounded parsing and shared structural/semantic validation; no effects. */
@@ -561,6 +614,7 @@ export class EnvironmentsService {
       "timezone",
       "production",
       "additionalOrigins",
+      "ignoredOrigins",
       "authRefs",
       "serverLog",
     ]);
@@ -571,9 +625,19 @@ export class EnvironmentsService {
       this.uniqueName(input.projectId, input.name);
       const target = origin(input.baseUrl);
       const profile = input.networkProfile ?? networkProfile(target);
+      const additionalOriginList = additionalOrigins(
+        input.additionalOrigins ?? [],
+        [target],
+        profile,
+      );
+      const ignoredOriginList = ignoredOrigins(input.ignoredOrigins ?? [], [
+        target,
+        ...additionalOriginList,
+      ]);
       const revision = entity(this.ctx, "evr", {
         targetOrigins: [target],
-        additionalOrigins: additionalOrigins(input.additionalOrigins ?? [], [target], profile),
+        additionalOrigins: additionalOriginList,
+        ...(ignoredOriginList.length ? { ignoredOrigins: ignoredOriginList } : {}),
         networkProfile: profile,
         authProfileRefs: this.authProfileRefs(input.projectId, input.authRefs ?? [], [target]),
         locale: input.locale ?? "en-US",
@@ -682,6 +746,7 @@ export class EnvironmentsService {
           createdAt: revision.createdAt,
           targetOrigins: revision.targetOrigins,
           additionalOrigins: revision.additionalOrigins ?? [],
+          ignoredOrigins: revision.ignoredOrigins ?? [],
           networkProfile: revision.networkProfile,
           authProfileRefs: revision.authProfileRefs,
           locale: revision.locale,
@@ -701,6 +766,7 @@ export class EnvironmentsService {
       "timezone",
       "production",
       "additionalOrigins",
+      "ignoredOrigins",
       "authRefs",
       "serverLog",
     ]);
@@ -725,13 +791,19 @@ export class EnvironmentsService {
         targetOrigins,
       );
       const profile = patch.networkProfile ?? previous.networkProfile;
+      const additionalOriginList = additionalOrigins(
+        patch.additionalOrigins ?? previous.additionalOrigins ?? [],
+        targetOrigins,
+        profile,
+      );
+      const ignoredOriginList = ignoredOrigins(
+        patch.ignoredOrigins ?? previous.ignoredOrigins ?? [],
+        [...targetOrigins, ...additionalOriginList],
+      );
       const revision = entity(this.ctx, "evr", {
         targetOrigins,
-        additionalOrigins: additionalOrigins(
-          patch.additionalOrigins ?? previous.additionalOrigins ?? [],
-          targetOrigins,
-          profile,
-        ),
+        additionalOrigins: additionalOriginList,
+        ...(ignoredOriginList.length ? { ignoredOrigins: ignoredOriginList } : {}),
         networkProfile: profile,
         authProfileRefs: refs,
         locale: patch.locale ?? previous.locale,

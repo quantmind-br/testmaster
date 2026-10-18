@@ -538,3 +538,41 @@ it("a current code revision verifies the requirements of the plan in its ancestr
     denominator: 2,
   });
 });
+
+it("verifiedRequirementCoverage counts fresh passing prior evidence of a skipped one-shot test, and only when it is fresh", async () => {
+  const { app, projectId, environmentId } = await openApp();
+  const skipped = seed(app, projectId, "skipped-once");
+  const executed = seed(app, projectId, "executed");
+  storeRequirements(app, projectId, [skipped, executed]);
+  const runFor = (requirement: Requirement) => {
+    const plan = scaffoldPlan("backend");
+    plan.requirementRefs = [requirement.id];
+    const test = app.tests.create({ projectId, plan });
+    return app.runs.prepare({ testId: test.id, environmentId });
+  };
+  const executedRun = passedItem(projectId, runFor(executed));
+  const report = (priorEvidence: ReportRun[]) =>
+    ({
+      runs: [executedRun],
+      priorEvidence,
+      selection: { requestedRunIds: [executedRun.run.id], notDispatched: [] },
+    }) as unknown as ReportSnapshot;
+  const prior = passedItem(projectId, runFor(skipped));
+
+  expect(verifiedRequirementCoverage(app.context, report([prior]))).toMatchObject({
+    numerator: 2,
+    denominator: 2,
+  });
+  // Negative controls: no prior evidence leaves the skipped test's requirement uncovered, and a
+  // stale prior run proves nothing, exactly as a stale executed run.
+  expect(verifiedRequirementCoverage(app.context, report([]))).toMatchObject({
+    numerator: 1,
+    denominator: 2,
+  });
+  expect(
+    verifiedRequirementCoverage(
+      app.context,
+      report([passedItem(projectId, prior.run, { freshness: { state: "stale" } })]),
+    ),
+  ).toMatchObject({ numerator: 1, denominator: 2 });
+});

@@ -15,7 +15,7 @@ const PASSIVE_METHODS: Readonly<Record<string, true>> = { GET: true, HEAD: true 
 /** Distinct origin and resource-type pairs recorded per attempt; further pairs only raise the omitted count. */
 const MAX_DENIALS = 64;
 
-export type EgressDisposition = "aborted" | "fatal";
+export type EgressDisposition = "aborted" | "ignored" | "fatal";
 export interface EgressDenial {
   stepId: string;
   origin: string;
@@ -42,6 +42,20 @@ export function denialDisposition(
     return "fatal";
   }
   return "aborted";
+}
+
+/**
+ * Whether a request goes to an origin the environment ignores on purpose. The URL must
+ * canonicalize (SEC-008: an ambiguous URL is never treated as ignored); a fragment never reaches
+ * the server, so it is dropped first. `ignored` applies to every resource type and method.
+ */
+export function isIgnoredRequest(url: string, ignoredOrigins: ReadonlySet<string>): boolean {
+  if (ignoredOrigins.size === 0) return false;
+  try {
+    return ignoredOrigins.has(canonicalUrl(url.split("#", 1)[0] ?? "").origin);
+  } catch {
+    return false;
+  }
 }
 
 /** Scheme, host and port of the denied URL; never its path, query, fragment or credentials. */

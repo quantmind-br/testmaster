@@ -169,6 +169,13 @@ const supplemental = {
           "Exact extra origins (scheme, host, port; no path, query, credentials or wildcard) page subrequests may reach. Replaces the previous list; [] clears it. They never receive credentials and are not target origins.",
       }),
     ),
+    ignoredOrigins: Type.Optional(
+      Type.Array(Type.String({ format: "uri" }), {
+        maxItems: 32,
+        description:
+          "Exact origins (scheme, host, port; no path, query, credentials or wildcard) whose requests are aborted and recorded, never failing the run and never reaching the network. Disjoint from the target and additional origins. Replaces the previous list; [] clears it.",
+      }),
+    ),
     authRefs: Type.Optional(Type.Array(P.id("aup"))),
     production: Type.Optional(Type.Boolean()),
     /** Opt-in server log source read after each attempt; null on update clears it. */

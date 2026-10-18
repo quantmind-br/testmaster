@@ -18,6 +18,7 @@ import {
   aggregateBatch,
   type BatchMember,
   type DagNode,
+  gateNeutralReason,
   resolveDagClosure,
   semanticHash,
 } from "@testmaster/domain";
@@ -31,6 +32,7 @@ import type { ImageLock } from "@testmaster/sandbox";
 import type { ResolvedConfig } from "./config.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "./context.js";
 import { type ReuseBinding, resolveReuse } from "./dependency-reuse.js";
+import { onceSatisfiedRun } from "./once.js";
 import {
   type AdmissionSnapshot,
   admissionInputHash,
@@ -55,8 +57,8 @@ export interface BatchProvenance {
 }
 export interface AdmissionOptions {
   wait?: boolean;
-  /** Name of the caller's flag that admits without a live worker; quoted in the refusal guidance. */
-  waitFlag?: string;
+  /** Flags of the caller that admit without a live worker; quoted in the refusal guidance. */
+  waitFlags?: readonly string[];
   idempotencyKey?: string;
   unsafeLocal?: boolean;
   selection?: {
@@ -146,6 +148,24 @@ export function captureDeclarations(plan: ExecutablePlan) {
   };
   visit(plan.steps);
   return captures;
+}
+/**
+ * The handle a cleanup entry that finds its data by lookup captures at cleanup time. Kept apart
+ * from `captureDeclarations`: no later test can depend on it, and it only exists after the steps.
+ */
+export function cleanupHandleDeclarations(plan: ExecutablePlan) {
+  return (plan.cleanup ?? []).flatMap((cleanup) =>
+    cleanup.find
+      ? [
+          {
+            stepId: cleanup.resourceRef,
+            name: "handle",
+            valueType: "string",
+            sensitive: true,
+          },
+        ]
+      : [],
+  );
 }
 export class RunsService {
   constructor(
@@ -590,6 +610,12 @@ export class RunsService {
           "ExecutablePlan",
           requireEntity(this.ctx, "TestRevision", String(producer.revisionId)).plan,
         );
+        if (producerPlan.runPolicy === "once")
+          throw new ContractError(
+            "PRECONDITION_FAILED",
+            "A one-shot test cannot be a dependency producer",
+            { reasonCode: "upstream_failed" },
+          );
         const captures = captureDeclarations(producerPlan).filter(
           (capture) => capture.name === binding.outputName,
         );
@@ -1055,6 +1081,14 @@ export class RunsService {
   }
   async admit(request: RunRequest, options: AdmissionOptions = {}): Promise<OwnedReceipt> {
     this.ctx.authorize("X");
+    validate("RunRequest", request);
+    const priorRunId = onceSatisfiedRun(this.ctx, request);
+    if (priorRunId)
+      throw new ContractError(
+        "PRECONDITION_FAILED",
+        `This one-shot test already passed against the environment's active revision in run ${priorRunId}; it runs again after a new test or environment revision`,
+        { reasonCode: "already_passed_once", priorRunId },
+      );
     if (!options.wait && !this.host.liveWorker())
       throw new ContractError(
         "PRECONDITION_FAILED",
@@ -1352,7 +1386,9 @@ export class BatchesService {
         required: true,
         dependency: false,
         outcome: null,
-        gate: "failed" as const,
+        gate: gateNeutralReason(member.reasonCode)
+          ? ("not_applicable" as const)
+          : ("failed" as const),
         reasonCode: member.reasonCode,
       })),
     );
@@ -1374,12 +1410,12 @@ export class BatchesService {
     if (!request.selection.length && !request.allowEmpty)
       throw new ContractError("INVALID_ARGUMENT", "Empty selection");
     if (!options.wait && !this.runs.host.liveWorker()) {
-      const flag = options.waitFlag ?? "--wait";
+      const flags = options.waitFlags ?? ["--wait"];
       throw new ContractError(
         "PRECONDITION_FAILED",
-        `No live worker; start a worker or use ${flag}`,
+        `No live worker; start a worker or use ${flags.join(" or ")}`,
         {
-          nextActions: ["worker start", flag],
+          nextActions: ["worker start", ...flags],
         },
       );
     }
@@ -1438,9 +1474,19 @@ export class BatchesService {
     const uniqueSelection = [
       ...new Map(request.selection.map((member) => [semanticHash(member), member])).values(),
     ];
-    let selection = uniqueSelection;
+    // A one-shot test that already passed against the environment's active revision is left out
+    // by design: it is declared as not dispatched, never fails the gate and names the prior Run.
+    const priorEvidence: { memberKey: string; testId: string; runId: string }[] = [];
+    let selection = uniqueSelection.filter((member, index) => {
+      const priorRunId = onceSatisfiedRun(this.ctx, member);
+      if (!priorRunId) return true;
+      const memberKey = `${index}:${member.testId}`;
+      rejected.push({ memberKey, reasonCode: "already_passed_once" });
+      priorEvidence.push({ memberKey, testId: member.testId, runId: priorRunId });
+      return false;
+    });
     if (request.partialDispatch) {
-      selection = uniqueSelection.filter((member, index) => {
+      selection = selection.filter((member) => {
         try {
           this.runs.prepareClosure([member], batchId, { pure: true });
           return true;
@@ -1450,7 +1496,7 @@ export class BatchesService {
             ["FORBIDDEN", "UNAUTHENTICATED", "POLICY_DENIED"].includes(error.code)
           )
             throw error;
-          const memberKey = `${index}:${member.testId}`;
+          const memberKey = `${uniqueSelection.indexOf(member)}:${member.testId}`;
           rejected.push({ memberKey, reasonCode: "upstream_failed" });
           rejections.push({
             memberKey,
@@ -1484,6 +1530,20 @@ export class BatchesService {
         flakePredecessor = run.id;
       }
     }
+    // Suite pacing: every run of the batch, producers included, waits for the interval after the
+    // start of the run before it in batch order. Frozen here so a later list edit cannot change it.
+    const memberIntervalMs = selection
+      .map((member) => member.extensions?.["testmaster:memberIntervalMs"])
+      .find((value): value is number => typeof value === "number" && value > 0);
+    if (memberIntervalMs !== undefined) {
+      let memberPredecessor: string | null = null;
+      for (const run of ordered) {
+        const cell = run.matrixCell as Record<string, unknown>;
+        cell.memberIntervalMs = memberIntervalMs;
+        cell.memberPredecessorRunId = memberPredecessor;
+        memberPredecessor = run.id;
+      }
+    }
     const counts = {
       passed: 0,
       failed: 0,
@@ -1492,7 +1552,11 @@ export class BatchesService {
       inconclusive: 0,
       inFlight: requestedIds.size,
     };
-    const gate = rejected.length ? "failed" : ordered.length ? "pending" : "not_applicable";
+    const gate = rejected.some((member) => !gateNeutralReason(member.reasonCode))
+      ? "failed"
+      : ordered.length
+        ? "pending"
+        : "not_applicable";
     this.ctx.entities.insert("BatchRun", {
       id: batchId,
       workspaceId: this.ctx.workspaceId,
@@ -1518,6 +1582,7 @@ export class BatchesService {
           (rejected.length - (provenance?.rejected.length ?? 0)),
         hash: semanticHash(request),
         rejections,
+        ...(priorEvidence.length ? { priorEvidence } : {}),
         requestedRunIds: [...requestedIds],
       },
       requestedCount: requestedIds.size + rejected.length,

@@ -27,6 +27,10 @@ export interface PlaywrightFixturesOptions {
    * It MAY define `capturePageFailure(page, testInfo)`, which the `page` and `profilePage`
    * fixtures call once a test that used them has failed, while the page is still open. Without
    * it (an exported project run outside TestMaster) nothing is captured.
+   * It MAY define `guardContext(context)`, an async function that installs the egress policy on a
+   * browser context and returns `undefined` or an async `finish(testInfo)` for the end of the test.
+   * The `context` fixture (so `page` too) and `profilePage` call it on the context they hand to the
+   * test. Without it (an exported project) no policy is installed.
    */
   preamble: string;
 }
@@ -45,6 +49,7 @@ export function playwrightFixturesCommonjs(options: PlaywrightFixturesOptions): 
 const base = require(${JSON.stringify(options.realModule)});
 ${options.preamble}
 const afterPageFailure = typeof capturePageFailure === "function" ? capturePageFailure : undefined;
+const guardBrowserContext = typeof guardContext === "function" ? guardContext : undefined;
 async function capturePageOfFailedTest(page, testInfo) {
   if (!afterPageFailure || testInfo.status === testInfo.expectedStatus || testInfo.status === "skipped") return;
   try {
@@ -89,6 +94,16 @@ const extended = base.extend({
   secrets: async ({}, use) => {
     await use(secrets);
   },
+  // Only the runner's preamble installs the egress policy; an exported project keeps the stock context.
+  ...(guardBrowserContext
+    ? {
+        context: async ({ context }, use, testInfo) => {
+          const finishGuard = await guardBrowserContext(context);
+          await use(context);
+          if (finishGuard) await finishGuard(testInfo);
+        },
+      }
+    : {}),
   // Only the runner's preamble captures failures; an exported project keeps the stock page.
   ...(afterPageFailure
     ? {
@@ -108,9 +123,11 @@ const extended = base.extend({
     const session = sessionFor("profilePage", baseURL);
     if (!session.storageState) throw new Error("The profilePage fixture needs a browser session, and this auth profile only has header credentials");
     const context = await browser.newContext({ storageState: session.storageState });
+    const finishGuard = guardBrowserContext ? await guardBrowserContext(context) : undefined;
     const page = await context.newPage();
     await use(page);
     await capturePageOfFailedTest(page, testInfo);
+    if (finishGuard) await finishGuard(testInfo);
     await context.close();
   },
   sourceSchemas: async ({}, use) => {

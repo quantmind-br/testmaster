@@ -1,6 +1,6 @@
 import { type Static, type TSchema, Type } from "@sinclair/typebox";
 import { authCheckpointKinds } from "./m4/auth.js";
-import { SuiteSelection, suiteStates } from "./m4/lists.js";
+import { SuiteMemberInterval, SuiteSelection, suiteStates } from "./m4/lists.js";
 import {
   ArtifactManifest,
   BatchCounts,
@@ -127,6 +127,8 @@ export const entities = {
     targetOrigins: names,
     /** Exact extra origins page subrequests may reach. Never a credential or approval target; absent on older revisions. */
     additionalOrigins: Type.Optional(names),
+    /** Exact origins whose requests are aborted and recorded without failing the run; never admitted to the proxy. Disjoint from target and additional origins; absent on older revisions. */
+    ignoredOrigins: Type.Optional(names),
     networkProfile: Enum(["public", "private", "local-loopback"]),
     authProfileRefs: Type.Array(id("aup")),
     locale: Name,
@@ -252,6 +254,7 @@ export const entities = {
     description: Description,
     version: Version,
     selection: SuiteSelection,
+    memberIntervalMs: Type.Optional(SuiteMemberInterval),
     state: Enum(suiteStates),
     createdBy: Name,
     updatedAt: Timestamp,

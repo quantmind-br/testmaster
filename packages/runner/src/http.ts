@@ -5,6 +5,7 @@ import { isIP } from "node:net";
 import { isDeepStrictEqual } from "node:util";
 import {
   ContractError,
+  type ExecutablePlan,
   type Expectation,
   invalidCredentialRefusal,
   JsonSetError,
@@ -55,6 +56,7 @@ function transportErrorCode(error: unknown): string | undefined {
 }
 
 type RequestInput = Extract<PlanStep, { operation: "request" }>["input"];
+type CleanupEntry = NonNullable<ExecutablePlan["cleanup"]>[number];
 type ResourceState =
   | "planned"
   | "created"
@@ -1217,8 +1219,8 @@ export class HttpEngine {
     return { url: authorizeUrl(runtime, base.href), headers, body };
   }
   private async resourceEvent(type: string, resource: OwnedResource): Promise<void> {
-    const { stepId: _stepId, ...payload } = resource;
-    await this.runtime.emit(type, payload);
+    // A snapshot: the resource changes state after the event, and an emitted payload must not.
+    await this.runtime.emit(type, { ...resource });
   }
   private async send(
     stepId: string,
@@ -1604,11 +1606,185 @@ export class HttpEngine {
       }
     }
   }
+  private assertCleanupAllowed(): void {
+    if (
+      this.runtime.signal.aborted &&
+      /credential_revoked|owner_revoked/u.test(String(this.runtime.signal.reason))
+    )
+      throw new RuntimeError("credential_revoked", "Authorization revoked before cleanup");
+  }
+  /**
+   * Cleanup of data a browser step created, which no request declared: the entry's GET lookup
+   * lists the items and the one item whose key equals the plan's value is deleted with the id the
+   * lookup returned. Nothing is deleted unless exactly one item matches and it carries a handle and
+   * an ownership proof; a list that may continue on another page is never read as "no match".
+   * No match passes (nothing was created); two or more matches fail; every other refusal is
+   * inconclusive. Each refusal and the no-match are logged, and a match is recorded as a resource.
+   */
+  private async cleanupFound(
+    entry: CleanupEntry,
+  ): Promise<NonNullable<RunnerResult["cleanupOutcome"]>> {
+    const { find } = entry;
+    if (!find) return "not_required";
+    const { runtime } = this;
+    const ref = entry.resourceRef;
+    const note = async (level: "info" | "error", message: string): Promise<void> => {
+      await runtime.emit("log", { level, message: `cleanup lookup ${ref}: ${message}` });
+    };
+    try {
+      this.assertCleanupAllowed();
+      if (sensitiveInput(runtime, find.equals))
+        deny("Resource correlation keys cannot be sensitive");
+      const expected = await runtime.resolve(find.equals);
+      if (
+        typeof expected !== "string" &&
+        typeof expected !== "number" &&
+        typeof expected !== "boolean"
+      )
+        deny("The cleanup lookup key must be a scalar");
+      const correlationKey = String(expected);
+      if (
+        !correlationKey ||
+        correlationKey.length > 200 ||
+        runtime.scrubSecrets(correlationKey) !== correlationKey
+      )
+        deny("Invalid resource correlation key");
+      const response = await this.send(
+        `cleanup-find-${ref}`,
+        find.lookup,
+        entry.deadlineMs,
+        new AbortController().signal,
+        false,
+      );
+      const inconclusive = async (why: string) => {
+        await note("error", `${why}; nothing was deleted`);
+        return "inconclusive" as const;
+      };
+      if (response.status < 200 || response.status >= 300)
+        return await inconclusive(`the lookup answered status ${response.status}`);
+      if (/<[^>]*>\s*;[^,]*\brel\s*=\s*"?[^",;]*\bnext\b/iu.test(response.headers.link ?? ""))
+        return await inconclusive("the list has a next page (Link rel=next)");
+      let json: unknown;
+      let items: unknown;
+      try {
+        json = responseJson(response);
+        items = jsonPointerValue(json, find.itemsPointer);
+      } catch {
+        return await inconclusive("the response has no JSON array at itemsPointer");
+      }
+      if (!Array.isArray(items))
+        return await inconclusive("itemsPointer does not point at an array");
+      if (find.totalPointer !== undefined) {
+        let total: unknown;
+        try {
+          total = jsonPointerValue(json, find.totalPointer);
+        } catch {
+          total = undefined;
+        }
+        if (typeof total !== "number" || !Number.isFinite(total))
+          return await inconclusive("totalPointer does not point at a number");
+        if (total > items.length)
+          return await inconclusive(`the list is paged: ${items.length} of ${total} items`);
+      }
+      const matches = items.filter((item) => {
+        try {
+          return jsonPointerValue(item, find.keyPointer) === expected;
+        } catch {
+          return false;
+        }
+      });
+      if (matches.length === 0) {
+        await note(
+          "info",
+          `no item matches among ${items.length}; nothing was created, nothing to delete`,
+        );
+        return "passed";
+      }
+      if (matches.length > 1) {
+        await note("error", `${matches.length} items match: refusing to delete any`);
+        return "failed";
+      }
+      const match = matches[0];
+      const read = (pointer: string): unknown => {
+        try {
+          return jsonPointerValue(match, pointer);
+        } catch {
+          return null;
+        }
+      };
+      const handle = read(find.handlePointer);
+      const proof = read(find.ownerProofPointer);
+      if (handle === null || handle === "" || proof === null || proof === false || proof === "")
+        return await inconclusive(
+          "the matched item lacks ownership evidence (handle or ownerProof)",
+        );
+      if (typeof handle !== "string" && typeof handle !== "number")
+        return await inconclusive("the matched item's handle is not scalar");
+      const resource: OwnedResource = {
+        stepId: ref,
+        resourceId: uuidV7IdGenerator.next("res"),
+        resourceType: find.resourceType,
+        correlationKey,
+        state: "planned",
+      };
+      await this.resourceEvent("resource.intent", resource);
+      resource.handleRef = `${ref}.handle`;
+      runtime.variables.set(resource.handleRef, { value: String(handle), sensitive: true });
+      addSensitive(runtime, String(handle));
+      await runtime.emit("variable.captured", {
+        stepId: ref,
+        name: "handle",
+        valueType: "string",
+        sensitive: true,
+        value: { literal: String(handle) },
+      });
+      resource.ownerProof = {
+        sha256: createHash("sha256").update(JSON.stringify(proof)).digest("hex"),
+      };
+      resource.state = "created";
+      await this.resourceEvent("resource.created", resource);
+      resource.state = "cleanup_pending";
+      await this.resourceEvent("resource.cleanup", resource);
+      let outcome: NonNullable<RunnerResult["cleanupOutcome"]> = "passed";
+      try {
+        const deletion = await this.send(
+          `cleanup-${ref}`,
+          entry.input,
+          entry.deadlineMs,
+          new AbortController().signal,
+          false,
+        );
+        await assertResponse(runtime, deletion, entry.successPredicate);
+        resource.state = "cleaned";
+      } catch (error) {
+        resource.state = "orphaned";
+        outcome =
+          error instanceof RuntimeError && error.outcome === "failed" ? "failed" : "inconclusive";
+      }
+      await this.resourceEvent("resource.cleanup", resource);
+      return outcome;
+    } catch (error) {
+      await note("error", "the lookup could not complete; nothing was deleted");
+      return error instanceof RuntimeError && error.outcome === "failed"
+        ? "failed"
+        : "inconclusive";
+    }
+  }
   async cleanup(result: RunnerResult): Promise<RunnerResult> {
     let outcome: NonNullable<RunnerResult["cleanupOutcome"]> = "not_required";
     const declarations = this.runtime.input.plan?.cleanup ?? [];
+    // Data found by lookup is created by the last steps (the UI), so it goes before what the
+    // request steps created, each group in reverse order.
+    for (const entry of declarations.filter((declared) => declared.find).reverse()) {
+      const next = await this.cleanupFound(entry);
+      if (next === "failed" || outcome === "failed") outcome = "failed";
+      else if (next === "inconclusive" || outcome === "inconclusive") outcome = "inconclusive";
+      else if (next === "passed") outcome = "passed";
+    }
     for (const resource of [...this.resources].reverse()) {
-      const cleanup = declarations.find((entry) => entry.resourceRef === resource.stepId);
+      const cleanup = declarations.find(
+        (entry) => !entry.find && entry.resourceRef === resource.stepId,
+      );
       if (
         resource.state !== "created" ||
         !resource.handleRef ||
@@ -1625,11 +1801,7 @@ export class HttpEngine {
       resource.state = "cleanup_pending";
       await this.resourceEvent("resource.cleanup", resource);
       try {
-        if (
-          this.runtime.signal.aborted &&
-          /credential_revoked|owner_revoked/u.test(String(this.runtime.signal.reason))
-        )
-          throw new RuntimeError("credential_revoked", "Authorization revoked before cleanup");
+        this.assertCleanupAllowed();
         const response = await this.send(
           `cleanup-${resource.stepId}`,
           cleanup.input,

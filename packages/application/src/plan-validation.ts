@@ -9,7 +9,7 @@ import {
 } from "@testmaster/contracts";
 import { validateProposalPlan } from "@testmaster/planner";
 import { schemaCitations, sourceSchemasFor, unusableSchemas } from "./ai/source-documents.js";
-import { requireEntity, type ServiceContext } from "./context.js";
+import { allEntities, requireEntity, type ServiceContext } from "./context.js";
 import { captureDeclarations } from "./runs.js";
 
 type Check = (typeof planValidationChecks)[number];
@@ -21,6 +21,7 @@ const semanticChecks: Record<string, { check: Check; code: string }> = {
   runner: { check: "types", code: "runner_mismatch" },
   requiredAssertion: { check: "assertions", code: "required_assertion_missing" },
   vacuousCount: { check: "assertions", code: "vacuous_count" },
+  nthCount: { check: "assertions", code: "nth_count" },
 };
 
 /** The id of the innermost step a JSON pointer passes through, so an issue names a step, not just a path. */
@@ -153,6 +154,29 @@ export class PlanValidationService {
       stepId?: string | null,
     ) => void,
   ): void {
+    if (plan.runPolicy === "once" && testId) {
+      const consumed = allEntities(this.ctx, "TestCase").some((other) => {
+        const active = other.activeRevisionId
+          ? this.ctx.entities.get(
+              "TestRevision",
+              this.ctx.workspaceId,
+              String(other.activeRevisionId),
+            )
+          : null;
+        const consumerPlan = active?.plan as ExecutablePlan | null | undefined;
+        return (consumerPlan?.dependsOn ?? []).some(
+          (binding) => binding.required && binding.producerTestId === testId,
+        );
+      });
+      if (consumed)
+        push(
+          "dependencies",
+          "once_producer",
+          "/runPolicy",
+          "A one-shot test cannot be a dependency producer: another test depends on its outputs.",
+          null,
+        );
+    }
     const bindings = plan.dependsOn ?? [];
     if (!bindings.length) return;
     const reaches = (current: string, seen: Set<string>): boolean => {
@@ -208,6 +232,14 @@ export class PlanValidationService {
         continue;
       }
       const producerPlan = revision.plan as ExecutablePlan | null;
+      if (producerPlan?.runPolicy === "once")
+        push(
+          "dependencies",
+          "dependency_producer_once",
+          `${field}/producerTestId`,
+          "The producer is a one-shot test (runPolicy once); a producer must run every time its consumers run.",
+          null,
+        );
       if (
         !producerPlan ||
         !captureDeclarations(producerPlan).some((capture) => capture.name === binding.outputName)

@@ -300,6 +300,44 @@ never binds `<step id>.handle`, so the declared cleanup leaves the resource orph
 `handle_not_captured` for a reference to a handle that is never bound). Generated cleanup paths get the
 specification's server path prefix (`basePath` or the server URL path) like request paths.
 
+Data that a browser step creates (a form that adds a project) has no creating request step to declare
+`input.resource`. Its `cleanup` entry carries `find` instead and `resourceRef` names the plan step that creates the data:
+
+```json
+{
+  "resourceRef": "submit-project",
+  "operation": "request",
+  "find": {
+    "resourceType": "project",
+    "lookup": { "method": "GET", "pathSegments": [{ "literal": "api" }, { "literal": "projects" }], "auth": "profile" },
+    "itemsPointer": "/items",
+    "keyPointer": "/name",
+    "equals": { "variableRef": "project_name" },
+    "handlePointer": "/id",
+    "ownerProofPointer": "/ownerId",
+    "totalPointer": "/total"
+  },
+  "input": { "method": "DELETE", "pathSegments": [{ "literal": "api" }, { "literal": "projects" }, { "variableRef": "submit-project.handle" }], "auth": "profile" },
+  "successPredicate": { "predicate": "statusIn", "values": [200, 204, 404] },
+  "deadlineMs": 10000,
+  "required": true
+}
+```
+
+The runner runs the lookup (GET only, no body, capture or resource) at cleanup time, before the cleanups of
+request-created resources, and deletes only when exactly one item's `keyPointer` equals `equals` (a scalar, never
+sensitive, compared strictly by type) and the item carries a non-empty `handlePointer` and `ownerProofPointer`.
+No match deletes nothing and passes: nothing was created. Two or more matches fail the cleanup and nothing is deleted
+(never the first of several). A match without handle or ownerProof, a lookup that does not answer 2xx with a JSON array at
+`itemsPointer`, and a paged list (`totalPointer` above the items returned, or a `Link` header with `rel="next"`) end the
+cleanup `inconclusive`, so a gate fails rather than reading a partial list as "nothing created". A match is recorded as a
+resource like a request-created one, so a deletion that fails is listed orphaned and can be compensated with
+`resource cleanup`. Give the data a name unique to the run (a captured or dependency value in `equals`): the lookup deletes
+whatever one item carries that name, including a leftover of an earlier run. Validation refuses a non-GET lookup, a
+lookup with a body, capture or resource, a `variableRef` no step captures (or the entry's own `<resourceRef>.handle`),
+a sensitive `equals`, an empty `handlePointer`/`ownerProofPointer`, and a `resourceRef` that names no step or a request that
+declares `input.resource`; code export refuses a plan with `find`.
+
 Exact flags: `testmaster <group> <command> --help`.
 
 ### What plan generation can use
@@ -351,6 +389,21 @@ URL. When the destination carries a query that is not fixed (a `return_to` param
 
 Keep the origin out of the pattern so the plan runs against every environment. Both URL predicates belong to browser
 (`playwright`) plans; an HTTP plan asserts a redirect with `statusIn` and `headerMatches` on `Location`.
+
+### The nth item of a list
+
+A locator that matches more than one element fails as ambiguous: the runner never picks one silently. When the target
+is genuinely the n-th of several identical elements (the second of two identical buttons, one row of a list), add
+`nth`, a 0-based index applied last, after `container`, `frame` and `pageAlias`:
+
+- `{"by": "role", "role": "button", "name": "Delete", "exact": true, "nth": 1}` acts on the second Delete button.
+
+The runner takes that one match and skips the ambiguity check; an index past the last match never attaches and fails
+with `assertion_timeout` like a missing element. Do not use `nth` to hide an ambiguity that a name, label, test id or
+container would resolve: the index silently retargets when the list changes, so healing never repairs or replaces a
+locator that carries `nth`. A count predicate (`countEquals`, `countAtLeast`, `countAtMost`) refuses a locator with `nth`
+(`nthCount`), because one match is always a count of 0 or 1: count the unscoped locator, or put `nth` on its
+`container`. Exported Playwright and pytest code applies `.nth(n)` last.
 
 ### Text of a response
 
@@ -467,6 +520,31 @@ additional origin only like it does for the `baseUrl`: that exact host and port,
 network profile permits (`local-loopback` loopback, `private` private ranges; the `public` profile never reaches
 either). Offline profiles ignore the list. Every change creates a new environment revision, so earlier approvals do
 not apply.
+
+#### Ignored origins
+
+Some pages load a third-party script you never want a test to reach, such as a payment widget. List it as an
+ignored origin instead of an additional one:
+
+```bash
+testmaster env update "$ENV_ID" --expected-version 3 --ignored-origin https://js.stripe.com
+testmaster env update "$ENV_ID" --expected-version 4 --clear-ignored-origins
+```
+
+`--ignored-origin` replaces the whole list (`ignoredOrigins` in the API and MCP; at most 32 exact `http(s)`
+origins, no wildcard, path, query or credentials, disjoint from the `baseUrl` and the additional origins). A
+request to an ignored origin is aborted before it leaves the browser, whatever its type (script, `fetch`, XHR,
+document, WebSocket), and recorded as an `egress.denied` event with disposition `ignored` and reason
+`origin_ignored` in `logs/egress.ndjson`. It never fails the run, so a plan or imported test that only reaches
+that origin through a script that is allowed to fail passes. Nothing is sent to the origin: it is never added to
+the allowlist, and the list applies under every network profile, offline ones too. A request whose URL cannot be
+read unambiguously is never ignored; it stays a fatal denial.
+
+Without the entry, an unapproved script is a fatal denial (`blocked/egress_denied`); only passive images, fonts,
+stylesheets and media are aborted without failing the run. Imported Playwright and pytest code follow the same
+rule through the pages of the `page` and `context` fixtures. A context a test builds itself with
+`browser.newContext()`, and the `request` fixtures, rely on the egress proxy alone: they cannot reach an
+unapproved origin, but they are neither ignored nor reported by origin.
 
 The proxy also removes the forwarding and proxy headers a page or runner request carries (`X-Forwarded-*`,
 `Forwarded`, `Via`, `Proxy-*`) before the request reaches the target, like a reverse proxy that drops
@@ -631,7 +709,7 @@ invalid source is an error that lists its diagnostics), `testmaster_normalize_re
 inside an approved root or from an environment variable of the MCP process, never from an argument),
 `testmaster_rotate_secret` (a new value for a secret whose name is taken: names are unique in the workspace, and
 `testmaster_set_secret` refuses a taken one with `details.secretId`),
-`testmaster_save_auth_profile` and `testmaster_update_environment` (`authRefs`, `additionalOrigins`). Create the
+`testmaster_save_auth_profile` and `testmaster_update_environment` (`authRefs`, `additionalOrigins`, `ignoredOrigins`). Create the
 secrets and auth profiles before `testmaster_generate_plan`, because the model is offered only what already exists;
 it is told which secrets each auth profile binds to which role, so a browser login fills the profile's account.
 Every decision is recorded with the acting principal. `testmaster_review_plan` (accept or reject),

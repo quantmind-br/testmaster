@@ -26,6 +26,12 @@ export const Locator = Type.Recursive((Self) => {
     container: Type.Optional(Self),
     frame: Type.Optional(Self),
     pageAlias: Type.Optional(Name),
+    nth: Type.Optional(
+      described(
+        Nonnegative,
+        "0-based index of the match to use, applied after pageAlias, frame and container scoping. The runner takes that one match and does not reject ambiguity; an index past the last match never attaches (assertion_timeout). Use it only when the target is genuinely the nth item of a list, never to paper over an ambiguous locator. Count predicates refuse a locator with nth.",
+      ),
+    ),
   };
   return Type.Union([
     Obj({ by: Type.Literal("testId"), value: Name, ...scope }),
@@ -455,14 +461,70 @@ export const DependencyBinding = Obj({
   maximumAge: Positive,
   permittedEnvironment: id("env"),
 });
+/**
+ * How a cleanup entry finds data a browser step created, which no request step can declare with
+ * `input.resource`: a GET request run at cleanup time lists the items, exactly one item whose key
+ * equals a plan value is the data to delete.
+ */
+const CleanupFind = Obj(
+  {
+    resourceType: described(
+      Name,
+      "Kind of the data the lookup finds (for example project); recorded on the resource and shown to the approver of a manual cleanup",
+    ),
+    lookup: described(
+      RequestInput,
+      "GET request run at cleanup time that lists the items (a list or search route of the application). It takes no body, capture or resource, and no variableRef that only the cleanup defines",
+    ),
+    itemsPointer: described(
+      JsonPointer,
+      'JSON pointer to the array of items in the lookup response; "" when the response body is the array',
+    ),
+    keyPointer: described(
+      JsonPointer,
+      "JSON pointer inside each item to the field compared with equals (for example /name)",
+    ),
+    equals: described(
+      Type.Union([
+        Obj({
+          literal: Type.Union([Type.String({ maxLength: 200 }), Type.Number(), Type.Boolean()]),
+        }),
+        Obj({ variableRef: Name }),
+      ]),
+      "The value the plan gave the data when a step created it. Scalar and never sensitive (no secretRef, no sensitive capture): it is stored as the resource's correlation key. Pick a value no other data of the account has, for example one carrying a captured or dependency value unique to the run",
+    ),
+    handlePointer: described(
+      JsonPointer,
+      'JSON pointer inside the matched item to the id the deletion request uses; the input refers to it as {"variableRef": "<resourceRef>.handle"}',
+    ),
+    ownerProofPointer: described(
+      JsonPointer,
+      "JSON pointer inside the matched item to a field proving the run's account owns it (creator, user or tenant id). A match without it is never deleted",
+    ),
+    totalPointer: Type.Optional(
+      described(
+        JsonPointer,
+        "JSON pointer to the total item count in the lookup response. When the total exceeds the items returned, or the response has a Link header with rel=next, the list is paged and the cleanup ends inconclusive instead of reading zero matches as nothing created",
+      ),
+    ),
+  },
+  {
+    description:
+      "Cleanup by lookup. resourceRef then names the plan step that creates the data through the UI (any step, not a request step with input.resource). Run before the cleanup of request-created resources, in reverse order of the entries. No match: nothing is deleted and the cleanup passes; two or more matches, or a match without handle or ownerProof: nothing is deleted and the cleanup fails or is inconclusive; never the first match",
+  },
+);
 const buildCleanup = <E extends TSchema>(expectation: E) =>
   Obj({
     resourceRef: described(
       Name,
-      "Id of the request step that creates the resource and declares input.resource with handle and ownerProof",
+      "Id of the request step that creates the resource and declares input.resource with handle and ownerProof; with find, the id of the plan step that creates the data",
     ),
     operation: Type.Literal("request"),
-    input: RequestInput,
+    input: described(
+      RequestInput,
+      "The deletion request, run once the resource is known (with find, once exactly one item matched)",
+    ),
+    find: Type.Optional(CleanupFind),
     successPredicate: described(
       expectation,
       "Cleanup runs after the steps, also when a step already deleted the resource: accept the deletion route's answer for a missing resource too (for example statusIn [200, 404])",
@@ -485,6 +547,12 @@ export const ExecutablePlan = Obj({
   cleanup: Type.Optional(Type.Array(Cleanup)),
   tags: Type.Optional(Type.Array(Name)),
   priority: Type.Optional(Priority),
+  runPolicy: Type.Optional(
+    described(
+      Enum(["always", "once"]),
+      "always (default) runs on every request. once: a batch or suite skips the test while its active revision has a fresh passing replay against the environment's active revision (a new environment revision re-arms it); a one-shot test cannot be a dependency producer",
+    ),
+  ),
 });
 /** An ExecutablePlan as a model may propose it: no terminal tests, so their operations and predicates are not in prompts. */
 export const ModelExecutablePlan = Obj({

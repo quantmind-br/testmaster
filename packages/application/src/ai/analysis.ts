@@ -682,6 +682,43 @@ function codeThrow(steps: readonly Evidence[]): Evidence | undefined {
   const item = codeFailure(steps);
   return item?.step?.reasonCode === "insufficient_evidence" ? item : undefined;
 }
+/** Playwright's messages for a locator action that matched several elements or timed out. */
+const CODE_STRICT =
+  /^\s*(?:[\w.]*Error: )?(?:[Ll]ocator\.\w+: )?(?:\w*Error: )?strict mode violation: ([^\n]*?) resolved to (\d+) elements?\b/u;
+const CODE_LOCATOR_TIMEOUT =
+  /^\s*(?:[\w.]*Error: )?[Ll]ocator\.\w+: (?:\w*Error: )?Timeout \d+ms exceeded\b/u;
+const CODE_LOCATOR_RESOLVED = /^\s*-\s+locator resolved to\b/mu;
+const CODE_WAITING_FOR = /^\s*-\s+waiting for (.+?)\s*$/mu;
+/** A code step the runner failed because its locator matched several elements or never matched. */
+interface CodeLocatorFailure {
+  item: Evidence;
+  ambiguous: boolean;
+  locator: string | null;
+  count: number | null;
+}
+/**
+ * The failed code step whose recorded error is a locator action ending in a verdict: a strict mode
+ * violation (the locator resolved to several elements) or a timeout of a locator that never
+ * attached. The runner fails both like the plan runner's ambiguous and never-attached locators,
+ * bare or inside `test.step`; a locator that attached but did not complete stays inconclusive and
+ * is read as a thrown error (`codeThrow`).
+ */
+function codeLocatorFailure(steps: readonly Evidence[]): CodeLocatorFailure | undefined {
+  const item = codeFailure(steps);
+  const message = item?.step?.status === "failed" ? item.step.error?.message : undefined;
+  if (!item || message === undefined) return undefined;
+  const strict = CODE_STRICT.exec(message);
+  if (strict)
+    return { item, ambiguous: true, locator: strict[1] ?? null, count: Number(strict[2]) };
+  if (CODE_LOCATOR_TIMEOUT.test(message) && !CODE_LOCATOR_RESOLVED.test(message))
+    return {
+      item,
+      ambiguous: false,
+      locator: CODE_WAITING_FOR.exec(message)?.[1] ?? null,
+      count: null,
+    };
+  return undefined;
+}
 /** The first line of a recorded error message, with the `at file:line[:column]` it ends on. */
 function errorHeadline(message: string): string {
   const [first = "", ...rest] = message.split("\n");
@@ -1005,7 +1042,7 @@ function terminalObserved(process: TerminalProcessEvidence): string {
 interface EgressDenialEvidence {
   origin: string;
   resourceType: string;
-  disposition: "aborted" | "fatal";
+  disposition: "aborted" | "ignored" | "fatal";
   count: number;
 }
 /** Payload of a persisted `egress.denied` runner observation; null for any other evidence. */
@@ -1018,7 +1055,7 @@ function egressDenial(value: unknown): EgressDenialEvidence | null {
   if (
     typeof origin !== "string" ||
     typeof resourceType !== "string" ||
-    (disposition !== "aborted" && disposition !== "fatal") ||
+    (disposition !== "aborted" && disposition !== "ignored" && disposition !== "fatal") ||
     typeof count !== "number"
   )
     return null;
@@ -1050,7 +1087,10 @@ function egressDenialFacts(evidence: readonly Evidence[]): {
   });
   return {
     facts: denials.slice(0, 10).map(({ denial, ref }) => ({
-      text: `The network policy ${denial.disposition === "aborted" ? "aborted" : "denied"} ${denial.count} ${denial.resourceType} request${denial.count === 1 ? "" : "s"} to ${denial.origin}${denial.disposition === "aborted" ? "; the page continued and the run was not failed by it" : "; the denial blocked the run"}.`,
+      text:
+        denial.disposition === "ignored"
+          ? `The environment ignores ${denial.origin}: ${denial.count} ${denial.resourceType} request${denial.count === 1 ? " was" : "s were"} aborted and recorded; the run was not failed by it.`
+          : `The network policy ${denial.disposition === "aborted" ? "aborted" : "denied"} ${denial.count} ${denial.resourceType} request${denial.count === 1 ? "" : "s"} to ${denial.origin}${denial.disposition === "aborted" ? "; the page continued and the run was not failed by it" : "; the denial blocked the run"}.`,
       evidenceRefs: [ref],
     })),
     omitted: Math.max(0, denials.length - 10),
@@ -2361,6 +2401,9 @@ export class AnalysisService {
     const failed = codeFailure(steps) ?? steps.find((item) => item.step!.status === "failed");
     // A code test that threw records no comparison: its expected and observed are not reported.
     const codeThrown = codeThrow(steps);
+    // A code locator that matched several elements, or never matched one, records no comparison
+    // either: the diagnosis names the locator and what it matched instead.
+    const codeLocator = codeLocatorFailure(steps);
     // A timed-out terminal process records no expected/observed values; its own artifact holds
     // the evidence, which is what the diagnosis reports instead of a null value.
     const processId = failed?.planStep
@@ -2623,11 +2666,14 @@ export class AnalysisService {
       Boolean(collected.plan?.cleanup?.length) &&
       run.cleanupOutcome !== "passed";
     const leftGaps = cleanupLeft ? cleanupGaps(collected.plan) : [];
+    const lookupCleanup = Boolean(collected.plan?.cleanup?.some((entry) => entry.find));
     if (cleanupLeft)
       next(
         leftGaps.length
           ? "Give every resource-creating request a handle and an ownerProof (a JSON pointer to a response field that proves the caller owns the resource) and a cleanup entry for that step, then rerun the test; delete what earlier runs left on the target."
-          : "Read the run's resource.cleanup events to find the resource left behind, fix its cleanup request or success predicate, then rerun the test.",
+          : lookupCleanup
+            ? "Read the run's cleanup lookup log lines and resource.cleanup events: a cleanup that finds its data by lookup deletes nothing when two items match, the match lacks a handle or ownerProof, or the list is paged. Make the key value unique to the run, fix the pointers or set totalPointer, rerun the test, and delete what the run left on the target."
+            : "Read the run's resource.cleanup events to find the resource left behind, fix its cleanup request or success predicate, then rerun the test.",
       );
     if (run.outcome === "passed")
       conclusion = !gateFailedPass
@@ -2643,7 +2689,9 @@ export class AnalysisService {
                 text: `The Run's assertions passed but its gate failed because its cleanup ended ${run.cleanupOutcome}: ${
                   leftGaps.length
                     ? leftGaps.join("; ")
-                    : "a resource it created was not deleted by its cleanup request, or its creation response did not prove ownership"
+                    : lookupCleanup
+                      ? "the data a browser step created was not deleted: its cleanup lookup matched no single item with a handle and ownerProof, or its deletion request failed"
+                      : "a resource it created was not deleted by its cleanup request, or its creation response did not prove ownership"
                 }. What it created may remain on the target.`,
               }
             : {
@@ -2729,6 +2777,43 @@ export class AnalysisService {
         advice: "not_indicated",
         reason:
           "Healing proposes locator changes to a declarative plan; this code test threw before any assertion, so its code must be fixed or regenerated.",
+      };
+    } else if (codeLocator && failureKind === "test_fragility") {
+      const target = codeLocator.locator
+        ? scrubEvidenceText(codeLocator.locator, secrets).text.slice(0, 300)
+        : "its locator";
+      if (codeLocator.ambiguous) {
+        conclusion = {
+          status: "cause_partially_supported",
+          text: `Step ${location} acted on ${target}, which matched ${codeLocator.count} elements, so the action had no single target (strict mode violation). The code's locator is ambiguous on the page it ran against; whether the locator is too broad or the page gained a matching element is not established.`,
+        };
+        alternative(
+          "The page may legitimately show several matching controls now (a product change); the code's locator must then be narrowed.",
+          "product_bug",
+        );
+        next(
+          `Narrow ${target} in the test code (by role and name, a test id, or \`.nth()\` only when the target really is the nth item of a list), or regenerate the test, then rerun it; the error and its location are recorded on step ${location}.`,
+          [codeLocator.item.ref],
+        );
+      } else {
+        conclusion = {
+          status: "cause_partially_supported",
+          text: `Step ${location} waited for ${target} until its timeout and the locator never matched an element, so the control the code acts on was not on the page. Whether the control was removed or renamed, the page did not reach that state, or the code's locator is wrong is not established.`,
+        };
+        alternative(
+          "The control may be missing because the product changed or regressed, or because the page did not reach the expected state.",
+          "product_bug",
+        );
+        alternative("The environment may have been slow or unavailable.", "environment");
+        next(
+          `Check whether ${target} still exists on the page the code reached (the failure screenshot and DOM recorded for step ${location}, when present), then fix the locator in the test code or regenerate the test and rerun it.`,
+          [codeLocator.item.ref],
+        );
+      }
+      healing = {
+        advice: "not_indicated",
+        reason:
+          "Healing proposes locator changes to a declarative plan; this locator is in test code, which must be fixed or regenerated.",
       };
     } else if (statusRejection) {
       const { meaning, status, expected, target, item, http, request } = statusRejection;
@@ -2985,6 +3070,7 @@ export class AnalysisService {
         );
       });
       const codeThrown = codeThrow(evidence);
+      const codeLocator = codeLocatorFailure(evidence);
       const unusable = unusableSchema(evidence);
       const schema = evidence.find(
         (item) =>
@@ -3227,6 +3313,16 @@ export class AnalysisService {
           secrets,
         ).text.slice(0, 1000);
         supports = [codeThrown.ref];
+      } else if (codeLocator) {
+        failureKind = "test_fragility";
+        recommendedAction = "fix_test";
+        hypothesis = scrubEvidenceText(
+          codeLocator.ambiguous
+            ? `The test code's locator ${codeLocator.locator ?? ""} matched ${codeLocator.count} elements, so its action had no single target; the locator is ambiguous on the page it ran against, which is not an established product cause.`
+            : `The test code waited for its locator ${codeLocator.locator ?? ""} until the timeout and it never matched an element; the control was missing or the locator is wrong, which is not an established product cause.`,
+          secrets,
+        ).text.slice(0, 1000);
+        supports = [codeLocator.item.ref];
       } else if (locatorSupport.length) {
         failureKind = "test_fragility";
         recommendedAction = "fix_test";

@@ -70,6 +70,15 @@
       },
       "description": "Exact extra origins page subrequests may reach; replaces the list, [] clears it. They never receive credentials"
     },
+    "ignoredOrigins": {
+      "maxItems": 32,
+      "type": "array",
+      "items": {
+        "format": "uri",
+        "type": "string"
+      },
+      "description": "Exact origins whose requests are aborted and recorded without failing the run; replaces the list, [] clears it. Never reached"
+    },
     "authRefs": {
       "maxItems": 16,
       "type": "array",

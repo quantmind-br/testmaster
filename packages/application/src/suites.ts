@@ -15,12 +15,15 @@ import { semanticHash } from "@testmaster/domain";
 import type { EntityDocument } from "@testmaster/persistence";
 import { auditSecurity } from "./audit.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "./context.js";
+import { onceSatisfiedRun } from "./once.js";
 import type { BatchesService } from "./runs.js";
 
 export interface StoredSuite extends EntityDocument {
   name: string;
   description: string;
   selection: SuiteSelection;
+  /** Minimum ms between the starts of consecutive members of a batch; absent: no pacing. */
+  memberIntervalMs?: number;
   state: "active" | "archived";
   createdBy: string;
   updatedAt: string;
@@ -35,8 +38,8 @@ export interface SuiteRunOptions {
   idempotencyKey?: string;
   /** Admit even when no worker is live; the Runs then wait for one. */
   wait?: boolean;
-  /** The caller's flag naming `wait`, quoted when no worker is live (CLI: `--queue`). */
-  waitFlag?: string;
+  /** The caller's flags that admit without a live worker, quoted in the refusal (CLI: `--wait`, `--queue`). */
+  waitFlags?: readonly string[];
   scheduleId?: string | null;
   /** Runs inside the admission transaction (a stale scheduler leader throws here). */
   guard?: () => void;
@@ -181,6 +184,7 @@ export class SuitesService {
         name: input.name,
         description: input.description ?? "",
         selection: input.selection,
+        ...(input.memberIntervalMs ? { memberIntervalMs: input.memberIntervalMs } : {}),
         state: "active",
         createdBy: this.ctx.principalId,
         updatedAt: now,
@@ -200,11 +204,14 @@ export class SuitesService {
         throw new ContractError("PRECONDITION_FAILED", "Archived list cannot be modified");
       if (patch.selection) this.assertSelection(patch.selection);
       if (patch.name) this.assertUniqueName(patch.name, id);
+      const { memberIntervalMs: currentInterval, ...kept } = current;
+      const memberIntervalMs = patch.memberIntervalMs ?? currentInterval;
       const next = {
-        ...current,
+        ...kept,
         name: patch.name ?? current.name,
         description: patch.description ?? current.description,
         selection: patch.selection ?? current.selection,
+        ...(memberIntervalMs ? { memberIntervalMs } : {}),
         updatedAt: new Date().toISOString(),
         version: expectedVersion + 1,
       };
@@ -242,16 +249,28 @@ export class SuitesService {
     validate("SuiteInput", input);
     this.ctx.authorize("R");
     this.assertSelection(input.selection);
-    return this.resolve(input.selection, null).expansion;
+    return this.resolve(input.selection, null, input.memberIntervalMs).expansion;
   }
 
   /**
    * Resolves a selection for the requester. Projects they cannot read and execute in become
    * exclusions keyed by project (no names), so a revoked grant is visible and never omitted.
    */
-  resolve(selection: SuiteSelection, ref: { id: string; version: number } | null): ResolvedSuite {
+  resolve(
+    selection: SuiteSelection,
+    ref: { id: string; version: number } | null,
+    /** Pacing of an unsaved definition; a stored list carries its own. */
+    pacing?: number,
+  ): ResolvedSuite {
+    const memberIntervalMs =
+      pacing ??
+      (ref
+        ? (this.ctx.entities.get("Suite", this.ctx.workspaceId, ref.id) as StoredSuite | null)
+            ?.memberIntervalMs
+        : undefined);
     const members: Member[] = [];
     const requests: RunRequest[] = [];
+    const satisfied: NonNullable<SuiteExpansion["satisfied"]> = [];
     const exclusions: Exclusion[] = [];
     const mapping = new Map<string, Mapping & { secrets: Set<string> }>();
     const excludedProjects = new Set<string>();
@@ -342,11 +361,24 @@ export class SuitesService {
         environmentId: env.env.id,
         environmentName: String(env.env.name),
       });
-      requests.push({
+      const request: RunRequest = {
         testId: test.id,
         revisionId: revision.id,
         environmentId: env.env.id,
-      });
+        // Frozen on every member run at admission (pacing is enforced at claim).
+        ...(memberIntervalMs
+          ? { extensions: { "testmaster:memberIntervalMs": memberIntervalMs } }
+          : {}),
+      };
+      requests.push(request);
+      // A one-shot test that already passed is skipped at admission; the preview says so.
+      const priorRunId = onceSatisfiedRun(this.ctx, request);
+      if (priorRunId)
+        satisfied.push({
+          memberKey: `${members.length - 1}:${test.id}`,
+          testId: test.id,
+          priorRunId,
+        });
       let row = mapping.get(projectId);
       if (!row) {
         row = {
@@ -441,6 +473,7 @@ export class SuitesService {
       members: members.map(({ memberKey: _key, ...rest }) => rest),
       exclusions,
       mapping: finalMapping,
+      ...(memberIntervalMs ? { memberIntervalMs } : {}),
     };
     const expansion: SuiteExpansion = {
       suiteId: (ref?.id ?? null) as SuiteExpansion["suiteId"],
@@ -448,11 +481,14 @@ export class SuitesService {
       kind: selection.kind,
       resolvedAt: new Date().toISOString(),
       hash: semanticHash(body),
+      ...(memberIntervalMs ? { memberIntervalMs } : {}),
       members,
       exclusions,
       mapping: finalMapping,
       requiresConfirmation: exclusions.map((item) => item.key),
       dispatchable: members.length > 0,
+      // Informational: the batch decides again at admission, so it is not part of the hash.
+      ...(satisfied.length ? { satisfied } : {}),
     };
     return { expansion, requests };
   }
@@ -542,7 +578,7 @@ export class SuitesService {
     return this.batches.admit(request, {
       idempotencyKey: options.idempotencyKey,
       ...(options.wait === undefined ? {} : { wait: options.wait }),
-      ...(options.waitFlag ? { waitFlag: options.waitFlag } : {}),
+      ...(options.waitFlags ? { waitFlags: options.waitFlags } : {}),
       provenance: {
         suiteId: expansion.suiteId,
         scheduleId: options.scheduleId ?? null,
@@ -552,6 +588,7 @@ export class SuitesService {
           kind: expansion.kind,
           resolvedAt: expansion.resolvedAt,
           hash: expansion.hash,
+          ...(expansion.memberIntervalMs ? { memberIntervalMs: expansion.memberIntervalMs } : {}),
           members: expansion.members,
           exclusions: expansion.exclusions,
           mapping: expansion.mapping,

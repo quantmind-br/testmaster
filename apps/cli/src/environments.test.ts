@@ -170,3 +170,94 @@ it("env update refuses combining --additional-origin with --clear-additional-ori
     environment.version,
   );
 });
+
+/** `ignoredOrigins` of every revision of the environment, newest first. */
+async function revisionIgnored(base: string[], id: string): Promise<string[][]> {
+  const listed = (await invoke([...base, "env", "revisions", id])).document.data;
+  if (!Array.isArray(listed)) throw new Error("env revisions did not return a list");
+  return listed.map((revision) => revision.ignoredOrigins);
+}
+
+it("env create and update manage exact ignored origins, and env revisions lists them", async () => {
+  const base = await workspace();
+  const created = await invoke([
+    ...base,
+    "env",
+    "create",
+    "--name",
+    "staging",
+    "--base-url",
+    "https://app.example.test",
+    "--network-profile",
+    "public",
+    "--ignored-origin",
+    "https://js.stripe.com",
+    "--ignored-origin",
+    "https://m.stripe.network",
+  ]);
+  expect(created.exit ?? 0).toBe(0);
+  const environment = environmentOf(created);
+  expect(await revisionIgnored(base, environment.id)).toEqual([
+    ["https://js.stripe.com", "https://m.stripe.network"],
+  ]);
+
+  const update = async (current: EnvironmentData, ...flags: string[]) => {
+    const result = await invoke([
+      ...base,
+      "env",
+      "update",
+      environment.id,
+      "--expected-version",
+      String(current.version),
+      ...flags,
+    ]);
+    expect(result.exit ?? 0).toBe(0);
+    return environmentOf(result);
+  };
+  // The flag replaces the list; omitting it keeps the list; the clear flag empties it.
+  const replaced = await update(environment, "--ignored-origin", "https://js.example.test");
+  const relocalized = await update(replaced, "--locale", "pt-BR");
+  await update(relocalized, "--clear-ignored-origins");
+  expect(await revisionIgnored(base, environment.id)).toEqual([
+    [],
+    ["https://js.example.test"],
+    ["https://js.example.test"],
+    ["https://js.stripe.com", "https://m.stripe.network"],
+  ]);
+});
+
+it("env update refuses combining --ignored-origin with --clear-ignored-origins, invalid origins and overlaps", async () => {
+  const base = await workspace();
+  const created = await invoke([
+    ...base,
+    "env",
+    "create",
+    "--name",
+    "staging",
+    "--base-url",
+    "https://app.example.test",
+    "--network-profile",
+    "public",
+  ]);
+  const environment = environmentOf(created);
+  for (const flags of [
+    ["--ignored-origin", "https://js.stripe.com", "--clear-ignored-origins"],
+    ["--ignored-origin", "https://js.stripe.com/v3"],
+    ["--ignored-origin", "https://*.stripe.com"],
+    ["--ignored-origin", "https://app.example.test"],
+    ["--ignored-origin", "https://flagcdn.com", "--additional-origin", "https://flagcdn.com"],
+  ]) {
+    const result = await invoke([
+      ...base,
+      "env",
+      "update",
+      environment.id,
+      "--expected-version",
+      String(environment.version),
+      ...flags,
+    ]);
+    expect(result.exit).not.toBe(0);
+    expect(result.document.error).toMatchObject({ code: "INVALID_ARGUMENT" });
+  }
+  expect(await revisionIgnored(base, environment.id)).toEqual([[]]);
+});

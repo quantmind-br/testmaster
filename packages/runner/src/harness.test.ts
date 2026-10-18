@@ -301,4 +301,42 @@ describe("importedResult", () => {
       importedResult({ ...failed, assertionFailures: 2, assertionTimeouts: 1 }, undefined),
     ).toEqual({ outcome: "failed", reasonCode: "assertion_mismatch" });
   });
+  it("blocks the run on a fatal egress denial whatever the assertions saw, unless the attempt was cancelled", () => {
+    const denied = { steps: 2, failures: 1, assertionFailures: 1, exitCode: 1, egressDenied: true };
+    expect(importedResult(denied, undefined)).toEqual({
+      outcome: "blocked",
+      reasonCode: "egress_denied",
+    });
+    expect(importedResult({ ...none, egressDenied: true }, undefined)).toEqual({
+      outcome: "blocked",
+      reasonCode: "egress_denied",
+    });
+    const cancelled = { outcome: "cancelled", reasonCode: "user_cancelled" } as const;
+    expect(importedResult({ ...none, egressDenied: true }, cancelled)).toEqual(cancelled);
+    // Control: an ignored or aborted denial never sets the flag, so the run passes.
+    expect(importedResult({ ...none, egressDenied: false }, undefined)).toEqual({
+      outcome: "passed",
+      reasonCode: "assertions_satisfied",
+    });
+  });
+  it("takes a locator that never attached as the verdict and leaves an attached one's timeout inconclusive", () => {
+    // One step timed out on a locator that never attached (failed/assertion_timeout); another
+    // timed out on one that attached (inconclusive, not an assertion failure).
+    const mixed = {
+      steps: 3,
+      failures: 2,
+      assertionFailures: 1,
+      assertionTimeouts: 1,
+      exitCode: 1,
+    };
+    expect(importedResult(mixed, undefined)).toEqual({
+      outcome: "failed",
+      reasonCode: "assertion_timeout",
+    });
+    const attachedOnly = { steps: 2, failures: 1, assertionFailures: 0, exitCode: 1 };
+    expect(importedResult(attachedOnly, undefined)).toEqual({
+      outcome: "inconclusive",
+      reasonCode: "insufficient_evidence",
+    });
+  });
 });

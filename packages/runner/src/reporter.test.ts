@@ -254,6 +254,74 @@ it("reports a failure once, on the innermost step, and not again on the test.ste
   });
 });
 
+const STRICT_ERROR =
+  "Error: locator.click: Error: strict mode violation: getByRole('button', { name: 'Two' }) resolved to 2 elements:\n    1) <button>Two</button>\n\nCall log:\n  - waiting for getByRole('button', { name: 'Two' })";
+const NEVER_ATTACHED_ERROR =
+  "TimeoutError: locator.click: Timeout 1500ms exceeded.\nCall log:\n  - waiting for getByRole('button', { name: 'Missing' })";
+const ATTACHED_ERROR =
+  "TimeoutError: locator.click: Timeout 1500ms exceeded.\nCall log:\n  - waiting for getByRole('button', { name: 'Off' })\n    - locator resolved to <button disabled>Off</button>\n  - attempting click action\n    - element is not enabled";
+const LOCATOR_VERDICTS = [
+  ["a strict mode violation", STRICT_ERROR, "failed", "assertion_mismatch"],
+  [
+    "a timeout of a locator that never attached",
+    NEVER_ATTACHED_ERROR,
+    "failed",
+    "assertion_timeout",
+  ],
+  ["a timeout of a locator that attached", ATTACHED_ERROR, "inconclusive", "insufficient_evidence"],
+] as const;
+
+it.each(LOCATOR_VERDICTS)(
+  "gives %s the same verdict bare in the test body and inside test.step",
+  async (_name, message, status, reasonCode) => {
+    const error = { message, location };
+    const bare = failedTest([error]);
+    const sentBare = await report((reporter) => {
+      reporter.onTestBegin(bare.test as never);
+      reporter.onTestEnd(bare.test as never, bare.result as never);
+    });
+    expect(sentBare[1]?.payload).toMatchObject({ status, reasonCode });
+    // Wrapped in test.step, the step and the test around it carry the same verdict.
+    const wrapped = failedTest([error]);
+    const step = { category: "test.step", title: "click", error };
+    const sentWrapped = await report((reporter) => {
+      reporter.onTestBegin(wrapped.test as never);
+      reporter.onStepBegin(wrapped.test as never, wrapped.result as never, step as never);
+      reporter.onStepEnd(wrapped.test as never, wrapped.result as never, step as never);
+      reporter.onTestEnd(wrapped.test as never, wrapped.result as never);
+    });
+    const finished = sentWrapped.filter((entry) => entry.type === "step.finished");
+    expect(finished.map((entry) => [entry.payload.status, entry.payload.reasonCode])).toEqual([
+      [status, reasonCode],
+      [status, reasonCode],
+    ]);
+    expect(finished[0]?.payload).toMatchObject({
+      error: { message: expect.stringContaining(message.split("\n")[0] as string) },
+    });
+  },
+);
+
+it("keeps another thrown action timeout inconclusive, bare and inside test.step", async () => {
+  const error = {
+    message:
+      'TimeoutError: page.goto: Timeout 30000ms exceeded.\nCall log:\n  - navigating to "http://x/"',
+    location,
+  };
+  const { test, result } = failedTest([error]);
+  const step = { category: "test.step", title: "open", error };
+  const sent = await report((reporter) => {
+    reporter.onTestBegin(test as never);
+    reporter.onStepBegin(test as never, result as never, step as never);
+    reporter.onStepEnd(test as never, result as never, step as never);
+    reporter.onTestEnd(test as never, result as never);
+  });
+  for (const entry of sent.filter((message) => message.type === "step.finished"))
+    expect(entry.payload).toMatchObject({
+      status: "inconclusive",
+      reasonCode: "insufficient_evidence",
+    });
+});
+
 it("sends the title of a test and of its steps with each start and finish, cut at 500 characters", async () => {
   const test = { expectedStatus: "passed", title: "logs in" };
   const result = { status: "passed", errors: [], duration: 1, attachments: [] };
@@ -374,4 +442,53 @@ it("turns the shim's capture warning into a warn log without changing the verdic
     payload: { level: "warn", message: "Page evidence of the failed test is unavailable: closed" },
   });
   expect(sent[2]?.payload).toMatchObject({ status: "inconclusive" });
+});
+
+const egressDenial = {
+  origin: "https://js.example.test",
+  method: "GET",
+  resourceType: "script",
+  disposition: "ignored",
+  count: 2,
+};
+const egressAttachment = (body: unknown, extra: object = {}) => ({
+  name: "testmaster-egress-denials",
+  contentType: "application/json",
+  body: Buffer.from(typeof body === "string" ? body : JSON.stringify(body)),
+  ...extra,
+});
+
+it("forwards the shim's egress denials as egress.denied events before the step finishes, for a passed test too", async () => {
+  const passed = withAttachments("passed", [egressAttachment([egressDenial])]);
+  const sent = await report((reporter) => {
+    reporter.onTestBegin(passed.test as never);
+    reporter.onTestEnd(passed.test as never, passed.result as never);
+  });
+  expect(sent.map((message) => message.type)).toEqual([
+    "step.started",
+    "egress.denied",
+    "step.finished",
+  ]);
+  expect(sent[1]?.payload).toEqual({ stepId: "imported-test-0", ...egressDenial });
+  expect(sent[2]?.payload).toMatchObject({ status: "passed" });
+});
+
+it("refuses an egress attachment that points at a file or is malformed, with a warning and no event", async () => {
+  const failed = withAttachments("passed", [
+    egressAttachment([egressDenial], { body: undefined, path: "../../etc/passwd" }),
+    egressAttachment("not json"),
+    egressAttachment([{ ...egressDenial, disposition: "dropped" }]),
+  ]);
+  const sent = await report((reporter) => {
+    reporter.onTestBegin(failed.test as never);
+    reporter.onTestEnd(failed.test as never, failed.result as never);
+  });
+  expect(sent.map((message) => message.type)).toEqual([
+    "step.started",
+    "log",
+    "log",
+    "log",
+    "step.finished",
+  ]);
+  expect(sent.slice(1, 4).every((message) => message.payload.level === "warn")).toBe(true);
 });

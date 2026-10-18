@@ -355,6 +355,10 @@
                   "type": "string"
                 },
                 {
+                  "const": "already_passed_once",
+                  "type": "string"
+                },
+                {
                   "const": "cleanup_failed",
                   "type": "string"
                 },
@@ -701,6 +705,11 @@
               "pattern": "^res_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
               "type": "string"
             },
+            "stepId": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
             "resourceType": {
               "minLength": 1,
               "maxLength": 200,
@@ -823,6 +832,11 @@
           "properties": {
             "resourceId": {
               "pattern": "^res_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "stepId": {
+              "minLength": 1,
+              "maxLength": 200,
               "type": "string"
             },
             "resourceType": {
@@ -949,6 +963,11 @@
               "pattern": "^res_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
               "type": "string"
             },
+            "stepId": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
             "resourceType": {
               "minLength": 1,
               "maxLength": 200,
@@ -1071,6 +1090,11 @@
           "properties": {
             "resourceId": {
               "pattern": "^res_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "stepId": {
+              "minLength": 1,
+              "maxLength": 200,
               "type": "string"
             },
             "resourceType": {
@@ -1315,6 +1339,11 @@
               "minLength": 1,
               "maxLength": 200,
               "type": "string"
+            },
+            "stepId": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
             }
           }
         }
@@ -1458,6 +1487,10 @@
               "anyOf": [
                 {
                   "const": "aborted",
+                  "type": "string"
+                },
+                {
+                  "const": "ignored",
                   "type": "string"
                 },
                 {
@@ -1679,6 +1712,10 @@
                 },
                 {
                   "const": "owner_revoked",
+                  "type": "string"
+                },
+                {
+                  "const": "already_passed_once",
                   "type": "string"
                 },
                 {

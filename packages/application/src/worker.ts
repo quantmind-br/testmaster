@@ -56,17 +56,23 @@ import { CodeImportService } from "./ai/code-import.js";
 import { sourceSchemasFor } from "./ai/source-documents.js";
 import { auditSecurity } from "./audit.js";
 import { type AuthProfilesService, authBlockReasons } from "./auth/index.js";
-import { attemptAdditionalOrigins } from "./authoring.js";
+import { attemptAdditionalOrigins, attemptIgnoredOrigins } from "./authoring.js";
 import { erasableCaptureSecretIds } from "./capture-retention.js";
 import { runMatrixCell } from "./comparisons.js";
 import type { ResolvedConfig } from "./config.js";
 import { entity, type RunActor, requireEntity, type ServiceContext } from "./context.js";
 import { type ReuseBinding, resolveReuse } from "./dependency-reuse.js";
 import { fixtureRevoked, planRunnerPolicy, stageFixtureInputs } from "./input-fixtures.js";
+import { memberIntervalReady } from "./member-interval.js";
 import { correlationId, OperationalLogger } from "./observability.js";
 import { reproduction, verifyAdmission } from "./provenance.js";
 import { assertArtifactPublishable } from "./retention.js";
-import { captureDeclarations, type ResolvedDependency, type RunsService } from "./runs.js";
+import {
+  captureDeclarations,
+  cleanupHandleDeclarations,
+  type ResolvedDependency,
+  type RunsService,
+} from "./runs.js";
 import type { SecretsService } from "./secrets.js";
 import {
   type EvidenceLimits,
@@ -95,8 +101,8 @@ import { isWriterContention, retryWriterContention } from "./writer-contention.j
 const runJobFilter = `queue NOT IN (${auxiliaryQueues.map((queue) => `'${queue}'`).join(",")})`;
 /** How often a running worker compares its migrations with the database's (OPS-038). */
 const schemaCheckIntervalMs = 2000;
-/** How long an attempt's lease heartbeat tolerates a contended writer before the attempt stops. */
-const leaseContentionToleranceMs = 15000;
+/** How often a running attempt renews its lease; the lease itself is the repository default (30 s). */
+const leaseHeartbeatIntervalMs = 10000;
 
 export interface WorkerHost {
   config: ResolvedConfig;
@@ -511,24 +517,29 @@ export class WorkerService {
     const poll = setInterval(() => {
       if (this.cancelled(run.id)) controller.abort();
     }, 100);
-    let heartbeatFailingSince: number | null = null;
+    // Fencing: another worker may reclaim the attempt once its lease expires, so this one must
+    // have stopped by then. A contended renewal is tolerated only while the last renewed lease
+    // still outlives one more heartbeat interval; anything else, or a lease about to lapse,
+    // stops the attempt.
+    let leaseExpiresAt = Date.parse(
+      String(
+        database.get(
+          "SELECT lease_expires_at FROM job_leases WHERE workspace_id=? AND id=?",
+          fence.workspaceId,
+          fence.jobId,
+        )?.lease_expires_at,
+      ),
+    );
     const heartbeat = setInterval(() => {
       try {
-        leases.heartbeat(fence);
-        heartbeatFailingSince = null;
+        leaseExpiresAt = Date.parse(leases.heartbeat(fence));
       } catch (error) {
-        // Contention is tolerated while the 30 s lease is still safely valid; anything else, or
-        // contention that outlasts the tolerance, stops the attempt.
-        heartbeatFailingSince ??= performance.now();
-        if (
-          isWriterContention(error) &&
-          performance.now() - heartbeatFailingSince < leaseContentionToleranceMs
-        )
+        if (isWriterContention(error) && leaseExpiresAt - Date.now() > leaseHeartbeatIntervalMs)
           return;
         heartbeatError = error;
         controller.abort();
       }
-    }, 10000);
+    }, leaseHeartbeatIntervalMs);
     const inputDir = join(this.host.config.dataDir, "cache", "attempt-input", fence.attemptId);
     let activeStepId: string | undefined;
     let sealedSnapshot: Record<string, unknown> | undefined;
@@ -734,6 +745,10 @@ export class WorkerService {
         origins,
         Boolean(admitted.profilePolicy.offline),
       );
+      const ignoredOrigins = attemptIgnoredOrigins(env as { ignoredOrigins?: string[] }, [
+        ...origins,
+        ...additionalOrigins,
+      ]);
       const agent =
         run.mode === "agent"
           ? new AgentModeService(this.ctx, {
@@ -805,16 +820,25 @@ export class WorkerService {
                     (error: unknown) => ({ error }),
                   );
                   const waitMs = Math.round(performance.now() - started);
-                  await retryWriterContention(() =>
-                    database.withTx(() =>
-                      new OutboxRepository(database).append(
-                        this.ctx.workspaceId,
-                        run.id,
-                        "attempt.model_wait",
-                        { attemptId: fence.attemptId, stepId, waitMs },
-                      ),
-                    ),
-                  );
+                  // Waits for the writer without a deadline while the attempt runs. Once the attempt
+                  // is being stopped only the timing event is lost: the answer the model already
+                  // returned is never discarded.
+                  try {
+                    await retryWriterContention(
+                      () =>
+                        database.withTx(() =>
+                          new OutboxRepository(database).append(
+                            this.ctx.workspaceId,
+                            run.id,
+                            "attempt.model_wait",
+                            { attemptId: fence.attemptId, stepId, waitMs },
+                          ),
+                        ),
+                      { signal: controller.signal, inTransaction: () => database.inTransaction },
+                    );
+                  } catch (error) {
+                    if (!(isWriterContention(error) && controller.signal.aborted)) throw error;
+                  }
                   if ("error" in answer) throw answer.error;
                   return answer.action;
                 },
@@ -823,6 +847,7 @@ export class WorkerService {
           networkPolicy: {
             allowedOrigins: [...origins, ...additionalOrigins],
             ...(additionalOrigins.length ? { additionalOrigins } : {}),
+            ...(ignoredOrigins.length ? { ignoredOrigins } : {}),
             networkProfile: env.networkProfile as "local-loopback" | "private" | "public",
             baseUrl: String(cell.baseUrl),
           },
@@ -898,6 +923,8 @@ export class WorkerService {
             );
             leases.assertCurrent(fence);
             return {
+              // A cleanup lookup's handle names the entry it belongs to; keep that producer.
+              ...(capture.stepId === undefined ? {} : { stepId: capture.stepId }),
               name: capture.name,
               valueType: capture.valueType,
               sensitive: true,
@@ -919,9 +946,19 @@ export class WorkerService {
             if (event.type === "runner.finished") timer.mark("collecting");
             if (event.type === "step.started") activeStepId = event.payload.stepId;
             if (event.type === "variable.captured") {
-              const declaration = (plan ? captureDeclarations(plan) : []).find(
-                (capture) => capture.stepId === activeStepId && capture.name === event.payload.name,
-              );
+              // A cleanup lookup names the entry it produces the handle for; every other capture
+              // belongs to the step being executed.
+              const named = event.payload.stepId;
+              const declaration = plan
+                ? named === undefined
+                  ? captureDeclarations(plan).find(
+                      (capture) =>
+                        capture.stepId === activeStepId && capture.name === event.payload.name,
+                    )
+                  : cleanupHandleDeclarations(plan).find(
+                      (capture) => capture.stepId === named && capture.name === event.payload.name,
+                    )
+                : undefined;
               if (!declaration || declaration.valueType !== event.payload.valueType)
                 throw new ContractError(
                   "PRECONDITION_FAILED",
@@ -984,6 +1021,15 @@ export class WorkerService {
                 }
               >;
               const payload = resourceEvent.payload;
+              // A resource a cleanup lookup found belongs to that entry's step, not to the step
+              // that was last executed; any other resource belongs to the executing step.
+              const resourceStepId =
+                payload.stepId !== undefined &&
+                plan?.cleanup?.some(
+                  (cleanup) => cleanup.find && cleanup.resourceRef === payload.stepId,
+                )
+                  ? payload.stepId
+                  : (activeStepId ?? null);
               database.withTx(() => {
                 leases.assertCurrent(fence);
                 const previous = this.ctx.entities.get(
@@ -1009,11 +1055,12 @@ export class WorkerService {
                       resourceType: payload.resourceType,
                       handleRef: null,
                       cleanupPlan: {
-                        stepId: activeStepId ?? null,
+                        stepId: resourceStepId,
                         correlationKey: payload.correlationKey,
                         declaration:
-                          plan?.cleanup?.find((cleanup) => cleanup.resourceRef === activeStepId) ??
-                          null,
+                          plan?.cleanup?.find(
+                            (cleanup) => cleanup.resourceRef === resourceStepId,
+                          ) ?? null,
                       },
                       state: "planned",
                       ownerProof: null,
@@ -1862,6 +1909,26 @@ export class WorkerService {
     return runEvidenceBytes(runMatrixCell(this.host.runs.get(runId)).limits as EvidenceLimits);
   }
   /**
+   * Suite pacing: a member waits for the interval after its predecessor's start, measured at
+   * claim. A cancelled member is eligible so it can finalize without waiting.
+   */
+  private memberIntervalReady(runId: string): boolean {
+    const cell = runMatrixCell(this.host.runs.get(runId));
+    const predecessorId = cell.memberPredecessorRunId;
+    if (typeof predecessorId !== "string" || this.cancelled(runId)) return true;
+    const started = this.ctx.database.get(
+      "SELECT started_at FROM attempts WHERE workspace_id=? AND run_id=? ORDER BY number LIMIT 1",
+      this.ctx.workspaceId,
+      predecessorId,
+    )?.started_at;
+    return memberIntervalReady({
+      intervalMs: typeof cell.memberIntervalMs === "number" ? cell.memberIntervalMs : undefined,
+      predecessorStartedAt: typeof started === "string" ? started : null,
+      predecessorCompleted: this.host.runs.get(predecessorId).phase === "completed",
+      now: Date.now(),
+    });
+  }
+  /**
    * Turns the enrolled placeholder into this process's worker: declared capabilities and image
    * digests replace the empty ones and the worker becomes ready. A revoked worker never starts,
    * and an identity whose process is still alive cannot be taken over.
@@ -1898,8 +1965,8 @@ export class WorkerService {
       handshake?: WorkerHandshake;
       /** An enrolled worker (REQ-038) this process becomes instead of registering a new row. */
       workerId?: string;
-      /** How long one operation keeps retrying a contended writer lock before the worker fails. */
-      writerContentionBudgetMs?: number;
+      /** Called once when a contended writer lock has kept one operation waiting past 5 s. */
+      onContended?: (elapsedMs: number) => void;
       /** Called once a registered worker is recorded ready and about to claim, with its id. */
       onReady?: (workerId: string) => void;
     } = {},
@@ -1968,12 +2035,14 @@ export class WorkerService {
       return executorKindOf(runner);
     };
     const tasks = new Set<Promise<void>>();
-    // Writer contention is transient: operations repeat within a bounded budget. Waiting stops on
-    // the abort signal only while nothing is in flight, so a draining worker keeps its tasks.
+    // Writer contention is transient and has no total deadline: each operation waits for the writer
+    // (full-jitter backoff) until the lock frees or the abort signal ends it. The signal is
+    // honored only while nothing is in flight, so a draining worker keeps its tasks.
     const contended = <T>(operation: () => T | Promise<T>): Promise<T> =>
       retryWriterContention(operation, {
         signal: tasks.size === 0 ? options.signal : undefined,
-        budgetMs: options.writerContentionBudgetMs,
+        onContended: options.onContended,
+        inTransaction: () => database.inTransaction,
       });
     if (!options.ephemeral && handshake) {
       const declared = {
@@ -2126,7 +2195,8 @@ export class WorkerService {
                   (this.cancelled(id) ||
                     this.dependencies(this.host.runs.get(id)).every(
                       (binding) => this.host.runs.get(binding.producerRunId).phase === "completed",
-                    )),
+                    )) &&
+                  this.memberIntervalReady(id),
               );
             // A Run whose admitting actor lost execute access ends blocked before any Attempt starts.
             for (const id of [...candidates]) {

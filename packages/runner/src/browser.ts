@@ -27,6 +27,7 @@ import {
   deniedOrigin,
   deniedSubrequestMessage,
   EgressDenials,
+  isIgnoredRequest,
   webSocketRequestUrl,
 } from "./egress.js";
 import { authorizeUrl, canonicalUrl, HttpEngine, readAuthorizedArtifact } from "./http.js";
@@ -226,6 +227,18 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
   let tempDirectory: string | undefined;
   let violation: RuntimeError | undefined;
   const denials = new EgressDenials();
+  const ignoredOrigins = new Set(
+    (runtime.input.networkPolicy.ignoredOrigins ?? []).map((entry) => canonicalUrl(entry).origin),
+  );
+  function recordIgnored(url: string, method: string, resourceType: string): void {
+    denials.record({
+      stepId: currentStepId ?? "attempt",
+      url,
+      method,
+      resourceType,
+      disposition: "ignored",
+    });
+  }
   let currentStepId: string | undefined;
   let popupIndex = 0;
   let expectedDownloadPage: Page | undefined;
@@ -346,11 +359,25 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
   // with zero matches while an ambiguous container still fails. Absence paths and locator
   // evidence use "lazy"; a frame always has to exist.
   type ContainerMode = "wait" | "lazy";
+  /**
+   * Resolves a locator and applies its `nth` selection last, after pageAlias, frame and container
+   * scoping. `.nth(n)` matches zero or one element, so every uniqueness check downstream passes
+   * for an existing item and an out-of-range index never attaches (assertion_timeout).
+   */
   async function locate(
     spec: LocatorSpec,
     timeout: number,
     base: Scope | Locator = scope,
     containers: ContainerMode = "wait",
+  ): Promise<Locator> {
+    const located = await locateScoped(spec, timeout, base, containers);
+    return spec.nth === undefined ? located : located.nth(spec.nth);
+  }
+  async function locateScoped(
+    spec: LocatorSpec,
+    timeout: number,
+    base: Scope | Locator,
+    containers: ContainerMode,
   ): Promise<Locator> {
     let root: Scope | Locator = spec.pageAlias === undefined ? base : pageFor(spec.pageAlias);
     if (spec.frame) root = await frameFrom(await locate(spec.frame, timeout, root), timeout);
@@ -1524,6 +1551,11 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       if (type && responseTypes.size < 256) responseTypes.set(response.url(), type);
     });
     target.on("download", (download) => {
+      if (isIgnoredRequest(download.url(), ignoredOrigins)) {
+        void download.cancel().catch(() => undefined);
+        recordIgnored(download.url(), "GET", "download");
+        return;
+      }
       if (policy.allowDownloads !== true || expectedDownloadPage !== target) {
         void download.cancel().catch(() => undefined);
         deny("Unexpected download is not authorized");
@@ -1533,9 +1565,14 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       try {
         authorizeFrame(frame);
       } catch {
+        const url = frame.url();
+        // A document of an ignored origin is dropped like its request; it never fails the attempt.
+        if (isIgnoredRequest(url, ignoredOrigins)) {
+          recordIgnored(url, "GET", "document");
+          return;
+        }
         // A frame is a document request that the route handler no longer sees once it is committed,
         // so the denial is recorded here like a denied subrequest: origin only, never path or query.
-        const url = frame.url();
         denials.record({
           stepId: currentStepId ?? "attempt",
           url,
@@ -1594,6 +1631,13 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
         return;
       }
       const request = route.request();
+      // An ignored origin is dropped before authorization for every resource type and method; the
+      // proxy never admits it either. Ambiguous URLs never match (SEC-008) and stay fatal below.
+      if (isIgnoredRequest(request.url(), ignoredOrigins)) {
+        recordIgnored(request.url(), request.method(), request.resourceType());
+        await route.abort("blockedbyclient").catch(() => undefined);
+        return;
+      }
       let authorized = false;
       try {
         authorizeUrl(runtime, request.url());
@@ -1638,6 +1682,11 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
     // hook and are covered by the proxy alone.
     await context.routeWebSocket("**/*", (socket) => {
       const requestUrl = webSocketRequestUrl(socket.url());
+      if (isIgnoredRequest(requestUrl, ignoredOrigins)) {
+        recordIgnored(requestUrl, "GET", "websocket");
+        void socket.close({ code: 1008, reason: "WebSocket origin is ignored by the environment" });
+        return;
+      }
       try {
         authorizeUrl(runtime, requestUrl);
       } catch {

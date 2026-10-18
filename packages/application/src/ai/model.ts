@@ -32,7 +32,7 @@ export const unsentModelReasons: ReadonlySet<string> = new Set([
 ]);
 export const promptVersions = {
   normalize: "normalize-4-empty-batches",
-  plan: "plan-8-cleanup-disclosure",
+  plan: "plan-9-locator-nth-cleanup-find",
   resolve_action: "resolve-action-1",
   generate_code: "generate-code-5-candidate-repair",
   summarize: "summarize-1",

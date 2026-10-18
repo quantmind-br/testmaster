@@ -60,6 +60,8 @@ Definir `N_selected` como todas as células requeridas resolvidas na seleção c
 
 Denominador zero produz `notApplicable` ou `insufficientData`, nunca 0%, 100% ou NaN exibido como número. A definição de `eligible` e o denominador total devem acompanhar métricas condicionais. Metrics por cenário, célula, Run e tentativa são agregações distintas. Um único requisito com dez testes não cobre dez requisitos; uma duplicata não aumenta cobertura. Cobertura de código tradicional pode ser adicionada quando instrumentada, mas não é inferida de navegação.
 
+`verifiedRequirementCoverage` também julga as evidências anteriores (`priorEvidence`) de um batch: o último replay passado e fresco que fez um teste `runPolicy: "once"` ser pulado (`already_passed_once`) verifica seus requisitos como se tivesse rodado no batch. Evidência anterior não entra em contagens de execução, `gatePassRate` nem `N_selected`.
+
 ### 2.3 Métricas de diagnóstico, geração e healing
 
 | Métrica | Definição | Salvaguarda |

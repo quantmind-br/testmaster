@@ -147,3 +147,151 @@ describe("a resource handle reference", () => {
     expect(refusal(plan([captured, read(), status]))).toBeUndefined();
   });
 });
+
+const titleCapture = {
+  capture: [
+    {
+      name: "title",
+      from: "jsonPointer",
+      pointer: "/title",
+      valueType: "string",
+      sensitive: false,
+    },
+  ],
+};
+const secretCapture = {
+  capture: [
+    {
+      name: "secret",
+      from: "jsonPointer",
+      pointer: "/secret",
+      valueType: "string",
+      sensitive: true,
+    },
+  ],
+};
+const lookup = (extra: Json = {}): Json => ({
+  method: "GET",
+  pathSegments: [{ literal: "items" }],
+  ...extra,
+});
+const findEntry = (find: Json = {}, resourceRef = "create"): Json => ({
+  ...cleanup(resourceRef),
+  find: {
+    resourceType: "item",
+    lookup: lookup(),
+    itemsPointer: "/items",
+    keyPointer: "/name",
+    equals: { variableRef: "create.title" },
+    handlePointer: "/id",
+    ownerProofPointer: "/owner",
+    ...find,
+  },
+});
+const findPlan = (entry: Json, createStep: Json = create(undefined, titleCapture)): Json =>
+  plan([createStep, status], { cleanup: [entry] });
+
+describe("cleanup by lookup", () => {
+  it("accepts a lookup entry for a step that declares no resource, with a literal or captured key", () => {
+    expect(refusal(findPlan(findEntry()))).toBeUndefined();
+    expect(refusal(findPlan(findEntry({ equals: { literal: "Run 42" } })))).toBeUndefined();
+    expect(() => validate("ExecutablePlan", findPlan(findEntry()))).not.toThrow();
+  });
+  it("refuses a resourceRef that is no step, or a request that already declares its own resource", () => {
+    const unknown = findPlan({
+      ...findEntry({}, "missing"),
+      input: {
+        method: "DELETE",
+        pathSegments: [{ literal: "items" }, { variableRef: "missing.handle" }],
+      },
+    });
+    expect(refusal(unknown)?.details).toMatchObject({ reasonCode: "cleanup_never_runs" });
+    expect(issuesOf(unknown)).toContainEqual(
+      expect.objectContaining({ path: "/cleanup/0/resourceRef", rule: "cleanupResource" }),
+    );
+    const declared = findPlan(
+      findEntry(),
+      create({ handle: "/id", ownerProof: "/owner" }, titleCapture),
+    );
+    expect(refusal(declared)?.details).toMatchObject({ reasonCode: "cleanup_never_runs" });
+    expect(issuesOf(declared)).toContainEqual(
+      expect.objectContaining({ path: "/cleanup/0/resourceRef", rule: "cleanupResource" }),
+    );
+  });
+  it("refuses two entries for the same step", () => {
+    const document = plan([create(undefined, titleCapture), status], {
+      cleanup: [findEntry(), findEntry()],
+    });
+    expect(refusal(document)?.details).toMatchObject({ reasonCode: "cleanup_never_runs" });
+  });
+  it("refuses a lookup that is not a GET, or that carries a body, capture or resource", () => {
+    for (const [field, extra] of [
+      ["method", { method: "POST" }],
+      ["method", { method: "DELETE" }],
+      ["body", { body: { kind: "text", value: { literal: "x" } } }],
+      ["capture", titleCapture],
+      ["resource", { resource: { resourceType: "item", correlationKey: { literal: "k" } } }],
+    ] as const) {
+      const document = findPlan(findEntry({ lookup: lookup(extra) }));
+      expect(() => validate("ExecutablePlan", document), field).toThrow();
+      expect(issuesOf(document), field).toContainEqual(
+        expect.objectContaining({
+          path: `/cleanup/0/find/lookup/${field}`,
+          rule: "cleanupFind",
+        }),
+      );
+    }
+  });
+  it("refuses a variableRef no step captured, and one that is the id the lookup finds", () => {
+    const uncaptured = findPlan(findEntry({ equals: { variableRef: "nobody.title" } }));
+    expect(issuesOf(uncaptured)).toContainEqual(
+      expect.objectContaining({ path: "/cleanup/0/find/equals/variableRef", rule: "binding" }),
+    );
+    const inLookup = findPlan(
+      findEntry({
+        lookup: lookup({ query: [{ name: { literal: "q" }, value: { variableRef: "ghost" } }] }),
+      }),
+    );
+    expect(issuesOf(inLookup)).toContainEqual(
+      expect.objectContaining({
+        path: "/cleanup/0/find/lookup/query/0/value/variableRef",
+        rule: "binding",
+      }),
+    );
+    const ownHandle = findPlan(findEntry({ equals: { variableRef: "create.handle" } }));
+    expect(() => validate("ExecutablePlan", ownHandle)).toThrow();
+    expect(issuesOf(ownHandle)).toContainEqual(
+      expect.objectContaining({ path: "/cleanup/0/find/equals/variableRef", rule: "binding" }),
+    );
+  });
+  it("refuses a sensitive key value", () => {
+    const document = findPlan(
+      findEntry({ equals: { variableRef: "create.secret" } }),
+      create(undefined, secretCapture),
+    );
+    expect(() => validate("ExecutablePlan", document)).toThrow();
+    expect(issuesOf(document)).toContainEqual(
+      expect.objectContaining({
+        path: "/cleanup/0/find/equals/variableRef",
+        rule: "cleanupFind",
+      }),
+    );
+  });
+  it("refuses a pointer that is not an RFC 6901 pointer, and one that names the item itself", () => {
+    for (const bad of [
+      { itemsPointer: "items" },
+      { keyPointer: "name" },
+      { handlePointer: "id" },
+      { ownerProofPointer: "owner" },
+      { totalPointer: "total" },
+    ])
+      expect(
+        () => validate("ExecutablePlan", findPlan(findEntry(bad))),
+        JSON.stringify(bad),
+      ).toThrow();
+    const whole = findPlan(findEntry({ handlePointer: "" }));
+    expect(issuesOf(whole)).toContainEqual(
+      expect.objectContaining({ path: "/cleanup/0/find/handlePointer", rule: "cleanupFind" }),
+    );
+  });
+});

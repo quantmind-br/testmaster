@@ -454,6 +454,12 @@ export function exportCode(input: ExecutablePlan, options: CodeExportOptions): C
   check(plan.steps);
   validatePlanSemantics(plan);
   for (const cleanup of plan.cleanup ?? []) {
+    if (cleanup.find)
+      unsupported(
+        cleanup.resourceRef,
+        "cleanup by lookup",
+        "the exported code deletes only what a request step declared with input.resource",
+      );
     unsupportedRequestFeature(cleanup.resourceRef, cleanup.input);
     const success = cleanup.successPredicate;
     if (!httpPredicates[success.predicate])

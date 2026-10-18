@@ -527,14 +527,32 @@ export class SelectionService {
         }
       };
       walk(plan.steps);
-      for (const cleanup of plan.cleanup ?? [])
+      for (const cleanup of plan.cleanup ?? []) {
+        const origin = String((run.matrixCell as Record<string, unknown>).baseUrl);
+        if (cleanup.find) {
+          preview.resources.push({
+            testId,
+            stepId: cleanup.resourceRef,
+            resourceType: cleanup.find.resourceType,
+            cleanupDeclared: true,
+          });
+          preview.effects.push({
+            testId,
+            stepId: `cleanup-find:${cleanup.resourceRef}`,
+            origin,
+            method: cleanup.find.lookup.method,
+            risk: risks.find((action) => action.stepId === `cleanup-find:${cleanup.resourceRef}`)!
+              .risk,
+          });
+        }
         preview.effects.push({
           testId,
           stepId: `cleanup:${cleanup.resourceRef}`,
-          origin: String((run.matrixCell as Record<string, unknown>).baseUrl),
+          origin,
           method: cleanup.input.method,
           risk: risks.find((action) => action.stepId === `cleanup:${cleanup.resourceRef}`)!.risk,
         });
+      }
     }
     preview.empty = selected.length === 0;
     const stateHash = this.stateHash(input);

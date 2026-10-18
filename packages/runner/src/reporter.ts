@@ -5,6 +5,7 @@ import type {
   TestResult,
   TestStep,
 } from "@playwright/test/reporter";
+import { EGRESS_ATTACHMENT, parseEgressAttachment } from "./code-egress.js";
 import {
   FAILURE_ARTIFACT_EVENT,
   FAILURE_WARNING_ATTACHMENT,
@@ -12,7 +13,15 @@ import {
   failureKind,
   vetAttachment,
 } from "./code-evidence.js";
-import { describeFailure, isAssertionFailure, isTimeoutFailure } from "./failure.js";
+import {
+  describeFailure,
+  isAssertionFailure,
+  isStrictViolation,
+  isTestTimeout,
+  isTimeoutFailure,
+  locatorTimeout,
+  type PlaywrightFailure,
+} from "./failure.js";
 
 /** A failure already reported on a step, and whether it was a failed assertion. */
 interface NotedFailure {
@@ -20,15 +29,26 @@ interface NotedFailure {
   assertion: boolean;
 }
 /**
- * What a failed test or step proves. An assertion that failed, or a test that ran out of time,
- * is a verdict on the target. Any other error was thrown by the test code before an assertion
- * judged anything: the evidence is insufficient, not a mismatch.
+ * What a failed test or step proves, the same whether the failure ends the test body or a
+ * `test.step` around it. A failed assertion, a test that ran out of time and a locator action
+ * that hit a strict mode violation (the locator matched several elements) or timed out without
+ * ever matching an element are verdicts on the target, like the plan runner's ambiguous and
+ * never-attached locators. A locator action that matched an element but did not complete (not
+ * enabled, covered) and any other error the test code threw before an assertion judged anything
+ * leave the evidence insufficient, not a mismatch.
  */
-function failedVerdict(assertion: boolean, timedOut: boolean) {
-  if (timedOut) return { status: "failed", reasonCode: "assertion_timeout" };
-  return assertion
-    ? { status: "failed", reasonCode: "assertion_mismatch" }
-    : { status: "inconclusive", reasonCode: "insufficient_evidence" };
+function failedVerdict(
+  assertion: boolean,
+  failure: PlaywrightFailure | undefined,
+  testTimedOut = false,
+) {
+  if (testTimedOut || isTestTimeout(failure) || (assertion && isTimeoutFailure(failure)))
+    return { status: "failed", reasonCode: "assertion_timeout" };
+  if (assertion || isStrictViolation(failure))
+    return { status: "failed", reasonCode: "assertion_mismatch" };
+  if (locatorTimeout(failure) === "never_attached")
+    return { status: "failed", reasonCode: "assertion_timeout" };
+  return { status: "inconclusive", reasonCode: "insufficient_evidence" };
 }
 /** Longest title a step or test carries on the wire; the Python runner cuts at the same length. */
 const STEP_TITLE_CHARS = 500;
@@ -99,6 +119,26 @@ export default class TestMasterReporter implements Reporter {
       else this.send(FAILURE_ARTIFACT_EVENT, { stepId, kind, data: vetted.data });
     }
   }
+  /**
+   * Forwards the requests the shim's route hook denied in the test's browser contexts as
+   * `egress.denied` events, whether or not the test passed. An attachment that is not a plain,
+   * bounded list of well-formed denials is refused with a warning and never read from a path.
+   */
+  private sendEgressDenials(
+    stepId: string,
+    attachments: TestResult["attachments"] | undefined,
+  ): void {
+    for (const attachment of attachments ?? []) {
+      if (attachment.name !== EGRESS_ATTACHMENT) continue;
+      const parsed = parseEgressAttachment(stepId, attachment);
+      if ("refused" in parsed)
+        this.send("log", {
+          level: "warn",
+          message: `Egress denials refused: ${parsed.refused}`,
+        });
+      else for (const denial of parsed.denials) this.send("egress.denied", denial);
+    }
+  }
   onTestEnd(test: TestCase, result: TestResult): void {
     const data = this.tests.get(test);
     if (!data) throw new Error("unknown_imported_test");
@@ -112,12 +152,13 @@ export default class TestMasterReporter implements Reporter {
     const assertion =
       first === undefined || (repeat ? recorded.assertion : isAssertionFailure(first));
     if (!passed) this.sendFailureEvidence(data.stepId, result.attachments);
+    this.sendEgressDenials(data.stepId, result.attachments);
     this.send("step.finished", {
       ...data,
       ...(passed
         ? { status: result.status === "skipped" ? "skipped" : "passed" }
         : {
-            ...failedVerdict(assertion, result.status === "timedOut"),
+            ...failedVerdict(assertion, first, result.status === "timedOut"),
             ...(result.status === "skipped" ? { status: "skipped" } : {}),
             ...(repeat
               ? {}
@@ -159,9 +200,7 @@ export default class TestMasterReporter implements Reporter {
         : undefined;
     this.send("step.finished", {
       ...data,
-      ...(error
-        ? { ...failedVerdict(assertion, isTimeoutFailure(error)), ...failure }
-        : { status: "passed" }),
+      ...(error ? { ...failedVerdict(assertion, error), ...failure } : { status: "passed" }),
       durationMs: step.duration,
       evidencePaths: [],
     });

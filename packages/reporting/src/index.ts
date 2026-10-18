@@ -97,6 +97,12 @@ export interface ReportSnapshot {
     targetBinding: "local-checkout" | "github-deployment" | "unbound";
   };
   runs: readonly ReportRun[];
+  /**
+   * Fresh passing Runs of earlier batches that satisfied the batch's one-shot members, which the
+   * batch skipped (`already_passed_once`). They are prior evidence for requirement coverage only:
+   * never part of `runs`, `selection.requested`, `allMembers` or `expanded`.
+   */
+  priorEvidence?: readonly ReportRun[];
   coverage?: CoverageMetrics;
   executionMetrics?: ExecutionMetrics;
   selection: {

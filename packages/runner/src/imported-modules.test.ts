@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { type ContractError, validateAgainstSchema } from "@testmaster/contracts";
 import { afterEach, expect, it } from "vitest";
+import { CODE_EGRESS_ENV } from "./code-egress.js";
 import {
   CODE_PROFILE_ENV,
   CODE_REDACTIONS_ENV,
@@ -255,7 +256,11 @@ interface ReportedTest {
  * Runs `spec` in a real Chromium through the staged shim and reports, per test, its status and the
  * attachments Playwright's reporters receive (TestMaster's reporter reads exactly these).
  */
-async function reportedTests(spec: string, redactions: string[]): Promise<ReportedTest[]> {
+async function reportedTests(
+  spec: string,
+  redactions: string[],
+  env: Record<string, string> = {},
+): Promise<ReportedTest[]> {
   const root = await stage(spec, false, {});
   await writeFile(
     join(root, "attachments-reporter.cjs"),
@@ -277,6 +282,7 @@ async function reportedTests(spec: string, redactions: string[]): Promise<Report
       cwd: root,
       env: {
         ...process.env,
+        ...env,
         [CODE_SECRETS_ENV]: "{}",
         [CODE_REDACTIONS_ENV]: JSON.stringify(redactions),
       },
@@ -337,4 +343,90 @@ it("blacks out text equal to a secret in the screenshot: same pixels as a page t
   // Without the value in the redactions the text is drawn, so the pixels differ.
   const [unmasked] = await reportedTests(pageSpec(SHOWN_SECRET), []);
   expect(attachment(unmasked, "testmaster-failure-screenshot")?.body).not.toBe(secretShot);
+}, 120_000);
+
+const IGNORED_ORIGIN = "http://127.0.0.1:41001";
+const UNAPPROVED_ORIGIN = "http://127.0.0.1:41002";
+const egressEnv = {
+  [CODE_EGRESS_ENV]: JSON.stringify({
+    allowed: ["http://127.0.0.1:41000"],
+    ignored: [IGNORED_ORIGIN],
+  }),
+};
+const denialsOf = (test: ReportedTest | undefined) =>
+  JSON.parse(
+    Buffer.from(attachment(test, "testmaster-egress-denials")?.body ?? "W10=", "base64").toString(
+      "utf8",
+    ),
+  );
+const egressSpec = (markup: string, extra = "") =>
+  `import { test } from '@playwright/test';\n` +
+  `test('loads', async ({ page }) => { await page.setContent(${JSON.stringify(markup)}); await page.waitForLoadState('load'); ${extra} });\n`;
+
+it("aborts and records a script of an ignored origin and a passive subresource of an unapproved one without failing the test", async () => {
+  const [test] = await reportedTests(
+    egressSpec(
+      `<script src="${IGNORED_ORIGIN}/v3/app.js?token=url-canary"></script><img src="${UNAPPROVED_ORIGIN}/flag.png">`,
+    ),
+    [],
+    egressEnv,
+  );
+  expect(test?.status).toBe("passed");
+  expect(attachment(test, "testmaster-egress-denials")).toMatchObject({
+    contentType: "application/json",
+  });
+  expect(denialsOf(test)).toEqual(
+    expect.arrayContaining([
+      {
+        origin: IGNORED_ORIGIN,
+        method: "GET",
+        resourceType: "script",
+        disposition: "ignored",
+        count: 1,
+      },
+      {
+        origin: UNAPPROVED_ORIGIN,
+        method: "GET",
+        resourceType: "image",
+        disposition: "aborted",
+        count: 1,
+      },
+    ]),
+  );
+  // Origin only: nothing of the path or query is attached.
+  expect(JSON.stringify(denialsOf(test))).not.toContain("url-canary");
+}, 120_000);
+
+it("records a script of an unapproved origin as fatal, and attaches nothing when nothing was denied", async () => {
+  const tests = await reportedTests(
+    `import { test } from '@playwright/test';\n` +
+      `test('blocked script', async ({ page }) => { await page.setContent(${JSON.stringify(`<script src="${UNAPPROVED_ORIGIN}/app.js"></script>`)}); await page.waitForLoadState('load'); });\n` +
+      `test('quiet', async ({ page }) => { await page.setContent('<p>hello</p>'); });\n`,
+    [],
+    egressEnv,
+  );
+  expect(denialsOf(tests.find((entry) => entry.title === "blocked script"))).toEqual([
+    {
+      origin: UNAPPROVED_ORIGIN,
+      method: "GET",
+      resourceType: "script",
+      disposition: "fatal",
+      count: 1,
+    },
+  ]);
+  expect(
+    attachment(
+      tests.find((entry) => entry.title === "quiet"),
+      "testmaster-egress-denials",
+    ),
+  ).toBeUndefined();
+}, 120_000);
+
+it("installs no route hook without an egress policy, as in an exported project", async () => {
+  const [test] = await reportedTests(
+    egressSpec(`<script src="${IGNORED_ORIGIN}/v3/app.js"></script>`),
+    [],
+  );
+  expect(test?.status).toBe("passed");
+  expect(attachment(test, "testmaster-egress-denials")).toBeUndefined();
 }, 120_000);

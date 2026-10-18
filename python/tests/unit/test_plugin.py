@@ -225,3 +225,44 @@ def test_explicit_step_classifies_the_exception_it_wraps():
     assert finish["error"] == {"code": "RuntimeError", "message": "RuntimeError: no manifest"}
     assert plugin.failed is False
     assert plugin.incomplete is True
+
+
+STRICT = "Locator.click: Error: strict mode violation: get_by_role(\"button\", name=\"Two\") resolved to 2 elements:\n    1) <button>Two</button>\n\nCall log:\n  - waiting for get_by_role(\"button\", name=\"Two\")"
+NEVER_ATTACHED = "Locator.click: Timeout 1500ms exceeded.\nCall log:\n  - waiting for get_by_role(\"button\", name=\"Missing\")"
+ATTACHED = "Locator.click: Timeout 1500ms exceeded.\nCall log:\n  - waiting for get_by_role(\"button\", name=\"Off\")\n    - locator resolved to <button disabled>Off</button>\n  - attempting click action\n    - element is not enabled"
+
+
+def raising(message):
+    return f"raise RuntimeError({message!r})"
+
+
+def test_locator_strict_violation_and_never_attached_timeout_are_verdicts_attached_timeout_is_not(tmp_path):
+    plugin, steps, _ = run_source(
+        tmp_path,
+        "def test_strict():\n    " + raising(STRICT) + "\n\ndef test_missing():\n    " + raising(NEVER_ATTACHED) + "\n\ndef test_disabled():\n    " + raising(ATTACHED) + "\n",
+    )
+    assert (steps["test_strict"]["status"], steps["test_strict"]["reasonCode"]) == ("failed", "assertion_mismatch")
+    assert (steps["test_missing"]["status"], steps["test_missing"]["reasonCode"]) == ("failed", "assertion_timeout")
+    assert (steps["test_disabled"]["status"], steps["test_disabled"]["reasonCode"]) == ("inconclusive", "insufficient_evidence")
+    assert steps["test_strict"]["error"]["code"] == "RuntimeError"
+    assert plugin.failed is True
+    assert (plugin.failure_count, plugin.timeout_count) == (2, 1)
+
+
+def test_explicit_step_gives_a_locator_error_the_same_verdict_as_a_bare_test():
+    import pytest
+
+    plugin = PythonPlugin(Protocol(), {})
+    for message in (STRICT, NEVER_ATTACHED, ATTACHED):
+        with pytest.raises(RuntimeError):
+            with plugin.step("click"):
+                raise RuntimeError(message)
+    finishes = [payload for kind, payload in plugin.protocol.events if kind == "step.finished"]
+    assert [(event["status"], event["reasonCode"]) for event in finishes] == [
+        ("failed", "assertion_mismatch"),
+        ("failed", "assertion_timeout"),
+        ("inconclusive", "insufficient_evidence"),
+    ]
+    assert plugin.failed is True
+    assert plugin.incomplete is True
+    assert (plugin.failure_count, plugin.timeout_count) == (2, 1)

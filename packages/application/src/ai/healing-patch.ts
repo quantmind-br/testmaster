@@ -20,6 +20,25 @@ export interface HealingReplacement {
   manualOnly: boolean;
 }
 
+const locatorFields: Record<string, true> = { locator: true, source: true, destination: true };
+/** True when a locator (or a container/frame in its scope chain) selects by position with `nth`. */
+function selectsByNth(locator: unknown): boolean {
+  if (!locator || typeof locator !== "object") return false;
+  if ("nth" in locator) return true;
+  return (
+    ("container" in locator && selectsByNth(locator.container)) ||
+    ("frame" in locator && selectsByNth(locator.frame))
+  );
+}
+/** The value a step holds at a JSON pointer, or undefined when absent. */
+function valueAt(step: PlanStep, path: string): unknown {
+  let current: unknown = step;
+  for (const part of path.slice(1).split("/")) {
+    if (!current || typeof current !== "object" || !Object.hasOwn(current, part)) return undefined;
+    current = Reflect.get(current, part);
+  }
+  return current;
+}
 /** The same present-field contract drives generation and replacement admission. */
 export function healingReplacements(step: PlanStep): HealingReplacement[] {
   if (step.kind !== "action") return [];
@@ -133,6 +152,16 @@ export function applyHealingPatch(
         stepId: step.id,
         path: change.path,
       });
+    // A position is only ever chosen by a person: the index silently retargets when the list changes.
+    if (
+      Object.hasOwn(locatorFields, change.path.split("/").at(-1) ?? "") &&
+      (selectsByNth(valueAt(step, change.path)) || selectsByNth(change.value))
+    )
+      throw new ContractError(
+        "POLICY_DENIED",
+        "Healing never produces or replaces a locator that selects by nth",
+        { stepId: step.id, path: change.path },
+      );
     manualOnly ||= replacement.manualOnly;
     replace(candidateSteps.get(step.id)!, change.path, change.value);
   }

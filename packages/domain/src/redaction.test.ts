@@ -134,3 +134,26 @@ it("restores the variable references a plan step id yields in variableRef fields
     ).redacted,
   ).toBe(true);
 });
+
+it("restores the handle reference and lookup step id a cleanup that finds its data yields", () => {
+  const identifiers = planIdentifiers({
+    steps: [{ id: "submit_root", operation: "click", input: {} }],
+    cleanup: [
+      {
+        resourceRef: "submit_root",
+        operation: "request",
+        find: { resourceType: "project" },
+        input: { pathSegments: [{ variableRef: "submit_root.handle" }] },
+      },
+    ],
+  });
+  const scrub = (text: string) => scrubEvidenceText(text, ["root"]).text;
+  const record = JSON.stringify({
+    handle: { variableRef: "submit_root.handle" },
+    stepId: "cleanup-find-submit_root",
+  });
+  expect(scrub(record)).toContain('"variableRef":"submit_[REDACTED].handle"');
+  const restored = restorePlanIdentifiers(scrub(record), identifiers, scrub);
+  expect(restored).toContain('"handle":{"variableRef":"submit_root.handle"}');
+  expect(restored).toContain('"stepId":"cleanup-find-submit_root"');
+});

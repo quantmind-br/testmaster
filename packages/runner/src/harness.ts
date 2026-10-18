@@ -3,10 +3,11 @@ import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
 import { StringDecoder } from "node:string_decoder";
 import { runBrowser } from "./browser.js";
+import { CODE_EGRESS_ENV, type CodeEgressPolicy, CodeEgressTally } from "./code-egress.js";
 import { FAILURE_ARTIFACT_EVENT, FailureEvidence } from "./code-evidence.js";
 import { type CodeProfile, readCodeProfile } from "./code-profile.js";
 import { startForwarder } from "./forwarder/index.js";
-import { runHttp } from "./http.js";
+import { canonicalUrl, runHttp } from "./http.js";
 import {
   CODE_PROFILE_ENV,
   CODE_REDACTIONS_ENV,
@@ -170,6 +171,13 @@ async function readCodeSecrets(
     values[name] = String(await runtime.resolve({ secretRef }));
   return values;
 }
+/** Canonical origins of the attempt's allowlist and ignore list, for the shim's route hook. */
+function codeEgressPolicy(policy: RunnerInput["networkPolicy"]): CodeEgressPolicy {
+  return {
+    allowed: policy.allowedOrigins.map((origin) => canonicalUrl(origin).origin),
+    ignored: (policy.ignoredOrigins ?? []).map((origin) => canonicalUrl(origin).origin),
+  };
+}
 /** What the reporter finished for an imported-code attempt, and how the Playwright process ended. */
 export interface ImportedTally {
   steps: number;
@@ -178,6 +186,8 @@ export interface ImportedTally {
   /** How many of the assertion failures were timeouts (`assertion_timeout`). */
   assertionTimeouts?: number;
   exitCode: number | null;
+  /** A request was denied fatally (not an ignored origin, not a passive subresource): SEC-011. */
+  egressDenied?: boolean;
 }
 /**
  * The verdict on the whole imported code. Only a failed assertion (or a timeout) is a verdict on
@@ -189,6 +199,9 @@ export function importedResult(
   tally: ImportedTally,
   aborted: RunnerResult | undefined,
 ): RunnerResult {
+  // A denied request the policy does not tolerate blocks the whole run (SEC-011), whatever the
+  // assertions saw afterwards: the test kept running without the request, so they are tainted.
+  if (tally.egressDenied && !aborted) return { outcome: "blocked", reasonCode: "egress_denied" };
   if (tally.assertionFailures > 0)
     return {
       outcome: "failed",
@@ -261,6 +274,7 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
   let assertionFailures = 0;
   let assertionTimeouts = 0;
   const failureEvidence = new FailureEvidence(runtime);
+  const egress = new CodeEgressTally();
   let queue = Promise.resolve();
   const child = fork(
     resolve("/opt/testmaster/runner/node_modules/@playwright/test/cli.js"),
@@ -274,6 +288,7 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
         // shim masks them on the page of a failed test.
         [CODE_REDACTIONS_ENV]: JSON.stringify([...runtime.secrets]),
         ...(profile ? { [CODE_PROFILE_ENV]: JSON.stringify(profile) } : {}),
+        [CODE_EGRESS_ENV]: JSON.stringify(codeEgressPolicy(runtime.input.networkPolicy)),
       },
       stdio: ["ignore", "pipe", "pipe", "ipc"],
     },
@@ -291,9 +306,17 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
       const payload = message.payload;
       if (
         typeof type !== "string" ||
-        !["step.started", "step.finished", "log", FAILURE_ARTIFACT_EVENT].includes(type)
+        !["step.started", "step.finished", "log", "egress.denied", FAILURE_ARTIFACT_EVENT].includes(
+          type,
+        )
       )
         throw new Error("reporter_event_denied");
+      if (type === "egress.denied") {
+        // Recorded and published once, merged, when the Playwright process has ended.
+        if (!egress.add(payload))
+          await runtime.emit("log", { level: "warn", message: "Egress denial refused: malformed" });
+        return;
+      }
       if (type === FAILURE_ARTIFACT_EVENT) {
         await failureEvidence.accept(payload);
         return;
@@ -364,8 +387,26 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
       child.once("error", reject);
     });
     await queue;
+    try {
+      for (const denial of egress.list())
+        await runtime.emit("egress.denied", { ...denial, origin: runtime.scrub(denial.origin) });
+      if (egress.omittedCount)
+        await runtime.emit("log", {
+          level: "warn",
+          message: `egress_denials_omitted:${egress.omittedCount}`,
+        });
+    } catch {
+      /* The protocol channel closed (cancellation); the verdict below still stands. */
+    }
     return importedResult(
-      { steps: count, failures, assertionFailures, assertionTimeouts, exitCode: code },
+      {
+        steps: count,
+        failures,
+        assertionFailures,
+        assertionTimeouts,
+        exitCode: code,
+        egressDenied: egress.fatal,
+      },
       abortVerdict(runtime.signal),
     );
   } finally {

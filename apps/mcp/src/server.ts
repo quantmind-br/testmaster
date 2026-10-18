@@ -635,9 +635,11 @@ export class TestMasterMcp {
               ? error
               : new ContractError("INTERNAL", "MCP operation failed");
           // A busy writer must not turn the tool's own error into a JSON-RPC failure: the audit
-          // write waits for the writer like a worker loop does, and the error is returned either way.
-          const audited = await retryWriterContention(() =>
-            this.auditToolError(request.params.name, extra.requestId, failure.code),
+          // write waits for the writer like a worker loop does until the request is cancelled, and
+          // the error is returned either way.
+          const audited = await retryWriterContention(
+            () => this.auditToolError(request.params.name, extra.requestId, failure.code),
+            { signal: extra.signal },
           ).then(
             () => true,
             (auditError: unknown) => {
@@ -733,7 +735,7 @@ export class TestMasterMcp {
         [
           "testmaster://projects/{projectId}/environments{?cursor,offset}",
           "Project environments",
-          "Environments of a project (archived ones included, with archivedAt), up to 100 a page within 32 KiB: id, name, version (the expectedVersion of testmaster_update_environment) and the active revision's target and additional origins, network profile and auth profile references. The project's default environment is marked default",
+          "Environments of a project (archived ones included, with archivedAt), up to 100 a page within 32 KiB: id, name, version (the expectedVersion of testmaster_update_environment) and the active revision's target, additional and ignored origins, network profile and auth profile references. The project's default environment is marked default",
         ],
         [
           "testmaster://sources/{id}",
@@ -1659,6 +1661,9 @@ export class TestMasterMcp {
     const remove = args.removeMembers as MemberMatch[] | undefined;
     const optional = {
       ...(typeof args.description === "string" ? { description: args.description } : {}),
+      ...(typeof args.memberIntervalMs === "number"
+        ? { memberIntervalMs: args.memberIntervalMs }
+        : {}),
     };
     if (args.suiteId === undefined) {
       if (typeof args.name !== "string")
@@ -1726,7 +1731,7 @@ export class TestMasterMcp {
     if (!Object.keys(patch).length)
       throw new ContractError(
         "INVALID_ARGUMENT",
-        "Nothing to change: give name, description, selection, addMembers or removeMembers",
+        "Nothing to change: give name, description, memberIntervalMs, selection, addMembers or removeMembers",
       );
     return app.suites.update(String(args.suiteId), patch, Number(args.expectedVersion));
   }
@@ -1961,7 +1966,7 @@ export class TestMasterMcp {
     if (!Object.keys(patch).length)
       throw new ContractError(
         "INVALID_ARGUMENT",
-        "Nothing to change: give name, baseUrl, networkProfile, locale, timezone, production, additionalOrigins, authRefs or serverLog at top level, next to environmentId",
+        "Nothing to change: give name, baseUrl, networkProfile, locale, timezone, production, additionalOrigins, ignoredOrigins, authRefs or serverLog at top level, next to environmentId",
       );
     const environment = app.environments.update(
       String(environmentId),

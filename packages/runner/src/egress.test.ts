@@ -4,6 +4,7 @@ import {
   deniedOrigin,
   deniedSubrequestMessage,
   EgressDenials,
+  isIgnoredRequest,
   webSocketRequestUrl,
 } from "./egress.js";
 
@@ -51,6 +52,25 @@ it.each([
   "ftp://cdn.example.test/a.png",
 ])("never downgrades an ambiguous passive URL: %s", (url) => {
   expect(denialDisposition(url, "GET", "image")).toBe("fatal");
+});
+
+it.each([
+  ["https://js.example.test/v3/app.js?x=1", true],
+  ["https://js.example.test/frame#section", true],
+  ["https://other.example.test/v3/app.js", false],
+  ["http://js.example.test/v3/app.js", false],
+  ["https://js.example.test:8443/v3/app.js", false],
+  // An ambiguous URL is never ignored (SEC-008).
+  ["https://js.example.test\\@evil.example.test/a.js", false],
+  ["https://user:pass@js.example.test/a.js", false],
+  ["https://js.example.test%2f@evil.example.test/a.js", false],
+  ["ftp://js.example.test/a.js", false],
+])("decides whether %s goes to an ignored origin", (url, expected) => {
+  expect(isIgnoredRequest(url, new Set(["https://js.example.test"]))).toBe(expected);
+});
+
+it("ignores nothing when the ignore list is empty", () => {
+  expect(isIgnoredRequest("https://js.example.test/a.js", new Set())).toBe(false);
 });
 
 it("reports the origin only, never path, query, fragment or credentials", () => {

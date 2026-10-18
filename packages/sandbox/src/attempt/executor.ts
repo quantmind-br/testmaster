@@ -606,7 +606,8 @@ export class AttemptExecutor {
               `${JSON.stringify({
                 origin: event.payload.origin,
                 decision: "deny",
-                reason: "origin_not_allowed",
+                reason:
+                  event.payload.disposition === "ignored" ? "origin_ignored" : "origin_not_allowed",
                 layer: "browser_route",
                 resourceType: event.payload.resourceType,
                 disposition: event.payload.disposition,

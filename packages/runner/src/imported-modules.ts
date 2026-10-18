@@ -7,10 +7,17 @@ import {
   playwrightFixturesModule,
 } from "@testmaster/domain";
 import {
+  CODE_EGRESS_ENV,
+  EGRESS_ATTACHMENT,
+  MAX_CODE_DENIALS,
+  requestEgress,
+} from "./code-egress.js";
+import {
   FAILURE_ATTACHMENTS,
   FAILURE_WARNING_ATTACHMENT,
   FAILURE_WARNING_CHARS,
 } from "./code-evidence.js";
+import { webSocketRequestUrl } from "./egress.js";
 import { pageMarkup, redactMarkup, screenshotPage } from "./page-evidence.js";
 
 /** Carries the code's secret values (name to value) to the Playwright processes it runs in. */
@@ -29,6 +36,9 @@ export const CODE_REDACTIONS_ENV = "TESTMASTER_CODE_REDACTIONS";
  * source), masked and redacted against every value the runner scrubs, for the reporter to
  * forward. The screenshot has no time limit of its own (`timeout: 0`): the test's timeout and the
  * attempt's deadline bound it. A capture that fails attaches the reason instead and never throws.
+ * They also call `guardContext` on every browser context they hand to the test: it applies the
+ * attempt's egress policy (`requestEgress`, embedded as source, with the policy from
+ * `CODE_EGRESS_ENV`) to requests and WebSockets and attaches what it denied for the reporter.
  */
 const hostValues = `const values = JSON.parse(process.env.${CODE_SECRETS_ENV} || "{}");
 function secretValue(name) {
@@ -56,6 +66,64 @@ async function capturePageFailure(page, testInfo) {
     const reason = error instanceof Error ? error.message : String(error);
     await testInfo.attach(${JSON.stringify(FAILURE_WARNING_ATTACHMENT)}, { body: Buffer.from(("Page evidence of the failed test is unavailable: " + reason).slice(0, ${FAILURE_WARNING_CHARS})), contentType: "text/plain" }).catch(() => undefined);
   }
+}
+${requestEgress.toString()}
+${webSocketRequestUrl.toString()}
+const egressPolicy = JSON.parse(process.env.${CODE_EGRESS_ENV} || "null");
+async function guardContext(context) {
+  if (!egressPolicy) return undefined;
+  const found = new Map();
+  const note = (url, method, resourceType, disposition) => {
+    let origin;
+    try {
+      const parsed = new URL(url);
+      origin = parsed.protocol === "http:" || parsed.protocol === "https:" ? parsed.origin.slice(0, 200) : parsed.protocol;
+    } catch {
+      origin = "unparsable";
+    }
+    const key = origin + "|" + resourceType;
+    const known = found.get(key);
+    if (known) {
+      known.count++;
+      if (disposition === "fatal") known.disposition = "fatal";
+      return;
+    }
+    if (found.size >= ${MAX_CODE_DENIALS}) {
+      if (disposition !== "fatal") return;
+      const evicted = [...found.entries()].find(([, entry]) => entry.disposition !== "fatal");
+      if (!evicted) return;
+      found.delete(evicted[0]);
+    }
+    found.set(key, { origin, method: method.toUpperCase().slice(0, 200), resourceType: (resourceType || "other").slice(0, 200), disposition, count: 1 });
+  };
+  await context.route("**/*", async (route) => {
+    const request = route.request();
+    const disposition = requestEgress(egressPolicy, request.url(), request.method(), request.resourceType());
+    if (disposition === "allowed") {
+      await route.continue().catch(() => undefined);
+      return;
+    }
+    note(request.url(), request.method(), request.resourceType(), disposition);
+    await route.abort("blockedbyclient").catch(() => undefined);
+  });
+  await context.routeWebSocket("**/*", (socket) => {
+    const requestUrl = webSocketRequestUrl(socket.url());
+    const disposition = requestEgress(egressPolicy, requestUrl, "GET", "websocket");
+    if (disposition === "allowed") {
+      try {
+        socket.connectToServer();
+      } catch {
+        void socket.close({ code: 1011, reason: "WebSocket could not be connected" });
+      }
+      return;
+    }
+    note(requestUrl, "GET", "websocket", disposition);
+    void socket.close({ code: 1008, reason: "WebSocket origin is not authorized" });
+  });
+  return async (testInfo) => {
+    if (found.size === 0) return;
+    await testInfo.attach(${JSON.stringify(EGRESS_ATTACHMENT)}, { body: Buffer.from(JSON.stringify([...found.values()])), contentType: "application/json" }).catch(() => undefined);
+  };
 }`;
 
 /**

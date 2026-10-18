@@ -219,16 +219,58 @@ it("REQ-034 suite run without a live worker names --queue, the flag it accepts, 
   expect(refused.exit).not.toBe(0);
   expect(refused.document.error).toMatchObject({
     code: "PRECONDITION_FAILED",
-    message: "No live worker; start a worker or use --queue",
-    details: { nextActions: ["worker start", "--queue"] },
+    message: "No live worker; start a worker or use --wait or --queue",
+    details: { nextActions: ["worker start", "--wait", "--queue"] },
   });
   expect(f.app.database.all("SELECT id FROM batches")).toHaveLength(0);
-  const waited = await f.invoke(["suite", "run", suite.id, "--wait"]);
-  expect(waited.exit).not.toBe(0);
-  expect(waited.document.error?.code).toBe("INVALID_ARGUMENT");
+  const both = await f.invoke(["suite", "run", suite.id, "--wait", "--queue"]);
+  expect(both.document.error?.code).toBe("INVALID_ARGUMENT");
+  expect(f.app.database.all("SELECT id FROM batches")).toHaveLength(0);
   const queued = await f.invoke(["suite", "run", suite.id, "--queue"]);
   expect(queued.exit).toBe(0);
   expect(queued.document.data).toMatchObject({ requested: 3, accepted: 3 });
+});
+
+it("REQ-034 suite run --wait runs the batch in this process without a worker and returns the test run batch shape", async () => {
+  const f = await fixture();
+  const suite = (await f.invoke(["suite", "create", "--name", "nightly", ...f.bindings])).document
+    .data as unknown as { id: string };
+  vi.spyOn(Object.getPrototypeOf(f.app.worker), "live").mockReturnValue(false);
+  // The members are cancelled when the in-process worker starts, so the real loop finalizes them
+  // without a container; what is under test is who runs the batch and what comes back.
+  const original = Object.getPrototypeOf(f.app.worker).run as (
+    this: unknown,
+    options: { runIds?: string[] },
+  ) => Promise<unknown>;
+  const workerRun = vi
+    .spyOn(Object.getPrototypeOf(f.app.worker), "run")
+    .mockImplementation(async function (this: unknown, options: { runIds?: string[] }) {
+      for (const id of options.runIds ?? []) await f.app.runs.cancel(id);
+      return original.call(this, options);
+    } as never);
+  const waited = await f.invoke(["suite", "run", suite.id, "--wait"]);
+  expect(waited.document.error).toBeUndefined();
+  const data = waited.document.data as unknown as {
+    receipt: { batchId: string; memberRuns: { runId: string }[] };
+    members: { runId: string; run: { phase: string; outcome: string } }[];
+    batch: { id?: string; batchId?: string };
+    healing: unknown[];
+  };
+  expect(data.receipt.memberRuns).toHaveLength(3);
+  expect(data.members.map((member) => member.runId)).toEqual(
+    data.receipt.memberRuns.map((member) => member.runId),
+  );
+  for (const member of data.members)
+    expect(member.run).toMatchObject({ phase: "completed", outcome: "cancelled" });
+  expect(data.healing).toEqual([]);
+  expect(workerRun).toHaveBeenCalledWith(
+    expect.objectContaining({
+      ephemeral: true,
+      runIds: data.receipt.memberRuns.map((member) => member.runId),
+    }),
+  );
+  // The exit code is the batch result: cancelled members are not a pass.
+  expect(waited.exit).not.toBe(0);
 });
 
 it("REQ-035 OPS-016 schedule commands preview, create, edit, pause, resume, list history and archive", async () => {

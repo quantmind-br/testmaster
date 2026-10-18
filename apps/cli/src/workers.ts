@@ -22,6 +22,13 @@ function announceReady(rt: Runtime, workerId: string): void {
   );
 }
 
+/** One stderr line when a worker operation has waited over 5 s for another process's writer lock. */
+function announceContention(rt: Runtime, elapsedMs: number): void {
+  rt.stderr.write(
+    `worker is waiting for the database writer lock (${Math.round(elapsedMs / 1000)} s so far; another process holds it)\n`,
+  );
+}
+
 export function workerCommands(program: Command, runtime: Runtime): void {
   const group = program.command("worker");
   runtime.bind(
@@ -50,6 +57,7 @@ export function workerCommands(program: Command, runtime: Runtime): void {
             signal: rt.controller.signal,
             workerId,
             onReady: (id) => announceReady(rt, id),
+            onContended: (elapsedMs) => announceContention(rt, elapsedMs),
           });
           if (rt.signal) throw rt.interrupted();
           return { data: { mode: "server", workerId, workspaceId } };
@@ -66,6 +74,7 @@ export function workerCommands(program: Command, runtime: Runtime): void {
       await app.worker.run({
         signal: rt.controller.signal,
         onReady: (id) => announceReady(rt, id),
+        onContended: (elapsedMs) => announceContention(rt, elapsedMs),
       });
       if (rt.signal) throw rt.interrupted();
       return { data: await app.worker.status() };

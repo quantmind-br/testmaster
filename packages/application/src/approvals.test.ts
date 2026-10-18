@@ -400,4 +400,41 @@ describe("bound production approvals", () => {
       basis: "HTTP method DELETE",
     });
   });
+  it("lists a cleanup lookup as a read next to the destructive delete it guards", () => {
+    const backend = scaffoldPlan("backend");
+    backend.cleanup = [
+      {
+        resourceRef: "submit-project",
+        operation: "request",
+        find: {
+          resourceType: "project",
+          lookup: { method: "GET", pathSegments: [{ literal: "projects" }] },
+          itemsPointer: "/items",
+          keyPointer: "/name",
+          equals: { literal: "Run 42" },
+          handlePointer: "/id",
+          ownerProofPointer: "/owner",
+        },
+        input: {
+          method: "DELETE",
+          pathSegments: [{ literal: "projects" }, { variableRef: "submit-project.handle" }],
+        },
+        successPredicate: { predicate: "statusIn", values: [204] },
+        deadlineMs: 1000,
+        required: true,
+      },
+    ];
+    expect(planRiskActions(backend).slice(-2)).toEqual([
+      {
+        stepId: "cleanup:submit-project",
+        risk: "destructive",
+        basis: "cleanup HTTP method DELETE",
+      },
+      {
+        stepId: "cleanup-find:submit-project",
+        risk: "read",
+        basis: "cleanup lookup HTTP method GET",
+      },
+    ]);
+  });
 });

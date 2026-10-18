@@ -6,6 +6,7 @@
     "createdAt",
     "targetOrigins",
     "additionalOrigins",
+    "ignoredOrigins",
     "networkProfile",
     "authProfileRefs",
     "locale",
@@ -32,6 +33,14 @@
       }
     },
     "additionalOrigins": {
+      "type": "array",
+      "items": {
+        "minLength": 1,
+        "maxLength": 200,
+        "type": "string"
+      }
+    },
+    "ignoredOrigins": {
       "type": "array",
       "items": {
         "minLength": 1,

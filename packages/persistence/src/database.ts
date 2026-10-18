@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash } from "node:crypto";
 import { createReadStream, readdirSync, readFileSync } from "node:fs";
 import {
@@ -28,6 +29,40 @@ import { restorePendingMessage, restorePendingTable } from "./postgres/restore.j
 import { applyRestoreTightening } from "./restore-tightening.js";
 
 export type SqlRow = Record<string, unknown>;
+/**
+ * How long one statement of a synchronous caller (a CLI command, an HTTP or MCP request) waits
+ * inside SQLite for another connection's writer lock before the typed `writer_contention` refusal.
+ * The wait blocks the whole process (node:sqlite is synchronous), and runs executing in the same
+ * process renew their attempt lease every 10 s on that event loop: the bound keeps one blocked
+ * statement from starving those renewals, while still absorbing ordinary overlap with another
+ * process's short transactions.
+ */
+export const sqliteBusyTimeoutMs = 5000;
+/**
+ * The writer-lock wait of a transaction started inside {@link withYieldingWriterWait}: a loop that
+ * can await (`retryWriterContention`) gives the event loop back between short attempts instead of
+ * blocking it, and has no total deadline.
+ */
+export const sqliteYieldingBusyTimeoutMs = 50;
+const yieldingWriterWait = new AsyncLocalStorage<true>();
+/**
+ * Runs `operation` so that every `withTx` it starts, across its awaits, waits for the writer lock
+ * only {@link sqliteYieldingBusyTimeoutMs} before refusing with `writer_contention`. Used by the
+ * asynchronous retry loop, which then sleeps without blocking timers, heartbeats or cancellation.
+ */
+export function withYieldingWriterWait<T>(operation: () => T): T {
+  return yieldingWriterWait.run(true, operation);
+}
+
+/** True for SQLite BUSY or LOCKED (primary result codes 5 and 6, extended codes included). */
+function isSqliteBusy(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  if ("errcode" in error && typeof error.errcode === "number") {
+    const primary = error.errcode & 0xff;
+    return primary === 5 || primary === 6;
+  }
+  return /database is locked|SQLITE_BUSY/.test(error.message);
+}
 export interface MigrationStatus {
   version: number;
   name: string;
@@ -193,7 +228,7 @@ export class PersistenceDatabase {
     try {
       await chmod(actual, 0o600);
       db.exec(
-        "PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;",
+        `PRAGMA foreign_keys=ON; PRAGMA busy_timeout=${sqliteBusyTimeoutMs}; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;`,
       );
       const journal = db.prepare("PRAGMA journal_mode").get()?.journal_mode;
       const locking = db.prepare("PRAGMA locking_mode").get()?.locking_mode;
@@ -217,7 +252,9 @@ export class PersistenceDatabase {
   }
   static memory(): PersistenceDatabase {
     const db = new DatabaseSync(":memory:");
-    db.exec("PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000; PRAGMA synchronous=FULL;");
+    db.exec(
+      `PRAGMA foreign_keys=ON; PRAGMA busy_timeout=${sqliteBusyTimeoutMs}; PRAGMA synchronous=FULL;`,
+    );
     return new PersistenceDatabase(
       { engine: "sqlite", db, path: ":memory:", migrations: [] },
       "*",
@@ -382,17 +419,27 @@ export class PersistenceDatabase {
       }
     }
     const { db } = this.core;
+    // Inside withYieldingWriterWait the BEGIN waits only briefly; the connection's own wait (the
+    // default, or an operator's override) is restored afterwards.
+    const restoreBusyMs =
+      yieldingWriterWait.getStore() === true
+        ? Number((db.prepare("PRAGMA busy_timeout").get() as { timeout: number }).timeout)
+        : undefined;
     try {
+      if (restoreBusyMs !== undefined)
+        db.exec(`PRAGMA busy_timeout=${sqliteYieldingBusyTimeoutMs}`);
       db.exec("BEGIN IMMEDIATE");
     } catch (error) {
       // BEGIN IMMEDIATE is the only statement that waits for the writer lock, so a busy error
       // here means the transaction never started and the caller can retry safely.
-      if (error instanceof Error && /database is locked|SQLITE_BUSY/.test(error.message))
+      if (isSqliteBusy(error))
         throw new ContractError("UNAVAILABLE", "Local writer is busy; retry the operation", {
           reasonCode: "writer_contention",
           retryable: true,
         });
       throw error;
+    } finally {
+      if (restoreBusyMs !== undefined) db.exec(`PRAGMA busy_timeout=${restoreBusyMs}`);
     }
     try {
       const value = fn(this);
@@ -584,7 +631,7 @@ export class PersistenceDatabase {
       if (sqlite.isTransaction) sqlite.exec("ROLLBACK");
       throw error;
     } finally {
-      sqlite.exec("PRAGMA busy_timeout=5000");
+      sqlite.exec(`PRAGMA busy_timeout=${sqliteBusyTimeoutMs}`);
       if (rebuildsTables) sqlite.exec("PRAGMA foreign_keys=ON");
     }
   }

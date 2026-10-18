@@ -128,6 +128,8 @@ export const NetworkPolicy = Obj({
   allowedOrigins: Type.Array(Type.String({ format: "uri" })),
   /** Subset of `allowedOrigins` admitted only for page subrequests; never a credential, cookie or target scope. */
   additionalOrigins: Type.Optional(Type.Array(Type.String({ format: "uri" }))),
+  /** Origins the browser route hook aborts and records without failing the attempt; never in `allowedOrigins`. */
+  ignoredOrigins: Type.Optional(Type.Array(Type.String({ format: "uri" }))),
   privateTargets: Type.Optional(
     Type.Array(Obj({ host: Name, port: Type.Integer({ minimum: 1, maximum: 65535 }) })),
   ),

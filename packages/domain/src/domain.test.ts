@@ -11,7 +11,10 @@ import {
   aggregateBatch,
   batchExitCode,
   evaluateRisk,
+  exitCodeForBatchGate,
+  exitCodeForGate,
   exitCodeForRun,
+  gateNeutralReason,
   resolveDagClosure,
 } from "./policies.js";
 import { propagateTaint, requirePublic, scrubBytes, scrubText } from "./redaction.js";
@@ -262,6 +265,48 @@ describe("batch identities and dependency admission", () => {
   it("empty explicitly allowed is not_applicable and otherwise denied", () => {
     expect(() => aggregateBatch([])).toThrow();
     expect(aggregateBatch([], true).gate).toBe("not_applicable");
+  });
+  it("leaves a gate-neutral reason out of the batch gate and exits 0 only when nothing else ran", () => {
+    const skipped = {
+      key: "once",
+      runId: null,
+      requested: true,
+      dependency: false,
+      required: true,
+      outcome: null,
+      gate: "failed" as const,
+      reasonCode: "already_passed_once",
+    };
+    const passed = {
+      key: "clean",
+      runId: "clean",
+      requested: true,
+      dependency: false,
+      required: true,
+      outcome: "passed" as const,
+      gate: "passed" as const,
+    };
+    expect(gateNeutralReason("already_passed_once")).toBe(true);
+    expect(gateNeutralReason("upstream_failed")).toBe(false);
+    // The skipped member does not fail an otherwise passing batch.
+    expect(aggregateBatch([skipped, passed]).gate).toBe("passed");
+    // A batch of skipped members alone has no judged member: not_applicable, without an error.
+    expect(aggregateBatch([skipped]).gate).toBe("not_applicable");
+    // Negative control: a member left out for a gating reason still fails the batch.
+    expect(aggregateBatch([{ ...skipped, reasonCode: "upstream_failed" }, passed]).gate).toBe(
+      "failed",
+    );
+    const notDispatched = [{ memberKey: "0:tst", reasonCode: "already_passed_once" }];
+    expect(exitCodeForBatchGate("not_applicable", notDispatched)).toBe(0);
+    // Negative controls: an empty batch with nothing declared, and a gating leftover, still exit nonzero.
+    expect(exitCodeForBatchGate("not_applicable", [])).toBe(exitCodeForGate("not_applicable"));
+    expect(
+      exitCodeForBatchGate("not_applicable", [
+        ...notDispatched,
+        { memberKey: "1:tst", reasonCode: "upstream_failed" },
+      ]),
+    ).toBe(exitCodeForGate("not_applicable"));
+    expect(exitCodeForBatchGate("failed", notDispatched)).toBe(exitCodeForGate("failed"));
   });
   it("refuses missing, ambiguous and cyclic producers before returning closure", () => {
     expect(() =>

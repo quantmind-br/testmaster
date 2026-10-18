@@ -41,6 +41,15 @@
         "type": "string"
       }
     },
+    "ignoredOrigins": {
+      "maxItems": 32,
+      "description": "Exact origins (scheme, host, port; no path, query, credentials or wildcard) whose requests are aborted and recorded, never failing the run and never reaching the network. Disjoint from the target and additional origins. Replaces the previous list; [] clears it.",
+      "type": "array",
+      "items": {
+        "format": "uri",
+        "type": "string"
+      }
+    },
     "authRefs": {
       "type": "array",
       "items": {

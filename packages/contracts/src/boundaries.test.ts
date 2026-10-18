@@ -55,8 +55,16 @@ it("validates egress.denied events and refuses a malformed denial", () => {
     count: 2,
   };
   expect(() => validate("RunnerEvent", { ...base, type: "egress.denied", payload })).not.toThrow();
+  // An origin on the environment's ignore list is recorded as `ignored`.
+  expect(() =>
+    validate("RunnerEvent", {
+      ...base,
+      type: "egress.denied",
+      payload: { ...payload, disposition: "ignored" },
+    }),
+  ).not.toThrow();
   for (const broken of [
-    { ...payload, disposition: "ignored" },
+    { ...payload, disposition: "dropped" },
     { ...payload, count: 0 },
     { ...payload, origin: undefined },
     { ...payload, url: "https://cdn.example.test/a.png?token=x" },
@@ -135,6 +143,33 @@ it("accepts additional origins on environment create and patch only as a bounded
       networkProfile: "public",
     }),
   ).not.toThrow();
+  expect(() =>
+    validate("NetworkPolicy", {
+      allowedOrigins: ["https://app.example.test"],
+      ignoredOrigins: ["https://js.stripe.com"],
+      networkProfile: "public",
+    }),
+  ).not.toThrow();
+});
+it("accepts ignored origins on environment create and patch only as a bounded list of URIs", () => {
+  const environment = {
+    name: "staging",
+    baseUrl: "https://app.example.test",
+    networkProfile: "public",
+  };
+  expect(() =>
+    validate("EnvironmentInput", { ...environment, ignoredOrigins: ["https://js.stripe.com"] }),
+  ).not.toThrow();
+  expect(() => validate("EnvironmentPatchInput", { ignoredOrigins: [] })).not.toThrow();
+  for (const ignoredOrigins of [
+    "https://js.stripe.com",
+    [42],
+    ["not a uri"],
+    Array.from({ length: 33 }, (_, index) => `https://c${index}.example.test`),
+  ]) {
+    expect(() => validate("EnvironmentInput", { ...environment, ignoredOrigins })).toThrow();
+    expect(() => validate("EnvironmentPatchInput", { ignoredOrigins })).toThrow();
+  }
 });
 it("counts lexical frame children against global step identity and assertion limits", async () => {
   const fixture = JSON.parse(

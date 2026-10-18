@@ -443,6 +443,10 @@ of a revision that was never promoted and is newer than the active one is a `can
 verifies no requirement either (`verifiedRequirementCoverage` judges active revisions). Batch
 reports show `executionMetrics.counts.candidateRuns` and, when it is not zero,
 `candidateRequirementCoverage`, the requirements the passing candidates would verify once promoted.
+A plan with `runPolicy: "once"` is skipped by batches, lists, selective runs and schedules while its
+active revision has a fresh passing replay against the environment's active revision and the same
+destination (`already_passed_once`, gate unchanged). That prior Run is the batch report's
+`priorEvidence`: it counts for `verifiedRequirementCoverage` and nowhere else.
 Reasons and current IDs make changed test source and environment context explicit. This is a
 read-time view, separate
 from artifact completeness: expiry may make a bundle partial while its original Run outcome,
@@ -682,6 +686,19 @@ a passing baseline. It records policy approval without a human reviewer. Missing
 the proposal manual. `test run --heal propose --wait` proposes only after observed failure;
 `CI=true` denies healing and retries. Controlled-provider journey results test these invariants,
 not live-model repair quality.
+
+Imported and generated Playwright code gets the same locator verdicts, whether the action runs in
+the test body or inside `test.step`. A locator action that throws a strict mode violation
+(`resolved to N elements`) is `failed/assertion_mismatch`, like the plan runner's ambiguous
+locator. A locator action timeout whose call log has no `locator resolved to` line (the locator
+never attached) is `failed/assertion_timeout`; one whose call log has it (the element matched but
+was disabled, covered or unstable) is `inconclusive/insufficient_evidence`, like a plan action
+that attached and then timed out. Any other thrown error, including a `page.goto` timeout, stays
+`inconclusive/insufficient_evidence`, and a test-deadline interruption stays
+`failed/assertion_timeout`. The Python runner applies the same rule to Playwright Python's
+`Locator.<action>` messages. The analysis of a failed locator verdict names the locator and how
+many elements it matched (or that it never matched one); healing is not offered because the
+locator is in code.
 
 An unambiguous locator state wait that exceeds its approved deadline on a live page is
 `failed/assertion_timeout`; a crashed page or detached frame remains an evidence failure. An

@@ -501,3 +501,77 @@ it.each(["settled", "live-resource"] as const)(
     }
   },
 );
+it("stores the handle a cleanup lookup captures under the entry's resourceRef after the vault protects it", async () => {
+  const { app, init } = await fixture();
+  try {
+    const plan = scaffoldPlan("backend");
+    plan.cleanup = [
+      {
+        resourceRef: "get-health",
+        operation: "request",
+        find: {
+          resourceType: "project",
+          lookup: { method: "GET", pathSegments: [{ literal: "projects" }] },
+          itemsPointer: "/items",
+          keyPointer: "/name",
+          equals: { literal: "Run 42" },
+          handlePointer: "/id",
+          ownerProofPointer: "/owner",
+        },
+        input: {
+          method: "DELETE",
+          pathSegments: [{ literal: "projects" }, { variableRef: "get-health.handle" }],
+        },
+        successPredicate: { predicate: "statusIn", values: [204] },
+        deadlineMs: 10000,
+        required: true,
+      },
+    ];
+    const test = app.tests.create({ projectId: init.projectId, plan });
+    const receipt = await app.runs.admit(
+      {
+        testId: test.id,
+        environmentId: init.environmentId,
+        extensions: { "testmaster:executor": "process" },
+      },
+      { wait: true },
+    );
+    // The executor's order for a sensitive capture: the host protects the literal, then observes
+    // the protected event. The lookup runs after every step, so no step is active any more.
+    vi.spyOn(AttemptExecutor.prototype, "execute").mockImplementation(async (input) => {
+      const payload = await input.protectCapture!({
+        stepId: "get-health",
+        name: "handle",
+        valueType: "string",
+        sensitive: true,
+        value: { literal: "p2" },
+      });
+      await input.onEvent!({
+        protocolVersion: "1.0.0",
+        attemptId: "att_lookup",
+        occurredAt: new Date().toISOString(),
+        seq: 0,
+        type: "variable.captured",
+        payload,
+      });
+      return {
+        outcome: "blocked",
+        reasonCode: "security_precondition_failed",
+        logDropped: 0,
+        events: [],
+      };
+    });
+    await app.worker.run({ ephemeral: true, runIds: [receipt.runId] });
+    expect(
+      app.database.all(
+        "SELECT producer_step_id, name, taint FROM variables WHERE producer_run_id=?",
+        receipt.runId,
+      ),
+    ).toEqual([{ producer_step_id: "get-health", name: "handle", taint: "sensitive" }]);
+    expect(JSON.stringify(app.database.all("SELECT data_json FROM variables"))).not.toContain(
+      '"p2"',
+    );
+  } finally {
+    app.close();
+  }
+});

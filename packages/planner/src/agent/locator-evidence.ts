@@ -83,7 +83,8 @@ export function validLocatorEvidence(record: LocatorEvidence): boolean {
   }
 }
 function selects(locator: Locator, element: LocatorCandidate): boolean {
-  if (locator.container || locator.frame || locator.pageAlias) return false;
+  if (locator.container || locator.frame || locator.pageAlias || locator.nth !== undefined)
+    return false;
   if (locator.by === "role") {
     const { role, name, exact } = locator as Locator & {
       role: string;
@@ -145,7 +146,8 @@ export function assessLocatorEquivalence(
       base.cardinality !== 1 ||
       base.locator.frame ||
       base.locator.container ||
-      base.locator.pageAlias
+      base.locator.pageAlias ||
+      base.locator.nth !== undefined
     )
       continue;
     const matched = base.candidates.filter((element) => element.matched);
@@ -290,7 +292,8 @@ export function waitStateEquivalence(
         ).length === 1 &&
         !base.locator.frame &&
         !base.locator.container &&
-        !base.locator.pageAlias
+        !base.locator.pageAlias &&
+        base.locator.nth === undefined
       )
         return {
           equivalent: true,

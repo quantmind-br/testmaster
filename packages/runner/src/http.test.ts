@@ -766,6 +766,248 @@ it("preserves business outcomes when cleanup fails and denies compensation after
   expect(deletes).toBe(1);
 });
 
+/** A cleanup entry that finds the data a browser step created through a GET list route. */
+function lookupCleanup(
+  find: Partial<NonNullable<NonNullable<ExecutablePlan["cleanup"]>[number]["find"]>> = {},
+): NonNullable<ExecutablePlan["cleanup"]> {
+  return [
+    {
+      resourceRef: "submit-project",
+      operation: "request",
+      find: {
+        resourceType: "project",
+        lookup: { method: "GET", pathSegments: [{ literal: "projects" }] },
+        itemsPointer: "/items",
+        keyPointer: "/name",
+        equals: { literal: "Run 42" },
+        handlePointer: "/id",
+        ownerProofPointer: "/owner",
+        ...find,
+      },
+      input: {
+        method: "DELETE",
+        pathSegments: [{ literal: "projects" }, { variableRef: "submit-project.handle" }],
+      },
+      successPredicate: { predicate: "statusIn", values: [204] },
+      deadlineMs: 1000,
+      required: true,
+    },
+  ];
+}
+async function projectsServer(
+  list: (res: ServerResponse) => void,
+  deleteStatus = 204,
+): Promise<{ base: string; requests: string[] }> {
+  const requests: string[] = [];
+  const base = await serve((req, res) => {
+    requests.push(`${req.method} ${req.url}`);
+    if (req.method === "DELETE") {
+      res.statusCode = deleteStatus;
+      res.end();
+    } else list(res);
+  });
+  return { base, requests };
+}
+const projects = (...items: Record<string, unknown>[]): string => JSON.stringify({ items });
+
+it("cleanup by lookup deletes the one item whose key equals the plan value and records it as a resource", async () => {
+  const { base, requests } = await projectsServer((res) =>
+    res.end(
+      projects({ id: "p1", name: "Other", owner: "me" }, { id: "p2", name: "Run 42", owner: "me" }),
+    ),
+  );
+  const { engine, events } = fixture(base, {
+    plan: plan([requestStep("noop", [])], lookupCleanup()),
+  });
+  expect(
+    await engine.cleanup({ outcome: "passed", reasonCode: "assertions_satisfied" }),
+  ).toMatchObject({ cleanupOutcome: "passed" });
+  expect(requests).toEqual(["GET /projects", "DELETE /projects/p2"]);
+  const resourceEvents = events.filter((event) => event.type.startsWith("resource."));
+  expect(resourceEvents.map((event) => event.type)).toEqual([
+    "resource.intent",
+    "resource.created",
+    "resource.cleanup",
+    "resource.cleanup",
+  ]);
+  expect(resourceEvents.map((event) => event.payload)).toMatchObject([
+    { state: "planned" },
+    { state: "created" },
+    { state: "cleanup_pending" },
+    { state: "cleaned" },
+  ]);
+  // The runner supplies the plan step the data belongs to, which the host keys the record by.
+  expect(resourceEvents[0]?.payload).toMatchObject({
+    stepId: "submit-project",
+    resourceType: "project",
+    correlationKey: "Run 42",
+  });
+  expect(resourceEvents[1]?.payload).toMatchObject({ handleRef: "submit-project.handle" });
+  expect(events.find((event) => event.type === "variable.captured")?.payload).toMatchObject({
+    stepId: "submit-project",
+    name: "handle",
+    sensitive: true,
+  });
+});
+
+it("cleanup by lookup resolves a variable key and deletes nothing, recorded, when no item matches", async () => {
+  const { base, requests } = await projectsServer((res) =>
+    res.end(projects({ id: "p1", name: "Other", owner: "me" })),
+  );
+  const { engine, events } = fixture(base, {
+    plan: plan(
+      [requestStep("noop", [])],
+      lookupCleanup({ equals: { variableRef: "project_name" } }),
+    ),
+    variables: { project_name: { value: "Run 42", sensitive: false } },
+  });
+  expect(
+    await engine.cleanup({ outcome: "passed", reasonCode: "assertions_satisfied" }),
+  ).toMatchObject({ cleanupOutcome: "passed" });
+  expect(requests).toEqual(["GET /projects"]);
+  expect(events.some((event) => event.type.startsWith("resource."))).toBe(false);
+  expect(events.find((event) => event.type === "log")?.payload).toMatchObject({
+    level: "info",
+    message: expect.stringContaining("no item matches"),
+  });
+});
+
+it("cleanup by lookup refuses two matching items and deletes neither", async () => {
+  const { base, requests } = await projectsServer((res) =>
+    res.end(
+      projects(
+        { id: "p1", name: "Run 42", owner: "me" },
+        { id: "p2", name: "Run 42", owner: "me" },
+      ),
+    ),
+  );
+  const { engine, events } = fixture(base, {
+    plan: plan([requestStep("noop", [])], lookupCleanup()),
+  });
+  expect(
+    await engine.cleanup({ outcome: "passed", reasonCode: "assertions_satisfied" }),
+  ).toMatchObject({ cleanupOutcome: "failed" });
+  expect(requests).toEqual(["GET /projects"]);
+  expect(events.some((event) => event.type.startsWith("resource."))).toBe(false);
+  expect(events.find((event) => event.type === "log")?.payload).toMatchObject({
+    level: "error",
+    message: expect.stringContaining("2 items match"),
+  });
+});
+
+it("cleanup by lookup never deletes a match that lacks a handle or an owner proof", async () => {
+  for (const item of [
+    { id: "p2", name: "Run 42" },
+    { id: "p2", name: "Run 42", owner: "" },
+    { name: "Run 42", owner: "me" },
+    { id: { nested: true }, name: "Run 42", owner: "me" },
+  ]) {
+    const { base, requests } = await projectsServer((res) => res.end(projects(item)));
+    const { engine, events } = fixture(base, {
+      plan: plan([requestStep("noop", [])], lookupCleanup()),
+    });
+    expect(
+      await engine.cleanup({ outcome: "passed", reasonCode: "assertions_satisfied" }),
+    ).toMatchObject({ cleanupOutcome: "inconclusive" });
+    expect(requests).toEqual(["GET /projects"]);
+    expect(events.some((event) => event.type.startsWith("resource."))).toBe(false);
+  }
+});
+
+it("cleanup by lookup ends inconclusive on a paged list instead of reading it as nothing created", async () => {
+  const one = { id: "p2", name: "Run 42", owner: "me" };
+  const paged: [string, (res: ServerResponse) => void, Parameters<typeof lookupCleanup>[0]][] = [
+    [
+      "total above the items returned, with a match",
+      (res) => res.end(JSON.stringify({ items: [one], total: 2 })),
+      { totalPointer: "/total" },
+    ],
+    [
+      "total above the items returned, without a match",
+      (res) => res.end(JSON.stringify({ items: [], total: 7 })),
+      { totalPointer: "/total" },
+    ],
+    [
+      "total that is not a number",
+      (res) => res.end(JSON.stringify({ items: [one], total: "many" })),
+      { totalPointer: "/total" },
+    ],
+    [
+      "Link header with rel=next",
+      (res) => {
+        res.setHeader("link", '<http://example.test/projects?page=2>; rel="next"');
+        res.end(projects(one));
+      },
+      {},
+    ],
+  ];
+  for (const [name, list, find] of paged) {
+    const { base, requests } = await projectsServer(list);
+    const { engine } = fixture(base, {
+      plan: plan([requestStep("noop", [])], lookupCleanup(find)),
+    });
+    expect(
+      (await engine.cleanup({ outcome: "passed", reasonCode: "assertions_satisfied" }))
+        .cleanupOutcome,
+      name,
+    ).toBe("inconclusive");
+    expect(requests, name).toEqual(["GET /projects"]);
+  }
+  // Control: a total equal to the items returned reads as complete and deletes the match.
+  const { base, requests } = await projectsServer((res) =>
+    res.end(JSON.stringify({ items: [one], total: 1 })),
+  );
+  const { engine } = fixture(base, {
+    plan: plan([requestStep("noop", [])], lookupCleanup({ totalPointer: "/total" })),
+  });
+  expect(
+    (await engine.cleanup({ outcome: "passed", reasonCode: "assertions_satisfied" }))
+      .cleanupOutcome,
+  ).toBe("passed");
+  expect(requests).toEqual(["GET /projects", "DELETE /projects/p2"]);
+});
+
+it("cleanup by lookup is inconclusive when the lookup fails, and refuses a sensitive key before any request", async () => {
+  const failing = await projectsServer((res) => {
+    res.statusCode = 500;
+    res.end("{}");
+  });
+  const down = fixture(failing.base, { plan: plan([requestStep("noop", [])], lookupCleanup()) });
+  expect(
+    (await down.engine.cleanup({ outcome: "passed", reasonCode: "assertions_satisfied" }))
+      .cleanupOutcome,
+  ).toBe("inconclusive");
+  expect(failing.requests).toEqual(["GET /projects"]);
+  const quiet = await projectsServer((res) => res.end(projects()));
+  const sensitive = fixture(quiet.base, {
+    plan: plan([requestStep("noop", [])], lookupCleanup({ equals: { variableRef: "token" } })),
+    variables: { token: { value: "Run 42", sensitive: true } },
+  });
+  expect(
+    (await sensitive.engine.cleanup({ outcome: "passed", reasonCode: "assertions_satisfied" }))
+      .cleanupOutcome,
+  ).toBe("inconclusive");
+  expect(quiet.requests).toEqual([]);
+});
+
+it("cleanup by lookup lists a deletion that fails as an orphaned resource and fails the cleanup", async () => {
+  const { base, requests } = await projectsServer(
+    (res) => res.end(projects({ id: "p2", name: "Run 42", owner: "me" })),
+    500,
+  );
+  const { engine, events } = fixture(base, {
+    plan: plan([requestStep("noop", [])], lookupCleanup()),
+  });
+  expect(
+    (await engine.cleanup({ outcome: "passed", reasonCode: "assertions_satisfied" }))
+      .cleanupOutcome,
+  ).toBe("failed");
+  expect(requests).toEqual(["GET /projects", "DELETE /projects/p2"]);
+  expect(
+    events.filter((event) => event.type === "resource.cleanup").map((event) => event.payload),
+  ).toMatchObject([{ state: "cleanup_pending" }, { state: "orphaned" }]);
+});
+
 it("rejects secret queries, header injection, unsafe URLs and artifacts before IO", async () => {
   const base = await serve((_req, res) => res.end("ok"));
   const { engine, runtime } = fixture(base, {

@@ -8,12 +8,14 @@ import {
   validate,
 } from "@testmaster/contracts";
 import type { Command } from "commander";
+import { waitForBatch } from "./execution.js";
 import {
   collect,
   integer,
   type Options,
   type Runtime,
   required,
+  seconds,
   string,
   strings,
   version,
@@ -104,8 +106,20 @@ function selectionOptions(command: Command): Command {
     )
     .option("--selection-file <path>", "JSON selection, as the API accepts it");
 }
-function suiteInput(name: string, description: string | undefined, selection: SuiteSelection) {
-  return { name, ...(description ? { description } : {}), selection } satisfies SuiteInput;
+const MEMBER_INTERVAL_HELP =
+  "Minimum milliseconds between the starts of consecutive members of a batch (0 clears)";
+function suiteInput(
+  name: string,
+  description: string | undefined,
+  selection: SuiteSelection,
+  memberIntervalMs?: number,
+) {
+  return {
+    name,
+    ...(description ? { description } : {}),
+    selection,
+    ...(memberIntervalMs === undefined ? {} : { memberIntervalMs }),
+  } satisfies SuiteInput;
 }
 function runInput(options: Options): SuiteRunInput {
   const confirmed = strings(options, "confirmExclusion");
@@ -124,7 +138,8 @@ export function suiteCommands(program: Command, runtime: Runtime): void {
   runtime.bind(
     selectionOptions(group.command("create"))
       .requiredOption("--name <name>")
-      .option("--description <text>"),
+      .option("--description <text>")
+      .option("--member-interval-ms <ms>", MEMBER_INTERVAL_HELP, integer),
     async (rt, _args, opts) => {
       const selection = await selectionOf(rt, opts);
       if (!selection)
@@ -134,14 +149,27 @@ export function suiteCommands(program: Command, runtime: Runtime): void {
         );
       return {
         data: await (await rt.app()).suites.create(
-          suiteInput(required(opts, "name"), string(opts, "description"), selection),
+          suiteInput(
+            required(opts, "name"),
+            string(opts, "description"),
+            selection,
+            typeof opts.memberIntervalMs === "number" ? opts.memberIntervalMs : undefined,
+          ),
         ),
       };
     },
     async (rt, _args, opts) => {
       const selection = await selectionOf(rt, opts);
       if (!selection) throw new ContractError("INVALID_ARGUMENT", "A selection is required");
-      validate("SuiteInput", suiteInput(required(opts, "name"), undefined, selection));
+      validate(
+        "SuiteInput",
+        suiteInput(
+          required(opts, "name"),
+          undefined,
+          selection,
+          typeof opts.memberIntervalMs === "number" ? opts.memberIntervalMs : undefined,
+        ),
+      );
       return { data: null };
     },
   );
@@ -159,6 +187,7 @@ export function suiteCommands(program: Command, runtime: Runtime): void {
     selectionOptions(group.command("update <id>"))
       .option("--name <name>")
       .option("--description <text>")
+      .option("--member-interval-ms <ms>", MEMBER_INTERVAL_HELP, integer)
       .requiredOption("--expected-version <version>", "Current version", integer),
     async (rt, args, opts) => {
       const selection = await selectionOf(rt, opts);
@@ -166,6 +195,9 @@ export function suiteCommands(program: Command, runtime: Runtime): void {
         ...(string(opts, "name") ? { name: string(opts, "name") as string } : {}),
         ...(string(opts, "description")
           ? { description: string(opts, "description") as string }
+          : {}),
+        ...(typeof opts.memberIntervalMs === "number"
+          ? { memberIntervalMs: opts.memberIntervalMs }
           : {}),
         ...(selection ? { selection } : {}),
       };
@@ -252,7 +284,7 @@ export function suiteCommands(program: Command, runtime: Runtime): void {
     group
       .command("run <id>")
       .description(
-        "Admit one frozen BatchRun for the list (a fixed list runs the revisions it pinned, not later promotions); follow each member with `run wait <runId>` (receipt memberRuns), then `report export <batchId>`",
+        "Admit one frozen BatchRun for the list (a fixed list runs the revisions it pinned, not later promotions); --wait follows every member to its end (no worker needed: runs them here) and exits with the batch result, otherwise follow each member with `run wait <runId>` (receipt memberRuns), then `report export <batchId>`",
       )
       .option(
         "--confirm-exclusion <key>",
@@ -261,19 +293,25 @@ export function suiteCommands(program: Command, runtime: Runtime): void {
       )
       .option("--expansion-hash <digest>", "Refuse unless the list still resolves to this hash")
       .option("--heal <policy>", "Healing policy: off or propose")
+      .option("--wait", "Wait for every member; runs them here when no worker is live")
+      .option("--timeout <seconds>", "Wait deadline in seconds", seconds)
+      .option("--cancel-on-interrupt", "Cancel the members when interrupted while waiting")
       .option("--queue", "Admit even when no worker is live; Runs wait for one")
       .option("--idempotency-key <key>"),
     async (rt, args, opts) => {
-      const receipt = await (await rt.app()).suites.run(String(args[0]), runInput(opts), {
+      if (opts.wait === true && opts.queue === true)
+        throw new ContractError("INVALID_ARGUMENT", "--wait and --queue are mutually exclusive");
+      const app = await rt.app();
+      const receipt = await app.suites.run(String(args[0]), runInput(opts), {
         origin: "cli",
-        ...(opts.queue === true ? { wait: true } : {}),
-        waitFlag: "--queue",
+        ...(opts.wait === true || opts.queue === true ? { wait: true } : {}),
+        waitFlags: ["--wait", "--queue"],
         ...(string(opts, "idempotencyKey")
           ? { idempotencyKey: string(opts, "idempotencyKey") as string }
           : {}),
       });
       rt.receipts.push(receipt);
-      return { data: receipt };
+      return opts.wait === true ? waitForBatch(rt, app, receipt, opts) : { data: receipt };
     },
   );
 }

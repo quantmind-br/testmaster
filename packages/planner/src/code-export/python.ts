@@ -286,6 +286,10 @@ class PlanRuntime:
             await handle.dispose()
 
     async def locate(self, spec, timeout, base=None):
+        located = await self.locate_scoped(spec, timeout, base)
+        return located if "nth" not in spec else located.nth(spec["nth"])
+
+    async def locate_scoped(self, spec, timeout, base):
         root = self.scope if base is None else base
         if "pageAlias" in spec:
             root = self.selected(spec["pageAlias"])

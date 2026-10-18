@@ -156,22 +156,30 @@ export function serverCommands(program: Command, runtime: Runtime): void {
       const app = createServer({ application, host, origins: strings(options, "origin") });
       // `controller` stops the worker and loops; it is aborted by shutdown or by a worker failure.
       const controller = new AbortController();
-      const worker = application.worker.run({ signal: controller.signal }).then(
-        () => {
-          // The worker ends by itself only when it was drained or stopped (or revoked) while the
-          // server runs: a server without a worker must not keep looking healthy.
-          if (!controller.signal.aborted) {
-            rt.stderr.write("worker drained; shutting the server down\n");
+      const worker = application.worker
+        .run({
+          signal: controller.signal,
+          onContended: (elapsedMs) =>
+            rt.stderr.write(
+              `worker is waiting for the database writer lock (${Math.round(elapsedMs / 1000)} s so far; another process holds it)\n`,
+            ),
+        })
+        .then(
+          () => {
+            // The worker ends by itself only when it was drained or stopped (or revoked) while the
+            // server runs: a server without a worker must not keep looking healthy.
+            if (!controller.signal.aborted) {
+              rt.stderr.write("worker drained; shutting the server down\n");
+              controller.abort();
+            }
+            return null;
+          },
+          (error: unknown) => {
+            rt.stderr.write(`worker failed: ${failureLabel(error)}; shutting the server down\n`);
             controller.abort();
-          }
-          return null;
-        },
-        (error: unknown) => {
-          rt.stderr.write(`worker failed: ${failureLabel(error)}; shutting the server down\n`);
-          controller.abort();
-          return { error };
-        },
-      );
+            return { error };
+          },
+        );
       const loops = controllerLoops(rt, application, "local", controller.signal);
       const address = await app.listen({ host, port: options.port as number });
       const receipt = {
@@ -308,7 +316,7 @@ export function identityCommands(program: Command, runtime: Runtime): void {
  * that ends in failure is fatal for the whole process: a loop that is not restarted would leave a
  * healthy-looking process with no worker for that workspace. Sibling loops drain, then the first
  * failure is thrown so the supervisor restarts the process (a build older than the database,
- * `worker_schema_behind`, OPS-038, and persistent writer contention included).
+ * `worker_schema_behind`, OPS-038, included; writer contention is waited out, not a failure).
  */
 export async function runServerWorkers(
   application: Application,

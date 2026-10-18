@@ -8,6 +8,14 @@ const EXPECTED = /^\s*Expected\b[^:\n]*:[ \t]*(\S.*)$/mu;
 const RECEIVED = /^\s*Received\b[^:\n]*:[ \t]*(\S.*)$/mu;
 const ASSERTION = /^\s*(?:(?:Error: )?expect\(|AssertionError\b)/u;
 const TIMEOUT = /\b(?:Test timeout of|Timeout) \d+ms exceeded\b/u;
+const TEST_TIMEOUT = /\bTest timeout of \d+ms exceeded\b/u;
+/** `locator.click: Error: strict mode violation: getByRole(...) resolved to 2 elements:`. */
+const STRICT_VIOLATION =
+  /^\s*(?:\w*Error: )?(?:locator\.\w+: )?(?:\w*Error: )?strict mode violation: [^\n]*\bresolved to \d+ elements?\b/u;
+/** `TimeoutError: locator.click: Timeout 5000ms exceeded.` (any locator action or wait). */
+const LOCATOR_TIMEOUT = /^\s*(?:\w*Error: )?locator\.\w+: (?:\w*Error: )?Timeout \d+ms exceeded\b/u;
+/** The call log line Playwright prints once the locator matched an element. */
+const LOCATOR_RESOLVED = /^\s*-\s+locator resolved to\b/mu;
 
 /** The parts of Playwright's `TestError` a failure report uses. */
 export interface PlaywrightFailure {
@@ -49,6 +57,34 @@ export function isAssertionFailure(failure: PlaywrightFailure | undefined): bool
  */
 export function isTimeoutFailure(failure: PlaywrightFailure | undefined): boolean {
   return TIMEOUT.test(stripVTControlCharacters(failure?.message ?? failure?.value ?? ""));
+}
+function messageOf(failure: PlaywrightFailure | undefined): string {
+  return stripVTControlCharacters(failure?.message ?? failure?.value ?? "");
+}
+/** Whether the failure is the test's own deadline ("Test timeout of 30000ms exceeded"). */
+export function isTestTimeout(failure: PlaywrightFailure | undefined): boolean {
+  return TEST_TIMEOUT.test(messageOf(failure));
+}
+/**
+ * Whether a locator action threw a strict mode violation: the locator resolved to more than one
+ * element, which is the plan runner's ambiguous cardinality and fails the same way.
+ */
+export function isStrictViolation(failure: PlaywrightFailure | undefined): boolean {
+  return STRICT_VIOLATION.test(messageOf(failure));
+}
+/**
+ * How a locator action ended when it timed out: `never_attached` when the call log has no "locator
+ * resolved to" line (nothing ever matched, the plan runner's `assertion_timeout`), `attached` when
+ * the locator matched but the action did not complete (not enabled, covered, not stable: the plan
+ * runner's inconclusive action timeout). `undefined` when the failure is no locator action timeout
+ * (a `page.goto` timeout, a thrown error).
+ */
+export function locatorTimeout(
+  failure: PlaywrightFailure | undefined,
+): "never_attached" | "attached" | undefined {
+  const message = messageOf(failure);
+  if (!LOCATOR_TIMEOUT.test(message)) return undefined;
+  return LOCATOR_RESOLVED.test(message) ? "attached" : "never_attached";
 }
 function errorCode(message: string, assertion: boolean): string {
   if (assertion) return "assertion_mismatch";

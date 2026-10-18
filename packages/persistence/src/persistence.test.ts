@@ -12,6 +12,9 @@ import {
   loadMigrations,
   MigrationChecksumError,
   PersistenceDatabase,
+  sqliteBusyTimeoutMs,
+  sqliteYieldingBusyTimeoutMs,
+  withYieldingWriterWait,
 } from "./database.js";
 import {
   AuditRepository,
@@ -327,8 +330,15 @@ describe("SQLite persistence", () => {
       const db = await createDatabase();
       const other = await PersistenceDatabase.open(db.path);
       connections.push(other);
-      expect(other.get("PRAGMA busy_timeout")?.timeout).toBe(5000);
-      other.exec("PRAGMA busy_timeout=50");
+      // A synchronous caller absorbs ordinary overlap; the yielding wait of the retry loop is short.
+      expect(sqliteBusyTimeoutMs).toBe(5000);
+      expect(sqliteYieldingBusyTimeoutMs).toBeLessThanOrEqual(100);
+      expect(other.get("PRAGMA busy_timeout")?.timeout).toBe(sqliteBusyTimeoutMs);
+      // The migrating open of a fresh database restores the same constant after its fail-fast 0.
+      expect(db.get("PRAGMA busy_timeout")?.timeout).toBe(sqliteBusyTimeoutMs);
+      const memory = PersistenceDatabase.memory();
+      connections.push(memory);
+      expect(memory.get("PRAGMA busy_timeout")?.timeout).toBe(sqliteBusyTimeoutMs);
       const holder = new DatabaseSync(db.path);
       try {
         holder.exec("PRAGMA busy_timeout=5000; BEGIN IMMEDIATE");
@@ -336,9 +346,11 @@ describe("SQLite persistence", () => {
         let ran = false;
         let error: unknown;
         try {
-          other.withTx(() => {
-            ran = true;
-          });
+          withYieldingWriterWait(() =>
+            other.withTx(() => {
+              ran = true;
+            }),
+          );
         } catch (caught) {
           error = caught;
         }
@@ -349,6 +361,8 @@ describe("SQLite persistence", () => {
         });
         expect(ran).toBe(false);
         expect(other.inTransaction).toBe(false);
+        // The yielding wait applies to that transaction only.
+        expect(other.get("PRAGMA busy_timeout")?.timeout).toBe(sqliteBusyTimeoutMs);
         holder.exec("COMMIT");
       } finally {
         holder.close();

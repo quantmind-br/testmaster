@@ -5,7 +5,7 @@ const PLAN_SCHEMA_RULE =
   "The plan is an `ExecutablePlan`: its JSON Schema is the resource testmaster://schemas/ExecutablePlan and the shape of one step is testmaster://schemas/Step. The plan schema is about 190 KB, past what a client shows of one read, so a read without `offset` returns a small pointer document (`name`, `sizeBytes`, `sha256`, `textPages.first`) instead: read the schema as text pages, `?offset=0` and then the offset plus the UTF-8 bytes of each page read, until a page is shorter than 32768 bytes, and concatenate them (they are exactly the schema; check `sha256`). testmaster_validate_document with `schema: ExecutablePlan` checks a plan before it is stored.";
 /** The one declaration that makes a created resource deleted; the planner prompt carries the same rule. */
 const PLAN_CLEANUP_RULE =
-  'A plan that creates a resource it must delete declares it twice: the creating request step sets `input.resource` {resourceType, correlationKey, handle (JSON pointer to the new id in the response), ownerProof (JSON pointer to a response field proving the account owns it)}, and a top-level `cleanup` entry sets `resourceRef` to that step id, a request (`operation: request`, whatever method the deletion route takes) that passes {"variableRef": "<step id>.handle"} in its path or body, and a `successPredicate`. Without both pointers and the entry the cleanup never runs (`cleanup_never_runs`). Cleanup also runs after a step already deleted the resource, so its predicate accepts the missing-resource answer too (`statusIn [200, 404]`).';
+  'A plan that creates a resource it must delete declares it twice: the creating request step sets `input.resource` {resourceType, correlationKey, handle (JSON pointer to the new id in the response), ownerProof (JSON pointer to a response field proving the account owns it)}, and a top-level `cleanup` entry sets `resourceRef` to that step id, a request (`operation: request`, whatever method the deletion route takes) that passes {"variableRef": "<step id>.handle"} in its path or body, and a `successPredicate`. Without both pointers and the entry the cleanup never runs (`cleanup_never_runs`). Cleanup also runs after a step already deleted the resource, so its predicate accepts the missing-resource answer too (`statusIn [200, 404]`). Data a browser step creates has no creating request: its cleanup entry adds `find` {resourceType, lookup (a GET list request), itemsPointer, keyPointer, equals ({literal} or {variableRef}, not sensitive), handlePointer, ownerProofPointer, totalPointer?} and `resourceRef` names the creating step; the runner deletes only when exactly one item matches (none: nothing to delete; two or more: refused; paged list: inconclusive).';
 
 /**
  * The rules of each MCP tool, served at `testmaster://tools/{name}`. A tool description stays a
@@ -171,6 +171,7 @@ export const toolRules: Record<keyof typeof mcpTools, readonly string[]> = {
   testmaster_save_suite: [
     "Creates a test list, or changes one at `expectedVersion`: replace the `selection`, or `addMembers`/`removeMembers` of a fixed list (removals first).",
     "Run it with testmaster_run_tests `suiteId` (replay only).",
+    "`memberIntervalMs` paces a list: the minimum milliseconds between the starts (claims) of consecutive members of a batch, in batch order (protects a stateful target from bursts such as login rate limits, and keeps ordered members ordered). A batch freezes it at admission; 0 clears it.",
     "Reports judge each test by its active revision: a pinned revision never promoted is a candidate (not stale, verifies nothing).",
   ],
   testmaster_approve_execution: [
@@ -215,8 +216,9 @@ export const toolRules: Record<keyof typeof mcpTools, readonly string[]> = {
     "The config keys of each kind are listed in the input schema. Next: testmaster_update_environment to bind the profile (`authRefs`).",
   ],
   testmaster_update_environment: [
-    "Changes an environment at `expectedVersion`; give only the fields to change, at top level next to `environmentId`: authRefs, additionalOrigins, baseUrl, networkProfile, locale, timezone, production, name, serverLog.",
+    "Changes an environment at `expectedVersion`; give only the fields to change, at top level next to `environmentId`: authRefs, additionalOrigins, ignoredOrigins, baseUrl, networkProfile, locale, timezone, production, name, serverLog.",
     "Returns the environment and its new active revision. A profile not bound to the target origin is PRECONDITION_FAILED.",
+    "`ignoredOrigins` (exact origins, at most 32, disjoint from the target and `additionalOrigins`; replaces the list, `[]` clears it) names third parties the run may do without, such as an analytics or payment script: their requests are aborted before authorization and recorded as `egress.denied` with disposition `ignored`, never fail the run, and never reach the network. Use it only for an origin whose absence the test tolerates; `additionalOrigins` is what lets a page actually use one.",
     "`serverLog: {kind: \"docker\", container}` opts in to reading the application server's docker log: the lines written during each attempt are stored, scrubbed of secrets, as the evidence logs/server.log, and testmaster_analyze_run cites its error lines. `serverLog: null` stops it. TestMaster only reads the log; the container must run on the host's docker.",
   ],
   testmaster_test_auth_login: [

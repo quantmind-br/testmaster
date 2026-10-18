@@ -78,7 +78,7 @@ export const toolDescriptions: Record<keyof typeof mcpTools, string> = {
   testmaster_save_auth_profile:
     "Create (projectId, name, kind, originBindings, secrets, config) or update (profileId, expectedVersion, fields) an auth profile; secrets are secret ids, username may be plain (unmasked).",
   testmaster_update_environment:
-    "Change an environment at expectedVersion; give only the fields to change at top level (authRefs, additionalOrigins, baseUrl, networkProfile, locale, timezone, production, name, serverLog).",
+    "Change an environment at expectedVersion; give only the fields to change at top level (authRefs, additionalOrigins, ignoredOrigins, baseUrl, networkProfile, locale, timezone, production, name, serverLog).",
   testmaster_test_auth_login:
     "Sign in once with an auth profile bound to an environment and report the outcome (authenticated, failed, blocked, checkpoint_required); saves nothing, never returns credentials. Scope X.",
 };

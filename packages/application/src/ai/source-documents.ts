@@ -457,7 +457,13 @@ export function applyServerBasePath(
   for (const step of flattenSteps(clone.steps))
     if (step.operation === "request")
       step.input.pathSegments = prefixedSegments(basePath, step.input.pathSegments);
-  for (const cleanup of clone.cleanup ?? [])
+  for (const cleanup of clone.cleanup ?? []) {
     cleanup.input.pathSegments = prefixedSegments(basePath, cleanup.input.pathSegments);
+    if (cleanup.find)
+      cleanup.find.lookup.pathSegments = prefixedSegments(
+        basePath,
+        cleanup.find.lookup.pathSegments,
+      );
+  }
   return clone;
 }

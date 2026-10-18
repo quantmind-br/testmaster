@@ -1,17 +1,14 @@
-import type { Application } from "@testmaster/application";
-import { ContractError, type Run, type RunRequest } from "@testmaster/contracts";
-import {
-  batchExitCode,
-  exitCodeForError,
-  exitCodeForGate,
-  exitCodeForRun,
-} from "@testmaster/domain";
+import { ContractError, type RunRequest } from "@testmaster/contracts";
 import type { Command } from "commander";
-import { environmentId, executionOptions, receiptResult, waitForRun } from "./execution.js";
 import {
-  CliFailure,
+  environmentId,
+  executionOptions,
+  proposeHealing,
+  receiptResult,
+  waitForBatch,
+} from "./execution.js";
+import {
   collect,
-  errorData,
   integer,
   type Options,
   type Runtime,
@@ -28,16 +25,7 @@ function admissionOptions(options: Options) {
     ...(key ? { idempotencyKey: key } : {}),
   };
 }
-/** A refused proposal (not indicated, already settled) is reported beside the finished run. */
-async function proposeHealing(app: Application, runId: string): Promise<unknown> {
-  try {
-    return await app.healing.propose(runId, {});
-  } catch (error) {
-    if (error instanceof ContractError && error.code === "PRECONDITION_FAILED")
-      return { refused: errorData(error) };
-    throw error;
-  }
-}
+
 function replayOptions(options: Options): void {
   if (options.mode !== "replay" && options.mode !== "agent")
     throw new ContractError("INVALID_ARGUMENT", "Mode must be replay or agent");
@@ -192,123 +180,7 @@ export function testExecutionCommands(test: Command, runtime: Runtime): void {
         const batch = await app.batches.get(receipt.batchId);
         return { data: { ...receipt, rejections: batch.rejections ?? [] } };
       }
-      const ephemeralIds: string[] = [];
-      for (const member of receipt.memberRuns) {
-        const owned = await app.runs.get(member.runId);
-        const policy = owned.gatePolicy as Record<string, unknown>;
-        if (policy.ownership === "ephemeral") ephemeralIds.push(member.runId);
-      }
-      const workerController = new AbortController();
-      const interrupt = (): void => workerController.abort(rt.controller.signal.reason);
-      rt.controller.signal.addEventListener("abort", interrupt, { once: true });
-      if (rt.controller.signal.aborted) interrupt();
-      const worker = ephemeralIds.length
-        ? app.worker.run({ ephemeral: true, runIds: ephemeralIds, signal: workerController.signal })
-        : undefined;
-      let workerError: unknown;
-      const workerDone = worker?.catch((error: unknown) => {
-        workerError = error;
-      });
-      const workerFailure = worker?.then(
-        () => new Promise<never>(() => {}),
-        (error: unknown): never => {
-          throw error;
-        },
-      );
-      void workerFailure?.catch(() => {});
-      let settled: PromiseSettledResult<Run>[];
-      try {
-        settled = await Promise.allSettled(
-          receipt.memberRuns.map((member) =>
-            waitForRun(rt, app, member.runId, {
-              ...options,
-              workerFailure,
-              cancelOnInterrupt:
-                options.cancelOnInterrupt === true || ephemeralIds.includes(member.runId),
-            }),
-          ),
-        );
-        if (settled.some((member) => member.status === "rejected") && ephemeralIds.length) {
-          try {
-            for (const id of ephemeralIds) await app.runs.cancel(id);
-          } finally {
-            workerController.abort(new Error("Batch wait ended before completion"));
-          }
-        }
-        await workerDone;
-        if (workerError && !rt.signal && settled.every((member) => member.status === "fulfilled"))
-          throw workerError;
-      } finally {
-        if (rt.signal) {
-          try {
-            for (const id of ephemeralIds) await app.runs.cancel(id);
-          } finally {
-            workerController.abort(rt.controller.signal.reason);
-          }
-        }
-        await workerDone;
-        rt.controller.signal.removeEventListener("abort", interrupt);
-      }
-      const members = settled.map((member, index) =>
-        member.status === "fulfilled"
-          ? { runId: receipt.memberRuns[index]?.runId, run: member.value }
-          : { runId: receipt.memberRuns[index]?.runId, error: errorData(member.reason) },
-      );
-      const healing = [];
-      if (options.heal === "propose") {
-        for (const member of settled)
-          if (member.status === "fulfilled" && member.value.outcome === "failed")
-            healing.push(await proposeHealing(app, member.value.id));
-      }
-      const codes = settled.map((member) => {
-        if (member.status === "fulfilled") {
-          const completed = app.runs
-            .events(member.value.id)
-            .find((e) => e.type === "run.completed");
-          const reasonCode = (completed?.payload as { reasonCode?: string } | undefined)
-            ?.reasonCode;
-          return exitCodeForRun({
-            gate: member.value.gate,
-            outcome: member.value.outcome,
-            reasonCode,
-          });
-        }
-        return member.reason instanceof CliFailure
-          ? member.reason.exit
-          : member.reason instanceof ContractError && member.reason.details.waitTimeout
-            ? 7
-            : exitCodeForError(errorData(member.reason).code);
-      });
-      const batch = await app.batches.get(receipt.batchId);
-      const aggregate = batch.aggregate as {
-        gate: "passed" | "failed" | "pending" | "not_applicable";
-      };
-      const rejections = Array.isArray(batch.rejections) ? batch.rejections : [];
-      const rejectedExits = rejections.map((rejection) => {
-        if (
-          typeof rejection === "object" &&
-          rejection !== null &&
-          "code" in rejection &&
-          typeof rejection.code === "string"
-        ) {
-          const code = rejection.code;
-          if (
-            code === "NOT_FOUND" ||
-            code === "INVALID_ARGUMENT" ||
-            code === "PRECONDITION_FAILED" ||
-            code === "REVISION_CONFLICT" ||
-            code === "PRECONDITION_REQUIRED" ||
-            code === "CAPABILITY_UNAVAILABLE" ||
-            code === "PAYLOAD_TOO_LARGE"
-          )
-            return exitCodeForError(code);
-        }
-        return 6;
-      });
-      return {
-        data: { receipt, members, batch, healing },
-        exit: batchExitCode([...codes, ...rejectedExits, exitCodeForGate(aggregate.gate)]),
-      };
+      return waitForBatch(rt, app, receipt, options);
     },
     (_rt, args, options) => {
       replayOptions(options);

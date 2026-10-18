@@ -48,7 +48,14 @@ export function planIdentifiers(...roots: unknown[]): PlanIdentifiers {
       capture?: unknown;
       input?: { capture?: unknown; resource?: unknown } | null;
       variableRef?: unknown;
+      resourceRef?: unknown;
+      find?: unknown;
     };
+    // A cleanup entry that finds its data by lookup binds the matched id to <resourceRef>.handle.
+    if (typeof node.resourceRef === "string" && node.find) {
+      variableRefs.add(`${node.resourceRef}.handle`);
+      stepIds.add(`cleanup-find-${node.resourceRef}`);
+    }
     if (typeof node.id === "string" && typeof node.operation === "string") {
       stepIds.add(node.id);
       stepIds.add(`cleanup-${node.id}`);

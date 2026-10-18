@@ -187,6 +187,7 @@ function uniqueLocatorBaseline(record: LocatorEvidence, locator: Locator): boole
     locator.frame ||
     locator.container ||
     locator.pageAlias ||
+    locator.nth !== undefined ||
     canonicalJson(record.locator) !== canonicalJson(locator)
   )
     return false;
