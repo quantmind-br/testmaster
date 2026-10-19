@@ -1,0 +1,115 @@
+{
+  "round": "r2",
+  "commit": "55738b5d5f18b8fb9a6a0e8e842eb013cd059d15",
+  "buildHash": "035e70fa691b13aac1f9057293ae1e4442ff7f700a9205809b05b5bb4aee4396",
+  "protocol": "evals/surface/preregistration.json",
+  "protocolSha256": "c3eb5bb6b765d3ad970c2cafad71ee3e593c1cb4e14cf71fb4ef727cff736950",
+  "stateDirectory": "~/.local/state/testmaster-surface",
+  "orderSeed": 20261020,
+  "agentUpstream": "https://api.quantforge.com.br",
+  "taskTemplate": "evals/surface/task-template.md",
+  "taskTemplateSha256": "efe231d875af3d46e599d8b80dfdc4e132fc9408b235e7668ee4cb70af1fa388",
+  "a0ToolsList": "evals/surface/a0/tools-list.json",
+  "a0ToolsListSha256": "0afeef59a6eb373d1b56255e54079331ae058cc102cd09825f13262d8241f4c0",
+  "internal": {
+    "provider": "quantforge",
+    "model": "gpt-6-luna"
+  },
+  "arms": [
+    {
+      "id": "A0",
+      "mcp": "a0",
+      "skillDir": "evals/surface/skills/a0",
+      "skillSha256": "e6583432ab347ca96909404f07e69d4bc298e428291ee8915a3f3e6e8f4d6a4d"
+    },
+    {
+      "id": "A1",
+      "mcp": "current",
+      "skillDir": "evals/surface/skills/a0",
+      "skillSha256": "e6583432ab347ca96909404f07e69d4bc298e428291ee8915a3f3e6e8f4d6a4d"
+    },
+    {
+      "id": "A2",
+      "mcp": "current",
+      "skillDir": "packages/application/skill-content/2.0.0",
+      "skillSha256": "f6a652e11a230e840a3c7597705f9ae90c1e1de7b95c519d20d268ca66903403"
+    },
+    {
+      "id": "A3",
+      "mcp": "none",
+      "skillDir": "packages/application/skill-content/2.0.0",
+      "skillSha256": "f6a652e11a230e840a3c7597705f9ae90c1e1de7b95c519d20d268ca66903403"
+    }
+  ],
+  "models": [
+    {
+      "id": "gemini-3.8-flash-high",
+      "thinking": null
+    },
+    {
+      "id": "muse-spark-1.3-contributor",
+      "thinking": null
+    }
+  ],
+  "apps": [
+    {
+      "name": "searxng",
+      "seeds": [
+        "sx-hash-answer",
+        "sx-empty-query",
+        "sx-rss-media-type",
+        "sx-preferences-persist",
+        "sx-config-engines"
+      ],
+      "proxyPort": 20421,
+      "concurrency": 4
+    },
+    {
+      "name": "weknora",
+      "seeds": [
+        "wk-token-refresh",
+        "wk-register-validation",
+        "wk-kb-update",
+        "wk-kb-delete",
+        "wk-kb-tags-total"
+      ],
+      "proxyPort": 20521,
+      "concurrency": 4
+    },
+    {
+      "name": "dokploy",
+      "seeds": [
+        "dk-project-list",
+        "dk-project-update",
+        "dk-default-environment",
+        "dk-session-identity",
+        "dk-application-idle"
+      ],
+      "proxyPort": 20621,
+      "concurrency": 4
+    }
+  ],
+  "analysis": {
+    "control": "A0",
+    "treatments": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "primaryTreatment": "A3",
+    "bootstrapReplicates": 10000,
+    "bootstrapSeed": 20261020,
+    "thresholds": {
+      "T1surfaceMax": 3000,
+      "TtotalRatioMax": 0.7,
+      "invalidRateDeltaUpperMax": 0.03,
+      "fabricationsDeltaUpperMax": 0,
+      "stepsToGreenRatioMax": 1.15
+    },
+    "abandonment": {
+      "invalidRateDeltaPointMin": 0.1
+    }
+  },
+  "purpose": "Development round 2 under protocol version 2: every arm × model × seed on the three development targets, from one build, with no product change since r1. r1 is void (harness secret-storage defect), so r2 is the first counted development round; its failure classes choose the single fix of round 3.",
+  "previousRounds": "c0-reference-shop (calibration, stopped by the qwen3.8-flash quota; instrument evidence only). r1 (void: the harness namespace refused the secret vault; rounds/r1/outcome.md). Instrument checks after r1: smoke-v2b/c (dk-project-update, A0 and A3, muse-spark-1.3-contributor); their results are not used."
+}
