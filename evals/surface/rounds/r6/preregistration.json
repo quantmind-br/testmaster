@@ -1,0 +1,115 @@
+{
+  "round": "r6",
+  "commit": "2763f00dfe446e97ba96a291a2bdeee093905378",
+  "buildHash": "2ae91753edc614918dbcde197cc66a90f7c365b32cc7e5c2a2b98a0fffa2ebbb",
+  "protocol": "evals/surface/preregistration.json",
+  "protocolSha256": "c653b2d8608f5646775ca558319ca258092ccc744368ee3a06ff4791904f9dc4",
+  "stateDirectory": "~/.local/state/testmaster-surface",
+  "orderSeed": 20261024,
+  "agentUpstream": "https://api.quantforge.com.br",
+  "taskTemplate": "evals/surface/task-template.md",
+  "taskTemplateSha256": "efe231d875af3d46e599d8b80dfdc4e132fc9408b235e7668ee4cb70af1fa388",
+  "a0ToolsList": "evals/surface/a0/tools-list.json",
+  "a0ToolsListSha256": "0afeef59a6eb373d1b56255e54079331ae058cc102cd09825f13262d8241f4c0",
+  "internal": {
+    "provider": "quantforge",
+    "model": "gpt-6-luna"
+  },
+  "arms": [
+    {
+      "id": "A0",
+      "mcp": "a0",
+      "skillDir": "evals/surface/skills/a0",
+      "skillSha256": "e6583432ab347ca96909404f07e69d4bc298e428291ee8915a3f3e6e8f4d6a4d"
+    },
+    {
+      "id": "A1",
+      "mcp": "current",
+      "skillDir": "evals/surface/skills/a0",
+      "skillSha256": "e6583432ab347ca96909404f07e69d4bc298e428291ee8915a3f3e6e8f4d6a4d"
+    },
+    {
+      "id": "A2",
+      "mcp": "current",
+      "skillDir": "packages/application/skill-content/2.3.0",
+      "skillSha256": "ebdfdba9ee9ba5ddc4f0c9aa2c073de3a77832da1714b66dccc6c2a47ddf0377"
+    },
+    {
+      "id": "A3",
+      "mcp": "none",
+      "skillDir": "packages/application/skill-content/2.3.0",
+      "skillSha256": "ebdfdba9ee9ba5ddc4f0c9aa2c073de3a77832da1714b66dccc6c2a47ddf0377"
+    }
+  ],
+  "models": [
+    {
+      "id": "gemini-3.8-flash-high",
+      "thinking": null
+    },
+    {
+      "id": "muse-spark-1.3-contributor",
+      "thinking": null
+    }
+  ],
+  "apps": [
+    {
+      "name": "searxng",
+      "seeds": [
+        "sx-hash-answer",
+        "sx-empty-query",
+        "sx-rss-media-type",
+        "sx-preferences-persist",
+        "sx-config-engines"
+      ],
+      "proxyPort": 20421,
+      "concurrency": 4
+    },
+    {
+      "name": "weknora",
+      "seeds": [
+        "wk-token-refresh",
+        "wk-register-validation",
+        "wk-kb-update",
+        "wk-kb-delete",
+        "wk-kb-tags-total"
+      ],
+      "proxyPort": 20521,
+      "concurrency": 4
+    },
+    {
+      "name": "dokploy",
+      "seeds": [
+        "dk-project-list",
+        "dk-project-update",
+        "dk-default-environment",
+        "dk-session-identity",
+        "dk-application-idle"
+      ],
+      "proxyPort": 20621,
+      "concurrency": 4
+    }
+  ],
+  "analysis": {
+    "control": "A0",
+    "treatments": [
+      "A1",
+      "A2",
+      "A3"
+    ],
+    "primaryTreatment": "A3",
+    "bootstrapReplicates": 10000,
+    "bootstrapSeed": 20261024,
+    "thresholds": {
+      "T1surfaceMax": 3000,
+      "TtotalRatioMax": 0.7,
+      "invalidRateDeltaUpperMax": 0.03,
+      "fabricationsDeltaUpperMax": 0,
+      "stepsToGreenRatioMax": 1.15
+    },
+    "abandonment": {
+      "invalidRateDeltaPointMin": 0.1
+    }
+  },
+  "purpose": "Development round 6 under protocol version 5: every arm × model × seed on the three development targets, from one build. Its single change since r5 is the r5 fix for the class flag inexistente: the CLI command `requirement snapshot` (version, sourceSnapshotId, requirement statuses, conflicts), which every arm can reach, and skill 2.3.0, which names it, for A2 and A3 (rounds/r5/classification.md).",
+  "previousRounds": "c0-reference-shop (calibration, instrument evidence only). r1 (void; rounds/r1/outcome.md). r2, r3, r4 and r5 (counted development rounds; rounds/<round>/report.md, classification.md)."
+}
