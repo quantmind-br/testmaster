@@ -9,6 +9,9 @@ export const AGENT_TARGETS = [
   "antigravity",
   "pi",
   "omp",
+  "crush",
+  "goose",
+  "jcode",
 ] as const;
 export type AgentTarget = (typeof AGENT_TARGETS)[number];
 export interface AgentTargetAdapter {
@@ -96,7 +99,7 @@ export const AGENT_TARGET_ADAPTERS: Readonly<Record<AgentTarget, AgentTargetAdap
       "https://pi.dev/docs/latest/security",
     ],
     "",
-    "2026-10-13",
+    "2026-10-19",
   ),
   omp: adapter(
     "omp",
@@ -104,7 +107,42 @@ export const AGENT_TARGET_ADAPTERS: Readonly<Record<AgentTarget, AgentTargetAdap
     ".omp/skills/testmaster/SKILL.md",
     ["https://omp.sh/docs/context-files", "https://omp.sh/docs/skills"],
     "",
-    "2026-10-13",
+    "2026-10-19",
+  ),
+  crush: adapter(
+    "crush",
+    "CRUSH.md",
+    ".crush/skills/testmaster/SKILL.md",
+    [
+      "https://github.com/charmbracelet/crush/blob/94f9364511033ca0242aebd8d3f8d10242b83328/internal/config/config.go#L29-L46",
+      "https://github.com/charmbracelet/crush/blob/94f9364511033ca0242aebd8d3f8d10242b83328/internal/config/load.go#L1341-L1372",
+      "https://github.com/charmbracelet/crush/blob/94f9364511033ca0242aebd8d3f8d10242b83328/internal/skills/skills.go#L118-L140",
+    ],
+    "",
+    "2026-10-19",
+  ),
+  goose: adapter(
+    "goose",
+    ".goosehints",
+    ".goose/skills/testmaster/SKILL.md",
+    [
+      "https://github.com/aaif-goose/goose/blob/fb9e3c89b2b4670a0eded99e7567e578ac6e502c/crates/goose/src/hints/load_hints.rs#L10-L24",
+      "https://github.com/aaif-goose/goose/blob/fb9e3c89b2b4670a0eded99e7567e578ac6e502c/crates/goose/src/skills/mod.rs#L320-L326",
+      "https://github.com/aaif-goose/goose/blob/fb9e3c89b2b4670a0eded99e7567e578ac6e502c/crates/goose/src/skills/client.rs#L243-L262",
+    ],
+    "",
+    "2026-10-19",
+  ),
+  jcode: adapter(
+    "jcode",
+    ".jcode/prompt-overlay.md",
+    ".jcode/skills/testmaster/SKILL.md",
+    [
+      "https://github.com/1jehuang/jcode/blob/9d22cbb8ecad6df840b22737439aa5164091fa31/crates/jcode-base/src/prompt.rs#L977-L1018",
+      "https://github.com/1jehuang/jcode/blob/9d22cbb8ecad6df840b22737439aa5164091fa31/crates/jcode-base/src/skill.rs#L290-L352",
+    ],
+    "",
+    "2026-10-19",
   ),
 };
 export function listAgentTargets(): readonly AgentTargetAdapter[] {

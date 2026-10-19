@@ -3,6 +3,7 @@
 - Status: accepted
 - Date: 2026-10-13
 - Amends: [ADR-009](009-agent-targets.md)
+- Amended by: [ADR-029](029-crush-goose-jcode-agent-targets.md)
 
 ## Context
 

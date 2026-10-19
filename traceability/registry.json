@@ -4479,7 +4479,7 @@
         "packages/application/src/agent-skills/managed.ts",
         "packages/application/src/agent-skills/targets.ts"
       ],
-      "note": "All ten configured targets (pi and omp added by ADR-023) exercised on Linux; vendor application execution is not claimed.",
+      "note": "All thirteen configured targets (pi and omp added by ADR-023; crush, goose and jcode by ADR-029) exercised on Linux; request-level discovery by the real crush, goose, jcode, opencode, forge and hermes binaries is recorded by the agent-target-loaders probe.",
       "coverage": {
         "positive": [
           "packages/application/src/agent-skills/installer.test.ts::upgrades an intact old block and skill without changing surrounding bytes"
@@ -4527,7 +4527,7 @@
         "packages/application/src/agent-skills/managed.ts",
         "packages/application/src/agent-skills/targets.ts"
       ],
-      "note": "All ten configured targets (pi and omp added by ADR-023) exercised on Linux; vendor application execution is not claimed.",
+      "note": "All thirteen configured targets (pi and omp added by ADR-023; crush, goose and jcode by ADR-029) exercised on Linux; request-level discovery by the real crush, goose, jcode, opencode, forge and hermes binaries is recorded by the agent-target-loaders probe.",
       "coverage": {
         "positive": [
           "validation/journeys/j14-agent-skills.test.ts::J14: every configured target through the built CLI, with ownership and hostile-workspace controls"
@@ -4695,7 +4695,7 @@
         "packages/application/src/agent-skills/managed.ts",
         "packages/application/src/agent-skills/targets.ts"
       ],
-      "note": "All ten configured targets (pi and omp added by ADR-023) exercised on Linux; vendor application execution is not claimed.",
+      "note": "All thirteen configured targets (pi and omp added by ADR-023; crush, goose and jcode by ADR-029) exercised on Linux; request-level discovery by the real crush, goose, jcode, opencode, forge and hermes binaries is recorded by the agent-target-loaders probe.",
       "coverage": {
         "positive": [
           "validation/journeys/j14-agent-skills.test.ts::J14: every configured target through the built CLI, with ownership and hostile-workspace controls"
@@ -4745,7 +4745,7 @@
         "packages/application/src/agent-skills/managed.ts",
         "packages/application/src/agent-skills/targets.ts"
       ],
-      "note": "All ten configured targets (pi and omp added by ADR-023) exercised on Linux; vendor application execution is not claimed.",
+      "note": "All thirteen configured targets (pi and omp added by ADR-023; crush, goose and jcode by ADR-029) exercised on Linux; request-level discovery by the real crush, goose, jcode, opencode, forge and hermes binaries is recorded by the agent-target-loaders probe.",
       "coverage": {
         "positive": [
           "validation/journeys/j14-agent-skills.test.ts::J14: every configured target through the built CLI, with ownership and hostile-workspace controls"
@@ -7269,7 +7269,12 @@
         "validation/results/m4-acceptance/agents/006-agents-loaders/manifest.json",
         "validation/results/m4-acceptance/agents/006-agents-loaders/created/validation/results/agent-target-loaders.json",
         "docs/adr/023-pi-omp-agent-targets.md",
-        "validation/probes/agent-target-loaders.mjs"
+        "validation/probes/agent-target-loaders.mjs",
+        "docs/adr/029-crush-goose-jcode-agent-targets.md",
+        "validation/results/agent-targets-20261019/002-agents-targeted/manifest.json",
+        "validation/results/agent-targets-20261019/002-agents-targeted/changed/validation/results/j14-agent-skills.json",
+        "validation/results/agent-targets-20261019/005-agents-loaders-reviewed/manifest.json",
+        "validation/results/agent-targets-20261019/005-agents-loaders-reviewed/changed/validation/results/agent-target-loaders.json"
       ],
       "code": [
         "packages/application/src/agent-skills/installer.ts",
@@ -17022,7 +17027,12 @@
         "validation/results/m4-acceptance/agents/006-agents-loaders/manifest.json",
         "validation/results/m4-acceptance/agents/006-agents-loaders/created/validation/results/agent-target-loaders.json",
         "docs/adr/023-pi-omp-agent-targets.md",
-        "validation/probes/agent-target-loaders.mjs"
+        "validation/probes/agent-target-loaders.mjs",
+        "docs/adr/029-crush-goose-jcode-agent-targets.md",
+        "validation/results/agent-targets-20261019/002-agents-targeted/manifest.json",
+        "validation/results/agent-targets-20261019/002-agents-targeted/changed/validation/results/j14-agent-skills.json",
+        "validation/results/agent-targets-20261019/005-agents-loaders-reviewed/manifest.json",
+        "validation/results/agent-targets-20261019/005-agents-loaders-reviewed/changed/validation/results/agent-target-loaders.json"
       ],
       "code": [
         "packages/application/src/agent-skills/installer.ts",

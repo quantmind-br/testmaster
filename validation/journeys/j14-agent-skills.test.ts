@@ -34,6 +34,9 @@ it("J14: every configured target through the built CLI, with ownership and hosti
       "antigravity",
       "pi",
       "omp",
+      "crush",
+      "goose",
+      "jcode",
     ]);
     for (const target of AGENT_TARGETS) {
       const adapter = AGENT_TARGET_ADAPTERS[target];
