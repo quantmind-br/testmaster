@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { AgentSkillReason } from "./types.js";
 
-export const AGENT_SKILL_VERSION = "2.0.0";
+export const AGENT_SKILL_VERSION = "2.1.0";
 const END = "<!-- testmaster:end -->";
 export interface ManagedSection {
   start: number;
