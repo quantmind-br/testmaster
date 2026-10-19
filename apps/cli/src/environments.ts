@@ -114,9 +114,26 @@ export function environmentCommands(program: Command, runtime: Runtime): void {
       ),
     };
   });
-  runtime.bind(group.command("get <id-or-name>"), async (rt, args, opts) => ({
-    data: await (await rt.app()).environments.get(String(args[0]), await rt.project(opts)),
-  }));
+  runtime.bind(
+    group
+      .command("get <id-or-name>")
+      .description(
+        "The environment and its activeRevision (target, additional and ignored origins, network profile, auth profiles); `env revisions` lists every revision",
+      ),
+    async (rt, args, opts) => {
+      const app = await rt.app();
+      const environment = app.environments.get(String(args[0]), await rt.project(opts));
+      return {
+        data: {
+          ...environment,
+          activeRevision:
+            app.environments
+              .revisions(environment.id)
+              .find((revision) => revision.id === environment.activeRevisionId) ?? null,
+        },
+      };
+    },
+  );
   runtime.bind(group.command("revisions <id-or-name>"), async (rt, args) => ({
     data: (await rt.app()).environments.revisions(String(args[0])),
   }));

@@ -226,6 +226,44 @@ it("env create and update manage exact ignored origins, and env revisions lists 
   ]);
 });
 
+it("env get shows the active revision, by id and by name, after an update", async () => {
+  const base = await workspace();
+  const created = await invoke([
+    ...base,
+    "env",
+    "create",
+    "--name",
+    "staging",
+    "--base-url",
+    "https://app.example.test",
+    "--network-profile",
+    "public",
+  ]);
+  const environment = environmentOf(created);
+  const updated = await invoke([
+    ...base,
+    "env",
+    "update",
+    environment.id,
+    "--expected-version",
+    String(environment.version),
+    "--ignored-origin",
+    "https://js.stripe.com",
+  ]);
+  expect(updated.exit ?? 0).toBe(0);
+
+  for (const reference of [environment.id, "staging"]) {
+    const read = (await invoke([...base, "env", "get", reference])).document.data;
+    expect(read.activeRevision).toMatchObject({
+      id: read.activeRevisionId,
+      targetOrigins: ["https://app.example.test"],
+      ignoredOrigins: ["https://js.stripe.com"],
+      networkProfile: "public",
+    });
+    expect(read.activeRevision).not.toHaveProperty("variables");
+  }
+});
+
 it("env update refuses combining --ignored-origin with --clear-ignored-origins, invalid origins and overlaps", async () => {
   const base = await workspace();
   const created = await invoke([
