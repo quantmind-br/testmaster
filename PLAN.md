@@ -1,6 +1,6 @@
 # PLAN — Peso da superfície de agente: encolher o MCP, promover o CLI
 
-Status: proposta para decisão do operador. Nenhuma fase começa sem aprovação explícita, inclusive a Fase 1.
+Status: Fases 0–5 executadas. Fase 4 decidiu pela **Fase 5b** (manter o MCP pós-Fase 1): o limite de 6 rodadas contadas (r2–r7) foi atingido sem que o A3 fosse não inferior para os dois modelos; o holdout não rodou (protocolo, passo 7). Registro: `evals/surface/rounds/decision.md` e [ADR-028](docs/adr/028-mcp-kept-after-surface-experiment.md).
 Data: 2026-10-18. Números medidos no HEAD `041a3fa`, a partir do catálogo compilado (`packages/contracts/dist`, `apps/mcp/dist`).
 Escopo: `apps/mcp`, `apps/cli`, `packages/contracts`, `packages/application/skill-content`, `specs/05-cli-mcp.md`, `docs/adr/`, `evals/`, `validation/journeys/`.
 

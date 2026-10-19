@@ -137,6 +137,8 @@ Este exemplo restringe o prazo e tentativas, em vez de redefinir os defaults de 
 
 Usar SDK oficial e versão do protocolo **negociada**, pinada no release testado. Baseline 2025-06-18 observada na pesquisa; não alegar latest sem verificar 2026-07-28 e SDK na implementação. Tools `inputSchema`, `structuredContent`, `isError` conforme protocolo suportado; o contrato do resultado é nomeado na página de regras da tool, não anunciado como `outputSchema`. Annotations readOnly/destructive/idempotent são sugestões, nunca fronteira de segurança.
 
+The MCP server is a supported surface next to the CLI ([ADR-028](../docs/adr/028-mcp-kept-after-surface-experiment.md)). A preregistered experiment (`evals/surface/rounds/decision.md`) did not show the CLI with the skill alone to be non-inferior to the MCP catalog, so no tool is removed. The agent skill documents the CLI route only. `tools/list` stays at or below the measured ceiling in `apps/mcp/src/surface.test.ts` (48,080 bytes), and no advertised schema inlines `ExecutablePlan` or exceeds 12 KB.
+
 | Tool | Entrada | Saída / efeito |
 |---|---|---|
 | `testmaster_capabilities` | nenhum | capabilities e limites |
