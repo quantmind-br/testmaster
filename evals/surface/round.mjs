@@ -22,6 +22,9 @@ import { sessionMetrics } from "./metrics.mjs";
 import { repo, runSession, sessionCli, sha256, treeHash, treeManifest } from "./session.mjs";
 import { startTargetProxy } from "./target-proxy.mjs";
 
+/** Seeded secrets whose value is a credential (the protocol's `secretInLog` counts only these). */
+const SENSITIVE_KEY = /password|api_?key|token|secret/i;
+
 /** The build every arm runs: the compiled output of every workspace package and app. */
 export function buildHash() {
   const roots = ["apps", "packages"].flatMap((group) =>
@@ -402,8 +405,12 @@ async function main() {
     .map((directory) => {
       const record = readJson(join(directory, "session.json"));
       const app = readJson(join(repo, "evals", "surface", "apps", record.app, "app.json"));
+      // Credentials only: an account's e-mail address or user name is an identifier the task
+      // tells the agent to use, not a secret.
       const secrets = app.secretsFile
-        ? Object.values(readJson(app.secretsFile.replace(/^~(?=\/)/, home)))
+        ? Object.entries(readJson(app.secretsFile.replace(/^~(?=\/)/, home)))
+            .filter(([key]) => SENSITIVE_KEY.test(key))
+            .map(([, value]) => value)
         : [];
       return sessionMetrics(directory, { secrets, outsideRoots: [home, repo] });
     });

@@ -219,28 +219,12 @@ export async function runSession(spec, directory) {
     PATH: `${bin}:${user.PATH}`,
     ...(spec.app.env ?? {}),
   };
-  // Outside the sandbox, a command still sees the session's /tmp at /tmp, as the agent does,
-  // except TestMaster's runtime root: it hands sockets below it to Docker, whose daemon resolves
-  // bind sources on the host's /tmp.
-  const runtimeRoot = `/tmp/testmaster-runtime-${process.getuid()}`;
-  mkdirSync(runtimeRoot, { recursive: true, mode: 0o700 });
-  const privateTmp = (cwd, command) => [
-    "--die-with-parent",
-    "--dev-bind",
-    "/",
-    "/",
-    "--bind",
-    tmp,
-    "/tmp",
-    "--bind",
-    runtimeRoot,
-    runtimeRoot,
-    "--chdir",
-    cwd,
-    "--",
-    process.execPath,
-    ...command,
-  ];
+  // Outside the sandbox, a command runs as the user, in no namespace: an unprivileged user
+  // namespace maps root-owned directories to the overflow user, which TestMaster's private-storage
+  // checks rightly refuse (no secret vault, so every `secret set` would fail). The agent's private
+  // /tmp is the session's `tmp` directory; a CLI argument or working directory naming /tmp is
+  // rewritten to it, as the agent's mount would resolve it. Paths inside files are not rewritten.
+  const hostTmp = (value) => value.replace(/(^|=)\/tmp(?=\/|$)/, (_, lead) => `${lead}${tmp}`);
   const collector = {
     SURFACE_REAL_CLI: realCli,
     SURFACE_CLI_LOG: join(directory, "cli.ndjson"),
@@ -251,12 +235,14 @@ export async function runSession(spec, directory) {
   const broker = await startBroker((header) => {
     if (header.kind === "cli")
       return {
-        command: "bwrap",
-        args: privateTmp(header.cwd, [join(here, "cli-wrapper.mjs"), ...header.argv]),
-        env: { ...header.env, ...collector },
+        command: process.execPath,
+        args: [join(here, "cli-wrapper.mjs"), ...header.argv.map(hostTmp)],
+        cwd: hostTmp(header.cwd),
+        // The agent holds a placeholder provider key; TestMaster's own model calls need the real one.
+        env: { ...header.env, QUANTFORGE_API_KEY: user.QUANTFORGE_API_KEY, ...collector },
       };
     if (header.kind === "mcp" && mcpServe)
-      return { command: "bwrap", args: privateTmp(ws, mcpServe), env };
+      return { command: process.execPath, args: mcpServe, cwd: ws, env };
     throw new Error(`no ${header.kind} surface in this session`);
   });
   const wrapper = join(bin, "testmaster");
@@ -330,7 +316,13 @@ export async function runSession(spec, directory) {
   const promptFile = join(directory, "task.md");
   writeFileSync(promptFile, spec.prompt);
 
-  const proxy = await startProxy({ upstream: UPSTREAM, directory: join(directory, "model") });
+  // The proxy holds the provider key; the agent gets a placeholder (agents print their environment).
+  const proxy = await startProxy({
+    upstream: UPSTREAM,
+    directory: join(directory, "model"),
+    apiKey: user.QUANTFORGE_API_KEY,
+  });
+  const agentEnv = { ...env, QUANTFORGE_API_KEY: "surface-proxy-holds-the-key" };
   writeFileSync(join(agentHome, "models.yml"), modelsYml(proxy.url, spec.model));
 
   const record = {
@@ -366,12 +358,11 @@ export async function runSession(spec, directory) {
   // workspace, PATH directory and /tmp, so neither this checkout, the harness state of other
   // sessions, nor the operator's configuration can inform (or contaminate) a session. Its own
   // PID namespace and no Docker socket: the host's process list and containers name other
-  // projects' paths (TestMaster still runs Docker, from outside, through the broker). A private
-  // /tmp per session: agents write scratch files to fixed /tmp paths, which would leak between
-  // sessions.
-  const dockerSockets = ["/run/docker.sock", `/run/user/${process.getuid()}/docker.sock`].filter(
-    (path) => existsSync(path),
-  );
+  // projects' paths (TestMaster still runs Docker, from outside, through the broker). The user's
+  // runtime directory is empty: its session bus reaches the operator's keyring and its rootless
+  // Docker socket. A private /tmp per session: agents write scratch files to fixed /tmp paths,
+  // which would leak between sessions.
+  const runtimeDir = `/run/user/${process.getuid()}`;
   const child = spawn(
     "bwrap",
     [
@@ -382,7 +373,8 @@ export async function runSession(spec, directory) {
       "/",
       "--proc",
       "/proc",
-      ...dockerSockets.flatMap((path) => ["--ro-bind", "/dev/null", path]),
+      ...(existsSync("/run/docker.sock") ? ["--ro-bind", "/dev/null", "/run/docker.sock"] : []),
+      ...(existsSync(runtimeDir) ? ["--tmpfs", runtimeDir] : []),
       "--tmpfs",
       homedir(),
       "--ro-bind",
@@ -401,7 +393,7 @@ export async function runSession(spec, directory) {
       OMP,
       ...args,
     ],
-    { cwd: ws, env, stdio: ["ignore", "pipe", "pipe"] },
+    { cwd: ws, env: agentEnv, stdio: ["ignore", "pipe", "pipe"] },
   );
   child.stdout.pipe(events);
   child.stderr.pipe(stderr);

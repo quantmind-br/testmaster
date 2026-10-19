@@ -101,9 +101,11 @@ function flatten(value, prefix = "") {
 
 /**
  * Starts the proxy on a loopback port. `upstream` is the provider base URL the agent would have
- * used (for example https://api.quantforge.com.br); the agent's path is appended to it.
+ * used (for example https://api.quantforge.com.br); the agent's path is appended to it. With
+ * `apiKey`, the proxy sends that credential upstream instead of the agent's, so the agent can hold
+ * a placeholder and the real key never reaches a process the agent controls.
  */
-export async function startProxy({ upstream, directory, marker = [] }) {
+export async function startProxy({ upstream, directory, marker = [], apiKey }) {
   mkdirSync(join(directory, "requests"), { recursive: true });
   const log = join(directory, "model-requests.ndjson");
   let seq = 0;
@@ -141,6 +143,7 @@ export async function startProxy({ upstream, directory, marker = [] }) {
     delete headers.host;
     delete headers["content-length"];
     delete headers["accept-encoding"];
+    if (apiKey) headers.authorization = `Bearer ${apiKey}`;
     const received = [];
     let upstreamStatus = null;
     try {
