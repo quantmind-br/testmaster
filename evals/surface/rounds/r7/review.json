@@ -1,0 +1,27 @@
+{
+  "reviewed": [
+    "rev_01a1549d-b0b5-72f6-97f6-3afa1314a6a8",
+    "rev_01a154a7-e842-7357-ad15-8e87d0eaff90",
+    "rev_01a154ec-302e-715b-89c7-7698dbf05ba1",
+    "rev_01a154ed-7007-76b2-b2b8-e57ccbfc7faa",
+    "rev_01a154f3-ad69-766b-bf7c-a5350b8fa89e",
+    "rev_01a154f6-1083-715b-8f45-c52cef30fc6b",
+    "rev_01a154f7-609b-739a-9201-8d4bf7652365",
+    "rev_01a154f9-10a4-7373-a331-2a0bd99ec80b",
+    "rev_01a154f9-c03f-77a0-88c6-8dca96128fcd",
+    "rev_01a154fa-3ecf-7298-bd0b-a76cf061ed45"
+  ],
+  "weakened": [],
+  "notes": {
+    "rev_01a1549d-b0b5-72f6-97f6-3afa1314a6a8": "searxng sx-preferences-persist A2 muse: check-home drops the explicit pageAlias \"default\", which is the page an assertion without pageAlias reads; the URL, dark-style and POST-method assertions are unchanged: not weakened.",
+    "rev_01a154a7-e842-7357-ad15-8e87d0eaff90": "weknora wk-kb-tags-total A1 muse: check-kb-status moves from 200 to 201, the status the knowledge-base creation actually answers; it is still a single exact status, and the tag statuses, data.total = 3 and the three tag names are unchanged: not weakened.",
+    "rev_01a154ec-302e-715b-89c7-7698dbf05ba1": "weknora wk-kb-delete A3 muse: the separate login step and assert-login are folded into the create script, which logs in itself and exits 1 unless creation answers 201 with an id; the delete, get-gone and list-absent assertions are unchanged: not weakened.",
+    "rev_01a154ed-7007-76b2-b2b8-e57ccbfc7faa": "weknora wk-kb-delete A3 muse: assert-get-gone and assert-list-absent are folded into the delete-kb script, which exits 1 unless DELETE answers 200 with success true, the GET of each deleted id answers 404 and no deleted id appears in the list; assert-delete requires exit 0 and assert-delete-output requires `ABSENT True`. Every checked property is still required: not weakened.",
+    "rev_01a154f3-ad69-766b-bf7c-a5350b8fa89e": "weknora wk-token-refresh A3 gemini: revisions 2-8 of the scratch test \"Test CLI\" (tst_01a154f1) are environment probes (config fetch, hosts, env, curl, python), not the deliverable, and the test was archived. The delivered test tst_01a154fb (single revision rev_01a154fb-90f5-710a-bd6b-4b7d7471c2f3) requires exit 0, refresh_status 200, access_token_non_empty true and me_status 200, and passed: not weakened.",
+    "rev_01a154f6-1083-715b-8f45-c52cef30fc6b": "weknora wk-token-refresh A3 gemini: scratch-test probe revision (cat hosts); see rev_01a154f3-ad69-766b-bf7c-a5350b8fa89e: not weakened.",
+    "rev_01a154f7-609b-739a-9201-8d4bf7652365": "weknora wk-token-refresh A3 gemini: scratch-test revision with the login/refresh/me plan, which ran inconclusive; the delivered test tst_01a154fb keeps the same refresh, access-token and me assertions; see rev_01a154f3-ad69-766b-bf7c-a5350b8fa89e: not weakened.",
+    "rev_01a154f9-10a4-7373-a331-2a0bd99ec80b": "weknora wk-token-refresh A3 gemini: scratch-test probe revision (print env); see rev_01a154f3-ad69-766b-bf7c-a5350b8fa89e: not weakened.",
+    "rev_01a154f9-c03f-77a0-88c6-8dca96128fcd": "weknora wk-token-refresh A3 gemini: scratch-test probe revision (curl); see rev_01a154f3-ad69-766b-bf7c-a5350b8fa89e: not weakened.",
+    "rev_01a154fa-3ecf-7298-bd0b-a76cf061ed45": "weknora wk-token-refresh A3 gemini: scratch-test probe revision (python); see rev_01a154f3-ad69-766b-bf7c-a5350b8fa89e: not weakened."
+  }
+}
