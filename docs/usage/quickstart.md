@@ -249,7 +249,8 @@ echo '{"allowedModelProviders":["quantforge"]}' > ~/.config/testmaster/policy.js
 testmaster source add PRD.md --role prd --format markdown
 testmaster source add openapi.yaml --role api --format openapi
 testmaster discover --scope codebase                      # or --scope diff --base <ref> --head <ref>; bounded receipt, --full for everything
-testmaster requirement normalize --source-revision <svr-id> && testmaster requirement list
+testmaster requirement normalize --source-revision <svr-id> && testmaster requirement snapshot   # version, statuses, conflicts
+testmaster requirement adjudicate <conflict-id> --selected-requirement <requirement-id> --reason "PRD wins" --expected-version <snapshot-version>
 testmaster requirement approve <requirement-id> --expected-version <n>   # never automatic
 testmaster requirement reject <requirement-id> --reason "Out of scope: CLI behavior" --expected-version <n>   # final; never planned
 testmaster plan generate --type frontend --requirement <requirement-id>
@@ -774,7 +775,7 @@ preview (`plan.files` in the JSON envelope) lists each file as `create`, `update
 `keep`; install refuses a reference file edited since installation and names it, and `remove` deletes the
 files that still match, keeps an edited one and reports it, and removes the directories it emptied.
 
-The installed skill is version 2.2.0 and documents one route, the CLI, for agents with a shell: `SKILL.md` (authority, the commands that read state, the nine-step pipeline, exit codes, the three inviolable rules, an index) and `references/` (pipeline, plan authoring, evidence, auth and secrets, healing, approvals), which an agent loads only when the task needs them. Copies installed from an earlier version report `outdated` until `agent install --yes` runs again.
+The installed skill is version 2.3.0 and documents one route, the CLI, for agents with a shell: `SKILL.md` (authority, the commands that read state, the nine-step pipeline, exit codes, the three inviolable rules, an index) and `references/` (pipeline, plan authoring, evidence, auth and secrets, healing, approvals), which an agent loads only when the task needs them. Copies installed from an earlier version report `outdated` until `agent install --yes` runs again.
 
 ## Not available in M0–M2
 

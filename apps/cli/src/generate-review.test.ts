@@ -334,6 +334,50 @@ function seedRequirements(f: Fixture, count = 3) {
   return requirements.map((item) => item.id);
 }
 
+it("requirement snapshot shows the conflicts and the snapshot version that adjudicate takes", async () => {
+  const f = await fixture();
+  const [first, second, third] = seedRequirements(f) as [string, string, string];
+
+  const before = await f.invoke("requirement", "snapshot");
+
+  expect(before.exit).toBe(0);
+  expect(before.data).toMatchObject({ version: 2, sourceSnapshotId: "seed-fingerprint" });
+  expect(before.data.conflicts).toEqual([
+    expect.objectContaining({
+      id: "conflict-1",
+      requirementIds: [first, second],
+      resolution: null,
+    }),
+  ]);
+  expect(before.data.requirements.map((item: { status: string }) => item.status)).toEqual([
+    "pending",
+    "pending",
+    "pending",
+  ]);
+
+  const decided = await f.invoke(
+    "requirement",
+    "adjudicate",
+    "conflict-1",
+    "--selected-requirement",
+    first,
+    "--reason",
+    "First wins",
+    "--expected-version",
+    String(before.data.version),
+  );
+  expect(decided.exit).toBe(0);
+
+  const after = await f.invoke("requirement", "snapshot");
+  expect(after.data.version).toBeGreaterThan(2);
+  expect(after.data.conflicts[0].resolution).toMatchObject({ selectedRequirementId: first });
+  expect(
+    Object.fromEntries(
+      after.data.requirements.map((item: { id: string; status: string }) => [item.id, item.status]),
+    ),
+  ).toEqual({ [first]: "pending", [second]: "superseded", [third]: "pending" });
+});
+
 it("requirement review applies edits, the conflict decision and approvals from one file and returns the new snapshot", async () => {
   const f = await fixture();
   const [first, second, third] = seedRequirements(f) as [string, string, string];

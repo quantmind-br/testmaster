@@ -2,7 +2,7 @@
 name: testmaster
 description: Drives the TestMaster CLI to prepare sources, review requirements and plans, run authorized deterministic tests, and read verified evidence. Use for application verification and failure triage, not autonomous product changes.
 metadata:
-  version: "2.2.0"
+  version: "2.3.0"
 ---
 
 # TestMaster CLI
@@ -11,7 +11,7 @@ metadata:
 
 Add `--output json`: stdout is one envelope (`data` or `error`), diagnostics to stderr. Every ID/version comes from a receipt field; never invent one. Model commands (`requirement normalize`, `plan generate`, `test generate`, `run analyze --model`, `heal propose`), `run wait` and `job wait` have no deadline: run them with no shell/tool timeout (omp bash `timeout: 0`).
 
-No `status` command; state is in lists: `project list`, `env list`, `source list`, `requirement list`, `plan list`, `test list`, `test revision list TEST_ID`, `run list`. `testmaster GROUP --help` prints a group's commands.
+No `status` command; state is in lists: `project list`, `env list`, `source list`, `requirement snapshot`, `plan list`, `test list`, `test revision list TEST_ID`, `run list`. `testmaster GROUP --help` prints a group's commands.
 
 ## Pipeline
 

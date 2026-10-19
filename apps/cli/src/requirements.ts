@@ -1,4 +1,4 @@
-import type { RequirementReviewInput } from "@testmaster/application";
+import { type RequirementReviewInput, withRequirementStatus } from "@testmaster/application";
 import { ContractError, parseStrictJson, validate } from "@testmaster/contracts";
 import type { Command } from "commander";
 import { listOrPage, withPaging } from "./paging.js";
@@ -96,6 +96,27 @@ export function requirementCommands(program: Command, runtime: Runtime): void {
   runtime.bind(group.command("get <id>"), async (rt, args) => ({
     data: await (await rt.app()).requirements.get(String(args[0])),
   }));
+  runtime.bind(
+    group
+      .command("snapshot")
+      .description(
+        "The current requirement snapshot: version (the review and adjudicate --expected-version), sourceSnapshotId, every requirement with its status, and the conflicts (resolution null until adjudicated)",
+      ),
+    async (rt, _args, options) => {
+      const snapshot = (await rt.app()).requirements.snapshot(await rt.project(options));
+      return {
+        data: {
+          version: snapshot.version,
+          sourceSnapshotId: snapshot.fingerprint,
+          requirements: snapshot.requirements.map((item) =>
+            withRequirementStatus(item, snapshot.conflicts),
+          ),
+          conflicts: snapshot.conflicts,
+          openQuestions: snapshot.openQuestions,
+        },
+      };
+    },
+  );
   runtime.bind(
     group
       .command("update <id>")
