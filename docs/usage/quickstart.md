@@ -774,7 +774,7 @@ preview (`plan.files` in the JSON envelope) lists each file as `create`, `update
 `keep`; install refuses a reference file edited since installation and names it, and `remove` deletes the
 files that still match, keeps an edited one and reports it, and removes the directories it emptied.
 
-The installed skill is version 2.1.0 and documents one route, the CLI, for agents with a shell: `SKILL.md` (authority, the commands that read state, the nine-step pipeline, exit codes, the three inviolable rules, an index) and `references/` (pipeline, plan authoring, evidence, auth and secrets, healing, approvals), which an agent loads only when the task needs them. Copies installed from an earlier version report `outdated` until `agent install --yes` runs again.
+The installed skill is version 2.2.0 and documents one route, the CLI, for agents with a shell: `SKILL.md` (authority, the commands that read state, the nine-step pipeline, exit codes, the three inviolable rules, an index) and `references/` (pipeline, plan authoring, evidence, auth and secrets, healing, approvals), which an agent loads only when the task needs them. Copies installed from an earlier version report `outdated` until `agent install --yes` runs again.
 
 ## Not available in M0–M2
 

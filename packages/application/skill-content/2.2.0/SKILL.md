@@ -2,7 +2,7 @@
 name: testmaster
 description: Drives the TestMaster CLI to prepare sources, review requirements and plans, run authorized deterministic tests, and read verified evidence. Use for application verification and failure triage, not autonomous product changes.
 metadata:
-  version: "2.1.0"
+  version: "2.2.0"
 ---
 
 # TestMaster CLI
@@ -48,4 +48,4 @@ testmaster run analyze RUN_ID
 2. Never bypass policy, approval or sandbox.
 3. A secret never goes on argv: `secret set NAME --from-env VAR` or `--file PATH`.
 
-References in `references/`, load as needed: `pipeline.md` output fields; `plan-authoring.md` plans, cleanup, schemas; `evidence.md` failure triage; `auth-secrets.md`; `healing.md` after a failed run; `approvals.md` exit 9/15.
+References in `references/`, load as needed: `pipeline.md` output fields; `plan-authoring.md` plans, cleanup, schemas; `evidence.md` failure triage; `auth-secrets.md` secrets, login profiles; `healing.md` after a failed run; `approvals.md` exit 9/15.

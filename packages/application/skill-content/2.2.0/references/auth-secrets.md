@@ -13,18 +13,24 @@ testmaster secret set shop-pass --file ./pass.txt --allowed-origin https://app.e
 
 ## Auth profiles
 
-`testmaster auth-profile create --example --kind form|form-browser|basic|bearer|api-key|cookie|oauth|oidc|manual` prints a valid file under `data.fixture.input.content`. The three common ones (`SEC_ID` is `data.id` of `secret set`):
+`testmaster auth-profile create --example --kind form|form-browser|basic|bearer|api-key|cookie|oauth|oidc|manual` prints a valid file under `data.fixture.input.content`. The four common ones (`SEC_ID` is `data.id` of `secret set`): a form login that sets a cookie, a form login that returns a token in its JSON body, a fixed token, a fixed cookie.
 
 ```json
 {"name":"app-form-login","kind":"form","originBindings":["https://app.example.test"],
  "secrets":{"username":"SEC_ID","password":"SEC_ID"},
  "config":{"http":{"loginUrl":"https://app.example.test/api/auth/login","contentType":"json",
   "fields":{"username":"email","password":"password"},"success":{"statusIn":[200],"cookieNames":["session"]},"ttlSeconds":3600}}}
+{"name":"app-token-login","kind":"form","originBindings":["https://app.example.test"],
+ "secrets":{"username":"SEC_ID","password":"SEC_ID"},
+ "config":{"http":{"loginUrl":"https://app.example.test/api/v1/auth/login","contentType":"json",
+  "fields":{"username":"email","password":"password"},"success":{"statusIn":[200],"tokenPointer":"/token"},"ttlSeconds":3600}}}
 {"name":"api-bearer","kind":"bearer","originBindings":["https://app.example.test"],
  "secrets":{"token":"SEC_ID"},"config":{"header":"Authorization"}}
 {"name":"api-session-cookie","kind":"cookie","originBindings":["https://app.example.test"],
  "secrets":{"cookie":"SEC_ID"},"config":{"header":"session"}}
 ```
+
+A form `success` takes only `statusIn`, `cookieNames`, `tokenPointer` and `tokenScheme`. `cookieNames` keeps the cookies a login sets. `tokenPointer` is a JSON pointer to the token in the login response body (`/token`, `/data/access_token`); every request with `"auth":"profile"` then sends `Authorization: Bearer TOKEN`, and `tokenScheme` replaces `Bearer`. The plan does not log in, capture the token or build that header itself.
 
 `api-key` is `bearer` with `secrets.key` and `config.header` such as `X-Api-Key`.
 
