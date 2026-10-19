@@ -1,15 +1,17 @@
 ---
 name: testmaster
-description: Drives the TestMaster CLI to prepare sources, review requirements and plans, run authorized deterministic tests, and read verified evidence. The agent runs and records every pipeline step itself. Use for application verification and failure triage, not autonomous product changes.
+description: Drives the TestMaster CLI to prepare sources, review requirements and plans, run authorized deterministic tests, and read verified evidence. Use for application verification and failure triage, not autonomous product changes.
 metadata:
-  version: "2.0.0"
+  version: "2.1.0"
 ---
 
 # TestMaster CLI
 
 **Authority.** The local token is a cooperative limit, not a security boundary: a shell as the same OS user reaches the database and vault without it. You make and record every review decision yourself.
 
-Add `--output json`: stdout is one envelope (`data` or `error`), diagnostics to stderr. Every ID/version comes from a receipt field; never invent one. Model commands (`requirement normalize`, `plan generate`, `test generate`, `run analyze --model`, `heal propose`) have no deadline: run them with no shell/tool timeout (omp bash `timeout: 0`). `run wait` and `job wait` have none either.
+Add `--output json`: stdout is one envelope (`data` or `error`), diagnostics to stderr. Every ID/version comes from a receipt field; never invent one. Model commands (`requirement normalize`, `plan generate`, `test generate`, `run analyze --model`, `heal propose`), `run wait` and `job wait` have no deadline: run them with no shell/tool timeout (omp bash `timeout: 0`).
+
+No `status` command; state is in lists: `project list`, `env list`, `source list`, `requirement list`, `plan list`, `test list`, `test revision list TEST_ID`, `run list`. `testmaster GROUP --help` prints a group's commands.
 
 ## Pipeline
 
@@ -46,11 +48,4 @@ testmaster run analyze RUN_ID
 2. Never bypass policy, approval or sandbox.
 3. A secret never goes on argv: `secret set NAME --from-env VAR` or `--file PATH`.
 
-## References (load as needed)
-
-- `references/pipeline.md`: each command's output field.
-- `references/plan-authoring.md`: writing a plan, cleanup, schemas.
-- `references/evidence.md`: triaging a failure; what is not verified.
-- `references/auth-secrets.md`: auth profiles and secrets.
-- `references/healing.md`: fragile test after a failed run.
-- `references/approvals.md`: `approval_required` (exit 9/15).
+References in `references/`, load as needed: `pipeline.md` output fields; `plan-authoring.md` plans, cleanup, schemas; `evidence.md` failure triage; `auth-secrets.md`; `healing.md` after a failed run; `approvals.md` exit 9/15.
