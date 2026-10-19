@@ -174,9 +174,14 @@ async function pool(tasks, limit) {
   );
 }
 
-/** The tests the session made green on their active revision, from its post-session state. */
+/**
+ * The tests the session made green on their active revision, from its post-session state. An
+ * archived test has left active use (and cannot be run), so it is not a delivered test.
+ */
 function greenTests(state) {
-  const active = new Map(state.tests.map((test) => [test.id, test.activeRevisionId]));
+  const active = new Map(
+    state.tests.filter((test) => !test.archivedAt).map((test) => [test.id, test.activeRevisionId]),
+  );
   const ids = state.runs
     .filter(
       (run) =>
@@ -225,10 +230,17 @@ async function main() {
   mkdirSync(join(stateDirectory, "sessions"), { recursive: true });
   const template = readFileSync(join(repo, prereg.taskTemplate), "utf8");
   const home = homedir();
+  // TestMaster's own model profile and policy, committed with the round (not the operator's live
+  // configuration, whose declared models come and go with the provider's inventory).
   const internal = {
-    profiles: readJson(join(home, ".config", "testmaster", "profiles.json")),
-    policy: readJson(join(home, ".config", "testmaster", "policy.json")),
+    profiles: readJson(join(repo, "evals", "surface", "internal", "profiles.json")),
+    policy: readJson(join(repo, "evals", "surface", "internal", "policy.json")),
   };
+  const declared = internal.profiles.profiles[internal.profiles.defaultProfile].modelProviders
+    .filter((provider) => provider.id === prereg.internal.provider)
+    .flatMap((provider) => provider.models.map((model) => model.id));
+  if (!declared.includes(prereg.internal.model))
+    throw new Error(`The internal profile does not declare ${prereg.internal.model}`);
   const planned = metricsOnly
     ? []
     : plannedSessions(prereg).filter(
@@ -386,7 +398,12 @@ async function main() {
                 verdict.phase === "completed" &&
                 !green(verdict),
             ),
-            falsePositive: clean.some((verdict) => !green(verdict)),
+            // A false positive is a replay that ran and failed on the clean target; a replay that
+            // TestMaster refused (no run) is a replay error, reported apart.
+            falsePositive: clean.some(
+              (verdict) => verdict.phase === "completed" && !green(verdict),
+            ),
+            replayErrors: [...mutant, ...clean].filter((verdict) => verdict.runId === null).length,
           },
           null,
           2,

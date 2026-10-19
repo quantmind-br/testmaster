@@ -1,0 +1,41 @@
+{
+  "defaultProfile": "local",
+  "profiles": {
+    "local": {
+      "config": {
+        "schemaVersion": "1.0.0"
+      },
+      "modelProviders": [
+        {
+          "id": "quantforge",
+          "kind": "openai-compatible",
+          "baseUrl": "https://api.quantforge.com.br/v1",
+          "apiKeyEnv": "QUANTFORGE_API_KEY",
+          "models": [
+            {
+              "id": "gpt-6-luna",
+              "reasoningEffort": "high",
+              "capabilities": {
+                "structuredJson": true,
+                "toolCalls": true,
+                "vision": true,
+                "contextTokens": 1050000,
+                "maxOutputTokens": 128000
+              }
+            }
+          ],
+          "prices": {
+            "gpt-6-luna": {
+              "currency": "USD",
+              "scale": 6,
+              "inputPerMillion": "100000",
+              "outputPerMillion": "500000",
+              "cacheReadPerMillion": "10000",
+              "version": "models.dev openai/gpt-6-luna 2026-10-19"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

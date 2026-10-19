@@ -380,6 +380,7 @@ export function sessionMetrics(directory, options = {}) {
     completion: fidelity ? fidelity.completion : null,
     detected: fidelity ? fidelity.detected : null,
     falsePositive: fidelity ? fidelity.falsePositive : null,
+    replayErrors: fidelity ? (fidelity.replayErrors ?? 0) : null,
     nonCompensatory: {
       secretInArgv: calls.some((call) => call.secretInArgv),
       secretInLog,
