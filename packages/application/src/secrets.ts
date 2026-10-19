@@ -636,28 +636,31 @@ export function health(
 export async function vaultHealth(layout: VaultLayout): Promise<SecretBackendHealth> {
   const id = `sec_${randomBytes(16).toString("hex")}`;
   const canary = randomBytes(32).toString("hex");
-  // The server profile has no desktop keychain, and its workspace ids are real ones.
-  const probeWorkspace =
-    layout.profile === "server" ? "ws_00000000-0000-4000-8000-000000000000" : "doctor";
+  // A vault envelope names a real workspace id (ws_...), so the probe uses one that no workspace has.
+  const probeWorkspace = "ws_00000000-0000-4000-8000-000000000000";
   if (layout.profile === "local")
     try {
-      await keychain("store", "doctor", id, 1, canary);
-      const matches = (await keychain("lookup", "doctor", id, 1)) === canary;
-      await keychain("clear", "doctor", id, 1);
+      await keychain("store", probeWorkspace, id, 1, canary);
+      const matches = (await keychain("lookup", probeWorkspace, id, 1)) === canary;
+      await keychain("clear", probeWorkspace, id, 1);
       if (matches) return { backend: "secret-tool", writable: true };
     } catch {
       /* Try the encrypted fallback, never plaintext persistence. */
     }
   try {
     await vaultWrite(layout, probeWorkspace, id, 1, canary, layout.profile === "local");
-    const matches = (await vaultRead(layout, probeWorkspace, id, 1)) === canary;
-    const directory = await vaultDirectory(layout.dataDirectory);
     try {
-      await unlink(`/proc/self/fd/${directory.fd}/${vaultName(id, 1)}`);
+      if ((await vaultRead(layout, probeWorkspace, id, 1)) === canary)
+        return { backend: "vault", writable: true };
     } finally {
-      await directory.close();
+      // The canary never outlives the probe, whether or not it read back.
+      const directory = await vaultDirectory(layout.dataDirectory);
+      try {
+        await unlink(`/proc/self/fd/${directory.fd}/${vaultName(id, 1)}`);
+      } finally {
+        await directory.close();
+      }
     }
-    if (matches) return { backend: "vault", writable: true };
   } catch {
     /* A read-only or unsafe home is unavailable, not session persistence. */
   }

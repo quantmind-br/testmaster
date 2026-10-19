@@ -199,6 +199,13 @@ it("stores captures from concurrent attempts one after another instead of refusi
     expect(await (await service.release(capture.id)).resolve()).toBe(`"value-${index}"`);
 });
 
+it("reports the encrypted vault writable without a keychain and leaves no probe behind", async () => {
+  const { config, home } = await fixture();
+  expect(await health(config)).toEqual({ backend: "vault", writable: true });
+  expect(await health(config)).toEqual({ backend: "vault", writable: true });
+  expect(await readdir(join(home, ".local", "share", "testmaster"))).toEqual([]);
+});
+
 it("refuses symlinked storage while explicit ephemeral secrets remain usable only in this service", async () => {
   const { service, config, home, ctx } = await fixture();
   const outside = await mkdtemp(join(tmpdir(), "tm-outside-"));
