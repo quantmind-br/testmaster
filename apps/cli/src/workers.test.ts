@@ -104,7 +104,7 @@ it("worker start drains on the first interruption and stops the attempt in fligh
   });
 });
 
-it("worker start interrupted while it opens the workspace announces the drain once", async () => {
+it("worker start interrupted before its worker starts ends without announcing a drain", async () => {
   const { cwd, app } = await openWorkspace();
   const { runtime, stdout, stderr } = capture();
   runtime.app = async () => {
@@ -113,12 +113,12 @@ it("worker start interrupted while it opens the workspace announces the drain on
   };
   process.exitCode = 0;
   await runCli(["--json", "--cwd", cwd, "worker", "start"], runtime);
-  expect(stderr().split(drainLine).length - 1).toBe(1);
+  expect(stderr()).not.toContain(drainLine);
   expect(process.exitCode).toBe(143);
   expect(JSON.parse(stdout())).toMatchObject({
     error: { code: "UNAVAILABLE", details: { signal: "SIGTERM" } },
   });
-  // Control: an interruption before the workspace opens ends the command with no worker to drain.
+  // An interruption before the workspace opens ends the command the same way.
   const early = capture();
   early.runtime.interrupt("SIGTERM");
   await runCli(["--json", "--cwd", cwd, "worker", "start"], early.runtime);

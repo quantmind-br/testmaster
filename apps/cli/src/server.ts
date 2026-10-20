@@ -313,19 +313,20 @@ export function identityCommands(program: Command, runtime: Runtime): void {
   );
 }
 /**
- * One stderr line when the first interruption starts a worker drain. Call it once the application
- * is open and a worker is about to run: an interruption that arrived while the application opened
- * is announced at once, since the worker then starts drained; one that arrived earlier ends the
- * command before any worker exists. The drain has no deadline, so the line names the forced stop:
- * a second interruption.
+ * One stderr line when the first interruption starts the drain of a running worker. Call it right
+ * before the worker starts: an interruption that arrives earlier ends the command before any worker
+ * runs, so it prints nothing. The drain has no deadline, so the line names the forced stop: a
+ * second interruption.
  */
 export function announceDrain(rt: Runtime): void {
-  const announce = () =>
-    rt.stderr.write(
-      "worker draining: attempts in flight finish first; interrupt again to stop them now\n",
-    );
-  if (rt.controller.signal.aborted) announce();
-  else rt.controller.signal.addEventListener("abort", announce, { once: true });
+  rt.controller.signal.addEventListener(
+    "abort",
+    () =>
+      rt.stderr.write(
+        "worker draining: attempts in flight finish first; interrupt again to stop them now\n",
+      ),
+    { once: true },
+  );
 }
 /**
  * One worker loop per workspace; new workspaces are picked up while the process runs. Any loop

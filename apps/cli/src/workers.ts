@@ -46,7 +46,6 @@ export function workerCommands(program: Command, runtime: Runtime): void {
     async (rt, _args, options) => {
       if (options.mode === "server") {
         const { application } = await rt.serverApp();
-        announceDrain(rt);
         if (typeof options.enrollTokenFile === "string") {
           const { workspaceId, workerId, resumed } = application
             .controllerScope()
@@ -54,6 +53,7 @@ export function workerCommands(program: Command, runtime: Runtime): void {
           rt.stderr.write(
             `worker ${workerId} ${resumed ? "resumed" : "enrolled"} in ${workspaceId}\n`,
           );
+          announceDrain(rt);
           await application.forWorkspaceSystem(workspaceId).worker.run({
             signal: rt.controller.signal,
             force: rt.forceController.signal,
@@ -64,6 +64,7 @@ export function workerCommands(program: Command, runtime: Runtime): void {
           if (rt.signal) throw rt.interrupted();
           return { data: { mode: "server", workerId, workspaceId } };
         }
+        announceDrain(rt);
         await runServerWorkers(
           application,
           rt.controller.signal,

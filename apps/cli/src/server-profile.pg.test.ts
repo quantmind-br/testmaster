@@ -202,3 +202,40 @@ it("ADR-017 runs one worker loop per workspace under worker start --mode server"
   await stopped;
   expect(observer.get("SELECT COUNT(*) AS n FROM workers WHERE state='ready'")?.n).toBe(0);
 });
+
+it("ADR-017 worker start --mode server interrupted while the application opens starts no worker and announces no drain", async () => {
+  const { path, database } = await deployment();
+  await invoke([
+    "server",
+    "bootstrap",
+    "--config",
+    path,
+    "--workspace-name",
+    "Acme",
+    "--owner-login",
+    "acme-owner",
+  ]);
+  let stdout = "";
+  let stderr = "";
+  const runtime = new Runtime(
+    sink((text) => {
+      stdout += text;
+    }),
+    sink((text) => {
+      stderr += text;
+    }),
+  );
+  const open = runtime.serverApp.bind(runtime);
+  runtime.serverApp = async () => {
+    const opened = await open();
+    runtime.interrupt("SIGTERM");
+    return opened;
+  };
+  await runCli(["--json", "worker", "start", "--mode", "server", "--config", path], runtime);
+  expect(stderr).not.toContain("worker draining");
+  expect(process.exitCode).toBe(143);
+  expect((JSON.parse(stdout) as Envelope).error).toMatchObject({ code: "UNAVAILABLE" });
+  const observer = PersistenceDatabase.openPostgres(database.config);
+  cleanups.push(() => observer.close());
+  expect(observer.get("SELECT COUNT(*) AS n FROM workers")?.n).toBe(0);
+});
