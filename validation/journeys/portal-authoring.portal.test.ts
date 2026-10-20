@@ -367,6 +367,39 @@ describe("portal authoring on the server profile", () => {
     expect(after.json<{ data: { items: unknown[] } }>().data.items).toHaveLength(1);
   });
 
+  it("UX-018 normalizing can be cancelled: the model call is aborted, nothing is committed, and normalizing again completes", async () => {
+    // newProject leaves the model answering with this project's normalization.
+    const { projectId } = await newProject("Normalize cancel", ["A"]);
+    const app = await system();
+    const before = app.requirements.snapshot(projectId).version;
+    const { page } = await portal();
+    await page.goto(`/projects/${projectId}/requirements`);
+    await page.getByRole("heading", { level: 2, name: "Normalize requirements" }).waitFor();
+    await page.getByRole("group", { name: "Sources to normalize" }).getByRole("checkbox").check();
+
+    const arrived = model.completionArrived();
+    const aborted = model.completionAborted();
+    const release = model.holdResponses();
+    const normalize = page.getByRole("button", { name: "Normalize", exact: true });
+    await normalize.click();
+    await arrived;
+    const cancel = page.getByRole("button", { name: "Cancel normalization" });
+    expect(await cancel.isVisible()).toBe(true);
+    await cancel.click();
+    // The server saw the browser leave and cancelled the model call before any answer existed.
+    await aborted;
+    await expect
+      .poll(async () => page.getByTestId("normalize-phase").textContent())
+      .toContain("Normalization was cancelled");
+    expect(app.requirements.snapshot(projectId).version).toBe(before);
+
+    release();
+    await normalize.click();
+    await expect.poll(() => app.requirements.snapshot(projectId).version).toBe(before + 1);
+    await expect.poll(async () => page.getByTestId("normalize-phase").textContent()).toBe("");
+    expect(await page.getByTestId("normalize-failure").count()).toBe(0);
+  });
+
   it("UX-018 the generate panel shows its inputs and no token budget for a fresh project", async () => {
     const { projectId } = await newProject("Fresh", ["A"]);
     const { page, diagnostics } = await portal();

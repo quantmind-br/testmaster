@@ -218,6 +218,18 @@ describe("CLI machine output and offline authoring", () => {
     expect(result.exit).toBe(5);
     expect(result.document.error).toMatchObject({ code: "INVALID_ARGUMENT" });
   });
+  it("says in help that a wait limit never ends a run the command executes", async () => {
+    for (const args of [["test", "run", "--help"], ["--help"]]) {
+      const result = await invoke(["--json", ...args]);
+      expect(result.exit).toBe(0);
+      const help: unknown = JSON.parse(result.stdout).data?.help;
+      expect(typeof help).toBe("string");
+      // Commander wraps long option descriptions; compare the text with its line breaks folded.
+      expect(String(help).replace(/\s+/gu, " ")).toContain(
+        "never ends a run this command executes",
+      );
+    }
+  });
   it("refuses every command on an unsupported Node major before any state is opened", async () => {
     const root = await mkdtemp(join(tmpdir(), "testmaster-cli-"));
     roots.push(root);

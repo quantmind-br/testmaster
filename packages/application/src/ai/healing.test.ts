@@ -1,6 +1,7 @@
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { ContractError, type ExecutablePlan, type Locator } from "@testmaster/contracts";
 import { semanticHash } from "@testmaster/domain";
 import { AuxiliaryLeaseRepository, type EntityDocument } from "@testmaster/persistence";
@@ -616,7 +617,7 @@ it("healing and agent mode refuse terminal tests explicitly, while factual analy
 });
 
 it.each([
-  ["PRECONDITION_FAILED", "cancelled"],
+  ["PRECONDITION_FAILED", "transport"],
   ["INVALID_ARGUMENT", "schema_invalid"],
 ] as const)("model %s failures expose bounded code-owned %s details", async (code, detail) => {
   const f = await generationFixture(null);
@@ -1130,24 +1131,175 @@ it("a model refusal raised before anything is sent, such as a missing API key, l
     unpaidSettlements: [{ detail: "provider_credentials_unavailable", phase: "model" }],
   });
 });
-it("a healing request that is still running is reported as running and is not reopened", async () => {
+/** A model call the test holds open: `reached` settles when it starts, `release` lets it answer. */
+function heldCall() {
+  const held = Promise.withResolvers<void>();
+  const started = Promise.withResolvers<void>();
+  return {
+    held: held.promise,
+    started: started.promise,
+    release: held.resolve,
+    reached: started.resolve,
+  };
+}
+const pending = Symbol("pending");
+/** `pending` when `request` has not settled after `ms` of real time. */
+const settledWithin = (request: Promise<unknown>, ms: number) =>
+  Promise.race([request, delay(ms).then(() => pending)]);
+it("a second healing request waits for the running one and returns its outcome", async () => {
   const f = await generationFixture(abstention);
-  const current = f.service.analysis.get(f.failed.id)!;
-  vi.spyOn(f.service.analysis, "get").mockReturnValue({ ...current, facts: [] });
-  await expect(f.service.propose(f.failed.id)).rejects.toMatchObject({
-    details: { reason: "evidence_unavailable" },
+  const call = heldCall();
+  const answer = f.complete.getMockImplementation()!;
+  f.complete.mockImplementationOnce(async (request: ModelInput) => {
+    call.reached();
+    await call.held;
+    return answer(request);
   });
-  const [job] = f.jobs.forTarget(f.app.context.workspaceId, "healing", f.failed.id);
-  f.app.database.run(
-    "UPDATE job_leases SET state='leased',lease_owner='other',lease_expires_at=? WHERE id=?",
-    new Date(Date.now() + 60000).toISOString(),
-    job!.jobId,
+  const first = f.service.propose(f.failed.id);
+  await call.started;
+  const second = f.service.propose(f.failed.id);
+  await expect(settledWithin(second, 150)).resolves.toBe(pending);
+  call.release();
+  const [holder, waiter] = await Promise.all([first, second]);
+  expect(holder).toMatchObject({ abstained: true, reasonCode: "model_abstained" });
+  expect(waiter).toEqual(holder);
+  expect(f.complete).toHaveBeenCalledTimes(1);
+});
+it("concurrent healing requests for a Run share one proposal and one model call", async () => {
+  const f = await deferredFixture();
+  const call = heldCall();
+  const answer = f.complete.getMockImplementation()!;
+  f.complete.mockImplementationOnce(async (request: ModelInput) => {
+    call.reached();
+    await call.held;
+    return answer(request);
+  });
+  const first = proposed(f.service.propose(f.failed.id));
+  await call.started;
+  const second = proposed(f.service.propose(f.failed.id));
+  call.release();
+  const [holder, waiter] = await Promise.all([first, second]);
+  expect(waiter.id).toBe(holder.id);
+  expect(f.complete).toHaveBeenCalledTimes(1);
+});
+it("a waiter re-drives a running request whose holder stopped before the paid call", async () => {
+  const f = await generationFixture(abstention);
+  const workspaceId = f.app.context.workspaceId;
+  // A first request settles before anything is sent, so the job carries this request's payload.
+  f.complete.mockRejectedValueOnce(
+    new ContractError("PRECONDITION_FAILED", "Provider API key is unavailable", {
+      reasonCode: "provider_credentials_unavailable",
+    }),
   );
   await expect(f.service.propose(f.failed.id)).rejects.toMatchObject({
-    code: "PRECONDITION_FAILED",
-    details: { reason: "already_running", jobId: job!.jobId },
+    details: { detail: "provider_credentials_unavailable" },
   });
-  expect(f.jobs.get(f.app.context.workspaceId, job!.jobId)?.state).toBe("leased");
+  const [settled] = f.jobs.forTarget(workspaceId, "healing", f.failed.id);
+  // A holder takes the job again and stops before its paid call: its lease runs out in 200 ms.
+  f.jobs.reopenUnpaid(workspaceId, settled!.jobId, new Date().toISOString());
+  const holder = f.jobs.claim({
+    workspaceId,
+    queue: "healing",
+    jobId: settled!.jobId,
+    owner: "stopped-holder",
+    leaseMs: 200,
+  });
+  expect(holder?.job.progress.paidCallStarted).toBe(false);
+  f.complete.mockClear();
+  const waiting = f.service.propose(f.failed.id);
+  await expect(settledWithin(waiting, 100)).resolves.toBe(pending);
+  expect(f.complete).not.toHaveBeenCalled();
+  await expect(waiting).resolves.toMatchObject({
+    abstained: true,
+    reasonCode: "model_abstained",
+    jobId: settled!.jobId,
+  });
+  expect(f.complete).toHaveBeenCalledTimes(1);
+  expect(f.jobs.get(workspaceId, settled!.jobId)?.state).toBe("completed");
+});
+it("a request that loses the reopen of an unpaid settled request to another caller re-drives it instead of failing", async () => {
+  const f = await generationFixture(abstention);
+  const workspaceId = f.app.context.workspaceId;
+  f.complete.mockRejectedValueOnce(
+    new ContractError("PRECONDITION_FAILED", "Provider API key is unavailable", {
+      reasonCode: "provider_credentials_unavailable",
+    }),
+  );
+  await expect(f.service.propose(f.failed.id)).rejects.toMatchObject({
+    details: { detail: "provider_credentials_unavailable" },
+  });
+  const [settled] = f.jobs.forTarget(workspaceId, "healing", f.failed.id);
+  // Another caller reopens the job between this request's read of it and its own reopen, which
+  // then finds the job no longer settled.
+  const reopen = AuxiliaryLeaseRepository.prototype.reopenUnpaid;
+  const spy = vi
+    .spyOn(AuxiliaryLeaseRepository.prototype, "reopenUnpaid")
+    .mockImplementationOnce(function (this: AuxiliaryLeaseRepository, ...args) {
+      reopen.apply(this, args);
+      return reopen.apply(this, args);
+    });
+  try {
+    await expect(f.service.propose(f.failed.id)).resolves.toMatchObject({
+      abstained: true,
+      reasonCode: "model_abstained",
+      jobId: settled!.jobId,
+    });
+  } finally {
+    spy.mockRestore();
+  }
+  expect(f.complete).toHaveBeenCalledTimes(2);
+  expect(f.jobs.get(workspaceId, settled!.jobId)?.state).toBe("completed");
+});
+/** A healing job of the Run held by another process whose paid call has started. */
+function paidHolder(
+  app: Application,
+  jobs: AuxiliaryLeaseRepository,
+  failedRunId: string,
+  leaseMs: number,
+) {
+  const workspaceId = app.context.workspaceId;
+  const { job } = jobs.enqueue(workspaceId, "healing", {
+    operation: "propose",
+    targetId: failedRunId,
+    actorId: app.context.principalId,
+    evidenceHash: "a".repeat(64),
+    configHash: "b".repeat(64),
+    options: {},
+  });
+  const fence = jobs.claim({
+    workspaceId,
+    queue: "healing",
+    jobId: job.jobId,
+    owner: "paid-holder",
+    leaseMs,
+  })!;
+  jobs.mark(fence, { paidCallStarted: true });
+  return fence;
+}
+it("a waiter answers no_regeneration when the running request stopped after its paid call started", async () => {
+  const f = await generationFixture(abstention);
+  const holder = paidHolder(f.app, f.jobs, f.failed.id, 200);
+  await expect(f.service.propose(f.failed.id)).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+    details: { reason: "no_regeneration", jobId: holder.jobId },
+  });
+  expect(f.complete).not.toHaveBeenCalled();
+  expect(f.jobs.get(f.app.context.workspaceId, holder.jobId)?.state).toBe(
+    "reconciliation_required",
+  );
+});
+it("a running paid request is waited on, not answered no_regeneration, until it settles", async () => {
+  const f = await generationFixture(abstention);
+  const holder = paidHolder(f.app, f.jobs, f.failed.id, 60000);
+  const waiting = f.service.propose(f.failed.id);
+  await expect(settledWithin(waiting, 150)).resolves.toBe(pending);
+  // The holder's paid call ends in a model abstention; the waiter returns that outcome.
+  f.jobs.finish(holder, "completed", { refused: true, reason: "model_abstained" });
+  await expect(waiting).resolves.toMatchObject({
+    abstained: true,
+    reasonCode: "model_abstained",
+    jobId: holder.jobId,
+  });
   expect(f.complete).not.toHaveBeenCalled();
 });
 it("a settled healing request whose paid call started can never be reopened", async () => {
@@ -1162,6 +1314,136 @@ it("a settled healing request whose paid call started can never be reopened", as
     f.jobs.reopenUnpaid(f.app.context.workspaceId, job!.jobId, new Date().toISOString()),
   ).toThrow("Paid call outcome must stay settled");
   expect(f.jobs.get(f.app.context.workspaceId, job!.jobId)?.state).toBe("completed");
+});
+/**
+ * A model call that ends once the caller's signal aborts, as the gateway cancels it:
+ * `PRECONDITION_FAILED`, carrying `details` (a `reasonCode` when nothing was sent yet).
+ */
+function cancelledOnAbort(reached: () => void, details: Record<string, unknown> = {}) {
+  return async (request: ModelInput): Promise<never> => {
+    reached();
+    const cancelled = Promise.withResolvers<never>();
+    request.signal?.addEventListener(
+      "abort",
+      () =>
+        cancelled.reject(
+          new ContractError("PRECONDITION_FAILED", "Model request cancelled", details),
+        ),
+      { once: true },
+    );
+    return cancelled.promise;
+  };
+}
+it("a healing request its caller cancels after the send is final", async () => {
+  const f = await generationFixture(abstention);
+  const call = heldCall();
+  f.complete.mockImplementationOnce(cancelledOnAbort(call.reached));
+  const controller = new AbortController();
+  const request = f.service.propose(f.failed.id, {}, { signal: controller.signal });
+  await call.started;
+  controller.abort();
+  await expect(request).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+    details: { reason: "model_failure", detail: "cancelled", phase: "model" },
+  });
+  const [job] = f.jobs.forTarget(f.app.context.workspaceId, "healing", f.failed.id);
+  expect(job).toMatchObject({
+    state: "completed",
+    progress: { paidCallStarted: true },
+    result: { detail: "cancelled", phase: "model", upstreamCode: "PRECONDITION_FAILED" },
+  });
+  await expect(f.service.propose(f.failed.id)).rejects.toMatchObject({
+    details: { reason: "no_regeneration" },
+  });
+  expect(f.complete).toHaveBeenCalledTimes(1);
+});
+it("a healing request cancelled before anything was sent leaves the Run's request unspent", async () => {
+  const f = await generationFixture(abstention);
+  const call = heldCall();
+  f.complete.mockImplementationOnce(
+    cancelledOnAbort(call.reached, { reasonCode: "cancelled_before_send" }),
+  );
+  const controller = new AbortController();
+  const request = f.service.propose(f.failed.id, {}, { signal: controller.signal });
+  await call.started;
+  controller.abort();
+  await expect(request).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+    details: {
+      reason: "model_failure",
+      detail: "cancelled_before_send",
+      nextAction: expect.stringContaining("propose again"),
+    },
+  });
+  const [job] = f.jobs.forTarget(f.app.context.workspaceId, "healing", f.failed.id);
+  expect(job?.progress.paidCallStarted).toBe(false);
+  await expect(f.service.propose(f.failed.id)).resolves.toMatchObject({
+    abstained: true,
+    reasonCode: "model_abstained",
+  });
+  expect(f.complete).toHaveBeenCalledTimes(2);
+});
+it("a truncated model answer is a transport failure when the caller did not cancel", async () => {
+  const f = await generationFixture(abstention);
+  f.complete.mockRejectedValueOnce(
+    new ContractError("PRECONDITION_FAILED", "Model output was truncated", {
+      reasonCode: "output_truncated",
+    }),
+  );
+  const request = f.service.propose(f.failed.id, {}, { signal: new AbortController().signal });
+  await expect(request).rejects.toMatchObject({
+    details: {
+      reason: "model_failure",
+      detail: "transport",
+      phase: "model",
+      upstreamCode: "PRECONDITION_FAILED",
+    },
+  });
+});
+it("a caller waiting for a running healing request stops on its own cancellation and leaves the request running", async () => {
+  const f = await generationFixture(abstention);
+  const workspaceId = f.app.context.workspaceId;
+  const call = heldCall();
+  const answer = f.complete.getMockImplementation()!;
+  f.complete.mockImplementationOnce(async (request: ModelInput) => {
+    call.reached();
+    await call.held;
+    return answer(request);
+  });
+  const holder = f.service.propose(f.failed.id);
+  await call.started;
+  const controller = new AbortController();
+  const waiting = f.service.propose(f.failed.id, {}, { signal: controller.signal });
+  await expect(settledWithin(waiting, 150)).resolves.toBe(pending);
+  controller.abort();
+  const [job] = f.jobs.forTarget(workspaceId, "healing", f.failed.id);
+  await expect(waiting).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+    details: { reason: "wait_cancelled", jobId: job?.jobId },
+  });
+  call.release();
+  await expect(holder).resolves.toMatchObject({ abstained: true, reasonCode: "model_abstained" });
+  expect(f.complete).toHaveBeenCalledTimes(1);
+  expect(f.jobs.get(workspaceId, job!.jobId)?.state).toBe("completed");
+  // A request that was given no cancellation passes none to the model.
+  expect(f.input[0]).not.toHaveProperty("signal");
+});
+it("a caller waiting for a healing request that its caller cancelled after the send answers no_regeneration", async () => {
+  const f = await generationFixture(abstention);
+  const call = heldCall();
+  f.complete.mockImplementationOnce(cancelledOnAbort(call.reached));
+  const controller = new AbortController();
+  const holder = f.service.propose(f.failed.id, {}, { signal: controller.signal });
+  await call.started;
+  const waiting = f.service.propose(f.failed.id);
+  await expect(settledWithin(waiting, 150)).resolves.toBe(pending);
+  controller.abort();
+  await expect(holder).rejects.toMatchObject({ details: { detail: "cancelled" } });
+  await expect(waiting).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+    details: { reason: "no_regeneration" },
+  });
+  expect(f.complete).toHaveBeenCalledTimes(1);
 });
 function withAdvice(
   service: HealingService,

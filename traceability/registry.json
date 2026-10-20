@@ -6953,7 +6953,7 @@
         "packages/reporting/src/reporting.test.ts::exports honest partial evidence while retaining original failure in every format"
       ],
       "oracle": [
-        "Healthy strict JSON/JUnit passes; real assertion failure remains failed despite separate diagnostic pass, with report bytes and original Run unchanged. Pre-action real container kill recovers only in non-CI execution; strict crash stays one-Attempt nonpass/no requests. Actual CI wait deadline during collection retains committed evidence with partial completeness and nonpass XML."
+        "Healthy strict JSON/JUnit passes; real assertion failure remains failed despite separate diagnostic pass, with report bytes and original Run unchanged. Pre-action real container kill recovers only in non-CI execution; strict crash stays one-Attempt nonpass/no requests. Actual CI wait deadline during collection of a worker-owned Run exports partial completeness and nonpass XML without cancelling or aborting the Run, which then completes passed; runs the invocation executes itself have no wait deadline."
       ],
       "evidence": [
         "validation/journeys/m3-ci-acceptance.docker.test.ts",
@@ -7017,7 +7017,7 @@
           },
           {
             "path": "validation/journeys/m3-ci-acceptance.docker.test.ts",
-            "assertion": "expect(deadlineAborted).toBe(true);\n        expect(run.run.id).toBe(heldRunId);\n        expect(timeout.error).toEqual({\n          code: \"PRECONDITION_FAILED\",\n          message: \"Wait deadline exceeded\",\n        });\n        expect(timeout.gate).toBe(\"failed\");\n        expect(timeout.exitCode).not.toBe(0);\n        expect(envelope.report!.completeness.state).toBe(\"partial\");\n        expect(envelope.report!.completeness.reasons).toContain(\"ci-wait-deadline-exceeded\");\n        expect(run.steps.some((step) => step.status === \"passed\")).toBe(true);\n        expect(run.evidenceState).toBe(\"committed\");\n        if (run.evidenceState === \"committed\")\n          expect(run.manifest.entries.some((entry) => entry.state === \"available\")).toBe(true);\n        expect(app.runs.events(run.run.id).some((event) => event.type === \"runner.finished\")).toBe(\n          true,\n        );\n        expect(await readFile(timeout.outputs.junit!, \"utf8\")).toContain(\"<error\");"
+            "assertion": "expect(run.run.id).toBe(heldRunId);\n        expect(timeout.error).toEqual({\n          code: \"PRECONDITION_FAILED\",\n          message: \"Wait deadline exceeded\",\n        });\n        expect(timeout.gate).toBe(\"failed\");\n        expect(timeout.exitCode).not.toBe(0);\n        expect(envelope.report!.completeness.state).toBe(\"partial\");\n        expect(envelope.report!.completeness.reasons).toContain(\"ci-wait-deadline-exceeded\");\n        expect(cancelRequested).toBe(false);\n        expect(heldSignal?.aborted).toBe(false);\n        expect(await readFile(timeout.outputs.junit!, \"utf8\")).toContain(\"<error\");"
           },
           {
             "path": "validation/journeys/m3-ci.docker.test.ts",

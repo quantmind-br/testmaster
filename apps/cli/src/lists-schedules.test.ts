@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Writable } from "node:stream";
+import { setTimeout as sleep } from "node:timers/promises";
 import { Application, scaffoldPlan } from "@testmaster/application";
 import { afterEach, expect, it, vi } from "vitest";
 import { runCli } from "./cli.js";
@@ -39,7 +40,7 @@ async function fixture() {
     [second.id, "b-one"],
   ] as const)
     app.tests.create({ projectId, plan: scaffoldPlan("backend"), name });
-  const invoke = async (args: string[]) => {
+  const invoke = async (args: string[], onRuntime?: (runtime: Runtime) => void) => {
     let stdout = "";
     const output = new Writable({
       write(chunk, _encoding, done) {
@@ -49,6 +50,7 @@ async function fixture() {
     });
     const runtime = new Runtime(output, output);
     runtime.app = async () => app;
+    onRuntime?.(runtime);
     process.exitCode = 0;
     await runCli(["--json", "--cwd", cwd, ...args], runtime);
     return {
@@ -56,6 +58,7 @@ async function fixture() {
       document: JSON.parse(stdout) as {
         data?: Record<string, unknown> & unknown[];
         error?: { code: string; details?: Record<string, unknown> };
+        warnings?: string[];
       },
     };
   };
@@ -271,6 +274,84 @@ it("REQ-034 suite run --wait runs the batch in this process without a worker and
   );
   // The exit code is the batch result: cancelled members are not a pass.
   expect(waited.exit).not.toBe(0);
+});
+
+/** Replaces the in-process worker with `body`, which may hand over to the real loop. */
+function spyWorker(
+  app: Application,
+  body: (
+    options: { runIds?: string[]; signal?: AbortSignal },
+    original: () => Promise<unknown>,
+  ) => Promise<unknown>,
+) {
+  const prototype = Object.getPrototypeOf(app.worker);
+  const original: (this: unknown, options: unknown) => Promise<unknown> = prototype.run;
+  return vi.spyOn(prototype, "run").mockImplementation(async function (
+    this: unknown,
+    options: { runIds?: string[] },
+  ) {
+    return body(options, () => original.call(this, options));
+  } as never);
+}
+
+it("suite run --wait --timeout never ends the batch it executes: the members finish and the limit only warns", async () => {
+  const f = await fixture();
+  const suite = (await f.invoke(["suite", "create", "--name", "nightly", ...f.bindings])).document
+    .data as unknown as { id: string };
+  vi.spyOn(Object.getPrototypeOf(f.app.worker), "live").mockReturnValue(false);
+  const cancel = vi.spyOn(f.app.runs, "cancel");
+  let cancelsBeforeWorkerEnded = -1;
+  // The worker outlasts the 50 ms limit by far, then ends its members the way a run ends.
+  spyWorker(f.app, async (options, original) => {
+    await sleep(300);
+    cancelsBeforeWorkerEnded = cancel.mock.calls.length;
+    for (const id of options.runIds ?? []) await f.app.runs.cancel(id);
+    return original();
+  });
+  const waited = await f.invoke(["suite", "run", suite.id, "--wait", "--timeout", "0.05"]);
+  expect(waited.document.error).toBeUndefined();
+  expect(cancelsBeforeWorkerEnded).toBe(0);
+  const data = waited.document.data;
+  const members: unknown[] = Array.isArray(data?.members) ? data.members : [];
+  expect(members).toHaveLength(3);
+  for (const member of members) {
+    expect(member).not.toHaveProperty("error");
+    expect(member).toMatchObject({ run: { phase: "completed" } });
+  }
+  expect(waited.exit).not.toBe(7);
+  expect(waited.document.warnings).toContain(
+    "--timeout and --request-timeout do not end a run this command executes: the wait continues until the run completes or the command is interrupted. The limit applies only to waits on worker-owned runs.",
+  );
+});
+
+it("suite run --wait still cancels the members it executes when it is interrupted", async () => {
+  const f = await fixture();
+  const suite = (await f.invoke(["suite", "create", "--name", "nightly", ...f.bindings])).document
+    .data as unknown as { id: string };
+  vi.spyOn(Object.getPrototypeOf(f.app.worker), "live").mockReturnValue(false);
+  // The worker runs until it is told to stop, like one waiting on a container.
+  const memberIds: string[] = [];
+  const workerRun = spyWorker(f.app, async (options, original) => {
+    memberIds.push(...(options.runIds ?? []));
+    const stopped = Promise.withResolvers<void>();
+    options.signal?.addEventListener("abort", () => stopped.resolve());
+    await stopped.promise;
+    return original();
+  });
+  let runtime: Runtime | undefined;
+  const pending = f.invoke(["suite", "run", suite.id, "--wait", "--timeout", "0.05"], (rt) => {
+    runtime = rt;
+  });
+  await vi.waitFor(() => expect(workerRun).toHaveBeenCalled());
+  await sleep(100);
+  runtime?.interrupt("SIGINT");
+  const interrupted = await pending;
+  expect(interrupted.exit).toBe(130);
+  expect(memberIds).toHaveLength(3);
+  for (const id of memberIds) {
+    expect(f.app.runs.get(id)).toMatchObject({ phase: "completed", outcome: "cancelled" });
+    expect(f.app.runs.events(id).some((event) => event.type === "run.cancel_requested")).toBe(true);
+  }
 });
 
 it("REQ-035 OPS-016 schedule commands preview, create, edit, pause, resume, list history and archive", async () => {

@@ -18,8 +18,9 @@ function endpointOf(baseUrl: string): { origin: string; remote: boolean } {
 }
 /**
  * Refusals the model service or gateway raise before any request is sent (configuration,
- * credentials, inventory, busy compute slots). Nothing was paid, so a request that ended on one
- * stays open: the next request evaluates it again instead of returning the refusal.
+ * credentials, inventory, busy compute slots, a caller cancellation before the first request).
+ * Nothing was paid, so a request that ended on one stays open: the next request evaluates it again
+ * instead of returning the refusal.
  */
 export const unsentModelReasons: ReadonlySet<string> = new Set([
   "provider_unavailable",
@@ -29,6 +30,7 @@ export const unsentModelReasons: ReadonlySet<string> = new Set([
   "model_capability_missing",
   "model_not_in_inventory",
   "quota_exceeded",
+  "cancelled_before_send",
 ]);
 export const promptVersions = {
   normalize: "normalize-4-empty-batches",

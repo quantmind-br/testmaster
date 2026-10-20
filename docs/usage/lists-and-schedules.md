@@ -81,8 +81,9 @@ remote implementation fails with `CAPABILITY_UNAVAILABLE` naming the command.
 
 `suite run --wait [--timeout <seconds>] [--cancel-on-interrupt]` admits one BatchRun, follows every member to its
 end and prints what `test run --wait` prints for a batch (`{ receipt, members, batch, healing }`); its exit code is
-the batch result. It needs no worker: with none live, this process runs the members itself (an interrupt or a
-failed wait cancels them), and with one live the worker runs them and `--wait` only follows them. Without `--wait`
+the batch result. It needs no worker: with none live, this process runs the members itself (an interrupt cancels
+them; `--timeout` does not apply to runs this process executes and only produces a warning), and with one live the
+worker runs them and `--wait` only follows them. Without `--wait`
 it admits the BatchRun and returns the receipt, and needs a live worker (`testmaster worker start`). With none, it
 is refused with `PRECONDITION_FAILED` and the next actions `worker start`, `--wait` and `--queue`; `--queue`
 admits the BatchRun anyway and its Runs stay queued until a worker is live. `--wait` and `--queue` exclude each

@@ -67,8 +67,16 @@ export type CiInput = SelectionInput & {
   healingPolicy?: string;
   maxAttempts?: number;
   signal?: AbortSignal;
+  /**
+   * Wait limit for runs a worker owns (default: the execution timeout plus the collection grace).
+   * Runs this invocation executes itself are waited on with no deadline.
+   */
   timeoutMs?: number;
+  /** Receives the warnings of the invocation (for example a `timeoutMs` that does not apply). */
+  onWarning?: (message: string) => void;
 };
+const ciInProcessLimitWarning =
+  "timeoutMs does not end a run this invocation executes: the wait continues until the run completes or the invocation is interrupted. The limit applies only to waits on worker-owned runs.";
 export function assertStrictCi(
   input: Pick<CiInput, "mode" | "healingPolicy" | "maxAttempts">,
 ): void {
@@ -177,6 +185,7 @@ export class CiService {
       outputDir: _out,
       signal,
       timeoutMs,
+      onWarning,
       mode,
       healingPolicy,
       maxAttempts,
@@ -205,42 +214,68 @@ export class CiService {
           const cell = this.runs.get(id).matrixCell as Record<string, unknown>;
           return cell.ownership === "ephemeral";
         });
+        if (timeoutMs !== undefined && ephemeral.length > 0) onWarning?.(ciInProcessLimitWarning);
         if (signal?.aborted) interrupt();
         const work = ephemeral.length
           ? this.worker.run({ ephemeral: true, runIds: ephemeral, signal: controller.signal })
           : undefined;
         void work?.catch(() => {});
+        // Ends the member waits still polling once the outcome is decided: a wait with no deadline
+        // would otherwise poll a run that never completes for as long as the process lives.
+        const waits = new AbortController();
+        const waitSignal = signal ? AbortSignal.any([signal, waits.signal]) : waits.signal;
         try {
           const waiting = Promise.all(
             receipt.allMembers.map((id) =>
               this.runs.wait(id, {
-                timeoutMs: timeoutMs ?? defaults.executionTimeoutMs + defaults.collectionGraceMs,
-                ...(signal ? { signal } : {}),
+                timeoutMs: ephemeral.includes(id)
+                  ? Number.POSITIVE_INFINITY
+                  : (timeoutMs ?? defaults.executionTimeoutMs + defaults.collectionGraceMs),
+                signal: waitSignal,
               }),
             ),
           );
           if (work) await Promise.all([waiting, work]);
           else await waiting;
-        } catch (error) {
-          for (const id of owned) this.runs.cancel(id);
-          controller.abort(error);
-          // Collection is bounded independently of the interrupted wait.
-          await Promise.race([
-            Promise.allSettled([
-              ...(work ? [work] : []),
-              ...owned.map((id) =>
-                this.runs.wait(id, {
-                  timeoutMs: defaults.cancellationGraceMs + defaults.collectionGraceMs,
-                }),
-              ),
-            ]),
-            delay(defaults.cancellationGraceMs + defaults.collectionGraceMs),
-          ]);
-          if (!signal?.aborted && !(error instanceof ContractError)) throw error;
-          failure =
-            error instanceof ContractError
-              ? error
-              : new ContractError("UNAVAILABLE", "CI interrupted");
+        } catch (caught) {
+          let error: unknown = caught;
+          if (work && caught instanceof ContractError && caught.details.waitTimeout === true) {
+            // A wait limit ends only the wait on runs a worker owns. The runs this invocation
+            // executes have none: they finish under the in-process worker first, unless the
+            // worker fails or the invocation is interrupted, which cancels them below.
+            await work.catch((workError: unknown) => {
+              error = workError;
+            });
+            if (signal?.aborted) error = signal.reason;
+          }
+          if (error instanceof ContractError && error.details.waitTimeout === true) {
+            // The runs a worker owns keep running and the report stays partial.
+            failure = error;
+          } else {
+            for (const id of owned) this.runs.cancel(id);
+            controller.abort(error);
+            // Collection is bounded independently of the interrupted wait. Whichever side settles
+            // first, the other's timer and polls stop, so they do not hold the process open.
+            const collection = new AbortController();
+            const grace = defaults.cancellationGraceMs + defaults.collectionGraceMs;
+            await Promise.race([
+              Promise.allSettled([
+                ...(work ? [work] : []),
+                ...owned.map((id) =>
+                  this.runs.wait(id, { timeoutMs: grace, signal: collection.signal }),
+                ),
+              ]),
+              delay(grace, undefined, { signal: collection.signal }).catch(() => {}),
+            ]);
+            collection.abort();
+            if (!signal?.aborted && !(error instanceof ContractError)) throw error;
+            failure =
+              error instanceof ContractError
+                ? error
+                : new ContractError("UNAVAILABLE", "CI interrupted");
+          }
+        } finally {
+          waits.abort();
         }
         snapshot = await this.reports.snapshot(receipt.batchId);
         if (failure) {

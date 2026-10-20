@@ -62,7 +62,11 @@ export function createCli(runtime: Runtime): Command {
     .option("--profile <name>", "Profile name")
     .option("--project <id>", "Project ID")
     .option("--endpoint <url>", "Server endpoint")
-    .option("--request-timeout <seconds>", "Request deadline in seconds", seconds)
+    .option(
+      "--request-timeout <seconds>",
+      "Request deadline in seconds for a remote HTTP request and for the wait on a run owned by a worker; never ends a run this command executes",
+      seconds,
+    )
     .option("--no-color", "Disable colors")
     .option("--verbose", "Diagnostics on stderr, without sensitive payloads")
     .option("--dry-run", "Validate locally without side effects")

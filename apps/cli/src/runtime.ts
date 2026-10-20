@@ -155,6 +155,8 @@ export class Runtime {
   readonly controller = new AbortController();
   readonly requestId = `cli_${randomUUID()}`;
   readonly receipts: unknown[] = [];
+  /** Warnings a handler's helpers add; `dispatch` appends them to the command's result. */
+  readonly warnings: string[] = [];
   signal: NodeJS.Signals | undefined;
   private application: Application | undefined;
   private opening: Promise<Application> | undefined;
@@ -208,6 +210,15 @@ export class Runtime {
    */
   confinedPath(path: string): Promise<string> {
     return confineServicePath(this.path(path));
+  }
+  /**
+   * Adds a warning to the command's result, once per distinct message. Text output also writes it
+   * to stderr at once: the command may run long before its result is printed.
+   */
+  warn(message: string): void {
+    if (this.warnings.includes(message)) return;
+    this.warnings.push(message);
+    if (this.output === "text") this.stderr.write(`${message}\n`);
   }
   interrupt(signal: NodeJS.Signals): void {
     if (!this.signal) {
@@ -394,7 +405,9 @@ export class Runtime {
     }
     const result = await handler(this, args, this.options);
     if (this.signal) throw this.interrupted();
-    this.pending = result;
+    this.pending = this.warnings.length
+      ? { ...result, warnings: [...(result.warnings ?? []), ...this.warnings] }
+      : result;
   }
   /**
    * Appends the invocation's audit record to the workspace the command opened: `cli.command.denied`
@@ -449,7 +462,9 @@ export class Runtime {
       );
     else {
       this.stdout.write(result.text ?? `${JSON.stringify(result.data, null, 2)}\n`);
-      for (const warning of warnings) this.stderr.write(`${warning}\n`);
+      // `warn` already wrote its own messages.
+      for (const warning of warnings)
+        if (!this.warnings.includes(warning)) this.stderr.write(`${warning}\n`);
     }
     process.exitCode = result.exit ?? 0;
   }

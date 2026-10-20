@@ -104,7 +104,9 @@ TestMaster's own files (`testmaster.config.json`, `.testmaster/`) never make a r
 - Exit codes follow `specs/05-cli-mcp.md` §3 (0 passed, 1 failed gate, 6 precondition, 7 wait deadline,
   8 capability unavailable, 9 policy/sandbox denied, 15 run blocked by policy, 130/143 interrupted).
 - `test run --wait` without a running worker makes the CLI the ephemeral owner; Ctrl-C cancels durably.
-  With `testmaster worker start` running, the CLI only waits and Ctrl-C detaches unless
+  `--timeout` and `--request-timeout` never end that run: the wait continues until the run completes or
+  Ctrl-C, and the command prints a warning. With a running worker they bound only the wait (exit 7, the run
+  continues). With `testmaster worker start` running, the CLI only waits and Ctrl-C detaches unless
   `--cancel-on-interrupt` is given. Without a worker and without `--wait`, admission is refused.
 - `test run --step-timeout <seconds>` (MCP `limits.stepTimeoutMs`, REST `limits.stepTimeoutMs`) caps every step of
   that run: a step stops at the least of its own `timeoutMs` and the requested value, so the flag shortens
@@ -167,9 +169,10 @@ Latest diagnosis is enrichment, never a replacement verdict. Applications export
 formats should capture `reports.snapshot(id)` once and pass it to `reports.exportCaptured`.
 CI exports use `artifacts.exportSanitized(runId, outDir)`: restricted raw entries are omitted
 with source snapshot/hash provenance, not relabelled as redacted. Original bundles are immutable.
-If the CI wait deadline expires during collection, the exported report stays partial with
-`ci-wait-deadline-exceeded` even when bounded cancellation subsequently commits the retained
-evidence. JSON and JUnit remain non-approving; collection completion does not erase the timeout.
+When the CI wait limit (`timeoutMs`, default 31 minutes) expires on runs a worker executes, the exported
+report stays partial with `ci-wait-deadline-exceeded`; those runs are not cancelled and keep running. With
+no live worker, `ci run` executes the runs itself and waits with no limit: only an interrupt cancels them,
+and a given `timeoutMs` produces a warning. JSON and JUnit remain non-approving for a partial report.
 HTTP artifact downloads are attachment-only, private/no-store, nosniff and sandboxed.
 
 ```bash
@@ -278,8 +281,9 @@ healing, normalization, delivery) and `dsc_` ids (discovery, exploration). A bat
 job completed and 1 when it was cancelled, failed or needs settlement; Ctrl-C detaches and never cancels it.
 `job cancel <id> --reason <text>` asks the job to stop and prints its state: a request is not a stop, so confirm
 with `job get` that the state is `cancelled`. A queued auxiliary job is cancelled at once and a running exploration
-is stopped by the process that runs it; a job a process holds that has no cancellation point (a running analysis or
-healing call, which may already be billed) is refused with `PRECONDITION_FAILED` and left untouched.
+is stopped by the process that runs it; a job a process holds (a running analysis or healing call, which may
+already be billed and stops only through its own caller's cancellation) is refused with `PRECONDITION_FAILED` and
+left untouched.
 
 Heal with a specific model using
 `testmaster heal propose "$RUN_ID" --provider quantforge --model <id>`; without them the first
@@ -712,8 +716,9 @@ different `--scope` set needs another file. On a server profile, tokens come fro
 
 Register the server with the client's request timeout turned off. A model call has no deadline, so
 `testmaster_normalize_requirements`, `testmaster_generate_plan`, `testmaster_generate_tests`,
-`testmaster_analyze_run` and `testmaster_propose_healing` can take minutes, and a client that gives up first
-loses the answer even though the server finishes the call. In omp, set `"timeout": 0` on the server entry of
+`testmaster_analyze_run` and `testmaster_propose_healing` can take minutes, and a client that gives up
+first cancels the call: the server aborts the model call, and a cancellation after the request was sent
+leaves the analysis reading stored as an abstention and the Run's healing request final. In omp, set `"timeout": 0` on the server entry of
 `mcp.json` (the default is 30 s; `OMP_MCP_TIMEOUT_MS=0` does the same for every server). Start the server in the
 initialized repository, or pass `--cwd <repository>` before `mcp serve` (`testmaster --cwd <repository> mcp
 serve ...`): the workspace is the directory the command runs in.
@@ -775,7 +780,7 @@ preview (`plan.files` in the JSON envelope) lists each file as `create`, `update
 `keep`; install refuses a reference file edited since installation and names it, and `remove` deletes the
 files that still match, keeps an edited one and reports it, and removes the directories it emptied.
 
-The installed skill is version 2.3.0 and documents one route, the CLI, for agents with a shell: `SKILL.md` (authority, the commands that read state, the nine-step pipeline, exit codes, the three inviolable rules, an index) and `references/` (pipeline, plan authoring, evidence, auth and secrets, healing, approvals), which an agent loads only when the task needs them. Copies installed from an earlier version report `outdated` until `agent install --yes` runs again.
+The installed skill is version 2.4.0 and documents one route, the CLI, for agents with a shell: `SKILL.md` (authority, the commands that read state, the nine-step pipeline, exit codes, the three inviolable rules, an index) and `references/` (pipeline, plan authoring, evidence, auth and secrets, healing, approvals), which an agent loads only when the task needs them. Copies installed from an earlier version report `outdated` until `agent install --yes` runs again.
 
 ## Not available in M0–M2
 

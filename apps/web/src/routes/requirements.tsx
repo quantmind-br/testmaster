@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import { api } from "../api";
 import { ConfirmDialog } from "../components/confirm-dialog";
@@ -132,21 +132,36 @@ function NormalizeForm({
   const [chosen, setChosen] = useState<Set<string>>(new Set());
   const [failure, setFailure] = useState<Failure | null>(null);
   const [busy, setBusy] = useState(false);
+  const [cancelled, setCancelled] = useState(false);
+  // Aborting the request closes the connection; the server then cancels the model call.
+  const controller = useRef<AbortController | null>(null);
   const usable = sources.items.filter((item) => item.activeRevisionId !== null);
   async function run(): Promise<void> {
     if (busy || chosen.size === 0) return;
     setBusy(true);
     setFailure(null);
+    setCancelled(false);
+    const request = new AbortController();
+    controller.current = request;
     try {
       await api("POST", `/projects/${encodeURIComponent(projectId)}/requirements/normalizations`, {
         body: { sourceRevisionIds: [...chosen] },
+        signal: request.signal,
       });
-      await onDone();
     } catch (error) {
-      setFailure(toFailure(error));
+      if (!request.signal.aborted) {
+        setFailure(toFailure(error));
+        return;
+      }
     } finally {
+      // The request is over: nothing is left to cancel while the requirements reload.
+      controller.current = null;
       setBusy(false);
     }
+    // A cancel that reached the server after it committed only lost the answer: the reload shows
+    // the requirements as they are.
+    await onDone();
+    if (request.signal.aborted) setCancelled(true);
   }
   return (
     <section aria-label="Normalize requirements">
@@ -197,6 +212,21 @@ function NormalizeForm({
       >
         {busy ? "Normalizing…" : "Normalize"}
       </button>
+      {busy ? (
+        <button
+          type="button"
+          className="button secondary"
+          onClick={() => controller.current?.abort()}
+        >
+          Cancel normalization
+        </button>
+      ) : null}
+      <p role="status" data-testid="normalize-phase">
+        {busy ? "Normalization is running. Cancelling leaves the requirements unchanged." : null}
+        {cancelled
+          ? "Normalization was cancelled. The requirements shown are current; normalize again to retry."
+          : null}
+      </p>
     </section>
   );
 }

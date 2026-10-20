@@ -1,3 +1,4 @@
+import { setTimeout as delay } from "node:timers/promises";
 import {
   type AuxiliaryFence,
   type AuxiliaryLeaseRepository,
@@ -26,4 +27,12 @@ export function keepLeaseAlive(
   }, RENEW_EVERY_MS);
   timer.unref();
   return { stop: () => clearInterval(timer) };
+}
+
+/**
+ * One 50 ms pass of a wait on another holder's job. `signal` cuts the pass short and the pass then
+ * resolves: the waiter's loop sees the abort on its next check and answers with its own error.
+ */
+export function waitPass(signal?: AbortSignal): Promise<void> {
+  return delay(50, undefined, signal ? { signal } : undefined).catch(() => undefined);
 }

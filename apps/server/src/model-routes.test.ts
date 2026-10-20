@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { request } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Application, issueLocalToken } from "@testmaster/application";
@@ -43,13 +44,14 @@ async function fixture() {
     await rm(cwd, { recursive: true, force: true });
   });
   const headers = { authorization: `Bearer ${issued.token}` };
-  const post = (path: string) =>
+  const post = (path: string, body: unknown = {}) =>
     fetch(`${address}/v1${path}`, {
       method: "POST",
       headers: { ...headers, "content-type": "application/json", "idempotency-key": randomUUID() },
-      body: "{}",
+      body: JSON.stringify(body),
     });
-  return { application, address, headers, post };
+  const projectId = application.projects.create({ name: "Model routes" }).id;
+  return { application, address, headers, post, projectId };
 }
 
 it("an ordinary route that stays silent past the idle socket timeout loses its connection", async () => {
@@ -80,3 +82,98 @@ it("routes that run a model call keep their connection past the idle socket time
   expect(analyze).toHaveBeenCalledTimes(1);
   expect(propose).toHaveBeenCalledTimes(1);
 });
+
+/** The `signal` of a service call's input or options, when it carries one. */
+function signalIn(value: unknown): AbortSignal | undefined {
+  return value &&
+    typeof value === "object" &&
+    "signal" in value &&
+    value.signal instanceof AbortSignal
+    ? value.signal
+    : undefined;
+}
+
+/** The model routes, the service method each one calls and the argument that carries the signal. */
+const modelRoutes = [
+  {
+    route: "POST /v1/runs/{id}/analysis",
+    path: () => "/runs/run_slow/analysis",
+    body: {},
+    service: (application: Application) => application.analysis,
+    method: "analyze",
+    argument: 2,
+  },
+  {
+    route: "POST /v1/runs/{id}/healing-proposals",
+    path: () => "/runs/run_slow/healing-proposals",
+    body: {},
+    service: (application: Application) => application.healing,
+    method: "propose",
+    argument: 2,
+  },
+  {
+    route: "POST /v1/projects/{id}/requirements/normalizations",
+    path: (projectId: string) => `/projects/${projectId}/requirements/normalizations`,
+    body: { sourceRevisionIds: ["svr_00000000-0000-4000-8000-000000000001"] },
+    service: (application: Application) => application.requirements,
+    method: "normalize",
+    argument: 0,
+  },
+];
+
+it.each(modelRoutes)(
+  "a client that closes the connection of $route aborts the call's signal",
+  async (route) => {
+    const f = await fixture();
+    const received = Promise.withResolvers<AbortSignal | undefined>();
+    vi.spyOn(Object.getPrototypeOf(route.service(f.application)), route.method).mockImplementation(
+      async (...args: unknown[]) => {
+        const signal = signalIn(args[route.argument]);
+        received.resolve(signal);
+        if (!signal) return {};
+        const aborted = Promise.withResolvers<void>();
+        signal.addEventListener("abort", () => aborted.resolve(), { once: true });
+        await aborted.promise;
+        return {};
+      },
+    );
+    const payload = JSON.stringify(route.body);
+    const client = request(`${f.address}/v1${route.path(f.projectId)}`, {
+      method: "POST",
+      headers: {
+        ...f.headers,
+        "content-type": "application/json",
+        "content-length": Buffer.byteLength(payload),
+        "idempotency-key": randomUUID(),
+      },
+    });
+    // The test destroys the socket itself, so the request's own error is expected.
+    client.on("error", () => undefined);
+    client.end(payload);
+    const signal = await received.promise;
+    expect(signal?.aborted).toBe(false);
+    client.destroy();
+    await expect.poll(() => signal?.aborted, { timeout: 2000 }).toBe(true);
+  },
+);
+
+it.each(modelRoutes)(
+  "a request of $route that completes leaves the call's signal unaborted",
+  async (route) => {
+    const f = await fixture();
+    let received: AbortSignal | undefined;
+    vi.spyOn(Object.getPrototypeOf(route.service(f.application)), route.method).mockImplementation(
+      async (...args: unknown[]) => {
+        received = signalIn(args[route.argument]);
+        return {};
+      },
+    );
+    const response = await f.post(route.path(f.projectId), route.body);
+    expect(response.status).toBe(200);
+    await response.arrayBuffer();
+    // The server sees the response's end before this check: a close after the answer aborts nothing.
+    await sleep(100);
+    expect(received).toBeInstanceOf(AbortSignal);
+    expect(received?.aborted).toBe(false);
+  },
+);

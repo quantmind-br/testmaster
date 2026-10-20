@@ -1,3 +1,4 @@
+import { setTimeout as delay } from "node:timers/promises";
 import {
   type Analysis,
   ContractError,
@@ -18,7 +19,7 @@ import { type ArtifactsService, EvidenceUnavailableError } from "../artifacts.js
 import type { ServiceContext } from "../context.js";
 import { AnalysisService, resolveAnalysisEvidence } from "./analysis.js";
 import type { DiscoveryDetail } from "./discovery.js";
-import { ModelService } from "./model.js";
+import { type ModelInput, ModelService } from "./model.js";
 
 const databases: PersistenceDatabase[] = [];
 afterEach(() => {
@@ -1530,6 +1531,135 @@ it("a model reading that outlasts the job lease keeps its lease and is stored", 
   } finally {
     vi.useRealTimers();
   }
+});
+const unknownReading = {
+  failureKind: "unknown",
+  hypotheses: [],
+  recommendedAction: "collect_more_evidence",
+  fixTargetHandle: null,
+  limitations: [],
+  nextSteps: [],
+  evidenceGaps: [],
+};
+/**
+ * A model call that reports the signal it received and is cancelled once that signal aborts, as
+ * the gateway cancels a request it already sent: `PRECONDITION_FAILED` without a reason code.
+ */
+function cancelledOnAbort(received: PromiseWithResolvers<AbortSignal | undefined>) {
+  return async (input: unknown): Promise<never> => {
+    const { signal } = input as ModelInput;
+    received.resolve(signal);
+    const cancelled = Promise.withResolvers<never>();
+    signal?.addEventListener(
+      "abort",
+      () => cancelled.reject(new ContractError("PRECONDITION_FAILED", "Model request cancelled")),
+      { once: true },
+    );
+    return cancelled.promise;
+  };
+}
+async function pendingAfter(promise: Promise<unknown>, ms: number): Promise<boolean> {
+  const settled = promise.then(
+    () => false,
+    () => false,
+  );
+  return Promise.race([settled, delay(ms).then(() => true)]);
+}
+function modelJob(f: AnalysisFixture) {
+  return f.service.jobs
+    .forTarget(f.ctx.workspaceId, "analysis", f.run.id)
+    .find((job) => job.payload.operation === "model");
+}
+it("a caller's cancellation aborts the model call of its reading, and the reading abstains", async () => {
+  const f = await fixture();
+  const received = Promise.withResolvers<AbortSignal | undefined>();
+  f.complete.mockImplementationOnce(cancelledOnAbort(received));
+  const controller = new AbortController();
+  const reading = f.service.analyze(f.run.id, { model: true }, { signal: controller.signal });
+  const signal = await received.promise;
+  controller.abort();
+  const analysis = await reading;
+  expect(signal?.aborted).toBe(true);
+  expect(f.service.modelStatus(analysis)).toMatchObject({
+    state: "abstained",
+    reasonCode: "PRECONDITION_FAILED",
+  });
+});
+it("a caller waiting for a running reading stops on its own cancellation and leaves the reading running", async () => {
+  const f = await fixture();
+  const called = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  f.complete.mockImplementationOnce(async () => {
+    called.resolve();
+    await release.promise;
+    return { modelCallId: f.modelCallId, output: unknownReading };
+  });
+  const holder = f.service.analyze(f.run.id, { model: true });
+  await called.promise;
+  const controller = new AbortController();
+  const cancelled = f.service.analyze(f.run.id, { model: true }, { signal: controller.signal });
+  const waiting = f.service.analyze(f.run.id, { model: true });
+  expect(await pendingAfter(cancelled, 100)).toBe(true);
+  controller.abort();
+  await expect(cancelled).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+    details: { reason: "wait_cancelled", jobId: modelJob(f)?.jobId },
+  });
+  // Control: the caller that keeps waiting is answered with the holder's reading.
+  expect(await pendingAfter(waiting, 100)).toBe(true);
+  release.resolve();
+  const held = await holder;
+  expect(held).toMatchObject({ source: "model", modelCallId: f.modelCallId });
+  expect((await waiting).id).toBe(held.id);
+  expect(f.complete).toHaveBeenCalledTimes(1);
+});
+it("a reading cancelled before anything was sent reopens on the next request, and one cancelled after the send is final", async () => {
+  const f = await fixture();
+  f.complete.mockRejectedValueOnce(
+    new ContractError("PRECONDITION_FAILED", "Model request cancelled", {
+      reasonCode: "cancelled_before_send",
+    }),
+  );
+  const unsent = await f.service.analyze(f.run.id, { model: true });
+  expect(f.service.modelStatus(unsent)).toMatchObject({
+    state: "abstained",
+    reasonCode: "cancelled_before_send",
+  });
+  expect(modelJob(f)?.progress.paidCallStarted).toBe(false);
+  f.complete.mockImplementationOnce(async () => ({
+    modelCallId: f.modelCallId,
+    output: unknownReading,
+  }));
+  const retried = await f.service.analyze(f.run.id, { model: true });
+  expect(retried).toMatchObject({ source: "model", modelCallId: f.modelCallId });
+  expect(f.complete).toHaveBeenCalledTimes(2);
+  // Control: the request was sent before the cancellation, so its abstention is the reading.
+  const sent = await fixture();
+  sent.complete.mockRejectedValueOnce(
+    new ContractError("PRECONDITION_FAILED", "Model request cancelled"),
+  );
+  const abstained = await sent.service.analyze(sent.run.id, { model: true });
+  expect(modelJob(sent)?.progress.paidCallStarted).toBe(true);
+  expect((await sent.service.analyze(sent.run.id, { model: true })).id).toBe(abstained.id);
+  expect(sent.complete).toHaveBeenCalledTimes(1);
+});
+it("a caller waiting for a reading whose own caller cancelled it after the send gets the stored abstention", async () => {
+  const f = await fixture();
+  const received = Promise.withResolvers<AbortSignal | undefined>();
+  f.complete.mockImplementationOnce(cancelledOnAbort(received));
+  const controller = new AbortController();
+  const holder = f.service.analyze(f.run.id, { model: true }, { signal: controller.signal });
+  await received.promise;
+  const waiting = f.service.analyze(f.run.id, { model: true });
+  expect(await pendingAfter(waiting, 100)).toBe(true);
+  controller.abort();
+  const abstained = await holder;
+  expect(f.service.modelStatus(abstained)).toMatchObject({
+    state: "abstained",
+    reasonCode: "PRECONDITION_FAILED",
+  });
+  expect((await waiting).id).toBe(abstained.id);
+  expect(f.complete).toHaveBeenCalledTimes(1);
 });
 it("an invalid explicit model choice is refused before any job or provider call", async () => {
   const f = await fixture();

@@ -2,14 +2,14 @@
 name: testmaster
 description: Drives the TestMaster CLI to prepare sources, review requirements and plans, run authorized deterministic tests, and read verified evidence. Use for application verification and failure triage, not autonomous product changes.
 metadata:
-  version: "2.3.0"
+  version: "2.4.0"
 ---
 
 # TestMaster CLI
 
 **Authority.** The local token is a cooperative limit, not a security boundary: a shell as the same OS user reaches the database and vault without it. You make and record every review decision yourself.
 
-Add `--output json`: stdout is one envelope (`data` or `error`), diagnostics to stderr. Every ID/version comes from a receipt field; never invent one. Model commands (`requirement normalize`, `plan generate`, `test generate`, `run analyze --model`, `heal propose`), `run wait` and `job wait` have no deadline: run them with no shell/tool timeout (omp bash `timeout: 0`).
+Add `--output json`: stdout is one envelope (`data` or `error`), diagnostics to stderr. Every ID/version comes from a receipt field; never invent one. Model commands (`requirement normalize`, `plan generate`, `test generate`, `run analyze --model`, `heal propose`), `job wait` and a `--wait` that runs the test itself have no deadline: use no shell/tool timeout (omp bash `timeout: 0`). `run wait` ends at `--timeout`.
 
 No `status` command; state is in lists: `project list`, `env list`, `source list`, `requirement snapshot`, `plan list`, `test list`, `test revision list TEST_ID`, `run list`. `testmaster GROUP --help` prints a group's commands.
 
@@ -35,7 +35,7 @@ testmaster run analyze RUN_ID
 | 1 | gate not passed |
 | 3, 4 | not authorized, not found |
 | 5, 6 | invalid input, stale version/conflict |
-| 7 | wait deadline |
+| 7 | wait deadline; the run goes on |
 | 8, 9 | capability unavailable, policy/sandbox refusal |
 | 10, 11, 12 | transport, rate limit, quota |
 | 14 | schema major incompatible |

@@ -7,7 +7,7 @@ import {
   validate,
 } from "@testmaster/contracts";
 import type { Command } from "commander";
-import { waitForBatch } from "./execution.js";
+import { WAIT_LIMIT_HELP, waitForBatch } from "./execution.js";
 import {
   collect,
   integer,
@@ -295,7 +295,7 @@ export function suiteCommands(program: Command, runtime: Runtime): void {
       .option("--expansion-hash <digest>", "Refuse unless the list still resolves to this hash")
       .option("--heal <policy>", "Healing policy: off or propose")
       .option("--wait", "Wait for every member; runs them here when no worker is live")
-      .option("--timeout <seconds>", "Wait deadline in seconds", seconds)
+      .option("--timeout <seconds>", WAIT_LIMIT_HELP, seconds)
       .option("--cancel-on-interrupt", "Cancel the members when interrupted while waiting")
       .option("--queue", "Admit even when no worker is live; Runs wait for one")
       .option("--idempotency-key <key>"),

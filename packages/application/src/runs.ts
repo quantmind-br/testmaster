@@ -1332,6 +1332,10 @@ export class RunsService {
       },
     ).receipt;
   }
+  /**
+   * Polls the Run until it completes. `timeoutMs` defaults to 1,800,000; `Number.POSITIVE_INFINITY`
+   * waits with no deadline. A deadline that passes ends only the wait, never the Run.
+   */
   async wait(
     id: string,
     options: { timeoutMs?: number; signal?: AbortSignal; cancelOnInterrupt?: boolean } = {},

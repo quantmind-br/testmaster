@@ -163,7 +163,10 @@ export function testExecutionCommands(test: Command, runtime: Runtime): void {
         if (options.heal === "propose" && finished.outcome === "failed")
           return {
             ...result,
-            data: { execution: result.data, healing: await proposeHealing(app, finished.id) },
+            data: {
+              execution: result.data,
+              healing: await proposeHealing(app, finished.id, rt.controller.signal),
+            },
           };
         return result;
       }

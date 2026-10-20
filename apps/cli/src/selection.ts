@@ -2,7 +2,7 @@ import type { SelectionInput } from "@testmaster/application";
 import { ContractError } from "@testmaster/contracts";
 import { batchExitCode, exitCodeForBatchGate, exitCodeForRun } from "@testmaster/domain";
 import type { Command } from "commander";
-import { environmentId, receiptResult, waitForRun } from "./execution.js";
+import { environmentId, receiptResult, WAIT_LIMIT_HELP, waitForRun } from "./execution.js";
 import { collect, type Result, type Runtime, seconds, string, strings } from "./runtime.js";
 
 export function selectionCommands(test: Command, runtime: Runtime): void {
@@ -21,7 +21,7 @@ export function selectionCommands(test: Command, runtime: Runtime): void {
       .option("--allow-empty")
       .option("--empty-reason <text>")
       .option("--wait")
-      .option("--timeout <seconds>", "Wait deadline in seconds", seconds)
+      .option("--timeout <seconds>", WAIT_LIMIT_HELP, seconds)
       .option("--revision <id>", "Explicit revision for exactly one test or Run")
       .option("--idempotency-key <key>", "Run reproduction idempotency key")
       .option("--expected-selection-hash <hash>"),
@@ -139,11 +139,17 @@ export function selectionCommands(test: Command, runtime: Runtime): void {
       try {
         await Promise.all(
           receipt.allMembers.map((id) =>
-            waitForRun(rt, app, id, {
-              ...options,
-              workerFailure,
-              cancelOnInterrupt: owned.includes(id),
-            }),
+            waitForRun(
+              rt,
+              app,
+              id,
+              {
+                ...options,
+                workerFailure,
+                cancelOnInterrupt: owned.includes(id),
+              },
+              owned.includes(id) ? "batch" : "worker",
+            ),
           ),
         );
         await finished;
@@ -160,8 +166,13 @@ export function selectionCommands(test: Command, runtime: Runtime): void {
           ]),
         };
       } finally {
-        for (const id of owned) if (app.runs.get(id).phase !== "completed") app.runs.cancel(id);
-        controller.abort();
+        // Only an interrupt or a failure of the in-process worker cancels the runs this process
+        // executes. On any other exit (a worker-owned member reached its wait limit) the
+        // in-process worker finishes them first.
+        if (rt.signal || workerError) {
+          for (const id of owned) if (app.runs.get(id).phase !== "completed") app.runs.cancel(id);
+          controller.abort();
+        }
         await finished;
         rt.controller.signal.removeEventListener("abort", interrupt);
       }

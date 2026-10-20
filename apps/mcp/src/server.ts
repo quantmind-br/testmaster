@@ -1173,12 +1173,16 @@ export class TestMasterMcp {
         // `model` is the switch (true) or the model id of the reading; provider only refines it.
         const model = args.model;
         const requested = model === true || typeof model === "string";
-        const analysis = await app.analysis.analyze(String(args.runId), {
-          model: requested,
-          ...(typeof args.provider === "string" ? { provider: args.provider } : {}),
-          ...(typeof model === "string" ? { modelId: model } : {}),
-          ...(typeof args.discoveryId === "string" ? { discoveryId: args.discoveryId } : {}),
-        });
+        const analysis = await app.analysis.analyze(
+          String(args.runId),
+          {
+            model: requested,
+            ...(typeof args.provider === "string" ? { provider: args.provider } : {}),
+            ...(typeof model === "string" ? { modelId: model } : {}),
+            ...(typeof args.discoveryId === "string" ? { discoveryId: args.discoveryId } : {}),
+          },
+          { signal },
+        );
         // A reading that was asked for always reports its fate; rules-only calls carry no status.
         return requested
           ? { ...analysis, modelStatus: app.analysis.modelStatus(analysis) }
@@ -1478,10 +1482,14 @@ export class TestMasterMcp {
           ...(typeof args.limit === "number" ? { limit: args.limit } : {}),
         });
       case "testmaster_propose_healing":
-        return app.healing.propose(String(args.runId), {
-          ...(typeof args.provider === "string" ? { provider: args.provider } : {}),
-          ...(typeof args.model === "string" ? { model: args.model } : {}),
-        });
+        return app.healing.propose(
+          String(args.runId),
+          {
+            ...(typeof args.provider === "string" ? { provider: args.provider } : {}),
+            ...(typeof args.model === "string" ? { model: args.model } : {}),
+          },
+          { signal },
+        );
       case "testmaster_review_healing":
         return app.healing.review(String(args.proposalId));
       case "testmaster_approve_healing": {

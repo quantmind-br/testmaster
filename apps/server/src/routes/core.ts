@@ -7,7 +7,7 @@ import {
   type TestRevisionInput,
   validateDocument,
 } from "@testmaster/contracts";
-import { abortOnDisconnect, holdConnectionOpen } from "./authoring.js";
+import { abortOnDisconnect } from "./authoring.js";
 import type { RouteContext, RouteHandler, RouteModule } from "./types.js";
 
 interface Call extends Omit<RouteContext, "body" | "query"> {
@@ -388,14 +388,16 @@ const handlers: Record<string, RouteHandler> = {
   ),
   "POST /approvals/{id}/revoke": h(({ app, id }) => app.approvals.revoke(id)),
   "GET /runs/{id}/analysis": h(({ app, id }) => app.analysis.stored(id)),
-  "POST /runs/{id}/analysis": h(({ app, id, body, reply }) => {
-    holdConnectionOpen(reply);
-    return app.analysis.analyze(id, body as Parameters<typeof app.analysis.analyze>[1]);
-  }),
-  "POST /runs/{id}/healing-proposals": h(({ app, id, body, reply }) => {
-    holdConnectionOpen(reply);
-    return app.healing.propose(id, body as Parameters<typeof app.healing.propose>[1]);
-  }),
+  "POST /runs/{id}/analysis": h(({ app, id, body, reply }) =>
+    app.analysis.analyze(id, body as Parameters<typeof app.analysis.analyze>[1], {
+      signal: abortOnDisconnect(reply),
+    }),
+  ),
+  "POST /runs/{id}/healing-proposals": h(({ app, id, body, reply }) =>
+    app.healing.propose(id, body as Parameters<typeof app.healing.propose>[1], {
+      signal: abortOnDisconnect(reply),
+    }),
+  ),
   "GET /healing-proposals/{id}": h(({ app, id }) => app.healing.get(id)),
   "GET /healing-proposals/{id}/review": h(({ app, id }) => app.healing.review(id)),
   "POST /healing-proposals/{id}/approve": h(({ app, id, body }) =>

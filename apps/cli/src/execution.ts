@@ -23,12 +23,15 @@ import {
   string,
 } from "./runtime.js";
 
+/** Help of the `--timeout` of a command that may execute its runs itself. */
+export const WAIT_LIMIT_HELP =
+  "Wait deadline in seconds for a run owned by a worker; never ends a run this command executes";
 export function executionOptions(command: Command): Command {
   return command
     .option("--env <id-or-name>")
     .option("--revision <id>")
     .option("--wait")
-    .option("--timeout <seconds>", "Wait deadline in seconds", seconds)
+    .option("--timeout <seconds>", WAIT_LIMIT_HELP, seconds)
     .option("--cancel-on-interrupt")
     .option("--unsafe-local", "Explicitly authorize process execution")
     .option("--idempotency-key <key>")
@@ -58,15 +61,29 @@ export async function environmentId(
     throw new ContractError("PRECONDITION_REQUIRED", "Select or create an environment");
   return environment.id;
 }
+/**
+ * Who executes the run a wait follows. `worker`: a worker of another process; the wait limit
+ * (`--timeout`, `--request-timeout`) ends the wait with exit 7 and the run continues. `ephemeral`:
+ * the in-process worker this call starts and ends. `batch`: an in-process worker the caller starts
+ * and ends. A run this process executes is waited on with no deadline.
+ */
+type WaitOwnership = "worker" | "ephemeral" | "batch";
+const inProcessLimitWarning =
+  "--timeout and --request-timeout do not end a run this command executes: the wait continues until the run completes or the command is interrupted. The limit applies only to waits on worker-owned runs.";
 export async function waitForRun(
   runtime: Runtime,
   app: Application,
   id: string,
   options: Options,
-  ownership: "worker" | "ephemeral" = "worker",
+  ownership: WaitOwnership = "worker",
 ): Promise<Run> {
   const current = app.runs.get(id);
   if (current.phase === "completed") return current;
+  const limited = ownership === "worker";
+  const requested = [options.timeout, options.requestTimeout].find(
+    (value): value is number => typeof value === "number",
+  );
+  if (!limited && requested !== undefined) runtime.warn(inProcessLimitWarning);
   const workerController = new AbortController();
   const waitController = new AbortController();
   const interrupt = (): void => {
@@ -91,29 +108,27 @@ export async function waitForRun(
   const watchedWorker = worker?.catch((error: unknown) => {
     workerFailure = error;
   });
-  const timeoutMs =
-    typeof options.timeout === "number"
-      ? options.timeout
-      : typeof options.requestTimeout === "number"
-        ? options.requestTimeout
-        : defaults.executionTimeoutMs + defaults.collectionGraceMs;
+  const timeoutMs = limited
+    ? (requested ?? defaults.executionTimeoutMs + defaults.collectionGraceMs)
+    : Number.POSITIVE_INFINITY;
   let timer: NodeJS.Timeout | undefined;
   let abortListener: (() => void) | undefined;
   let waiting: Promise<Run> | undefined;
   try {
     const deadline = new Promise<never>((_resolve, reject) => {
-      timer = setTimeout(
-        () =>
-          reject(
-            new CliFailure(
-              "UPSTREAM_TIMEOUT",
-              "Wait deadline exceeded; inspect the run before retrying",
-              7,
-              { runId: id, ownership, receipts: runtime.receipts },
+      if (limited)
+        timer = setTimeout(
+          () =>
+            reject(
+              new CliFailure(
+                "UPSTREAM_TIMEOUT",
+                "Wait deadline exceeded; inspect the run before retrying",
+                7,
+                { runId: id, ownership, receipts: runtime.receipts },
+              ),
             ),
-          ),
-        timeoutMs,
-      );
+          timeoutMs,
+        );
       abortListener = () => reject(runtime.interrupted());
       runtime.controller.signal.addEventListener("abort", abortListener, { once: true });
       if (runtime.controller.signal.aborted) abortListener();
@@ -136,9 +151,11 @@ export async function waitForRun(
   } catch (error) {
     waitController.abort(error);
     try {
+      // No deadline ends a wait on a run this process executes, so only an interrupt or a failure
+      // of the in-process worker reaches this cancel for it.
       if (ownership === "ephemeral" || (runtime.signal && options.cancelOnInterrupt === true)) {
         await app.runs.cancel(id);
-        if (ownership === "worker")
+        if (ownership !== "ephemeral")
           await app.runs
             .wait(id, { timeoutMs: defaults.cancellationGraceMs + defaults.collectionGraceMs })
             .catch(() => {});
@@ -184,10 +201,17 @@ export async function receiptResult(
     exit: exitCodeForRun({ gate: run.gate, outcome: run.outcome, reasonCode }),
   };
 }
-/** A refused proposal (not indicated, already settled) is reported beside the finished run. */
-export async function proposeHealing(app: Application, runId: string): Promise<unknown> {
+/**
+ * A refused proposal (not indicated, already settled, cancelled) is reported beside the finished
+ * run. `signal` is the command's interrupt: it aborts the proposal's model call.
+ */
+export async function proposeHealing(
+  app: Application,
+  runId: string,
+  signal: AbortSignal,
+): Promise<unknown> {
   try {
-    return await app.healing.propose(runId, {});
+    return await app.healing.propose(runId, {}, { signal });
   } catch (error) {
     if (error instanceof ContractError && error.code === "PRECONDITION_FAILED")
       return { refused: errorData(error) };
@@ -197,9 +221,10 @@ export async function proposeHealing(app: Application, runId: string): Promise<u
 /**
  * Follows every member of an admitted batch to its end (`test run --wait`, `suite run --wait`).
  * Members this process owns (no live worker at admission) run in an in-process worker that ends
- * with the wait; an interrupt or a failed wait cancels them. The result carries the receipt, one
- * entry per member, the batch view and any healing proposals; the exit code is the worst of the
- * member, rejection and gate codes.
+ * with the wait and are waited on with no deadline; an interrupt or a failure of the in-process
+ * worker cancels them, a wait limit does not. The result carries the receipt, one entry per
+ * member, the batch view and any healing proposals; the exit code is the worst of the member,
+ * rejection and gate codes.
  */
 export async function waitForBatch(
   rt: Runtime,
@@ -213,6 +238,7 @@ export async function waitForBatch(
     const policy = owned.gatePolicy as Record<string, unknown>;
     if (policy.ownership === "ephemeral") ephemeralIds.push(member.runId);
   }
+  const inProcess = receipt.memberRuns.map((member) => ephemeralIds.includes(member.runId));
   const workerController = new AbortController();
   const interrupt = (): void => workerController.abort(rt.controller.signal.reason);
   rt.controller.signal.addEventListener("abort", interrupt, { once: true });
@@ -234,16 +260,23 @@ export async function waitForBatch(
   let settled: PromiseSettledResult<Run>[];
   try {
     settled = await Promise.allSettled(
-      receipt.memberRuns.map((member) =>
-        waitForRun(rt, app, member.runId, {
-          ...options,
-          workerFailure,
-          cancelOnInterrupt:
-            options.cancelOnInterrupt === true || ephemeralIds.includes(member.runId),
-        }),
+      receipt.memberRuns.map((member, index) =>
+        waitForRun(
+          rt,
+          app,
+          member.runId,
+          {
+            ...options,
+            workerFailure,
+            cancelOnInterrupt: options.cancelOnInterrupt === true || inProcess[index] === true,
+          },
+          inProcess[index] ? "batch" : "worker",
+        ),
       ),
     );
-    if (settled.some((member) => member.status === "rejected") && ephemeralIds.length) {
+    // A member this process owns ends its wait only by an interrupt or a failure of the
+    // in-process worker; a worker-owned member that reached its wait limit cancels nothing.
+    if (settled.some((member, index) => member.status === "rejected" && inProcess[index])) {
       try {
         for (const id of ephemeralIds) await app.runs.cancel(id);
       } finally {
@@ -273,7 +306,7 @@ export async function waitForBatch(
   if (options.heal === "propose") {
     for (const member of settled)
       if (member.status === "fulfilled" && member.value.outcome === "failed")
-        healing.push(await proposeHealing(app, member.value.id));
+        healing.push(await proposeHealing(app, member.value.id, rt.controller.signal));
   }
   const codes = settled.map((member) => {
     if (member.status === "fulfilled") {

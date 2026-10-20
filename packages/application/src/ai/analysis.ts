@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { setTimeout as delay } from "node:timers/promises";
 import {
   type Analysis,
   ContractError,
@@ -41,7 +40,7 @@ import {
   readExecutionError,
 } from "../run-verdict.js";
 import type { DiscoveryDetail, DiscoveryService } from "./discovery.js";
-import { AUXILIARY_LEASE_MS, keepLeaseAlive } from "./job-lease.js";
+import { AUXILIARY_LEASE_MS, keepLeaseAlive, waitPass } from "./job-lease.js";
 import { type ModelService, promptVersions, unsentModelReasons } from "./model.js";
 import {
   type RequirementReviewState,
@@ -3479,6 +3478,7 @@ export class AnalysisService {
     factual: Analysis,
     input: AnalysisInput,
     fence: AuxiliaryFence,
+    signal?: AbortSignal,
   ): Promise<Analysis> {
     const source = this.source(run, input.discoveryId);
     const projectId = String(requireEntity(this.ctx, "TestCase", run.testId).projectId);
@@ -3808,6 +3808,7 @@ export class AnalysisService {
       ...(input.provider !== undefined ? { provider: input.provider } : {}),
       ...(input.modelId !== undefined ? { model: input.modelId } : {}),
       dataClasses: source ? ["execution_evidence", "code_summary"] : ["execution_evidence"],
+      ...(signal ? { signal } : {}),
       inputRefs: refs.map((ref) => semanticHash(ref)),
       data,
       instructions:
@@ -4092,7 +4093,7 @@ export class AnalysisService {
       ? (requireEntity(this.ctx, "Analysis", id) as unknown as Analysis)
       : null;
   }
-  private async drive(job: AuxiliaryJob, run: Run): Promise<Analysis> {
+  private async drive(job: AuxiliaryJob, run: Run, signal?: AbortSignal): Promise<Analysis> {
     if (job.payload.actorId !== this.ctx.principalId)
       throw new ContractError(
         "FORBIDDEN",
@@ -4115,10 +4116,22 @@ export class AnalysisService {
     });
     if (!fence) {
       // Another holder runs this job. A model call has no deadline, so wait until the job settles;
-      // a holder that stopped stops renewing its lease, and expiry then hands the job back.
+      // a holder that stopped stops renewing its lease, and expiry then hands the job back. The
+      // caller's own cancellation ends only this wait: the holder's job is left untouched.
       for (;;) {
+        if (signal?.aborted)
+          throw new ContractError(
+            "PRECONDITION_FAILED",
+            "Analysis cancelled while another request for this Run was running",
+            { reason: "wait_cancelled", jobId: job.jobId },
+          );
         this.jobs.expire();
-        const current = this.jobs.get(this.ctx.workspaceId, job.jobId)!;
+        const current = this.jobs.get(this.ctx.workspaceId, job.jobId);
+        if (!current)
+          throw new ContractError("PRECONDITION_FAILED", "Analysis job no longer exists", {
+            reason: "job_missing",
+            jobId: job.jobId,
+          });
         const stored = this.receipt(current);
         if (stored) return stored;
         if (current.state === "cancelled")
@@ -4126,8 +4139,8 @@ export class AnalysisService {
             jobId: job.jobId,
           });
         if (current.state === "reconciliation_required") return this.settlePaid(current);
-        if (current.state === "queued") return this.drive(current, run);
-        await delay(50);
+        if (current.state === "queued") return this.drive(current, run, signal);
+        await waitPass(signal);
       }
     }
     const factualRow = this.factualRow(run.id);
@@ -4142,7 +4155,7 @@ export class AnalysisService {
             "Factual diagnosis is required before enrichment",
           );
         try {
-          analysis = await this.enrich(run, factual, input, fence);
+          analysis = await this.enrich(run, factual, input, fence, signal);
         } catch (error) {
           if (
             error instanceof ContractError &&
@@ -4178,7 +4191,16 @@ export class AnalysisService {
       lease.stop();
     }
   }
-  async analyze(runId: string, input: AnalysisInput = {}): Promise<Analysis> {
+  /**
+   * The analysis of a terminal Run: the rules reading, then the model reading when
+   * `input.model` is set. `options.signal` is the caller's cancellation: it aborts this caller's
+   * model call, or ends its wait for another request of the same reading.
+   */
+  async analyze(
+    runId: string,
+    input: AnalysisInput = {},
+    options: { signal?: AbortSignal } = {},
+  ): Promise<Analysis> {
     validate("AnalysisInput", input);
     const explicitModel = input.provider !== undefined || input.modelId !== undefined;
     if (explicitModel && !input.model)
@@ -4227,7 +4249,7 @@ export class AnalysisService {
       configHash: semanticHash({ rules: "analysis-rules-4-layered-relational" }),
       options: {},
     }).job;
-    const factual = await this.drive(rules, run);
+    const factual = await this.drive(rules, run, options.signal);
     if (!input.model) return factual;
     const configHash = semanticHash({
       providers: this.model.config.modelProviders,
@@ -4262,6 +4284,7 @@ export class AnalysisService {
         ? this.jobs.reopenUnpaid(this.ctx.workspaceId, job.jobId, new Date().toISOString())
         : job,
       run,
+      options.signal,
     );
   }
   private settlePaid(job: AuxiliaryJob): Analysis {

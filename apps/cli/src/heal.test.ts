@@ -1,8 +1,9 @@
 import { Writable } from "node:stream";
 import type { Application } from "@testmaster/application";
-import type { HealingReview } from "@testmaster/contracts";
+import { ContractError, type HealingReview } from "@testmaster/contracts";
 import { expect, it, vi } from "vitest";
 import { runCli } from "./cli.js";
+import { proposeHealing } from "./execution.js";
 import { Runtime } from "./runtime.js";
 
 const review: HealingReview = {
@@ -250,4 +251,66 @@ it("heal propose prints an abstention as a normal result with exit code 0", asyn
   } finally {
     process.exitCode = exit;
   }
+});
+
+/**
+ * A healing service whose `propose` waits until the signal it received aborts, then refuses as
+ * the model service does for a cancelled call.
+ */
+function cancellableProposal() {
+  const received = Promise.withResolvers<AbortSignal | undefined>();
+  const propose = vi.fn(
+    async (_runId: string, _input: unknown, options: { signal?: AbortSignal } = {}) => {
+      received.resolve(options.signal);
+      const cancelled = Promise.withResolvers<never>();
+      options.signal?.addEventListener(
+        "abort",
+        () => cancelled.reject(new ContractError("PRECONDITION_FAILED", "Model request cancelled")),
+        { once: true },
+      );
+      return cancelled.promise;
+    },
+  );
+  return { received: received.promise, propose };
+}
+
+it("heal propose stops on Ctrl-C: the interrupt cancels the model call and exits 130", async () => {
+  const output = new Writable({
+    write(_chunk, _encoding, done) {
+      done();
+    },
+  });
+  const runtime = new Runtime(output, output);
+  const proposal = cancellableProposal();
+  runtime.app = async () => ({ healing: { propose: proposal.propose } }) as unknown as Application;
+  const exit = process.exitCode;
+  try {
+    process.exitCode = undefined;
+    const running = runCli(
+      ["--output", "json", "heal", "propose", "run_00000000-0000-4000-8000-000000000003"],
+      runtime,
+    );
+    const signal = await proposal.received;
+    expect(signal?.aborted).toBe(false);
+    runtime.interrupt("SIGINT");
+    await running;
+    expect(process.exitCode).toBe(130);
+    expect(signal?.aborted).toBe(true);
+  } finally {
+    process.exitCode = exit;
+  }
+});
+
+it("an auto-heal proposal cancelled by the command's interrupt is reported as refused", async () => {
+  const proposal = cancellableProposal();
+  const app = { healing: { propose: proposal.propose } } as unknown as Application;
+  const controller = new AbortController();
+  const settled = proposeHealing(
+    app,
+    "run_00000000-0000-4000-8000-000000000003",
+    controller.signal,
+  );
+  await proposal.received;
+  controller.abort();
+  await expect(settled).resolves.toMatchObject({ refused: { code: "PRECONDITION_FAILED" } });
 });

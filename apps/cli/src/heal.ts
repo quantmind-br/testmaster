@@ -113,10 +113,14 @@ export function healingCommands(program: Command, runtime: Runtime): void {
       const app = await rt.app();
       const provider = string(options, "provider");
       const model = string(options, "model");
-      const outcome = await app.healing.propose(String(args[0]), {
-        ...(provider ? { provider } : {}),
-        ...(model ? { model } : {}),
-      });
+      const outcome = await app.healing.propose(
+        String(args[0]),
+        {
+          ...(provider ? { provider } : {}),
+          ...(model ? { model } : {}),
+        },
+        { signal: rt.controller.signal },
+      );
       // An abstention is a normal result: the request was answered, there is just nothing to apply.
       return isHealingAbstention(outcome)
         ? { data: outcome, text: healingAbstentionText(outcome) }

@@ -13,6 +13,10 @@ route catalog. Text from sources, models, plans, DOM and reports is always rende
   server cancels the model call when the connection drops, and nothing is stored. Sources and requirements
   prepared earlier stay as they were. **Resume generation** repeats the request with the same idempotency
   key, so a generation that finished before the cancel arrived is returned instead of billed twice.
+- **Normalize requirements** (the requirements page) has no time limit and the portal sends none.
+  **Cancel normalization** closes the request; the server cancels the model call when the connection
+  drops, and no requirement snapshot is committed. The page then reloads the requirements, so a
+  normalization that committed before the cancel arrived shows its result. Normalize again to retry.
 - A batch whose source or approved requirements changed after generation is shown as **Stale source** with
   the reason. Its proposals cannot be selected; regenerate or review the sources. A new source never
   silently invalidates or silently keeps an old proposal.

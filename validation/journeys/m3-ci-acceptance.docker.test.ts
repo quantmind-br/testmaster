@@ -10,6 +10,7 @@ import {
   action,
   assertion,
   controlledShop,
+  eventually,
   executable,
   healthPlan,
   journey,
@@ -254,10 +255,12 @@ describe("J11 generic CI boundaries", () => {
     await journey("m3-ci-collecting-timeout", async (session) => {
       const target = await controlledShop();
       let app: Application | undefined;
+      let worker: Promise<unknown> | undefined;
       const real = AttemptExecutor.prototype.execute;
       let delayCollection = false;
       let heldRunId: string | undefined;
-      let deadlineAborted = false;
+      let heldSignal: AbortSignal | undefined;
+      const held = Promise.withResolvers<void>();
       const fault = vi
         .spyOn(AttemptExecutor.prototype, "execute")
         .mockImplementation(function (input, signal) {
@@ -270,18 +273,10 @@ describe("J11 generic CI boundaries", () => {
                 await input.onEvent?.(event);
                 if (hold && event.type === "runner.finished") {
                   heldRunId = input.runId;
+                  heldSignal = signal;
                   expect(event.payload.outcome).toBe("passed");
                   expect(signal?.aborted).toBe(false);
-                  await new Promise<void>((resolve) =>
-                    signal?.addEventListener(
-                      "abort",
-                      () => {
-                        deadlineAborted = true;
-                        resolve();
-                      },
-                      { once: true },
-                    ),
-                  );
+                  await held.promise;
                 }
               },
             },
@@ -297,14 +292,32 @@ describe("J11 generic CI boundaries", () => {
           environmentId: text(identity.environmentId),
           testIds: [test.id],
         };
+        // No live worker: this invocation executes its runs, so the limit cannot end them and
+        // only warns.
+        const warnings: string[] = [];
         const healthy = await app.ci.run({
           ...input,
           outputDir: join(session.temporary, "healthy-ci"),
           timeoutMs: 60000,
+          onWarning: (message) => warnings.push(message),
         });
         const positive = await validateCiEnvelope(healthy.outputs.report!);
         expect(healthy.gate).toBe("passed");
         expect(positive.report!.completeness.state).toBe("complete");
+        expect(warnings).toEqual([
+          "timeoutMs does not end a run this invocation executes: the wait continues until the run completes or the invocation is interrupted. The limit applies only to waits on worker-owned runs.",
+        ]);
+        const unlimitedWarnings: string[] = [];
+        const unlimited = await app.ci.run({
+          ...input,
+          outputDir: join(session.temporary, "unlimited-ci"),
+          onWarning: (message) => unlimitedWarnings.push(message),
+        });
+        expect(unlimited.gate).toBe("passed");
+        expect(unlimitedWarnings).toEqual([]);
+        // A live worker owns the next run: the deadline ends the wait, never the run.
+        worker = app.worker.run();
+        await eventually(async () => app?.worker.live(), Boolean);
         delayCollection = true;
         const timeout = await app.ci.run({
           ...input,
@@ -314,7 +327,9 @@ describe("J11 generic CI boundaries", () => {
         const envelope = await validateCiEnvelope(timeout.outputs.report!);
         const run = envelope.report!.runs[0]!;
         session.runIds.push(run.run.id);
-        expect(deadlineAborted).toBe(true);
+        const cancelRequested = app.runs
+          .events(run.run.id)
+          .some((event) => event.type === "run.cancel_requested");
         expect(run.run.id).toBe(heldRunId);
         expect(timeout.error).toEqual({
           code: "PRECONDITION_FAILED",
@@ -324,24 +339,39 @@ describe("J11 generic CI boundaries", () => {
         expect(timeout.exitCode).not.toBe(0);
         expect(envelope.report!.completeness.state).toBe("partial");
         expect(envelope.report!.completeness.reasons).toContain("ci-wait-deadline-exceeded");
-        expect(run.steps.some((step) => step.status === "passed")).toBe(true);
-        expect(run.evidenceState).toBe("committed");
-        if (run.evidenceState === "committed")
-          expect(run.manifest.entries.some((entry) => entry.state === "available")).toBe(true);
+        expect(cancelRequested).toBe(false);
+        expect(heldSignal?.aborted).toBe(false);
+        expect(await readFile(timeout.outputs.junit!, "utf8")).toContain("<error");
+        held.resolve();
+        const finished = await eventually(
+          async () => app?.runs.get(run.run.id),
+          (current) => current?.phase === "completed",
+        );
+        expect(finished?.outcome).toBe("passed");
         expect(app.runs.events(run.run.id).some((event) => event.type === "runner.finished")).toBe(
           true,
         );
-        expect(await readFile(timeout.outputs.junit!, "utf8")).toContain("<error");
+        app.worker.drain();
+        await worker;
+        worker = undefined;
         session.oracles.push({
           check: "ciCollectingDeadlinePartial",
           runId: run.run.id,
           deadlineMs: 15000,
-          deadlineAborted,
-          evidenceState: run.evidenceState,
+          ownership: "worker",
+          cancelRequested,
+          attemptAborted: heldSignal?.aborted ?? null,
           completeness: envelope.report!.completeness,
           gate: timeout.gate,
+          outcomeAfterRelease: finished?.outcome ?? null,
+          inProcessWarnings: warnings,
         });
       } finally {
+        held.resolve();
+        if (app && worker) {
+          app.worker.drain();
+          await worker;
+        }
         fault.mockRestore();
         app?.close();
         await target.close();

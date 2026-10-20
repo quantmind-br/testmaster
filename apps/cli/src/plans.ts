@@ -202,7 +202,11 @@ export function planCommands(program: Command, runtime: Runtime): void {
       )
       .option("--env <id-or-name>", "Environment (default: the project's default environment)")
       .option("--only <proposal-id>", "Proposal to try (repeatable or comma-separated)", collect)
-      .option("--timeout <seconds>", "Wait deadline per run in seconds", seconds),
+      .option(
+        "--timeout <seconds>",
+        "Wait deadline per run in seconds for a run owned by a worker; never ends a run this command executes",
+        seconds,
+      ),
     async (rt, args, options) => {
       const app = await rt.app();
       const batchId = String(args[0]);

@@ -19,6 +19,8 @@ import {
 } from "@testmaster/domain";
 import {
   AuditRepository,
+  type AuxiliaryFence,
+  type AuxiliaryJob,
   AuxiliaryLeaseRepository,
   type EntityDocument,
   OutboxRepository,
@@ -43,7 +45,7 @@ import {
   type HealingReplacement,
   healingReplacements,
 } from "./healing-patch.js";
-import { AUXILIARY_LEASE_MS, keepLeaseAlive } from "./job-lease.js";
+import { AUXILIARY_LEASE_MS, keepLeaseAlive, waitPass } from "./job-lease.js";
 import { type ModelService, unsentModelReasons } from "./model.js";
 
 export interface HealingInput {
@@ -572,7 +574,17 @@ export class HealingService {
       environmentId: String((run.matrixCell as Record<string, unknown>).environmentId),
     };
   }
-  async propose(failedRunId: string, input: HealingInput = {}): Promise<HealingOutcome> {
+  /**
+   * Proposes a repair for a failed Run, one paid model request per Run. `options.signal` is the
+   * caller's cancellation: it aborts this caller's model call, or ends its wait for another
+   * request of the same Run without touching that request.
+   */
+  async propose(
+    failedRunId: string,
+    input: HealingInput = {},
+    options: { signal?: AbortSignal } = {},
+  ): Promise<HealingOutcome> {
+    const signal = options.signal;
     validate("HealingInput", input);
     const run = this.runs.get(failedRunId);
     const test = requireEntity(this.ctx, "TestCase", run.testId);
@@ -620,77 +632,100 @@ export class HealingService {
       );
     // An explicit choice is validated before any job exists and never falls back to another model.
     const selection = this.model.select(input, "Healing");
-    const facts = this.analysis.get(failedRunId) ?? (await this.analysis.analyze(failedRunId, {}));
+    const facts =
+      this.analysis.get(failedRunId) ?? (await this.analysis.analyze(failedRunId, {}, options));
     const jobs = new AuxiliaryLeaseRepository(this.ctx.database);
-    const prior = jobs.forTarget(this.ctx.workspaceId, "healing", failedRunId);
-    // A request that started a paid call, or whose outcome still has to be settled, is final for
-    // this Run. A request that never reached the provider (an evidence-phase failure or a
-    // deterministic refusal) is not: the same job is reopened below and evaluated again.
-    const final = prior.find(
-      (job) => job.progress.paidCallStarted || job.state === "reconciliation_required",
-    );
-    if (final) {
-      // A settled model abstention is a result: asking again returns it instead of an error.
-      const settled = settledAbstention(failedRunId, final);
-      if (settled) return settled;
-      throw new ContractError(
-        "PRECONDITION_FAILED",
-        "Healing request already settled or requires reconciliation",
-        { reason: "no_regeneration", jobId: final.jobId },
+    // One healing request runs per Run. A second caller waits, with no deadline, for the running
+    // request and returns its outcome. A holder that stopped stops renewing its lease; expiry then
+    // hands an unpaid job back to the queue, where this caller claims it, and leaves a paid one to
+    // be settled without a new call. The caller's own cancellation ends only its wait.
+    let fence: (AuxiliaryFence & { job: AuxiliaryJob }) | null = null;
+    let job: AuxiliaryJob;
+    for (;;) {
+      jobs.expire();
+      const stored = this.latest(failedRunId);
+      if (stored) return stored;
+      const prior = jobs.forTarget(this.ctx.workspaceId, "healing", failedRunId);
+      const held = prior.find((candidate) => candidate.state === "leased");
+      if (held) {
+        if (signal?.aborted)
+          throw new ContractError(
+            "PRECONDITION_FAILED",
+            "Healing cancelled while another request for this Run was running",
+            { reason: "wait_cancelled", jobId: held.jobId },
+          );
+        await waitPass(signal);
+        continue;
+      }
+      // A request that started a paid call, or whose outcome still has to be settled, is final for
+      // this Run. A request that never reached the provider (an evidence-phase failure or a
+      // deterministic refusal) is not: the same job is reopened below and evaluated again.
+      const final = prior.find(
+        (candidate) =>
+          candidate.progress.paidCallStarted || candidate.state === "reconciliation_required",
       );
-    }
-    const running = prior.find((job) => job.state === "leased");
-    if (running)
-      throw new ContractError("PRECONDITION_FAILED", "Healing request is already running", {
-        reason: "already_running",
-        jobId: running.jobId,
+      if (final) {
+        // A settled model abstention is a result: asking again returns it instead of an error.
+        const settled = settledAbstention(failedRunId, final);
+        if (settled) return settled;
+        throw new ContractError(
+          "PRECONDITION_FAILED",
+          "Healing request already settled or requires reconciliation",
+          { reason: "no_regeneration", jobId: final.jobId },
+        );
+      }
+      // The analysis already says no test-only repair is indicated: refuse before any job or
+      // reservation exists, so the Run's healing request stays available for a later analysis.
+      const advice = facts.diagnosis?.healing;
+      if (advice?.advice === "not_indicated") {
+        const nextStep = facts.diagnosis?.nextSteps[0]?.text;
+        throw new ContractError(
+          "PRECONDITION_FAILED",
+          `Healing is not indicated by the analysis of this Run: ${advice.reason}${nextStep ? ` Next: ${nextStep}` : ""}`,
+          {
+            reason: "healing_not_indicated",
+            reasonCode: "healing_not_indicated",
+            analysisId: facts.id,
+            advice: advice.advice,
+            analysisReason: advice.reason,
+            ...(nextStep ? { nextStep } : {}),
+            nextAction:
+              "Nothing was sent to the model and this Run's healing request is unused; act on the analysis next step, or analyze the Run again with new evidence and propose again",
+          },
+        );
+      }
+      const { job: enqueued } = jobs.enqueue(this.ctx.workspaceId, "healing", {
+        operation: "propose",
+        targetId: failedRunId,
+        actorId: this.ctx.principalId,
+        evidenceHash: semanticHash({ run: run.id, revision: revision.contentHash, facts }),
+        configHash: semanticHash({
+          providers: this.model.config.modelProviders.map(({ id, models }) => ({ id, models })),
+          policy: this.model.config.effectiveConfig.policyHash,
+        }),
+        options: input as Record<string, unknown>,
       });
-    // The analysis already says no test-only repair is indicated: refuse before any job or
-    // reservation exists, so the Run's healing request stays available for a later analysis.
-    const advice = facts.diagnosis?.healing;
-    if (advice?.advice === "not_indicated") {
-      const nextStep = facts.diagnosis?.nextSteps[0]?.text;
-      throw new ContractError(
-        "PRECONDITION_FAILED",
-        `Healing is not indicated by the analysis of this Run: ${advice.reason}${nextStep ? ` Next: ${nextStep}` : ""}`,
-        {
-          reason: "healing_not_indicated",
-          reasonCode: "healing_not_indicated",
-          analysisId: facts.id,
-          advice: advice.advice,
-          analysisReason: advice.reason,
-          ...(nextStep ? { nextStep } : {}),
-          nextAction:
-            "Nothing was sent to the model and this Run's healing request is unused; act on the analysis next step, or analyze the Run again with new evidence and propose again",
-        },
-      );
-    }
-    const { job: enqueued } = jobs.enqueue(this.ctx.workspaceId, "healing", {
-      operation: "propose",
-      targetId: failedRunId,
-      actorId: this.ctx.principalId,
-      evidenceHash: semanticHash({ run: run.id, revision: revision.contentHash, facts }),
-      configHash: semanticHash({
-        providers: this.model.config.modelProviders.map(({ id, models }) => ({ id, models })),
-        policy: this.model.config.effectiveConfig.policyHash,
-      }),
-      options: input as Record<string, unknown>,
-    });
-    const job =
-      enqueued.state === "completed" || enqueued.state === "cancelled"
-        ? jobs.reopenUnpaid(this.ctx.workspaceId, enqueued.jobId, new Date().toISOString())
-        : enqueued;
-    const fence = jobs.claim({
-      workspaceId: this.ctx.workspaceId,
-      queue: "healing",
-      jobId: job.jobId,
-      owner: `healing:${randomUUID()}`,
-      leaseMs: AUXILIARY_LEASE_MS,
-    });
-    if (!fence)
-      throw new ContractError("PRECONDITION_FAILED", "Healing request is already running", {
+      if (enqueued.state === "completed" || enqueued.state === "cancelled") {
+        try {
+          job = jobs.reopenUnpaid(this.ctx.workspaceId, enqueued.jobId, new Date().toISOString());
+        } catch (error) {
+          // Another caller reopened or settled the job since it was read: look at it again.
+          if (!(error instanceof ContractError && error.code === "PRECONDITION_FAILED"))
+            throw error;
+          await waitPass(signal);
+          continue;
+        }
+      } else job = enqueued;
+      fence = jobs.claim({
+        workspaceId: this.ctx.workspaceId,
+        queue: "healing",
         jobId: job.jobId,
+        owner: `healing:${randomUUID()}`,
+        leaseMs: AUXILIARY_LEASE_MS,
       });
+      if (fence) break;
+      await waitPass(signal);
+    }
     if (fence.job.payload.actorId !== this.ctx.principalId) {
       jobs.finish(fence, "completed", { refused: true, reason: "actor_changed" });
       throw new ContractError("FORBIDDEN", "Healing job actor does not match authenticated actor");
@@ -802,6 +837,7 @@ export class HealingService {
         ...(selection.explicit
           ? { provider: selection.providerId!, model: selection.modelId! }
           : {}),
+        ...(signal ? { signal } : {}),
       });
       modelCallId = result.modelCallId;
       const output = validate<AIHealingOutput>("AIHealingOutput", result.output);
@@ -943,14 +979,13 @@ export class HealingService {
           (reasonCode === "writer_contention" && current?.progress.paidCallStarted !== true))
           ? reasonCode
           : null;
-      // All diagnostic details are code-owned; schema errors can contain model values.
+      // All diagnostic details are code-owned; schema errors can contain model values. A request
+      // is `cancelled` only when its caller cancelled it.
       const detail =
         unsentReason ??
         (phase === "semantic"
           ? "semantic_invalid"
-          : phase === "model" &&
-              error instanceof ContractError &&
-              error.code === "PRECONDITION_FAILED"
+          : phase === "model" && signal?.aborted === true
             ? "cancelled"
             : error instanceof ContractError && error.code === "INVALID_ARGUMENT"
               ? "schema_invalid"
@@ -1014,9 +1049,11 @@ export class HealingService {
                 nextAction:
                   unsentReason === "writer_contention"
                     ? "Nothing was sent to the model; the local database was busy, so propose again for this Run"
-                    : unsentReason
-                      ? "Nothing was sent to the model; fix the provider configuration and propose again for this Run"
-                      : "This Run's healing request is final; pass --provider/--model when healing the next eligible failed Run",
+                    : unsentReason === "cancelled_before_send"
+                      ? "Nothing was sent to the model; the request was cancelled, so propose again for this Run"
+                      : unsentReason
+                        ? "Nothing was sent to the model; fix the provider configuration and propose again for this Run"
+                        : "This Run's healing request is final; pass --provider/--model when healing the next eligible failed Run",
               }
             : {}),
         },

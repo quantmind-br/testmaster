@@ -660,6 +660,43 @@ describe("policy-controlled model requests", () => {
     expect(cancelled.ledger.settlements.every((entry) => entry.cost === "unknown")).toBe(true);
   });
 
+  it("marks a cancellation before the first request of the call as unsent and sends nothing", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const unsent = await fixture((_req, res) => res.end(JSON.stringify(completion)));
+    await expect(
+      unsent.gateway.complete({ ...testRequest, signal: controller.signal }),
+    ).rejects.toMatchObject({
+      code: "PRECONDITION_FAILED",
+      details: { reasonCode: "cancelled_before_send" },
+    });
+    expect(unsent.counts().completions).toBe(0);
+    // Controls: once a request of the call was sent, the cancellation is not unsent.
+    const during = new AbortController();
+    const cut = await fixture(() => during.abort());
+    const duringFirst = await cut.gateway
+      .complete({ ...testRequest, signal: during.signal })
+      .catch((caught: unknown) => caught);
+    expect(duringFirst).toMatchObject({ code: "PRECONDITION_FAILED" });
+    expect(duringFirst).not.toHaveProperty("details.reasonCode");
+    const repair = new AbortController();
+    const repaired = await fixture((_req, res, _body, n) => {
+      if (n === 1)
+        res.end(
+          JSON.stringify({
+            ...completion,
+            choices: [{ message: { content: '{"amount":"bad"}' }, finish_reason: "stop" }],
+          }),
+        );
+      else repair.abort();
+    });
+    const duringRepair = await repaired.gateway
+      .complete({ ...testRequest, signal: repair.signal })
+      .catch((caught: unknown) => caught);
+    expect(duringRepair).toMatchObject({ code: "PRECONDITION_FAILED" });
+    expect(duringRepair).not.toHaveProperty("details.reasonCode");
+  });
+
   it("atomic compute-slot reservations admit one call at a time when one slot exists", async () => {
     const f = await fixture(undefined, new TestBudgetLedger(1));
     const results = await Promise.allSettled(

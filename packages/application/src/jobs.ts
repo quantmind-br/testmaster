@@ -89,9 +89,10 @@ export class JobsService {
   }
 
   /**
-   * Asks a job to stop. An auxiliary job nobody holds is cancelled at once; one a process holds
-   * has no cancellation point and is refused, because dropping it would discard a model call that
-   * may already be billed. An exploration is stopped only by the process that runs it.
+   * Asks a job to stop. An auxiliary job nobody holds is cancelled at once; one a process holds is
+   * refused, because its model call stops only through its own caller's cancellation (Ctrl-C, a
+   * client disconnect, an MCP request cancel) and may already be billed. An exploration is stopped
+   * only by the process that runs it.
    */
   async cancel(id: string, reason: string): Promise<JobCancelReceipt> {
     if (!reason.trim() || reason.length > 2000)
@@ -132,7 +133,7 @@ export class JobsService {
     if (!cancelled)
       throw new ContractError(
         "PRECONDITION_FAILED",
-        "A process holds this job and its model call has no cancellation point; wait for it with `job wait`",
+        "A process holds this job, and its model call stops only through its own caller's cancellation; wait for it with `job wait`",
         { jobId: id, state: this.get(id).state },
       );
   }

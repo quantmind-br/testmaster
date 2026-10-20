@@ -119,7 +119,7 @@ export class ModelGateway {
         reasonCode: "provider_unavailable",
         availableProviders: Object.keys(this.providers),
       });
-    this.authorize(input, provider, signal);
+    this.authorize(input, provider, signal, { reasonCode: "cancelled_before_send" });
     const declared = provider.models.find((model) => model.id === input.model);
     if (!declared)
       throw new ContractError("CAPABILITY_UNAVAILABLE", "Model is unavailable", {
@@ -278,7 +278,7 @@ export class ModelGateway {
           },
         );
       if (!inventoryChecked) {
-        this.authorize(input, provider, signal);
+        this.authorize(input, provider, signal, { reasonCode: "cancelled_before_send" });
         try {
           // Gateways in front of several upstream pools can list a model intermittently;
           // absence is reported only after a bounded number of listings.
@@ -306,7 +306,9 @@ export class ModelGateway {
           }
         } catch (error) {
           if (signal.aborted)
-            throw new ContractError("PRECONDITION_FAILED", "Model inventory request cancelled");
+            throw new ContractError("PRECONDITION_FAILED", "Model inventory request cancelled", {
+              reasonCode: "cancelled_before_send",
+            });
           throw error;
         }
         inventoryChecked = true;
@@ -315,7 +317,12 @@ export class ModelGateway {
       let raw: Record<string, unknown> | undefined;
       let lastResult: ModelResult<T> | undefined;
       for (let transportAttempt = 0; transportAttempt <= 1; transportAttempt += 1) {
-        this.authorize(input, provider, signal, invalidDetails());
+        // Nothing of this call was sent before its first request: a cancellation here is unpaid.
+        const cancelledDetails: Record<string, unknown> =
+          repairAttempt === 0 && transportAttempt === 0
+            ? { reasonCode: "cancelled_before_send" }
+            : invalidDetails();
+        this.authorize(input, provider, signal, cancelledDetails);
         // Reserve locally for provider-controlled generation; never send a token ceiling.
         const outputReservation =
           declared.capabilities.maxOutputTokens ??
@@ -346,7 +353,7 @@ export class ModelGateway {
           throw new ContractError(
             "PRECONDITION_FAILED",
             "Model request cancelled before send",
-            invalidDetails(),
+            cancelledDetails,
           );
         }
         const callStarted = performance.now();

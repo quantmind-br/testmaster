@@ -195,8 +195,10 @@ server/MCP callers must pass their authenticated identity to `Application.open`.
 Run admission atomically writes the pinned revision/environment/config, lease, outbox and
 idempotency receipt. A foreground `worker start` owns durable execution. Without a live
 worker, `test run --wait` owns an ephemeral supervisor; asynchronous admission is refused.
-Client timeout never implies a passing verdict. Ctrl-C detaches from a persistent worker
-unless `--cancel-on-interrupt`; interruption of an ephemeral owner cancels and cleans up.
+Client timeout never implies a passing verdict. A wait limit applies only to waits on worker-owned
+runs; it never cancels a run the same command executes. `testmaster ci` follows the same rule.
+Ctrl-C detaches from a persistent worker unless `--cancel-on-interrupt`; interruption of an
+ephemeral owner cancels and cleans up.
 Attempts run only through the hardened sandbox. Explicit unsafe process execution requires
 both `--unsafe-local` and operator authorization and is labelled `isolation: none`.
 
@@ -577,10 +579,15 @@ in its text content, so an agent never mistakes a rules-only analysis for a mode
 (`run analyze --model`) returns the same `modelStatus` in `data`, prints a `Model reading:` line
 and warns on stderr when the model was not used. A reading refused before anything was sent (the
 `unsentModelReasons` of `ai/model.ts`: a missing API key, a model that is not declared, configured,
-capable or in the provider inventory) is not final: the job is settled unpaid, and the next request
+capable or in the provider inventory, or a cancellation of the caller before the first request
+(`cancelled_before_send`)) is not final: the job is settled unpaid, and the next request
 for the same reading reopens it (`reopenUnpaid`, the earlier receipt kept in
 `progress.unpaidSettlements`) and evaluates again, so fixing the configuration is enough. A reading
-that abstained after a model call stays stored. A later enrichment with another model, or a reopened
+that abstained after a model call stays stored, and so does one whose caller cancelled it after the
+request was sent: a caller that was waiting for it gets that abstention. A caller that waits for a
+running request of the same reading stops waiting on its own cancellation (Ctrl-C, a closed REST
+connection, a cancelled MCP request) with `PRECONDITION_FAILED`, `details.reason: "wait_cancelled"`,
+and leaves that request running. A later enrichment with another model, or a reopened
 one, starts from the factual analysis, not from the abstention.
 Evidence redaction scrubs only the values of credential-named environment variables with at least
 8 characters (`environmentSecretValues`), so flags such as `INSPECTOR_MASK_SECRETS=true` are never
@@ -628,8 +635,22 @@ phase, `provider_unavailable`, `evidence_unavailable`, `evidence_too_large`, `se
 `evidence_invalid`, or a model refusal raised before anything is sent, the `unsentModelReasons` of
 `ai/model.ts` such as `provider_credentials_unavailable`) is not final: the next `propose` reopens
 the same job (the earlier refusal is
-kept in `progress.unpaidSettlements`) and evaluates again. A leased request answers
-`already_running`. Diagnosed product, contract or security failures abstain before model
+kept in `progress.unpaidSettlements`) and evaluates again. A second `propose` for the same Run
+waits, with no deadline, for the running request and returns its outcome: the stored proposal, the
+settled abstention, or `no_regeneration` when the holder stopped after its paid call started; a
+holder that stopped before the paid call is re-driven by the waiter. The caller's cancellation
+(Ctrl-C of `heal propose` or `test run --heal propose`, a closed REST connection, a cancelled MCP
+request) aborts the model call. Before the first request it is a refusal raised before anything is
+sent (`cancelled_before_send`): the job is settled unpaid with `detail: "cancelled_before_send"`, the
+error's `nextAction` says to propose again, and the next `propose` reopens the job. After the request
+was sent it is final: the job completes refused with `reason: "model_failure"`, `detail: "cancelled"`,
+`phase: "model"` and `upstreamCode: "PRECONDITION_FAILED"`, `progress.paidCallStarted` stays `true`,
+and the next `propose`, like a caller that was waiting for it, gets `no_regeneration`; a waiter whose
+holder was cancelled before the first request re-drives the job and calls the model. `detail:
+"cancelled"` is recorded only when the caller cancelled: an answer the gateway refuses as truncated
+or filtered (`output_truncated`, `content_filtered`) is `detail: "transport"`. A waiting caller stops on
+its own cancellation with `PRECONDITION_FAILED`, `details.reason: "wait_cancelled"`, and leaves the
+running request untouched. Diagnosed product, contract or security failures abstain before model
 execution (`semantic_failure`, the same normal result with `modelCallId: null`). Before any job,
 reservation or model call, a Run whose analysis (the stored one, or the rules analysis `propose`
 computes when none exists) says `healing.advice: "not_indicated"` is refused with
@@ -1040,7 +1061,9 @@ Model refusals carry `details.reasonCode` (no milestone label): `provider_unavai
 `declaredModelsPresent`/`declaredModelsAbsent` from the last provider listing),
 `model_substituted` (the provider answered with a different model) and `model_not_configured`
 (with the requested provider/model and the available model ids). There is never a silent
-fallback to another model. A response that fails local validation is persisted on its
+fallback to another model. A cancellation of the caller before the first request of the call
+carries `cancelled_before_send` (nothing was sent and nothing is charged); one after a request was
+sent carries no `reasonCode`. A response that fails local validation is persisted on its
 `model_calls` record, returned by the usage report and repeated in the final error and in a
 cancellation error that follows an invalid attempt as
 `validationFailure {code, message, issues, omittedIssues}`: at most 5 issues of validator path,
@@ -1053,7 +1076,8 @@ empty and `cache_hit` is always 0, even within one process. No persistent cache 
 (`model_calls` keeps only `responseHash`). A normalization retried after the first one finished
 therefore pays for its model calls again; one retried while the first still runs waits for it and
 reuses its snapshot (single-flight lock `normalization` over `job_leases`, `ai/normalization-lock.ts`).
-This is a documented limitation, not a behavior change.
+A waiting normalization whose running one was cancelled finds no committed snapshot and normalizes
+again, which pays for a new call. This is a documented limitation, not a behavior change.
 
 Semantic checks in the repair loop: `ModelRequest.check(output)` (model-gateway `types.ts`) runs
 after schema validation, also on a cache hit (a cached output that fails it is a miss, so it is

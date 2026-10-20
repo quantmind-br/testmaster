@@ -71,7 +71,11 @@ export function runCommands(program: Command, runtime: Runtime): void {
   runtime.bind(
     group
       .command("wait <id>")
-      .option("--timeout <seconds>", "Wait deadline", seconds)
+      .option(
+        "--timeout <seconds>",
+        "Wait deadline in seconds (exit 7 after it); the run continues",
+        seconds,
+      )
       .option("--cancel-on-interrupt"),
     async (rt, args, options) => {
       const app = await rt.app();
@@ -88,7 +92,13 @@ export function runCommands(program: Command, runtime: Runtime): void {
     },
   );
   runtime.bind(
-    group.command("cancel <id>").option("--timeout <seconds>", "Cancellation deadline", seconds),
+    group
+      .command("cancel <id>")
+      .option(
+        "--timeout <seconds>",
+        "Wait deadline in seconds for the cancellation to complete (exit 7 after it)",
+        seconds,
+      ),
     async (rt, args, options) => {
       const app = await rt.app();
       const id = String(args[0]);
@@ -183,12 +193,16 @@ export function runCommands(program: Command, runtime: Runtime): void {
       .option("--discovery <id>", "Bind source targets to an authorized frozen discovery"),
     async (rt, args, options) => {
       const app = await rt.app();
-      const analysis = await app.analysis.analyze(String(args[0]), {
-        model: options.model === true,
-        ...(typeof options.provider === "string" ? { provider: options.provider } : {}),
-        ...(typeof options.modelId === "string" ? { modelId: options.modelId } : {}),
-        ...(typeof options.discovery === "string" ? { discoveryId: options.discovery } : {}),
-      });
+      const analysis = await app.analysis.analyze(
+        String(args[0]),
+        {
+          model: options.model === true,
+          ...(typeof options.provider === "string" ? { provider: options.provider } : {}),
+          ...(typeof options.modelId === "string" ? { modelId: options.modelId } : {}),
+          ...(typeof options.discovery === "string" ? { discoveryId: options.discovery } : {}),
+        },
+        { signal: rt.controller.signal },
+      );
       if (options.model !== true)
         return { data: analysis, text: formatDiagnosisSummary(analysis), exit: 0 };
       // A requested model reading that produced no model analysis says so, instead of looking

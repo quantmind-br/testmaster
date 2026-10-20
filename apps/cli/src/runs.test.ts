@@ -4,11 +4,13 @@ import { join } from "node:path";
 import { Writable } from "node:stream";
 import { setTimeout as sleep } from "node:timers/promises";
 import { Application, SignedCursorCodec, scaffoldPlan } from "@testmaster/application";
+import { ContractError } from "@testmaster/contracts";
 import { exitCodeForRun } from "@testmaster/domain";
 import { ExecutionRepository, OutboxRepository } from "@testmaster/persistence";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { seedRun } from "../../../packages/application/src/run-seed.testing.js";
 import { runCli } from "./cli.js";
+import { waitForRun } from "./execution.js";
 import { Runtime } from "./runtime.js";
 
 const cleanups: (() => Promise<void>)[] = [];
@@ -357,3 +359,76 @@ it("run events --follow stops on Ctrl-C with the interrupt exit code and keeps w
   );
   expect(app.runs.get(seeded.runId).phase).not.toBe("completed");
 });
+
+it("run analyze --model stops on Ctrl-C: the interrupt cancels the model call and exits 130", async () => {
+  const { app, invoke, seed } = await fixture();
+  const seeded = await seed(1);
+  const received = Promise.withResolvers<AbortSignal | undefined>();
+  vi.spyOn(app.analysis, "analyze").mockImplementation(async (_runId, _input, options = {}) => {
+    received.resolve(options.signal);
+    const cancelled = Promise.withResolvers<never>();
+    options.signal?.addEventListener(
+      "abort",
+      () => cancelled.reject(new ContractError("PRECONDITION_FAILED", "Model request cancelled")),
+      { once: true },
+    );
+    return cancelled.promise;
+  });
+  let runtime: Runtime | undefined;
+  const analyzing = invoke(["run", "analyze", seeded.runId, "--model"], true, (started) => {
+    runtime = started;
+  });
+  const signal = await received.promise;
+  expect(signal?.aborted).toBe(false);
+  runtime?.interrupt("SIGINT");
+  const result = await analyzing;
+  expect(result.exit).toBe(130);
+  expect(signal?.aborted).toBe(true);
+});
+
+const inProcessLimitWarning =
+  "--timeout and --request-timeout do not end a run this command executes: the wait continues until the run completes or the command is interrupted. The limit applies only to waits on worker-owned runs.";
+const cancelRequested = (app: Application, runId: string) =>
+  app.runs.events(runId).some((event) => event.type === "run.cancel_requested");
+
+it("a wait limit never ends a run this process executes: the wait outlasts it and only warns", async () => {
+  const { app, seed } = await fixture();
+  const seeded = await seed(1, { complete: false });
+  // The in-process worker finishes the run after 400 ms, well past the 50 ms limit.
+  vi.spyOn(app.worker, "run").mockImplementation((async () => {
+    await sleep(400);
+    complete(app, seeded.runId, String(seeded.attemptIds[0]), "passed");
+  }) as never);
+  const runtime = new Runtime();
+  const run = await waitForRun(runtime, app, seeded.runId, { timeout: 50 }, "ephemeral");
+  expect(run).toMatchObject({ phase: "completed", outcome: "passed" });
+  expect(cancelRequested(app, seeded.runId)).toBe(false);
+  expect(runtime.warnings).toEqual([inProcessLimitWarning]);
+  // Without a limit there is nothing to warn about.
+  const other = await seed(1, { complete: false });
+  vi.mocked(app.worker.run).mockImplementation((async () => {
+    await sleep(50);
+    complete(app, other.runId, String(other.attemptIds[0]), "passed");
+  }) as never);
+  const quiet = new Runtime();
+  await waitForRun(quiet, app, other.runId, {}, "ephemeral");
+  expect(quiet.warnings).toEqual([]);
+});
+
+it.each([
+  ["--timeout", ["run", "wait", "RUN", "--timeout", "0.05"]],
+  ["--request-timeout", ["--request-timeout", "0.05", "run", "wait", "RUN"]],
+])(
+  "run wait with %s ends the wait on a worker-owned run with exit 7 and leaves the run going",
+  async (_flag, args) => {
+    const { app, invoke, seed } = await fixture();
+    const seeded = await seed(1, { complete: false });
+    const result = await invoke(args.map((arg) => (arg === "RUN" ? seeded.runId : arg)));
+    expect(result.exit).toBe(7);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      error: { code: "UPSTREAM_TIMEOUT", details: { ownership: "worker" } },
+    });
+    expect(app.runs.get(seeded.runId).phase).not.toBe("completed");
+    expect(cancelRequested(app, seeded.runId)).toBe(false);
+  },
+);
