@@ -225,7 +225,7 @@ it("J10 M4-03 SEC-024 a failing assertion stays failed while rejected credential
         // Authentication works, the oracle disagrees: the Run FAILED, it is not blocked.
         const failed = await run(session, text(wrong.id), 1);
         expect(failed.run.outcome).toBe("failed");
-        const steps = items(await session.command(["run", "steps", failed.runId]));
+        const steps = items(object(await session.command(["run", "steps", failed.runId])).steps);
         expect(
           steps.filter((step) => step.status === "failed").map((step) => step.planStepId),
         ).toEqual(["me_user"]);
