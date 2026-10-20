@@ -9,37 +9,111 @@ import {
   renderManagedSection,
   renderOwnedSkill,
 } from "@testmaster/application";
-import { expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { resultsDirectory } from "../../tools/src/results-dir.js";
 import { Journey, object, root, text } from "./harness.js";
 
-it("J14: every configured target through the built CLI, with ownership and hostile-workspace controls", async () => {
-  const session = await Journey.create("j14-agent-skills");
+// One test per target, each under the default test timeout. The targets share one initialized
+// workspace, and the journey record written after the last test covers every one of them.
+describe("J14: every configured target through the built CLI, with ownership and hostile-workspace controls", () => {
   const shippedRoot = join(root, "packages/application/skill-content", AGENT_SKILL_VERSION);
-  const shipped = (await readdir(shippedRoot, { recursive: true, withFileTypes: true }))
-    .filter((entry) => entry.isFile())
-    .map((entry) => ({ path: join(entry.parentPath, entry.name).slice(shippedRoot.length + 1) }));
+  let shipped: { path: string }[] = [];
+  let journey: Journey | undefined;
   const evidence: Record<string, unknown>[] = [];
   let error: unknown;
-  try {
-    await session.command(["init", "--mode", "local"]);
-    const listing = await session.command(["agent", "list"]);
-    expect((listing.items as { target: string }[]).map((item) => item.target)).toEqual([
-      "claude",
-      "codex",
-      "cursor",
-      "cline",
-      "windsurf",
-      "copilot",
-      "kiro",
-      "antigravity",
-      "pi",
-      "omp",
-      "crush",
-      "goose",
-      "jcode",
-    ]);
-    for (const target of AGENT_TARGETS) {
+  /** Runs one check in the shared session; its failure is kept for the journey record. */
+  const recorded = async (check: (session: Journey) => Promise<void>): Promise<void> => {
+    try {
+      if (!journey) throw new Error("The J14 session was not created");
+      await check(journey);
+    } catch (failure) {
+      error ??= failure;
+      throw failure;
+    }
+  };
+  beforeAll(async () => {
+    shipped = (await readdir(shippedRoot, { recursive: true, withFileTypes: true }))
+      .filter((entry) => entry.isFile())
+      .map((entry) => ({ path: join(entry.parentPath, entry.name).slice(shippedRoot.length + 1) }));
+    journey = await Journey.create("j14-agent-skills");
+  });
+  afterAll(async () => {
+    if (!journey) return;
+    const commands = journey.commands.map(({ argv, exitCode, json }) => ({
+      argv,
+      exitCode,
+      ...(json?.error ? { error: json.error } : {}),
+    }));
+    await journey.close(error);
+    await writeFile(
+      join(resultsDirectory(), "j14-agent-skills.json"),
+      `${JSON.stringify(
+        {
+          schemaVersion: "1.0.0",
+          journey: "J14",
+          observedAt: new Date().toISOString(),
+          passed: error === undefined,
+          method: "automatic",
+          reviewer: "testmaster-automated-acceptance",
+          reviewLimitations: [
+            "Filesystem/CLI checks only; vendor clients not launched and no human sign-off.",
+          ],
+          class: "deterministic-e2e",
+          runner: "built-cli-node",
+          externalDependency: "none",
+          targets: evidence,
+          commands,
+          ...(error ? { error: String(error) } : {}),
+          requirements: [
+            "REQ-031",
+            "INT-034",
+            "INT-035",
+            "INT-036",
+            "INT-037",
+            "INT-038",
+            "INT-039",
+            "SEC-017",
+          ],
+          mcpAuthorization: {
+            owner: "W4CMcp",
+            evidence: "apps/mcp/src/mcp.test.ts",
+            status: "separately_covered_not_exercised_by_this_journey",
+          },
+          limitations: [
+            "Linux filesystem/CLI behavior only; vendor clients not launched.",
+            "Atomic update is per file; proprietary client invocation is not execution proof.",
+            "MCP scope denial belongs to the MCP acceptance suite, not this CLI run.",
+          ],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+  });
+
+  it("initializes a workspace whose agent list names every configured target", () =>
+    recorded(async (session) => {
+      await session.command(["init", "--mode", "local"]);
+      const listing = await session.command(["agent", "list"]);
+      expect((listing.items as { target: string }[]).map((item) => item.target)).toEqual([
+        "claude",
+        "codex",
+        "cursor",
+        "cline",
+        "windsurf",
+        "copilot",
+        "kiro",
+        "antigravity",
+        "pi",
+        "omp",
+        "crush",
+        "goose",
+        "jcode",
+      ]);
+    }));
+
+  it.each(AGENT_TARGETS)("%s: install, drift, removal and hostile-workspace controls", (target) =>
+    recorded(async (session) => {
       const adapter = AGENT_TARGET_ADAPTERS[target];
       const path = join(session.cwd, adapter.instructionsPath);
       const skill = join(session.cwd, adapter.skillPath);
@@ -184,77 +258,27 @@ it("J14: every configured target through the built CLI, with ownership and hosti
           "tree_remove_cleanup",
         ],
       });
-    }
-    const outsideDryRun = join(session.temporary, "fresh-repo");
-    await mkdir(outsideDryRun);
-    const freshPreview = await session.command(
-      ["agent", "install", "--target", "claude"],
-      0,
-      {},
-      outsideDryRun,
-    );
-    expect(freshPreview.applied).toBe(false);
-    expect(await readdir(outsideDryRun)).toEqual([]);
-    await session.command(
-      ["agent", "install", "--target", "claude", "--yes", "--dry-run"],
-      0,
-      {},
-      outsideDryRun,
-    );
-    expect(await readdir(outsideDryRun)).toEqual([]);
-  } catch (failure) {
-    error = failure;
-    throw failure;
-  } finally {
-    const commands = session.commands.map(({ argv, exitCode, json }) => ({
-      argv,
-      exitCode,
-      ...(json?.error ? { error: json.error } : {}),
+    }),
+  );
+
+  it("previews and dry-runs an install outside any workspace without writing a file", () =>
+    recorded(async (session) => {
+      const outsideDryRun = join(session.temporary, "fresh-repo");
+      await mkdir(outsideDryRun);
+      const freshPreview = await session.command(
+        ["agent", "install", "--target", "claude"],
+        0,
+        {},
+        outsideDryRun,
+      );
+      expect(freshPreview.applied).toBe(false);
+      expect(await readdir(outsideDryRun)).toEqual([]);
+      await session.command(
+        ["agent", "install", "--target", "claude", "--yes", "--dry-run"],
+        0,
+        {},
+        outsideDryRun,
+      );
+      expect(await readdir(outsideDryRun)).toEqual([]);
     }));
-    await session.close(error);
-    await writeFile(
-      join(resultsDirectory(), "j14-agent-skills.json"),
-      `${JSON.stringify(
-        {
-          schemaVersion: "1.0.0",
-          journey: "J14",
-          observedAt: new Date().toISOString(),
-          passed: error === undefined,
-          method: "automatic",
-          reviewer: "testmaster-automated-acceptance",
-          reviewLimitations: [
-            "Filesystem/CLI checks only; vendor clients not launched and no human sign-off.",
-          ],
-          class: "deterministic-e2e",
-          runner: "built-cli-node",
-          externalDependency: "none",
-          targets: evidence,
-          commands,
-          ...(error ? { error: String(error) } : {}),
-          requirements: [
-            "REQ-031",
-            "INT-034",
-            "INT-035",
-            "INT-036",
-            "INT-037",
-            "INT-038",
-            "INT-039",
-            "SEC-017",
-          ],
-          mcpAuthorization: {
-            owner: "W4CMcp",
-            evidence: "apps/mcp/src/mcp.test.ts",
-            status: "separately_covered_not_exercised_by_this_journey",
-          },
-          limitations: [
-            "Linux filesystem/CLI behavior only; vendor clients not launched.",
-            "Atomic update is per file; proprietary client invocation is not execution proof.",
-            "MCP scope denial belongs to the MCP acceptance suite, not this CLI run.",
-          ],
-        },
-        null,
-        2,
-      )}\n`,
-    );
-  }
-}, 120_000);
+});
