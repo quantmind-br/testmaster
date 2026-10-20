@@ -13,7 +13,11 @@ import {
   scrubEvidenceText,
   semanticHash,
 } from "@testmaster/domain";
-import { EntityRepository, PersistenceDatabase } from "@testmaster/persistence";
+import {
+  AuxiliaryLeaseRepository,
+  EntityRepository,
+  PersistenceDatabase,
+} from "@testmaster/persistence";
 import { type LocatorEvidence, locatorFingerprint } from "@testmaster/planner";
 import { afterEach, expect, it, vi } from "vitest";
 import {
@@ -1725,6 +1729,39 @@ it("a reading cancelled before anything was sent reopens on the next request, an
   expect(modelJob(sent)?.progress.paidCallStarted).toBe(true);
   expect((await sent.service.analyze(sent.run.id, { model: true })).id).toBe(abstained.id);
   expect(sent.complete).toHaveBeenCalledTimes(1);
+});
+it("a request that loses the reopen of an unsent reading to another caller drives the reading instead of failing", async () => {
+  const f = await fixture();
+  f.complete.mockRejectedValueOnce(
+    new ContractError("PRECONDITION_FAILED", "Model request cancelled", {
+      reasonCode: "cancelled_before_send",
+    }),
+  );
+  const unsent = await f.service.analyze(f.run.id, { model: true });
+  expect(f.service.modelStatus(unsent)).toMatchObject({ reasonCode: "cancelled_before_send" });
+  // Another caller reopens the job between this request's read of it and its own reopen, which
+  // then finds the job no longer settled.
+  const reopen = AuxiliaryLeaseRepository.prototype.reopenUnpaid;
+  const spy = vi
+    .spyOn(AuxiliaryLeaseRepository.prototype, "reopenUnpaid")
+    .mockImplementationOnce(function (this: AuxiliaryLeaseRepository, ...args) {
+      reopen.apply(this, args);
+      return reopen.apply(this, args);
+    });
+  f.complete.mockImplementationOnce(async () => ({
+    modelCallId: f.modelCallId,
+    output: unknownReading,
+  }));
+  try {
+    await expect(f.service.analyze(f.run.id, { model: true })).resolves.toMatchObject({
+      source: "model",
+      modelCallId: f.modelCallId,
+    });
+  } finally {
+    spy.mockRestore();
+  }
+  expect(f.complete).toHaveBeenCalledTimes(2);
+  expect(modelJob(f)?.state).toBe("completed");
 });
 it("a caller waiting for a reading whose own caller cancelled it after the send gets the stored abstention", async () => {
   const f = await fixture();

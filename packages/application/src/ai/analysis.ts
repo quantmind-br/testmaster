@@ -4289,26 +4289,38 @@ export class AnalysisService {
           }
         : (input.discoveryId ?? null),
     });
-    const { job } = this.jobs.enqueue(this.ctx.workspaceId, "analysis", {
-      operation: "model",
-      targetId: runId,
-      actorId: this.ctx.principalId,
-      evidenceHash,
-      configHash,
-      options: input as Record<string, unknown>,
-    });
-    // A reading refused before anything was sent (no API key, model not configured, a busy local
-    // writer) is not final: the same request reaches the model once the cause is gone.
-    const refusal = job.result?.modelStatus as AnalysisModelStatus | undefined;
-    return this.drive(
-      job.state === "completed" &&
+    for (;;) {
+      const { job } = this.jobs.enqueue(this.ctx.workspaceId, "analysis", {
+        operation: "model",
+        targetId: runId,
+        actorId: this.ctx.principalId,
+        evidenceHash,
+        configHash,
+        options: input as Record<string, unknown>,
+      });
+      // A reading refused before anything was sent (no API key, model not configured, a busy local
+      // writer) is not final: the same request reaches the model once the cause is gone.
+      const refusal = job.result?.modelStatus as AnalysisModelStatus | undefined;
+      const unsent =
+        job.state === "completed" &&
         !job.progress.paidCallStarted &&
-        unsentReading(refusal?.reasonCode, job.progress.paidCallStarted)
-        ? this.jobs.reopenUnpaid(this.ctx.workspaceId, job.jobId, new Date().toISOString())
-        : job,
-      run,
-      options.signal,
-    );
+        unsentReading(refusal?.reasonCode, job.progress.paidCallStarted);
+      if (!unsent) return this.drive(job, run, options.signal);
+      let reopened: AuxiliaryJob;
+      try {
+        reopened = this.jobs.reopenUnpaid(
+          this.ctx.workspaceId,
+          job.jobId,
+          new Date().toISOString(),
+        );
+      } catch (error) {
+        // Another caller reopened or settled the job since it was read: look at it again.
+        if (!(error instanceof ContractError && error.code === "PRECONDITION_FAILED")) throw error;
+        await waitPass(options.signal);
+        continue;
+      }
+      return this.drive(reopened, run, options.signal);
+    }
   }
   private settlePaid(job: AuxiliaryJob): Analysis {
     authorizedRun(this.ctx, job.payload.targetId, "X");
