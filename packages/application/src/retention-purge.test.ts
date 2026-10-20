@@ -306,7 +306,7 @@ it("OPS-021 a workspace legal hold placed while the purge pass runs keeps everyt
     const report = await app.retentionPurge.run({ now });
     expect(report).toMatchObject({
       legalHold: true,
-      runs: { eligible: 1, purged: 1, skipped: [{ runId: second.runId, reason: "legal_hold" }] },
+      runs: { eligible: 1, purged: 1, skipped: [{ runId: "*", reason: "legal_hold" }] },
       idempotencyReceipts: 0,
     });
   } finally {
@@ -314,6 +314,34 @@ it("OPS-021 a workspace legal hold placed while the purge pass runs keeps everyt
   }
   expect(count(app, "runs", "id", first.runId)).toBe(0);
   expect(count(app, "runs", "id", second.runId)).toBe(1);
+  expect(count(app, "idempotency_receipts", "key", receipt)).toBe(1);
+});
+
+it("OPS-021 a workspace legal hold placed after the pass deleted its last Run keeps the receipts", async () => {
+  const { app, workspaceId } = await openApplication();
+  const scope = { application: app, workspaceId };
+  const expired = seedRun(scope, { createdAt: old, endedAt: old, outcome: "failed" });
+  const receipt = seedReceipt(app, expiredReceipt);
+  // The hold lands right after the transaction that deletes the only Run that is due.
+  const withTx = app.database.withTx.bind(app.database);
+  const spy = vi
+    .spyOn(app.database, "withTx")
+    .mockImplementationOnce(<T>(fn: (tx: PersistenceDatabase) => T): T => {
+      const result = withTx(fn);
+      setHold(app, `retention:legal-hold:${workspaceId}`);
+      return result;
+    });
+  try {
+    const report = await app.retentionPurge.run({ now });
+    expect(report).toMatchObject({
+      legalHold: true,
+      runs: { eligible: 1, purged: 1, skipped: [] },
+      idempotencyReceipts: 0,
+    });
+  } finally {
+    spy.mockRestore();
+  }
+  expect(count(app, "runs", "id", expired.runId)).toBe(0);
   expect(count(app, "idempotency_receipts", "key", receipt)).toBe(1);
 });
 

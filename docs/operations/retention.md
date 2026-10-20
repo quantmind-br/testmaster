@@ -54,9 +54,9 @@ and records the reason, requester and time in an incident or change record: Test
 API or CLI for it in this release. Check holds before enabling or changing a purge
 and keep the list of active holds in your records. A hold committed while a purge cycle runs
 protects whatever that cycle has not deleted yet: the cycle reads the holds again in each
-transaction that deletes data. A hold protects only while it exists: a restore
-from a backup older than the hold does not contain it, so re-create holds after a restore, before
-releasing isolation.
+transaction that deletes data, and a hold on the workspace ends the cycle. A hold protects only
+while it exists: a restore from a backup older than the hold does not contain it, so re-create
+holds after a restore, before releasing isolation.
 
 ## Signed audit summary
 

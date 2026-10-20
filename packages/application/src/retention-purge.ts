@@ -24,6 +24,8 @@ const auxiliaryJobOfRun = `queue IN (${auxiliaryQueues.map((queue) => `'${queue}
 /** Job states no holder works on any more; the purge deletes auxiliary jobs in these states only. */
 const settledJobStates = "('completed','cancelled')";
 const settledAuxiliaryJobOfRun = `${auxiliaryJobOfRun} AND state IN ${settledJobStates}`;
+/** What the delete transaction of a Run returns when it finds a hold on the whole workspace. */
+const workspaceHoldPlaced = Symbol("workspace hold placed");
 
 export interface PurgeOptions {
   /** Clock hook; tests move it past the retention windows. */
@@ -141,16 +143,22 @@ export class RetentionPurgeService {
     return { workspace: keys.has(prefix), keys };
   }
 
-  /**
-   * Why a terminal Run must stay, or null when its whole subtree may go. `held` are the legal-hold
-   * keys; a hold on the workspace keeps every Run.
-   */
+  /** Whether a legal hold covers the whole workspace. */
+  private workspaceHeld(): boolean {
+    return Boolean(
+      this.database.get(
+        "SELECT 1 FROM operational_state WHERE key=? AND value<>'released'",
+        legalHoldPrefix(this.ctx.workspaceId),
+      ),
+    );
+  }
+
+  /** Why a terminal Run must stay, or null when its whole subtree may go. */
   private blocker(runId: string, now: Date, held: Set<string>): string | null {
     const ws = this.ctx.workspaceId;
     const one = (sql: string, ...values: unknown[]): boolean =>
       Boolean(this.database.get(sql, ws, runId, ...values));
-    if (held.has(legalHoldPrefix(ws)) || held.has(`${legalHoldPrefix(ws)}:${runId}`))
-      return "legal_hold";
+    if (held.has(`${legalHoldPrefix(ws)}:${runId}`)) return "legal_hold";
     const artifacts = this.database.all<{ id: string }>(
       "SELECT id FROM artifacts WHERE workspace_id=? AND run_id=?",
       ws,
@@ -313,18 +321,23 @@ export class RetentionPurgeService {
       )
       .filter((row) => (row.last ?? row.created_at) < cutoffs.metadata);
     for (const candidate of candidates.slice(0, limit)) {
+      const blocked = this.blocker(candidate.id, now, keys);
+      if (blocked) {
+        report.runs.skipped.push({ runId: candidate.id, reason: blocked });
+        continue;
+      }
       if (report.dryRun) {
-        const blocked = this.blocker(candidate.id, now, keys);
-        if (blocked) report.runs.skipped.push({ runId: candidate.id, reason: blocked });
-        else report.runs.eligible++;
+        report.runs.eligible++;
         continue;
       }
       try {
-        // The checks run inside the write transaction, with the legal holds read again: a hold,
-        // pending delivery, open review or running job that appeared since this pass started
-        // keeps the Run.
-        const blocked = this.database.withTx(() => {
-          const reason = this.blocker(candidate.id, now, this.holds().keys);
+        // The write transaction checks again, with the legal holds read again: a hold, pending
+        // delivery, open review or running job that appeared since the check above keeps the Run,
+        // and a hold placed on the workspace ends the pass.
+        const late = this.database.withTx(() => {
+          const fresh = this.holds();
+          if (fresh.workspace) return workspaceHoldPlaced;
+          const reason = this.blocker(candidate.id, now, fresh.keys);
           if (reason) return reason;
           this.grantPermit();
           this.deleteRun(candidate.id);
@@ -332,7 +345,12 @@ export class RetentionPurgeService {
           this.revokePermit();
           return null;
         });
-        if (blocked) report.runs.skipped.push({ runId: candidate.id, reason: blocked });
+        if (late === workspaceHoldPlaced) {
+          report.legalHold = true;
+          report.runs.skipped.push({ runId: "*", reason: "legal_hold" });
+          break;
+        }
+        if (late) report.runs.skipped.push({ runId: candidate.id, reason: late });
         else {
           report.runs.eligible++;
           report.runs.purged++;
@@ -346,7 +364,7 @@ export class RetentionPurgeService {
     if (!report.dryRun) {
       this.database.withTx(() => {
         // A workspace hold placed while this pass ran keeps the rest of the workspace.
-        if (this.holds().workspace) {
+        if (report.legalHold || this.workspaceHeld()) {
           report.legalHold = true;
           return;
         }
@@ -412,6 +430,10 @@ export class RetentionPurgeService {
     limit: number,
   ): Promise<void> {
     const ws = this.ctx.workspaceId;
+    if (report.legalHold) {
+      report.audit.skipped = "legal_hold";
+      return;
+    }
     const events = this.database.all<AuditRow>(
       "SELECT id,actor,action,resource_id,request_id,timestamp,before_hash,after_hash FROM audit_events WHERE workspace_id=? AND timestamp<? ORDER BY timestamp,id LIMIT ?",
       ws,
@@ -427,7 +449,8 @@ export class RetentionPurgeService {
     }
     const subkey = deriveSubkey(key.key, "audit-purge");
     this.database.withTx(() => {
-      if (this.holds().workspace) {
+      // A workspace hold placed while this pass ran keeps the audit events.
+      if (this.workspaceHeld()) {
         report.legalHold = true;
         report.audit.skipped = "legal_hold";
         return;
