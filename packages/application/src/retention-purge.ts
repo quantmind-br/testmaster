@@ -1,7 +1,7 @@
 import { createHmac, randomUUID } from "node:crypto";
 import { defaults } from "@testmaster/contracts";
 import { canonicalJson, sha256 } from "@testmaster/domain";
-import type { PersistenceDatabase } from "@testmaster/persistence";
+import { auxiliaryQueues, type PersistenceDatabase } from "@testmaster/persistence";
 import { auditSecurity } from "./audit.js";
 import { type BackupKey, deriveSubkey, readKeyFile } from "./backup-crypto.js";
 import type { ServiceContext } from "./context.js";
@@ -16,6 +16,11 @@ import type { ServerConfig } from "./server-config.js";
 const dayMs = 86_400_000;
 const purgePermitKey = (workspaceId: string): string => `retention:purge-permit:${workspaceId}`;
 const legalHoldPrefix = (workspaceId: string): string => `retention:legal-hold:${workspaceId}`;
+/**
+ * The auxiliary jobs of a Run (its analysis and healing requests) name the Run in their payload;
+ * their `resource_id` is a semantic hash. One placeholder: the Run id.
+ */
+const auxiliaryJobOfRun = `queue IN (${auxiliaryQueues.map((queue) => `'${queue}'`).join(",")}) AND json_extract(data_json,'$.payload.targetId')=?`;
 
 export interface PurgeOptions {
   /** Clock hook; tests move it past the retention windows. */
@@ -184,13 +189,20 @@ export class RetentionPurgeService {
       )
     )
       return "healing_review_open";
+    // A holder still works on the Run's analysis or healing job; a later cycle purges it settled.
+    if (
+      one(
+        `SELECT 1 FROM job_leases WHERE workspace_id=? AND ${auxiliaryJobOfRun} AND state NOT IN ('completed','cancelled')`,
+      )
+    )
+      return "auxiliary_job_active";
     return null;
   }
 
   private deleteRun(runId: string): void {
     const ws = this.ctx.workspaceId;
     const attempts = "(SELECT id FROM attempts WHERE workspace_id=? AND run_id=?)";
-    const jobs = "(SELECT id FROM job_leases WHERE workspace_id=? AND resource_id=?)";
+    const jobs = `(SELECT id FROM job_leases WHERE workspace_id=? AND (resource_id=? OR (${auxiliaryJobOfRun})))`;
     const artifactIds = this.database
       .all<{ id: string }>("SELECT id FROM artifacts WHERE workspace_id=? AND run_id=?", ws, runId)
       .map((row) => row.id);
@@ -220,14 +232,17 @@ export class RetentionPurgeService {
       ["DELETE FROM batch_members WHERE workspace_id=? AND run_id=?", [ws, runId]],
       [
         `DELETE FROM deliveries WHERE workspace_id=? AND event_id IN (SELECT id FROM outbox WHERE workspace_id=? AND (aggregate_id=? OR aggregate_id IN ${jobs}))`,
-        [ws, ws, runId, ws, runId],
+        [ws, ws, runId, ws, runId, runId],
       ],
       ["DELETE FROM attempts WHERE workspace_id=? AND run_id=?", [ws, runId]],
       [
         `DELETE FROM outbox WHERE workspace_id=? AND (aggregate_id=? OR aggregate_id IN ${jobs})`,
-        [ws, runId, ws, runId],
+        [ws, runId, ws, runId, runId],
       ],
-      ["DELETE FROM job_leases WHERE workspace_id=? AND resource_id=?", [ws, runId]],
+      [
+        `DELETE FROM job_leases WHERE workspace_id=? AND (resource_id=? OR (${auxiliaryJobOfRun}))`,
+        [ws, runId, runId],
+      ],
       ["DELETE FROM runs WHERE workspace_id=? AND id=?", [ws, runId]],
     ];
     for (const [sql, values] of statements) this.database.run(sql, ...values);

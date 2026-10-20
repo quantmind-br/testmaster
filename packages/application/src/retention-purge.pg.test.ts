@@ -1,7 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { IdempotencyRepository } from "@testmaster/persistence";
+import {
+  AuxiliaryLeaseRepository,
+  IdempotencyRepository,
+  type PersistenceDatabase,
+} from "@testmaster/persistence";
 import { afterEach, expect, it } from "vitest";
 import { addWorkspace, type OpsStack, opsStack, type SeededRun, seedRun } from "./ops.testkit.js";
 
@@ -66,6 +70,28 @@ function seedReceipt(stack: OpsStack, expiresAt: string, ws = stack.workspaceId)
   );
   db(stack).run("UPDATE idempotency_receipts SET expires_at=? WHERE key=?", expiresAt, key);
   return key;
+}
+/** An analysis or healing job of `runId`: claimed, then settled as `state` unless it stays leased. */
+function auxiliaryJob(
+  database: PersistenceDatabase,
+  workspaceId: string,
+  queue: "analysis" | "healing",
+  runId: string,
+  state: "completed" | "cancelled" | "leased",
+) {
+  const jobs = new AuxiliaryLeaseRepository(database);
+  const { job } = jobs.enqueue(workspaceId, queue, {
+    operation: queue === "analysis" ? "factual" : "propose",
+    targetId: runId,
+    actorId: "usr_seed",
+    evidenceHash: "a".repeat(64),
+    configHash: "b".repeat(64),
+    options: {},
+  });
+  const fence = jobs.claim({ workspaceId, owner: "seed", queue, jobId: job.jobId });
+  if (!fence) throw new Error("The seeded job was not claimed");
+  if (state !== "leased") jobs.finish(fence, state, {});
+  return { jobs, jobId: job.jobId, fence };
 }
 
 it("OPS-021 purges terminal Runs past the metadata window with their whole subtree and keeps newer and running Runs", async () => {
@@ -434,4 +460,38 @@ it("OPS-021 SEC-037 a purge of one workspace never reads or deletes another work
   expect(otherReport.idempotencyReceipts).toBe(1);
   expect(count(stack, "idempotency_receipts", "key", theirReceipt, otherId)).toBe(0);
   expect(count(stack, "audit_events", "id", theirAudit, otherId)).toBe(0);
+});
+
+it("OPS-021 a purged Run takes its settled analysis and healing jobs and leaves another Run's job", async () => {
+  const stack = await stackWithClock();
+  const ws = stack.workspaceId;
+  const expired = seedRun(stack, { createdAt: old, endedAt: old, outcome: "failed" });
+  const running = seedRun(stack, { createdAt: old });
+  const analysis = auxiliaryJob(db(stack), ws, "analysis", expired.runId, "completed");
+  const healing = auxiliaryJob(db(stack), ws, "healing", expired.runId, "cancelled");
+  const other = auxiliaryJob(db(stack), ws, "analysis", running.runId, "completed");
+  const report = await stack.workspace.retentionPurge.run({ now });
+  expect(report.runs).toMatchObject({ purged: 1, skipped: [] });
+  expect(count(stack, "runs", "id", expired.runId)).toBe(0);
+  expect(analysis.jobs.get(ws, analysis.jobId)).toBeNull();
+  expect(analysis.jobs.get(ws, healing.jobId)).toBeNull();
+  expect(analysis.jobs.get(ws, other.jobId)?.state).toBe("completed");
+});
+
+it("OPS-021 keeps a Run whose analysis job a holder still runs and purges both once the job settles", async () => {
+  const stack = await stackWithClock();
+  const ws = stack.workspaceId;
+  const expired = seedRun(stack, { createdAt: old, endedAt: old, outcome: "failed" });
+  const held = auxiliaryJob(db(stack), ws, "analysis", expired.runId, "leased");
+  const report = await stack.workspace.retentionPurge.run({ now });
+  expect(report.runs).toMatchObject({
+    purged: 0,
+    skipped: [{ runId: expired.runId, reason: "auxiliary_job_active" }],
+  });
+  expect(count(stack, "runs", "id", expired.runId)).toBe(1);
+  expect(held.jobs.get(ws, held.jobId)?.state).toBe("leased");
+  held.jobs.finish(held.fence, "completed", {});
+  const later = await stack.workspace.retentionPurge.run({ now });
+  expect(later.runs).toMatchObject({ purged: 1, skipped: [] });
+  expect(held.jobs.get(ws, held.jobId)).toBeNull();
 });

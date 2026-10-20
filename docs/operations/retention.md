@@ -19,7 +19,8 @@ is not an accepted remedy (see [alerts.md](alerts.md#storage_critical)).
 A purge cycle of the retention controller, per workspace:
 
 * **Run metadata.** Terminal Runs (`completed`) whose end is older than 90 days: the Run's metadata
-  rows are removed. Evidence objects follow their own policy and are not removed by this step.
+  rows, including its analysis and healing jobs, are removed. Evidence objects follow their own
+  policy and are not removed by this step.
 * **Idempotency receipts** whose expiry is older than 90 days (the metadata window), about 97 days
   after the key was first used because a receipt expires 7 days after it is stored: the stored
   replay result of an idempotency key. A key whose receipt is purged is treated as new.
@@ -28,6 +29,8 @@ A purge cycle of the retention controller, per workspace:
 ## What is never purged
 
 * Runs that are not terminal (queued, running, cancelling) and anything an active Attempt references.
+* A Run whose analysis or healing job is queued, running or awaiting settlement of a paid call: the
+  purge skips it with `auxiliary_job_active` and removes it on a later cycle once the job settles.
 * Anything under a **legal hold** (below), including the Runs and audit events it covers (verify the hold on a preview before the first purge).
 * Runs and objects that an in-progress or unexpired backup holds (a backup holds the objects it
   captured for 48 hours after it starts).
