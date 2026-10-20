@@ -16,7 +16,7 @@
 ```bash
 testmaster worker start      # foreground supervisor; claims leases, heartbeats, reconciles
 testmaster worker status
-testmaster worker drain      # stop claiming; in-flight attempts finish within the drain window
+testmaster worker drain      # stop claiming; in-flight attempts finish, however long they take
 testmaster worker reconcile  # one reconciliation pass (expired leases, orphan staging/containers, outbox)
 ```
 
@@ -25,14 +25,24 @@ Once the worker is registered and claiming, `worker start` writes one line to st
 supervisor (systemd, a background job, an agent) can wait for `ready` in that line. Stdout keeps
 only the final JSON or text result printed when the worker stops.
 
-Defaults (`specs/08-operations.md` §2.2): heartbeat 10 s, lease 30 s, drain 60 s, reconciler every 30 s,
+The first interruption (SIGINT, SIGTERM or SIGHUP) drains the worker: it stops claiming and writes
+`worker draining: attempts in flight finish first; interrupt again to stop them now` to stderr.
+The drain has no deadline of its own. Each attempt in flight still ends under its own attempt and
+run limits, and a model answer is never cut, so a stop can last as long as the longest attempt.
+A second interruption is the forced stop: the worker aborts the attempts it still runs, and each
+one ends under its fence. Its Run ends `inconclusive`, or `blocked` when no step had started, and
+never `passed`. Under systemd the unit has `TimeoutStopSec=infinity`, and the forced stop is
+`systemctl --user kill --kill-whom=main -s SIGINT testmaster-worker@<name>`.
+
+Defaults (`specs/08-operations.md` §2.2): heartbeat 10 s, lease 30 s, reconciler every 30 s,
 `maxAttempts` 2 (retries only for infrastructure failures before any effect or assertion). Each claim
 increments the lease fence; a worker holding a stale fence cannot publish. A killed worker leaves its
 attempt to the reconciler, which marks it `inconclusive` or retries it according to recorded effects —
 never `passed`. Containers are labelled `io.testmaster.attempt|run|owner-pid` and orphans are removed by
 the reconciler.
 
-`testmaster server start` runs the same worker in the foreground together with the loopback API.
+`testmaster server start` runs the same worker in the foreground together with the loopback API, and
+drains it the same way on shutdown.
 
 ## Database
 

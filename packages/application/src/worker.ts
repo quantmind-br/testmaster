@@ -1964,6 +1964,13 @@ export class WorkerService {
       onContended?: (elapsedMs: number) => void;
       /** Called once a registered worker is recorded ready and about to claim, with its id. */
       onReady?: (workerId: string) => void;
+      /**
+       * The caller's explicit stop of a long-lived worker, such as a second interruption. A drain
+       * has no deadline: attempts in flight finish under their own limits, and a model answer is
+       * never cut. Aborting this signal stops them now instead; each one ends as an interrupted
+       * attempt under its fence. The attempts of an ephemeral worker already stop at `signal`.
+       */
+      force?: AbortSignal;
     } = {},
   ) {
     if (options.ephemeral && options.runIds?.length) {
@@ -2070,7 +2077,6 @@ export class WorkerService {
       this.workerId = options.workerId ?? registered?.id ?? null;
     }
     let lastMaintenance = Date.now();
-    let drainStart: number | null = null;
     // A build older than the database must not claim: it stops claiming, lets in-flight work
     // finish under its fenced leases, and ends with `worker_schema_behind` (ADR-015, OPS-038).
     let schemaRefusal: ContractError | null = null;
@@ -2130,9 +2136,7 @@ export class WorkerService {
           this.drainRequested = true;
           if (options.ephemeral) for (const id of options.runIds ?? []) this.host.runs.cancel(id);
         }
-        if (this.drainRequested && drainStart === null) drainStart = performance.now();
-        if (drainStart !== null && performance.now() - drainStart > 60000)
-          for (const controller of this.active.values()) controller.abort();
+        if (options.force?.aborted) this.drainRequested = true;
         const done =
           options.ephemeral &&
           (options.runIds ?? []).every((id) => this.host.runs.get(id).phase === "completed");
@@ -2242,7 +2246,7 @@ export class WorkerService {
           if (fence) {
             const task = this.execute(
               fence,
-              options.ephemeral ? options.signal : undefined,
+              options.ephemeral ? options.signal : options.force,
             ).finally(() => tasks.delete(task));
             tasks.add(task);
           }

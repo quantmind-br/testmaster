@@ -153,6 +153,8 @@ const deniedCodes: Record<string, true> = {
 };
 export class Runtime {
   readonly controller = new AbortController();
+  /** Aborted by a second interruption: a draining worker then stops the attempts it still runs. */
+  readonly forceController = new AbortController();
   readonly requestId = `cli_${randomUUID()}`;
   readonly receipts: unknown[] = [];
   /** Warnings a handler's helpers add; `dispatch` appends them to the command's result. */
@@ -224,7 +226,7 @@ export class Runtime {
     if (!this.signal) {
       this.signal = signal;
       this.controller.abort(new Error(signal));
-    }
+    } else this.forceController.abort(new Error(signal));
   }
   interrupted(): CliFailure {
     return new CliFailure(

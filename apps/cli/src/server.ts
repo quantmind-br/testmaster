@@ -155,9 +155,11 @@ export function serverCommands(program: Command, runtime: Runtime): void {
       const app = createServer({ application, host, origins: strings(options, "origin") });
       // `controller` stops the worker and loops; it is aborted by shutdown or by a worker failure.
       const controller = new AbortController();
+      announceDrain(rt);
       const worker = application.worker
         .run({
           signal: controller.signal,
+          force: rt.forceController.signal,
           onContended: (elapsedMs) =>
             rt.stderr.write(
               `worker is waiting for the database writer lock (${Math.round(elapsedMs / 1000)} s so far; another process holds it)\n`,
@@ -311,16 +313,32 @@ export function identityCommands(program: Command, runtime: Runtime): void {
   );
 }
 /**
+ * One stderr line when the first interruption starts a worker drain. The drain has no deadline,
+ * so the line names the forced stop: a second interruption.
+ */
+export function announceDrain(rt: Runtime): void {
+  rt.controller.signal.addEventListener(
+    "abort",
+    () =>
+      rt.stderr.write(
+        "worker draining: attempts in flight finish first; interrupt again to stop them now\n",
+      ),
+    { once: true },
+  );
+}
+/**
  * One worker loop per workspace; new workspaces are picked up while the process runs. Any loop
  * that ends in failure is fatal for the whole process: a loop that is not restarted would leave a
  * healthy-looking process with no worker for that workspace. Sibling loops drain, then the first
  * failure is thrown so the supervisor restarts the process (a build older than the database,
  * `worker_schema_behind`, OPS-038, included; writer contention is waited out, not a failure).
+ * `force` stops the attempts every loop still runs, as `WorkerService.run` documents.
  */
 export async function runServerWorkers(
   application: Application,
   signal: AbortSignal,
   onError: (workspaceId: string, error: unknown) => void,
+  force?: AbortSignal,
 ): Promise<void> {
   const fail = new AbortController();
   const linked = AbortSignal.any([signal, fail.signal]);
@@ -332,7 +350,7 @@ export async function runServerWorkers(
         workspaceId,
         application
           .forWorkspaceSystem(workspaceId)
-          .worker.run({ signal: linked })
+          .worker.run({ signal: linked, ...(force ? { force } : {}) })
           .then(
             () => null,
             (error: unknown) => {

@@ -12710,24 +12710,40 @@
       "status": "verified",
       "scenario": [
         "validation/journeys/runtime-control.docker.test.ts::OPS-015 drain after claim retains the active job but never starts the queued attempt",
-        "packages/application/src/runtime-control.test.ts::restarted old owner cannot publish after a replacement claim even with the same owner name"
+        "packages/application/src/runtime-control.test.ts::restarted old owner cannot publish after a replacement claim even with the same owner name",
+        "packages/application/src/worker-drain.test.ts::OPS-015 a draining worker lets the attempt in flight finish however long the drain lasts",
+        "packages/application/src/worker-drain.test.ts::OPS-015 a forced stop ends the attempt a draining worker still runs, and never as passed",
+        "apps/cli/src/workers.test.ts::worker start drains on the first interruption and stops the attempt in flight on the second"
       ],
       "oracle": [
-        "Drain injected immediately after durable claim commit before runner acknowledgment removes readiness, lets claimed real HTTP Attempt finish, leaves next job queued with zero Attempts; old same-name owner cannot finalize after replacement fence."
+        "Drain injected immediately after durable claim commit before runner acknowledgment removes readiness, lets claimed real HTTP Attempt finish, leaves next job queued with zero Attempts; old same-name owner cannot finalize after replacement fence.",
+        "The drain has no deadline: an Attempt held past ten minutes of drain keeps its signal and passes; only the explicit force (a second interruption of worker start) aborts it, and its Run ends inconclusive, never passed."
       ],
       "evidence": [
         "validation/results/runtime-drain-after-claim.json",
         "validation/journeys/runtime-control.docker.test.ts",
-        "packages/application/src/runtime-control.test.ts"
+        "packages/application/src/runtime-control.test.ts",
+        "packages/application/src/worker-drain.test.ts",
+        "apps/cli/src/workers.test.ts"
       ],
-      "code": ["packages/application/src/worker.ts", "packages/persistence/src/repositories.ts"],
+      "code": [
+        "packages/application/src/worker.ts",
+        "packages/persistence/src/repositories.ts",
+        "apps/cli/src/runtime.ts",
+        "apps/cli/src/workers.ts",
+        "apps/cli/src/server.ts",
+        "deploy/systemd/testmaster-worker@.service"
+      ],
       "note": "Local worker scope; distributed drain is not claimed.",
       "coverage": {
         "positive": [
-          "validation/journeys/runtime-control.docker.test.ts::OPS-015 drain after claim retains the active job but never starts the queued attempt"
+          "validation/journeys/runtime-control.docker.test.ts::OPS-015 drain after claim retains the active job but never starts the queued attempt",
+          "packages/application/src/worker-drain.test.ts::OPS-015 a draining worker lets the attempt in flight finish however long the drain lasts",
+          "apps/cli/src/workers.test.ts::worker start drains on the first interruption and stops the attempt in flight on the second"
         ],
         "negative": [
-          "validation/journeys/runtime-control.docker.test.ts::OPS-015 drain after claim retains the active job but never starts the queued attempt"
+          "validation/journeys/runtime-control.docker.test.ts::OPS-015 drain after claim retains the active job but never starts the queued attempt",
+          "packages/application/src/worker-drain.test.ts::OPS-015 a forced stop ends the attempt a draining worker still runs, and never as passed"
         ],
         "criticalAssertions": [
           {
@@ -12737,6 +12753,14 @@
           {
             "path": "validation/journeys/runtime-control.docker.test.ts",
             "assertion": "expect(app.runs.get(b.runId).status).toBe(\"queued\");\n      expect(app.database.all(\"SELECT * FROM attempts WHERE run_id=?\", b.runId)).toHaveLength(0);"
+          },
+          {
+            "path": "packages/application/src/worker-drain.test.ts",
+            "assertion": "expect(app.runs.get(runId)).toMatchObject({ phase: \"completed\", outcome: \"passed\" });"
+          },
+          {
+            "path": "packages/application/src/worker-drain.test.ts",
+            "assertion": "expect(app.runs.get(runId)).toMatchObject({ phase: \"completed\", outcome: \"inconclusive\" });"
           }
         ]
       }

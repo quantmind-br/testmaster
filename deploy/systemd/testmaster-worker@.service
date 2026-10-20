@@ -18,7 +18,11 @@ Environment=TESTMASTER_NO_TELEMETRY=true
 ExecStart=/usr/bin/env node %h/testmaster/apps/cli/dist/main.js worker start --mode server --config %E/testmaster/%i.json
 Restart=on-failure
 RestartSec=30
-TimeoutStopSec=90
+# A stop drains: the worker claims nothing new and lets the attempts in flight finish, with no
+# deadline, because a model answer is never cut (OPS-015). A second signal stops them now, and
+# their Runs end inconclusive, never passed:
+# `systemctl --user kill --kill-whom=main -s SIGINT testmaster-worker@<name>`.
+TimeoutStopSec=infinity
 KillSignal=SIGTERM
 NoNewPrivileges=true
 PrivateTmp=true

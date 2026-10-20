@@ -66,7 +66,10 @@ export interface UpgradeOptions {
   /** Root holding `runs/` and `fixture-inputs/`; defaults to the database directory. */
   evidenceRoot?: string;
   migrationsDir?: string;
-  /** Maximum time to wait for in-flight work (default 60 s, the worker drain window). */
+  /**
+   * Maximum wait for in-flight work (default 60 s). Work still running is never stopped: the
+   * upgrade stops instead, with nothing backed up or migrated.
+   */
   drainTimeoutMs?: number;
   pollIntervalMs?: number;
 }

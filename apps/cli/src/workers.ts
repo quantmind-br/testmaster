@@ -2,7 +2,7 @@ import { stat } from "node:fs/promises";
 import { ContractError } from "@testmaster/contracts";
 import { type Command, Option } from "commander";
 import type { Runtime } from "./runtime.js";
-import { runServerWorkers } from "./server.js";
+import { announceDrain, runServerWorkers } from "./server.js";
 
 /** The token file must be private to the operator running the worker (mode 0600). */
 async function readEnrollmentToken(rt: Runtime, path: string): Promise<string> {
@@ -44,6 +44,7 @@ export function workerCommands(program: Command, runtime: Runtime): void {
         "Enroll this process as one registered pool worker with a one-use tm_wrk_ token (server mode)",
       ),
     async (rt, _args, options) => {
+      announceDrain(rt);
       if (options.mode === "server") {
         const { application } = await rt.serverApp();
         if (typeof options.enrollTokenFile === "string") {
@@ -55,6 +56,7 @@ export function workerCommands(program: Command, runtime: Runtime): void {
           );
           await application.forWorkspaceSystem(workspaceId).worker.run({
             signal: rt.controller.signal,
+            force: rt.forceController.signal,
             workerId,
             onReady: (id) => announceReady(rt, id),
             onContended: (elapsedMs) => announceContention(rt, elapsedMs),
@@ -62,10 +64,14 @@ export function workerCommands(program: Command, runtime: Runtime): void {
           if (rt.signal) throw rt.interrupted();
           return { data: { mode: "server", workerId, workspaceId } };
         }
-        await runServerWorkers(application, rt.controller.signal, (workspaceId, error) =>
-          rt.stderr.write(
-            `worker for workspace ${workspaceId} stopped: ${error instanceof Error ? error.message : "unknown"}\n`,
-          ),
+        await runServerWorkers(
+          application,
+          rt.controller.signal,
+          (workspaceId, error) =>
+            rt.stderr.write(
+              `worker for workspace ${workspaceId} stopped: ${error instanceof Error ? error.message : "unknown"}\n`,
+            ),
+          rt.forceController.signal,
         );
         if (rt.signal) throw rt.interrupted();
         return { data: { mode: "server", workspaces: application.operator.workspaceIds() } };
@@ -73,6 +79,7 @@ export function workerCommands(program: Command, runtime: Runtime): void {
       const app = await rt.app();
       await app.worker.run({
         signal: rt.controller.signal,
+        force: rt.forceController.signal,
         onReady: (id) => announceReady(rt, id),
         onContended: (elapsedMs) => announceContention(rt, elapsedMs),
       });
