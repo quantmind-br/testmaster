@@ -17,6 +17,7 @@ afterEach(async () => {
 const now = new Date("2026-10-20T12:00:00.000Z");
 const old = "2026-06-01T00:00:00.000Z";
 const recent = "2026-10-10T00:00:00.000Z";
+const older = "2026-05-01T00:00:00.000Z";
 
 async function stackWithClock(): Promise<OpsStack> {
   const stack = await opsStack();
@@ -56,6 +57,9 @@ const permits = (stack: OpsStack): number =>
 const expiredReceipt = "2026-06-01T00:00:00.000Z";
 const receiptInsideWindow = "2026-09-01T00:00:00.000Z";
 const unexpiredReceipt = "2099-01-01T00:00:00.000Z";
+const placeHold = (stack: OpsStack, key: string): void => {
+  db(stack).run("INSERT INTO operational_state(key,value) VALUES(?,?)", key, "case-17");
+};
 const releaseHold = (stack: OpsStack, key: string): void => {
   expect(
     db(stack).run("UPDATE operational_state SET value='released' WHERE key=?", key).changes,
@@ -516,12 +520,12 @@ it("OPS-021 a purged Run takes its settled analysis and healing jobs with their 
   expect(count(stack, "deliveries", "id", keptEvent.deliveryId)).toBe(1);
 });
 
-it("OPS-021 keeps a Run whose analysis job a holder claims after the purge checked the Run", async () => {
+it("OPS-021 keeps a Run whose analysis job a holder claims while the purge pass runs", async () => {
   const stack = await stackWithClock();
   const ws = stack.workspaceId;
   const expired = seedRun(stack, { createdAt: old, endedAt: old, outcome: "failed" });
-  // Another caller enqueues and claims the Run's analysis job between the purge's check of the
-  // Run and the transaction that deletes it.
+  // Another caller enqueues and claims the Run's analysis job after the pass selected the Run,
+  // just before the transaction that deletes it.
   const database = stack.workspace.database;
   const withTx = database.withTx.bind(database);
   let started: ReturnType<typeof auxiliaryJob> | undefined;
@@ -543,6 +547,66 @@ it("OPS-021 keeps a Run whose analysis job a holder claims after the purge check
   }
   expect(count(stack, "runs", "id", expired.runId)).toBe(1);
   expect(started?.jobs.get(ws, started.jobId)?.state).toBe("leased");
+});
+
+it("OPS-021 keeps a Run when a legal hold on it is placed while the purge pass runs", async () => {
+  const stack = await stackWithClock();
+  const ws = stack.workspaceId;
+  const expired = seedRun(stack, { createdAt: old, endedAt: old, outcome: "failed" });
+  // The hold lands after the pass read the holds, just before the transaction that deletes the Run.
+  const database = stack.workspace.database;
+  const withTx = database.withTx.bind(database);
+  const spy = vi
+    .spyOn(database, "withTx")
+    .mockImplementationOnce(<T>(fn: (tx: PersistenceDatabase) => T): T => {
+      placeHold(stack, `retention:legal-hold:${ws}:${expired.runId}`);
+      return withTx(fn);
+    });
+  try {
+    const report = await stack.workspace.retentionPurge.run({ now });
+    expect(report.runs).toMatchObject({
+      eligible: 0,
+      purged: 0,
+      skipped: [{ runId: expired.runId, reason: "legal_hold" }],
+    });
+  } finally {
+    spy.mockRestore();
+  }
+  expect(count(stack, "runs", "id", expired.runId)).toBe(1);
+});
+
+it("OPS-021 a workspace legal hold placed while the purge pass runs keeps everything the pass has not deleted yet", async () => {
+  const stack = await stackWithClock();
+  const ws = stack.workspaceId;
+  const first = seedRun(stack, { createdAt: older, endedAt: older, outcome: "failed" });
+  const second = seedRun(stack, { createdAt: old, endedAt: old, outcome: "failed" });
+  const receipt = seedReceipt(stack, expiredReceipt);
+  const audit = insertAudit(stack, "2025-01-01T00:00:00.000Z");
+  // The hold lands right after the transaction that deletes the first Run.
+  const database = stack.workspace.database;
+  const withTx = database.withTx.bind(database);
+  const spy = vi
+    .spyOn(database, "withTx")
+    .mockImplementationOnce(<T>(fn: (tx: PersistenceDatabase) => T): T => {
+      const result = withTx(fn);
+      placeHold(stack, `retention:legal-hold:${ws}`);
+      return result;
+    });
+  try {
+    const report = await stack.workspace.retentionPurge.run({ now });
+    expect(report).toMatchObject({
+      legalHold: true,
+      runs: { eligible: 1, purged: 1, skipped: [{ runId: second.runId, reason: "legal_hold" }] },
+      idempotencyReceipts: 0,
+      audit: { purged: 0, summaryId: null, skipped: "legal_hold" },
+    });
+  } finally {
+    spy.mockRestore();
+  }
+  expect(count(stack, "runs", "id", first.runId)).toBe(0);
+  expect(count(stack, "runs", "id", second.runId)).toBe(1);
+  expect(count(stack, "idempotency_receipts", "key", receipt)).toBe(1);
+  expect(count(stack, "audit_events", "id", audit)).toBe(1);
 });
 
 it("OPS-021 keeps a Run whose analysis job a holder still runs and purges both once the job settles", async () => {

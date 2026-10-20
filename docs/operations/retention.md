@@ -52,7 +52,9 @@ A hold is a key in the operational state of the workspace; any value except `rel
 The database administrator sets and releases holds directly in `operational_state`, in a transaction,
 and records the reason, requester and time in an incident or change record: TestMaster provides no
 API or CLI for it in this release. Check holds before enabling or changing a purge
-and keep the list of active holds in your records. A hold protects only while it exists: a restore
+and keep the list of active holds in your records. A hold committed while a purge cycle runs
+protects whatever that cycle has not deleted yet: the cycle reads the holds again in each
+transaction that deletes data. A hold protects only while it exists: a restore
 from a backup older than the hold does not contain it, so re-create holds after a restore, before
 releasing isolation.
 

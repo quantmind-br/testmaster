@@ -20,6 +20,7 @@ afterEach(async () => {
 
 const now = new Date("2026-10-20T12:00:00.000Z");
 const old = "2026-06-01T00:00:00.000Z";
+const older = "2026-05-01T00:00:00.000Z";
 const expiredReceipt = "2026-06-01T00:00:00.000Z";
 const receiptInsideWindow = "2026-09-01T00:00:00.000Z";
 const unexpiredReceipt = "2099-01-01T00:00:00.000Z";
@@ -233,12 +234,12 @@ it("OPS-021 a purged Run takes its settled analysis and healing jobs with their 
   expect(count(app, "deliveries", "id", keptEvent.deliveryId)).toBe(1);
 });
 
-it("OPS-021 keeps a Run whose analysis job a holder claims after the purge checked the Run", async () => {
+it("OPS-021 keeps a Run whose analysis job a holder claims while the purge pass runs", async () => {
   const { app, workspaceId } = await openApplication();
   const scope = { application: app, workspaceId };
   const expired = seedRun(scope, { createdAt: old, endedAt: old, outcome: "failed" });
-  // Another caller enqueues and claims the Run's analysis job between the purge's check of the
-  // Run and the transaction that deletes it.
+  // Another caller enqueues and claims the Run's analysis job after the pass selected the Run,
+  // just before the transaction that deletes it.
   const withTx = app.database.withTx.bind(app.database);
   let started: ReturnType<typeof auxiliaryJob> | undefined;
   const spy = vi
@@ -259,6 +260,61 @@ it("OPS-021 keeps a Run whose analysis job a holder claims after the purge check
   }
   expect(count(app, "runs", "id", expired.runId)).toBe(1);
   expect(started?.jobs.get(workspaceId, started.jobId)?.state).toBe("leased");
+});
+
+it("OPS-021 keeps a Run when a legal hold on it is placed while the purge pass runs", async () => {
+  const { app, workspaceId } = await openApplication();
+  const scope = { application: app, workspaceId };
+  const expired = seedRun(scope, { createdAt: old, endedAt: old, outcome: "failed" });
+  // The hold lands after the pass read the holds, just before the transaction that deletes the Run.
+  const withTx = app.database.withTx.bind(app.database);
+  const spy = vi
+    .spyOn(app.database, "withTx")
+    .mockImplementationOnce(<T>(fn: (tx: PersistenceDatabase) => T): T => {
+      setHold(app, `retention:legal-hold:${workspaceId}:${expired.runId}`);
+      return withTx(fn);
+    });
+  try {
+    const report = await app.retentionPurge.run({ now });
+    expect(report.runs).toMatchObject({
+      eligible: 0,
+      purged: 0,
+      skipped: [{ runId: expired.runId, reason: "legal_hold" }],
+    });
+  } finally {
+    spy.mockRestore();
+  }
+  expect(count(app, "runs", "id", expired.runId)).toBe(1);
+});
+
+it("OPS-021 a workspace legal hold placed while the purge pass runs keeps everything the pass has not deleted yet", async () => {
+  const { app, workspaceId } = await openApplication();
+  const scope = { application: app, workspaceId };
+  const first = seedRun(scope, { createdAt: older, endedAt: older, outcome: "failed" });
+  const second = seedRun(scope, { createdAt: old, endedAt: old, outcome: "failed" });
+  const receipt = seedReceipt(app, expiredReceipt);
+  // The hold lands right after the transaction that deletes the first Run.
+  const withTx = app.database.withTx.bind(app.database);
+  const spy = vi
+    .spyOn(app.database, "withTx")
+    .mockImplementationOnce(<T>(fn: (tx: PersistenceDatabase) => T): T => {
+      const result = withTx(fn);
+      setHold(app, `retention:legal-hold:${workspaceId}`);
+      return result;
+    });
+  try {
+    const report = await app.retentionPurge.run({ now });
+    expect(report).toMatchObject({
+      legalHold: true,
+      runs: { eligible: 1, purged: 1, skipped: [{ runId: second.runId, reason: "legal_hold" }] },
+      idempotencyReceipts: 0,
+    });
+  } finally {
+    spy.mockRestore();
+  }
+  expect(count(app, "runs", "id", first.runId)).toBe(0);
+  expect(count(app, "runs", "id", second.runId)).toBe(1);
+  expect(count(app, "idempotency_receipts", "key", receipt)).toBe(1);
 });
 
 it("OPS-021 keeps a Run whose analysis job a holder still runs and purges both once the job settles", async () => {
