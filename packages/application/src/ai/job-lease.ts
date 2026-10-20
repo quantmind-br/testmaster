@@ -40,10 +40,25 @@ export function waitPass(signal?: AbortSignal): Promise<void> {
 }
 
 /**
+ * One wait pass on another holder's job that ends the wait when the caller is cancelled, before
+ * or during the pass: `PRECONDITION_FAILED` `wait_cancelled` with `cancelled` as the message. The
+ * cancellation ends only this caller's wait and leaves the other holder's job alone, so a
+ * cancelled waiter never goes on to take the job.
+ */
+export async function waitTurn(
+  signal: AbortSignal | undefined,
+  jobId: string,
+  cancelled: string,
+): Promise<void> {
+  await waitPass(signal);
+  if (signal?.aborted)
+    throw new ContractError("PRECONDITION_FAILED", cancelled, { reason: "wait_cancelled", jobId });
+}
+
+/**
  * Reopens `jobId`, a request that never reached the provider. When another caller reopened or
- * settled it first, this waits one pass and returns null: the caller reads the job again. A caller
- * cancelled meanwhile stops with `wait_cancelled` (message `cancelled`); its cancellation ends only
- * its own wait and leaves the other caller's job alone.
+ * settled it first, this waits one turn (`waitTurn`) and returns null: the caller reads the job
+ * again.
  */
 export async function reopenUnpaidOrWait(
   jobs: AuxiliaryLeaseRepository,
@@ -57,8 +72,6 @@ export async function reopenUnpaidOrWait(
   } catch (error) {
     if (!(error instanceof ContractError && error.code === "PRECONDITION_FAILED")) throw error;
   }
-  await waitPass(signal);
-  if (signal?.aborted)
-    throw new ContractError("PRECONDITION_FAILED", cancelled, { reason: "wait_cancelled", jobId });
+  await waitTurn(signal, jobId, cancelled);
   return null;
 }

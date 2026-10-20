@@ -45,7 +45,7 @@ import {
   type HealingReplacement,
   healingReplacements,
 } from "./healing-patch.js";
-import { AUXILIARY_LEASE_MS, keepLeaseAlive, reopenUnpaidOrWait, waitPass } from "./job-lease.js";
+import { AUXILIARY_LEASE_MS, keepLeaseAlive, reopenUnpaidOrWait, waitTurn } from "./job-lease.js";
 import { type ModelService, unsentModelReasons } from "./model.js";
 
 export interface HealingInput {
@@ -639,6 +639,7 @@ export class HealingService {
     // request and returns its outcome. A holder that stopped stops renewing its lease; expiry then
     // hands an unpaid job back to the queue, where this caller claims it, and leaves a paid one to
     // be settled without a new call. The caller's own cancellation ends only its wait.
+    const cancelled = "Healing cancelled while another request for this Run was running";
     let fence: (AuxiliaryFence & { job: AuxiliaryJob }) | null = null;
     let job: AuxiliaryJob;
     for (;;) {
@@ -648,13 +649,7 @@ export class HealingService {
       const prior = jobs.forTarget(this.ctx.workspaceId, "healing", failedRunId);
       const held = prior.find((candidate) => candidate.state === "leased");
       if (held) {
-        if (signal?.aborted)
-          throw new ContractError(
-            "PRECONDITION_FAILED",
-            "Healing cancelled while another request for this Run was running",
-            { reason: "wait_cancelled", jobId: held.jobId },
-          );
-        await waitPass(signal);
+        await waitTurn(signal, held.jobId, cancelled);
         continue;
       }
       // A request that started a paid call, or whose outcome still has to be settled, is final for
@@ -711,7 +706,7 @@ export class HealingService {
           this.ctx.workspaceId,
           enqueued.jobId,
           signal,
-          "Healing cancelled while another request for this Run was running",
+          cancelled,
         );
         if (!reopened) continue;
         job = reopened;
@@ -724,7 +719,7 @@ export class HealingService {
         leaseMs: AUXILIARY_LEASE_MS,
       });
       if (fence) break;
-      await waitPass(signal);
+      await waitTurn(signal, job.jobId, cancelled);
     }
     if (fence.job.payload.actorId !== this.ctx.principalId) {
       jobs.finish(fence, "completed", { refused: true, reason: "actor_changed" });

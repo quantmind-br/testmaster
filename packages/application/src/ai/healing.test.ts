@@ -1286,6 +1286,40 @@ it("a request cancelled while it waits after losing the reopen of an unpaid requ
   expect(f.jobs.get(workspaceId, settled!.jobId)?.state).toBe("queued");
   expect(f.complete).toHaveBeenCalledTimes(1);
 });
+it("a request cancelled while it waits for a running request never takes the job that request leaves unsent", async () => {
+  const f = await generationFixture(abstention);
+  const workspaceId = f.app.context.workspaceId;
+  f.complete.mockRejectedValueOnce(
+    new ContractError("PRECONDITION_FAILED", "Provider API key is unavailable", {
+      reasonCode: "provider_credentials_unavailable",
+    }),
+  );
+  await expect(f.service.propose(f.failed.id)).rejects.toMatchObject({
+    details: { detail: "provider_credentials_unavailable" },
+  });
+  const [settled] = f.jobs.forTarget(workspaceId, "healing", f.failed.id);
+  // Another holder runs the request again, and this caller waits for it.
+  f.jobs.reopenUnpaid(workspaceId, settled!.jobId, new Date().toISOString());
+  const holder = f.jobs.claim({
+    workspaceId,
+    queue: "healing",
+    jobId: settled!.jobId,
+    owner: "other-holder",
+  });
+  f.complete.mockClear();
+  const controller = new AbortController();
+  const waiting = f.service.propose(f.failed.id, {}, { signal: controller.signal });
+  await expect(settledWithin(waiting, 100)).resolves.toBe(pending);
+  // The caller is cancelled, then the holder stops before anything reached the provider.
+  controller.abort();
+  f.jobs.finish(holder!, "cancelled", {});
+  await expect(waiting).rejects.toMatchObject({
+    code: "PRECONDITION_FAILED",
+    details: { reason: "wait_cancelled", jobId: settled!.jobId },
+  });
+  expect(f.complete).not.toHaveBeenCalled();
+  expect(f.jobs.get(workspaceId, settled!.jobId)?.state).toBe("cancelled");
+});
 /** A healing job of the Run held by another process whose paid call has started. */
 function paidHolder(
   app: Application,
