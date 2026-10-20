@@ -20,6 +20,9 @@ A purge cycle of the retention controller, per workspace:
 
 * **Run metadata.** Terminal Runs (`completed`) whose end is older than 90 days: the Run's metadata
   rows are removed. Evidence objects follow their own policy and are not removed by this step.
+* **Idempotency receipts** whose expiry is older than 90 days (the metadata window), about 97 days
+  after the key was first used because a receipt expires 7 days after it is stored: the stored
+  replay result of an idempotency key. A key whose receipt is purged is treated as new.
 * **Audit events** older than 365 days are removed after a signed summary has been written (below).
 
 ## What is never purged

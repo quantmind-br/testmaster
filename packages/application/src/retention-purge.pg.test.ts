@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { IdempotencyRepository } from "@testmaster/persistence";
 import { afterEach, expect, it } from "vitest";
 import { addWorkspace, type OpsStack, opsStack, type SeededRun, seedRun } from "./ops.testkit.js";
 
@@ -48,6 +49,24 @@ const permits = (stack: OpsStack): number =>
       "SELECT COUNT(*) AS n FROM operational_state WHERE key LIKE 'retention:purge-permit:%'",
     )?.n,
   );
+const expiredReceipt = "2026-06-01T00:00:00.000Z";
+const receiptInsideWindow = "2026-09-01T00:00:00.000Z";
+const unexpiredReceipt = "2099-01-01T00:00:00.000Z";
+const releaseHold = (stack: OpsStack, key: string): void => {
+  expect(
+    db(stack).run("UPDATE operational_state SET value='released' WHERE key=?", key).changes,
+  ).toBe(1);
+};
+/** Stores a receipt through the repository, then moves its expiry to `expiresAt`. */
+function seedReceipt(stack: OpsStack, expiresAt: string, ws = stack.workspaceId): string {
+  const key = `receipt-${randomUUID()}`;
+  new IdempotencyRepository(db(stack)).execute(
+    { workspaceId: ws, actorScope: "usr_seed", operation: "seed.operation", key, body: { key } },
+    () => ({ stored: key }),
+  );
+  db(stack).run("UPDATE idempotency_receipts SET expires_at=? WHERE key=?", expiresAt, key);
+  return key;
+}
 
 it("OPS-021 purges terminal Runs past the metadata window with their whole subtree and keeps newer and running Runs", async () => {
   const stack = await stackWithClock();
@@ -116,6 +135,118 @@ it("OPS-021 honours legal holds on the workspace, a Run and an artifact, and pur
   const released = await stack.workspace.retentionPurge.run({ now });
   expect(released.runs.purged).toBe(1);
   expect(count(stack, "runs", "id", held.runId)).toBe(0);
+});
+
+it("OPS-021 CI-009 a workspace hold released by value no longer protects the workspace", async () => {
+  const stack = await stackWithClock();
+  const key = `retention:legal-hold:${stack.workspaceId}`;
+  const expired = seedRun(stack, { createdAt: old, endedAt: old, outcome: "passed" });
+  db(stack).run("INSERT INTO operational_state(key,value) VALUES(?,?)", key, "case-17");
+  const held = await stack.workspace.retentionPurge.run({ now });
+  expect(held.legalHold).toBe(true);
+  expect(held.audit.skipped).toBe("legal_hold");
+  expect(count(stack, "runs", "id", expired.runId)).toBe(1);
+  releaseHold(stack, key);
+  const released = await stack.workspace.retentionPurge.run({ now });
+  expect(released.legalHold).toBe(false);
+  expect(released.runs.purged).toBe(1);
+  expect(count(stack, "runs", "id", expired.runId)).toBe(0);
+});
+
+it("OPS-021 CI-009 a Run hold released by value no longer protects that Run", async () => {
+  const stack = await stackWithClock();
+  const expired = seedRun(stack, { createdAt: old, endedAt: old, outcome: "passed" });
+  const key = `retention:legal-hold:${stack.workspaceId}:${expired.runId}`;
+  db(stack).run("INSERT INTO operational_state(key,value) VALUES(?,?)", key, "case-17");
+  const held = await stack.workspace.retentionPurge.run({ now });
+  expect(held.runs.purged).toBe(0);
+  expect(held.runs.skipped).toEqual([{ runId: expired.runId, reason: "legal_hold" }]);
+  expect(count(stack, "runs", "id", expired.runId)).toBe(1);
+  releaseHold(stack, key);
+  const released = await stack.workspace.retentionPurge.run({ now });
+  expect(released.runs).toMatchObject({ purged: 1, skipped: [] });
+  expect(count(stack, "runs", "id", expired.runId)).toBe(0);
+});
+
+it("OPS-021 CI-009 an artifact hold released by value no longer blocks the Run that owns the artifact", async () => {
+  const stack = await stackWithClock();
+  const expired = seedRun(stack, {
+    createdAt: old,
+    endedAt: old,
+    outcome: "passed",
+    artifact: "expired",
+  });
+  const key = `retention:legal-hold:${stack.workspaceId}:${expired.artifactId}`;
+  db(stack).run("INSERT INTO operational_state(key,value) VALUES(?,?)", key, "case-17");
+  const held = await stack.workspace.retentionPurge.run({ now });
+  expect(held.runs.skipped).toEqual([{ runId: expired.runId, reason: "legal_hold" }]);
+  releaseHold(stack, key);
+  const released = await stack.workspace.retentionPurge.run({ now });
+  expect(released.runs).toMatchObject({ purged: 1, skipped: [] });
+  expect(count(stack, "runs", "id", expired.runId)).toBe(0);
+});
+
+it("OPS-021 CI-019 deletes an idempotency receipt expired before the metadata cutoff even when no Run is purgeable", async () => {
+  const stack = await stackWithClock();
+  const key = seedReceipt(stack, expiredReceipt);
+  const report = await stack.workspace.retentionPurge.run({ now });
+  expect(report.runs.eligible).toBe(0);
+  expect(report.idempotencyReceipts).toBe(1);
+  expect(count(stack, "idempotency_receipts", "key", key)).toBe(0);
+});
+
+it("OPS-021 CI-019 keeps an unexpired receipt and replays its stored result", async () => {
+  const stack = await stackWithClock();
+  const key = seedReceipt(stack, unexpiredReceipt);
+  const report = await stack.workspace.retentionPurge.run({ now });
+  expect(report.idempotencyReceipts).toBe(0);
+  expect(count(stack, "idempotency_receipts", "key", key)).toBe(1);
+  let called = false;
+  const replay = new IdempotencyRepository(db(stack)).execute(
+    {
+      workspaceId: stack.workspaceId,
+      actorScope: "usr_seed",
+      operation: "seed.operation",
+      key,
+      body: { key },
+    },
+    () => {
+      called = true;
+      return { stored: "other" };
+    },
+  );
+  expect(replay).toEqual({ replayed: true, receipt: { stored: key } });
+  expect(called).toBe(false);
+});
+
+it("OPS-021 CI-019 keeps a receipt that expired inside the metadata window", async () => {
+  const stack = await stackWithClock();
+  const key = seedReceipt(stack, receiptInsideWindow);
+  const report = await stack.workspace.retentionPurge.run({ now });
+  expect(report.idempotencyReceipts).toBe(0);
+  expect(count(stack, "idempotency_receipts", "key", key)).toBe(1);
+});
+
+it("OPS-021 CI-019 a preview deletes no receipt and reports zero", async () => {
+  const stack = await stackWithClock();
+  const key = seedReceipt(stack, expiredReceipt);
+  const preview = await stack.workspace.retentionPurge.run({ now, dryRun: true });
+  expect(preview.idempotencyReceipts).toBe(0);
+  expect(count(stack, "idempotency_receipts", "key", key)).toBe(1);
+});
+
+it("OPS-021 CI-019 a workspace hold keeps an expired receipt until the hold is released", async () => {
+  const stack = await stackWithClock();
+  const holdKey = `retention:legal-hold:${stack.workspaceId}`;
+  const key = seedReceipt(stack, expiredReceipt);
+  db(stack).run("INSERT INTO operational_state(key,value) VALUES(?,?)", holdKey, "case-17");
+  const held = await stack.workspace.retentionPurge.run({ now });
+  expect(held.idempotencyReceipts).toBe(0);
+  expect(count(stack, "idempotency_receipts", "key", key)).toBe(1);
+  releaseHold(stack, holdKey);
+  const released = await stack.workspace.retentionPurge.run({ now });
+  expect(released.idempotencyReceipts).toBe(1);
+  expect(count(stack, "idempotency_receipts", "key", key)).toBe(0);
 });
 
 it("OPS-021 keeps Runs whose evidence, backup hold, events, delivery or healing review are still needed", async () => {
@@ -286,8 +417,13 @@ it("OPS-021 SEC-037 a purge of one workspace never reads or deletes another work
     workspaceId: otherId,
   });
   const theirAudit = insertAudit(stack, "2025-01-01T00:00:00.000Z", otherId);
+  const myReceipt = seedReceipt(stack, expiredReceipt);
+  const theirReceipt = seedReceipt(stack, expiredReceipt, otherId);
   const report = await stack.workspace.retentionPurge.run({ now });
   expect(report.runs.purged).toBe(1);
+  expect(report.idempotencyReceipts).toBe(1);
+  expect(count(stack, "idempotency_receipts", "key", myReceipt)).toBe(0);
+  expect(count(stack, "idempotency_receipts", "key", theirReceipt, otherId)).toBe(1);
   expect(count(stack, "runs", "id", mine.runId)).toBe(0);
   expect(count(stack, "runs", "id", theirs.runId, otherId)).toBe(1);
   expect(count(stack, "audit_events", "id", theirAudit, otherId)).toBe(1);
@@ -295,5 +431,7 @@ it("OPS-021 SEC-037 a purge of one workspace never reads or deletes another work
     .forWorkspaceSystem(otherId)
     .retentionPurge.run({ now });
   expect(otherReport.runs.purged).toBe(1);
+  expect(otherReport.idempotencyReceipts).toBe(1);
+  expect(count(stack, "idempotency_receipts", "key", theirReceipt, otherId)).toBe(0);
   expect(count(stack, "audit_events", "id", theirAudit, otherId)).toBe(0);
 });

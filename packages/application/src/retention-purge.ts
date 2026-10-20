@@ -45,6 +45,8 @@ export interface PurgeReport {
   batches: number;
   outboxEvents: number;
   sessions: number;
+  /** Idempotency receipts of this workspace with `expires_at` before `cutoffs.metadata` deleted by a run; 0 in a preview and under a workspace hold. */
+  idempotencyReceipts: number;
   audit: {
     eligible: number;
     purged: number;
@@ -122,7 +124,7 @@ export class RetentionPurgeService {
     const keys = new Set(
       this.database
         .all<{ key: string }>(
-          "SELECT key FROM operational_state WHERE key=? OR key LIKE ?",
+          "SELECT key FROM operational_state WHERE (key=? OR key LIKE ?) AND value<>'released'",
           prefix,
           `${prefix}:%`,
         )
@@ -275,6 +277,7 @@ export class RetentionPurgeService {
       batches: 0,
       outboxEvents: 0,
       sessions: 0,
+      idempotencyReceipts: 0,
       audit: { eligible: 0, purged: 0, summaryId: null, skipped: null },
     };
     if (workspaceHeld) {
@@ -317,6 +320,11 @@ export class RetentionPurgeService {
         report.outboxEvents = this.deleteSettledEvents(cutoffs.metadata);
         report.sessions = this.database.run(
           "DELETE FROM sessions WHERE workspace_id=? AND expires_at<?",
+          ws,
+          cutoffs.metadata,
+        ).changes;
+        report.idempotencyReceipts = this.database.run(
+          "DELETE FROM idempotency_receipts WHERE workspace_id=? AND expires_at<?",
           ws,
           cutoffs.metadata,
         ).changes;
