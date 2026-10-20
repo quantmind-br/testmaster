@@ -153,7 +153,12 @@ export class RetentionPurgeService {
     );
   }
 
-  /** Why a terminal Run must stay, or null when its whole subtree may go. */
+  /**
+   * Why a terminal Run must stay, or null when its whole subtree may go. `held` are the legal-hold
+   * keys; only holds on the Run and its artifacts count here, since a hold on the workspace is
+   * checked by the pass before any deletion: at its start, in each Run's delete transaction, and
+   * before the receipts and audit transactions.
+   */
   private blocker(runId: string, now: Date, held: Set<string>): string | null {
     const ws = this.ctx.workspaceId;
     const one = (sql: string, ...values: unknown[]): boolean =>
@@ -297,10 +302,10 @@ export class RetentionPurgeService {
       metadata: new Date(now.getTime() - defaults.metadataRetentionDays * dayMs).toISOString(),
       audit: new Date(now.getTime() - defaults.auditRetentionDays * dayMs).toISOString(),
     };
-    const { workspace: workspaceHeld, keys } = this.holds();
+    const { workspace: heldAtStart, keys } = this.holds();
     const report: PurgeReport = {
       dryRun: options.dryRun === true,
-      legalHold: workspaceHeld,
+      legalHold: heldAtStart,
       cutoffs,
       runs: { eligible: 0, purged: 0, skipped: [] },
       batches: 0,
@@ -309,7 +314,7 @@ export class RetentionPurgeService {
       idempotencyReceipts: 0,
       audit: { eligible: 0, purged: 0, summaryId: null, skipped: null },
     };
-    if (workspaceHeld) {
+    if (heldAtStart) {
       report.runs.skipped.push({ runId: "*", reason: "legal_hold" });
       report.audit.skipped = "legal_hold";
       return report;
