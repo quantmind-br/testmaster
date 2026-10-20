@@ -45,7 +45,7 @@ import {
   type HealingReplacement,
   healingReplacements,
 } from "./healing-patch.js";
-import { AUXILIARY_LEASE_MS, keepLeaseAlive, waitPass } from "./job-lease.js";
+import { AUXILIARY_LEASE_MS, keepLeaseAlive, reopenUnpaidOrWait, waitPass } from "./job-lease.js";
 import { type ModelService, unsentModelReasons } from "./model.js";
 
 export interface HealingInput {
@@ -706,15 +706,15 @@ export class HealingService {
         options: input as Record<string, unknown>,
       });
       if (enqueued.state === "completed" || enqueued.state === "cancelled") {
-        try {
-          job = jobs.reopenUnpaid(this.ctx.workspaceId, enqueued.jobId, new Date().toISOString());
-        } catch (error) {
-          // Another caller reopened or settled the job since it was read: look at it again.
-          if (!(error instanceof ContractError && error.code === "PRECONDITION_FAILED"))
-            throw error;
-          await waitPass(signal);
-          continue;
-        }
+        const reopened = await reopenUnpaidOrWait(
+          jobs,
+          this.ctx.workspaceId,
+          enqueued.jobId,
+          signal,
+          "Healing cancelled while another request for this Run was running",
+        );
+        if (!reopened) continue;
+        job = reopened;
       } else job = enqueued;
       fence = jobs.claim({
         workspaceId: this.ctx.workspaceId,

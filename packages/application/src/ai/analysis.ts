@@ -42,7 +42,7 @@ import {
   readExecutionError,
 } from "../run-verdict.js";
 import type { DiscoveryDetail, DiscoveryService } from "./discovery.js";
-import { AUXILIARY_LEASE_MS, keepLeaseAlive, waitPass } from "./job-lease.js";
+import { AUXILIARY_LEASE_MS, keepLeaseAlive, reopenUnpaidOrWait, waitPass } from "./job-lease.js";
 import { type ModelService, promptVersions, unsentModelReasons } from "./model.js";
 import {
   type RequirementReviewState,
@@ -4306,20 +4306,14 @@ export class AnalysisService {
         !job.progress.paidCallStarted &&
         unsentReading(refusal?.reasonCode, job.progress.paidCallStarted);
       if (!unsent) return this.drive(job, run, options.signal);
-      let reopened: AuxiliaryJob;
-      try {
-        reopened = this.jobs.reopenUnpaid(
-          this.ctx.workspaceId,
-          job.jobId,
-          new Date().toISOString(),
-        );
-      } catch (error) {
-        // Another caller reopened or settled the job since it was read: look at it again.
-        if (!(error instanceof ContractError && error.code === "PRECONDITION_FAILED")) throw error;
-        await waitPass(options.signal);
-        continue;
-      }
-      return this.drive(reopened, run, options.signal);
+      const reopened = await reopenUnpaidOrWait(
+        this.jobs,
+        this.ctx.workspaceId,
+        job.jobId,
+        options.signal,
+        "Analysis cancelled while another request for this Run was running",
+      );
+      if (reopened) return this.drive(reopened, run, options.signal);
     }
   }
   private settlePaid(job: AuxiliaryJob): Analysis {

@@ -1,6 +1,8 @@
 import { setTimeout as delay } from "node:timers/promises";
+import { ContractError } from "@testmaster/contracts";
 import {
   type AuxiliaryFence,
+  type AuxiliaryJob,
   type AuxiliaryLeaseRepository,
   StaleFenceError,
 } from "@testmaster/persistence";
@@ -35,4 +37,28 @@ export function keepLeaseAlive(
  */
 export function waitPass(signal?: AbortSignal): Promise<void> {
   return delay(50, undefined, signal ? { signal } : undefined).catch(() => undefined);
+}
+
+/**
+ * Reopens `jobId`, a request that never reached the provider. When another caller reopened or
+ * settled it first, this waits one pass and returns null: the caller reads the job again. A caller
+ * cancelled meanwhile stops with `wait_cancelled` (message `cancelled`); its cancellation ends only
+ * its own wait and leaves the other caller's job alone.
+ */
+export async function reopenUnpaidOrWait(
+  jobs: AuxiliaryLeaseRepository,
+  workspaceId: string,
+  jobId: string,
+  signal: AbortSignal | undefined,
+  cancelled: string,
+): Promise<AuxiliaryJob | null> {
+  try {
+    return jobs.reopenUnpaid(workspaceId, jobId, new Date().toISOString());
+  } catch (error) {
+    if (!(error instanceof ContractError && error.code === "PRECONDITION_FAILED")) throw error;
+  }
+  await waitPass(signal);
+  if (signal?.aborted)
+    throw new ContractError("PRECONDITION_FAILED", cancelled, { reason: "wait_cancelled", jobId });
+  return null;
 }

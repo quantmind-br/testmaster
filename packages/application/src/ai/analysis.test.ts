@@ -1763,6 +1763,38 @@ it("a request that loses the reopen of an unsent reading to another caller drive
   expect(f.complete).toHaveBeenCalledTimes(2);
   expect(modelJob(f)?.state).toBe("completed");
 });
+it("a request cancelled while it waits after losing the reopen of an unsent reading stops without taking the job", async () => {
+  const f = await fixture();
+  f.complete.mockRejectedValueOnce(
+    new ContractError("PRECONDITION_FAILED", "Model request cancelled", {
+      reasonCode: "cancelled_before_send",
+    }),
+  );
+  await f.service.analyze(f.run.id, { model: true });
+  // Another caller reopens the job first, and this request is cancelled before it looks again.
+  const controller = new AbortController();
+  const reopen = AuxiliaryLeaseRepository.prototype.reopenUnpaid;
+  const spy = vi
+    .spyOn(AuxiliaryLeaseRepository.prototype, "reopenUnpaid")
+    .mockImplementationOnce(function (this: AuxiliaryLeaseRepository, ...args) {
+      reopen.apply(this, args);
+      controller.abort();
+      return reopen.apply(this, args);
+    });
+  try {
+    await expect(
+      f.service.analyze(f.run.id, { model: true }, { signal: controller.signal }),
+    ).rejects.toMatchObject({
+      code: "PRECONDITION_FAILED",
+      details: { reason: "wait_cancelled", jobId: modelJob(f)?.jobId },
+    });
+  } finally {
+    spy.mockRestore();
+  }
+  // The job the other caller reopened stays queued for it; nothing more reached the model.
+  expect(modelJob(f)?.state).toBe("queued");
+  expect(f.complete).toHaveBeenCalledTimes(1);
+});
 it("a caller waiting for a reading whose own caller cancelled it after the send gets the stored abstention", async () => {
   const f = await fixture();
   const received = Promise.withResolvers<AbortSignal | undefined>();
