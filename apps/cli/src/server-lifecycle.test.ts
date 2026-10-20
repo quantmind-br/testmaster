@@ -40,7 +40,7 @@ async function fixture() {
   });
   await app.init();
   const port = await freePort();
-  const invoke = async () => {
+  const invoke = async (interruptWhileOpening = false) => {
     let stdout = "";
     let stderr = "";
     const collect = (sink: (text: string) => void) =>
@@ -58,7 +58,10 @@ async function fixture() {
         stderr += text;
       }),
     );
-    runtime.app = async () => app;
+    runtime.app = async () => {
+      if (interruptWhileOpening) runtime.interrupt("SIGTERM");
+      return app;
+    };
     process.exitCode = 0;
     await runCli(["--json", "--cwd", cwd, "server", "start", "--port", String(port)], runtime);
     const documents = stdout
@@ -104,6 +107,20 @@ it("a local server whose worker drains by itself shuts down cleanly instead of s
   expect(result.exit).toBe(0);
   expect(result.stderr).toContain("worker drained; shutting the server down");
   expect(result.documents.some((document) => document.error)).toBe(false);
+  expect(await f.listening()).toBe(false);
+}, 30_000);
+
+it("a local server interrupted while it opens starts neither its worker nor its listener", async () => {
+  const f = await fixture();
+  const run = vi.spyOn(f.app.worker, "run").mockResolvedValue({ workerId: null, drained: true });
+  const result = await f.invoke(true);
+  expect(run).not.toHaveBeenCalled();
+  expect(result.exit).toBe(143);
+  expect(result.stderr).not.toContain("worker draining");
+  expect(result.documents.find((document) => document.error)?.error).toMatchObject({
+    code: "UNAVAILABLE",
+    details: { signal: "SIGTERM" },
+  });
   expect(await f.listening()).toBe(false);
 }, 30_000);
 

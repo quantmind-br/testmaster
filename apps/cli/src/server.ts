@@ -152,6 +152,9 @@ export function serverCommands(program: Command, runtime: Runtime): void {
         application,
         tokenPath ? { tokenPath: rt.path(tokenPath) } : {},
       );
+      // An interruption while the application opened ends the command before the worker or the
+      // listener starts, as for `worker start`.
+      if (rt.signal) throw rt.interrupted();
       const app = createServer({ application, host, origins: strings(options, "origin") });
       // `controller` stops the worker and loops; it is aborted by shutdown or by a worker failure.
       const controller = new AbortController();
