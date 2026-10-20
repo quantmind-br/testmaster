@@ -20,7 +20,11 @@ afterEach(async () => {
   for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
 });
 
-it("worker start drains on the first interruption and stops the attempt in flight on the second", async () => {
+const drainLine =
+  "worker draining: attempts in flight finish first; interrupt again to stop them now";
+
+/** An initialized workspace whose worker sees the checked-in image lock and never reaches Docker. */
+async function openWorkspace() {
   const cwd = await mkdtemp(join(tmpdir(), "tm-cli-worker-"));
   const home = join(cwd, "home");
   await mkdir(home);
@@ -30,7 +34,6 @@ it("worker start drains on the first interruption and stops the attempt in fligh
     await rm(cwd, { recursive: true, force: true });
   });
   const init = await app.init();
-  // Admission and the worker see the checked-in image lock; the attempt never reaches Docker.
   const lock = await readImageLock(
     new URL("../../../containers/images.lock.json", import.meta.url).pathname,
   );
@@ -38,15 +41,11 @@ it("worker start drains on the first interruption and stops the attempt in fligh
   vi.spyOn(app, "images").mockResolvedValue(lock);
   vi.spyOn(app.runs.host, "admittedImages").mockReturnValue(lock);
   vi.spyOn(DockerExecutor.prototype, "listOrphans").mockResolvedValue([]);
-  const started = Promise.withResolvers<AbortSignal>();
-  vi.spyOn(AttemptExecutor.prototype, "execute").mockImplementation(async (_input, signal) => {
-    if (!signal) throw new Error("The worker runs every attempt with an abort signal");
-    started.resolve(signal);
-    await new Promise((resolve) => signal.addEventListener("abort", resolve, { once: true }));
-    return { outcome: "cancelled", reasonCode: "user_cancelled", logDropped: 0, events: [] };
-  });
-  const test = app.tests.create({ projectId: init.projectId, plan: scaffoldPlan("backend") });
-  await app.runs.admit({ testId: test.id, environmentId: init.environmentId }, { wait: true });
+  return { cwd, app, init };
+}
+
+/** A runtime whose stdout and stderr are kept in memory. */
+function capture() {
   let stdout = "";
   let stderr = "";
   const sink = (append: (text: string) => void) =>
@@ -64,14 +63,27 @@ it("worker start drains on the first interruption and stops the attempt in fligh
       stderr += text;
     }),
   );
+  return { runtime, stdout: () => stdout, stderr: () => stderr };
+}
+
+it("worker start drains on the first interruption and stops the attempt in flight on the second", async () => {
+  const { cwd, app, init } = await openWorkspace();
+  const started = Promise.withResolvers<AbortSignal>();
+  vi.spyOn(AttemptExecutor.prototype, "execute").mockImplementation(async (_input, signal) => {
+    if (!signal) throw new Error("The worker runs every attempt with an abort signal");
+    started.resolve(signal);
+    await new Promise((resolve) => signal.addEventListener("abort", resolve, { once: true }));
+    return { outcome: "cancelled", reasonCode: "user_cancelled", logDropped: 0, events: [] };
+  });
+  const test = app.tests.create({ projectId: init.projectId, plan: scaffoldPlan("backend") });
+  await app.runs.admit({ testId: test.id, environmentId: init.environmentId }, { wait: true });
+  const { runtime, stdout, stderr } = capture();
   runtime.app = async () => app;
   process.exitCode = 0;
   const command = runCli(["--json", "--cwd", cwd, "worker", "start"], runtime);
   const signal = await started.promise;
   runtime.interrupt("SIGTERM");
-  expect(stderr).toContain(
-    "worker draining: attempts in flight finish first; interrupt again to stop them now",
-  );
+  expect(stderr()).toContain(drainLine);
   // The draining worker keeps scheduling passes, each a new heartbeat, with the attempt still running.
   const heartbeats = new Set<unknown>();
   await vi.waitFor(
@@ -87,7 +99,31 @@ it("worker start drains on the first interruption and stops the attempt in fligh
   expect(signal.aborted).toBe(true);
   // The exit code and the envelope name the interruption that started the stop.
   expect(process.exitCode).toBe(143);
-  expect(JSON.parse(stdout)).toMatchObject({
+  expect(JSON.parse(stdout())).toMatchObject({
+    error: { code: "UNAVAILABLE", details: { signal: "SIGTERM" } },
+  });
+});
+
+it("worker start interrupted while it opens the workspace announces the drain once", async () => {
+  const { cwd, app } = await openWorkspace();
+  const { runtime, stdout, stderr } = capture();
+  runtime.app = async () => {
+    runtime.interrupt("SIGTERM");
+    return app;
+  };
+  process.exitCode = 0;
+  await runCli(["--json", "--cwd", cwd, "worker", "start"], runtime);
+  expect(stderr().split(drainLine).length - 1).toBe(1);
+  expect(process.exitCode).toBe(143);
+  expect(JSON.parse(stdout())).toMatchObject({
+    error: { code: "UNAVAILABLE", details: { signal: "SIGTERM" } },
+  });
+  // Control: an interruption before the workspace opens ends the command with no worker to drain.
+  const early = capture();
+  early.runtime.interrupt("SIGTERM");
+  await runCli(["--json", "--cwd", cwd, "worker", "start"], early.runtime);
+  expect(early.stderr()).not.toContain(drainLine);
+  expect(JSON.parse(early.stdout())).toMatchObject({
     error: { code: "UNAVAILABLE", details: { signal: "SIGTERM" } },
   });
 });

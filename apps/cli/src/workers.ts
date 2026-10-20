@@ -44,9 +44,9 @@ export function workerCommands(program: Command, runtime: Runtime): void {
         "Enroll this process as one registered pool worker with a one-use tm_wrk_ token (server mode)",
       ),
     async (rt, _args, options) => {
-      announceDrain(rt);
       if (options.mode === "server") {
         const { application } = await rt.serverApp();
+        announceDrain(rt);
         if (typeof options.enrollTokenFile === "string") {
           const { workspaceId, workerId, resumed } = application
             .controllerScope()
@@ -77,6 +77,7 @@ export function workerCommands(program: Command, runtime: Runtime): void {
         return { data: { mode: "server", workspaces: application.operator.workspaceIds() } };
       }
       const app = await rt.app();
+      announceDrain(rt);
       await app.worker.run({
         signal: rt.controller.signal,
         force: rt.forceController.signal,

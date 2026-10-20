@@ -313,9 +313,11 @@ export function identityCommands(program: Command, runtime: Runtime): void {
   );
 }
 /**
- * One stderr line when the first interruption starts a worker drain, also when it arrived while
- * the command was still starting. The drain has no deadline, so the line names the forced stop: a
- * second interruption.
+ * One stderr line when the first interruption starts a worker drain. Call it once the application
+ * is open and a worker is about to run: an interruption that arrived while the application opened
+ * is announced at once, since the worker then starts drained; one that arrived earlier ends the
+ * command before any worker exists. The drain has no deadline, so the line names the forced stop:
+ * a second interruption.
  */
 export function announceDrain(rt: Runtime): void {
   const announce = () =>
