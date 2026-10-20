@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { createApiClient } from "../api/client";
+import { type ApiResult, createApiClient } from "../api/client";
+import type { Page } from "../api/controllers";
 import { projectNavigation } from "../components/app-shell";
-import { diffIssues } from "../routes/discovery";
+import { activeSourceRevisionIds, diffIssues } from "../routes/discovery";
 import type { PortalRoute } from "../routes/types";
 import { onboardingSteps } from "./m4-types";
 import {
@@ -121,5 +122,44 @@ describe("binary uploads", () => {
     expect(captured?.headers.get("x-upload-token")).toBe("tok");
     expect(captured?.headers.get("x-csrf-token")).toBe("csrf-token");
     expect(captured?.body).toBe(bytes);
+  });
+});
+
+describe("discovery source walk", () => {
+  interface SourceRow {
+    id: string;
+    activeRevisionId: string | null;
+  }
+  const pagedSources =
+    (...pages: SourceRow[][]) =>
+    async (cursor: string | null): Promise<ApiResult<Page<SourceRow>>> => {
+      const index = cursor === null ? 0 : Number(cursor);
+      const hasMore = index + 1 < pages.length;
+      return {
+        data: {
+          items: pages[index] ?? [],
+          hasMore,
+          nextCursor: hasMore ? String(index + 1) : null,
+        },
+        etag: null,
+        requestId: "req",
+        warnings: [],
+      };
+    };
+
+  it("submits the active revision of every source, not only the first page", async () => {
+    const fetchPage = pagedSources(
+      [{ id: "src-a", activeRevisionId: "rev-a" }],
+      [{ id: "src-b", activeRevisionId: "rev-b" }],
+    );
+    expect(await activeSourceRevisionIds(fetchPage)).toEqual(["rev-a", "rev-b"]);
+  });
+
+  it("leaves out sources that have no active revision", async () => {
+    const fetchPage = pagedSources([
+      { id: "src-a", activeRevisionId: "rev-a" },
+      { id: "src-empty", activeRevisionId: null },
+    ]);
+    expect(await activeSourceRevisionIds(fetchPage)).toEqual(["rev-a"]);
   });
 });

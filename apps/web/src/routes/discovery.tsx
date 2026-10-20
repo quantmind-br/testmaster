@@ -1,6 +1,7 @@
 import { type ReactNode, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { api } from "../api";
+import { loadAllPages, type Page, type PagedOptions } from "../api/controllers";
 import { type Column, DataTable } from "../components/data-table";
 import { ErrorSummary, type FieldIssue, FormField } from "../components/form";
 import { useSelectContext } from "../components/portal-context";
@@ -10,7 +11,12 @@ import { StatusView, ViewState } from "../components/view-state";
 import { usePageTitle } from "../hooks/use-page-title";
 import { usePaged, useResource } from "../hooks/use-resource";
 import { type Failure, toFailure } from "../lib/api-error";
-import type { DiscoveryDetail, DiscoverySummary, ProjectRef } from "../lib/m4-types";
+import type {
+  DiscoveryDetail,
+  DiscoverySummary,
+  ProjectRef,
+  SourceListItem,
+} from "../lib/m4-types";
 import { shortHash } from "../lib/onboarding";
 import { NotFoundPage } from "./not-found";
 import type { PortalRoute } from "./types";
@@ -34,6 +40,14 @@ export function diffIssues(input: {
       message: "Enter the head commit, or include the working tree",
     });
   return issues;
+}
+
+/** The active revision id of every source of the list, following every page. */
+export async function activeSourceRevisionIds(
+  fetchPage: PagedOptions<Pick<SourceListItem, "id" | "activeRevisionId">>["fetchPage"],
+): Promise<string[]> {
+  const sources = await loadAllPages(fetchPage);
+  return sources.flatMap((source) => (source.activeRevisionId ? [source.activeRevisionId] : []));
 }
 
 function NewDiscovery({ projectId }: { projectId: string }): ReactNode {
@@ -63,10 +77,11 @@ function NewDiscovery({ projectId }: { projectId: string }): ReactNode {
         if (head.trim()) budget.head = head.trim();
         if (workingTree) budget.workingTree = true;
       }
-      const sources = await api<{ items: { activeRevisionId: string | null }[] }>(
-        "GET",
-        `/projects/${encodeURIComponent(projectId)}/sources`,
-        { query: { limit: 100 } },
+      const sourceRevisionIds = await activeSourceRevisionIds((cursor, limit, signal) =>
+        api<Page<SourceListItem>>("GET", `/projects/${encodeURIComponent(projectId)}/sources`, {
+          query: { limit, cursor },
+          signal,
+        }),
       );
       const created = await api<{ job: { id: string } }>(
         "POST",
@@ -74,9 +89,7 @@ function NewDiscovery({ projectId }: { projectId: string }): ReactNode {
         {
           body: {
             projectId,
-            sourceRevisionIds: sources.data.items.flatMap((item) =>
-              item.activeRevisionId ? [item.activeRevisionId] : [],
-            ),
+            sourceRevisionIds,
             scope: [scope],
             budget,
           },

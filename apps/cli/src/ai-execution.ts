@@ -118,7 +118,12 @@ export function explorationCommands(program: Command, runtime: Runtime): void {
         "JSON array (max 20) of typed form steps the controller may select when one matches an observed control",
       )
       .option("--max-steps <count>", "Action budget", integer, 5)
-      .option("--time-budget-ms <ms>", "Wall-clock budget", integer, 60000),
+      .option(
+        "--time-budget-ms <ms>",
+        "Browser time budget in milliseconds; the wait for a model answer is not counted and a model call is never cut",
+        integer,
+        60000,
+      ),
     async (rt, _args, options) => {
       const projectId = await rt.project(options);
       if (!projectId)

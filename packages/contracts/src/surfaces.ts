@@ -271,7 +271,7 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ["GET", "/revisions/{id}/code", "tests:R", "M2", "Empty", "TestCodeExport"],
   ["POST", "/runs", "runs:X", "M1", "RunRequest", "OwnedRunReceipt"],
   ["GET", "/runs", "runs:R", "M1", "Empty", "Run"],
-  ["GET", "/runs/{id}", "runs:R", "M1", "Empty", "Run"],
+  ["GET", "/runs/{id}", "runs:R", "M1", "Empty", "RunView"],
   ["POST", "/runs/{id}/cancel", "runs:X", "M1", "CancelInput", "CancelReceipt"],
   ["POST", "/runs/{id}/rerun", "runs:X", "M1", "RerunInput", "OwnedRunReceipt"],
   ["GET", "/runs/{id}/steps", "runs:R", "M1", "Empty", "StepResultRecord"],

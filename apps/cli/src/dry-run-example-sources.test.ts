@@ -130,6 +130,14 @@ it("REQ-029 plan generate --dry-run validates its selection, reports the paid op
       },
     ],
   });
+  const preconditions = valid.document.data?.unresolvedPreconditions as string[];
+  expect(preconditions).toHaveLength(3);
+  expect(preconditions).toEqual([
+    "the source snapshot, when named, must match the current requirement snapshot",
+    "every selected requirement must be approved and free of open conflicts",
+    "the model provider must be allowed by `allowedModelProviders` in policy.json",
+  ]);
+  expect(preconditions.join(" ")).not.toMatch(/consent|budget/iu);
   expect(await readdir(root)).toEqual(["home"]);
   // The same flags with a duplicated requirement are refused, and the verdict says so.
   const invalid = await invoke([
@@ -278,6 +286,17 @@ it("m1 test export lists the format choices and names the --out rule when it ref
   ]);
   expect(refused.exit).toBe(5);
   expect(refused.document.error?.message).toContain("inside the workspace");
+});
+
+it("explore --help states that the time budget counts browser time only", async () => {
+  const { base } = await project();
+  const help = await invoke([...base, "explore", "--help"]);
+  const text = String(help.document.data?.help).replace(/\s+/gu, " ");
+  expect(text).toContain(
+    "--time-budget-ms <ms> Browser time budget in milliseconds; the wait for a model answer is not counted",
+  );
+  expect(text).not.toContain("Wall-clock");
+  process.exitCode = originalExitCode;
 });
 it("m2 --example answers before required options are checked and prints a complete input contract", async () => {
   const root = await emptyRoot();

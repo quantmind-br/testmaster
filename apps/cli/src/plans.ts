@@ -145,7 +145,7 @@ export function planCommands(program: Command, runtime: Runtime): void {
         [
           "the source snapshot, when named, must match the current requirement snapshot",
           "every selected requirement must be approved and free of open conflicts",
-          "the model must be declared, consented and within budget",
+          "the model provider must be allowed by `allowedModelProviders` in policy.json",
         ],
       );
     },

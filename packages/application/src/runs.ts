@@ -167,6 +167,16 @@ export function cleanupHandleDeclarations(plan: ExecutablePlan) {
       : [],
   );
 }
+export interface RunListFilter {
+  testId?: string;
+  batchId?: string;
+  /** A Run `status`: a phase or an outcome; not validated. */
+  status?: string;
+  /** `created_at >= since`, ISO 8601 UTC with milliseconds. */
+  since?: string;
+  /** Resolved through the Run's test. */
+  projectId?: string;
+}
 export class RunsService {
   constructor(
     readonly ctx: ServiceContext,
@@ -182,8 +192,8 @@ export class RunsService {
       ...(this.host.analysisStatus ? { analysisStatus: this.host.analysisStatus(id) } : {}),
     } as Run & EntityDocument;
   }
-  list(): (Run & EntityDocument)[] {
-    return [...this.stream({}, { cutoff: "9999-12-31T23:59:59.999Z", after: null })];
+  list(filter: RunListFilter = {}): (Run & EntityDocument)[] {
+    return [...this.stream(filter, { cutoff: "9999-12-31T23:59:59.999Z", after: null })];
   }
   /**
    * Newest-first Runs the caller may read, produced lazily in pages of 100 so a consumer that stops
@@ -191,13 +201,7 @@ export class RunsService {
    * resolved through the Run's test. Authorization and test lookups are memoised per test.
    */
   *stream(
-    filter: {
-      testId?: string;
-      batchId?: string;
-      status?: string;
-      since?: string;
-      projectId?: string;
-    },
+    filter: RunListFilter,
     position: { cutoff: string; after: { createdAt: string; id: string } | null },
   ): Generator<Run & EntityDocument> {
     this.ctx.authorize("R");

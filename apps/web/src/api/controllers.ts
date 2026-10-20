@@ -210,3 +210,34 @@ export function createPagedController<T extends { id: string }>(
     },
   };
 }
+
+/**
+ * Every item of a cursor-paged list; a failed page throws its ApiError. An expired cursor restarts
+ * the walk from the first page once (createPagedController), as the CLI's remote lists do; a second
+ * expiry throws CURSOR_EXPIRED instead of walking again.
+ */
+export async function loadAllPages<T extends { id: string }>(
+  fetchPage: PagedOptions<T>["fetchPage"],
+): Promise<T[]> {
+  const controller = createPagedController<T>({ fetchPage, limit: maxPageSize });
+  try {
+    await controller.reload();
+    let state = controller.store.get();
+    let restarted = false;
+    while (state.hasMore && state.nextCursor && !state.error) {
+      await controller.loadMore();
+      state = controller.store.get();
+      if (!state.restarted || state.error) continue;
+      if (restarted)
+        throw new ApiError(410, "", {
+          code: "CURSOR_EXPIRED",
+          message: "The cursor expired again after the walk restarted from the first page",
+        });
+      restarted = true;
+    }
+    if (state.error) throw state.error;
+    return [...state.items];
+  } finally {
+    controller.dispose();
+  }
+}

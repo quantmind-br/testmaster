@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { ApiError, type ApiResult } from "./client";
-import { createPagedController, createResourceController, type Page } from "./controllers";
+import {
+  createPagedController,
+  createResourceController,
+  loadAllPages,
+  type Page,
+} from "./controllers";
 
 const result = <T>(data: T, etag: string | null = null): ApiResult<T> => ({
   data,
@@ -185,5 +190,59 @@ describe("paged controller", () => {
     expect(controller.store.get()).toMatchObject({ status: "ready", loadingMore: false });
     expect(controller.store.get().error?.code).toBe("INTERNAL");
     expect(controller.store.get().items).toHaveLength(1);
+  });
+});
+
+describe("loadAllPages", () => {
+  const ids = (rows: readonly Row[]) => rows.map((row) => row.id);
+
+  it("returns the items of every page in order", async () => {
+    const source = pages(
+      { items: [{ id: "a" }, { id: "b" }], hasMore: true, nextCursor: "1" },
+      { items: [{ id: "c" }], hasMore: true, nextCursor: "2" },
+      { items: [{ id: "d" }], hasMore: false, nextCursor: null },
+    );
+    expect(ids(await loadAllPages<Row>(source.fetchPage))).toEqual(["a", "b", "c", "d"]);
+    expect(source.cursors).toEqual([null, "1", "2"]);
+    expect(source.limits).toEqual([100, 100, 100]);
+  });
+
+  it("rejects with the ApiError of a failing page instead of returning the pages read so far", async () => {
+    const error = failure(503, "UNAVAILABLE");
+    await expect(
+      loadAllPages<Row>(async (cursor) => {
+        if (cursor === "1") throw error;
+        return result({ items: [{ id: "a" }], hasMore: true, nextCursor: "1" });
+      }),
+    ).rejects.toBe(error);
+  });
+
+  it("returns the restarted walk, each item once, when a cursor expires", async () => {
+    let expiredOnce = false;
+    const rows = await loadAllPages<Row>(async (cursor) => {
+      if (cursor === null)
+        return result({ items: [{ id: "a" }, { id: "b" }], hasMore: true, nextCursor: "1" });
+      if (!expiredOnce) {
+        expiredOnce = true;
+        throw failure(410, "CURSOR_EXPIRED");
+      }
+      return result({ items: [{ id: "c" }], hasMore: false, nextCursor: null });
+    });
+    expect(expiredOnce).toBe(true);
+    expect(ids(rows)).toEqual(["a", "b", "c"]);
+  });
+
+  it("rejects with CURSOR_EXPIRED when the restarted walk expires too", async () => {
+    const cursors: (string | null)[] = [];
+    await expect(
+      loadAllPages<Row>(async (cursor) => {
+        cursors.push(cursor);
+        // A walk that keeps restarting would never settle: end it with another error instead.
+        if (cursors.length > 6) throw failure(503, "UNAVAILABLE");
+        if (cursor !== null) throw failure(410, "CURSOR_EXPIRED");
+        return result({ items: [{ id: "a" }], hasMore: true, nextCursor: "1" });
+      }),
+    ).rejects.toMatchObject({ status: 410, code: "CURSOR_EXPIRED" });
+    expect(cursors.filter((cursor) => cursor !== null)).toEqual(["1", "1"]);
   });
 });

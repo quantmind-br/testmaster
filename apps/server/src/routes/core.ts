@@ -1,5 +1,5 @@
 import { Readable } from "node:stream";
-import type { Application, ArtifactStream } from "@testmaster/application";
+import { type Application, type ArtifactStream, runVerdict } from "@testmaster/application";
 import {
   type BatchRequest,
   ContractError,
@@ -168,7 +168,10 @@ const handlers: Record<string, RouteHandler> = {
       ),
     ),
   ),
-  "GET /runs/{id}": h(({ app, id }) => app.runs.get(id)),
+  "GET /runs/{id}": h(({ app, id }) => {
+    const run = app.runs.get(id);
+    return { ...run, ...runVerdict(run, app.runs.events(id)) };
+  }),
   "POST /runs/{id}/cancel": h(({ app, id }) => app.runs.cancel(id)),
   "POST /runs/{id}/rerun": h(({ app, id, body, key }) =>
     app.runs.rerun(id, { ...body, idempotencyKey: key } as Parameters<typeof app.runs.rerun>[1]),

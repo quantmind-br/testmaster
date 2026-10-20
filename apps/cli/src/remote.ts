@@ -4,7 +4,8 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { ContractError, type ErrorCode, errorRegistry } from "@testmaster/contracts";
 import type { Command } from "commander";
-import { type Options, type Result, type Runtime, required, string } from "./runtime.js";
+import { runListFilter } from "./run-filter.js";
+import { type Options, type Result, type Runtime, required, string, strings } from "./runtime.js";
 
 /**
  * Remote CLI mode (M4-01, OPS-027): the same command surface against `/v1`, authenticated with a
@@ -165,22 +166,29 @@ export class RemoteClient {
     }
     return envelope.data as T;
   }
-  /** Follows signed cursors; a bounded number of pages keeps one command bounded. */
+  /** Follows signed cursors until the server answers nextCursor null; a failed page fails the call, and an expired cursor restarts the walk once from the first page. */
   async list<T>(path: string): Promise<T[]> {
-    const items: T[] = [];
+    const separator = path.includes("?") ? "&" : "?";
+    let items: T[] = [];
     let cursor: string | null = null;
-    for (let page = 0; page < 20; page++) {
-      const separator = path.includes("?") ? "&" : "?";
-      const query: string = `${separator}limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`;
-      const data: { items: T[]; nextCursor: string | null } = await this.request(
-        "GET",
-        `${path}${query}`,
-      );
-      items.push(...data.items);
-      cursor = data.nextCursor;
-      if (!cursor) break;
+    let restarted = false;
+    for (;;) {
+      try {
+        const page: { items: T[]; nextCursor: string | null } = await this.request(
+          "GET",
+          `${path}${separator}limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+        );
+        items.push(...page.items);
+        cursor = page.nextCursor;
+        if (!cursor) return items;
+      } catch (error) {
+        const expired = error instanceof ContractError && error.code === "CURSOR_EXPIRED";
+        if (!cursor || restarted || !expired) throw error;
+        restarted = true;
+        items = [];
+        cursor = null;
+      }
     }
-    return items;
   }
 }
 
@@ -202,16 +210,37 @@ async function projectOf(client: RemoteClient, options: Options): Promise<string
 /** Commands that run against `/v1`; every other command fails closed with CAPABILITY_UNAVAILABLE. */
 export const remoteHandlers: Readonly<Record<string, RemoteHandler>> = {
   "project list": async (client) => ({ data: await client.list("/projects") }),
-  "run list": async (client) => ({ data: await client.list("/runs") }),
+  "run list": async (client, _args, options) => {
+    for (const flag of ["limit", "cursor"] as const)
+      if (options[flag] !== undefined) throw unavailableRemote(`run list --${flag}`);
+    const query = new URLSearchParams(Object.entries(runListFilter(options)));
+    return { data: await client.list(query.size ? `/runs?${query}` : "/runs") };
+  },
   "run get": async (client, args) => ({
     data: await client.request("GET", `/runs/${encodeURIComponent(String(args[0]))}`),
   }),
   "run cancel": async (client, args) => ({
     data: await client.request("POST", `/runs/${encodeURIComponent(String(args[0]))}/cancel`, {}),
   }),
-  "test list": async (client, _args, options) => ({
-    data: await client.list(`/projects/${await projectOf(client, options)}/tests`),
-  }),
+  "test list": async (client, _args, options) => {
+    for (const flag of ["status", "limit", "cursor"] as const)
+      if (options[flag] !== undefined) throw unavailableRemote(`test list --${flag}`);
+    const tags = strings(options, "tag");
+    const priorities = strings(options, "priority");
+    if (tags.length > 1) throw unavailableRemote("test list --tag (repeated)");
+    if (priorities.length > 1) throw unavailableRemote("test list --priority (repeated)");
+    const query = new URLSearchParams();
+    for (const [flag, value] of [
+      ["tag", tags[0]],
+      ["priority", priorities[0]],
+    ] as const) {
+      // The server treats an empty filter as absent; refuse it rather than list every test.
+      if (value === "") throw new ContractError("INVALID_ARGUMENT", `--${flag} must not be empty`);
+      if (value !== undefined) query.set(flag, value);
+    }
+    const path = `/projects/${await projectOf(client, options)}/tests`;
+    return { data: await client.list(query.size ? `${path}?${query}` : path) };
+  },
   "test get": async (client, args) => ({
     data: await client.request("GET", `/tests/${encodeURIComponent(String(args[0]))}`),
   }),

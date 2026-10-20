@@ -11,8 +11,8 @@ const nullable = <T extends TSchema>(schema: T) => Type.Union([schema, Type.Null
  * Real response bodies of the run, batch, resource and quarantine routes whose catalog row names a
  * schema the server does not emit.
  *
- * Reused as is, with no schema here: `Run` (GET /runs items and GET /runs/{id}: the stored Run
- * entity, `analysisStatus` included) and `BatchReceipt` (POST /flake-studies).
+ * Reused as is, with no schema here: `Run` (GET /runs items: the stored Run entity,
+ * `analysisStatus` included) and `BatchReceipt` (POST /flake-studies).
  */
 
 /** POST /runs (202) and POST /runs/{id}/rerun (200): the RunReceipt plus who executes the Run. */
@@ -51,6 +51,17 @@ const EvidenceBundleView = P.Obj({
 const AttemptListItem = P.Obj({
   ...runViewContracts.AttemptView.properties,
   createdAt: Type.Union([P.Timestamp, Type.Literal("")]),
+});
+
+/**
+ * GET /runs/{id}: the stored Run plus the verdict `runVerdict` reads from its events
+ * (`reasonCode`, `unavailableEvidence`, `executionError`, each present only when the Run has one).
+ */
+const RunView = P.Obj({
+  ...E.entities.Run.properties,
+  reasonCode: Ops.RunResult.properties.reasonCode,
+  unavailableEvidence: Ops.RunResult.properties.unavailableEvidence,
+  executionError: Ops.RunResult.properties.executionError,
 });
 
 /** One member of the batch aggregate, as built by `aggregateBatch`. */
@@ -154,6 +165,7 @@ export const runResponseContracts = {
   StepResultRecord,
   EvidenceBundleView,
   AttemptListItem,
+  RunView,
   BatchMemberView,
   BatchView,
   ResourceDetail,
@@ -165,6 +177,7 @@ export type OwnedRunReceipt = Static<typeof OwnedRunReceipt>;
 export type StepResultRecord = Static<typeof StepResultRecord>;
 export type EvidenceBundleView = Static<typeof EvidenceBundleView>;
 export type AttemptListItem = Static<typeof AttemptListItem>;
+export type RunView = Static<typeof RunView>;
 export type BatchMemberView = Static<typeof BatchMemberView>;
 export type BatchView = Static<typeof BatchView>;
 export type ResourceDetail = Static<typeof ResourceDetail>;

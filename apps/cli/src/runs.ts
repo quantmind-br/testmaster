@@ -5,6 +5,8 @@ import { exitCodeForRun } from "@testmaster/domain";
 import { formatDiagnosisSummary } from "@testmaster/reporting";
 import type { Command } from "commander";
 import { waitForRun } from "./execution.js";
+import { listOrPage, withPaging } from "./paging.js";
+import { runListBinding, runListFilter } from "./run-filter.js";
 import { integer, type Result, type Runtime, seconds, string } from "./runtime.js";
 
 /** Steps per page by default: the page size of the MCP resource `testmaster://runs/{id}/steps`. */
@@ -61,7 +63,28 @@ async function followEvents(
 }
 export function runCommands(program: Command, runtime: Runtime): void {
   const group = program.command("run").alias("runs");
-  runtime.bind(group.command("list"), async (rt) => ({ data: await (await rt.app()).runs.list() }));
+  runtime.bind(
+    withPaging(
+      group
+        .command("list")
+        .option("--test <id>", "Only Runs of this test")
+        .option("--batch <id>", "Only Runs of this batch")
+        .option(
+          "--status <status>",
+          "Only Runs with this status (a phase such as queued, or an outcome such as passed or failed)",
+        )
+        .option(
+          "--since <timestamp>",
+          "Only Runs created at or after this UTC timestamp (ISO 8601, ending in Z)",
+        ),
+      100,
+    ),
+    async (rt, _args, options) => {
+      const filter = runListFilter(options);
+      const runs = (await rt.app()).runs.list(filter);
+      return { data: await listOrPage(rt, runs, runListBinding(filter), options) };
+    },
+  );
   runtime.bind(group.command("get <id>"), async (rt, args) => {
     const app = await rt.app();
     const id = String(args[0]);

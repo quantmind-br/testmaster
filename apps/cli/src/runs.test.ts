@@ -17,6 +17,7 @@ const cleanups: (() => Promise<void>)[] = [];
 const originalExit = process.exitCode;
 afterEach(async () => {
   process.exitCode = originalExit;
+  vi.unstubAllEnvs();
   for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
 });
 
@@ -70,14 +71,23 @@ async function fixture() {
     await runCli([...(json ? ["--json"] : []), "--cwd", cwd, ...args], runtime);
     return { exit: process.exitCode ?? 0, stdout, stderr };
   };
-  const seed = (steps: number, options: { complete?: boolean } = {}) =>
+  /** A Run of `test` in the init environment, unless `options` names another test or environment. */
+  const seed = (
+    steps: number,
+    options: {
+      complete?: boolean;
+      testId?: string;
+      environmentId?: string;
+      outcome?: "passed" | "failed";
+    } = {},
+  ) =>
     seedRun(app, {
-      testId: test.id,
-      environmentId: init.environmentId,
+      testId: options.testId ?? test.id,
+      environmentId: options.environmentId ?? init.environmentId,
       ...(options.complete === undefined ? {} : { complete: options.complete }),
       attempts: [
         {
-          outcome: "passed",
+          outcome: options.outcome ?? "passed",
           steps: Array.from({ length: steps }, (_, index) => ({
             stepId: `step-${String(index).padStart(3, "0")}`,
             status: "passed" as const,
@@ -85,7 +95,7 @@ async function fixture() {
         },
       ],
     });
-  return { app, invoke, seed };
+  return { app, init, test, invoke, seed };
 }
 
 interface StepsPage {
@@ -432,3 +442,170 @@ it.each([
     expect(cancelRequested(app, seeded.runId)).toBe(false);
   },
 );
+
+interface ListedRun {
+  id: string;
+  testId: string;
+  batchId: string | null;
+  status: string;
+  createdAt: string;
+}
+interface RunsPage {
+  total: number;
+  returned: number;
+  items: ListedRun[];
+  nextCursor: string | null;
+}
+
+/** Runs of two tests, one passed and one failed, plus a Run of a test in a second project. */
+async function listFixture() {
+  const f = await fixture();
+  vi.stubEnv("TESTMASTER_PROJECT_ID", undefined);
+  const other = f.app.tests.create({
+    projectId: f.init.projectId,
+    plan: scaffoldPlan("backend"),
+    name: "other",
+  });
+  const second = f.app.projects.create({ name: "Second project" });
+  const secondEnvironment = f.app.environments.create({
+    projectId: second.id,
+    name: "staging",
+    baseUrl: "http://127.0.0.1:4102",
+  });
+  const secondTest = f.app.tests.create({ projectId: second.id, plan: scaffoldPlan("backend") });
+  const run = (testId: string, outcome: "passed" | "failed", environmentId: string) =>
+    f.seed(0, { testId, environmentId, outcome });
+  const passed = await run(f.test.id, "passed", f.init.environmentId);
+  const failed = await run(other.id, "failed", f.init.environmentId);
+  const inSecond = await run(secondTest.id, "passed", secondEnvironment.id);
+  const list = async (args: string[] = []) => {
+    const result = await f.invoke(["run", "list", ...args]);
+    return {
+      ...result,
+      document: JSON.parse(result.stdout) as {
+        data: unknown;
+        error?: { code: string; message: string };
+      },
+    };
+  };
+  const ids = async (args: string[] = []) =>
+    ((await list(args)).document.data as ListedRun[]).map((item) => item.id);
+  return { ...f, other, second, secondTest, passed, failed, inSecond, list, ids };
+}
+
+it("run list --test returns only the runs of that test", async () => {
+  const f = await listFixture();
+  expect(await f.ids(["--test", f.test.id])).toEqual([f.passed.runId]);
+  expect(await f.ids(["--test", f.other.id])).toEqual([f.failed.runId]);
+});
+
+it("run list --batch returns only the runs of that batch", async () => {
+  const f = await listFixture();
+  f.app.preflight = async () => {};
+  const batch = await f.app.batches.admit(
+    { selection: [{ testId: f.test.id, environmentId: f.init.environmentId }] } as Parameters<
+      typeof f.app.batches.admit
+    >[0],
+    { wait: true },
+  );
+  const listed = (await f.list(["--batch", batch.batchId])).document.data as ListedRun[];
+  expect(listed).toHaveLength(1);
+  expect(listed[0]?.batchId).toBe(batch.batchId);
+  expect(listed.map((item) => item.id)).not.toContain(f.passed.runId);
+  expect(await f.ids(["--batch", "bat_unknown"])).toEqual([]);
+});
+
+it("run list --status returns only the runs with that status", async () => {
+  const f = await listFixture();
+  expect(await f.ids(["--status", "failed"])).toEqual([f.failed.runId]);
+  expect((await f.ids(["--status", "passed"])).sort()).toEqual(
+    [f.passed.runId, f.inSecond.runId].sort(),
+  );
+});
+
+it("run list --since keeps the runs created at or after the timestamp", async () => {
+  const f = await listFixture();
+  const after = new Date(Date.now() + 3_600_000).toISOString().replace(/\.\d+Z$/, "Z");
+  expect(await f.ids(["--since", after])).toEqual([]);
+  const [newest] = (await f.list()).document.data as ListedRun[];
+  if (!newest) throw new Error("The fixture has runs");
+  expect(newest.createdAt).toMatch(/\.\d{3}Z$/);
+  const sameSecond = await f.ids(["--since", newest.createdAt.replace(/\.\d+Z$/, "Z")]);
+  expect(sameSecond).toContain(newest.id);
+});
+
+it.each([
+  ["--since", "yesterday", "--since must be a UTC timestamp"],
+  ["--since", "2030-01-01", "--since must be a UTC timestamp"],
+  ["--since", "2030-01-01T00:00:00+02:00", "--since must be a UTC timestamp"],
+  ["--since", "2030-13-45T00:00:00Z", "--since must be a UTC timestamp"],
+  ["--test", "", "--test must not be empty"],
+  ["--batch", "", "--batch must not be empty"],
+  ["--status", "", "--status must not be empty"],
+  ["--project", "", "--project must not be empty"],
+])("run list %s %j exits 5 with INVALID_ARGUMENT", async (flag, value, reason) => {
+  const f = await listFixture();
+  const result = await f.list([flag, value]);
+  expect(result.exit).toBe(5);
+  expect(result.document.error).toMatchObject({ code: "INVALID_ARGUMENT" });
+  expect(result.document.error?.message).toContain(reason);
+});
+
+it("run list filters by project only when --project is given", async () => {
+  const f = await listFixture();
+  expect(await f.ids(["--project", "prj_unknown"])).toEqual([]);
+  expect(await f.ids(["--project", f.second.id])).toEqual([f.inSecond.runId]);
+  expect((await f.ids()).sort()).toEqual([f.passed.runId, f.failed.runId, f.inSecond.runId].sort());
+  // TESTMASTER_PROJECT_ID is the same explicit choice as the flag.
+  vi.stubEnv("TESTMASTER_PROJECT_ID", f.second.id);
+  expect(await f.ids()).toEqual([f.inSecond.runId]);
+  // An empty variable is unset, as an empty shell variable usually is.
+  vi.stubEnv("TESTMASTER_PROJECT_ID", "");
+  expect((await f.ids()).sort()).toEqual([f.passed.runId, f.failed.runId, f.inSecond.runId].sort());
+});
+
+it("run list without --limit and --cursor prints the bare array of every run, newest first", async () => {
+  const f = await listFixture();
+  const data = (await f.list()).document.data as ListedRun[];
+  expect(Array.isArray(data)).toBe(true);
+  expect(data).toHaveLength(3);
+  expect(data.every((item) => typeof item.id === "string")).toBe(true);
+  expect(data.map((item) => item.id)).toEqual([f.inSecond.runId, f.failed.runId, f.passed.runId]);
+});
+
+it("run list --limit pages with the total and a cursor, and a walk returns every run once", async () => {
+  const f = await listFixture();
+  for (let index = 0; index < 2; index++) await f.seed(0);
+  const unpaged = await f.ids();
+  expect(unpaged).toHaveLength(5);
+  const first = (await f.list(["--limit", "2"])).document.data as RunsPage;
+  expect(first).toMatchObject({ total: 5, returned: 2 });
+  expect(first.nextCursor).not.toBeNull();
+
+  const walked: string[] = [];
+  let cursor: string | null = null;
+  do {
+    const page = (await f.list(["--limit", "2", ...(cursor ? ["--cursor", cursor] : [])])).document
+      .data as RunsPage;
+    walked.push(...page.items.map((item) => item.id));
+    cursor = page.nextCursor;
+  } while (cursor);
+  expect(cursor).toBeNull();
+  expect(walked).toEqual(unpaged);
+});
+
+it("run list refuses a cursor issued for other filters", async () => {
+  const f = await listFixture();
+  const issued = (await f.list(["--status", "passed", "--limit", "1"])).document.data as RunsPage;
+  const cursor = String(issued.nextCursor);
+  expect(cursor).not.toBe("null");
+  const otherFilter = await f.list(["--status", "failed", "--cursor", cursor]);
+  expect(otherFilter.exit).toBe(5);
+  expect(otherFilter.document.error?.code).toBe("INVALID_ARGUMENT");
+  const noFilter = await f.list(["--cursor", cursor]);
+  expect(noFilter.exit).toBe(5);
+  expect(noFilter.document.error?.code).toBe("INVALID_ARGUMENT");
+  // Positive control: the same filter accepts it.
+  const same = await f.list(["--status", "passed", "--cursor", cursor]);
+  expect(same.exit).toBe(0);
+});

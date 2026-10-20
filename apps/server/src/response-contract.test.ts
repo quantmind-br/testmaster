@@ -9,6 +9,7 @@ import type { LightMyRequestResponse } from "fastify";
 import { afterEach, expect, it } from "vitest";
 import { seedRun } from "../../../packages/application/src/run-seed.testing.js";
 import { responseIssues } from "../../../packages/contracts/src/response-validation.testing.js";
+import { OutboxRepository } from "../../../packages/persistence/src/index.js";
 import { createServer } from "./server.js";
 
 const cleanup: (() => Promise<void>)[] = [];
@@ -281,6 +282,38 @@ it("C4 populated run, step, attempt, bundle, batch and event responses match the
   expect(runs.data.items?.length).toBeGreaterThanOrEqual(3);
   const run = conforms("GET", "/runs/{id}", await f.get(`/v1/runs/${seeded.runId}`));
   expect(run.data).toMatchObject({ phase: "completed", outcome: "passed" });
+  // A reduction that carries a reason adds the verdict fields RunView declares and Run does not.
+  f.application.database.withTx(() =>
+    new OutboxRepository(f.application.database).append(
+      f.application.context.workspaceId,
+      seeded.runId,
+      "run.reduced",
+      {
+        outcome: "passed",
+        reasonCode: "evidence_incomplete",
+        unavailableEvidence: [
+          {
+            relativePath: "dom/page.html",
+            kind: "dom",
+            state: "missing",
+            omissionReason: "redaction_failed",
+          },
+        ],
+      },
+    ),
+  );
+  const verdictRun = conforms("GET", "/runs/{id}", await f.get(`/v1/runs/${seeded.runId}`));
+  expect(verdictRun.data.reasonCode).toBe("evidence_incomplete");
+  expect(
+    violations("GET", "/runs/{id}", 200, {
+      ...verdictRun,
+      data: { ...verdictRun.data, reasonCode: "not_a_reason" },
+    }),
+  ).toBeGreaterThan(0);
+  // GET /runs items stay the stored Run, which has no verdict fields.
+  expect(
+    violations("GET", "/runs", 200, { ...runs, data: { ...runs.data, items: [verdictRun.data] } }),
+  ).toBeGreaterThan(0);
   const steps = conforms("GET", "/runs/{id}/steps", await f.get(`/v1/runs/${seeded.runId}/steps`));
   expect(steps.data.items).toHaveLength(3);
   const attempts = conforms(

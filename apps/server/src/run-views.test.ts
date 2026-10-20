@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { Application, issueLocalToken, scaffoldPlan } from "@testmaster/application";
 import { afterEach, expect, it } from "vitest";
 import { seedRun } from "../../../packages/application/src/run-seed.testing.js";
+import { OutboxRepository } from "../../../packages/persistence/src/index.js";
 import { createServer } from "./server.js";
 
 const cleanup: (() => Promise<void>)[] = [];
@@ -61,6 +62,57 @@ it("UX-029 GET /runs/{id}/attempts returns every Attempt with its policy and ret
   expect(items[0]?.policy).toEqual({ maxAttempts: 2 });
   // Negative control: an unknown Run is a not-found error, not an empty list.
   expect((await f.get("/v1/runs/run_00000000000000000000000000/attempts")).statusCode).toBe(404);
+}, 60_000);
+
+const unavailableEvidence = [
+  {
+    relativePath: "http/orders.json",
+    kind: "http",
+    state: "missing",
+    omissionReason: "redaction_failed",
+  },
+];
+
+it("GET /runs/{id} returns the verdict of the final reduction while GET /runs items stay bare", async () => {
+  const f = await fixture();
+  const evidenceGap = await seedRun(f.application, {
+    testId: f.test.id,
+    environmentId: f.init.environmentId,
+    attempts: [{ outcome: "passed", steps: [{ stepId: "s1", status: "passed" }] }],
+    gate: "failed",
+  });
+  f.application.database.withTx(() =>
+    new OutboxRepository(f.application.database).append(
+      f.application.context.workspaceId,
+      evidenceGap.runId,
+      "run.reduced",
+      { outcome: "passed", reasonCode: "evidence_incomplete", unavailableEvidence },
+    ),
+  );
+  const plain = await seedRun(f.application, {
+    testId: f.test.id,
+    environmentId: f.init.environmentId,
+    attempts: [{ outcome: "passed" }],
+  });
+
+  const response = await f.get(`/v1/runs/${evidenceGap.runId}`);
+  expect(response.statusCode).toBe(200);
+  const data = response.json().data;
+  expect(data).toMatchObject({
+    outcome: "passed",
+    gate: "failed",
+    reasonCode: "evidence_incomplete",
+  });
+  expect(data.unavailableEvidence).toEqual(unavailableEvidence);
+  // The list rows are the stored Run: no verdict fields.
+  const listed = (await f.get("/v1/runs")).json().data.items as Record<string, unknown>[];
+  const row = listed.find((item) => item.id === evidenceGap.runId);
+  expect(row).toBeDefined();
+  expect(row).not.toHaveProperty("reasonCode");
+  // Negative control: a reduction without a reason adds no reasonCode.
+  const bare = (await f.get(`/v1/runs/${plain.runId}`)).json().data;
+  expect(bare.outcome).toBe("passed");
+  expect(bare).not.toHaveProperty("reasonCode");
 }, 60_000);
 
 it("UX-035 UX-036 GET /runs filters by batch so a matrix page lists exactly its members", async () => {

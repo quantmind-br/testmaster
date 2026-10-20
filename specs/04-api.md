@@ -80,7 +80,7 @@ Não retry de 401/403, validation, policy, crédito do provedor esgotado, produc
 | GET `/revisions/{id}/code` | language/framework/contentHash/downloadRef | tests:R | M2 |
 | POST `/runs` | RunRequest abaixo; runId/status/snapshot receipt | runs:X | M1 |
 | GET `/runs` | test/project/status/env/source/since, cursor | runs:R | M1 |
-| GET `/runs/{id}` | status/attempts/outcome/gate/evidence summary | runs:R | M1 |
+| GET `/runs/{id}` | status/attempts/outcome/gate/evidence summary; reasonCode, unavailableEvidence and executionError of the final reduction (schema RunView) | runs:R | M1 |
 | POST `/runs/{id}/cancel` | reason; requested/already_terminal + observed status | runs:X | M1 |
 | POST `/runs/{id}/rerun` | env override opcional; cria novo Run/revision pin | runs:X | M1 |
 | GET `/runs/{id}/steps` | attempt obrigatório se mais de uma; pagination | runs:R | M1 |
