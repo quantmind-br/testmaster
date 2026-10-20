@@ -1,9 +1,7 @@
 import { createHash } from "node:crypto";
 import { isIP } from "node:net";
 import {
-  assertCleanupRuns,
-  assertHandleCaptured,
-  assertNoNegativeBeforeRender,
+  assertAuthoringRules,
   ContractError,
   type Environment,
   type EnvironmentRevision,
@@ -322,9 +320,7 @@ export function attemptIgnoredOrigins(
 /** Strict, bounded parsing and shared structural/semantic validation; no effects. */
 export function lintPlan(bytes: Uint8Array | string): ExecutablePlan {
   const plan = materializePlanDefaults(parseAndValidate<ExecutablePlan>("ExecutablePlan", bytes));
-  assertNoNegativeBeforeRender(plan);
-  assertCleanupRuns(plan);
-  assertHandleCaptured(plan);
+  assertAuthoringRules(plan);
   return plan;
 }
 export function scaffoldPlan(type: "frontend" | "backend" | "cli"): ExecutablePlan {

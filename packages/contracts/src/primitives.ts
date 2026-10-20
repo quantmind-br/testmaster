@@ -56,8 +56,12 @@ export const id = (prefix: EntityPrefix) => Type.String({ pattern: `^${prefix}_$
 export const Timestamp = Type.String({ format: "date-time", pattern: "Z$" });
 export const ContentDigest = Type.String({ pattern: "^[0-9a-f]{64}$" });
 export const Version = Type.Integer({ minimum: 1 });
-export const Name = Type.String({ minLength: 1, maxLength: 200 });
-export const Description = Type.String({ maxLength: 8000 });
+/** Upper bound of a `Name`; code that shortens text to fit one uses this bound. */
+export const NAME_MAX_LENGTH = 200;
+/** Upper bound of a `Description`; code that shortens text to fit one uses this bound. */
+export const DESCRIPTION_MAX_LENGTH = 8000;
+export const Name = Type.String({ minLength: 1, maxLength: NAME_MAX_LENGTH });
+export const Description = Type.String({ maxLength: DESCRIPTION_MAX_LENGTH });
 /** Optional reason a reviewer records with a decision (accept, reject, promote, approve): 1-2000 characters. */
 export const DecisionReason = Type.String({ minLength: 1, maxLength: 2000 });
 export const Nonnegative = Type.Integer({ minimum: 0 });

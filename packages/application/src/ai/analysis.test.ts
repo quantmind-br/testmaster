@@ -7,7 +7,12 @@ import {
   type StepResult,
   validate,
 } from "@testmaster/contracts";
-import { canonicalJson, materializePlanDefaults, semanticHash } from "@testmaster/domain";
+import {
+  canonicalJson,
+  materializePlanDefaults,
+  scrubEvidenceText,
+  semanticHash,
+} from "@testmaster/domain";
 import { EntityRepository, PersistenceDatabase } from "@testmaster/persistence";
 import { type LocatorEvidence, locatorFingerprint } from "@testmaster/planner";
 import { afterEach, expect, it, vi } from "vitest";
@@ -1244,6 +1249,84 @@ it("an under-supported alternative is dropped with a disclosure while a supporte
   expect(result.modelCallId).not.toBeNull();
   expect(result.hypotheses.map((item) => item.confidence)).toEqual([0.6]);
   expect(result.limitations.some((value) => value.includes("were not recorded"))).toBe(true);
+});
+const scrubbedTextOutput = (overrides: Record<string, unknown>) => ({
+  failureKind: "product_bug",
+  hypotheses: [{ text: "Observed mismatch", supports: ["E2"], contradicts: [], confidence: 0.6 }],
+  recommendedAction: "fix_product",
+  fixTargetHandle: null,
+  limitations: [],
+  nextSteps: [],
+  evidenceGaps: [],
+  ...overrides,
+});
+it("a model limitation that grows past its stored bound while its secret is masked is stored clipped", async () => {
+  const f = await fixture();
+  const raw = `${"a".repeat(185)} token=abc`;
+  expect(raw).toHaveLength(195);
+  f.complete.mockImplementationOnce(async () => ({
+    modelCallId: f.modelCallId,
+    output: scrubbedTextOutput({ limitations: [raw] }),
+  }));
+  const result = await f.service.analyze(f.run.id, { model: true });
+  expect(result.modelCallId).toBe(f.modelCallId);
+  expect(result.limitations.some((value) => value.includes("Model enrichment abstained"))).toBe(
+    false,
+  );
+  const clipped = result.limitations.find((value) => value.startsWith(`${"a".repeat(185)} token=`));
+  expect(clipped).toHaveLength(200);
+  expect(clipped?.endsWith("…")).toBe(true);
+  expect(result.limitations.some((value) => value.includes("abc"))).toBe(false);
+});
+it("a model hypothesis that grows past its stored bound while its secret is masked is stored clipped", async () => {
+  const f = await fixture();
+  const text = "token=abc ".repeat(800);
+  expect(text).toHaveLength(8000);
+  expect(scrubEvidenceText(text).text).toHaveLength(13600);
+  f.complete.mockImplementationOnce(async () => ({
+    modelCallId: f.modelCallId,
+    output: scrubbedTextOutput({
+      hypotheses: [{ text, supports: ["E2"], contradicts: [], confidence: 0.6 }],
+    }),
+  }));
+  const result = await f.service.analyze(f.run.id, { model: true });
+  expect(result.modelCallId).toBe(f.modelCallId);
+  const stored = result.hypotheses.find((item) => item.text.startsWith("token="));
+  expect(stored?.text).toHaveLength(8000);
+  expect(stored?.text.endsWith("…")).toBe(true);
+});
+it("model limitations that differ only past the stored bound are stored once", async () => {
+  const f = await fixture();
+  const a = `${"a".repeat(179)} token=abc ZZZ-1`;
+  const b = `${"a".repeat(179)} token=abc ZZZ-2`;
+  expect(a).toHaveLength(195);
+  expect(b).toHaveLength(195);
+  f.complete.mockImplementationOnce(async () => ({
+    modelCallId: f.modelCallId,
+    output: scrubbedTextOutput({ limitations: [a, b] }),
+  }));
+  const result = await f.service.analyze(f.run.id, { model: true });
+  expect(result.modelCallId).toBe(f.modelCallId);
+  const clipped = result.limitations.filter((value) => value.startsWith("a".repeat(179)));
+  expect(clipped).toHaveLength(1);
+  expect(clipped[0]).toHaveLength(200);
+});
+it("a model limitation whose trailing location alone fills the stored bound is clipped without it", async () => {
+  const f = await fixture();
+  const raw = `xxxxx\n    at http://h/${"p".repeat(160)}?token=abc&z=1:7`;
+  expect(raw).toHaveLength(198);
+  f.complete.mockImplementationOnce(async () => ({
+    modelCallId: f.modelCallId,
+    output: scrubbedTextOutput({ limitations: [raw] }),
+  }));
+  const result = await f.service.analyze(f.run.id, { model: true });
+  expect(result.modelCallId).toBe(f.modelCallId);
+  expect(result.limitations.some((value) => value.includes("Model enrichment abstained"))).toBe(
+    false,
+  );
+  const clipped = result.limitations.find((value) => value.startsWith("xxxxx\n    at http://h/"));
+  expect(clipped).toHaveLength(200);
+  expect(clipped?.endsWith("…")).toBe(true);
 });
 it("a model abstention does not erase the cause the rules established from observed evidence", async () => {
   const f = await fixture();

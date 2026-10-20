@@ -524,9 +524,7 @@ export function validateDocument(
     });
   const checked = validate(schema, document);
   if (schema === "ExecutablePlan") {
-    assertNoNegativeBeforeRender(checked as ExecutablePlan);
-    assertCleanupRuns(checked as ExecutablePlan);
-    assertHandleCaptured(checked as ExecutablePlan);
+    assertAuthoringRules(checked as ExecutablePlan);
   }
   return { validated: true, schema };
 }
@@ -1207,6 +1205,16 @@ export function assertHandleCaptured(plan: ExecutablePlan): void {
       { reasonCode: "handle_not_captured", issues },
       issues,
     );
+}
+/**
+ * The authoring check run when a plan is written, edited, linted or generated: no negative
+ * assertion before the page renders, every cleanup entry runs, every handle reference is bound.
+ * The first failing rule throws its own ContractError. Not run when a stored plan executes.
+ */
+export function assertAuthoringRules(plan: ExecutablePlan): void {
+  assertNoNegativeBeforeRender(plan);
+  assertCleanupRuns(plan);
+  assertHandleCaptured(plan);
 }
 /**
  * Why `header` cannot carry this invalid credential, or undefined when it can. The cookie form

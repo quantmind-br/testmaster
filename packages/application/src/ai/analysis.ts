@@ -2,8 +2,10 @@ import { randomUUID } from "node:crypto";
 import {
   type Analysis,
   ContractError,
+  DESCRIPTION_MAX_LENGTH,
   type ExecutablePlan,
   type Locator,
+  NAME_MAX_LENGTH,
   type NextStepAction,
   type PlanStep,
   type Run,
@@ -724,11 +726,32 @@ function errorHeadline(message: string): string {
   const at = /^\s*at (\S+:\d+(?::\d+)?)\s*$/u.exec(rest.at(-1) ?? "")?.[1];
   return `${first.trim().slice(0, 300)}${at ? ` (at ${at})` : ""}`;
 }
-/** A recorded message cut to `limit`, keeping the `at file:line[:column]` location it ends on. */
+type PersistFields = Omit<Analysis, "id" | "workspaceId" | "createdAt" | "version" | "extensions">;
+/**
+ * A recorded message cut to `limit`, keeping the `at file:line[:column]` location it ends on. A
+ * location of `limit - 1` characters or more cannot be kept next to the marker: it is omitted.
+ */
 function clipMessage(message: string, limit: number): string {
   if (message.length <= limit) return message;
   const at = /\n[ \t]*at \S+:\d+(?::\d+)?\s*$/u.exec(message)?.[0] ?? "";
+  if (at.length >= limit - 1) return `${message.slice(0, limit - 1)}…`;
   return `${message.slice(0, limit - at.length - 1)}…${at}`;
+}
+/**
+ * The persisted fields with the scrubbed text held to the stored bounds: scrubbing can grow a
+ * value past the bound it met before masking. Limitations (`Name` values) are clipped, then
+ * de-duplicated (two values that differ only past the cut collapse to one); hypothesis texts
+ * (`Description` values) are clipped.
+ */
+function boundScrubbedText(fields: PersistFields): PersistFields {
+  return {
+    ...fields,
+    limitations: [...new Set(fields.limitations.map((item) => clipMessage(item, NAME_MAX_LENGTH)))],
+    hypotheses: fields.hypotheses.map((hypothesis) => ({
+      ...hypothesis,
+      text: clipMessage(hypothesis.text, DESCRIPTION_MAX_LENGTH),
+    })),
+  };
 }
 /**
  * A failed code step that compared HTTP statuses (expected 200, received 401): the generated
@@ -1829,7 +1852,7 @@ export class AnalysisService {
       ]);
   }
   private persist(
-    fields: Omit<Analysis, "id" | "workspaceId" | "createdAt" | "version" | "extensions">,
+    fields: PersistFields,
     fence?: AuxiliaryFence,
     modelStatus?: AnalysisModelStatus,
   ): Analysis {
@@ -1838,7 +1861,7 @@ export class AnalysisService {
         "INVALID_ARGUMENT",
         "New analysis requires layered diagnosis and hypothesis support",
       );
-    const result = entity(this.ctx, "ana", fields);
+    const result = entity(this.ctx, "ana", boundScrubbedText(fields));
     validate("Analysis", result);
     const apply = () => {
       this.ctx.entities.insert("Analysis", result);

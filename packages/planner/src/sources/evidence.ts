@@ -1,4 +1,4 @@
-import { ContractError } from "@testmaster/contracts";
+import { ContractError, type ValidationIssue } from "@testmaster/contracts";
 import { canonicalJson } from "@testmaster/domain";
 import type { SourceEvidenceRef } from "./types.js";
 
@@ -30,12 +30,20 @@ export class EvidenceCatalog {
   handles(refs: SourceEvidenceRef[]): string[] {
     return [...new Set(refs.map((ref) => this.handle(ref)))];
   }
-  /** Resolves model citations; any unknown handle rejects the whole output. */
-  resolve(handles: string[], message: string): SourceEvidenceRef[] {
-    return [...new Set(handles)].map((handle) => {
+  /**
+   * Resolves model citations; any unknown handle rejects the whole output. With `path`, the error
+   * carries one issue per unknown handle (indexed in `handles`); the message never names the handle.
+   */
+  resolve(handles: string[], message: string, path?: string): SourceEvidenceRef[] {
+    const refs = new Map<string, SourceEvidenceRef>();
+    const issues: ValidationIssue[] = [];
+    for (const [index, handle] of handles.entries()) {
       const ref = this.byHandle.get(handle);
-      if (!ref) throw new ContractError("INVALID_ARGUMENT", message);
-      return ref;
-    });
+      if (ref) refs.set(handle, ref);
+      else if (path === undefined) throw new ContractError("INVALID_ARGUMENT", message);
+      else issues.push({ path: `${path}/${index}`, rule: "evidenceGrounding", message });
+    }
+    if (issues.length) throw new ContractError("INVALID_ARGUMENT", message, {}, issues);
+    return [...refs.values()];
   }
 }

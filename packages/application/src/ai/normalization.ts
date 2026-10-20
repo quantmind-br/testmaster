@@ -1,3 +1,4 @@
+import { ContractError } from "@testmaster/contracts";
 import { canonicalJson, semanticHash } from "@testmaster/domain";
 import {
   EvidenceCatalog,
@@ -90,6 +91,44 @@ export function batchChunks(chunks: SourceChunk[]): SourceChunk[][] {
   return batches;
 }
 
+/**
+ * Rewrites the issue paths of a refused answer from merged-state coordinates to the coordinates of
+ * the model's own output, so repair feedback points at what the model wrote. A negative index
+ * keeps the path (the item came from an earlier answer).
+ */
+function locateInOutput(
+  error: unknown,
+  origin: { requirements: (index: number) => number; conflicts: (index: number) => number },
+): never {
+  if (!(error instanceof ContractError)) throw error;
+  const issues = error.issues.map((issue) => ({
+    ...issue,
+    path: issue.path.replace(/^\/(requirements|conflicts)\/(\d+)(?=\/|$)/, (whole, kind, at) => {
+      const locate = kind === "requirements" ? origin.requirements : origin.conflicts;
+      const mapped = locate(Number(at));
+      return mapped < 0 ? whole : `/${kind}/${mapped}`;
+    }),
+  }));
+  throw new ContractError(error.code, error.message, error.details, issues);
+}
+
+/**
+ * A gateway check that keeps the value it validated, so the answer the gateway returns is not
+ * validated a second time. An output the check never saw (a test double's) is validated on read.
+ */
+function checkedAnswer<T>(validate: (raw: unknown) => T): {
+  check: (raw: unknown) => void;
+  value: (output: unknown) => T;
+} {
+  let last: { raw: unknown; value: T } | undefined;
+  return {
+    check: (raw) => {
+      last = { raw, value: validate(raw) };
+    },
+    value: (output) => (last && last.raw === output ? last.value : validate(output)),
+  };
+}
+
 /** Bounded extraction, with prior statements available for cross-source conflict detection. */
 export async function normalizeSources(
   model: ModelService,
@@ -142,6 +181,28 @@ export async function normalizeSources(
   const merged: NormalizedRequirements = { requirements: [], conflicts: [], openQuestions: [] };
   const callIds: string[] = [];
   for (const [index, batch] of batches.entries()) {
+    /** Resolves and validates one extraction answer against everything merged so far. */
+    const accept = (raw: unknown): NormalizedRequirements => {
+      const output = resolveNormalizationOutput(raw, catalog);
+      const base = { requirements: merged.requirements.length, conflicts: merged.conflicts.length };
+      try {
+        // Semantic validation includes prior keys used in conflicts.
+        return validateNormalization(
+          {
+            requirements: [...merged.requirements, ...output.requirements],
+            conflicts: [...merged.conflicts, ...output.conflicts],
+            openQuestions: [...new Set([...merged.openQuestions, ...output.openQuestions])],
+          },
+          evidence,
+        );
+      } catch (error) {
+        return locateInOutput(error, {
+          requirements: (i) => i - base.requirements,
+          conflicts: (i) => i - base.conflicts,
+        });
+      }
+    };
+    const answer = checkedAnswer(accept);
     const result = await model.complete<unknown>({
       ...input,
       purpose: "normalize",
@@ -152,21 +213,12 @@ export async function normalizeSources(
         priorRequirements: citedRequirements(merged.requirements),
         batchKeyPrefix: `batch-${index + 1}-`,
       },
+      check: answer.check,
       instructions:
         "Extract concise explicit product requirements and acceptance criteria from the current chunks only, not titles, headings, administrative commands or review instructions. A requirement describes observable behavior of the product under test. Statements about how the tests themselves are written, run, configured or given credentials (test tooling, secrets handling, environments, the verification scope itself) are not requirements: omit them, and record one in openQuestions only when it is an ambiguous statement about the product. A preamble or introduction that only names the product, its version, its setup or configuration, or the areas a document covers is context, not a requirement: emit a requirement from it only for an observable behavior that it states itself. When the current chunks state no requirement, return requirements: [] and never a placeholder requirement that says so. The current chunks may be one part of the sources, and other parts are extracted separately: never record an openQuestion asking which behavior an area requires because the current chunks only name that area. Emit one requirement per requirement the source states: a stated behavior together with ALL of its acceptance criteria. When the source lays requirements out as sections (a heading chunk naming a requirement or carrying a REQ-style id, then its statement and its acceptance criteria as paragraph and listItem chunks), every such section is exactly ONE requirement: text is the statement, and each criterion listed under it (a listItem, a checklist or an 'Acceptance criteria' line) is one entry of that requirement's acceptanceCriteria, never a requirement of its own. Never emit both a summary requirement and separate requirements for the criteria of the same section, and never restate one behavior in several requirements. Split a section only when the source itself states distinct behaviors with their own acceptance criteria; merge nothing the source states separately. At most 12 requirements. Each text/reason/criterion must be concise (under 200 characters). Cite evidence only by the evidenceId values of the chunks that state it (for example E3); never invent evidenceIds, never repeat source text or schemas. Requirement keys must start with batchKeyPrefix. Prior requirements are context only: do not re-emit them. A conflict MUST cite evidenceIds from at least two DIFFERENT sourceRevisionId values. If only one source revision is available, return conflicts: [] and record ambiguity in openQuestions instead. Mentioning another document inside a chunk does not provide evidence for that other revision. Preserve contradictory current/prior statements as separate requirements and conflicts referencing both existing and new keys with their actual evidenceIds from different revisions. Never approve anything. Inference requires confidence and reason. Return complete JSON without commentary.",
     });
     callIds.push(result.modelCallId);
-    const output = resolveNormalizationOutput(result.output, catalog);
-    // Semantic validation includes prior keys used in conflicts.
-    const combined = validateNormalization(
-      {
-        requirements: [...merged.requirements, ...output.requirements],
-        conflicts: [...merged.conflicts, ...output.conflicts],
-        openQuestions: [...new Set([...merged.openQuestions, ...output.openQuestions])],
-      },
-      evidence,
-    );
-    Object.assign(merged, combined);
+    Object.assign(merged, answer.value(result.output));
     onProgress?.({
       completed: index + 1,
       total,
@@ -201,20 +253,41 @@ export async function normalizeSources(
     }))
     .filter((conflict) => conflict.keys.length >= 2);
   if (sources.length > 1) {
-    const reconciliation = await model.complete<unknown>(
-      reconciliationRequest(merged.requirements),
-    );
+    /** Merges one reconciliation answer over the current state and validates the result. */
+    const reconcile = (raw: unknown): NormalizedRequirements => {
+      const output = resolveConflictOutput(raw, catalog);
+      const entries = [
+        ...merged.conflicts.map((conflict) => ({ conflict, at: -1 })),
+        ...output.conflicts.map((conflict, at) => ({ conflict, at })),
+      ];
+      const kept = [
+        ...new Map(
+          entries.map((entry) => [canonicalJson([...entry.conflict.keys].sort()), entry]),
+        ).values(),
+      ];
+      try {
+        return validateNormalization(
+          {
+            requirements: merged.requirements,
+            conflicts: kept.map(({ conflict }) => conflict),
+            openQuestions: [...new Set([...merged.openQuestions, ...output.openQuestions])],
+          },
+          evidence,
+        );
+      } catch (error) {
+        return locateInOutput(error, {
+          requirements: () => -1,
+          conflicts: (i) => kept[i]?.at ?? -1,
+        });
+      }
+    };
+    const answer = checkedAnswer(reconcile);
+    const reconciliation = await model.complete<unknown>({
+      ...reconciliationRequest(merged.requirements),
+      check: answer.check,
+    });
     callIds.push(reconciliation.modelCallId);
-    const output = resolveConflictOutput(reconciliation.output, catalog);
-    merged.conflicts = [
-      ...new Map(
-        [...merged.conflicts, ...output.conflicts].map((conflict) => [
-          canonicalJson([...conflict.keys].sort()),
-          conflict,
-        ]),
-      ).values(),
-    ];
-    merged.openQuestions = [...new Set([...merged.openQuestions, ...output.openQuestions])];
+    Object.assign(merged, answer.value(reconciliation.output));
     onProgress?.({ completed: total, total, message: "Reconciled conflicts across sources" });
   }
   return { normalized: validateNormalization(merged, evidence), modelCallIds: callIds };

@@ -1,4 +1,4 @@
-import { ContractError, validate } from "@testmaster/contracts";
+import { ContractError, type ValidationIssue, validate } from "@testmaster/contracts";
 import { canonicalJson } from "@testmaster/domain";
 import type { EvidenceCatalog } from "../sources/evidence.js";
 import type { SourceEvidenceRef } from "../sources/types.js";
@@ -26,13 +26,42 @@ type Cited<T> = Omit<T, "sourceRefs"> & { evidenceIds: string[] };
 const ungroundedRequirement = "Requirement references evidence outside supplied sources";
 const ungroundedConflict = "Conflict evidence is not grounded";
 
+/**
+ * Resolves handles at `path`; unknown handles add their issues instead of stopping the walk. Only
+ * the catalog's grounding refusal, which always carries its issues, is collected.
+ */
+function resolveCollecting(
+  catalog: EvidenceCatalog,
+  handles: string[],
+  message: string,
+  path: string,
+  issues: ValidationIssue[],
+): SourceEvidenceRef[] {
+  try {
+    return catalog.resolve(handles, message, path);
+  } catch (error) {
+    if (!(error instanceof ContractError) || !error.issues.length) throw error;
+    issues.push(...error.issues);
+    return [];
+  }
+}
+function refuseCollected(issues: ValidationIssue[]): ContractError {
+  return new ContractError("INVALID_ARGUMENT", issues[0]?.message ?? "", {}, issues);
+}
 function resolveConflicts(
   conflicts: Cited<RequirementConflict>[],
   catalog: EvidenceCatalog,
+  issues: ValidationIssue[],
 ): RequirementConflict[] {
-  return conflicts.map(({ evidenceIds, ...conflict }) => ({
+  return conflicts.map(({ evidenceIds, ...conflict }, index) => ({
     ...conflict,
-    sourceRefs: catalog.resolve(evidenceIds, ungroundedConflict),
+    sourceRefs: resolveCollecting(
+      catalog,
+      evidenceIds,
+      ungroundedConflict,
+      `/conflicts/${index}/evidenceIds`,
+      issues,
+    ),
   }));
 }
 /** Validates model extraction output and resolves its evidence handles to supplied refs. */
@@ -45,14 +74,20 @@ export function resolveNormalizationOutput(
     conflicts: Cited<RequirementConflict>[];
     openQuestions: string[];
   }>("AIRequirementsOutput", value);
-  return {
-    requirements: output.requirements.map(({ evidenceIds, ...requirement }) => ({
-      ...requirement,
-      sourceRefs: catalog.resolve(evidenceIds, ungroundedRequirement),
-    })),
-    conflicts: resolveConflicts(output.conflicts, catalog),
-    openQuestions: output.openQuestions,
-  };
+  const issues: ValidationIssue[] = [];
+  const requirements = output.requirements.map(({ evidenceIds, ...requirement }, index) => ({
+    ...requirement,
+    sourceRefs: resolveCollecting(
+      catalog,
+      evidenceIds,
+      ungroundedRequirement,
+      `/requirements/${index}/evidenceIds`,
+      issues,
+    ),
+  }));
+  const conflicts = resolveConflicts(output.conflicts, catalog, issues);
+  if (issues.length) throw refuseCollected(issues);
+  return { requirements, conflicts, openQuestions: output.openQuestions };
 }
 /** Validates model reconciliation output and resolves its evidence handles to supplied refs. */
 export function resolveConflictOutput(
@@ -63,10 +98,10 @@ export function resolveConflictOutput(
     conflicts: Cited<RequirementConflict>[];
     openQuestions: string[];
   }>("AIRequirementConflictsOutput", value);
-  return {
-    conflicts: resolveConflicts(output.conflicts, catalog),
-    openQuestions: output.openQuestions,
-  };
+  const issues: ValidationIssue[] = [];
+  const conflicts = resolveConflicts(output.conflicts, catalog, issues);
+  if (issues.length) throw refuseCollected(issues);
+  return { conflicts, openQuestions: output.openQuestions };
 }
 /** Semantic checks over resolved requirements; every ref must be supplied evidence. */
 export function validateNormalization(
@@ -75,29 +110,54 @@ export function validateNormalization(
 ): NormalizedRequirements {
   const allowed = new Set(evidence.map((ref) => canonicalJson(ref)));
   const keys = new Set<string>();
-  for (const requirement of result.requirements) {
+  const issues: ValidationIssue[] = [];
+  for (const [index, requirement] of result.requirements.entries()) {
     if (keys.has(requirement.key))
-      throw new ContractError("INVALID_ARGUMENT", "Duplicate normalized requirement key");
+      issues.push({
+        path: `/requirements/${index}/key`,
+        rule: "requirementKey",
+        message: "Duplicate normalized requirement key",
+      });
     keys.add(requirement.key);
     if (
       requirement.originKind === "inferred" &&
       (requirement.confidence === null || !requirement.reason.trim())
     )
-      throw new ContractError("INVALID_ARGUMENT", "Inference requires confidence and reason");
+      issues.push({
+        path: `/requirements/${index}`,
+        rule: "inferenceBasis",
+        message: "Inference requires confidence and reason",
+      });
     if (
       !requirement.sourceRefs.length ||
       requirement.sourceRefs.some((ref) => !allowed.has(canonicalJson(ref)))
     )
-      throw new ContractError("INVALID_ARGUMENT", ungroundedRequirement);
+      issues.push({
+        path: `/requirements/${index}/evidenceIds`,
+        rule: "evidenceGrounding",
+        message: ungroundedRequirement,
+      });
   }
-  for (const conflict of result.conflicts) {
+  for (const [index, conflict] of result.conflicts.entries()) {
     if (conflict.keys.some((key) => !keys.has(key)))
-      throw new ContractError("INVALID_ARGUMENT", "Conflict references an unknown requirement");
-    for (const ref of conflict.sourceRefs)
-      if (!allowed.has(canonicalJson(ref)))
-        throw new ContractError("INVALID_ARGUMENT", ungroundedConflict);
+      issues.push({
+        path: `/conflicts/${index}/keys`,
+        rule: "conflictKeys",
+        message: "Conflict references an unknown requirement",
+      });
+    if (conflict.sourceRefs.some((ref) => !allowed.has(canonicalJson(ref))))
+      issues.push({
+        path: `/conflicts/${index}/evidenceIds`,
+        rule: "evidenceGrounding",
+        message: ungroundedConflict,
+      });
     if (new Set(conflict.sourceRefs.map((ref) => ref.sourceRevisionId)).size < 2)
-      throw new ContractError("INVALID_ARGUMENT", "Conflict must preserve both source revisions");
+      issues.push({
+        path: `/conflicts/${index}/evidenceIds`,
+        rule: "conflictRevisions",
+        message: "Conflict must preserve both source revisions",
+      });
   }
+  if (issues.length) throw refuseCollected(issues);
   return result;
 }

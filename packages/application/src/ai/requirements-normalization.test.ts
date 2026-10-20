@@ -28,21 +28,27 @@ async function fixture() {
   let completions = 0;
   let gate: Promise<void> | undefined;
   let arrival = Promise.withResolvers<void>();
-  let output: unknown = {
-    requirements: [
-      {
-        key: "health",
-        text: "Health reports ok",
-        acceptanceCriteria: ["Health reports ok"],
-        evidenceIds: ["E1"],
-        originKind: "explicit",
-        confidence: null,
-        reason: "Stated in the PRD",
-      },
-    ],
-    conflicts: [],
-    openQuestions: [],
-  };
+  let extractions: unknown[] = [
+    {
+      requirements: [
+        {
+          key: "health",
+          text: "Health reports ok",
+          acceptanceCriteria: ["Health reports ok"],
+          evidenceIds: ["E1"],
+          originKind: "explicit",
+          confidence: null,
+          reason: "Stated in the PRD",
+        },
+      ],
+      conflicts: [],
+      openQuestions: [],
+    },
+  ];
+  let reconciliations: unknown[] = [{ conflicts: [], openQuestions: [] }];
+  let extractionCalls = 0;
+  let reconciliationCalls = 0;
+  const prompts: { content: string }[][] = [];
   const server = createServer(async (request, response) => {
     if (request.url === "/v1/models") {
       response.end(JSON.stringify({ data: [{ id: "model" }] }));
@@ -51,6 +57,14 @@ async function fixture() {
     completions++;
     const chunks: Buffer[] = [];
     for await (const chunk of request) chunks.push(Buffer.from(chunk));
+    const body: { messages: { content: string }[] } = JSON.parse(Buffer.concat(chunks).toString());
+    prompts.push(body.messages);
+    const reconciling = body.messages.some((message) =>
+      message.content.includes("Compare the normalized statements"),
+    );
+    const answers = reconciling ? reconciliations : extractions;
+    const answered = reconciling ? reconciliationCalls++ : extractionCalls++;
+    const output = answers[Math.min(answered, answers.length - 1)];
     arrival.resolve();
     await gate;
     response.end(
@@ -111,10 +125,20 @@ async function fixture() {
       };
     },
     completions: () => completions,
-    /** Replaces what every later completion answers. */
+    /** Replaces what every later extraction completion answers. */
     respond(value: unknown) {
-      output = value;
+      extractions = [value];
     },
+    /** The n-th extraction completion answers `values[n]`; the last value repeats. */
+    respondSequence(...values: unknown[]) {
+      extractions = values;
+    },
+    /** The same for reconciliation completions (the request that compares normalized statements). */
+    respondReconciliation(...values: unknown[]) {
+      reconciliations = values;
+    },
+    /** The message contents of each received completion request, in order. */
+    prompts: () => prompts.map((messages) => messages.map((message) => message.content).join("\n")),
   };
 }
 
@@ -183,4 +207,103 @@ it("cancelling a waiting normalization stops only that caller", async () => {
   held.release();
   expect((await first).version).toBe(1);
   expect(f.completions()).toBe(1);
+});
+
+const requirementAnswer = (evidenceIds: string[]) => ({
+  requirements: [
+    {
+      key: "health",
+      text: "Health reports ok",
+      acceptanceCriteria: ["Health reports ok"],
+      evidenceIds,
+      originKind: "explicit",
+      confidence: null,
+      reason: "Stated in the PRD",
+    },
+  ],
+  conflicts: [],
+  openQuestions: [],
+});
+const ungroundedRequirement = "Requirement references evidence outside supplied sources";
+const unknownKeyConflict = {
+  conflicts: [{ keys: ["health", "unknown-key"], reason: "Disagree", evidenceIds: ["E1", "E3"] }],
+  openQuestions: [],
+};
+const noConflicts = { conflicts: [], openQuestions: [] };
+
+it("an extraction answer citing unknown evidence is repaired once the gateway names the field", async () => {
+  const f = await fixture();
+  f.respondSequence(requirementAnswer(["E987654"]), requirementAnswer(["E1"]));
+  const revisionId = await f.source("prd.md");
+  await f.app.requirements.normalize({ projectId: f.projectId, sourceRevisionIds: [revisionId] });
+  expect(f.completions()).toBe(2);
+  const stored = f.app.requirements.list(f.projectId);
+  expect(stored).toHaveLength(1);
+  const supplied = f.app.sources.revision(revisionId).chunks[0]?.evidenceRef;
+  expect(supplied).toBeDefined();
+  expect(stored[0]?.sourceRefs).toEqual([supplied]);
+  const repair = f.prompts()[1] ?? "";
+  expect(repair).toContain("failed local validation");
+  expect(repair).toContain("/requirements/0/evidenceIds/0");
+  expect(repair).toContain(ungroundedRequirement);
+  expect(repair).not.toContain("E987654");
+});
+
+it("an extraction answer that stays ungrounded fails after two repairs and stores nothing", async () => {
+  const f = await fixture();
+  f.respond(requirementAnswer(["E987654"]));
+  await expect(
+    f.app.requirements.normalize({
+      projectId: f.projectId,
+      sourceRevisionIds: [await f.source("prd.md")],
+    }),
+  ).rejects.toMatchObject({
+    code: "INVALID_ARGUMENT",
+    message: ungroundedRequirement,
+    details: { repairs: 2, modelCallId: expect.any(String) },
+  });
+  expect(f.completions()).toBe(3);
+  expect(f.app.requirements.list(f.projectId)).toEqual([]);
+});
+
+it("a grounded extraction answer needs exactly one completion", async () => {
+  const f = await fixture();
+  f.respond(requirementAnswer(["E1"]));
+  const snapshot = await f.app.requirements.normalize({
+    projectId: f.projectId,
+    sourceRevisionIds: [await f.source("prd.md")],
+  });
+  expect(f.completions()).toBe(1);
+  expect(snapshot.requirements).toHaveLength(1);
+  expect(f.app.requirements.list(f.projectId)).toHaveLength(1);
+});
+
+it("a reconciliation conflict naming an unknown requirement key is repaired", async () => {
+  const f = await fixture();
+  f.respondReconciliation(unknownKeyConflict, noConflicts);
+  await f.app.requirements.normalize({
+    projectId: f.projectId,
+    sourceRevisionIds: [await f.source("a.md"), await f.source("b.md")],
+  });
+  // One extraction, two reconciliation attempts.
+  expect(f.completions()).toBe(3);
+  const repair = f.prompts()[2] ?? "";
+  expect(repair).toContain("/conflicts/0/keys");
+  expect(repair).toContain("Conflict references an unknown requirement");
+});
+
+it("a reconciliation answer that stays invalid fails after two repairs", async () => {
+  const f = await fixture();
+  f.respondReconciliation(unknownKeyConflict);
+  await expect(
+    f.app.requirements.normalize({
+      projectId: f.projectId,
+      sourceRevisionIds: [await f.source("a.md"), await f.source("b.md")],
+    }),
+  ).rejects.toMatchObject({
+    code: "INVALID_ARGUMENT",
+    message: "Conflict references an unknown requirement",
+    details: { repairs: 2 },
+  });
+  expect(f.completions()).toBe(4);
 });

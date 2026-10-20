@@ -1096,7 +1096,14 @@ signal is created once from the caller's cancellation, so repairs and checks sha
 each attempt opens its own accounting reservation. `generate_plan` runs every per-proposal check in
 that hook (evidence, requirement refs, plan validity, offered secrets, schema pointers, HTTP
 status-only plans, type/runner, integration workflow) and collects all refused proposals, not the
-first. A batch still refused after the repairs fails `INVALID_ARGUMENT` with the first cause as
+first. Requirement normalization runs `resolveNormalizationOutput` (per extraction batch, against
+the requirements merged so far) and `resolveConflictOutput` (reconciliation) plus
+`validateNormalization` in that hook, each collecting every issue before it throws, with `issues`
+paths such as `/requirements/<i>/evidenceIds` and `/conflicts/<i>/keys` (in the model's own output
+coordinates, never naming the model's handles); an ungrounded answer is repaired at most twice, and
+after the second repair the error is the same `INVALID_ARGUMENT` message as before with
+`repairs: 2` and `modelCallId`. For `generate_plan`, a batch still refused after the repairs fails
+`INVALID_ARGUMENT` with the first cause as
 message and `details {atomicity: "all_or_nothing", refused: [{index, requirementIds, reasonCode,
 message, pointers?, planName?, stepIds?, predicates?, regenerate?}], modelCallId}`, nothing stored
 (`planName` is the refused plan, `stepIds`/`predicates` the steps and assertion predicates its

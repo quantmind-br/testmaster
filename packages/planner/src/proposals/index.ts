@@ -1,7 +1,5 @@
 import {
-  assertCleanupRuns,
-  assertHandleCaptured,
-  assertNoNegativeBeforeRender,
+  assertAuthoringRules,
   ContractError,
   type ExecutablePlan,
   observesRenderedContent,
@@ -103,9 +101,7 @@ export function validateProposalPlan(input: unknown): ExecutablePlan {
       "Trivial assertions cannot establish requirement coverage",
     );
   requireBrowserPostCondition(plan);
-  assertNoNegativeBeforeRender(plan);
-  assertCleanupRuns(plan);
-  assertHandleCaptured(plan);
+  assertAuthoringRules(plan);
   return plan;
 }
 /** A proposal refused on its own merits, located by its position in the model output. */
