@@ -1,9 +1,10 @@
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { renameSync, symlinkSync } from "node:fs";
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join, relative } from "node:path";
 import { uuidV7IdGenerator } from "@testmaster/domain";
 import { FileEvidenceStore } from "@testmaster/evidence";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { Application } from "./application.js";
 import { scaffoldPlan } from "./authoring.js";
 
@@ -87,10 +88,12 @@ async function seedRun(outcome: "passed" | "failed") {
   );
   const stage = await new FileEvidenceStore({ rootDir: app.config.dataDir }).openAttempt(ids);
   const refs: Record<string, { artifactId: string; relativePath: string }> = {};
+  const entries = [];
   for (const [relativePath, kind, mimeType] of files) {
     const writer = await stage.beginArtifact({ relativePath, kind, mimeType });
     await writer.write(Buffer.from("{}"));
     const entry = await writer.end();
+    entries.push(entry);
     refs[relativePath] = { artifactId: entry.artifactId, relativePath };
   }
   const committed = await stage.commit({ redactionPolicyHash: "0".repeat(64) });
@@ -105,6 +108,23 @@ async function seedRun(outcome: "passed" | "failed") {
     committedAt: now,
     redactionPolicyHash: "0".repeat(64),
   });
+  for (const entry of entries)
+    app.context.entities.insert("Artifact", {
+      id: entry.artifactId,
+      workspaceId: ids.workspaceId,
+      createdAt: now,
+      runId: ids.runId,
+      attemptId: ids.attemptId,
+      revisionId: ids.revisionId,
+      snapshotId: ids.snapshotId,
+      kind: entry.kind,
+      hash: entry.sha256,
+      bytes: entry.sizeBytes,
+      mime: entry.mimeType,
+      redactionStatus: entry.redactionStatus,
+      storageKey: `runs/${ids.workspaceId}/${ids.runId}/${ids.attemptId}/${entry.relativePath}`,
+      state: entry.state,
+    });
   const addStep = (
     planStepId: string,
     index: number,
@@ -127,7 +147,7 @@ async function seedRun(outcome: "passed" | "failed") {
     });
   const failedOnly = async () =>
     (await app.artifacts.get(ids.runId, { failedOnly: true })).manifest;
-  return { addStep, failedOnly };
+  return { addStep, failedOnly, app, ids };
 }
 
 it("failed-only keeps the evidence of the non-passed step itself", async () => {
@@ -167,4 +187,127 @@ it("failed-only on a passed run stays an empty subset", async () => {
   const manifest = await f.failedOnly();
   expect(manifest.subset).toBe(true);
   expect(manifest.entries).toEqual([]);
+});
+
+async function tree(dir: string): Promise<Record<string, string>> {
+  const out: Record<string, string> = {};
+  for (const entry of await readdir(dir, { recursive: true, withFileTypes: true })) {
+    if (!entry.isFile()) continue;
+    const path = join(entry.parentPath, entry.name);
+    out[relative(dir, path)] = (await readFile(path)).toString("base64");
+  }
+  return out;
+}
+
+it("exports a raw bundle to a missing directory with the committed bytes and a compact manifest", async () => {
+  const f = await seedRun("passed");
+  const committed = await f.app.artifacts.get(f.ids.runId);
+  const out = join(roots[0] as string, "export");
+  const exported = await f.app.artifacts.get(f.ids.runId, { out });
+  expect(exported.bundleDir).toBe(out);
+  const written = await tree(out);
+  expect(Object.keys(written).sort()).toEqual(
+    [...files.map(([path]) => path), "manifest.json", "meta.json"].sort(),
+  );
+  for (const [path] of files)
+    expect(written[path]).toBe(
+      (await readFile(join(committed.bundleDir, path))).toString("base64"),
+    );
+  const manifestText = await readFile(join(out, "manifest.json"), "utf8");
+  expect(JSON.parse(manifestText)).toEqual(JSON.parse(JSON.stringify(exported.manifest)));
+  expect(manifestText).not.toContain("\n");
+  expect(JSON.parse(await readFile(join(out, "meta.json"), "utf8"))).toEqual(
+    JSON.parse(JSON.stringify(exported.meta)),
+  );
+});
+
+it("exports into an existing empty directory", async () => {
+  const f = await seedRun("passed");
+  const out = join(roots[0] as string, "empty");
+  await mkdir(out);
+  await f.app.artifacts.get(f.ids.runId, { out });
+  expect(Object.keys(await tree(out)).sort()).toEqual(
+    [...files.map(([path]) => path), "manifest.json", "meta.json"].sort(),
+  );
+});
+
+it("refuses a non-empty output directory and leaves its files alone", async () => {
+  const f = await seedRun("passed");
+  const out = join(roots[0] as string, "export");
+  await f.app.artifacts.get(f.ids.runId, { out });
+  const first = await tree(out);
+  await expect(f.app.artifacts.get(f.ids.runId, { out })).rejects.toMatchObject({
+    code: "INVALID_ARGUMENT",
+  });
+  expect(await tree(out)).toEqual(first);
+
+  const other = join(roots[0] as string, "other");
+  await mkdir(other);
+  await writeFile(join(other, "unrelated.txt"), "keep");
+  await expect(f.app.artifacts.get(f.ids.runId, { out: other })).rejects.toMatchObject({
+    code: "INVALID_ARGUMENT",
+  });
+  expect(await readdir(other)).toEqual(["unrelated.txt"]);
+  expect(await readFile(join(other, "unrelated.txt"), "utf8")).toBe("keep");
+});
+
+it("refuses an output that is or goes through a symbolic link and creates nothing at its target", async () => {
+  const f = await seedRun("passed");
+  const root = roots[0] as string;
+  const target = join(root, "target");
+  await mkdir(target);
+  await symlink(target, join(root, "link"));
+  await symlink(join(root, "planted"), join(root, "dangling"));
+  for (const out of [join(root, "link", "export"), join(root, "link"), join(root, "dangling")]) {
+    await expect(f.app.artifacts.get(f.ids.runId, { out })).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+  }
+  expect(await readdir(target)).toEqual([]);
+  await expect(stat(join(root, "planted"))).rejects.toMatchObject({ code: "ENOENT" });
+});
+
+it("refuses an output path that is an existing regular file and leaves the file alone", async () => {
+  const f = await seedRun("passed");
+  const out = join(roots[0] as string, "report.txt");
+  await writeFile(out, "keep");
+  await expect(f.app.artifacts.get(f.ids.runId, { out })).rejects.toMatchObject({
+    code: "FORBIDDEN",
+    details: { path: out },
+  });
+  expect(await readFile(out, "utf8")).toBe("keep");
+});
+
+it("a source artifact swapped for a symbolic link during an export keeps its own error, not an output refusal", async () => {
+  const f = await seedRun("passed");
+  const committed = await f.app.artifacts.get(f.ids.runId);
+  const elsewhere = join(roots[0] as string, "elsewhere");
+  await mkdir(elsewhere);
+  // The bundle was verified; its files are then replaced by links before they are streamed.
+  let swapped = false;
+  vi.spyOn(
+    f.app.artifacts as unknown as { assertReadable(artifactId: string): void },
+    "assertReadable",
+  ).mockImplementation(() => {
+    if (swapped) return;
+    swapped = true;
+    for (const [path] of files) {
+      const moved = join(elsewhere, basename(path));
+      renameSync(join(committed.bundleDir, path), moved);
+      symlinkSync(moved, join(committed.bundleDir, path));
+    }
+  });
+  const out = join(roots[0] as string, "export");
+  await expect(f.app.artifacts.get(f.ids.runId, { out })).rejects.toMatchObject({ code: "ELOOP" });
+});
+
+it("exports nested entries with private directories and files", async () => {
+  const f = await seedRun("passed");
+  const out = join(roots[0] as string, "export");
+  await f.app.artifacts.get(f.ids.runId, { out });
+  for (const dir of ["http", "logs", "snapshot"])
+    expect((await stat(join(out, dir))).mode & 0o777).toBe(0o700);
+  for (const [path] of files) expect((await stat(join(out, path))).mode & 0o777).toBe(0o600);
+  expect((await stat(join(out, "manifest.json"))).mode & 0o777).toBe(0o600);
+  expect((await stat(join(out, "meta.json"))).mode & 0o777).toBe(0o600);
 });

@@ -252,6 +252,42 @@ it("captures a JSON field of stdout as a variable and keeps it out of evidence w
     expect(artifact.text, path).not.toContain("tok-9f8e7d6c5b4a");
 });
 
+it("keeps a captured boolean readable in evidence even when the capture is sensitive", async () => {
+  const { result, artifacts } = await execute([
+    action("flag", "run", {
+      ...node(`console.log(JSON.stringify({flag:true}))`),
+      capture: [
+        {
+          name: "flag",
+          from: "stdout",
+          jsonPointer: "/flag",
+          valueType: "boolean",
+          sensitive: true,
+        },
+      ],
+    }),
+    check("exit", { processStepId: "flag" }, exitIs(0)),
+  ]);
+  expect(result.outcome).toBe("passed");
+  expect(artifacts.get("terminal/flag.stdout.txt")?.text).toContain("true");
+});
+
+it("redacts the leaves of a sensitive captured object from an indented print of it", async () => {
+  const { result, artifacts } = await execute([
+    action("dump", "run", {
+      ...node(`console.log(JSON.stringify({ obj: { note: "leaf-canary-1234" } }, null, 2))`),
+      capture: [
+        { name: "obj", from: "stdout", jsonPointer: "/obj", valueType: "object", sensitive: true },
+      ],
+    }),
+    check("exit", { processStepId: "dump" }, exitIs(0)),
+  ]);
+  expect(result.outcome).toBe("passed");
+  const stdout = artifacts.get("terminal/dump.stdout.txt");
+  expect(stdout).toBeDefined();
+  expect(stdout?.text).not.toContain("leaf-canary-1234");
+});
+
 it("kills the whole process tree when a run exceeds its time and reports assertion_timeout", async () => {
   const { result, artifacts, finished } = await execute([
     action(

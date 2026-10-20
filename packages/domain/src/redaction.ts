@@ -142,6 +142,20 @@ export function scrubEvidenceText(text: string, secrets: readonly string[] = [])
   return { text: output, redacted: output !== text };
 }
 
+/** The scrub patterns of a sensitive value: its string and number leaves, plus the JSON text of every object or array (and, recursively, of its children). Booleans, null and undefined register nothing; empty strings are omitted. */
+export function sensitiveValuePatterns(value: unknown): string[] {
+  const patterns: string[] = [];
+  const visit = (item: unknown): void => {
+    if (typeof item === "string" || typeof item === "number") patterns.push(String(item));
+    else if (item && typeof item === "object") {
+      patterns.push(JSON.stringify(item));
+      for (const child of Object.values(item)) visit(child);
+    }
+  };
+  visit(value);
+  return patterns.filter((pattern) => pattern.length > 0);
+}
+
 const secretVariableName = /secret|token|password|credential|api_key/iu;
 /** Shorter values are flags and counters (`true`, `false`, `1`), never credentials. */
 const minimumSecretLength = 8;

@@ -922,14 +922,9 @@ export class WorkerService {
               origins,
             );
             leases.assertCurrent(fence);
-            return {
-              // A cleanup lookup's handle names the entry it belongs to; keep that producer.
-              ...(capture.stepId === undefined ? {} : { stepId: capture.stepId }),
-              name: capture.name,
-              valueType: capture.valueType,
-              sensitive: true,
-              encryptedValueRef: protectedValue.id,
-            };
+            // A cleanup lookup's handle names the entry it belongs to; keep that producer.
+            const { value: _value, ...rest } = capture;
+            return { ...rest, sensitive: true, encryptedValueRef: protectedValue.id };
           },
           onEvent: async (event) => {
             if (event.type === "runner.hello")

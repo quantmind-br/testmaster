@@ -1,7 +1,13 @@
 import { access, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { DependencyBinding, ExecutablePlan, RunRequest } from "@testmaster/contracts";
+import {
+  type DependencyBinding,
+  type ExecutablePlan,
+  type RunnerEvent,
+  type RunRequest,
+  VariableCapture,
+} from "@testmaster/contracts";
 import { ExecutionRepository, LeaseRepository } from "@testmaster/persistence";
 import { AttemptExecutor } from "@testmaster/sandbox";
 import { afterEach, expect, it, vi } from "vitest";
@@ -501,32 +507,36 @@ it.each(["settled", "live-resource"] as const)(
     }
   },
 );
+function cleanupLookupPlan(): ExecutablePlan {
+  const plan = scaffoldPlan("backend");
+  plan.cleanup = [
+    {
+      resourceRef: "get-health",
+      operation: "request",
+      find: {
+        resourceType: "project",
+        lookup: { method: "GET", pathSegments: [{ literal: "projects" }] },
+        itemsPointer: "/items",
+        keyPointer: "/name",
+        equals: { literal: "Run 42" },
+        handlePointer: "/id",
+        ownerProofPointer: "/owner",
+      },
+      input: {
+        method: "DELETE",
+        pathSegments: [{ literal: "projects" }, { variableRef: "get-health.handle" }],
+      },
+      successPredicate: { predicate: "statusIn", values: [204] },
+      deadlineMs: 10000,
+      required: true,
+    },
+  ];
+  return plan;
+}
 it("stores the handle a cleanup lookup captures under the entry's resourceRef after the vault protects it", async () => {
   const { app, init } = await fixture();
   try {
-    const plan = scaffoldPlan("backend");
-    plan.cleanup = [
-      {
-        resourceRef: "get-health",
-        operation: "request",
-        find: {
-          resourceType: "project",
-          lookup: { method: "GET", pathSegments: [{ literal: "projects" }] },
-          itemsPointer: "/items",
-          keyPointer: "/name",
-          equals: { literal: "Run 42" },
-          handlePointer: "/id",
-          ownerProofPointer: "/owner",
-        },
-        input: {
-          method: "DELETE",
-          pathSegments: [{ literal: "projects" }, { variableRef: "get-health.handle" }],
-        },
-        successPredicate: { predicate: "statusIn", values: [204] },
-        deadlineMs: 10000,
-        required: true,
-      },
-    ];
+    const plan = cleanupLookupPlan();
     const test = app.tests.create({ projectId: init.projectId, plan });
     const receipt = await app.runs.admit(
       {
@@ -571,6 +581,72 @@ it("stores the handle a cleanup lookup captures under the entry's resourceRef af
     expect(JSON.stringify(app.database.all("SELECT data_json FROM variables"))).not.toContain(
       '"p2"',
     );
+  } finally {
+    app.close();
+  }
+});
+it("omits only the plaintext value from a protected capture and points at the stored secret", async () => {
+  const { app, init } = await fixture();
+  try {
+    const test = app.tests.create({ projectId: init.projectId, plan: cleanupLookupPlan() });
+    const receipt = await app.runs.admit(
+      {
+        testId: test.id,
+        environmentId: init.environmentId,
+        extensions: { "testmaster:executor": "process" },
+      },
+      { wait: true },
+    );
+    // No replacement implementation: the real vault call runs and its metadata is observable.
+    const protect = vi.spyOn(app.secrets, "protectCapture");
+    // One value for every property of the payload, so a new schema property fails here until sampled.
+    const sample = {
+      name: "handle",
+      valueType: "string" as const,
+      sensitive: true,
+      value: { literal: "p2" },
+      encryptedValueRef: "runner-supplied-ref",
+      stepId: "get-health",
+    };
+    expect(Object.keys(sample).sort()).toEqual(
+      [...Object.keys(VariableCapture.properties), "stepId"].sort(),
+    );
+    let payload: Extract<RunnerEvent, { type: "variable.captured" }>["payload"] | undefined;
+    vi.spyOn(AttemptExecutor.prototype, "execute").mockImplementation(async (input) => {
+      payload = await input.protectCapture!(sample);
+      await input.onEvent!({
+        protocolVersion: "1.0.0",
+        attemptId: "att_lookup",
+        occurredAt: new Date().toISOString(),
+        seq: 0,
+        type: "variable.captured",
+        payload,
+      });
+      return {
+        outcome: "blocked",
+        reasonCode: "security_precondition_failed",
+        logDropped: 0,
+        events: [],
+      };
+    });
+    await app.worker.run({ ephemeral: true, runIds: [receipt.runId] });
+    const stored = await protect.mock.results[0]!.value;
+    expect(protect.mock.calls[0]![0]).toMatch(/^capture-.+-handle$/);
+    expect(payload).not.toHaveProperty("value");
+    expect(payload).toEqual({
+      stepId: "get-health",
+      name: "handle",
+      valueType: "string",
+      sensitive: true,
+      encryptedValueRef: stored.id,
+    });
+    expect(payload?.encryptedValueRef).not.toBe("runner-supplied-ref");
+    expect(
+      app.database.all(
+        "SELECT producer_step_id, name, taint FROM variables WHERE producer_run_id=?",
+        receipt.runId,
+      ),
+    ).toEqual([{ producer_step_id: "get-health", name: "handle", taint: "sensitive" }]);
   } finally {
     app.close();
   }

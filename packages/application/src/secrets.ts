@@ -17,16 +17,34 @@ import { allEntities, entity, type ServiceContext } from "./context.js";
 import { filesystemRoot, type ServerConfig } from "./server-config.js";
 
 export type SecretMetadata = SecretReference & EntityDocument & { version: number };
-export interface SecretBackendHealth {
-  backend: "secret-tool" | "vault" | "unavailable";
-  writable: boolean;
-}
+export type SecretBackendHealth =
+  | {
+      backend: "secret-tool" | "vault" | "unavailable";
+      writable: boolean;
+      reasonCode?: undefined;
+      path?: undefined;
+    }
+  | {
+      backend: "unavailable";
+      writable: false;
+      /** The probe was refused because another process holds the vault lock. */
+      reasonCode: "lock_busy";
+      /** The lock file. */
+      path: string;
+    };
 const MAX_SECRET_BYTES = 65536;
 
 function unavailable(): ContractError {
   return new ContractError(
     "PRECONDITION_FAILED",
     "Secure secret storage is unavailable; explicit ephemeral mode is required",
+  );
+}
+function lockBusy(path: string): ContractError {
+  return new ContractError(
+    "PRECONDITION_FAILED",
+    "The secret vault is busy: another TestMaster process holds its lock",
+    { reasonCode: "lock_busy", path },
   );
 }
 function validateValue(value: string): void {
@@ -233,7 +251,12 @@ function vaultDirectory(path: string): Promise<FileHandle> {
     throw unavailable();
   });
 }
-async function readPrivate(directory: FileHandle, name: string, maxBytes: number): Promise<Buffer> {
+async function readPrivate(
+  directory: FileHandle,
+  name: string,
+  maxBytes: number,
+  maxLinks = 1,
+): Promise<Buffer> {
   const handle = await open(
     `/proc/self/fd/${directory.fd}/${name}`,
     constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
@@ -242,7 +265,8 @@ async function readPrivate(directory: FileHandle, name: string, maxBytes: number
     const stat = await handle.stat();
     if (
       !stat.isFile() ||
-      stat.nlink !== 1 ||
+      stat.nlink < 1 ||
+      stat.nlink > maxLinks ||
       (stat.mode & 0o077) !== 0 ||
       (process.getuid && stat.uid !== process.getuid()) ||
       stat.size > maxBytes
@@ -458,33 +482,34 @@ async function vaultFileLock(layout: VaultLayout): Promise<VaultLock> {
     await directory.close();
   };
   const path = `/proc/self/fd/${lockDirectory.fd}/vault.lock`;
+  const busyPath = join(layout.lockDirectory, "vault.lock");
+  const pidBytes = Buffer.from(String(process.pid));
   try {
     try {
-      const lock = await open(
-        path,
-        constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW,
-        0o600,
-      );
-      await lock.writeFile(String(process.pid));
-      await lock.close();
+      await writePrivate(lockDirectory, "vault.lock", pidBytes);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-      const pid = Number((await readPrivate(lockDirectory, "vault.lock", 32)).toString());
-      if (!Number.isSafeInteger(pid) || pid < 1) throw unavailable();
+      // A holder between its link and unlink steps leaves two links on a complete lock.
+      const text = (await readPrivate(lockDirectory, "vault.lock", 32, 2)).toString();
+      const pid = Number(text);
+      if (!/^[0-9]+$/.test(text) || !Number.isSafeInteger(pid) || pid < 1) throw lockBusy(busyPath);
       try {
         process.kill(pid, 0);
-        throw new ContractError("PRECONDITION_FAILED", "Vault key maintenance is busy");
+        throw lockBusy(busyPath);
       } catch (owner) {
-        if ((owner as NodeJS.ErrnoException).code !== "ESRCH") throw owner;
+        if (owner instanceof ContractError) throw owner;
+        const code = (owner as NodeJS.ErrnoException).code;
+        if (code === "EPERM") throw lockBusy(busyPath);
+        if (code !== "ESRCH") throw owner;
       }
       await unlink(path);
-      const lock = await open(
-        path,
-        constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW,
-        0o600,
-      );
-      await lock.writeFile(String(process.pid));
-      await lock.close();
+      try {
+        await writePrivate(lockDirectory, "vault.lock", pidBytes);
+      } catch (second) {
+        // Another process reclaimed the dead holder's lock first.
+        if ((second as NodeJS.ErrnoException).code === "EEXIST") throw lockBusy(busyPath);
+        throw second;
+      }
     }
     return {
       directory,
@@ -661,8 +686,15 @@ export async function vaultHealth(layout: VaultLayout): Promise<SecretBackendHea
         await directory.close();
       }
     }
-  } catch {
+  } catch (error) {
     /* A read-only or unsafe home is unavailable, not session persistence. */
+    if (error instanceof ContractError && error.details.reasonCode === "lock_busy")
+      return {
+        backend: "unavailable",
+        writable: false,
+        reasonCode: "lock_busy",
+        path: error.details.path as string,
+      };
   }
   return { backend: "unavailable", writable: false };
 }
@@ -748,7 +780,11 @@ export class SecretsService {
       );
       return "vault";
     } catch (error) {
-      if (this.layout.profile === "server" && error instanceof ContractError) throw error;
+      if (
+        error instanceof ContractError &&
+        (this.layout.profile === "server" || error.details.reasonCode === "lock_busy")
+      )
+        throw error;
       throw unavailable();
     }
   }

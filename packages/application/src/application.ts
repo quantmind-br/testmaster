@@ -1601,7 +1601,11 @@ export class Application {
         : []),
       ...(secrets.writable
         ? []
-        : ["No writable secure secret backend; secrets need explicit ephemeral mode."]),
+        : [
+            secrets.reasonCode === "lock_busy"
+              ? `Vault lock ${secrets.path} is held by another process or does not name one; retry when that process finishes, and remove the file only when no TestMaster process is running.`
+              : "No writable secure secret backend; secrets need explicit ephemeral mode.",
+          ]),
       ...(target.status === "WARN" ? ["The probed target answered with a server error."] : []),
       ...(runtime.available && runtime.mode === "rootful"
         ? [

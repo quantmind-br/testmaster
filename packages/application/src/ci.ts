@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { readdir, readFile } from "node:fs/promises";
-import { basename, dirname, join, resolve } from "node:path";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { type BatchReceipt, ContractError, defaults, validate } from "@testmaster/contracts";
 import {
@@ -10,7 +10,7 @@ import {
   type Gate,
   semanticHash,
 } from "@testmaster/domain";
-import { ConfinedRoot } from "@testmaster/evidence";
+import type { ConfinedRoot } from "@testmaster/evidence";
 import {
   exportJunit,
   exportMarkdown,
@@ -22,6 +22,7 @@ import { isEvidenceUnavailable } from "./artifacts.js";
 import { byteHash } from "./ci-envelope.js";
 import { requireEntity } from "./context.js";
 import { assertNotDemoWorkspace } from "./demo-workspace.js";
+import { openEmptyDirectory } from "./output-directory.js";
 import type { AdmissionSnapshot } from "./provenance.js";
 import type { BatchesService, RunsService } from "./runs.js";
 import type { SelectionInput, SelectionReceipt, SelectionService } from "./selection.js";
@@ -88,27 +89,12 @@ export function assertStrictCi(
     throw new ContractError("POLICY_DENIED", "Strict CI forbids agent mode, healing and retries");
 }
 export async function openCiOutput(path: string): Promise<ConfinedRoot> {
-  const absolute = resolve(path);
-  const parent = new ConfinedRoot(dirname(absolute), true);
-  try {
-    try {
-      parent.mkdirExclusive(basename(absolute));
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-    }
-    const root = parent.openDirectory(basename(absolute));
-    if ((await readdir(`/proc/self/fd/${root.fd}`)).length) {
-      root.close();
-      throw new ContractError("INVALID_ARGUMENT", "CI output directory must be empty");
-    }
-    // Exclusive claim also prevents concurrent invocations from sharing an empty directory.
-    const claim = await root.openFile(".ci-owner", true);
-    await claim.writeFile(randomUUID());
-    await claim.close();
-    return root;
-  } finally {
-    parent.close();
-  }
+  const root = await openEmptyDirectory(path, "CI output directory must be empty");
+  // Exclusive claim also prevents concurrent invocations from sharing an empty directory.
+  const claim = await root.openFile(".ci-owner", true);
+  await claim.writeFile(randomUUID());
+  await claim.close();
+  return root;
 }
 async function writeAtomic(root: ConfinedRoot, name: string, content: string): Promise<void> {
   const temp = `${name}.${randomUUID()}.tmp`;

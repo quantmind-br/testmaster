@@ -1,5 +1,16 @@
+import type * as childProcess from "node:child_process";
 import { spawn } from "node:child_process";
-import { mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
+import {
+  link,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  stat,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { uuidV7IdGenerator } from "@testmaster/domain";
@@ -223,6 +234,106 @@ it("refuses symlinked storage while explicit ephemeral secrets remain usable onl
   const restarted = new SecretsService(ctx, config);
   await expect((await restarted.release(metadata.id)).resolve()).rejects.toMatchObject({
     code: "PRECONDITION_FAILED",
+  });
+});
+
+/** Seeds the cross-process vault lock as another process would have left it. */
+async function seedLock(home: string, content: string): Promise<string> {
+  const directory = join(home, ".config", "testmaster");
+  await mkdir(directory, { recursive: true, mode: 0o700 });
+  const path = join(directory, "vault.lock");
+  await writeFile(path, content, { mode: 0o600 });
+  return path;
+}
+async function deadPid(): Promise<number> {
+  const actual = await vi.importActual<typeof childProcess>("node:child_process");
+  const pid = actual.spawnSync(process.execPath, ["-e", ""]).pid;
+  if (pid === undefined) throw new Error("spawnSync returned no pid");
+  return pid;
+}
+const origin = "https://shop.example";
+
+it("takes the vault lock whole and leaves neither the lock nor a temporary file behind", async () => {
+  const { service, home } = await fixture();
+  await service.protectCapture("capture-att_1-token", "value", [origin]);
+  const names = await readdir(join(home, ".config", "testmaster"));
+  expect(names).not.toContain("vault.lock");
+  expect(names.filter((name) => name.endsWith(".tmp"))).toEqual([]);
+});
+
+it("reports a lock held by a live process as busy without the ephemeral advice", async () => {
+  const { service, home } = await fixture();
+  const path = await seedLock(home, String(process.pid));
+  const refused = await service
+    .protectCapture("capture-att_1-token", "value", [origin])
+    .catch((error: unknown) => error);
+  expect(refused).toMatchObject({
+    code: "PRECONDITION_FAILED",
+    details: { reasonCode: "lock_busy", path },
+  });
+  expect(refused).toMatchObject({ message: expect.not.stringContaining("ephemeral") });
+  expect(await readFile(path, "utf8")).toBe(String(process.pid));
+});
+
+it("reclaims a lock whose process is dead", async () => {
+  const { service, home } = await fixture();
+  const path = await seedLock(home, String(await deadPid()));
+  await service.protectCapture("capture-att_1-token", "value", [origin]);
+  await expect(stat(path)).rejects.toMatchObject({ code: "ENOENT" });
+});
+
+it("reports a lock held by a process it may not signal as busy", async () => {
+  const { service, home } = await fixture();
+  await seedLock(home, String(process.pid));
+  const kill = vi.spyOn(process, "kill").mockImplementation(() => {
+    throw Object.assign(new Error("not permitted"), { code: "EPERM" });
+  });
+  try {
+    await expect(
+      service.protectCapture("capture-att_1-token", "value", [origin]),
+    ).rejects.toMatchObject({ details: { reasonCode: "lock_busy" } });
+  } finally {
+    kill.mockRestore();
+  }
+});
+
+it.each([
+  ["empty", ""],
+  ["non-numeric", "not-a-pid"],
+  ["zero", "0"],
+  ["out-of-range", "99999999999999999999"],
+])("reports a lock with %s content as busy and leaves it untouched", async (_name, content) => {
+  const { service, home } = await fixture();
+  const path = await seedLock(home, content);
+  await expect(
+    service.protectCapture("capture-att_1-token", "value", [origin]),
+  ).rejects.toMatchObject({ details: { reasonCode: "lock_busy" } });
+  expect(await readFile(path, "utf8")).toBe(content);
+});
+
+it("reports a live holder that is between its link and unlink steps as busy", async () => {
+  const { service, home } = await fixture();
+  const path = await seedLock(home, String(process.pid));
+  await link(path, join(home, ".config", "testmaster", ".holder.tmp"));
+  await expect(
+    service.protectCapture("capture-att_1-token", "value", [origin]),
+  ).rejects.toMatchObject({ details: { reasonCode: "lock_busy" } });
+});
+
+it("passes a busy lock through a local secret write, a rewrap and the health probe", async () => {
+  const { service, config, home } = await fixture();
+  const path = await seedLock(home, String(process.pid));
+  await expect(service.set("persistent", "v", { allowedOrigins: [origin] })).rejects.toMatchObject({
+    details: { reasonCode: "lock_busy" },
+  });
+  await expect(service.rewrapKeys()).rejects.toMatchObject({
+    details: { reasonCode: "lock_busy" },
+  });
+  expect(await health(config)).toEqual({
+    backend: "unavailable",
+    writable: false,
+    reasonCode: "lock_busy",
+    path,
   });
 });
 

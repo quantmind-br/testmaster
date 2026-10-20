@@ -33,6 +33,18 @@ def policy():
         ("https://user:pass@js.stripe.com/v3", "GET", "script", "fatal"),
         ("https://js.stripe.com\\@evil.example.test/v3", "GET", "script", "fatal"),
         ("ftp://js.stripe.com/v3", "GET", "script", "fatal"),
+        # A host whose last label is a number is never read as a name, however a client resolves it.
+        ("https://0x7f.1/a.png", "GET", "image", "fatal"),
+        ("http://127.1/a.png", "GET", "image", "fatal"),
+        ("http://2130706433/a.png", "GET", "image", "fatal"),
+        ("http://0177.0.0.1/a.png", "GET", "image", "fatal"),
+        ("https://example.123/a.png", "GET", "image", "fatal"),
+        ("http://256.1.1.1/a.png", "GET", "image", "fatal"),
+        ("http://１２７.０.０.１/a.png", "GET", "image", "fatal"),
+        ("http://127。0。0。1/a.png", "GET", "image", "fatal"),
+        ("http://a..1/a.png", "GET", "image", "fatal"),
+        ("http://127.0.0.1/a.png", "GET", "image", "aborted"),
+        ("http://[::ffff:1.2.3.4]/a.png", "GET", "image", "aborted"),
     ],
 )
 def test_decide(url, method, kind, expected):
@@ -44,6 +56,23 @@ def test_canonical_origin_drops_default_ports_and_keeps_others():
     assert canonical_origin("http://127.0.0.1:3000/x") == "http://127.0.0.1:3000"
     assert canonical_origin("http://[::1]:8080/") == "http://[::1]:8080"
     assert canonical_origin("not a url") is None
+
+
+def test_canonical_origin_refuses_non_canonical_ipv4_hosts():
+    for url in (
+        "https://0x7f.1/a.png",
+        "http://127.1/a.png",
+        "http://2130706433/a.png",
+        "http://0177.0.0.1/a.png",
+        "https://example.123/a.png",
+        "http://256.1.1.1/a.png",
+        "http://１２７.０.０.１/a.png",
+        "http://127。0。0。1/a.png",
+        "http://a..1/a.png",
+    ):
+        assert canonical_origin(url) is None, url
+    assert canonical_origin("http://127.0.0.1/a.png") == "http://127.0.0.1"
+    assert canonical_origin("http://[::ffff:1.2.3.4]/a.png") == "http://[::ffff:1.2.3.4]"
 
 
 def test_websocket_maps_to_http_origin():

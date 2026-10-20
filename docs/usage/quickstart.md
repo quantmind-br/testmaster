@@ -92,6 +92,9 @@ hash (a mismatch fails with `BUNDLE_INTEGRITY_ERROR`), but an entry that is expi
 copied, and that is not a failure. Read completeness in `data.manifest.entries[].state` (`available` or not); MCP
 `testmaster_get_evidence` reports `integrity` and the partial state directly.
 
+`--out` takes a new directory or an empty one. A non-empty directory is refused with `INVALID_ARGUMENT`, and a
+symbolic link on the path (or as the path itself) is refused with `FORBIDDEN`; no file is written through a link.
+
 `testmaster init` writes `testmaster.config.json` in the working directory and binds that directory to the
 project. Run again in the same workspace, it keeps an existing file (unless `--overwrite`) and writes an absent
 one for the same project, with its default environment's origin; `configWritten` in the receipt says which.

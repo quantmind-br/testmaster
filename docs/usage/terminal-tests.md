@@ -371,6 +371,8 @@ testmaster report export "$RUN_ID" --format html --out report.html
 `artifact get` has no integrity flag in its JSON. Success means every available entry matched its manifest hash (a
 mismatch fails with `BUNDLE_INTEGRITY_ERROR`); it does not mean the bundle is complete, so read
 `data.manifest.entries[].state` for entries that are not `available`. MCP `testmaster_get_evidence` reports `integrity`.
+`--out` takes a new directory or an empty one: a non-empty directory fails with `INVALID_ARGUMENT`, and a symbolic
+link on the path fails with `FORBIDDEN`.
 
 Terminal evidence, all passed through the secret redactor before it is stored:
 

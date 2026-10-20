@@ -1,4 +1,4 @@
-import { mkdir, open, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import {
   type ArtifactManifest,
@@ -48,6 +48,7 @@ import {
   type FixtureImportReceipt,
   importFixtureInput,
 } from "./input-fixtures.js";
+import { openEmptyDirectory } from "./output-directory.js";
 import { revisionStanding } from "./revision-standing.js";
 import {
   describeExecutionError,
@@ -58,6 +59,17 @@ import {
 import type { RunsService } from "./runs.js";
 import { sumTimings } from "./timing.js";
 
+/** The `FORBIDDEN` refusal of an output path that goes through a link or a non-regular file. */
+function outputRefusal(path: string, error: unknown): unknown {
+  const code = (error as NodeJS.ErrnoException | undefined)?.code;
+  if (error instanceof UnsafePathError || code === "ELOOP" || code === "ENOTDIR")
+    return new ContractError(
+      "FORBIDDEN",
+      "Path goes through a symbolic link, a parent that is not a directory, or a file that is not a regular single-link file",
+      { path },
+    );
+  return error;
+}
 function responseStepIdOf(plan: ExecutablePlan | null | undefined, planStepId: unknown) {
   const visit = (steps: readonly PlanStep[]): string | undefined => {
     for (const step of steps) {
@@ -291,32 +303,45 @@ export class ArtifactsService {
         )
       )
         this.authorizeRaw(runId, options.allowRestrictedRaw === true, options.approvalId);
-      await mkdir(out, { recursive: true, mode: 0o700 });
-      for (const entry of manifest.entries) {
-        if (entry.state !== "available") continue;
-        this.assertReadable(entry.artifactId);
-        const path = join(out, entry.relativePath);
-        await mkdir(dirname(path), { recursive: true, mode: 0o700 });
-        const file = await open(path, "wx", 0o600);
-        try {
-          for await (const chunk of streamBundleArtifact(bundle, entry.relativePath, {
-            allowRestrictedRaw: options.allowRestrictedRaw ?? false,
-          })) {
-            this.assertReadable(entry.artifactId);
-            await file.write(chunk);
+      // Only an operation on the output path is refused as one: a failure reading the source
+      // bundle keeps its own error.
+      const refuse = (error: unknown): never => {
+        throw outputRefusal(out, error);
+      };
+      let root: ConfinedRoot | undefined;
+      try {
+        root = await openEmptyDirectory(out, "Output directory must be empty").catch(refuse);
+        for (const entry of manifest.entries) {
+          if (entry.state !== "available") continue;
+          this.assertReadable(entry.artifactId);
+          const file = await root.openFile(entry.relativePath, true).catch(refuse);
+          try {
+            for await (const chunk of streamBundleArtifact(bundle, entry.relativePath, {
+              allowRestrictedRaw: options.allowRestrictedRaw ?? false,
+            })) {
+              this.assertReadable(entry.artifactId);
+              await file.write(chunk);
+            }
+          } finally {
+            await file.close();
           }
-        } finally {
-          await file.close();
         }
+        for (const [name, content] of [
+          ["manifest.json", JSON.stringify(manifest)],
+          ["meta.json", JSON.stringify(bundle.meta)],
+        ] as const) {
+          const file = await root.openFile(name, true).catch(refuse);
+          try {
+            await file.writeFile(content);
+            await file.sync();
+          } finally {
+            await file.close();
+          }
+        }
+        await root.sync();
+      } finally {
+        root?.close();
       }
-      await writeFile(join(out, "manifest.json"), JSON.stringify(manifest), {
-        mode: 0o600,
-        flag: "wx",
-      });
-      await writeFile(join(out, "meta.json"), JSON.stringify(bundle.meta), {
-        mode: 0o600,
-        flag: "wx",
-      });
       return { bundleDir: out, sourceBundleDir: bundleDir, manifest, meta: bundle.meta };
     }
     return { bundleDir, manifest, meta: bundle.meta };

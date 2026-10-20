@@ -35,6 +35,9 @@ Tests live next to the code as `src/**/*.test.ts` and are excluded from `tsc` ou
 | unit | `*.test.ts` | `pnpm test` | hermetic, no external network |
 | docker | `*.docker.test.ts` | `pnpm test:docker` | Docker daemon, built runner images |
 | live | `*.live.test.ts` | `pnpm test:live` | `QUANTFORGE_API_KEY` for the real model |
+| postgres | `*.pg.test.ts`, `*.portal.test.ts` | `pnpm test:postgres` | Docker daemon, pinned `postgres:17-alpine` container |
+
+`pnpm test:docker` also runs the Python unit suite (`python/tests/unit`) inside the locked Python runner image with the working tree mounted read-only and no network (`validation/journeys/python-unit.docker.test.ts`); `pnpm test` and `tools/ci/check.sh` do not run it.
 
 Permanent tests exercise observable behaviour (state transitions, denials, hashes, exit codes,
 real browser/API outcomes). No tests that pin wording, wiring or defaults.
@@ -398,6 +401,9 @@ production capture needs a current matching `artifacts:raw` approval before any 
 The implicit local owner may request raw explicitly. Production export additionally requires
 `--approval ID` bound to `artifacts:raw`, the actor, exact revision/environment, origins and
 current policy. MCP pages never expose raw bytes. Reports derive from the same committed snapshot.
+`artifact get --out DIR` opens `DIR` through descriptor confinement: it takes a new or an empty directory,
+refuses a non-empty one with `INVALID_ARGUMENT` and a symbolic link on the path with `FORBIDDEN`, and creates
+every file without following links.
 Backup restore writes an isolated directory, suspends admission and requires operator review.
 
 Browser downloads accept authorized HTTP origins and same-origin blob URLs, never opaque

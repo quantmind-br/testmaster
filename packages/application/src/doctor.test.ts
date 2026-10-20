@@ -118,6 +118,30 @@ it("doctor reports blocking failures apart from recommendations and exposes only
   expect(report.checks.network).toMatchObject({ status: "PASS", telemetry: "disabled" });
 });
 
+it("doctor names a held vault lock and keeps the ephemeral advice for other secret failures", async () => {
+  const app = await fixture();
+  await healthyHost(app);
+  vi.spyOn(app.secrets, "health").mockResolvedValue({
+    backend: "unavailable",
+    writable: false,
+    reasonCode: "lock_busy",
+    path: "/x/vault.lock",
+  });
+  const busy = await app.doctor();
+  expect(busy.checks.secrets).toMatchObject({ status: "WARN", reasonCode: "lock_busy" });
+  expect(busy.recommendations).toEqual(
+    expect.arrayContaining([expect.stringContaining("/x/vault.lock")]),
+  );
+  expect(busy.recommendations.some((line) => line.includes("ephemeral"))).toBe(false);
+
+  vi.spyOn(app.secrets, "health").mockResolvedValue({ backend: "unavailable", writable: false });
+  const plain = await app.doctor();
+  expect(plain.checks.secrets).toMatchObject({ status: "WARN" });
+  expect(plain.recommendations).toEqual(
+    expect.arrayContaining([expect.stringContaining("explicit ephemeral mode")]),
+  );
+});
+
 it("admission refuses a Run when the data directory is not writable before any container starts", async () => {
   const app = await fixture();
   const { doctor } = await healthyHost(app);

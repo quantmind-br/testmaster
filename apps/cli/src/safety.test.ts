@@ -127,6 +127,21 @@ it("refuses a --file path that reaches outside through a symbolic link, and a --
   expect((await out("schema.json")).document.error?.code).toBe("INVALID_ARGUMENT");
 });
 
+it("refuses an artifact get --out that goes through a symbolic link before the service runs", async () => {
+  const { root, base } = await project();
+  const outside = await mkdtemp(join(tmpdir(), "tm-cli-outside-"));
+  cleanups.push(() => rm(outside, { recursive: true, force: true }));
+  await symlink(outside, join(root, "link"));
+  await symlink(join(outside, "planted"), join(root, "dangling"));
+  // The run does not exist: the refusal is the path's, so it precedes the service's lookup.
+  for (const path of ["link/evidence", "dangling"]) {
+    const refused = await invoke([...base, "artifact", "get", "run_missing", "--out", path]);
+    expect(refused.exit).toBe(3);
+    expect(refused.document.error?.code).toBe("FORBIDDEN");
+  }
+  expect(await readdir(outside)).toEqual([]);
+});
+
 it("refuses a hard-linked input and a directory where a file is expected", async () => {
   const { root, base } = await project();
   await writeFile(join(root, "original.json"), "{}");

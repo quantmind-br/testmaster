@@ -16,6 +16,7 @@ import {
   type PlanIdentifiers,
   planIdentifiers,
   scrubEvidenceText,
+  sensitiveValuePatterns,
   withoutPlanIdentifierFields,
 } from "@testmaster/domain";
 import type { ArtifactWriter, EvidenceStore } from "@testmaster/evidence";
@@ -270,12 +271,7 @@ export class AttemptExecutor {
         "literal" in event.payload.value
       ) {
         const literal = event.payload.value.literal;
-        const captureSecrets = (value: unknown): void => {
-          if (typeof value === "string" && value) values.add(value);
-          else if (value && typeof value === "object")
-            for (const item of Object.values(value)) captureSecrets(item);
-        };
-        captureSecrets(literal);
+        for (const pattern of sensitiveValuePatterns(literal)) values.add(pattern);
         try {
           if (!input.protectCapture) throw new Error("sensitive_capture_storage_unavailable");
           event = { ...event, payload: await input.protectCapture(event.payload) };

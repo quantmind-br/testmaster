@@ -5,6 +5,7 @@ import {
   restorePlanIdentifiers,
   scrubEvidenceText,
   scrubEvidenceValue,
+  sensitiveValuePatterns,
   withoutPlanIdentifierFields,
 } from "./redaction.js";
 
@@ -156,4 +157,21 @@ it("restores the handle reference and lookup step id a cleanup that finds its da
   const restored = restorePlanIdentifiers(scrub(record), identifiers, scrub);
   expect(restored).toContain('"handle":{"variableRef":"submit_root.handle"}');
   expect(restored).toContain('"stepId":"cleanup-find-submit_root"');
+});
+
+it.each([
+  ["abc", ["abc"]],
+  ["", []],
+  [4242, ["4242"]],
+  [true, []],
+  [false, []],
+  [null, []],
+  [undefined, []],
+  [{ a: "x", b: true }, ['{"a":"x","b":true}', "x"]],
+  [
+    ["x", 7],
+    ['["x",7]', "x", "7"],
+  ],
+])("registers the scrub patterns of the sensitive value %j", (value, patterns) => {
+  expect([...sensitiveValuePatterns(value)].sort()).toEqual([...patterns].sort());
 });

@@ -59,7 +59,7 @@ export function artifactCommands(program: Command, runtime: Runtime): void {
       return {
         data: await (await rt.app()).artifacts.get(String(args[0]), {
           ...(attemptId ? { attemptId } : {}),
-          ...(out ? { out: rt.path(out) } : {}),
+          ...(out ? { out: await rt.confinedPath(out) } : {}),
           ...(options.failedOnly === true ? { failedOnly: true } : {}),
           ...(options.raw === true ? { allowRestrictedRaw: true } : {}),
           ...(string(options, "approval")

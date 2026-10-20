@@ -525,8 +525,7 @@ class TerminalEngine {
         );
       const sensitive = capture.sensitive || usedSecret;
       // Registered before any evidence is written so the value is redacted from it.
-      if (sensitive && value !== null)
-        this.runtime.secrets.add(typeof value === "string" ? value : JSON.stringify(value));
+      if (sensitive) this.runtime.addSensitive(value);
       pending.push({ name: capture.name, value, valueType: capture.valueType, sensitive });
     }
     return pending;

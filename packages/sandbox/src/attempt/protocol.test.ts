@@ -132,12 +132,8 @@ async function scenario(
               capture: Extract<RunnerEvent, { type: "variable.captured" }>["payload"],
             ) => {
               expect(capture.value).toEqual({ literal: "protocol-capture-canary" });
-              return {
-                name: capture.name,
-                valueType: capture.valueType,
-                sensitive: true,
-                encryptedValueRef: "encrypted-capture-ref",
-              };
+              const { value: _value, ...rest } = capture;
+              return { ...rest, sensitive: true, encryptedValueRef: "encrypted-capture-ref" };
             },
           }
         : {}),

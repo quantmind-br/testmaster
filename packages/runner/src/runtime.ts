@@ -6,6 +6,7 @@ import {
   restorePlanIdentifiers,
   scrubEvidenceText,
   scrubText,
+  sensitiveValuePatterns,
 } from "@testmaster/domain";
 import type { ProtocolClient } from "./protocol.js";
 
@@ -150,8 +151,12 @@ export class Runtime {
   ) {
     this.variables = new Map(Object.entries(input.variables ?? {}));
     for (const entry of this.variables.values())
-      if (entry.sensitive) this.secrets.add(String(entry.value));
+      if (entry.sensitive) this.addSensitive(entry.value);
     this.identifiers = planIdentifiers(input.plan, input.auth, input.agent);
+  }
+  /** Registers the scrub patterns of a sensitive value (see `sensitiveValuePatterns`). */
+  addSensitive(value: unknown): void {
+    for (const pattern of sensitiveValuePatterns(value)) this.secrets.add(pattern);
   }
   emit(type: string, payload: unknown): Promise<void> {
     return this.protocol.emit(type, payload);
@@ -218,7 +223,7 @@ export class Runtime {
     if ("variableRef" in value) {
       const variable = this.variables.get(String(value.variableRef));
       if (!variable) throw new RuntimeError("upstream_failed", "Variable binding missing");
-      if (variable.sensitive) this.secrets.add(String(variable.value));
+      if (variable.sensitive) this.addSensitive(variable.value);
       return variable.value;
     }
     if ("secretRef" in value) {

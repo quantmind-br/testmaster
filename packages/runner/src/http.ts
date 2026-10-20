@@ -943,15 +943,6 @@ function sensitiveInput(runtime: Runtime, value: unknown): boolean {
     return runtime.variables.get(String(value.variableRef))?.sensitive ?? false;
   return Object.values(value).some((child) => sensitiveInput(runtime, child));
 }
-function addSensitive(runtime: Runtime, value: unknown): void {
-  // Booleans and null are never secrets, and scrubbing them corrupts any evidence that holds
-  // `true`, `false` or `null`. A declared-sensitive capture still scrubs its string and number leaves.
-  if (typeof value === "string" || typeof value === "number") runtime.secrets.add(String(value));
-  else if (value && typeof value === "object") {
-    runtime.secrets.add(JSON.stringify(value));
-    for (const child of Object.values(value)) addSensitive(runtime, child);
-  }
-}
 
 export class HttpEngine {
   readonly responses = new Map<string, HttpResponse>();
@@ -1405,7 +1396,7 @@ export class HttpEngine {
               );
             resource.handleRef = `${stepId}.handle`;
             runtime.variables.set(resource.handleRef, { value: String(handle), sensitive: true });
-            addSensitive(runtime, String(handle));
+            runtime.addSensitive(String(handle));
             await runtime.emit("variable.captured", {
               name: "handle",
               valueType: "string",
@@ -1588,7 +1579,7 @@ export class HttpEngine {
         sensitive: entry.sensitive,
       });
       if (entry.sensitive) {
-        addSensitive(this.runtime, entry.value);
+        this.runtime.addSensitive(entry.value);
         // This trusted IPC value is encrypted by the supervisor before durable observations.
         await this.runtime.emit("variable.captured", {
           name: entry.name,
@@ -1730,7 +1721,7 @@ export class HttpEngine {
       await this.resourceEvent("resource.intent", resource);
       resource.handleRef = `${ref}.handle`;
       runtime.variables.set(resource.handleRef, { value: String(handle), sensitive: true });
-      addSensitive(runtime, String(handle));
+      runtime.addSensitive(String(handle));
       await runtime.emit("variable.captured", {
         stepId: ref,
         name: "handle",
