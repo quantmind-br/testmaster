@@ -313,18 +313,17 @@ export function identityCommands(program: Command, runtime: Runtime): void {
   );
 }
 /**
- * One stderr line when the first interruption starts a worker drain. The drain has no deadline,
- * so the line names the forced stop: a second interruption.
+ * One stderr line when the first interruption starts a worker drain, also when it arrived while
+ * the command was still starting. The drain has no deadline, so the line names the forced stop: a
+ * second interruption.
  */
 export function announceDrain(rt: Runtime): void {
-  rt.controller.signal.addEventListener(
-    "abort",
-    () =>
-      rt.stderr.write(
-        "worker draining: attempts in flight finish first; interrupt again to stop them now\n",
-      ),
-    { once: true },
-  );
+  const announce = () =>
+    rt.stderr.write(
+      "worker draining: attempts in flight finish first; interrupt again to stop them now\n",
+    );
+  if (rt.controller.signal.aborted) announce();
+  else rt.controller.signal.addEventListener("abort", announce, { once: true });
 }
 /**
  * One worker loop per workspace; new workspaces are picked up while the process runs. Any loop
