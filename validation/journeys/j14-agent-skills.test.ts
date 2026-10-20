@@ -9,12 +9,13 @@ import {
   renderManagedSection,
   renderOwnedSkill,
 } from "@testmaster/application";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { resultsDirectory } from "../../tools/src/results-dir.js";
 import { Journey, object, root, text } from "./harness.js";
 
-// One test per target, each under the default test timeout. The targets share one initialized
-// workspace, and the journey record written after the last test covers every one of them.
+// Three tests per target, each a few built-CLI processes, so each fits the default test timeout on
+// a loaded host. The targets share one initialized workspace, and the journey record written after
+// the last test covers every one of them.
 describe("J14: every configured target through the built CLI, with ownership and hostile-workspace controls", () => {
   const shippedRoot = join(root, "packages/application/skill-content", AGENT_SKILL_VERSION);
   let shipped: { path: string }[] = [];
@@ -31,11 +32,27 @@ describe("J14: every configured target through the built CLI, with ownership and
       throw failure;
     }
   };
+  /** The files of one target in the shared workspace and the foreign bytes around its section. */
+  const targetFiles = (session: Journey, target: (typeof AGENT_TARGETS)[number]) => {
+    const adapter = AGENT_TARGET_ADAPTERS[target];
+    return {
+      adapter,
+      path: join(session.cwd, adapter.instructionsPath),
+      skill: join(session.cwd, adapter.skillPath),
+      foreignBefore: Buffer.from(`${adapter.instructionsPrefix}custom ${target}\r\n`),
+      foreignAfter: Buffer.from("foreign tail\r\n", "latin1"),
+    };
+  };
   beforeAll(async () => {
     shipped = (await readdir(shippedRoot, { recursive: true, withFileTypes: true }))
       .filter((entry) => entry.isFile())
       .map((entry) => ({ path: join(entry.parentPath, entry.name).slice(shippedRoot.length + 1) }));
     journey = await Journey.create("j14-agent-skills");
+  });
+  // A check vitest failed with no error thrown in its body, such as a timeout, fails the record.
+  afterEach(({ task }) => {
+    if (task.result?.state === "fail")
+      error ??= new Error(task.result.errors?.[0]?.message ?? `${task.name} failed`);
   });
   afterAll(async () => {
     if (!journey) return;
@@ -112,15 +129,11 @@ describe("J14: every configured target through the built CLI, with ownership and
       ]);
     }));
 
-  it.each(AGENT_TARGETS)("%s: install, drift, removal and hostile-workspace controls", (target) =>
+  it.each(AGENT_TARGETS)("%s: preview, install and status", (target) =>
     recorded(async (session) => {
-      const adapter = AGENT_TARGET_ADAPTERS[target];
-      const path = join(session.cwd, adapter.instructionsPath);
-      const skill = join(session.cwd, adapter.skillPath);
+      const { adapter, path, skill, foreignBefore, foreignAfter } = targetFiles(session, target);
       await mkdir(dirname(path), { recursive: true });
       await mkdir(dirname(skill), { recursive: true });
-      const foreignBefore = Buffer.from(`${adapter.instructionsPrefix}custom ${target}\r\n`);
-      const foreignAfter = Buffer.from("foreign tail\r\n", "latin1");
       const original = Buffer.concat([
         foreignBefore,
         renderManagedSection(Buffer.from("\nold content\n"), "0.8.0"),
@@ -181,6 +194,13 @@ describe("J14: every configured target through the built CLI, with ownership and
       expect(updated.subarray(section?.end)).toEqual(foreignAfter);
       const status = await session.command(["agent", "status", "--target", target]);
       expect(object((status.items as unknown[])[0]).status).toBe("installed");
+    }),
+  );
+
+  it.each(AGENT_TARGETS)("%s: instruction and skill drift, then removal", (target) =>
+    recorded(async (session) => {
+      const { path, skill, foreignBefore, foreignAfter } = targetFiles(session, target);
+      const updated = await readFile(path);
       const drifted = Buffer.from(
         updated.toString().replace("TestMaster", "Human changed TestMaster"),
       );
@@ -200,6 +220,12 @@ describe("J14: every configured target through the built CLI, with ownership and
       // Removal takes every file of the tree and the directories it emptied.
       await expect(lstat(skill)).rejects.toMatchObject({ code: "ENOENT" });
       await expect(lstat(dirname(skill))).rejects.toMatchObject({ code: "ENOENT" });
+    }),
+  );
+
+  it.each(AGENT_TARGETS)("%s: duplicate markers, symlinks and concurrent installs", (target) =>
+    recorded(async (session) => {
+      const { path, skill } = targetFiles(session, target);
       const block = renderManagedSection(Buffer.from("\nold\n"), "0.8.0");
       await writeFile(path, Buffer.concat([block, block]));
       const duplicate = await session.command(["agent", "install", "--target", target, "--yes"], 6);
