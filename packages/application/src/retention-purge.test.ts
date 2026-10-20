@@ -7,7 +7,7 @@ import {
   IdempotencyRepository,
   type PersistenceDatabase,
 } from "@testmaster/persistence";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { Application } from "./application.js";
 import { seedRun } from "./ops.testkit.js";
 
@@ -88,6 +88,38 @@ function auxiliaryJob(
   if (!fence) throw new Error("The seeded job was not claimed");
   if (state !== "leased") jobs.finish(fence, state, {});
   return { jobs, jobId: job.jobId, fence };
+}
+/** A delivered outbox event of `aggregateId` with the delivered check run that refers to it. */
+function deliveredEvent(database: PersistenceDatabase, workspaceId: string, aggregateId: string) {
+  const eventId = `evt_${randomUUID()}`;
+  database.run(
+    "INSERT INTO outbox(workspace_id,id,created_at,aggregate_id,seq,type,payload_ref,data_json,delivery_state) VALUES(?,?,?,?,?,?,?,?,?)",
+    workspaceId,
+    eventId,
+    old,
+    aggregateId,
+    0,
+    "job.settled",
+    eventId,
+    "{}",
+    "delivered",
+  );
+  const deliveryId = `dlv_${randomUUID()}`;
+  database.run(
+    "INSERT INTO deliveries(workspace_id,id,created_at,event_id,destination_ref,check_name,subject_sha,report_hash,payload_hash,state,check_status) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+    workspaceId,
+    deliveryId,
+    old,
+    eventId,
+    "github:repo",
+    "TestMaster / result",
+    "a".repeat(40),
+    randomUUID().replaceAll("-", "").repeat(2),
+    "c".repeat(64),
+    "delivered",
+    "completed",
+  );
+  return { eventId, deliveryId };
 }
 
 it("OPS-021 CI-009 a workspace hold released by value no longer protects the workspace", async () => {
@@ -179,7 +211,7 @@ it("OPS-021 CI-019 a workspace hold keeps an expired receipt until the hold is r
   expect(count(app, "idempotency_receipts", "key", key)).toBe(0);
 });
 
-it("OPS-021 a purged Run takes its settled analysis and healing jobs and leaves another Run's job", async () => {
+it("OPS-021 a purged Run takes its settled analysis and healing jobs with their events and leaves another Run's job", async () => {
   const { app, workspaceId } = await openApplication();
   const scope = { application: app, workspaceId };
   const expired = seedRun(scope, { createdAt: old, endedAt: old, outcome: "failed" });
@@ -187,12 +219,46 @@ it("OPS-021 a purged Run takes its settled analysis and healing jobs and leaves 
   const analysis = auxiliaryJob(app.database, workspaceId, "analysis", expired.runId, "completed");
   const healing = auxiliaryJob(app.database, workspaceId, "healing", expired.runId, "cancelled");
   const other = auxiliaryJob(app.database, workspaceId, "analysis", running.runId, "completed");
+  const purgedEvent = deliveredEvent(app.database, workspaceId, analysis.jobId);
+  const keptEvent = deliveredEvent(app.database, workspaceId, other.jobId);
   const report = await app.retentionPurge.run({ now });
   expect(report.runs).toMatchObject({ purged: 1, skipped: [] });
   expect(count(app, "runs", "id", expired.runId)).toBe(0);
   expect(analysis.jobs.get(workspaceId, analysis.jobId)).toBeNull();
   expect(analysis.jobs.get(workspaceId, healing.jobId)).toBeNull();
+  expect(count(app, "outbox", "id", purgedEvent.eventId)).toBe(0);
+  expect(count(app, "deliveries", "id", purgedEvent.deliveryId)).toBe(0);
   expect(analysis.jobs.get(workspaceId, other.jobId)?.state).toBe("completed");
+  expect(count(app, "outbox", "id", keptEvent.eventId)).toBe(1);
+  expect(count(app, "deliveries", "id", keptEvent.deliveryId)).toBe(1);
+});
+
+it("OPS-021 keeps a Run whose analysis job a holder claims after the purge checked the Run", async () => {
+  const { app, workspaceId } = await openApplication();
+  const scope = { application: app, workspaceId };
+  const expired = seedRun(scope, { createdAt: old, endedAt: old, outcome: "failed" });
+  // Another caller enqueues and claims the Run's analysis job between the purge's check of the
+  // Run and the transaction that deletes it.
+  const withTx = app.database.withTx.bind(app.database);
+  let started: ReturnType<typeof auxiliaryJob> | undefined;
+  const spy = vi
+    .spyOn(app.database, "withTx")
+    .mockImplementationOnce(<T>(fn: (tx: PersistenceDatabase) => T): T => {
+      started = auxiliaryJob(app.database, workspaceId, "analysis", expired.runId, "leased");
+      return withTx(fn);
+    });
+  try {
+    const report = await app.retentionPurge.run({ now });
+    expect(report.runs).toMatchObject({
+      eligible: 0,
+      purged: 0,
+      skipped: [{ runId: expired.runId, reason: "auxiliary_job_active" }],
+    });
+  } finally {
+    spy.mockRestore();
+  }
+  expect(count(app, "runs", "id", expired.runId)).toBe(1);
+  expect(started?.jobs.get(workspaceId, started.jobId)?.state).toBe("leased");
 });
 
 it("OPS-021 keeps a Run whose analysis job a holder still runs and purges both once the job settles", async () => {

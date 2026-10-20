@@ -21,6 +21,8 @@ const legalHoldPrefix = (workspaceId: string): string => `retention:legal-hold:$
  * their `resource_id` is a semantic hash. One placeholder: the Run id.
  */
 const auxiliaryJobOfRun = `queue IN (${auxiliaryQueues.map((queue) => `'${queue}'`).join(",")}) AND json_extract(data_json,'$.payload.targetId')=?`;
+/** The purge deletes settled auxiliary jobs only: a job a holder still works on is never removed. */
+const settledAuxiliaryJobOfRun = `${auxiliaryJobOfRun} AND state IN ('completed','cancelled')`;
 
 export interface PurgeOptions {
   /** Clock hook; tests move it past the retention windows. */
@@ -189,20 +191,25 @@ export class RetentionPurgeService {
       )
     )
       return "healing_review_open";
-    // A holder still works on the Run's analysis or healing job; a later cycle purges it settled.
-    if (
-      one(
-        `SELECT 1 FROM job_leases WHERE workspace_id=? AND ${auxiliaryJobOfRun} AND state NOT IN ('completed','cancelled')`,
-      )
-    )
-      return "auxiliary_job_active";
+    if (this.auxiliaryJobActive(runId)) return "auxiliary_job_active";
     return null;
+  }
+
+  /** A holder still works on the Run's analysis or healing job; a later cycle purges it settled. */
+  private auxiliaryJobActive(runId: string): boolean {
+    return Boolean(
+      this.database.get(
+        `SELECT 1 FROM job_leases WHERE workspace_id=? AND ${auxiliaryJobOfRun} AND state NOT IN ('completed','cancelled')`,
+        this.ctx.workspaceId,
+        runId,
+      ),
+    );
   }
 
   private deleteRun(runId: string): void {
     const ws = this.ctx.workspaceId;
     const attempts = "(SELECT id FROM attempts WHERE workspace_id=? AND run_id=?)";
-    const jobs = `(SELECT id FROM job_leases WHERE workspace_id=? AND (resource_id=? OR (${auxiliaryJobOfRun})))`;
+    const jobs = `(SELECT id FROM job_leases WHERE workspace_id=? AND (resource_id=? OR (${settledAuxiliaryJobOfRun})))`;
     const artifactIds = this.database
       .all<{ id: string }>("SELECT id FROM artifacts WHERE workspace_id=? AND run_id=?", ws, runId)
       .map((row) => row.id);
@@ -240,7 +247,7 @@ export class RetentionPurgeService {
         [ws, runId, ws, runId, runId],
       ],
       [
-        `DELETE FROM job_leases WHERE workspace_id=? AND (resource_id=? OR (${auxiliaryJobOfRun}))`,
+        `DELETE FROM job_leases WHERE workspace_id=? AND (resource_id=? OR (${settledAuxiliaryJobOfRun}))`,
         [ws, runId, runId],
       ],
       ["DELETE FROM runs WHERE workspace_id=? AND id=?", [ws, runId]],
@@ -315,13 +322,21 @@ export class RetentionPurgeService {
       report.runs.eligible++;
       if (report.dryRun) continue;
       try {
-        this.database.withTx(() => {
+        const deleted = this.database.withTx(() => {
+          // A job enqueued or reopened since the check above keeps the Run: the write
+          // transaction looks again before it deletes anything.
+          if (this.auxiliaryJobActive(candidate.id)) return false;
           this.grantPermit();
           this.deleteRun(candidate.id);
           hook("purge.run_deleted");
           this.revokePermit();
+          return true;
         });
-        report.runs.purged++;
+        if (deleted) report.runs.purged++;
+        else {
+          report.runs.skipped.push({ runId: candidate.id, reason: "auxiliary_job_active" });
+          report.runs.eligible--;
+        }
       } catch (error) {
         // A reference this pass did not anticipate keeps the Run; nothing is half deleted.
         if (!/foreign key/i.test(error instanceof Error ? error.message : "")) throw error;
