@@ -3,6 +3,7 @@ import { cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/pr
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { expect, it } from "vitest";
+import { resultsDirectory } from "../results-dir.js";
 
 it("kills non-equivalent revision redaction and assertion mutations in isolated implementation copies", async () => {
   const root = resolve(".");
@@ -113,9 +114,8 @@ it("kills non-equivalent revision redaction and assertion mutations in isolated 
         await writeFile(path, original);
       }
     }
-    await mkdir(join(root, "validation/results"), { recursive: true });
     await writeFile(
-      join(root, "validation/results/critical-mutations.json"),
+      join(resultsDirectory(), "critical-mutations.json"),
       JSON.stringify(
         {
           schemaVersion: "1.0.0",

@@ -60,6 +60,23 @@ and protocol artifact chunks never enter public observation events. Archive extr
 an AbortSignal and removes incomplete staging on failure/cancellation; nested archives are
 rejected by both extension and magic, never recursively unpacked.
 
+### Test results directory
+
+Test runs write result JSON to the directory named by `TESTMASTER_RESULTS_DIR`. An empty value
+counts as unset, and a relative value resolves against the repository root, never the current
+directory. The default is `validation/results/tmp`, which `.gitignore` ignores, so a plain test
+run leaves the committed evidence under `validation/results/` untouched.
+
+Refreshing committed evidence requires `TESTMASTER_RESULTS_DIR=validation/results` in front of
+`pnpm test`, `pnpm test:docker`, `pnpm test:docker:rootless` or `pnpm test:postgres`. The unit
+project writes these tracked files: `critical-mutations.json`, `m3-critical-mutations.json`,
+`j14-agent-skills.json`, `journey-manifest-metadata.json`, `hostile-repository-boundary.json` and
+`hostile-repository-boundary-hostile-network.json`. Outside the journeys, the docker project writes
+the tracked `m3-holdout-prompt-leakage-audit.json`. Journey summaries written by the docker,
+docker-rootless and live journeys follow the same directory. The external preservation runner,
+which captures and restores `validation/results` outside the repository, sets
+`TESTMASTER_RESULTS_DIR=validation/results` for every labelled run.
+
 
 ## Relocatable runtime distribution
 
@@ -456,9 +473,9 @@ real retention, and proves foreign Run/Attempt snapshot substitution is denied.
 
 
 
-M1 journeys use the built CLI and real reference app in `validation/journeys/`. They write
-observed JSON summaries under `validation/results/`. The separately exercised manual quickstart
-transcript is `validation/results/quickstart-m1.md`.
+M1 journeys use the built CLI and real reference app in `validation/journeys/` and write observed
+JSON summaries to the test results directory; the committed summaries are under
+`validation/results/`. The manual quickstart transcript is `validation/results/quickstart-m1.md`.
 M2 source/discovery/requirement/proposal/usage commands share application services. `source add`
 accepts OpenAPI 3.0, 3.1, 3.2 and Swagger 2.0; a 3.2 document is validated as the 3.1 model (the
 validator knows no 3.2 schema) after its 3.2-only fields (`$self`, `itemSchema`, `summary`, `kind`, ...) are
@@ -511,8 +528,9 @@ addresses from the whole CLI process tree, plus Node fetch/undici/net/tls/dns di
 sealed container egress logs. It records no socket payloads or request headers. The Docker
 journey runs init/doctor/lint/create/replay/rerun/evidence/report with default privacy settings
 and no model key; a separate live-model journey exercises the same recorder positively through
-real normalization, proposal generation and code export. Observations are retained under
-`validation/results/network-*.json`; these checks do not claim M4 web or GitHub integration.
+real normalization, proposal generation and code export. Observations are written as
+`network-*.json` to the test results directory; the committed copies are under
+`validation/results/network-*.json`. These checks do not claim M4 web or GitHub integration.
 
 Requirements preserve conflicting source refs; reviewers adjudicate conflicts and explicitly approve
 selected requirements, or reject out-of-scope ones with a mandatory reason (`requirement reject`,
@@ -537,7 +555,8 @@ JSON pointer) next to its handle but cites only handles.
 selected generated revisions and preserves retained proposals; `plan reject` takes the same options.
 The optional reason (1-2000 characters) is kept on every proposal the call decides, with the reviewer and
 the time (`extensions['testmaster:decision']`), and the audit event stays content-free. Edits are CAS and return a diff on
-conflict. J02/J03 live journeys record their exercised evidence in `validation/results/`.
+conflict. J02/J03 live journeys write their exercised evidence to the test results directory; the
+committed copies are under `validation/results/`.
 M3–M6 groups report their milestone rather than returning successful placeholders.
 
 M3 diagnosis is separate from terminal execution: `run analyze RUN` retains an immutable
@@ -1490,4 +1509,5 @@ Claim limits (what M4 does not show):
   (`validation/results/m4-dr-rehearsal.json`, `m4-capacity-benchmark.json`); proposed objectives are not measured service levels. Volume encryption is an
   operator attestation. No SCIM revocation source (OPS-019: M6).
 - Reproduce with `pnpm test`, `pnpm test:postgres`, `pnpm test:postgres-parity`, `pnpm test:docker` and `pnpm test:docker:rootless`, each through the
-  preservation wrapper; the PostgreSQL projects start a pinned `postgres:17-alpine` container per run.
+  preservation wrapper, which sets `TESTMASTER_RESULTS_DIR=validation/results`; the PostgreSQL projects start a pinned `postgres:17-alpine` container
+  per run.

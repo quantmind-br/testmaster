@@ -1,9 +1,9 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import type { Page } from "playwright-core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { portalRoutes } from "../../apps/web/src/routes/index";
+import { resultsDirectory } from "../../tools/src/results-dir.js";
 import { atViewport, axeReport, expectAccessible, type OpenPortal, openPortal } from "./portal.js";
 import {
   checkKeyboardTraversal,
@@ -23,8 +23,6 @@ import { type ServerStack, startServerStack } from "./server-stack.js";
  * slice is therefore swept without editing this file; a parametrised page nobody can seed fails
  * the sweep unless a seed file lists it with a reason.
  */
-const here = dirname(fileURLToPath(import.meta.url));
-const reportPath = join(here, "..", "results", "m4-portal-accessibility.json");
 
 let stack: ServerStack;
 let seeds: MergedSeeds;
@@ -277,9 +275,8 @@ describe("portal accessibility sweep", () => {
       });
       for (const problem of problems) failures.push(`${route.path}: ${problem}`);
     }
-    mkdirSync(dirname(reportPath), { recursive: true });
     writeFileSync(
-      reportPath,
+      join(resultsDirectory(), "m4-portal-accessibility.json"),
       `${JSON.stringify(
         {
           generatedBy: "validation/journeys/portal-accessibility.portal.test.ts",

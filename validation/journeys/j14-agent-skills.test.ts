@@ -10,6 +10,7 @@ import {
   renderOwnedSkill,
 } from "@testmaster/application";
 import { expect, it } from "vitest";
+import { resultsDirectory } from "../../tools/src/results-dir.js";
 import { Journey, object, root, text } from "./harness.js";
 
 it("J14: every configured target through the built CLI, with ownership and hostile-workspace controls", async () => {
@@ -212,7 +213,7 @@ it("J14: every configured target through the built CLI, with ownership and hosti
     }));
     await session.close(error);
     await writeFile(
-      join(root, "validation/results/j14-agent-skills.json"),
+      join(resultsDirectory(), "j14-agent-skills.json"),
       `${JSON.stringify(
         {
           schemaVersion: "1.0.0",

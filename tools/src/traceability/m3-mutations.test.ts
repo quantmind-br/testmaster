@@ -13,6 +13,7 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve, sep } from "node:path";
 import { expect, it } from "vitest";
+import { resultsDirectory } from "../results-dir.js";
 
 interface Target {
   file: string;
@@ -511,9 +512,8 @@ it("kills M3 critical mutations in source-isolated copies and retains equivalent
       healthy.passedTests > 0 &&
       observations.length === mutations.length &&
       observations.every((row) => row.outcome === "killed" || row.outcome === "equivalent");
-    await mkdir(join(root, "validation/results"), { recursive: true });
     await writeFile(
-      join(root, "validation/results/m3-critical-mutations.json"),
+      join(resultsDirectory(), "m3-critical-mutations.json"),
       JSON.stringify(
         {
           schemaVersion: "1.0.0",

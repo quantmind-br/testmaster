@@ -1,7 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, it } from "vitest";
-import { journey, root } from "./harness.js";
+import { resultsDirectory } from "../../tools/src/results-dir.js";
+import { journey } from "./harness.js";
 
 it("records automatic method reviewer and limitations without claiming a human or unopened UI", async () => {
   await journey(
@@ -17,7 +18,7 @@ it("records automatic method reviewer and limitations without claiming a human o
     },
   );
   const result = JSON.parse(
-    await readFile(join(root, "validation/results/journey-manifest-metadata.json"), "utf8"),
+    await readFile(join(resultsDirectory(), "journey-manifest-metadata.json"), "utf8"),
   );
   expect(result).toMatchObject({
     method: "automatic",

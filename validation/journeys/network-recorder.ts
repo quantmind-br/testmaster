@@ -1,7 +1,8 @@
 import { appendFile, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 import { expect } from "vitest";
+import { resultsDirectory } from "../../tools/src/results-dir.js";
 import { type Journey, object, root } from "./harness.js";
 
 export async function recordNetwork(session: Journey, label: string) {
@@ -57,9 +58,9 @@ syncBuiltinESMExports();
       return { trace, events };
     },
     async save(trace: string, events: unknown[]) {
-      const path = `validation/results/${session.name}-${label}-network.json`;
+      const file = join(resultsDirectory(), `${session.name}-${label}-network.json`);
       await writeFile(
-        join(root, path),
+        file,
         JSON.stringify(
           {
             method:
@@ -71,7 +72,7 @@ syncBuiltinESMExports();
           2,
         ),
       );
-      return path;
+      return relative(root, file);
     },
     async checkpoint() {
       // strace opens its output anew per CLI invocation; collect it before the next command.

@@ -4,6 +4,7 @@ import { type Application, scaffoldPlan } from "@testmaster/application";
 import { type ExecutablePlan, routeCatalog } from "@testmaster/contracts";
 import type { Locator, Page } from "playwright-core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { resultsDirectory } from "../../tools/src/results-dir.js";
 import { type FakeModel, fakeModelEnv, startFakeModel } from "./fake-model.js";
 import {
   atViewport,
@@ -779,7 +780,7 @@ describe("portal authoring on the server profile", () => {
       expect(used, expected).toContain(expected);
     // The oracle of M4-04: the routes the real UI called, and what axe found on every page it checked.
     await writeFile(
-      join(import.meta.dirname, "..", "results", "m4-portal-authoring.json"),
+      join(resultsDirectory(), "m4-portal-authoring.json"),
       `${JSON.stringify(
         {
           journey: "portal-authoring",

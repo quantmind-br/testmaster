@@ -27,6 +27,7 @@ import {
 import { scrubText } from "@testmaster/domain";
 import { startShop } from "@testmaster/reference-shop";
 import { expect } from "vitest";
+import { resultsDirectory } from "../../tools/src/results-dir.js";
 
 export const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const cli = join(root, "apps/cli/dist/main.js");
@@ -412,9 +413,8 @@ export class Journey {
       }
       failureDiagnostics.artifacts = artifacts;
     }
-    await mkdir(join(root, "validation/results"), { recursive: true });
     await writeFile(
-      join(root, "validation/results", `${this.name}.json`),
+      join(resultsDirectory(), `${this.name}.json`),
       scrubText(
         JSON.stringify(
           {

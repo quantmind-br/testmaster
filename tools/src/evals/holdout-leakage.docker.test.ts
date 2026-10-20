@@ -6,6 +6,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Application } from "@testmaster/application";
 import { afterAll, beforeAll, expect, it } from "vitest";
+import { resultsDirectory } from "../results-dir.js";
 import {
   assertRoundNotInvalidated,
   findLeaks,
@@ -338,7 +339,7 @@ it("detects the sealed case identifier the healing prompt builder really sends, 
     negativeControl,
   };
   await writeFile(
-    join(root, "validation/results/m3-holdout-prompt-leakage-audit.json"),
+    join(resultsDirectory(), "m3-holdout-prompt-leakage-audit.json"),
     `${JSON.stringify(record, null, 2)}\n`,
   );
 }, 900_000);
