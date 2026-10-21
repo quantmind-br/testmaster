@@ -17841,15 +17841,18 @@
         "packages/application/src/worker-pool.test.ts::REQ-038 a heartbeat is refused for a lost lease, a stale version, a draining override and a foreign or revoked credential",
         "packages/application/src/worker-pool.test.ts::M4-08 REQ-038 a read-only identity can neither list, enroll, drain nor revoke workers while an administrator can",
         "validation/journeys/notifications-workers.portal.test.ts::M4-08 REQ-038 a viewer gets the forbidden view for workers, not an empty list, and the API refuses the same read",
-        "validation/journeys/notifications-workers.portal.test.ts::INT-004 REQ-038 every /v1 request the pages made is a catalog route and nothing else was called"
+        "validation/journeys/notifications-workers.portal.test.ts::INT-004 REQ-038 every /v1 request the pages made is a catalog route and nothing else was called",
+        "validation/journeys/m5-remote-workers.docker.test.ts::M5-01 a partitioned remote worker loses its lease: its egress ends, its stale publication is refused with lease_lost and the Run completes from the worker that reclaimed it",
+        "apps/server/src/workers-deliveries.test.ts::M5-01 the remote worker routes answer only the worker's own credential and refuse an attempt it does not hold"
       ],
       "oracle": [
-        "A one-use enrollment token enrolls one worker, resumes it on re-presentation and is refused when unknown, expired or revoked; the heartbeat route renews the held lease, records liveness and never undoes an administrator's drain, and refuses a lost lease, a stale version and a foreign, unenrolled or revoked credential. Silent workers go offline and are announced. Only administrators manage workers, and the portal shows the token once. Outbound enrollment over the network moves to M5."
+        "A one-use enrollment token enrolls one worker, resumes it on re-presentation and is refused when unknown, expired or revoked; the heartbeat route renews the held lease, records liveness and never undoes an administrator's drain, and refuses a lost lease, a stale version and a foreign, unenrolled or revoked credential. Silent workers go offline and are announced. Only administrators manage workers, and the portal shows the token once. A remote worker enrolled over HTTPS (M5-01, ADR-030) runs Attempts without database credentials, needs no inbound port, and its routes answer only its own credential."
       ],
       "evidence": [
         "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log",
         "validation/results/m4-acceptance/s8/132-s8-v2-pg/output.log",
-        "validation/results/m4-acceptance/s8/139-s8-v2-portal-c/output.log"
+        "validation/results/m4-acceptance/s8/139-s8-v2-portal-c/output.log",
+        "validation/results/M5-01-remote-workers.json"
       ],
       "code": [
         "packages/application/src/worker-pool.ts",
@@ -17862,7 +17865,9 @@
         "apps/web/src/routes/workers.tsx",
         "apps/web/src/routes/notifications.tsx",
         "apps/web/src/features/admin/",
-        "apps/web/src/features/notifications/"
+        "apps/web/src/features/notifications/",
+        "packages/application/src/remote-workers.ts",
+        "packages/application/src/remote-worker-agent.ts"
       ],
       "coverage": {
         "positive": [
@@ -17871,13 +17876,15 @@
           "packages/application/src/worker-pool.test.ts::REQ-038 a ready worker whose heartbeat stopped is marked offline once and announced on the outbox",
           "apps/server/src/workers-deliveries.test.ts::REQ-038 M4-08 the workers routes enroll with a one-time token, list without it, drain and revoke for administrators only",
           "apps/server/src/workers-deliveries.test.ts::REQ-038 the heartbeat route renews a lease with the worker credential and refuses every other caller",
-          "validation/journeys/notifications-workers.portal.test.ts::M4-08 REQ-038 an owner enrolls a worker in the portal and the one-time token is shown once, never listed, stored or kept after a reload"
+          "validation/journeys/notifications-workers.portal.test.ts::M4-08 REQ-038 an owner enrolls a worker in the portal and the one-time token is shown once, never listed, stored or kept after a reload",
+          "validation/journeys/m5-remote-workers.docker.test.ts::M5-01 a partitioned remote worker loses its lease: its egress ends, its stale publication is refused with lease_lost and the Run completes from the worker that reclaimed it"
         ],
         "negative": [
           "packages/application/src/worker-pool.test.ts::REQ-038 a heartbeat is refused for a lost lease, a stale version, a draining override and a foreign or revoked credential",
           "packages/application/src/worker-pool.test.ts::M4-08 REQ-038 a read-only identity can neither list, enroll, drain nor revoke workers while an administrator can",
           "validation/journeys/notifications-workers.portal.test.ts::M4-08 REQ-038 a viewer gets the forbidden view for workers, not an empty list, and the API refuses the same read",
-          "validation/journeys/notifications-workers.portal.test.ts::INT-004 REQ-038 every /v1 request the pages made is a catalog route and nothing else was called"
+          "validation/journeys/notifications-workers.portal.test.ts::INT-004 REQ-038 every /v1 request the pages made is a catalog route and nothing else was called",
+          "apps/server/src/workers-deliveries.test.ts::M5-01 the remote worker routes answer only the worker's own credential and refuse an attempt it does not hold"
         ],
         "criticalAssertions": [
           {
@@ -17909,17 +17916,7 @@
             "assertion": "  expect(lost.json().error.details.reasonCode).toBe(\"lease_lost\");"
           }
         ]
-      },
-      "deferred": [
-        {
-          "milestone": "M5",
-          "scope": "Outbound worker enrollment over the network (pools, labels and remote workers)",
-          "specQuote": {
-            "path": "ROADMAP.md",
-            "text": "M5-01 — Workers distribuídos** (`Operations`, `Execution`). Pools/labels/outbound enrollment"
-          }
-        }
-      ]
+      }
     },
     {
       "id": "REQ-039",
