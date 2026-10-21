@@ -4,8 +4,8 @@ import { join } from "node:path";
 import type { CodeReference } from "@testmaster/contracts";
 import { afterEach, expect, it } from "vitest";
 import { Application } from "./application.js";
+import { codeSecretBindings } from "./attempt-session.js";
 import { authBlockReasons } from "./auth/index.js";
-import { codeSecretBindings } from "./worker.js";
 
 const roots: string[] = [];
 const apps: Application[] = [];
