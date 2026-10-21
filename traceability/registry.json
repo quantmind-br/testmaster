@@ -532,6 +532,7 @@
       "code": [
         "packages/application/src/runs.ts",
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "apps/server/src/server.ts",
         "apps/cli/src/test-execution.ts"
       ],
@@ -620,7 +621,11 @@
         "packages/sandbox/src/docker/isolation.docker.test.ts",
         "validation/journeys/m1-recovery.docker.test.ts"
       ],
-      "code": ["packages/application/src/worker.ts", "packages/sandbox/src/docker/executor.ts"],
+      "code": [
+        "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
+        "packages/sandbox/src/docker/executor.ts"
+      ],
       "note": "Acceptance exercised by the cited real-Docker scenarios; pass evidence is the orchestrator-reported final 41-test Docker gate. Validated rootful-hardened Linux profile only.",
       "coverage": {
         "positive": [
@@ -741,6 +746,7 @@
         "packages/evidence/src/store.ts",
         "packages/persistence/src/repositories.ts",
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/reporting/src/index.ts",
         "packages/application/src/ci.ts",
         "packages/application/src/notifications/service.ts"
@@ -1155,7 +1161,8 @@
       "code": [
         "packages/application/src/provenance.ts",
         "packages/application/src/runs.ts",
-        "packages/application/src/worker.ts"
+        "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts"
       ],
       "note": "Agent session receives admitted provider/policy/config, not mutable current model config. Deterministic Docker replay invokes no model.",
       "coverage": {
@@ -1427,6 +1434,7 @@
       "code": [
         "packages/application/src/runs.ts",
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/application/src/ai/code-import.ts"
       ],
       "note": "Imported code uses real sandbox Playwright reporter; no latest lookup substitution.",
@@ -1515,7 +1523,8 @@
       "code": [
         "packages/evidence/src/store.ts",
         "packages/persistence/src/repositories.ts",
-        "packages/application/src/worker.ts"
+        "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts"
       ],
       "note": "Local filesystem/SQLite profile; real Docker HTTP target and process kill. No PostgreSQL/S3 runtime claim.",
       "coverage": {
@@ -5198,6 +5207,7 @@
         "packages/application/src/application.ts",
         "packages/application/src/runs.ts",
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/application/src/provenance.ts"
       ],
       "note": "Image lock tests use real installed Docker images and alternate lock path, never overwrite global image lock. No runner fallback.",
@@ -5442,7 +5452,8 @@
       "code": [
         "packages/evidence/src/store.ts",
         "packages/evidence/src/reader.ts",
-        "packages/application/src/worker.ts"
+        "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts"
       ],
       "note": "Execution artifact provenance verified; authored-code artifacts intentionally exist before a Run and are not execution evidence. Pass basis: orchestrator-reported green unit/docker/live gates and cited existing journey results; no tests rerun for this mapping.",
       "coverage": {
@@ -5488,7 +5499,11 @@
         "packages/application/src/execution-risk.test.ts",
         "validation/results/j17-worker-recovery.json"
       ],
-      "code": ["packages/domain/src/run.ts", "packages/application/src/worker.ts"],
+      "code": [
+        "packages/domain/src/run.ts",
+        "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts"
+      ],
       "note": "No guarantee that every infrastructure failure category is measured. Pass basis: orchestrator-reported green unit/docker/live gates and cited existing journey results; no tests rerun for this mapping.",
       "coverage": {
         "positive": [
@@ -5717,7 +5732,11 @@
         "packages/persistence/src/persistence.test.ts",
         "validation/results/j17-worker-recovery.json"
       ],
-      "code": ["packages/application/src/worker.ts", "packages/persistence/src/repositories.ts"],
+      "code": [
+        "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
+        "packages/persistence/src/repositories.ts"
+      ],
       "note": "No exactly-once external mutation guarantee; uncertain resources require reconciliation. Pass basis: orchestrator-reported green unit/docker/live gates and cited existing journey results; no tests rerun for this mapping.",
       "coverage": {
         "positive": [
@@ -5937,6 +5956,7 @@
       "code": [
         "apps/cli/src/test-execution.ts",
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/sandbox/src/attempt/executor.ts"
       ],
       "note": "Acceptance exercised by the cited real-Docker scenarios; pass evidence is the orchestrator-reported final 41-test Docker gate. Validated rootful-hardened Linux profile only. Approved rootful deviation replaces the rootless reference for this local gate; rootless itself is not verified.",
@@ -6890,6 +6910,7 @@
         "packages/application/src/auth",
         "packages/application/src/secrets.ts",
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "apps/server/src/routes/auth.ts",
         "apps/web/src/features/auth/auth-pages.tsx",
         "apps/web/src/routes/auth.tsx",
@@ -7427,6 +7448,7 @@
       ],
       "code": [
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/application/src/retention.ts",
         "packages/application/src/backups.ts"
       ],
@@ -7895,7 +7917,8 @@
       "code": [
         "packages/evidence/src/store.ts",
         "packages/persistence/src/repositories.ts",
-        "packages/application/src/worker.ts"
+        "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts"
       ],
       "note": "M1 local storage/supervisor acceptance; broader retention/refcount and restore-key limitations retained under their own IDs.",
       "coverage": {
@@ -7988,7 +8011,8 @@
       "code": [
         "packages/runner/src/browser.ts",
         "packages/sandbox/src/attempt/executor.ts",
-        "packages/application/src/worker.ts"
+        "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts"
       ],
       "note": "Frame/popup/upload/download/wait/hooks and cancellation/lease expiry now exercised with real Docker browser. RuntimeControl separately exercises repeated application cancellation.",
       "coverage": {
@@ -8123,6 +8147,7 @@
       "code": [
         "packages/application/src/runs.ts",
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/domain/src/run.ts",
         "packages/application/src/provenance.ts"
       ],
@@ -10023,6 +10048,7 @@
         "packages/application/src/auth",
         "packages/application/src/secrets.ts",
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/contracts/src/m4/auth.ts",
         "apps/server/src/routes/auth.ts",
         "apps/cli/src/auth-profiles.ts",
@@ -10930,7 +10956,8 @@
       "code": [
         "packages/evidence/src/store.ts",
         "packages/persistence/src/database.ts",
-        "packages/application/src/worker.ts"
+        "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts"
       ],
       "note": "Local SQLite/filesystem boundary fault injection; later storage profiles are unverified. Pass basis: orchestrator-reported green unit/docker/live gates and cited existing journey results; no tests rerun for this mapping.",
       "coverage": {
@@ -12234,6 +12261,7 @@
       "code": [
         "packages/persistence/src/repositories.ts",
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/sandbox/src/attempt/executor.ts"
       ],
       "note": "Acceptance exercised by the cited unit scenarios; pass evidence is the orchestrator-reported final 420-test unit gate, not a rerun by this mapper. Local ownership/fence scope only, not M5 distributed-partition validation.",
@@ -12278,6 +12306,7 @@
       ],
       "code": [
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/domain/src/run.ts",
         "packages/persistence/src/repositories.ts"
       ],
@@ -12519,6 +12548,7 @@
       ],
       "code": [
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/contracts/src/operations.ts",
         "apps/cli/src/workers.ts"
       ],
@@ -12593,6 +12623,7 @@
       "code": [
         "packages/application/src/runs.ts",
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/sandbox/src/docker/executor.ts"
       ],
       "note": "Cancellation reads terminal status inside the mutation transaction and composes with outer API idempotency transactions; failure precedence retained by existing reducer acceptance.",
@@ -12696,6 +12727,7 @@
       ],
       "code": [
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/runner/src/runtime.ts",
         "packages/contracts/src/registries.ts"
       ],
@@ -13121,7 +13153,8 @@
       "code": [
         "packages/evidence/src/store.ts",
         "packages/persistence/src/repositories.ts",
-        "packages/application/src/worker.ts"
+        "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts"
       ],
       "note": "Filesystem profile only; multipart acceptance exercises actual streamed local ArtifactWriter, not disabled S3 multipart.",
       "coverage": {
@@ -13831,6 +13864,7 @@
         "packages/application/src/context.ts",
         "packages/application/src/runs.ts",
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/persistence/src/repositories.ts",
         "apps/server/src/server.ts",
         "apps/cli/src/runtime.ts",
@@ -15787,6 +15821,7 @@
       "code": [
         "packages/application/src/runs.ts",
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/domain/src/policies.ts"
       ],
       "note": "Acceptance exercised by the cited unit scenarios; pass evidence is the orchestrator-reported final 420-test unit gate, not a rerun by this mapper.",
@@ -16058,6 +16093,7 @@
         "packages/application/src/auth",
         "packages/application/src/secrets.ts",
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/contracts/src/m4/auth.ts",
         "apps/server/src/routes/auth.ts",
         "apps/cli/src/auth-profiles.ts",
@@ -16324,6 +16360,7 @@
       "code": [
         "packages/application/src/runs.ts",
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/domain/src/policies.ts"
       ],
       "note": "Acceptance exercised by the cited unit scenarios; pass evidence is the orchestrator-reported final 420-test unit gate, not a rerun by this mapper. Aggregate memory pool admission is separate OPS-032 gap.",
@@ -16372,6 +16409,7 @@
       "code": [
         "packages/application/src/runs.ts",
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/sandbox/src/docker/executor.ts"
       ],
       "note": "No rollback of target effects is claimed.",
@@ -16546,7 +16584,11 @@
         "validation/journeys/network-boundary.docker.test.ts",
         "validation/journeys/provenance.docker.test.ts"
       ],
-      "code": ["packages/application/src/runs.ts", "packages/application/src/worker.ts"],
+      "code": [
+        "packages/application/src/runs.ts",
+        "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts"
+      ],
       "note": "NetworkBoundary peer exercised full real CLI strict HTTP/browser rerun network recorder and live positive control; provenance slice independently passed old-environment/policy Docker replay.",
       "coverage": {
         "positive": [
@@ -18422,6 +18464,7 @@
         "packages/application/src/application.ts",
         "packages/application/src/runs.ts",
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/sandbox/src/attempt/executor.ts"
       ],
       "note": "Fault injection invokes real socket/policy code, not mock success; explicit unauthorized unsafe-local still refuses rather than fallback.",
@@ -19926,6 +19969,7 @@
         "packages/application/src/auth",
         "packages/application/src/secrets.ts",
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/contracts/src/m4/auth.ts",
         "apps/server/src/routes/auth.ts",
         "apps/cli/src/auth-profiles.ts",
@@ -20075,6 +20119,7 @@
         "packages/application/src/auth",
         "packages/application/src/secrets.ts",
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/contracts/src/m4/auth.ts",
         "apps/server/src/routes/auth.ts",
         "apps/cli/src/auth-profiles.ts",
@@ -20185,6 +20230,7 @@
         "packages/sandbox/src/docker/executor.ts",
         "packages/sandbox/src/attempt/executor.ts",
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "apps/cli/src/workers.ts"
       ],
       "note": "Real cleanup-failure acceptance passes; workspace local runner slot quarantined in operational_state until explicit safe operator clearance. No migration; trusted constructor DI only, unreachable from product admission.",
@@ -20559,6 +20605,7 @@
         "packages/application/src/runs.ts",
         "packages/application/src/artifacts.ts",
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/runner/src/http.ts",
         "packages/evidence/src/store.ts",
         "packages/contracts/src/operations.ts",
@@ -21367,6 +21414,7 @@
       "code": [
         "packages/application/src/resources.ts",
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/runner/src/http.ts"
       ],
       "coverage": {
@@ -25867,6 +25915,7 @@
         "packages/application/src/timing.ts",
         "packages/application/src/runs.ts",
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/application/src/artifacts.ts",
         "packages/reporting/src/index.ts"
       ],
@@ -27011,7 +27060,8 @@
         "packages/domain/src/run.ts",
         "packages/domain/src/policies.ts",
         "packages/persistence/src/repositories.ts",
-        "packages/application/src/worker.ts"
+        "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts"
       ],
       "note": "Local scope acceptance; scheduler/remote-worker lifecycle beyond M2 not claimed. Pass basis: orchestrator-reported green unit/docker/live gates and cited existing journey results; no tests rerun for this mapping.",
       "coverage": {
@@ -27113,6 +27163,7 @@
         "packages/evidence/src/store.ts",
         "packages/persistence/src/repositories.ts",
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/persistence/src/database.ts"
       ],
       "note": "Verified declared local SQLite/filesystem profile only; PostgreSQL/S3 runtime later milestone.",
@@ -27162,6 +27213,7 @@
       "code": [
         "packages/application/src/runs.ts",
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/domain/src/policies.ts",
         "packages/runner/src/http.ts"
       ],
@@ -27320,7 +27372,11 @@
         "validation/results/W4-A-resource-cleanup.json",
         "validation/journeys/m1-functional.docker.test.ts"
       ],
-      "code": ["packages/runner/src/http.ts", "packages/application/src/worker.ts"],
+      "code": [
+        "packages/runner/src/http.ts",
+        "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts"
+      ],
       "note": "Acceptance exercised by the cited unit scenarios; pass evidence is the orchestrator-reported final 420-test unit gate, not a rerun by this mapper. Declarative HTTP scope only, not M5 property/security/load runner.",
       "coverage": {
         "positive": [
@@ -28233,6 +28289,7 @@
       "code": [
         "packages/application/src/provenance.ts",
         "packages/application/src/worker.ts",
+        "packages/application/src/attempt-session.ts",
         "packages/evidence/src/store.ts",
         "packages/sandbox/src/attempt/executor.ts"
       ],
