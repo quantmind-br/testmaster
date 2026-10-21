@@ -10540,11 +10540,82 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M5",
       "ownerRole": "Operations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-remote-workers.docker.test.ts::M5-01 one workspace flooding the shared pool worker does not monopolize it: another workspace's Run starts while the flood is still queued",
+        "packages/application/src/remote-workers.test.ts::M5-01 an environment's worker selector places its Runs only on workers carrying every selected label",
+        "validation/journeys/m5-remote-workers.docker.test.ts::M5-01 a partitioned remote worker loses its lease: its egress ends, its stale publication is refused with lease_lost and the Run completes from the worker that reclaimed it",
+        "validation/journeys/m5-remote-workers.docker.test.ts::M5-01 an external effect in flight on a partitioned remote worker stays uncertain and its Run is not retried",
+        "packages/application/src/remote-workers.test.ts::M5-01 a remote worker whose lease expired publishes nothing: upload, heartbeat and finalize are refused with lease_lost and the Run is reclaimed",
+        "apps/server/src/workers-deliveries.test.ts::M5-01 the remote worker routes answer only the worker's own credential and refuse an attempt it does not hold"
+      ],
+      "oracle": [
+        "On the real server profile (PostgreSQL, server start --mode server behind TLS) remote workers without database credentials run Attempts on the host Docker daemon over HTTPS: a worker partitioned from the controller mid-Attempt stops its sandbox and egress within one lease period (the held target connection closes, no container is left), the reconciler retries the Run under a new fence on a second worker which passes it, and the healed worker's settle is refused with lease_lost with no artifact for the stale Attempt; a POST in flight with a planned resource on a partitioned worker ends retry_unsafe_external_effect with one Attempt, one target POST and the resource uncertain; a shared pool worker flooded by one workspace claims another workspace's Run within its first three claims (six-run flood, two slots)."
+      ],
+      "evidence": [
+        "validation/results/M5-01-remote-workers.json",
+        "validation/journeys/m5-remote-workers.docker.test.ts",
+        "packages/application/src/remote-workers.test.ts",
+        "apps/server/src/workers-deliveries.test.ts",
+        "docs/adr/030-remote-workers.md",
+        "docs/operations/workers.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "packages/application/src/remote-workers.ts",
+        "packages/application/src/remote-worker-agent.ts",
+        "packages/application/src/worker.ts",
+        "packages/application/src/worker-pool.ts",
+        "packages/application/src/worker-handshake.ts",
+        "packages/application/src/operations-controllers.ts",
+        "packages/contracts/src/m5/remote-workers.ts",
+        "apps/server/src/routes/workers.ts",
+        "apps/server/src/server.ts",
+        "apps/cli/src/workers.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012). Controller, workers and Docker share one host; the partition is a blackholing TCP relay between one worker and the controller's TLS proxy. Remote calls need the API process that answered the claim (affinity on the worker id). The distributed deployment profile of specs/08-operations.md (stateless API replicas, elected scheduler, shared object storage, mTLS service identities) and its capability stay disabled; mTLS identities belong to M5-02.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m5-remote-workers.docker.test.ts::M5-01 one workspace flooding the shared pool worker does not monopolize it: another workspace's Run starts while the flood is still queued",
+          "packages/application/src/remote-workers.test.ts::M5-01 an environment's worker selector places its Runs only on workers carrying every selected label"
+        ],
+        "negative": [
+          "validation/journeys/m5-remote-workers.docker.test.ts::M5-01 a partitioned remote worker loses its lease: its egress ends, its stale publication is refused with lease_lost and the Run completes from the worker that reclaimed it",
+          "validation/journeys/m5-remote-workers.docker.test.ts::M5-01 an external effect in flight on a partitioned remote worker stays uncertain and its Run is not retried",
+          "packages/application/src/remote-workers.test.ts::M5-01 a remote worker whose lease expired publishes nothing: upload, heartbeat and finalize are refused with lease_lost and the Run is reclaimed",
+          "apps/server/src/workers-deliveries.test.ts::M5-01 the remote worker routes answer only the worker's own credential and refuse an attempt it does not hold"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m5-remote-workers.docker.test.ts",
+            "assertion": "expect(egressEndedAfterMs).toBeLessThan(45_000);"
+          },
+          {
+            "path": "validation/journeys/m5-remote-workers.docker.test.ts",
+            "assertion": "expect(lineOf(workerA, \"attempt.lease_lost\", firstAttemptId)?.call).toBe(\"settle\");"
+          },
+          {
+            "path": "validation/journeys/m5-remote-workers.docker.test.ts",
+            "assertion": "expect(lineOf(workerA, \"attempt.settled\", firstAttemptId)).toBeUndefined();"
+          },
+          {
+            "path": "validation/journeys/m5-remote-workers.docker.test.ts",
+            "assertion": "expect(events).toContain(\"retry_unsafe_external_effect\");"
+          },
+          {
+            "path": "validation/journeys/m5-remote-workers.docker.test.ts",
+            "assertion": ").toEqual([{ state: \"uncertain\" }]);"
+          },
+          {
+            "path": "validation/journeys/m5-remote-workers.docker.test.ts",
+            "assertion": "expect(otherPosition).toBeLessThanOrEqual(2);"
+          },
+          {
+            "path": "packages/application/src/remote-workers.test.ts",
+            "assertion": "expect((await app.remoteWorkers.claim(other, await claimInput(app))).attempt).toBeNull();"
+          }
+        ]
+      }
     },
     {
       "id": "M5-02",
