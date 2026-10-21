@@ -33,11 +33,13 @@ Tests live next to the code as `src/**/*.test.ts` and are excluded from `tsc` ou
 | Project | Files | Command | Requirements |
 |---|---|---|---|
 | unit | `*.test.ts` | `pnpm test` | hermetic, no external network |
-| docker | `*.docker.test.ts` | `pnpm test:docker` | Docker daemon, built runner images |
+| docker | `*.docker.test.ts` | `pnpm test:docker` | Docker daemon, built runner images, Go 1.22+ on `PATH` |
 | live | `*.live.test.ts` | `pnpm test:live` | `QUANTFORGE_API_KEY` for the real model |
 | postgres | `*.pg.test.ts`, `*.portal.test.ts` | `pnpm test:postgres` | Docker daemon, pinned `postgres:17-alpine` container |
 
 `pnpm test:docker` also runs the Python unit suite (`python/tests/unit`) inside the locked Python runner image with the working tree mounted read-only and no network (`validation/journeys/python-unit.docker.test.ts`); `pnpm test` and `tools/ci/check.sh` do not run it.
+
+The terminal runner acceptance (`validation/journeys/m5-terminal-acceptance.docker.test.ts`, M5-09) builds the stdlib-only Go TUI in `fixtures/reference-tui` with the host `go` toolchain (`CGO_ENABLED=0`, `GOPROXY=off`, `GOTOOLCHAIN=local`), once healthy and once per defect planted in a throwaway copy, and fails with an explicit message when `go` is missing.
 
 Permanent tests exercise observable behaviour (state transitions, denials, hashes, exit codes,
 real browser/API outcomes). No tests that pin wording, wiring or defaults.

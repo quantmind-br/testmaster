@@ -10636,11 +10636,119 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M5",
       "ownerRole": "Execution",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-terminal-acceptance.docker.test.ts::M5-09 a real Go TUI passes its pipe and PTY tests and its evidence names the executed binary",
+        "packages/runner/src/terminal.test.ts::reports exit code, stdout and stderr separately and feeds stdin",
+        "packages/runner/src/terminal.test.ts::encodes cursor keys by the DECCKM mode the program set and shows the alternate screen",
+        "packages/runner/src/terminal.test.ts::shows only the visible columns of an alternate screen after it is narrowed",
+        "packages/sandbox/src/attempt/terminal.docker.test.ts::runs a CLI fixture and a PTY session in the sandbox and leaves no process behind",
+        "validation/journeys/m5-terminal-acceptance.docker.test.ts::M5-09 each defect planted in a throwaway copy fails only its matching test with failed/assertion_*",
+        "validation/journeys/m5-terminal-acceptance.docker.test.ts::M5-09 a missing program blocks, a hung program times out with no process left, and a cancel kills the process tree",
+        "packages/runner/src/terminal.test.ts::fails a wrong exit code with assertion_mismatch and the observed code",
+        "packages/runner/src/terminal.test.ts::counts and kills a process that outlives the program, and passes when nothing does",
+        "packages/runner/src/terminal.test.ts::kills the whole process tree when a run exceeds its time and reports assertion_timeout",
+        "packages/runner/src/terminal.test.ts::blocks a program that cannot be started instead of failing the assertion",
+        "packages/sandbox/src/attempt/terminal.docker.test.ts::counts a process that outlives the program and still tears the sandbox down",
+        "packages/sandbox/src/attempt/terminal.docker.test.ts::fails a hung program with assertion_timeout and does not need the container to be killed"
+      ],
+      "oracle": [
+        "A stdlib-only Go TUI (fixtures/reference-tui) built from source runs through the CLI in a real Docker sandbox: its seven pipe and PTY tests pass, each of seven defects planted in a throwaway copy fails only its matching test with failed/assertion_*, a missing program is a blocked step, a hung program is killed by SIGKILL with assertion_timeout and no container left, and a cancel ends the run cancelled/user_cancelled with the program and its child gone from the host."
+      ],
+      "evidence": [
+        "validation/results/m5-terminal-reference-tui.json",
+        "validation/results/m5-terminal-planted-defects.json",
+        "validation/results/m5-terminal-negatives.json",
+        "validation/journeys/m5-terminal-acceptance.docker.test.ts",
+        "packages/runner/src/terminal.test.ts",
+        "packages/sandbox/src/attempt/terminal.docker.test.ts",
+        "packages/contracts/src/terminal-plan.test.ts",
+        "docs/adr/025-terminal-runner.md",
+        "docs/usage/terminal-tests.md",
+        "specs/11-contract-details.md"
+      ],
+      "code": [
+        "fixtures/reference-tui/main.go",
+        "packages/runner/src/terminal.ts",
+        "packages/runner/src/terminal-session.ts",
+        "packages/runner/src/terminal-processes.ts",
+        "packages/contracts/src/plans.ts",
+        "packages/contracts/src/validation.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012). Linux x64 runner image; the Go fixture is built on the host with go 1.22+. HTTP, Playwright and pytest runs on the same image stay covered by the existing Docker journeys in pnpm test:docker. Windows, macOS, the host clipboard and unsafe-local are refused or out of scope.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m5-terminal-acceptance.docker.test.ts::M5-09 a real Go TUI passes its pipe and PTY tests and its evidence names the executed binary",
+          "packages/runner/src/terminal.test.ts::reports exit code, stdout and stderr separately and feeds stdin",
+          "packages/runner/src/terminal.test.ts::encodes cursor keys by the DECCKM mode the program set and shows the alternate screen",
+          "packages/runner/src/terminal.test.ts::shows only the visible columns of an alternate screen after it is narrowed",
+          "packages/sandbox/src/attempt/terminal.docker.test.ts::runs a CLI fixture and a PTY session in the sandbox and leaves no process behind"
+        ],
+        "negative": [
+          "validation/journeys/m5-terminal-acceptance.docker.test.ts::M5-09 each defect planted in a throwaway copy fails only its matching test with failed/assertion_*",
+          "validation/journeys/m5-terminal-acceptance.docker.test.ts::M5-09 a missing program blocks, a hung program times out with no process left, and a cancel kills the process tree",
+          "packages/runner/src/terminal.test.ts::fails a wrong exit code with assertion_mismatch and the observed code",
+          "packages/runner/src/terminal.test.ts::counts and kills a process that outlives the program, and passes when nothing does",
+          "packages/runner/src/terminal.test.ts::kills the whole process tree when a run exceeds its time and reports assertion_timeout",
+          "packages/runner/src/terminal.test.ts::blocks a program that cannot be started instead of failing the assertion",
+          "packages/sandbox/src/attempt/terminal.docker.test.ts::counts a process that outlives the program and still tears the sandbox down",
+          "packages/sandbox/src/attempt/terminal.docker.test.ts::fails a hung program with assertion_timeout and does not need the container to be killed"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m5-terminal-acceptance.docker.test.ts",
+            "assertion": "expect(failing, defect.name).toEqual([defect.test]);"
+          },
+          {
+            "path": "validation/journeys/m5-terminal-acceptance.docker.test.ts",
+            "assertion": "expect(target?.reasonCode, defect.name).toMatch(/^assertion_/);"
+          },
+          {
+            "path": "validation/journeys/m5-terminal-acceptance.docker.test.ts",
+            "assertion": "expect(object(process.program).sha256).toBe(await sha256(binary));"
+          },
+          {
+            "path": "validation/journeys/m5-terminal-acceptance.docker.test.ts",
+            "assertion": "expect(start).toMatchObject({ status: \"blocked\", reasonCode: \"unsupported_capability\" });"
+          },
+          {
+            "path": "validation/journeys/m5-terminal-acceptance.docker.test.ts",
+            "assertion": "expect(hung).toMatchObject({ outcome: \"failed\", reasonCode: \"assertion_timeout\" });"
+          },
+          {
+            "path": "validation/journeys/m5-terminal-acceptance.docker.test.ts",
+            "assertion": "expect(await containers(runId)).toBe(\"\");"
+          },
+          {
+            "path": "packages/runner/src/terminal.test.ts",
+            "assertion": "expect(result).toEqual({ outcome: \"passed\", reasonCode: \"assertions_satisfied\" });"
+          },
+          {
+            "path": "packages/runner/src/terminal.test.ts",
+            "assertion": "expect(finished(\"code\").error?.message).toContain(\"last observation: 2\");"
+          },
+          {
+            "path": "packages/runner/src/terminal.test.ts",
+            "assertion": "expect(bad.finished(\"clean\").error?.message).toContain(\"last observation: 1\");"
+          },
+          {
+            "path": "packages/runner/src/terminal.test.ts",
+            "assertion": "expect(artifacts.get(\"terminal/steps/seen-screen.txt\")?.text).toContain(\"buffer=alternate\");"
+          },
+          {
+            "path": "packages/runner/src/terminal.test.ts",
+            "assertion": "expect(missing.result).toEqual({ outcome: \"blocked\", reasonCode: \"unsupported_capability\" });"
+          },
+          {
+            "path": "packages/sandbox/src/attempt/terminal.docker.test.ts",
+            "assertion": "expect(finished(\"clean\")?.reasonCode).toBe(\"assertion_mismatch\");"
+          },
+          {
+            "path": "packages/sandbox/src/attempt/terminal.docker.test.ts",
+            "assertion": "expect(finished(\"hang\")?.reasonCode).toBe(\"assertion_timeout\");"
+          }
+        ]
+      }
     },
     {
       "id": "M6-01",

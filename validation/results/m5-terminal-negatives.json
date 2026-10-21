@@ -1,0 +1,263 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m5-terminal-negatives",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "fixtures/reference-tui built with the host Go toolchain",
+  "observedAt": "2026-10-21T02:42:08.511Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "m5-terminal-negatives",
+        "--base-url",
+        "http://127.0.0.1:9",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_e63a8b36-61af-4cab-84f5-964b55d2804a",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "artifact",
+        "import-fixture",
+        "/tmp/tm-reftui-HOUxpf/reftui-healthy",
+        "--mime-type",
+        "application/octet-stream",
+        "--name",
+        "reftui",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d9493fce-57b8-46c8-815b-0f1e919b042f",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-V1gZox/repo/missing.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_32cc44fe-486e-4e4b-983c-1507120a11d6",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a15c56-231e-72db-90c2-28231efe37ea",
+        "--wait",
+        "--timeout",
+        "180",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 8,
+      "signal": null,
+      "requestId": "cli_88275172-ac8f-4c5a-b892-2f617cd288a5",
+      "warnings": [
+        "--timeout and --request-timeout do not end a run this command executes: the wait continues until the run completes or the command is interrupted. The limit applies only to waits on worker-owned runs."
+      ],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "steps",
+        "run_01a15c56-298c-7232-89b9-421097fe32b0",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_7597e253-deb0-4f47-9daf-393af77b283d",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-V1gZox/repo/hung.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_0fe7052d-3a16-48a6-a9e7-afd17ea33c71",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a15c56-324a-7388-9271-fd8264ac8271",
+        "--wait",
+        "--timeout",
+        "180",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "requestId": "cli_d6849e10-a02d-4b9e-a0b3-6363ba481b5b",
+      "warnings": [
+        "--timeout and --request-timeout do not end a run this command executes: the wait continues until the run completes or the command is interrupted. The limit applies only to waits on worker-owned runs."
+      ],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-V1gZox/repo/cancel.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ad31526d-4571-45a7-9786-49f5601a549d",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "list",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d311fd79-0b74-46d3-9947-b18b3e3a252a",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "list",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_0534f22d-e2c5-4cc9-b343-b40ad92c584b",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "cancel",
+        "run_01a15c56-54d8-71ee-988d-791057ba447e",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_031a8da6-4a94-415e-8865-0190691cca53",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a15c56-4dfe-752c-a41b-86978f8c333a",
+        "--wait",
+        "--timeout",
+        "180",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "requestId": "cli_c3d3b6c3-2443-47fb-8449-1a86f0c79f42",
+      "warnings": [
+        "--timeout and --request-timeout do not end a run this command executes: the wait continues until the run completes or the command is interrupted. The limit applies only to waits on worker-owned runs."
+      ],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a15c56-298c-7232-89b9-421097fe32b0",
+    "run_01a15c56-38ed-7564-a3a1-94db5fd556ee",
+    "run_01a15c56-54d8-71ee-988d-791057ba447e"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "terminalNegatives",
+      "missing": {
+        "runId": "run_01a15c56-298c-7232-89b9-421097fe32b0",
+        "outcome": "inconclusive",
+        "reasonCode": "unsupported_capability"
+      },
+      "hung": {
+        "runId": "run_01a15c56-38ed-7564-a3a1-94db5fd556ee",
+        "outcome": "failed",
+        "reasonCode": "assertion_timeout"
+      },
+      "cancelled": {
+        "runId": "run_01a15c56-54d8-71ee-988d-791057ba447e",
+        "killedHostPids": [
+          93686,
+          93693
+        ]
+      }
+    }
+  ],
+  "limitations": [
+    "Linux x64 runner image only; the Go fixture is a static binary built on the host.",
+    "Automated oracle only; no model, healing, agent mode or code export is involved."
+  ]
+}
