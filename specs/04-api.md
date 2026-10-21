@@ -50,7 +50,7 @@ Não retry de 401/403, validation, policy, crédito do provedor esgotado, produc
 | GET/PATCH `/projects/{id}` | metadata/defaultEnvironment | projects:R/W | M1 |
 | POST `/projects/{id}/archive` | impedir novos jobs, preservar histórico | projects:W | M1 |
 | POST `/projects/{id}/purge` | confirmation token, deletion job e tombstone | projects:A | M4 |
-| GET/POST `/projects/{id}/environments` | name/baseUrl/networkProfile/authRefs/additionalOrigins/ignoredOrigins/serverLog | env:R/W | M1 |
+| GET/POST `/projects/{id}/environments` | name/baseUrl/networkProfile/authRefs/additionalOrigins/ignoredOrigins/serverLog/workerSelector | env:R/W | M1 |
 | GET/PATCH/DELETE `/environments/{id}` | nova EnvironmentRevision; delete=archive | env:R/W | M1 |
 | POST `/projects/{id}/default-environment` | environmentId, If-Match project | env:W | M1 |
 | GET/POST `/secrets` | refs metadata; create value em corpo TLS, não response | secrets:R/W | M1 |
@@ -110,6 +110,10 @@ Não retry de 401/403, validation, policy, crédito do provedor esgotado, produc
 | GET/POST/DELETE `/tunnels` (item `/{id}`) | binding, TTL, exact loopback; secret create-only | tunnel:X | M5 |
 | GET/POST `/workers` | capabilities/labels/lease enrollment | workers:A | M4 |
 | POST `/workers/{id}/heartbeat` | lease/status/version, scoped worker token | worker:X | M4 |
+| POST `/workers/enroll` | resolve (e na primeira vez inscreve) a credencial `tm_wrk_`; responde workerId/shared/labels/state | worker credential | M5 |
+| POST `/workers/{id}/claims` | handshake/capacity/slots/state; no máximo um Attempt com dispatch, inputFiles, leaseExpiresAt e evidenceLimits | worker credential | M5 |
+| GET `/workers/{id}/attempts/{attemptId}/input?path=` | um arquivo de entrada do Attempt (binário) | worker credential | M5 |
+| POST `/workers/{id}/attempts/{attemptId}/{heartbeat,events,secrets,captures,auth-state,actions,finalize,fail}`; PUT `…/bundle?path=` | cada chamada sob o fence corrente; Attempt que o worker não detém → `PRECONDITION_FAILED` `lease_lost` sem efeito (ADR-030) | worker credential | M5 |
 | GET `/usage` | reserved/actual/unknown por período/projeto/model | usage:R | M2 |
 | GET `/audit-events` | immutable event pagination | audit:R | M4 |
 | POST `/integrations/{provider}/webhooks` | signed provider event, dedupe receipt | signature | M4/M5 |
