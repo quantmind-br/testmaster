@@ -68,6 +68,24 @@ export const Nonnegative = Type.Integer({ minimum: 0 });
 export const Positive = Type.Integer({ minimum: 1 });
 export const Enum = <T extends string>(values: readonly T[]) =>
   Type.Union(values.map((value) => Type.Literal(value)));
+/** Keys the worker runtime declares itself; an operator label or selector never uses them. */
+export const RESERVED_WORKER_LABELS = [
+  "name",
+  "pid",
+  "architecture",
+  "os",
+  "capacity",
+  "actions",
+  "slots",
+] as const;
+/** Operator labels of a worker, and the label selector an environment places Runs with (ADR-030). */
+export const WorkerLabels = Type.Record(
+  Type.String({
+    pattern: `^(?!(?:${RESERVED_WORKER_LABELS.join("|")})$)[a-z][a-z0-9._-]{0,62}$`,
+  }),
+  Name,
+  { maxProperties: 16, additionalProperties: false },
+);
 export const Obj = <T extends Record<string, TSchema>>(
   properties: T,
   options: Record<string, unknown> = {},

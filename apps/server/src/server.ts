@@ -9,6 +9,7 @@ import {
   correlationId,
   executeIdempotent,
   OperationalLogger,
+  type RemoteWorkerCaller,
   type ServerConfig,
   SignedCursorCodec,
   sessionCsrfMatches,
@@ -19,6 +20,7 @@ import {
   errorRegistry,
   INBOUND_WEBHOOK_MAX_BYTES,
   parseStrictJson,
+  REMOTE_WORKER_BODY_LIMIT_BYTES,
   routeCatalog,
   validate,
 } from "@testmaster/contracts";
@@ -72,13 +74,18 @@ const contexts = new WeakMap<
 >();
 /** Per-route settings read by the authentication hook. */
 interface RouteConfig {
-  auth: "token" | "public" | "signature";
+  auth: "token" | "public" | "signature" | "worker";
   /** Cookies are never read; `/mcp` is a bearer-only transport. */
   bearerOnly?: boolean;
 }
 interface PresentedCredential {
   kind: "bearer" | "session";
   secret: string;
+}
+/** The credential a remote worker presented; `caller` is null only on enrollment (ADR-030). */
+interface WorkerCredential {
+  token: string;
+  caller: RemoteWorkerCaller | null;
 }
 /** Routes without explicit config (404s) are authenticated like any other route. */
 function routeConfig(request: FastifyRequest): RouteConfig {
@@ -125,6 +132,7 @@ export function createServer(options: ServerOptions): FastifyInstance {
   });
   const identities = new WeakMap<FastifyRequest, AuthenticatedIdentity>();
   const credentials = new WeakMap<FastifyRequest, PresentedCredential>();
+  const workers = new WeakMap<FastifyRequest, WorkerCredential>();
   contexts.set(app, { options, identities });
   const portal = options.portal === false ? null : loadPortal(options.portal);
   const codec = new SignedCursorCodec(
@@ -189,7 +197,10 @@ export function createServer(options: ServerOptions): FastifyInstance {
       return;
     }
     try {
-      done(null, parseStrictJson(body as Buffer, 10 * 1024 * 1024));
+      // A remote worker's finalize carries every runner event of the Attempt (ADR-030).
+      const limit =
+        routeConfig(request).auth === "worker" ? REMOTE_WORKER_BODY_LIMIT_BYTES : 10 * 1024 * 1024;
+      done(null, parseStrictJson(body as Buffer, limit));
     } catch (error) {
       done(error as Error);
     }
@@ -248,8 +259,29 @@ export function createServer(options: ServerOptions): FastifyInstance {
     const route = routeConfig(request);
     const budget = takeBudget(view?.clientIp ?? "local");
     // Public and signed routes never authenticate here, but every call spends the caller's budget.
-    if (route.auth !== "token") {
+    if (route.auth === "public" || route.auth === "signature") {
       budget.tokens--;
+      return;
+    }
+    if (route.auth === "worker") {
+      // A remote worker presents its own `tm_wrk_` credential; only a refused one costs budget.
+      const authorization = request.headers.authorization;
+      const bearer =
+        typeof authorization === "string" ? /^Bearer (\S+)$/.exec(authorization) : null;
+      if (!bearer) throw new ContractError("UNAUTHENTICATED", "A worker credential is required");
+      const params = request.params as Record<string, string | undefined>;
+      try {
+        workers.set(request, {
+          token: bearer[1] as string,
+          caller:
+            params.id === undefined
+              ? null
+              : options.application.remoteWorkers.identify(bearer[1] as string, params.id),
+        });
+      } catch (error) {
+        budget.tokens--;
+        throw error;
+      }
       return;
     }
     const authorization = request.headers.authorization;
@@ -376,7 +408,11 @@ export function createServer(options: ServerOptions): FastifyInstance {
       method: route.method as HTTPMethods,
       url: `/v1${route.path.replace(/\{(\w+)\}/g, ":$1")}`,
       config: { auth: route.auth } satisfies RouteConfig,
-      ...(route.auth === "signature" ? { bodyLimit: INBOUND_WEBHOOK_MAX_BYTES } : {}),
+      ...(route.auth === "signature"
+        ? { bodyLimit: INBOUND_WEBHOOK_MAX_BYTES }
+        : route.auth === "worker"
+          ? { bodyLimit: REMOTE_WORKER_BODY_LIMIT_BYTES }
+          : {}),
       handler: async (request, reply) => {
         const identity = identities.get(request) ?? null;
         const service = identity
@@ -389,7 +425,7 @@ export function createServer(options: ServerOptions): FastifyInstance {
             "Capability is not implemented in this milestone",
             { capability: route.path, milestone: route.milestone },
           );
-        if (route.scope !== "public" && route.auth !== "signature") {
+        if (route.scope !== "public" && route.auth !== "signature" && route.auth !== "worker") {
           const scope = route.scope === "upload token" ? "W" : route.scope.split(":").at(-1);
           // Named resource actions are never implied by W/X; the service evaluates them per resource.
           if (namedActions[scope ?? ""]) {
@@ -428,8 +464,12 @@ export function createServer(options: ServerOptions): FastifyInstance {
           );
           throw new ContractError("FORBIDDEN", "Workspace mismatch");
         }
-        // Signed webhooks come from third parties that cannot send Idempotency-Key; their dedupe is the delivery ID.
-        const mutation = route.auth !== "signature" && !["GET", "HEAD"].includes(route.method);
+        // Signed webhooks come from third parties that cannot send Idempotency-Key; their dedupe is
+        // the delivery ID. Worker calls are fenced and repeatable (ADR-030).
+        const mutation =
+          route.auth !== "signature" &&
+          route.auth !== "worker" &&
+          !["GET", "HEAD"].includes(route.method);
         const key = request.headers["idempotency-key"];
         if (
           mutation &&
@@ -488,6 +528,7 @@ export function createServer(options: ServerOptions): FastifyInstance {
           body,
           rawBody: route.auth === "signature" ? (rawBodies.get(request) ?? null) : null,
           idempotencyKey: typeof key === "string" ? key : null,
+          worker: workers.get(request) ?? null,
           ifMatch: () => {
             if (match === undefined)
               throw new ContractError("PRECONDITION_REQUIRED", "If-Match is required");

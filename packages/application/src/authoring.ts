@@ -117,6 +117,8 @@ export interface EnvironmentInput {
   authRefs?: string[];
   /** Opt-in server log source; null clears it on update. */
   serverLog?: ServerLogSource | null;
+  /** Operator labels a worker must carry to claim the Runs (ADR-030); {} clears it on update. */
+  workerSelector?: Record<string, string>;
 }
 export type EnvironmentPatch = Partial<Omit<EnvironmentInput, "projectId">>;
 export type TestPatch = Partial<Pick<TestCase, "name" | "tags" | "priority">>;
@@ -613,6 +615,7 @@ export class EnvironmentsService {
       "ignoredOrigins",
       "authRefs",
       "serverLog",
+      "workerSelector",
     ]);
     const serverLog = serverLogSource(input.serverLog);
     return authoringTransaction(this.ctx, () => {
@@ -641,6 +644,9 @@ export class EnvironmentsService {
         variables: {},
         production: input.production ?? false,
         ...(serverLog ? { serverLog } : {}),
+        ...(input.workerSelector && Object.keys(input.workerSelector).length
+          ? { workerSelector: input.workerSelector }
+          : {}),
       }) as Stored<EnvironmentRevision>;
       const value = entity(this.ctx, "env", {
         projectId: input.projectId,
@@ -749,6 +755,7 @@ export class EnvironmentsService {
           timezone: revision.timezone,
           production: revision.production,
           serverLog: revision.serverLog ?? null,
+          workerSelector: revision.workerSelector ?? {},
         } as EnvironmentRevisionView;
       });
   }
@@ -765,6 +772,7 @@ export class EnvironmentsService {
       "ignoredOrigins",
       "authRefs",
       "serverLog",
+      "workerSelector",
     ]);
     const serverLog = patch.serverLog === undefined ? undefined : serverLogSource(patch.serverLog);
     return authoringTransaction(this.ctx, () => {
@@ -809,6 +817,10 @@ export class EnvironmentsService {
         // undefined keeps the previous source, null (serverLogSource → null) clears it.
         ...((patch.serverLog === undefined ? previous.serverLog : serverLog)
           ? { serverLog: patch.serverLog === undefined ? previous.serverLog : serverLog }
+          : {}),
+        // undefined keeps the previous selector, {} clears it.
+        ...(Object.keys(patch.workerSelector ?? previous.workerSelector ?? {}).length
+          ? { workerSelector: patch.workerSelector ?? previous.workerSelector }
           : {}),
       }) as Stored<EnvironmentRevision>;
       this.ctx.entities.insert("EnvironmentRevision", revision, { environmentId: id });

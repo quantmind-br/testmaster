@@ -138,6 +138,49 @@ it("REQ-038 the heartbeat route renews a lease with the worker credential and re
   expect(stale.json().error.code).toBe("REVISION_CONFLICT");
 });
 
+it("M5-01 the remote worker routes answer only the worker's own credential and refuse an attempt it does not hold", async () => {
+  const f = await fixture();
+  const enroll = async (name: string) =>
+    (await f.call("POST", "/v1/workers", { payload: { name } })).json().data as {
+      worker: { id: string };
+      enrollmentToken: string;
+    };
+  const a = await enroll("remote-a");
+  const b = await enroll("remote-b");
+  const post = (url: string, token?: string) =>
+    f.app.inject({
+      method: "POST",
+      url,
+      headers: {
+        "content-type": "application/json",
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+      },
+      payload: "{}",
+    });
+  const identity = await post("/v1/workers/enroll", a.enrollmentToken);
+  expect(identity.statusCode).toBe(200);
+  expect(identity.json().data).toMatchObject({ workerId: a.worker.id, shared: false });
+  expect((await post("/v1/workers/enroll", b.enrollmentToken)).statusCode).toBe(200);
+
+  const heartbeat = `/v1/workers/${a.worker.id}/attempts/att_${randomUUID()}/heartbeat`;
+  const lost = await post(heartbeat, a.enrollmentToken);
+  expect(lost.statusCode).toBe(422);
+  expect(lost.json().error.details.reasonCode).toBe("lease_lost");
+  // Negative controls: no credential, a user token, another worker's credential.
+  expect((await post(heartbeat)).statusCode).toBe(401);
+  expect((await post(heartbeat, f.admin.token)).statusCode).toBe(401);
+  expect((await post(heartbeat, b.enrollmentToken)).statusCode).toBe(401);
+  expect((await post("/v1/workers/enroll", f.admin.token)).statusCode).toBe(401);
+  // An administrator cannot label a private worker as the operator's shared pool worker.
+  expect(
+    (
+      await f.call("POST", "/v1/workers", {
+        payload: { name: "fake", labels: { sharedPool: "1" } },
+      })
+    ).statusCode,
+  ).toBe(400);
+});
+
 it("OPS-033 the HTTP admission receipt explains the wait and a full tenant queue answers 429 with Retry-After", async () => {
   const f = await fixture();
   f.h.app.preflight = async () => {};

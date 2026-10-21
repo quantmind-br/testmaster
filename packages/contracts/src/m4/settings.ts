@@ -53,6 +53,8 @@ export const settingsContracts = {
     production: Type.Boolean(),
     /** The opted-in server log source; null when the environment reads none. */
     serverLog: Type.Union([ServerLogSource, Type.Null()]),
+    /** Labels a worker must carry to claim the revision's Runs; empty: any worker (ADR-030). */
+    workerSelector: Type.Record(Type.String(), Name),
   }),
 };
 export type SecretRotationInput = Static<typeof settingsContracts.SecretRotationInput>;

@@ -676,6 +676,7 @@ it("M4-05 lists environment revisions newest first and never returns variables",
       "serverLog",
       "targetOrigins",
       "timezone",
+      "workerSelector",
     ].sort(),
   );
   // Positive control: a stored revision that carries a captured value is listed, minus the value.

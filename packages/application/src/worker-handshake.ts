@@ -82,3 +82,14 @@ export function supportsQueuedRun(
       handshake.runners.includes(capability) || handshake.actions.includes(capability),
   );
 }
+/**
+ * True when the worker carries every label of the Run's environment selector (ADR-030); a Run
+ * whose revision has no selector may run on any worker.
+ */
+export function selectsWorker(
+  revision: EntityDocument,
+  labels: Readonly<Record<string, unknown>> | null,
+): boolean {
+  const selector = (revision.workerSelector ?? {}) as Record<string, string>;
+  return Object.entries(selector).every(([key, value]) => labels?.[key] === value);
+}

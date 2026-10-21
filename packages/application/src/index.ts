@@ -53,6 +53,8 @@ export * from "./plan-trial.js";
 export * from "./provenance.js";
 export * from "./quarantine.js";
 export * from "./release.js";
+export * from "./remote-worker-agent.js";
+export * from "./remote-workers.js";
 export * from "./resources.js";
 export * from "./retention.js";
 export * from "./retention-purge.js";

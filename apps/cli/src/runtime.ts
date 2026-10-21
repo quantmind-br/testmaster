@@ -95,6 +95,20 @@ export function strings(options: Options, key: string): string[] {
 export function collect(value: string, previous: string[] = []): string[] {
   return [...previous, value];
 }
+/** `key=value` options as a label map; the schema at the service boundary checks keys and values. */
+export function labels(values: readonly string[]): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const value of values) {
+    const separator = value.indexOf("=");
+    if (separator < 1)
+      throw new ContractError("INVALID_ARGUMENT", "A label must be written key=value", { value });
+    const key = value.slice(0, separator);
+    if (Object.hasOwn(result, key))
+      throw new ContractError("INVALID_ARGUMENT", "A label key is repeated", { key });
+    result[key] = value.slice(separator + 1);
+  }
+  return result;
+}
 export function unavailable(capability: string): never {
   throw new ContractError("CAPABILITY_UNAVAILABLE", "Capability is unavailable", {
     capability,

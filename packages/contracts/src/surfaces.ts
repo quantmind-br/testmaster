@@ -68,8 +68,11 @@ export interface RouteDefinition {
   method: string;
   path: string;
   scope: string;
-  /** `public` skips authentication, `signature` is verified by the route itself. */
-  auth: "token" | "public" | "signature";
+  /**
+   * `public` skips authentication, `signature` is verified by the route itself, `worker` is a
+   * remote worker's `tm_wrk_` credential scoped to the worker id in the path (ADR-030).
+   */
+  auth: "token" | "public" | "signature" | "worker";
   milestone: Milestone;
   requestSchema: string;
   response: RouteResponse;
@@ -339,6 +342,33 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ["GET", "/workers/{id}", "workers:A", "M4", "Empty", "Worker"],
   // Authenticated by the route itself with the worker credential (tm_wrk_), never by a user session.
   ["POST", "/workers/{id}/heartbeat", "signature", "M4", "HeartbeatInput", "Worker"],
+  // Remote worker protocol (ADR-030): the worker's `tm_wrk_` credential, scoped to the path's worker.
+  ["POST", "/workers/enroll", "worker", "M5", "Empty", "RemoteWorkerIdentity"],
+  ["POST", "/workers/{id}/claims", "worker", "M5", "RemoteClaimInput", "RemoteClaim"],
+  ...(
+    [
+      ["GET", "input", "Empty", "Binary"],
+      ["POST", "heartbeat", "Empty", "RemoteAttemptLease"],
+      ["POST", "events", "RemoteEventInput", "RemoteAck"],
+      ["POST", "secrets", "RemoteSecretInput", "RemoteSecretValue"],
+      ["POST", "captures", "RemoteCaptureInput", "RemoteCapture"],
+      ["POST", "auth-state", "RemoteAuthStateInput", "RemoteAck"],
+      ["POST", "actions", "RemoteActionInput", "RemoteAction"],
+      ["PUT", "bundle", "Binary", "RemoteBundleFile"],
+      ["POST", "finalize", "RemoteFinalizeInput", "RemoteAck"],
+      ["POST", "fail", "RemoteFailInput", "RemoteAck"],
+    ] as const
+  ).map(
+    ([method, path, input, output]) =>
+      [
+        method,
+        `/workers/{id}/attempts/{attemptId}/${path}`,
+        "worker",
+        "M5",
+        input,
+        output,
+      ] as const,
+  ),
   ["GET", "/usage", "usage:R", "M2", "Empty", "UsageReport"],
   ["GET", "/audit-events", "audit:A", "M4", "Empty", "AuditEntry"],
   [
@@ -622,6 +652,8 @@ const responseOverrides: Readonly<Record<string, ResponseOverride>> = {
   // Raw bodies: a single `Range` answers 206.
   "GET /artifacts/{id}": { kind: "binary", alsoStatus: [206] },
   "GET /artifacts/{id}/content": { kind: "binary", alsoStatus: [206] },
+  // One input file of a remotely claimed Attempt, as raw bytes.
+  "GET /workers/{id}/attempts/{attemptId}/input": { kind: "binary" },
   "GET /metrics": { kind: "text" },
   "GET /runs/{id}/events": { kind: "stream" },
   "GET /discovery/{id}/events": { kind: "stream" },
@@ -663,7 +695,7 @@ export const routeCatalog: readonly RouteDefinition[] = routeRows.flatMap(
         method,
         path,
         scope: resolvedScope,
-        auth: scope === "public" ? "public" : scope === "signature" ? "signature" : "token",
+        auth: scope === "public" || scope === "signature" || scope === "worker" ? scope : "token",
         milestone,
         requestSchema:
           method === "GET" || (method === "DELETE" && path !== "/tests/{id}")

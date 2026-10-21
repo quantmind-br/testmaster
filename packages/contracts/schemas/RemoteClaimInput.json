@@ -1,0 +1,155 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "handshake",
+    "capacity",
+    "slots",
+    "state",
+    "architecture",
+    "os"
+  ],
+  "properties": {
+    "handshake": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "schemaVersions",
+        "runnerVersion",
+        "runners",
+        "actions",
+        "imageDigests"
+      ],
+      "properties": {
+        "schemaVersions": {
+          "maxItems": 100,
+          "type": "array",
+          "items": {
+            "minLength": 1,
+            "maxLength": 128,
+            "type": "string"
+          }
+        },
+        "runnerVersion": {
+          "minLength": 1,
+          "maxLength": 128,
+          "type": "string"
+        },
+        "runners": {
+          "maxItems": 100,
+          "type": "array",
+          "items": {
+            "minLength": 1,
+            "maxLength": 128,
+            "type": "string"
+          }
+        },
+        "actions": {
+          "maxItems": 100,
+          "type": "array",
+          "items": {
+            "minLength": 1,
+            "maxLength": 128,
+            "type": "string"
+          }
+        },
+        "imageDigests": {
+          "maxItems": 100,
+          "type": "array",
+          "items": {
+            "minLength": 1,
+            "maxLength": 128,
+            "type": "string"
+          }
+        }
+      }
+    },
+    "capacity": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "cpu",
+        "memoryBytes",
+        "pids",
+        "diskBytes",
+        "pools"
+      ],
+      "properties": {
+        "cpu": {
+          "minimum": 0,
+          "type": "number"
+        },
+        "memoryBytes": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "pids": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "diskBytes": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "pools": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "browser",
+            "http",
+            "python",
+            "terminal"
+          ],
+          "properties": {
+            "browser": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "http": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "python": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "terminal": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    "slots": {
+      "minimum": 1,
+      "maximum": 64,
+      "type": "integer"
+    },
+    "state": {
+      "anyOf": [
+        {
+          "const": "ready",
+          "type": "string"
+        },
+        {
+          "const": "draining",
+          "type": "string"
+        }
+      ]
+    },
+    "architecture": {
+      "minLength": 1,
+      "maxLength": 128,
+      "type": "string"
+    },
+    "os": {
+      "minLength": 1,
+      "maxLength": 128,
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:RemoteClaimInput",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

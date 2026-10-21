@@ -16,6 +16,7 @@ export * from "./m4/schedules.js";
 export * from "./m4/settings.js";
 export * from "./m4/sources.js";
 export * from "./m4/workers.js";
+export * from "./m5/remote-workers.js";
 export * from "./metrics.js";
 export * from "./openapi.js";
 export * from "./operations.js";

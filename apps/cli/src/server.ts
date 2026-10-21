@@ -9,13 +9,14 @@ import {
   type ServerConfig,
   serverReadiness,
 } from "@testmaster/application";
-import { ContractError } from "@testmaster/contracts";
+import { ContractError, validate } from "@testmaster/contracts";
 import { PersistenceDatabase } from "@testmaster/persistence";
 import { createServer } from "@testmaster/server";
 import type { Command } from "commander";
 import {
   collect,
   integer,
+  labels,
   modeOption,
   type Runtime,
   required,
@@ -249,6 +250,63 @@ export function serverCommands(program: Command, runtime: Runtime): void {
       return {
         data: issued,
         text: `Operator token ${issued.id} (valid until ${issued.expiresAt}), shown once:\n${issued.token}\n`,
+      };
+    },
+  );
+  runtime.bind(
+    group
+      .command("worker-enrollment")
+      .option("--name <name>", "Name of the shared pool worker")
+      .option(
+        "--label <key=value>",
+        "Operator label an environment's worker selector can match (repeatable)",
+        collect,
+        [],
+      )
+      .option("--expires-in-seconds <n>", "Lifetime of the unused enrollment token", integer)
+      .option("--out <path>", "New file (mode 0600) that receives the one-use tm_wrk_ token")
+      .description(
+        "Enroll a shared pool worker that claims Runs of every workspace (needs --config)",
+      ),
+    async (rt, _args, options) => {
+      const name = required(options, "name");
+      const out = required(options, "out");
+      const workerLabels = labels(strings(options, "label"));
+      const expiresInSeconds = options.expiresInSeconds;
+      const input = {
+        name,
+        ...(Object.keys(workerLabels).length ? { labels: workerLabels } : {}),
+        ...(typeof expiresInSeconds === "number" ? { expiresInSeconds } : {}),
+      };
+      validate("WorkerEnrollmentInput", input);
+      const { application } = await rt.serverApp();
+      // The shared worker's row lives in the first workspace (ADR-030).
+      const home = application.operator.workspaceIds()[0];
+      if (!home)
+        throw new ContractError("PRECONDITION_FAILED", "The server has no workspace yet", {
+          nextActions: ["testmaster server bootstrap --config <file>"],
+        });
+      const enrollment = application
+        .forWorkspaceSystem(home)
+        .workerPool.createEnrollment(input, { shared: true });
+      let path: string;
+      try {
+        path = await rt.writeOutput(out, `${enrollment.enrollmentToken}\n`, { mode: 0o600 });
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "EEXIST")
+          throw new ContractError("PRECONDITION_FAILED", "Token file already exists");
+        throw error;
+      }
+      const data = {
+        workerId: String(enrollment.worker.id),
+        workspaceId: home,
+        shared: true,
+        tokenFile: path,
+        tokenExpiresAt: enrollment.tokenExpiresAt,
+      };
+      return {
+        data,
+        text: `Shared worker ${data.workerId} enrolling; its token was written to ${path} (valid until ${data.tokenExpiresAt})\n`,
       };
     },
   );

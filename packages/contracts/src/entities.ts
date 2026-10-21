@@ -39,6 +39,7 @@ import {
   Timestamp,
   uuidPattern,
   Version,
+  WorkerLabels,
 } from "./primitives.js";
 import { reasonCodes } from "./registries.js";
 
@@ -137,6 +138,8 @@ export const entities = {
     production: Type.Boolean(),
     /** The application server's log source; absent: no server log is read. */
     serverLog: Type.Optional(ServerLogSource),
+    /** Labels a worker must carry to claim Runs of this revision (ADR-030); absent: any worker. */
+    workerSelector: Type.Optional(WorkerLabels),
   }),
   SecretReference: entity("sec", {
     workspaceId: id("ws"),

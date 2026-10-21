@@ -1,0 +1,195 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "state",
+    "attempt"
+  ],
+  "properties": {
+    "state": {
+      "anyOf": [
+        {
+          "const": "enrolling",
+          "type": "string"
+        },
+        {
+          "const": "ready",
+          "type": "string"
+        },
+        {
+          "const": "draining",
+          "type": "string"
+        },
+        {
+          "const": "revoked",
+          "type": "string"
+        },
+        {
+          "const": "offline",
+          "type": "string"
+        }
+      ]
+    },
+    "attempt": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "attemptId",
+            "runId",
+            "workspaceId",
+            "leaseExpiresAt",
+            "dispatch",
+            "inputFiles",
+            "evidenceLimits"
+          ],
+          "properties": {
+            "attemptId": {
+              "pattern": "^att_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "runId": {
+              "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "workspaceId": {
+              "pattern": "^ws_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "leaseExpiresAt": {
+              "format": "date-time",
+              "pattern": "Z$",
+              "type": "string"
+            },
+            "dispatch": {
+              "type": "object",
+              "patternProperties": {
+                "^(.*)$": {
+                  "anyOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/T0"
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "patternProperties": {
+                        "^(.*)$": {
+                          "$ref": "#/$defs/T0"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "inputFiles": {
+              "maxItems": 10000,
+              "type": "array",
+              "items": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "path",
+                  "sizeBytes",
+                  "sha256",
+                  "mode"
+                ],
+                "properties": {
+                  "path": {
+                    "minLength": 1,
+                    "maxLength": 512,
+                    "pattern": "^(?!.*(?:^|/)\\.\\.?(?:/|$))[^/\\u0000-\\u001f]+(?:/[^/\\u0000-\\u001f]+)*$",
+                    "type": "string"
+                  },
+                  "sizeBytes": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "mode": {
+                    "minimum": 0,
+                    "maximum": 511,
+                    "type": "integer"
+                  }
+                }
+              }
+            },
+            "evidenceLimits": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "objectBytes",
+                "attemptBytes"
+              ],
+              "properties": {
+                "objectBytes": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "attemptBytes": {
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "T0": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$id": "urn:testmaster:RemoteClaim",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

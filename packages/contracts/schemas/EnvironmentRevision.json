@@ -248,6 +248,18 @@
         }
       }
     },
+    "workerSelector": {
+      "maxProperties": 16,
+      "additionalProperties": false,
+      "type": "object",
+      "patternProperties": {
+        "^(?!(?:name|pid|architecture|os|capacity|actions|slots)$)[a-z][a-z0-9._-]{0,62}$": {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        }
+      }
+    },
     "extensions": {
       "type": "object",
       "patternProperties": {

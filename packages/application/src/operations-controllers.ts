@@ -48,10 +48,28 @@ export const retentionController: Controller = {
   },
 };
 
-/** Registers the loops the server process runs (alerts and retention). */
+/**
+ * Expires the leases of lost workers and settles their Runs. A remote worker has no database to
+ * do this itself, so the server process runs it for every pool (ADR-030).
+ */
+export const leaseReconcilerController: Controller = {
+  name: "lease-reconciler",
+  intervalMs: 5_000,
+  async run(scope) {
+    for (const id of workspaceIds(scope)) {
+      const workspace = scope.systemScope(id);
+      if (workspace.operations.isolated()) continue;
+      workspace.worker.settleLeases();
+    }
+    await scope.remoteWorkers.sweep();
+  },
+};
+
+/** Registers the loops the server process runs (alerts, retention and lease reconciliation). */
 export function registerOperationsControllers(registry: ControllerRegistry): void {
   registry.register(alertsController);
   registry.register(retentionController);
+  registry.register(leaseReconcilerController);
 }
 
 interface PendingOperation {

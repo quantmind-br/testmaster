@@ -455,6 +455,17 @@ export class AttemptSession {
   heartbeat(): number {
     return Date.parse(this.leases.heartbeat(this.fence));
   }
+  /** Throws `StaleFenceError` once this Attempt's fence is no longer current or its lease lapsed. */
+  assertCurrent(): void {
+    this.leases.assertCurrent(this.fence);
+  }
+  /** The Attempt's evidence limits: the largest object and the whole Attempt, in bytes. */
+  evidenceLimits(): { objectBytes: number; attemptBytes: number } {
+    return {
+      objectBytes: this.limits.artifactBytes ?? 67108864,
+      attemptBytes: this.limits.attemptArtifactBytes ?? 268435456,
+    };
+  }
 
   private recordTiming(): void {
     this.timer.mark("completed");

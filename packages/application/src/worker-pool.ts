@@ -66,14 +66,17 @@ export function fairShareCap(input: FairShareInput): number | undefined {
   return Math.max(1, Math.ceil(slots / Math.max(1, active)) + aging);
 }
 
-/** Concurrent executions the fresh, ready workers declared; a worker without a declaration counts as two. */
+/**
+ * Concurrent executions the fresh, ready workers declared; a worker without a declaration counts
+ * as two. A shared pool worker has a row in each workspace it serves and counts once (ADR-030).
+ */
 function readySlots(database: PersistenceDatabase, now: Date): number {
   const fresh = new Date(now.getTime() - WORKER_HEARTBEAT_TIMEOUT_MS).toISOString();
   const workers = database.all(
-    "SELECT data_json FROM workers WHERE state='ready' AND last_heartbeat_at>?",
+    "SELECT id,data_json FROM workers WHERE state='ready' AND last_heartbeat_at>?",
     fresh,
   );
-  let total = 0;
+  const declaredById = new Map<string, number>();
   for (const worker of workers) {
     let declared = defaultSlotsPerWorker;
     try {
@@ -83,9 +86,23 @@ function readySlots(database: PersistenceDatabase, now: Date): number {
     } catch {
       // A malformed document keeps the default.
     }
-    total += declared;
+    const id = String(worker.id);
+    declaredById.set(id, Math.max(declaredById.get(id) ?? 0, declared));
   }
+  let total = 0;
+  for (const declared of declaredById.values()) total += declared;
   return Math.max(1, total);
+}
+
+/** Label that marks the operator's shared pool worker, which claims for every workspace. */
+export const SHARED_WORKER_LABEL = "sharedPool";
+
+/** The worker a remote `tm_wrk_` credential belongs to (ADR-030). */
+export interface RemoteWorkerCaller {
+  /** The workspace that holds the worker's own row and credential. */
+  workspaceId: string;
+  workerId: string;
+  shared: boolean;
 }
 
 interface CredentialOwner {
@@ -93,6 +110,7 @@ interface CredentialOwner {
   tokenId: string;
   workerId: string;
   enrolled: boolean;
+  shared: boolean;
 }
 /** Body of a worker heartbeat (catalog `HeartbeatInput`). */
 export interface WorkerHeartbeat {
@@ -129,9 +147,13 @@ export class WorkerPoolService {
 
   /**
    * Creates the worker in `enrolling` state and a one-use token the worker presents when it
-   * starts. The token is returned once and only its hash is stored.
+   * starts. The token is returned once and only its hash is stored. A `shared` worker is the
+   * server operator's pool worker: it claims for every workspace (ADR-030).
    */
-  createEnrollment(input: WorkerEnrollmentInput): WorkerEnrollment {
+  createEnrollment(
+    input: WorkerEnrollmentInput,
+    options: { shared?: boolean } = {},
+  ): WorkerEnrollment {
     this.ctx.authorize("A");
     const ttl = input.expiresInSeconds ?? WORKER_ENROLLMENT_DEFAULT_TTL_SECONDS;
     const tokenExpiresAt = new Date(this.now().getTime() + ttl * 1000).toISOString();
@@ -149,7 +171,12 @@ export class WorkerPoolService {
         identityRef: `pending:${tokenId}`,
         capabilities: [],
         imageDigests: [],
-        labels: { ...(input.labels ?? {}), name: input.name, enrollmentTokenId: tokenId },
+        labels: {
+          ...(input.labels ?? {}),
+          name: input.name,
+          enrollmentTokenId: tokenId,
+          ...(options.shared ? { [SHARED_WORKER_LABEL]: "true" } : {}),
+        },
         state: "enrolling",
         lastHeartbeatAt: null,
       });
@@ -189,7 +216,19 @@ export class WorkerPoolService {
       tokenId: String(row.id),
       workerId: String(worker.id),
       enrolled: typeof document.labels?.enrolledAt === "string",
+      shared: document.labels?.[SHARED_WORKER_LABEL] === "true",
     };
+  }
+
+  /**
+   * The enrolled worker a remote call's credential belongs to, scoped to the worker id the call
+   * names (`null` for the enrollment call itself). Anything else is `UNAUTHENTICATED`.
+   */
+  remoteCaller(token: string, workerId: string | null): RemoteWorkerCaller {
+    const owner = this.credentialOwner(token);
+    if (!owner || (workerId !== null && (!owner.enrolled || owner.workerId !== workerId)))
+      throw new ContractError("UNAUTHENTICATED", "A valid worker credential is required");
+    return { workspaceId: owner.workspaceId, workerId: owner.workerId, shared: owner.shared };
   }
 
   /**
@@ -345,6 +384,42 @@ export class WorkerPoolService {
       });
       auditSecurity(this.ctx, "worker.revoke", id, "allowed");
     });
+    // A shared pool worker revoked where it was enrolled loses every workspace it served
+    // (ADR-030); its leases there are fenced exactly as here.
+    const home =
+      labels[SHARED_WORKER_LABEL] === "true" &&
+      labels.enrollmentTokenId &&
+      this.ctx.database.get(
+        "SELECT 1 FROM server_tokens WHERE workspace_id=? AND id=?",
+        this.ctx.workspaceId,
+        labels.enrollmentTokenId,
+      );
+    if (home) {
+      const controller = this.ctx.database.forWorkspace("*");
+      inTx(controller, () => {
+        for (const row of controller.all(
+          "SELECT workspace_id FROM workers WHERE id=? AND workspace_id<>? AND state<>'revoked'",
+          id,
+          this.ctx.workspaceId,
+        )) {
+          const workspaceId = String(row.workspace_id);
+          controller.run(
+            "UPDATE workers SET state='revoked',version=version+1 WHERE workspace_id=? AND id=?",
+            workspaceId,
+            id,
+          );
+          const fenced = new LeaseRepository(controller).fenceWorker(
+            workspaceId,
+            id,
+            this.now().toISOString(),
+          );
+          new OutboxRepository(controller).append(workspaceId, id, "worker.revoked", {
+            workerId: id,
+            fencedJobs: fenced.length,
+          });
+        }
+      });
+    }
     return requireEntity(this.ctx, "Worker", id);
   }
 

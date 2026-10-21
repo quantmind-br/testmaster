@@ -110,7 +110,8 @@
         "locale",
         "timezone",
         "production",
-        "serverLog"
+        "serverLog",
+        "workerSelector"
       ],
       "properties": {
         "id": {
@@ -207,6 +208,16 @@
               "type": "null"
             }
           ]
+        },
+        "workerSelector": {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
         }
       }
     }

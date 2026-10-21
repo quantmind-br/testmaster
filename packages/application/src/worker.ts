@@ -28,6 +28,7 @@ import {
   type ImageLock,
 } from "@testmaster/sandbox";
 import {
+  type AttemptDispatch,
   AttemptSession,
   abandonAttemptResources,
   attemptObservations,
@@ -58,6 +59,7 @@ import { UnsafeRuntime } from "./unsafe-runtime.js";
 import { fitsCapacity, validateCapacity, type WorkerCapacity } from "./worker-capacity.js";
 import {
   localHandshake,
+  selectsWorker,
   supportsQueuedRun,
   validateHandshake,
   type WorkerHandshake,
@@ -78,6 +80,8 @@ const leaseHeartbeatIntervalMs = 10000;
 export interface WorkerHost {
   config: ResolvedConfig;
   images(): Promise<ImageLock>;
+  /** The pinned image lock without inspecting this host's Docker, for remote workers (ADR-030). */
+  lockedImages?: () => Promise<ImageLock>;
   seccompPath: string;
   secrets: SecretsService;
   runs: RunsService;
@@ -451,11 +455,14 @@ export class WorkerService {
   private eraseSettledCaptures(): Promise<void> {
     return eraseSettledCaptures(this.ctx, this.host.secrets);
   }
-  private async maintenance() {
+  /**
+   * Expires overdue leases and settles the Runs they leave: a retry-safe Run is requeued, any other
+   * completes. Every write is fenced, so the API process may run it for remote workers (ADR-030).
+   */
+  settleLeases(): string[] {
     const database = this.ctx.database;
     const leases = new LeaseRepository(database);
     const expired = leases.expire();
-    await this.eraseSettledCaptures();
     const pending = database.all(
       `SELECT * FROM job_leases WHERE workspace_id=? AND state='reconciliation_required' AND dispatchable=1 AND ${runJobFilter}`,
       this.ctx.workspaceId,
@@ -530,6 +537,12 @@ export class WorkerService {
         });
       }
     }
+    return expired;
+  }
+  private async maintenance() {
+    const database = this.ctx.database;
+    const expired = this.settleLeases();
+    await this.eraseSettledCaptures();
     const reaped = await this.dockerExecutor()
       .reapOrphans(async (attemptId) => {
         const row = database.get(
@@ -673,6 +686,182 @@ export class WorkerService {
     });
     this.workerId = workerId;
   }
+  /** The sandbox executor kind of a Run, from its test revision's runner. */
+  private runKind(runId: string): ExecutorKind {
+    const run = this.host.runs.get(runId);
+    const revision = requireEntity(this.ctx, "TestRevision", run.revisionId);
+    return executorKindOf(revision.runnerKind ?? (revision.plan as ExecutablePlan | null)?.runner);
+  }
+  /**
+   * Selects and claims the next Run a worker may run (OPS-008, OPS-032, OPS-033): queued order,
+   * flake and dependency predecessors settled, suite pacing, the handshake's capabilities, the
+   * environment's worker selector (ADR-030), the admitting actor still allowed, the tenant's
+   * fair share, then capacity and storage inside the claim transaction. Synchronous, so a
+   * caller repeats it whole while the writer is contended. Shared by the local loop and the
+   * remote protocol.
+   */
+  claimNext(input: {
+    owner: string;
+    workerId: string | null;
+    /** The worker's labels; null for a worker without a row, which no selector matches. */
+    labels: Readonly<Record<string, unknown>> | null;
+    handshake: WorkerHandshake | null;
+    lock: ImageLock | null;
+    runIds?: readonly string[];
+    capacity: WorkerCapacity;
+    /** Executor kinds whose capacity is already taken, read inside the claim transaction. */
+    reserved: () => ExecutorKind[];
+    /** Whether the Run's worst-case evidence fits next to the work in progress. */
+    storage: (runId: string) => boolean;
+  }): (Fence & { runId: string; expiresAt: string; number: number }) | null {
+    const database = this.ctx.database;
+    const { handshake, lock, runIds } = input;
+    const candidates = database
+      .all(
+        "SELECT r.id FROM runs r JOIN job_leases j ON j.workspace_id=r.workspace_id AND j.resource_id=r.id WHERE r.workspace_id=? AND j.state='queued' ORDER BY j.available_at,j.id",
+        this.ctx.workspaceId,
+      )
+      .map((row) => String(row.id))
+      .filter((id) => {
+        if (runIds && !runIds.includes(id)) return false;
+        const run = this.host.runs.get(id);
+        const cancelled = this.cancelled(id);
+        const predecessor = runMatrixCell(run).flakePredecessorRunId;
+        return (
+          (cancelled ||
+            typeof predecessor !== "string" ||
+            this.host.runs.get(predecessor).phase === "completed") &&
+          (!handshake ||
+            !lock ||
+            supportsQueuedRun(
+              handshake,
+              run,
+              requireEntity(this.ctx, "TestRevision", run.revisionId),
+              lock,
+            )) &&
+          selectsWorker(
+            requireEntity(this.ctx, "EnvironmentRevision", run.environmentRevisionId),
+            input.labels,
+          ) &&
+          (cancelled ||
+            this.dependencies(run).every(
+              (binding) => this.host.runs.get(binding.producerRunId).phase === "completed",
+            )) &&
+          this.memberIntervalReady(id)
+        );
+      });
+    // A Run whose admitting actor lost execute access ends blocked before any Attempt starts.
+    for (const id of [...candidates]) {
+      const run = this.host.runs.get(id);
+      const actor = runMatrixCell(run).actor as RunActor | undefined;
+      if (!actor || this.cancelled(id)) continue;
+      const project = requireEntity(this.ctx, "TestCase", run.testId).projectId;
+      if (this.ctx.reauthorizeActor(actor, String(project))) continue;
+      this.host.runs.blockActorRevoked(id);
+      candidates.splice(candidates.indexOf(id), 1);
+    }
+    // Cross-tenant demand is read before the transaction: a workspace-bound claim cannot see other tenants.
+    const maxLeased = candidates.length
+      ? fairShareCap({
+          database: database.forWorkspace("*"),
+          workspaceId: this.ctx.workspaceId,
+          now: new Date(),
+        })
+      : undefined;
+    // The transaction makes resource reservation and lease claim indivisible across owners.
+    return database.withTx(() => {
+      if (this.isQuarantined()) return null;
+      const reserved = input.reserved();
+      // A cancelled run still claims, to finalize without writing evidence.
+      const eligible = candidates.filter(
+        (id) =>
+          fitsCapacity(input.capacity, reserved, this.runKind(id)) &&
+          (this.cancelled(id) || input.storage(id)),
+      );
+      return new LeaseRepository(database).claim({
+        workspaceId: this.ctx.workspaceId,
+        owner: input.owner,
+        queue: "local",
+        runIds: eligible,
+        ...(maxLeased !== undefined ? { maxLeased } : {}),
+        ...(input.workerId ? { workerId: input.workerId } : {}),
+      });
+    });
+  }
+  /**
+   * Claims the next Run for a remote worker (ADR-030) and opens the Attempt's controller session:
+   * the snapshot is sealed and the input files are written under `inputDir` for the worker to
+   * fetch. The image lock is read without this host's Docker; the worker runs only images its own
+   * daemon verified. Returns null when nothing is claimable, or when the claimed Run was settled
+   * while it was prepared (a blocked dependency, a spent deadline or a refused preparation).
+   */
+  async claimForRemote(input: {
+    workerId: string;
+    labels: Readonly<Record<string, unknown>>;
+    handshake: WorkerHandshake;
+    capacity: WorkerCapacity;
+    /** Executor kinds of the Attempts the worker already runs, in every workspace. */
+    reserved: readonly ExecutorKind[];
+    /** Worst-case evidence of those Attempts, held on the worker's disk until it is uploaded. */
+    inFlightBytes: number;
+  }): Promise<{
+    session: AttemptSession;
+    controller: AbortController;
+    dispatch: AttemptDispatch;
+    inputDir: string;
+    expiresAt: string;
+  } | null> {
+    const images = this.host.lockedImages ?? this.host.images;
+    const lock = await images();
+    const handshake = validateHandshake(input.handshake, localHandshake(lock));
+    const capacity = validateCapacity(input.capacity);
+    const room = await this.storageRoom();
+    const database = this.ctx.database;
+    const fence = await retryWriterContention(
+      () =>
+        this.claimNext({
+          owner: `remote:${input.workerId}`,
+          workerId: input.workerId,
+          labels: input.labels,
+          handshake,
+          lock,
+          capacity,
+          reserved: () => [...input.reserved],
+          // The evidence lands on this server and, until it is uploaded, on the worker's disk.
+          storage: (id) => {
+            const incomingBytes = this.worstCaseEvidence(id);
+            return (
+              hasStorageRoom({ ...room, incomingBytes }) &&
+              hasStorageRoom({
+                freeBytes: capacity.diskBytes,
+                inFlightBytes: input.inFlightBytes,
+                incomingBytes,
+              })
+            );
+          },
+        }),
+      { inTransaction: () => database.inTransaction },
+    );
+    if (!fence) return null;
+    const controller = new AbortController();
+    const session = AttemptSession.open(this.ctx, { ...this.host, images }, fence, {
+      workerId: input.workerId,
+      signal: controller.signal,
+    });
+    const inputDir = join(this.host.config.dataDir, "cache", "remote-input", fence.attemptId);
+    let dispatch: AttemptDispatch | null = null;
+    try {
+      dispatch = await session.prepare(inputDir);
+    } catch (error) {
+      await session.fail(error);
+    }
+    if (!dispatch) {
+      await rm(inputDir, { recursive: true, force: true });
+      await session.close();
+      return null;
+    }
+    return { session, controller, dispatch, inputDir, expiresAt: fence.expiresAt };
+  }
   async run(
     options: {
       signal?: AbortSignal;
@@ -714,7 +903,6 @@ export class WorkerService {
     } else this.ctx.authorize(options.ephemeral ? "X" : "A");
     this.drainRequested = false;
     const database = this.ctx.database;
-    const leases = new LeaseRepository(database);
     const runIds = options.ephemeral
       ? this.host.runs.expandRunIds(options.runIds ?? [])
       : undefined;
@@ -752,12 +940,6 @@ export class WorkerService {
     const handshake = availableHandshake
       ? validateHandshake(options.handshake ?? availableHandshake, availableHandshake)
       : null;
-    const kindOf = (id: string): ExecutorKind => {
-      const run = this.host.runs.get(id);
-      const revision = requireEntity(this.ctx, "TestRevision", run.revisionId);
-      const runner = revision.runnerKind ?? (revision.plan as ExecutablePlan | null)?.runner;
-      return executorKindOf(runner);
-    };
     const tasks = new Set<Promise<void>>();
     // Writer contention is transient and has no total deadline: each operation waits for the writer
     // (full-jitter backoff) until the lock frees or the abort signal ends it. The signal is
@@ -889,82 +1071,34 @@ export class WorkerService {
           // every workspace are read with the controller scope.
           const room = next ? await this.storageRoom() : null;
           // Selection, actor revocation and the claim repeat as a unit while the writer is contended.
-          const fence = await contended(() => {
-            const candidates = database
-              .all(
-                "SELECT r.id FROM runs r JOIN job_leases j ON j.workspace_id=r.workspace_id AND j.resource_id=r.id WHERE r.workspace_id=? AND j.state='queued' ORDER BY j.available_at,j.id",
-                this.ctx.workspaceId,
-              )
-              .map((row) => String(row.id))
-              .filter(
-                (id) =>
-                  (!runIds || runIds.includes(id)) &&
-                  (this.cancelled(id) ||
-                    typeof runMatrixCell(this.host.runs.get(id)).flakePredecessorRunId !==
-                      "string" ||
-                    this.host.runs.get(
-                      String(runMatrixCell(this.host.runs.get(id)).flakePredecessorRunId),
-                    ).phase === "completed") &&
-                  (!handshake ||
-                    !lock ||
-                    supportsQueuedRun(
-                      handshake,
-                      this.host.runs.get(id),
-                      requireEntity(this.ctx, "TestRevision", this.host.runs.get(id).revisionId),
-                      lock,
-                    )) &&
-                  (this.cancelled(id) ||
-                    this.dependencies(this.host.runs.get(id)).every(
-                      (binding) => this.host.runs.get(binding.producerRunId).phase === "completed",
-                    )) &&
-                  this.memberIntervalReady(id),
-              );
-            // A Run whose admitting actor lost execute access ends blocked before any Attempt starts.
-            for (const id of [...candidates]) {
-              const run = this.host.runs.get(id);
-              const actor = runMatrixCell(run).actor as RunActor | undefined;
-              if (!actor || this.cancelled(id)) continue;
-              const project = requireEntity(this.ctx, "TestCase", run.testId).projectId;
-              if (this.ctx.reauthorizeActor(actor, String(project))) continue;
-              this.host.runs.blockActorRevoked(id);
-              candidates.splice(candidates.indexOf(id), 1);
-            }
-            // Cross-tenant demand is read before the transaction: a workspace-bound claim cannot see other tenants.
-            const maxLeased = candidates.length
-              ? fairShareCap({
-                  database: database.forWorkspace("*"),
-                  workspaceId: this.ctx.workspaceId,
-                  now: new Date(),
-                })
-              : undefined;
-            // The transaction makes resource reservation and lease claim indivisible across local owners.
-            return database.withTx(() => {
-              if (this.isQuarantined()) return null;
-              const reserved = database
-                .all(
-                  `SELECT resource_id FROM job_leases WHERE state='leased' AND dispatchable=1 AND ${runJobFilter}`,
-                )
-                .map((row) => kindOf(String(row.resource_id)));
+          const fence = await contended(() =>
+            this.claimNext({
+              owner: this.owner,
+              workerId: this.workerId,
+              labels: this.workerId
+                ? (requireEntity(this.ctx, "Worker", this.workerId).labels as Record<
+                    string,
+                    unknown
+                  >)
+                : null,
+              handshake,
+              lock,
+              ...(runIds ? { runIds } : {}),
+              capacity,
+              // Local owners on this host share its capacity; remote workers bring their own.
+              reserved: () =>
+                database
+                  .all(
+                    `SELECT resource_id FROM job_leases WHERE state='leased' AND dispatchable=1 AND ${runJobFilter} AND lease_owner NOT LIKE 'remote:%'`,
+                  )
+                  .map((row) => this.runKind(String(row.resource_id))),
               // A run starts only when the free space holds its worst-case evidence next to the
               // runs in progress; otherwise it stays queued, with no deadline, until room returns.
-              // A cancelled run still claims, to finalize without writing evidence.
-              const eligible = candidates.filter(
-                (id) =>
-                  fitsCapacity(capacity, reserved, kindOf(id)) &&
-                  (room === null ||
-                    this.cancelled(id) ||
-                    hasStorageRoom({ ...room, incomingBytes: this.worstCaseEvidence(id) })),
-              );
-              return leases.claim({
-                workspaceId: this.ctx.workspaceId,
-                owner: this.owner,
-                queue: "local",
-                runIds: eligible,
-                ...(maxLeased !== undefined ? { maxLeased } : {}),
-                ...(this.workerId ? { workerId: this.workerId } : {}),
-              });
-            });
-          });
+              storage: (id) =>
+                room === null ||
+                hasStorageRoom({ ...room, incomingBytes: this.worstCaseEvidence(id) }),
+            }),
+          );
           if (fence) {
             const task = this.execute(
               fence,

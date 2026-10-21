@@ -98,6 +98,7 @@ const notAuthoredJson: Record<string, string> = {
   "secret rotate --file": "raw secret value, plain text",
   "secret set --file": "raw secret value, plain text",
   "server keygen --out": "output destination",
+  "server worker-enrollment --out": "output destination for the token",
   "server start --token-file": "token file, plain text",
   "source add --file": "requirements source in any format; --format picks the parser",
   "source add <path>": "requirements source in any format; --format picks the parser",
@@ -107,6 +108,8 @@ const notAuthoredJson: Record<string, string> = {
   "test lint --dir": "directory of plan files, each shaped as the --plan example",
   "token issue --token-file": "output destination for the token",
   "usage --out": "output destination",
+  "worker start --ca-file": "PEM certificate authority, not JSON",
+  "worker start --data-dir": "worker data directory",
   "worker start --enroll-token-file": "token file, plain text",
 };
 

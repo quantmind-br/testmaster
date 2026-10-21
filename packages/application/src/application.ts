@@ -112,6 +112,7 @@ import { PlanTrialService } from "./plan-trial.js";
 import { PlanValidationService } from "./plan-validation.js";
 import { QuarantineService } from "./quarantine.js";
 import { revokedImageIds, revokeImage } from "./release.js";
+import { RemoteAttemptRegistry, RemoteWorkerService } from "./remote-workers.js";
 import { ResourcesService } from "./resources.js";
 import { RetentionService } from "./retention.js";
 import { RetentionPurgeService } from "./retention-purge.js";
@@ -206,6 +207,8 @@ interface SharedRuntime {
   /** Workspace system scopes handed to controller loops, built once per workspace. */
   systemScopes?: Map<string, Application>;
   ephemeralSecrets: Map<string, string>;
+  /** Attempts remote workers run, held by this API process (ADR-030). */
+  remoteAttempts?: RemoteAttemptRegistry;
 }
 const IMAGE_REMEDY =
   "reinstall TestMaster (`make install` in a source checkout) or rebuild the runner images (`containers/build.sh`) so the installed image lock and the local Docker image store agree";
@@ -280,6 +283,8 @@ export class Application {
   readonly schedules: SchedulesService;
   readonly notifications: NotificationsService;
   readonly workerPool: WorkerPoolService;
+  /** The remote worker protocol (ADR-030); every scoped instance shares the held Attempts. */
+  readonly remoteWorkers: RemoteWorkerService;
   readonly github: GithubService;
   readonly agentSkills: AgentSkillsService;
   readonly model: ModelService;
@@ -456,6 +461,7 @@ export class Application {
     this.worker = new WorkerService(this.context, {
       config,
       images: () => this.images(),
+      lockedImages: () => this.lockedImages(),
       seccompPath: this.seccompPath,
       secrets: this.secrets,
       runs: this.runs,
@@ -567,6 +573,8 @@ export class Application {
     const publicOrigin = serverConfig?.server.publicOrigin ?? defaultPublicOrigin;
     this.integrations.useDelivery({ secrets: this.platformSecrets(), publicOrigin });
     this.workerPool = new WorkerPoolService(this.context);
+    this.shared.remoteAttempts ??= new RemoteAttemptRegistry();
+    this.remoteWorkers = new RemoteWorkerService(this, this.shared.remoteAttempts);
     this.notifications = new NotificationsService(this.context, this.integrations, this.batches, {
       publicOrigin,
     });
@@ -1216,12 +1224,7 @@ export class Application {
     // starts and verifies every container's hardening (seccomp, limits, mounts, image ID) before
     // each Attempt. A mismatch ends the Run `blocked` with `security_precondition_failed`.
     if (this.serverConfig) {
-      this.verifiedImages = await verifyImageLock(
-        this.lockPath,
-        async (imageId) => imageId,
-        undefined,
-        revokedImageIds(this.database),
-      );
+      this.verifiedImages = await this.lockedImages();
       return;
     }
     const docker = await new DockerExecutor().doctor();
@@ -1243,6 +1246,18 @@ export class Application {
         ...(problem.imageId ? { imageId: problem.imageId } : {}),
       });
     }
+  }
+  /**
+   * The pinned image lock checked for revocation but not against this host's Docker: a remote
+   * worker verifies the images on its own daemon (ADR-030).
+   */
+  lockedImages(): Promise<ImageLock> {
+    return verifyImageLock(
+      this.lockPath,
+      async (imageId) => imageId,
+      undefined,
+      revokedImageIds(this.database),
+    );
   }
   async images(): Promise<ImageLock> {
     const lock = await verifyImageLock(

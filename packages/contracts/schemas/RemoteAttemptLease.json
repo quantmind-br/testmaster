@@ -1,0 +1,21 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "leaseExpiresAt",
+    "cancelRequested"
+  ],
+  "properties": {
+    "leaseExpiresAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "cancelRequested": {
+      "type": "boolean"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:RemoteAttemptLease",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

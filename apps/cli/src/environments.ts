@@ -4,6 +4,7 @@ import { listOrPage, withPaging } from "./paging.js";
 import {
   collect,
   integer,
+  labels,
   type Options,
   type Runtime,
   required,
@@ -39,6 +40,12 @@ function environmentPatch(opts: Options) {
       "INVALID_ARGUMENT",
       "--clear-ignored-origins cannot be combined with --ignored-origin",
     );
+  const workerSelector = labels(strings(opts, "workerLabel"));
+  if (opts.clearWorkerSelector === true && Object.keys(workerSelector).length)
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      "--clear-worker-selector cannot be combined with --worker-label",
+    );
   return {
     ...(name ? { name } : {}),
     ...(baseUrl ? { baseUrl } : {}),
@@ -61,6 +68,11 @@ function environmentPatch(opts: Options) {
       ? { serverLog: { kind: "docker" as const, container: serverLogContainer } }
       : opts.clearServerLog === true
         ? { serverLog: null }
+        : {}),
+    ...(Object.keys(workerSelector).length
+      ? { workerSelector }
+      : opts.clearWorkerSelector === true
+        ? { workerSelector: {} }
         : {}),
   };
 }
@@ -91,6 +103,13 @@ function environmentOptions(command: Command): Command {
       "Docker container of the application server: the log lines it writes during each attempt become the evidence logs/server.log (opt-in)",
     )
     .option("--clear-server-log", "Stop reading the server log")
+    .option(
+      "--worker-label <key=value>",
+      "Run only on workers carrying this operator label; replaces the current selector (repeatable)",
+      collect,
+      [],
+    )
+    .option("--clear-worker-selector", "Let any worker run this environment")
     .option("--production");
 }
 export function environmentCommands(program: Command, runtime: Runtime): void {

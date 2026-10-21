@@ -1,7 +1,8 @@
 import { stat } from "node:fs/promises";
+import { httpsWorkerTransport, RemoteWorkerAgent } from "@testmaster/application";
 import { ContractError } from "@testmaster/contracts";
 import { type Command, Option } from "commander";
-import type { Runtime } from "./runtime.js";
+import { type Options, type Runtime, required, string } from "./runtime.js";
 import { announceDrain, runServerWorkers } from "./server.js";
 
 /** The token file must be private to the operator running the worker (mode 0600). */
@@ -29,6 +30,41 @@ function announceContention(rt: Runtime, elapsedMs: number): void {
   );
 }
 
+/**
+ * A worker without database credentials (ADR-030): it claims from the server over HTTPS with its
+ * `tm_wrk_` credential and prints one JSON line per lifecycle fact on stderr.
+ */
+async function runRemoteWorker(
+  rt: Runtime,
+  options: Options,
+): Promise<{ mode: "remote"; workerId: string }> {
+  const slots = Number(options.slots);
+  if (!Number.isInteger(slots) || slots < 1 || slots > 64)
+    throw new ContractError("INVALID_ARGUMENT", "--slots must be an integer from 1 to 64");
+  const dataDir = string(options, "dataDir") ?? process.env.TESTMASTER_DATA_DIR;
+  if (!dataDir)
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      "Remote mode requires --data-dir or TESTMASTER_DATA_DIR",
+    );
+  const credential = await readEnrollmentToken(rt, required(options, "enrollTokenFile"));
+  const caFile = string(options, "caFile");
+  const agent = new RemoteWorkerAgent({
+    transport: httpsWorkerTransport({
+      endpoint: required(options, "controller"),
+      credential,
+      ...(caFile ? { ca: await rt.readInput(caFile) } : {}),
+    }),
+    dataDir: await rt.confinedPath(dataDir),
+    slots,
+    log: (entry) => rt.stderr.write(`${JSON.stringify(entry)}\n`),
+  });
+  announceDrain(rt);
+  const { workerId } = await agent.run(rt.controller.signal, rt.forceController.signal);
+  if (rt.signal) throw rt.interrupted();
+  return { mode: "remote", workerId };
+}
+
 export function workerCommands(program: Command, runtime: Runtime): void {
   const group = program.command("worker");
   runtime.bind(
@@ -36,14 +72,28 @@ export function workerCommands(program: Command, runtime: Runtime): void {
       .command("start")
       .addOption(
         new Option("--mode <mode>", "Deployment mode")
-          .choices(["local", "server"])
+          .choices(["local", "server", "remote"])
           .default("local"),
       )
       .option(
         "--enroll-token-file <path>",
-        "Enroll this process as one registered pool worker with a one-use tm_wrk_ token (server mode)",
+        "Enroll this process as one registered pool worker with a one-use tm_wrk_ token (server and remote mode)",
+      )
+      .option(
+        "--controller <url>",
+        "HTTPS origin of the TestMaster server a remote worker claims from (remote mode)",
+      )
+      .option(
+        "--ca-file <path>",
+        "PEM certificate authority the remote worker trusts for --controller (remote mode)",
+      )
+      .option("--slots <n>", "Attempts a remote worker runs at the same time (remote mode)", "2")
+      .option(
+        "--data-dir <path>",
+        "Directory for a remote worker's inputs and sealed bundles; defaults to TESTMASTER_DATA_DIR",
       ),
     async (rt, _args, options) => {
+      if (options.mode === "remote") return { data: await runRemoteWorker(rt, options) };
       if (options.mode === "server") {
         const { application } = await rt.serverApp();
         if (typeof options.enrollTokenFile === "string") {

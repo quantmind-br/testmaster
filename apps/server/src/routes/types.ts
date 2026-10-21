@@ -1,6 +1,7 @@
 import type {
   Application,
   AuthenticatedIdentity,
+  RemoteWorkerCaller,
   SignedCursorCodec,
 } from "@testmaster/application";
 import type { FastifyReply, FastifyRequest } from "fastify";
@@ -16,6 +17,11 @@ export interface RouteContext {
   /** Only for routes declared `raw: true` (webhooks). */
   readonly rawBody: Buffer | null;
   readonly idempotencyKey: string | null;
+  /**
+   * Worker-credential routes only (ADR-030): the presented `tm_wrk_` token and the worker it
+   * identifies for the path's `{id}`; `caller` is null on enrollment.
+   */
+  readonly worker: { token: string; caller: RemoteWorkerCaller | null } | null;
   /** Parsed `If-Match` version; PRECONDITION_REQUIRED / INVALID_ARGUMENT as everywhere else. */
   ifMatch(): number;
   page<T extends { id: string; createdAt?: string }>(

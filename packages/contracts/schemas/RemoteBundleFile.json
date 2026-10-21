@@ -1,0 +1,28 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "path",
+    "sizeBytes",
+    "sha256"
+  ],
+  "properties": {
+    "path": {
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^(?!.*(?:^|/)\\.\\.?(?:/|$))[^/\\u0000-\\u001f]+(?:/[^/\\u0000-\\u001f]+)*$",
+      "type": "string"
+    },
+    "sizeBytes": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:RemoteBundleFile",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

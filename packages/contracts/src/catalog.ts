@@ -19,6 +19,7 @@ import { scheduleContracts } from "./m4/schedules.js";
 import { settingsContracts } from "./m4/settings.js";
 import { sourceInsightContracts } from "./m4/sources.js";
 import { workerContracts } from "./m4/workers.js";
+import { remoteWorkerContracts } from "./m5/remote-workers.js";
 import * as Metrics from "./metrics.js";
 import * as Ops from "./operations.js";
 import * as Plans from "./plans.js";
@@ -179,6 +180,12 @@ const supplemental = {
     production: Type.Optional(Type.Boolean()),
     /** Opt-in server log source read after each attempt; null on update clears it. */
     serverLog: Type.Optional(Type.Union([Entities.ServerLogSource, Type.Null()])),
+    workerSelector: Type.Optional(
+      CloneType(P.WorkerLabels, {
+        description:
+          "Operator labels a worker must carry to claim this environment's Runs (for example a private network pool). Replaces the previous selector; {} clears it.",
+      }),
+    ),
   }),
   DefaultEnvironmentInput: P.Obj({ environmentId: P.id("env") }),
   SecretInput: P.Obj({
@@ -1035,6 +1042,7 @@ export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({
   ...notificationContracts,
   ...deliveryContracts,
   ...workerContracts,
+  ...remoteWorkerContracts,
   ...githubContracts,
   ...identityContracts,
   ...settingsContracts,
