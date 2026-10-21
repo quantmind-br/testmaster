@@ -4,7 +4,7 @@ import { chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { Application, type ServerConfig } from "@testmaster/application";
-import { createTestDatabase } from "@testmaster/persistence/testing";
+import { createTestDatabase, type TestDatabase } from "@testmaster/persistence/testing";
 import { cli, eventually } from "./harness.js";
 import {
   createTestCa,
@@ -51,6 +51,11 @@ export interface ServerStackOptions {
   readonly extraEnv?: Readonly<Record<string, string>>;
   /** Extra environment for the server, the worker and the in-process application. */
   readonly env?: Readonly<Record<string, string>>;
+  /**
+   * Creates the stack's database. Defaults to the PostgreSQL server of the `postgres` vitest
+   * projects; a Docker journey passes one created on a server it started itself.
+   */
+  readonly database?: () => Promise<TestDatabase>;
 }
 
 export interface ServerStack {
@@ -88,6 +93,8 @@ export interface ServerStack {
   readonly cwd: string;
   /** Fresh anonymous client that trusts only the stack CA. */
   anonymous(): HttpsClient;
+  /** Spawns another `testmaster` process with the stack's HOME and environment; stopped with the stack. */
+  spawn(args: string[], env?: Readonly<Record<string, string>>): Spawned;
   logs(): string;
   stop(): Promise<void>;
 }
@@ -130,7 +137,7 @@ function expectString(value: unknown, pattern: RegExp, what: string): string {
   return found;
 }
 
-interface Spawned {
+export interface Spawned {
   readonly child: ChildProcessWithoutNullStreams;
   readonly stdout: () => string;
   readonly stderr: () => string;
@@ -182,7 +189,7 @@ export async function startServerStack(options: ServerStackOptions = {}): Promis
     await chmod(file, 0o600);
   }
 
-  const database = await createTestDatabase();
+  const database = await (options.database ?? createTestDatabase)();
   const ca = await createTestCa(join(directory, "ca"));
   let upstreamPort = 0;
   const proxy = await startTlsProxy({ ca, upstreamPort: () => upstreamPort });
@@ -440,6 +447,18 @@ export async function startServerStack(options: ServerStackOptions = {}): Promis
       async scope() {
         application ??= await Application.open({ cwd, home, env, server: config });
         return application.controllerScope();
+      },
+      spawn(args, extra = {}) {
+        const child = spawnCli(args, { ...env, ...extra }, cwd);
+        spawned.push(child);
+        closers.push(async () => {
+          if (child.child.exitCode !== null || child.child.signalCode !== null) return;
+          child.child.kill("SIGTERM");
+          const kill = setTimeout(() => child.child.kill("SIGKILL"), 20_000);
+          await child.exited;
+          clearTimeout(kill);
+        });
+        return child;
       },
       logs: () =>
         redact(
