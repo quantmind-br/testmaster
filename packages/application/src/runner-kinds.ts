@@ -10,11 +10,12 @@ export interface RevisionRunner {
 
 /**
  * The runner a revision executes in. A property probe keeps the `probe` runner it shipped with;
- * every other probe kind names itself, so a worker advertises each probe kind it can run.
+ * every other probe kind names itself, so a worker advertises each probe kind it can run. The probe
+ * alone decides, so a caller holding only `{probe, plan}` resolves the same runner.
  */
 export function runnerOf(revision: RevisionRunner): string {
   const kind = (revision.probe as { kind?: unknown } | null | undefined)?.kind;
-  if (typeof kind === "string" && kind !== "property") return `probe:${kind}`;
+  if (typeof kind === "string") return kind === "property" ? "probe" : `probe:${kind}`;
   return String(
     revision.runnerKind ?? (revision.plan as { runner?: unknown } | null)?.runner ?? "playwright",
   );
