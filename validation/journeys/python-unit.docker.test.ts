@@ -37,7 +37,8 @@ const egressVectorIds = [
 it("the Python runner's unit suite passes inside the locked Python runner image", async () => {
   const lock = JSON.parse(await readFile(resolve("containers/images.lock.json"), "utf8"));
   const imageId: string = lock["testmaster-runner-python"].imageId;
-  // The mounted working tree shadows the copy of `python/` baked into the image.
+  // The mounted working tree shadows the copy of `python/` baked into the image; the ZAP adapter
+  // its unit tests load by path is mounted at the same relative place (ADR-033).
   const result = await docker([
     "run",
     "--rm",
@@ -59,6 +60,8 @@ it("the Python runner's unit suite passes inside the locked Python runner image"
     "PYTHONPATH=/work/python",
     "--mount",
     `type=bind,src=${resolve("python")},dst=/work/python,readonly`,
+    "--mount",
+    `type=bind,src=${resolve("containers/zap")},dst=/work/containers/zap,readonly`,
     "--workdir",
     "/work/python",
     "--entrypoint",
