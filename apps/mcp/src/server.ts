@@ -1548,6 +1548,9 @@ export class TestMasterMcp {
           reason: String(args.reason),
           ...(typeof args.actorId === "string" ? { actorId: args.actorId } : {}),
           ...(typeof args.expiresAt === "string" ? { expiresAt: args.expiresAt } : {}),
+          ...(args.limits && typeof args.limits === "object"
+            ? { limits: args.limits as Record<string, unknown> }
+            : {}),
         });
       default:
         unavailable(name);

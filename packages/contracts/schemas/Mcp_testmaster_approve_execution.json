@@ -18,17 +18,17 @@
         "maxLength": 200,
         "type": "string"
       },
-      "description": "Risk classes (write, destructive, securityProbe) or step ids the approval covers"
+      "description": "Risk classes, step ids or tunnel:<id> the approval covers"
     },
     "revisionHash": {
       "pattern": "^[0-9a-f]{64}$",
       "type": "string",
-      "description": "contentHash of the exact revision being approved"
+      "description": "Exact revision contentHash"
     },
     "environmentRevisionId": {
       "pattern": "^evr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
       "type": "string",
-      "description": "Exact environment revision being approved"
+      "description": "Exact environment revision"
     },
     "originSet": {
       "minItems": 1,
@@ -43,7 +43,7 @@
     "policyHash": {
       "pattern": "^[0-9a-f]{64}$",
       "type": "string",
-      "description": "Policy hash of the run policy being approved"
+      "description": "Run policy hash"
     },
     "reason": {
       "minLength": 1,
@@ -56,6 +56,10 @@
       "maxLength": 200,
       "type": "string",
       "description": "Principal id that will execute; defaults to the caller"
+    },
+    "limits": {
+      "type": "object",
+      "description": "Copy of binding.limits"
     },
     "expiresAt": {
       "format": "date-time",

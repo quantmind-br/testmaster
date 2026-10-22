@@ -61,7 +61,7 @@ const Preview = P.Obj({
   }),
   timeoutMs: Type.Integer({ minimum: 1000, maximum: 86_400_000 }),
 });
-const NullableId = (prefix: "env" | "prj") => Type.Union([P.id(prefix), Type.Null()]);
+const NullableId = (prefix: "env" | "prj" | "tun") => Type.Union([P.id(prefix), Type.Null()]);
 
 /** Per-repository bindings; a repository runs nothing until it is enabled and bound to a project. */
 export const GithubRepositorySettings = P.Obj({
@@ -75,6 +75,11 @@ export const GithubRepositorySettings = P.Obj({
   /** Environment used for `fixture-only` fork runs; it must have no auth profile and its plans no secret refs. */
   fixtureEnvironmentId: NullableId("env"),
   preview: Preview,
+  /**
+   * Active tunnel of the bound project that same-repository pull request previews run through
+   * (INT-024, ADR-031); fork pull requests never use it. Absent means none.
+   */
+  previewTunnelId: Type.Optional(NullableId("tun")),
 });
 export const githubDefaultRepositorySettings = {
   enabled: false,
@@ -138,6 +143,7 @@ export const githubContracts = {
       baseEnvironmentId: NullableId("env"),
       fixtureEnvironmentId: NullableId("env"),
       preview: Type.Partial(Preview),
+      previewTunnelId: NullableId("tun"),
     }),
   ),
   GithubRotateWebhookSecretInput: P.Obj({ secretRef: P.id("sec") }),
@@ -203,6 +209,11 @@ export const githubContracts = {
     batchId: Type.Union([P.id("bat"), Type.Null()]),
     supersededBy: Type.Union([Type.String({ pattern: "^[0-9a-f]{40}$" }), Type.Null()]),
     gate: Type.Union([P.Gate, Type.Null()]),
+    /**
+     * What `approval create` needs when the head was refused for want of an approval, such as a
+     * preview through a tunnel (SEC-039); null otherwise.
+     */
+    approvalBinding: Type.Union([P.Json, Type.Null()]),
     createdAt: P.Timestamp,
     updatedAt: P.Timestamp,
   }),

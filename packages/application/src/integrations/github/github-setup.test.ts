@@ -190,4 +190,28 @@ describe("INT-014 test delivery and repository settings", () => {
       granted: true,
     });
   });
+
+  it("INT-024 a repository preview tunnel must be an active tunnel of the bound project", async () => {
+    const w = await world();
+    await w.install();
+    const target = { address: "127.0.0.1" as const, port: 8080 };
+    const session = { publicKey: "k".repeat(43), certificateSha256: "c".repeat(64), relayId: "r" };
+    const other = w.app.projects.create({ name: "other-project" });
+    const foreign = w.app.tunnels.create({ projectId: other.id, target });
+    w.app.tunnels.open(foreign.tunnel.id, foreign.openToken, session);
+    const requested = w.app.tunnels.create({ projectId: w.projectId, target });
+    const update = (previewTunnelId: string) => () =>
+      w.app.github.updateRepository(w.integration.id, "501", { previewTunnelId });
+    expect(update(foreign.tunnel.id)).toThrowError(
+      expect.objectContaining({ code: "INVALID_ARGUMENT" }),
+    );
+    expect(update(requested.tunnel.id)).toThrowError(
+      expect.objectContaining({
+        code: "PRECONDITION_FAILED",
+        details: expect.objectContaining({ reasonCode: "tunnel_lost" }),
+      }),
+    );
+    w.app.tunnels.open(requested.tunnel.id, requested.openToken, session);
+    expect(update(requested.tunnel.id)().settings.previewTunnelId).toBe(requested.tunnel.id);
+  });
 });

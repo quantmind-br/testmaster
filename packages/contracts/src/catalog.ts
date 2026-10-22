@@ -579,6 +579,8 @@ const supplemental = {
     expectedSelectionHash: Type.Optional(P.ContentDigest),
     /** Claimed target; must equal the frozen environment revision baseUrl. Never an override. */
     targetUrl: Type.Optional(Type.String({ format: "uri", maxLength: 2048 })),
+    /** Active tunnel every selected Run reaches its loopback target through (ADR-031). */
+    tunnelId: Type.Optional(P.id("tun")),
   }),
   SelectionPreview: P.Obj({
     selectionHash: P.ContentDigest,
@@ -970,6 +972,8 @@ const httpInputs = {
     expiresAt: Type.Optional(P.Timestamp),
     policyHash: P.ContentDigest,
     reason: P.Name,
+    /** The resolved limits the refusal names; absent binds the effective defaults of a plain Run. */
+    limits: Type.Optional(Ops.RunLimits),
   }),
 };
 export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({

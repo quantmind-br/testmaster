@@ -29,6 +29,8 @@ export interface ApprovalInput {
   expiresAt?: string;
   policyHash: string;
   reason: string;
+  /** The resolved Run limits a refusal named; binds the approval to exactly those limits. */
+  limits?: Record<string, unknown>;
 }
 export type RiskClass = "read" | "write" | "destructive" | "securityProbe";
 
@@ -307,6 +309,7 @@ export class ApprovalsService {
           "expiresAt",
           "policyHash",
           "reason",
+          "limits",
         ].includes(key)
       )
         throw new ContractError("INVALID_ARGUMENT", "Unknown approval field", { field: key });
@@ -317,6 +320,8 @@ export class ApprovalsService {
         "Approval requires a reason of 1 to 200 characters",
         { field: "reason" },
       );
+    // The CLI and MCP pass `limits` through as copied; only the schema says what a limit may be.
+    validate("ApprovalInput", input);
     return authoringTransaction(this.ctx, () => {
       const projectId = this.projectId(input.environmentRevisionId);
       this.ctx.authorize("W", projectId);
@@ -407,7 +412,7 @@ export class ApprovalsService {
       );
       let resourceDigestValid = false;
       let bindingRevision = revision;
-      let bindingLimits: unknown;
+      let bindingLimits: unknown = input.limits;
       if (value.actionSet.length === 1 && value.actionSet[0]?.startsWith("cleanup:")) {
         const resourceId = value.actionSet[0].slice("cleanup:".length);
         const resource = requireEntity(this.ctx, "ResourceRecord", resourceId);
@@ -761,6 +766,7 @@ export class ApprovalsService {
                 ].sort(),
                 policyHash,
                 actorId,
+                ...(cell?.limits === undefined ? {} : { limits: cell.limits }),
               },
             },
           );

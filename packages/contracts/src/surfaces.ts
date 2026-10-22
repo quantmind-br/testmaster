@@ -1236,17 +1236,20 @@ export const mcpTools = {
     input: Obj({
       actionSet: d(
         Type.Array(Name, { minItems: 1 }),
-        "Risk classes (write, destructive, securityProbe) or step ids the approval covers",
+        "Risk classes, step ids or tunnel:<id> the approval covers",
       ),
-      revisionHash: d(ContentDigest, "contentHash of the exact revision being approved"),
-      environmentRevisionId: d(id("evr"), "Exact environment revision being approved"),
+      revisionHash: d(ContentDigest, "Exact revision contentHash"),
+      environmentRevisionId: d(id("evr"), "Exact environment revision"),
       originSet: d(
         Type.Array(Name, { minItems: 1 }),
         "Canonical http(s) origins the run may touch, without path",
       ),
-      policyHash: d(ContentDigest, "Policy hash of the run policy being approved"),
+      policyHash: d(ContentDigest, "Run policy hash"),
       reason: d(Name, "Why the caller approves this execution (1-200 characters)"),
       actorId: Type.Optional(d(Name, "Principal id that will execute; defaults to the caller")),
+      limits: Type.Optional(
+        d(Type.Unsafe<Record<string, unknown>>({ type: "object" }), "Copy of binding.limits"),
+      ),
       expiresAt: Type.Optional(
         d(Timestamp, "Expiry, at most 30 minutes ahead; default 30 minutes"),
       ),

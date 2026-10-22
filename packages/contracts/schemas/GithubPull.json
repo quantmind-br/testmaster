@@ -22,6 +22,7 @@
     "batchId",
     "supersededBy",
     "gate",
+    "approvalBinding",
     "createdAt",
     "updatedAt"
   ],
@@ -222,6 +223,43 @@
         }
       ]
     },
+    "approvalBinding": {
+      "anyOf": [
+        {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/T0"
+              }
+            },
+            {
+              "type": "object",
+              "patternProperties": {
+                "^(.*)$": {
+                  "$ref": "#/$defs/T0"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "createdAt": {
       "format": "date-time",
       "pattern": "Z$",
@@ -233,7 +271,38 @@
       "type": "string"
     }
   },
-  "$defs": {},
+  "$defs": {
+    "T0": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/T0"
+          }
+        },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^(.*)$": {
+              "$ref": "#/$defs/T0"
+            }
+          }
+        }
+      ]
+    }
+  },
   "$id": "urn:testmaster:GithubPull",
   "$schema": "https://json-schema.org/draft/2020-12/schema"
 }

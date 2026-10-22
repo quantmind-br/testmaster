@@ -34,6 +34,8 @@ export interface SelectionInput {
   provenance?: RunRequest["provenance"];
   expectedSelectionHash?: string;
   targetUrl?: string;
+  /** Active tunnel every selected Run reaches its loopback target through (ADR-031). */
+  tunnelId?: string;
   /** Admission origin recorded on every Run; defaults to the CLI. */
   origin?: RunRequest["origin"];
 }
@@ -409,6 +411,7 @@ export class SelectionService {
       origin: input.origin ?? "cli",
       ...(strict ? { limits: { maxAttempts: 1 } } : {}),
       ...(input.provenance ? { provenance: input.provenance } : {}),
+      ...(input.tunnelId ? { tunnelId: input.tunnelId } : {}),
       ...(item.dependencyRevisions
         ? { extensions: { "testmaster:dependencyRevisions": item.dependencyRevisions } }
         : {}),

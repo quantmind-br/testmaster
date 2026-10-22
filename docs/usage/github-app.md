@@ -58,6 +58,7 @@ for each repository set:
 | Preview provider | `github-deployments` or `manual`. |
 | Preview environment pattern | Glob over the deployment environment name, for example `preview/*`. |
 | Include draft pull requests | Drafts are skipped by default. |
+| Preview tunnel | `previewTunnelId`, REST only: an active tunnel of the bound project that same-repository previews run through (see below). |
 
 The same settings are `PATCH /v1/integrations/{id}/github/repositories/{repositoryId}`. Administrator scope is
 required; only repositories the installation grants can be configured.
@@ -93,6 +94,21 @@ For a repository using the `manual` provider, a pull request waits in `awaiting_
 write scope attests the URL: `POST /v1/preview-deployments` (`integrationId`, `repositoryId`, `prNumber`,
 `headSha`, `url`) or the **Manual preview** form on the integration page. The Run's provenance then records
 `binding: "unbound"` with a human attestation, never `verified`, and the network policy still applies.
+
+## Previews through a tunnel
+
+A developer can serve a pull request's preview from their own machine through a self-hosted tunnel
+(`testmaster --endpoint <server> tunnel start --target 127.0.0.1:<port>`). Set the repository's
+`previewTunnelId` to that tunnel (it must be active and belong to the bound project) and attest each head with
+a manual preview at the tunnel's target URL, `http://127.0.0.1:<port>`. A same-repository head is then admitted
+with the tunnel and runs on a remote worker; a fork never uses the tunnel, whatever its fork policy.
+
+A Run through a tunnel needs a reviewer's approval (SEC-039). Without one the head is denied with
+`admission_failed:POLICY_DENIED`, `result` concludes `action_required` and `required-gate` `failure`, and the
+pull request's `approvalBinding` (`GET /v1/integrations/{id}/github/pulls`) lists the exact fields
+`testmaster approval create` needs, including `actorId` and `limits`. An approval is consumed by one Run, so
+every later head is denied again until it is approved. Stopping the tunnel cancels the preview's Run with
+`tunnel_lost`; its checks never turn green.
 
 ## Delivery problems
 

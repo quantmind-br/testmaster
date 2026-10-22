@@ -36027,6 +36027,67 @@
             "minLength": 1,
             "maxLength": 200,
             "type": "string"
+          },
+          "limits": {
+            "additionalProperties": false,
+            "type": "object",
+            "properties": {
+              "executionTimeoutMs": {
+                "minimum": 1,
+                "maximum": 7200000,
+                "default": 1800000,
+                "type": "integer"
+              },
+              "attemptTimeoutMs": {
+                "minimum": 1,
+                "maximum": 900000,
+                "default": 300000,
+                "type": "integer"
+              },
+              "stepTimeoutMs": {
+                "minimum": 1,
+                "description": "Maximum ms for every step of this run: caps each step's own timeout and never lengthens it",
+                "type": "integer"
+              },
+              "networkRequestTimeoutMs": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "preparationTimeoutMs": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "collectionGraceMs": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "analysisGraceMs": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "maxAttempts": {
+                "minimum": 1,
+                "maximum": 2,
+                "default": 2,
+                "type": "integer"
+              },
+              "bodyBytes": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "artifactBytes": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "attemptArtifactBytes": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "logBytes": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            }
           }
         },
         "$defs": {}
@@ -93951,6 +94012,7 @@
           "batchId",
           "supersededBy",
           "gate",
+          "approvalBinding",
           "createdAt",
           "updatedAt"
         ],
@@ -94151,6 +94213,43 @@
               }
             ]
           },
+          "approvalBinding": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/GithubPull/$defs/T0"
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "patternProperties": {
+                      "^(.*)$": {
+                        "$ref": "#/components/schemas/GithubPull/$defs/T0"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "createdAt": {
             "format": "date-time",
             "pattern": "Z$",
@@ -94162,7 +94261,38 @@
             "type": "string"
           }
         },
-        "$defs": {}
+        "$defs": {
+          "T0": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/GithubPull/$defs/T0"
+                }
+              },
+              {
+                "type": "object",
+                "patternProperties": {
+                  "^(.*)$": {
+                    "$ref": "#/components/schemas/GithubPull/$defs/T0"
+                  }
+                }
+              }
+            ]
+          }
+        }
       },
       "GithubRepository": {
         "additionalProperties": false,
@@ -94336,6 +94466,17 @@
                     "type": "integer"
                   }
                 }
+              },
+              "previewTunnelId": {
+                "anyOf": [
+                  {
+                    "pattern": "^tun_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             }
           },
@@ -94469,6 +94610,17 @@
                 "type": "integer"
               }
             }
+          },
+          "previewTunnelId": {
+            "anyOf": [
+              {
+                "pattern": "^tun_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "$defs": {}
@@ -94611,6 +94763,17 @@
                 "type": "integer"
               }
             }
+          },
+          "previewTunnelId": {
+            "anyOf": [
+              {
+                "pattern": "^tun_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "$defs": {}
@@ -144172,17 +144335,17 @@
               "maxLength": 200,
               "type": "string"
             },
-            "description": "Risk classes (write, destructive, securityProbe) or step ids the approval covers"
+            "description": "Risk classes, step ids or tunnel:<id> the approval covers"
           },
           "revisionHash": {
             "pattern": "^[0-9a-f]{64}$",
             "type": "string",
-            "description": "contentHash of the exact revision being approved"
+            "description": "Exact revision contentHash"
           },
           "environmentRevisionId": {
             "pattern": "^evr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
             "type": "string",
-            "description": "Exact environment revision being approved"
+            "description": "Exact environment revision"
           },
           "originSet": {
             "minItems": 1,
@@ -144197,7 +144360,7 @@
           "policyHash": {
             "pattern": "^[0-9a-f]{64}$",
             "type": "string",
-            "description": "Policy hash of the run policy being approved"
+            "description": "Run policy hash"
           },
           "reason": {
             "minLength": 1,
@@ -144210,6 +144373,10 @@
             "maxLength": 200,
             "type": "string",
             "description": "Principal id that will execute; defaults to the caller"
+          },
+          "limits": {
+            "type": "object",
+            "description": "Copy of binding.limits"
           },
           "expiresAt": {
             "format": "date-time",
@@ -228784,6 +228951,10 @@
           "targetUrl": {
             "format": "uri",
             "maxLength": 2048,
+            "type": "string"
+          },
+          "tunnelId": {
+            "pattern": "^tun_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
             "type": "string"
           }
         },

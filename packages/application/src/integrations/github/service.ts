@@ -59,6 +59,9 @@ import {
 const MANIFEST_TTL_MS = 600_000;
 const WEBHOOK_ROTATION_MS = 86_400_000;
 const REVOKED_KEY = "integration:revoked:github:";
+/** `operational_state` key of the approval binding a refused pull request head names. */
+const approvalBindingKey = (pull: { workspaceId: string; id: string }): string =>
+  `github:approval-binding:${pull.workspaceId}:${pull.id}`;
 const handledPullActions = new Set([
   "opened",
   "reopened",
@@ -955,6 +958,10 @@ export class GithubService {
             deploymentId: target.deploymentId ?? `fixture-only:${pull.id}`,
           },
           targetUrl: origin,
+          // INT-024: only a same-repository head reaches the developer's tunnel; a fork never does.
+          ...(settings.previewTunnelId && !pull.fork && !target.fixture
+            ? { tunnelId: settings.previewTunnelId }
+            : {}),
           origin: "github",
           quarantinePolicy: "exclude",
         },
@@ -976,6 +983,13 @@ export class GithubService {
             : `admission_failed:${error.code}`;
         if (reason === "actor_revoked")
           this.raiseAlert(pull.workspaceId, pull.projectId, pull.id, "actor_revoked", "high");
+        // The reviewer approves exactly what was refused; a later head needs its own approval.
+        if (error.details.reasonCode === "approval_required" && error.details.binding)
+          this.scope.database.run(
+            "INSERT INTO operational_state(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            approvalBindingKey(pull),
+            JSON.stringify(error.details.binding),
+          );
         return this.deny(integration, pull, reason);
       }
       throw error;
@@ -1390,6 +1404,7 @@ export class GithubService {
           ? {}
           : { fixtureEnvironmentId: patch.fixtureEnvironmentId }),
         preview: { ...record.settings.preview, ...(patch.preview ?? {}) },
+        ...(patch.previewTunnelId === undefined ? {} : { previewTunnelId: patch.previewTunnelId }),
       };
       if (settings.enabled && !settings.projectId)
         throw new ContractError("INVALID_ARGUMENT", "An enabled repository needs a project", {
@@ -1412,6 +1427,25 @@ export class GithubService {
             "Environment does not belong to the bound project",
             { id },
           );
+      }
+      // Checked when set: a tunnel that ends later refuses each tunnelled admission instead.
+      if (patch.previewTunnelId && settings.previewTunnelId) {
+        const tunnel = this.ctx.database.get(
+          "SELECT project_id,state FROM tunnels WHERE workspace_id=? AND id=?",
+          this.ctx.workspaceId,
+          settings.previewTunnelId,
+        );
+        if (!tunnel || tunnel.project_id !== settings.projectId)
+          throw new ContractError(
+            "INVALID_ARGUMENT",
+            "Preview tunnel does not belong to the bound project",
+            { field: "previewTunnelId" },
+          );
+        if (tunnel.state !== "active")
+          throw new ContractError("PRECONDITION_FAILED", "Preview tunnel is not active", {
+            field: "previewTunnelId",
+            reasonCode: "tunnel_lost",
+          });
       }
       if (settings.forkPolicy === "fixture-only" && !settings.fixtureEnvironmentId)
         throw new ContractError(
@@ -1464,9 +1498,17 @@ export class GithubService {
       batchId: pull.batchId,
       supersededBy: pull.supersededBy,
       gate: pull.gate,
+      approvalBinding: this.approvalBinding(pull),
       createdAt: pull.createdAt,
       updatedAt: pull.updatedAt,
     } as GithubPull;
+  }
+  private approvalBinding(pull: PullRecord): unknown {
+    const row = this.ctx.database.get(
+      "SELECT value FROM operational_state WHERE key=?",
+      approvalBindingKey(pull),
+    );
+    return row ? JSON.parse(String(row.value)) : null;
   }
   checks(integrationId: string, limit = 100): GithubCheck[] {
     this.ctx.authorize("R");
