@@ -1,0 +1,63 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "M5-03-visual-baselines",
+  "class": "deterministic-e2e",
+  "runner": "real-docker-server-profile",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-22T15:17:43.584Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [],
+  "runIds": [
+    "run_01a16430-5816-730c-a8b6-b7e30694455a",
+    "run_01a16430-5e3e-75dc-811d-b06cb028b6f4",
+    "run_01a16430-62fb-76af-b4d4-c5a4a7a203f2",
+    "run_01a16430-6824-7163-9856-829a98da5503",
+    "run_01a16430-706a-7414-9f09-5650d525291a",
+    "run_01a16430-759d-76a5-ad5c-6930b3902f8e",
+    "run_01a16430-7a59-77b6-82df-daef37dd6c51",
+    "run_01a16430-7f88-76ca-a63b-e754a57471bc"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "visualBaselineLifecycle",
+      "missingRunId": "run_01a16430-5816-730c-a8b6-b7e30694455a",
+      "draftOnlyBaselineId": "vbl_01a16430-5e30-7389-83c1-490033d34ad2",
+      "draftOnlyRunId": "run_01a16430-5e3e-75dc-811d-b06cb028b6f4",
+      "approvedRunId": "run_01a16430-62fb-76af-b4d4-c5a4a7a203f2",
+      "firefoxRunId": "run_01a16430-6824-7163-9856-829a98da5503",
+      "crossCellComparison": {
+        "comparability": "partially_comparable",
+        "reasons": [
+          "execution-config-changed",
+          "source-binding-unavailable",
+          "runtime-identity-unavailable"
+        ]
+      },
+      "candidate": {
+        "width": 960,
+        "height": 340
+      }
+    },
+    {
+      "check": "visualPriceColorMutant",
+      "healthyRunId": "run_01a16430-706a-7414-9f09-5650d525291a",
+      "mutantRunId": "run_01a16430-759d-76a5-ad5c-6930b3902f8e",
+      "changedPixels": 1126,
+      "redChangedPixels": 721
+    },
+    {
+      "check": "visualMaskedRegion",
+      "healthyRunId": "run_01a16430-7a59-77b6-82df-daef37dd6c51",
+      "mutantRunId": "run_01a16430-7f88-76ca-a63b-e754a57471bc"
+    }
+  ],
+  "limitations": [
+    "Chromium cell only for the visual scenarios; baselines are per cell, so other engines need their own approvals.",
+    "Pixel comparison happens inside the pinned runner image; fonts and rasterisation are those of that image."
+  ]
+}

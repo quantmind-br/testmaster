@@ -1,0 +1,219 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "M5-03-matrix-engines",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-22T15:17:27.159Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "M5-03-matrix-engines",
+        "--base-url",
+        "http://127.0.0.1:34781",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_c389ba63-a3ac-4434-91d3-3642ec1753b2",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-pN9usR/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_a81e9d6b-a065-43cd-b2b4-fb82db067bbf",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a16430-0ea2-7653-b68d-b79a96d62126",
+        "--browser",
+        "chromium",
+        "--wait",
+        "--timeout",
+        "240",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_28fc4b91-0f5d-48e3-99f4-dc1152a16d1d",
+      "warnings": [
+        "--timeout and --request-timeout do not end a run this command executes: the wait continues until the run completes or the command is interrupted. The limit applies only to waits on worker-owned runs."
+      ],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a16430-17a1-772e-a11a-05dc27e38269",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_20a0dbc5-bf09-4c2d-ba5f-7c1134547768",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a16430-0ea2-7653-b68d-b79a96d62126",
+        "--browser",
+        "firefox",
+        "--wait",
+        "--timeout",
+        "240",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_1d6c2df4-8c39-4f65-a62e-e0d1a37c3324",
+      "warnings": [
+        "--timeout and --request-timeout do not end a run this command executes: the wait continues until the run completes or the command is interrupted. The limit applies only to waits on worker-owned runs."
+      ],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a16430-2753-7334-94c6-729978f1daa9",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_950d740e-36a2-4eb8-888a-81e27c60bdd5",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a16430-0ea2-7653-b68d-b79a96d62126",
+        "--browser",
+        "webkit",
+        "--wait",
+        "--timeout",
+        "240",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_683fe853-95e6-4d14-991a-fefef962443b",
+      "warnings": [
+        "--timeout and --request-timeout do not end a run this command executes: the wait continues until the run completes or the command is interrupted. The limit applies only to waits on worker-owned runs."
+      ],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "get",
+        "run_01a16430-3a5a-72d2-b48b-0325184165cb",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_82f4fbe6-f1c8-464c-9cf5-dc772b7b22bb",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a16430-17a1-772e-a11a-05dc27e38269",
+    "run_01a16430-2753-7334-94c6-729978f1daa9",
+    "run_01a16430-3a5a-72d2-b48b-0325184165cb"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "engineMatrixIdentity",
+      "observed": {
+        "chromium": {
+          "runId": "run_01a16430-17a1-772e-a11a-05dc27e38269",
+          "configuredEngine": "chromium",
+          "identity": {
+            "browserName": "chromium",
+            "browserVersion": "153.0.8010.12"
+          },
+          "userAgentEngines": [
+            "chromium"
+          ]
+        },
+        "firefox": {
+          "runId": "run_01a16430-2753-7334-94c6-729978f1daa9",
+          "configuredEngine": "firefox",
+          "identity": {
+            "browserName": "firefox",
+            "browserVersion": "155.0"
+          },
+          "userAgentEngines": [
+            "firefox"
+          ]
+        },
+        "webkit": {
+          "runId": "run_01a16430-3a5a-72d2-b48b-0325184165cb",
+          "configuredEngine": "webkit",
+          "identity": {
+            "browserName": "webkit",
+            "browserVersion": "26.6"
+          },
+          "userAgentEngines": [
+            "webkit"
+          ]
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "Linux x64 runner image only; the three engines are the Playwright builds pinned in that image.",
+    "Automated oracle only (User-Agent seen by the target); no model is involved."
+  ]
+}
