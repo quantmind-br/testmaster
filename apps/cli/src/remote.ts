@@ -232,6 +232,36 @@ async function projectOf(client: RemoteClient, options: Options): Promise<string
   return project.id;
 }
 
+/** The token selects the workspace of a remote endpoint; host-only selectors do not apply. */
+function assertRemoteOps(command: string, options: Options): void {
+  if (options.workspace !== undefined) throw unavailableRemote(`${command} --workspace`);
+  if (options.mode === "server") throw unavailableRemote(`${command} --mode server`);
+}
+
+const admission =
+  (action: "pause" | "drain" | "resume"): RemoteHandler =>
+  async (client, _args, options) => {
+    assertRemoteOps(`ops ${action}`, options);
+    return {
+      data: await client.request("POST", "/operations/admission", {
+        action,
+        reason: required(options, "reason"),
+      }),
+    };
+  };
+
+const workerClaims =
+  (action: "pause" | "resume"): RemoteHandler =>
+  async (client, _args, options) => {
+    assertRemoteOps(`ops workers ${action}`, options);
+    return {
+      data: await client.request("POST", "/operations/worker-claims", {
+        action,
+        reason: required(options, "reason"),
+      }),
+    };
+  };
+
 /** Commands that run against `/v1`; every other command fails closed with CAPABILITY_UNAVAILABLE. */
 export const remoteHandlers: Readonly<Record<string, RemoteHandler>> = {
   "project list": async (client) => ({ data: await client.list("/projects") }),
@@ -341,6 +371,15 @@ export const remoteHandlers: Readonly<Record<string, RemoteHandler>> = {
   "tunnel stop": async (client, args) => ({
     data: await client.request("DELETE", `/tunnels/${encodeURIComponent(String(args[0]))}`),
   }),
+  "ops status": async (client, _args, options) => {
+    assertRemoteOps("ops status", options);
+    return { data: await client.request("GET", "/operations/status") };
+  },
+  "ops pause": admission("pause"),
+  "ops drain": admission("drain"),
+  "ops resume": admission("resume"),
+  "ops workers pause": workerClaims("pause"),
+  "ops workers resume": workerClaims("resume"),
 };
 /** Commands that manage the connection itself and never need a stored credential. */
 export const remoteExempt: ReadonlySet<string> = new Set([

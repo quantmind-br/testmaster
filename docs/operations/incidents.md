@@ -77,8 +77,11 @@ entry.
 ## During the incident
 
 1. Contain first with the authenticated operations that exist: `ops pause|drain`,
-   `worker drain`, `run cancel`, `secret remove|rotate`, removing a provider from `allowedModelProviders`, token revocation, and
-   `ops reconcile preview|apply`. Record each action as a timeline entry.
+   `ops workers pause`, `worker drain`, `run cancel`, `tunnel stop <id>`, `secret remove|rotate`,
+   removing a provider from `allowedModelProviders`, token revocation, and
+   `ops reconcile preview|apply`. Record each action as a timeline entry. `ops status`,
+   `ops pause|drain|resume`, `ops workers pause|resume` and `tunnel stop` also run against a server
+   with `--endpoint <url>`.
 2. Preserve before repair: database, audit export, sealed manifests, bounded logs, the images lock and
    redacted configuration. Do not edit rows, remove failed assertions or export secret values.
 3. Keep reach honest. List what is confirmed, what is only suspected and what is unknown, each with

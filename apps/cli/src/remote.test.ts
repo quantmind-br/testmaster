@@ -243,6 +243,39 @@ describe("CLI remote mode", () => {
     expect(none.document.error?.details?.nextActions).toBeDefined();
   });
 
+  it("OPS-035 ops status, admission and worker-claim commands act on the server workspace through --endpoint", async () => {
+    const f = await fixture();
+    vi.stubEnv("TESTMASTER_API_KEY", f.token);
+    const remote = (...args: string[]) =>
+      invoke<{ claims: { paused: boolean; reason: string | null }; admission: unknown }>([
+        "--endpoint",
+        f.endpoint,
+        ...args,
+      ]);
+    const paused = await remote("ops", "workers", "pause", "--reason", "suspected bypass");
+    expect(paused.exit, paused.stdout).toBe(0);
+    expect(paused.document.data.claims).toMatchObject({ paused: true, reason: "suspected bypass" });
+    // The server's own state changed, not a local database next to the CLI.
+    expect(f.application.operations.status().claims.paused).toBe(true);
+    const admission = await remote("ops", "pause", "--reason", "maintenance");
+    expect(admission.document.data).toMatchObject({ kind: "admission", state: "completed" });
+    expect(f.application.operations.status().admission.state).toBe("paused");
+    const status = await remote("ops", "status");
+    expect(status.document.data).toMatchObject({
+      admission: { state: "paused" },
+      claims: { paused: true },
+    });
+    await remote("ops", "resume", "--reason", "done");
+    await remote("ops", "workers", "resume", "--reason", "done");
+    expect(f.application.operations.status()).toMatchObject({
+      admission: { state: "enabled" },
+      claims: { paused: false },
+    });
+    // A host-only selector does not apply to a remote endpoint.
+    const scoped = await remote("ops", "status", "--workspace", f.init.workspaceId);
+    expect(scoped.document.error?.code).toBe("CAPABILITY_UNAVAILABLE");
+  });
+
   it("OPS-027 the CLI correlation ID is the server request ID, the audit event correlation and the Run's matrix cell", async () => {
     const f = await fixture();
     vi.stubEnv("TESTMASTER_API_KEY", f.token);
