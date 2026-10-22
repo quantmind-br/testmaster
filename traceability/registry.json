@@ -10959,11 +10959,81 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M5",
       "ownerRole": "Execution",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-accessibility.docker.test.ts::M5-04 the a11y-missing-label mutant fails with a serious violation artifact",
+        "validation/journeys/m5-accessibility.docker.test.ts::M5-04 the healthy shop passes with automated_scan_only limitation",
+        "validation/journeys/m5-accessibility.docker.test.ts::M5-04 keyboard navigation reaches the login button by Tab presses",
+        "packages/runner/src/accessibility.test.ts::ADR-032 counts serious and critical violating elements against maximum, inclusive",
+        "packages/runner/src/accessibility.test.ts::ADR-032 always reports the automated-scan limitation and the criteria no rule judged",
+        "packages/reporting/src/reporting.test.ts::ADR-032 reports a clean accessibility scan as automated evidence with unverified criteria"
+      ],
+      "oracle": [
+        "An accessibilityViolations assertion (maximum 0) on the reference shop's sign-in form fails with assertion_mismatch on Chromium, Firefox and WebKit against the a11y-missing-label mutant; each Run's a11y/<step>.json names the critical axe rule label on exactly the unlabelled password field (one counted element), carries automated_scan_only and lists 2.1.1 among the WCAG 2.2 A/AA criteria no rule judged. On the healthy shop the same plan passes with zero counted elements, the artifact still lists unverified criteria, and the Markdown and HTML reports each print one accessibility line with the count of unverified criteria and 'automated scan only', and no accessibility line claims certification or conformance. A keyboard-only plan signs in by Tab from the email field, filling whatever holds focus, Tab and Space on the focused element; making the alert paragraph focusable breaks it. The counting rule is inclusive at maximum, and exercised criteria come from passed, violated and needs-review rules alike."
+      ],
+      "evidence": [
+        "validation/results/M5-04-accessibility-mutant.json",
+        "validation/results/M5-04-accessibility-healthy.json",
+        "validation/results/M5-04-keyboard-workflow.json",
+        "validation/journeys/m5-accessibility.docker.test.ts",
+        "docs/adr/032-matrix-visual-accessibility.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "packages/contracts/src/plans.ts",
+        "packages/contracts/src/registries.ts",
+        "packages/runner/src/accessibility.ts",
+        "packages/runner/src/browser.ts",
+        "packages/reporting/src/index.ts",
+        "containers/build.mjs"
+      ],
+      "note": "Verified by automated oracles only (ADR-012): axe-core 4.14.0 pinned in the Linux x64 runner image, run on all three engines. The scan judges only what its rules automate; the WCAG 2.2 A/AA criteria no rule judged are reported as not verified on every artifact and report, and no surface presents a scan as conformance or certification. The page under test shares the scan's JavaScript realm and could falsify its own result (B-32).",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m5-accessibility.docker.test.ts::M5-04 the healthy shop passes with automated_scan_only limitation",
+          "validation/journeys/m5-accessibility.docker.test.ts::M5-04 keyboard navigation reaches the login button by Tab presses",
+          "packages/runner/src/accessibility.test.ts::ADR-032 counts serious and critical violating elements against maximum, inclusive"
+        ],
+        "negative": [
+          "validation/journeys/m5-accessibility.docker.test.ts::M5-04 the a11y-missing-label mutant fails with a serious violation artifact",
+          "packages/runner/src/accessibility.test.ts::ADR-032 always reports the automated-scan limitation and the criteria no rule judged",
+          "packages/reporting/src/reporting.test.ts::ADR-032 reports a clean accessibility scan as automated evidence with unverified criteria"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m5-accessibility.docker.test.ts",
+            "assertion": "expect(label?.impact, engine).toBe(\"critical\");"
+          },
+          {
+            "path": "validation/journeys/m5-accessibility.docker.test.ts",
+            "assertion": "expect(scan.counted, engine).toBe(1);"
+          },
+          {
+            "path": "validation/journeys/m5-accessibility.docker.test.ts",
+            "assertion": "expect(scan.limitations, engine).toEqual([\"automated_scan_only\"]);"
+          },
+          {
+            "path": "validation/journeys/m5-accessibility.docker.test.ts",
+            "assertion": "expect(scan.notVerified).toContain(\"2.1.1\");"
+          },
+          {
+            "path": "validation/journeys/m5-accessibility.docker.test.ts",
+            "assertion": "expect(line, format).toMatch(/automated scan only/u);"
+          },
+          {
+            "path": "validation/journeys/m5-accessibility.docker.test.ts",
+            "assertion": "expect(claims, format).toEqual([]);"
+          },
+          {
+            "path": "validation/journeys/m5-accessibility.docker.test.ts",
+            "assertion": "expect(run).toMatchObject({ outcome: \"passed\", reasonCode: \"assertions_satisfied\" });"
+          },
+          {
+            "path": "packages/runner/src/accessibility.test.ts",
+            "assertion": "expect(scan.limitations).toEqual([AUTOMATED_SCAN_ONLY]);"
+          }
+        ]
+      }
     },
     {
       "id": "M5-05",
@@ -18715,11 +18785,81 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M5",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-accessibility.docker.test.ts::M5-04 the a11y-missing-label mutant fails with a serious violation artifact",
+        "validation/journeys/m5-accessibility.docker.test.ts::M5-04 the healthy shop passes with automated_scan_only limitation",
+        "validation/journeys/m5-accessibility.docker.test.ts::M5-04 keyboard navigation reaches the login button by Tab presses",
+        "packages/runner/src/accessibility.test.ts::ADR-032 counts serious and critical violating elements against maximum, inclusive",
+        "packages/runner/src/accessibility.test.ts::ADR-032 always reports the automated-scan limitation and the criteria no rule judged",
+        "packages/reporting/src/reporting.test.ts::ADR-032 reports a clean accessibility scan as automated evidence with unverified criteria"
+      ],
+      "oracle": [
+        "An accessibilityViolations assertion (maximum 0) on the reference shop's sign-in form fails with assertion_mismatch on Chromium, Firefox and WebKit against the a11y-missing-label mutant; each Run's a11y/<step>.json names the critical axe rule label on exactly the unlabelled password field (one counted element), carries automated_scan_only and lists 2.1.1 among the WCAG 2.2 A/AA criteria no rule judged. On the healthy shop the same plan passes with zero counted elements, the artifact still lists unverified criteria, and the Markdown and HTML reports each print one accessibility line with the count of unverified criteria and 'automated scan only', and no accessibility line claims certification or conformance. A keyboard-only plan signs in by Tab from the email field, filling whatever holds focus, Tab and Space on the focused element; making the alert paragraph focusable breaks it. The counting rule is inclusive at maximum, and exercised criteria come from passed, violated and needs-review rules alike."
+      ],
+      "evidence": [
+        "validation/results/M5-04-accessibility-mutant.json",
+        "validation/results/M5-04-accessibility-healthy.json",
+        "validation/results/M5-04-keyboard-workflow.json",
+        "validation/journeys/m5-accessibility.docker.test.ts",
+        "docs/adr/032-matrix-visual-accessibility.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "packages/contracts/src/plans.ts",
+        "packages/contracts/src/registries.ts",
+        "packages/runner/src/accessibility.ts",
+        "packages/runner/src/browser.ts",
+        "packages/reporting/src/index.ts",
+        "containers/build.mjs"
+      ],
+      "note": "Verified by automated oracles only (ADR-012): axe-core 4.14.0 pinned in the Linux x64 runner image, run on all three engines. The scan judges only what its rules automate; the WCAG 2.2 A/AA criteria no rule judged are reported as not verified on every artifact and report, and no surface presents a scan as conformance or certification. The page under test shares the scan's JavaScript realm and could falsify its own result (B-32).",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m5-accessibility.docker.test.ts::M5-04 the healthy shop passes with automated_scan_only limitation",
+          "validation/journeys/m5-accessibility.docker.test.ts::M5-04 keyboard navigation reaches the login button by Tab presses",
+          "packages/runner/src/accessibility.test.ts::ADR-032 counts serious and critical violating elements against maximum, inclusive"
+        ],
+        "negative": [
+          "validation/journeys/m5-accessibility.docker.test.ts::M5-04 the a11y-missing-label mutant fails with a serious violation artifact",
+          "packages/runner/src/accessibility.test.ts::ADR-032 always reports the automated-scan limitation and the criteria no rule judged",
+          "packages/reporting/src/reporting.test.ts::ADR-032 reports a clean accessibility scan as automated evidence with unverified criteria"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m5-accessibility.docker.test.ts",
+            "assertion": "expect(label?.impact, engine).toBe(\"critical\");"
+          },
+          {
+            "path": "validation/journeys/m5-accessibility.docker.test.ts",
+            "assertion": "expect(scan.counted, engine).toBe(1);"
+          },
+          {
+            "path": "validation/journeys/m5-accessibility.docker.test.ts",
+            "assertion": "expect(scan.limitations, engine).toEqual([\"automated_scan_only\"]);"
+          },
+          {
+            "path": "validation/journeys/m5-accessibility.docker.test.ts",
+            "assertion": "expect(scan.notVerified).toContain(\"2.1.1\");"
+          },
+          {
+            "path": "validation/journeys/m5-accessibility.docker.test.ts",
+            "assertion": "expect(line, format).toMatch(/automated scan only/u);"
+          },
+          {
+            "path": "validation/journeys/m5-accessibility.docker.test.ts",
+            "assertion": "expect(claims, format).toEqual([]);"
+          },
+          {
+            "path": "validation/journeys/m5-accessibility.docker.test.ts",
+            "assertion": "expect(run).toMatchObject({ outcome: \"passed\", reasonCode: \"assertions_satisfied\" });"
+          },
+          {
+            "path": "packages/runner/src/accessibility.test.ts",
+            "assertion": "expect(scan.limitations).toEqual([AUTOMATED_SCAN_ONLY]);"
+          }
+        ]
+      }
     },
     {
       "id": "REQ-048",
@@ -29089,12 +29229,137 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M5",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": [],
-      "note": "The visual half is in place since M5-03: baselines are approved by a reviewer other than their creator, captures run with animations disabled and the caret hidden, masks are bounded (1 to 10) and may not hide an asserted element (validation/journeys/m5-matrix-visual.docker.test.ts, validation/results/M5-03-visual-baselines.json). The accessibility half (automated audit, non-automatable criteria reported unverified) closes with M5-04."
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 a missing baseline blocks with a candidate, an approved baseline passes and another engine's cell finds none",
+        "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 the visual-price-color mutant fails visualMatches with a diff artifact",
+        "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 a masked region change still passes",
+        "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 a visual plan renders under a fixed clock and other plans keep the real clock",
+        "packages/application/src/visual-baselines.test.ts::the creator cannot approve their own draft and another principal can",
+        "packages/application/src/visual-baselines.test.ts::stored bytes reach a runner only when they still hash to the approved sha256",
+        "packages/contracts/src/browser-plan.test.ts::ADR-032 refuses a mask that hides an element an assertion checks and accepts any other",
+        "validation/journeys/m5-accessibility.docker.test.ts::M5-04 the a11y-missing-label mutant fails with a serious violation artifact",
+        "validation/journeys/m5-accessibility.docker.test.ts::M5-04 the healthy shop passes with automated_scan_only limitation",
+        "validation/journeys/m5-accessibility.docker.test.ts::M5-04 keyboard navigation reaches the login button by Tab presses",
+        "packages/runner/src/accessibility.test.ts::ADR-032 counts serious and critical violating elements against maximum, inclusive",
+        "packages/runner/src/accessibility.test.ts::ADR-032 always reports the automated-scan limitation and the criteria no rule judged",
+        "packages/reporting/src/reporting.test.ts::ADR-032 reports a clean accessibility scan as automated evidence with unverified criteria"
+      ],
+      "oracle": [
+        "On the real server profile a visualMatches Run without an approved baseline ends blocked/visual_baseline_missing with visual/<step>-candidate.png; a draft alone keeps it blocked; the creator's approval is refused (FORBIDDEN, self_approval) and a second human with a tests:approve grant approves; the next Run passes with actual and diff images; the same test on Firefox finds no baseline and its Run is not comparable as the same execution (execution-config-changed). Against the visual-price-color mutant the Run fails with assertion_mismatch and a diff image, and an independent pixel oracle finds that most changed pixels are red; with the price cells masked the same mutant passes. A mask equal to an asserted locator is refused at validation.",
+        "A page that writes new Date().toISOString() into an element reads 2026-01-01T00:00:00.000Z in a Run whose plan has a visualMatches step (the Run ends blocked/visual_baseline_missing with that text step passed) and the real time in a Run of the same page without one (failed/assertion_mismatch).",
+        "An accessibilityViolations assertion (maximum 0) on the reference shop's sign-in form fails with assertion_mismatch on Chromium, Firefox and WebKit against the a11y-missing-label mutant; each Run's a11y/<step>.json names the critical axe rule label on exactly the unlabelled password field (one counted element), carries automated_scan_only and lists 2.1.1 among the WCAG 2.2 A/AA criteria no rule judged. On the healthy shop the same plan passes with zero counted elements, the artifact still lists unverified criteria, and the Markdown and HTML reports each print one accessibility line with the count of unverified criteria and 'automated scan only', and no accessibility line claims certification or conformance. A keyboard-only plan signs in by Tab from the email field, filling whatever holds focus, Tab and Space on the focused element; making the alert paragraph focusable breaks it. The counting rule is inclusive at maximum, and exercised criteria come from passed, violated and needs-review rules alike."
+      ],
+      "evidence": [
+        "validation/results/M5-03-visual-baselines.json",
+        "validation/results/M5-03-visual-clock.json",
+        "validation/journeys/m5-matrix-visual.docker.test.ts",
+        "validation/results/M5-04-accessibility-mutant.json",
+        "validation/results/M5-04-accessibility-healthy.json",
+        "validation/results/M5-04-keyboard-workflow.json",
+        "validation/journeys/m5-accessibility.docker.test.ts",
+        "docs/adr/032-matrix-visual-accessibility.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "packages/application/src/visual-baselines.ts",
+        "packages/application/src/visual-cell.ts",
+        "packages/runner/src/visual.ts",
+        "packages/runner/src/visual-assertion.ts",
+        "packages/contracts/src/validation.ts",
+        "packages/contracts/src/plans.ts",
+        "packages/contracts/src/registries.ts",
+        "packages/runner/src/accessibility.ts",
+        "packages/runner/src/browser.ts",
+        "packages/reporting/src/index.ts",
+        "containers/build.mjs"
+      ],
+      "note": "Verified by automated oracles only (ADR-012). Visual: baselines are approved by a principal other than their creator and frozen at admission per rendering cell; captures run with animations disabled and the caret hidden; masks are bounded (1 to 10), may not hide an asserted element and are painted on both images; a Run never updates a baseline, so the visual-price-color mutant stays failed until a reviewer approves a new image. Accessibility: axe-core 4.14.0 in the runner image; every scan and report lists the WCAG 2.2 A/AA criteria no rule judged as not verified and carries automated_scan_only. Fonts are those of the pinned runner image, and a Run whose plan has a visualMatches step reads the fixed time 2026-01-01T00:00:00.000Z while its timers keep running.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 a missing baseline blocks with a candidate, an approved baseline passes and another engine's cell finds none",
+          "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 a masked region change still passes",
+          "validation/journeys/m5-accessibility.docker.test.ts::M5-04 the healthy shop passes with automated_scan_only limitation",
+          "validation/journeys/m5-accessibility.docker.test.ts::M5-04 keyboard navigation reaches the login button by Tab presses",
+          "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 a visual plan renders under a fixed clock and other plans keep the real clock"
+        ],
+        "negative": [
+          "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 a missing baseline blocks with a candidate, an approved baseline passes and another engine's cell finds none",
+          "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 the visual-price-color mutant fails visualMatches with a diff artifact",
+          "validation/journeys/m5-accessibility.docker.test.ts::M5-04 the a11y-missing-label mutant fails with a serious violation artifact",
+          "packages/reporting/src/reporting.test.ts::ADR-032 reports a clean accessibility scan as automated evidence with unverified criteria"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(first.verdict, first.runId).toBe(\"blocked/visual_baseline_missing\");"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(stillMissing.verdict, stillMissing.runId).toBe(\"blocked/visual_baseline_missing\");"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(second.verdict, second.runId).toBe(\"passed/assertions_satisfied\");"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(firefox.verdict, firefox.runId).toBe(\"blocked/visual_baseline_missing\");"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(object(object(self.json()).error).details).toMatchObject({ reason: \"self_approval\" });"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(mutant.verdict, mutant.runId).toBe(\"failed/assertion_mismatch\");"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(red / changed.length).toBeGreaterThan(0.5);"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(mutant.verdict, mutant.runId).toBe(\"passed/assertions_satisfied\");"
+          },
+          {
+            "path": "packages/application/src/visual-baselines.test.ts",
+            "assertion": "expect(refused.details).toMatchObject({ reason: \"self_approval\" });"
+          },
+          {
+            "path": "packages/contracts/src/browser-plan.test.ts",
+            "assertion": "rule: \"mask_hides_assertion\","
+          },
+          {
+            "path": "packages/runner/src/visual.test.ts",
+            "assertion": "expect(mask([{ x: 3, y: 4, width: 3, height: 3 }])).toBe(0);"
+          },
+          {
+            "path": "validation/journeys/m5-accessibility.docker.test.ts",
+            "assertion": "expect(label?.impact, engine).toBe(\"critical\");"
+          },
+          {
+            "path": "validation/journeys/m5-accessibility.docker.test.ts",
+            "assertion": "expect(scan.counted, engine).toBe(1);"
+          },
+          {
+            "path": "validation/journeys/m5-accessibility.docker.test.ts",
+            "assertion": "expect(scan.limitations, engine).toEqual([\"automated_scan_only\"]);"
+          },
+          {
+            "path": "validation/journeys/m5-accessibility.docker.test.ts",
+            "assertion": "expect(scan.notVerified).toContain(\"2.1.1\");"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(withVisual).toMatchObject({"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(withoutVisual).toMatchObject({"
+          }
+        ]
+      }
     },
     {
       "id": "VAL-042",
@@ -30300,8 +30565,8 @@
     {
       "id": "accessibilityViolations",
       "milestone": "M5",
-      "requirements": ["REQ-047", "API-008"],
-      "gate": "M5 normative acceptance; capability unavailable until milestone"
+      "requirements": ["M5-04", "REQ-047", "API-008"],
+      "gate": "M5 automated axe-core scans reported as not establishing conformance (ADR-032); positive/negative evidence and protected assertions"
     },
     {
       "id": "memory",
