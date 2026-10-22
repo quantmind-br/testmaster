@@ -1,6 +1,7 @@
 import type {
   Application,
   AuthenticatedIdentity,
+  PopProof,
   RemoteWorkerCaller,
   SignedCursorCodec,
 } from "@testmaster/application";
@@ -18,10 +19,13 @@ export interface RouteContext {
   readonly rawBody: Buffer | null;
   readonly idempotencyKey: string | null;
   /**
-   * Worker-credential routes only (ADR-030): the presented `tm_wrk_` token and the worker it
-   * identifies for the path's `{id}`; `caller` is null on enrollment.
+   * Worker routes only (ADR-031): the worker a signed call identifies for the path's `{id}`, or,
+   * on enrollment, the presented `tm_wrk_` credential and the proof of the key it binds.
    */
-  readonly worker: { token: string; caller: RemoteWorkerCaller | null } | null;
+  readonly worker: {
+    caller: RemoteWorkerCaller | null;
+    enrollment: { token: string; proof: PopProof } | null;
+  } | null;
   /** Parsed `If-Match` version; PRECONDITION_REQUIRED / INVALID_ARGUMENT as everywhere else. */
   ifMatch(): number;
   page<T extends { id: string; createdAt?: string }>(

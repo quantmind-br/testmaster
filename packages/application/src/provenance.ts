@@ -703,6 +703,8 @@ export function admissionInputHash(cell: Record<string, unknown>): string {
     limits: cell.limits,
     // Present only when the request capped steps, so the hash of a run without a cap is unchanged.
     ...(cell.stepTimeoutCapMs === undefined ? {} : { stepTimeoutCapMs: cell.stepTimeoutCapMs }),
+    // Present only for a tunnelled Run, so the hash of every other run is unchanged (ADR-031).
+    ...(cell.tunnelId === undefined ? {} : { tunnelId: cell.tunnelId }),
     seed: cell.seed,
     executor: cell.executor,
     repetitionIndex: cell.repetitionIndex ?? null,

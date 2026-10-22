@@ -88,7 +88,12 @@ describe("REQ-038 M4-08 enrollment, drain and revoke of pool workers", () => {
 
     const controller = app.controllerScope().workerPool;
     const first = controller.enroll(created.enrollmentToken);
-    expect(first).toEqual({ workspaceId, workerId: created.worker.id, resumed: false });
+    expect(first).toEqual({
+      workspaceId,
+      workerId: created.worker.id,
+      resumed: false,
+      shared: false,
+    });
     // Presenting the same token again resumes the same identity rather than minting another worker.
     expect(controller.enroll(created.enrollmentToken)).toMatchObject({
       workerId: created.worker.id,

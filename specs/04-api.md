@@ -107,13 +107,15 @@ Não retry de 401/403, validation, policy, crédito do provedor esgotado, produc
 | GET `/schedules/{id}/firings` | skipped/misfire/overlap e batch refs | schedules:R | M4 |
 | GET `/resources` | created/orphan/cleaned, filtro run | runs:R | M2 |
 | POST `/resources/{id}/cleanup` | approved compensation + owner proof | cleanup:X | M2 |
-| GET/POST/DELETE `/tunnels` (item `/{id}`) | binding, TTL, exact loopback; secret create-only | tunnel:X | M5 |
+| GET/POST `/tunnels`; GET/DELETE `/tunnels/{id}` | POST: projectId, target `{address: 127.0.0.1 ou ::1, port}` e ttlSeconds (60–3600, default 900); responde o Tunnel e um `openToken` de uso único válido por 60 s, mostrado uma vez e guardado só como hash. DELETE revoga: novos streams param na hora, os ativos fecham em até 5 s e Runs ligados terminam `cancelled` com `tunnel_lost` (ADR-031) | tunnel:X | M5 |
+| GET `/tunnels/{id}/session` (`Upgrade: testmaster-tunnel/1`) | sessão do agent: `TestMaster-Tunnel-Token`, `TestMaster-Tunnel-Certificate` (SHA-256 do certificado) e `TestMaster-Proof` assinado pela chave Ed25519 que o certificado nomeia; token usado, expirado ou de outro túnel → `UNAUTHENTICATED`; frames sequenciados de no máximo 64 KiB com janela de 256 KiB por stream | open token + proof of possession | M5 |
+| GET `/workers/{id}/attempts/{attemptId}/tunnel` (`Upgrade: testmaster-tunnel/1`) | um stream para o alvo do túnel do Run, só para o worker que detém o Attempt corrente: sem prova → `UNAUTHENTICATED`; Attempt não detido → `PRECONDITION_FAILED` `lease_lost`; Run sem sessão viva → `FORBIDDEN` `tunnel_lost`; 33º stream → `QUOTA_EXCEEDED`. O relay só encaminha o TLS fim a fim entre worker e agent | worker proof of possession (`TM-PoP`) | M5 |
 | GET/POST `/workers` | capabilities/labels/lease enrollment | workers:A | M4 |
 | POST `/workers/{id}/heartbeat` | lease/status/version, scoped worker token | worker:X | M4 |
-| POST `/workers/enroll` | resolve (e na primeira vez inscreve) a credencial `tm_wrk_`; responde workerId/shared/labels/state | worker credential | M5 |
-| POST `/workers/{id}/claims` | handshake/capacity/slots/state; no máximo um Attempt com dispatch, inputFiles, leaseExpiresAt e evidenceLimits | worker credential | M5 |
-| GET `/workers/{id}/attempts/{attemptId}/input?path=` | um arquivo de entrada do Attempt (binário) | worker credential | M5 |
-| POST `/workers/{id}/attempts/{attemptId}/{heartbeat,events,secrets,captures,auth-state,actions,finalize,fail}`; PUT `…/bundle?path=` | cada chamada sob o fence corrente; Attempt que o worker não detém → `PRECONDITION_FAILED` `lease_lost` sem efeito (ADR-030) | worker credential | M5 |
+| POST `/workers/enroll` | resolve (e na primeira vez inscreve) a credencial `tm_wrk_` e vincula a chave Ed25519 do worker (`TestMaster-Proof`, ADR-031); outra chave → `UNAUTHENTICATED`; responde workerId/shared/labels/state | worker credential + proof of possession | M5 |
+| POST `/workers/{id}/claims` | handshake/capacity/slots/state; no máximo um Attempt com dispatch, inputFiles, leaseExpiresAt e evidenceLimits | worker proof of possession (`TM-PoP`) | M5 |
+| GET `/workers/{id}/attempts/{attemptId}/input?path=` | um arquivo de entrada do Attempt (binário) | worker proof of possession (`TM-PoP`) | M5 |
+| POST `/workers/{id}/attempts/{attemptId}/{heartbeat,events,secrets,captures,auth-state,actions,finalize,fail}`; PUT `…/bundle?path=` | cada chamada sob o fence corrente; Attempt que o worker não detém → `PRECONDITION_FAILED` `lease_lost` sem efeito (ADR-030) | worker proof of possession (`TM-PoP`) | M5 |
 | GET `/usage` | reserved/actual/unknown por período/projeto/model | usage:R | M2 |
 | GET `/audit-events` | immutable event pagination | audit:R | M4 |
 | POST `/integrations/{provider}/webhooks` | signed provider event, dedupe receipt | signature | M4/M5 |
@@ -166,6 +168,8 @@ Artifact `restrictedRaw` exige, além de `artifacts:R`, permissão `artifacts:ra
 Esse request aplica overrides de deadline e retries; os defaults operacionais são Run 1.800 s, Attempt 300 s, step 30 s e até um retry infra seguro adicional. O contrato completo de valores e reducers está em [11-contract-details](11-contract-details.md).
 
 Revision pode ser omitida para resolver active atomicamente; resposta sempre a informa. Override target explícito cria environment snapshot efêmero e valida allowedOrigins de auth. `origin` é validado/atribuído pelo canal, não permite spoof de auditoria. `201/202 data`: runId, status, revisionId, environmentRevisionId, acceptedAt, links.self/events/bundle, idempotencyKey. Receipt durável antes de worker iniciar.
+
+`tunnelId` (M5, opcional) admite o Run por um túnel ativo do projeto do teste cujo alvo é exatamente o host e a porta do `baseUrl` do environment (`localhost` vale `127.0.0.1`); fora isso a admissão recusa com `NOT_FOUND`, `PRECONDITION_FAILED` `tunnel_lost` ou `POLICY_DENIED` `tunnel_target_mismatch`. Só o executor Docker de um worker remoto o executa, e cada Run exige uma aprovação vinculada cujo actionSet nomeia `tunnel:<id>`, mesmo fora de produção (ADR-031, SEC-039).
 
 ## 5. Eventos e IPC
 

@@ -15,7 +15,7 @@ import {
   type PersistenceDatabase,
   StaleFenceError,
 } from "@testmaster/persistence";
-import { auditSecurity } from "./audit.js";
+import { auditAs, auditSecurity } from "./audit.js";
 import { entity, requireEntity, type ServiceContext } from "./context.js";
 import { sha256Hex } from "./passwords.js";
 import { insertToken, revokeTokenRow, tokenKind } from "./tokens.js";
@@ -111,6 +111,8 @@ interface CredentialOwner {
   workerId: string;
   enrolled: boolean;
   shared: boolean;
+  /** The Ed25519 key a remote worker bound at enrollment (ADR-031), null before. */
+  publicKey: string | null;
 }
 /** Body of a worker heartbeat (catalog `HeartbeatInput`). */
 export interface WorkerHeartbeat {
@@ -211,55 +213,108 @@ export class WorkerPoolService {
     if (!worker || worker.state === "revoked") return null;
     if (Date.parse(String(row.expires_at)) <= this.now().getTime()) return null;
     const document: { labels?: Record<string, unknown> } = JSON.parse(String(worker.data_json));
+    const publicKey = document.labels?.publicKey;
     return {
       workspaceId,
       tokenId: String(row.id),
       workerId: String(worker.id),
       enrolled: typeof document.labels?.enrolledAt === "string",
       shared: document.labels?.[SHARED_WORKER_LABEL] === "true",
+      publicKey: typeof publicKey === "string" ? publicKey : null,
     };
   }
 
   /**
-   * The enrolled worker a remote call's credential belongs to, scoped to the worker id the call
-   * names (`null` for the enrollment call itself). Anything else is `UNAUTHENTICATED`.
+   * The enrolled remote worker `workerId` and the key it bound, to verify a signed call
+   * (ADR-031); null when the worker is unknown, revoked, not enrolled, holds no key, or its
+   * credential expired or was revoked. A shared worker's own row is the one its token belongs to.
    */
-  remoteCaller(token: string, workerId: string | null): RemoteWorkerCaller {
-    const owner = this.credentialOwner(token);
-    if (!owner || (workerId !== null && (!owner.enrolled || owner.workerId !== workerId)))
-      throw new ContractError("UNAUTHENTICATED", "A valid worker credential is required");
-    return { workspaceId: owner.workspaceId, workerId: owner.workerId, shared: owner.shared };
+  remoteKey(workerId: string): { caller: RemoteWorkerCaller; publicKey: string } | null {
+    const database = this.ctx.database;
+    for (const row of database.all(
+      "SELECT workspace_id,state,data_json FROM workers WHERE id=?",
+      workerId,
+    )) {
+      const document: { labels?: Record<string, unknown> } = JSON.parse(String(row.data_json));
+      const labels = document.labels ?? {};
+      if (typeof labels.enrollmentTokenId !== "string") continue;
+      const token = database.get(
+        "SELECT expires_at,revoked_at FROM server_tokens WHERE workspace_id=? AND id=?",
+        row.workspace_id,
+        labels.enrollmentTokenId,
+      );
+      if (!token) continue;
+      if (
+        token.revoked_at ||
+        row.state === "revoked" ||
+        Date.parse(String(token.expires_at)) <= this.now().getTime() ||
+        typeof labels.enrolledAt !== "string" ||
+        typeof labels.publicKey !== "string"
+      )
+        return null;
+      return {
+        caller: {
+          workspaceId: String(row.workspace_id),
+          workerId,
+          shared: labels[SHARED_WORKER_LABEL] === "true",
+        },
+        publicKey: labels.publicKey,
+      };
+    }
+    return null;
   }
 
   /**
    * Presents an enrollment token (controller scope: the workspace is only known from the token).
    * An unused, unexpired token enrolls its worker exactly once and from then on is that worker's
-   * credential (heartbeat only, `WORKER_CREDENTIAL_TTL_SECONDS`). Presenting it again resumes the
-   * same identity until the worker is revoked, so a restarted process keeps its worker row.
+   * credential (`WORKER_CREDENTIAL_TTL_SECONDS`). Presenting it again resumes the same identity
+   * until the worker is revoked, so a restarted process keeps its worker row. A remote worker
+   * presents `publicKey`: the first enrollment that carries one binds it, and from then on the
+   * credential enrolls only with that key, so a copied token without the private key is useless
+   * (ADR-031).
    */
-  enroll(token: string): { workspaceId: string; workerId: string; resumed: boolean } {
+  enroll(
+    token: string,
+    publicKey?: string,
+  ): { workspaceId: string; workerId: string; resumed: boolean; shared: boolean } {
     const owner = this.credentialOwner(token);
     if (!owner)
       throw new ContractError("UNAUTHENTICATED", "Enrollment token is invalid or expired");
-    const { workspaceId, workerId, tokenId } = owner;
-    if (owner.enrolled) return { workspaceId, workerId, resumed: true };
+    const { workspaceId, workerId, tokenId, shared } = owner;
+    if (publicKey !== undefined && owner.publicKey !== null && owner.publicKey !== publicKey) {
+      auditAs(
+        { database: this.ctx.database, workspaceId, actor: `worker:${workerId}` },
+        "worker.key_mismatch",
+        workerId,
+        "denied",
+      );
+      throw new ContractError("UNAUTHENTICATED", "The worker credential is bound to another key");
+    }
+    const bind = publicKey !== undefined && owner.publicKey === null;
+    if (owner.enrolled && !bind) return { workspaceId, workerId, resumed: true, shared };
     const enroll = () => {
       const at = this.now();
-      this.ctx.database.run(
-        "UPDATE server_tokens SET expires_at=? WHERE workspace_id=? AND id=? AND revoked_at IS NULL",
-        new Date(at.getTime() + WORKER_CREDENTIAL_TTL_SECONDS * 1000).toISOString(),
-        workspaceId,
-        tokenId,
-      );
+      if (!owner.enrolled)
+        this.ctx.database.run(
+          "UPDATE server_tokens SET expires_at=? WHERE workspace_id=? AND id=? AND revoked_at IS NULL",
+          new Date(at.getTime() + WORKER_CREDENTIAL_TTL_SECONDS * 1000).toISOString(),
+          workspaceId,
+          tokenId,
+        );
       const current = this.workerDocument(workspaceId, workerId);
+      const labels = current.labels as Record<string, string>;
       this.ctx.entities.update("Worker", workspaceId, workerId, Number(current.version), {
         ...current,
-        labels: { ...(current.labels as Record<string, string>), enrolledAt: at.toISOString() },
+        labels: {
+          ...labels,
+          ...(owner.enrolled ? {} : { enrolledAt: at.toISOString() }),
+          ...(bind ? { publicKey } : {}),
+        },
       });
       new AuditRepository(this.ctx.database).append({
         workspaceId,
         actor: `worker:${workerId}`,
-        action: "worker.enroll",
+        action: owner.enrolled ? "worker.key_bound" : "worker.enroll",
         resourceId: workerId,
         requestId: randomUUID(),
         timestamp: at.toISOString(),
@@ -269,7 +324,7 @@ export class WorkerPoolService {
     };
     if (this.ctx.database.inTransaction) enroll();
     else this.ctx.database.withTx(enroll);
-    return { workspaceId, workerId, resumed: false };
+    return { workspaceId, workerId, resumed: owner.enrolled, shared };
   }
 
   /**

@@ -4069,11 +4069,85 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M5",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-041 SEC-044 a remote worker reaches only the tunnel's loopback target, end to end over TLS the relay cannot read",
+        "packages/application/src/tunnels.test.ts::REQ-037 a Run is admitted through an active tunnel of its project only, to the tunnel's target and in the Docker sandbox",
+        "packages/application/src/approvals.test.ts::SEC-042 a Run through a tunnel needs a bound approval naming that tunnel even outside production",
+        "packages/application/src/tunnels.test.ts::SEC-043 a tunnel that ends cancels every Run still bound to it with tunnel_lost",
+        "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-043 owner revocation closes the active stream within 5 s, refuses new ones and cancels the bound Run with tunnel_lost",
+        "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-043 a silent control channel and the TTL end the session on both sides and cancel the bound Run"
+      ],
+      "oracle": [
+        "A tunnel exists only after an explicit tunnel start (or POST /v1/tunnels) scoped to one project and one loopback target; the agent authenticates with a one-time open token and the session carries a TTL; GET /v1/tunnels/{id} reports state and a live indicator that is true only while the relay holds the session. A tunnelled Run needs a SEC-039 approval naming tunnel:<id> even outside production (approval_required otherwise). A tunnel lost before admission refuses the Run with tunnel_lost; a tunnel lost after the Run started cancels it with tunnel_lost only when no failure was proven first (a held request already failed by the transport stays inconclusive), and nothing falls back to a direct connection: the egress proxy carries a tunnelled request on the dialed stream and never dials the target."
+      ],
+      "evidence": [
+        "validation/results/M5-02-tunnels.json",
+        "validation/journeys/m5-tunnels.docker.test.ts",
+        "docs/adr/031-tunnels-and-worker-proof-of-possession.md",
+        "docs/operations/tunnels.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "packages/application/src/tunnels.ts",
+        "packages/application/src/tunnel-relay.ts",
+        "packages/application/src/tunnel-agent.ts",
+        "packages/application/src/tunnel-dialer.ts",
+        "packages/application/src/tunnel-frames.ts",
+        "packages/application/src/tunnel-certificate.ts",
+        "packages/application/src/remote-worker-agent.ts",
+        "packages/application/src/approvals.ts",
+        "packages/sandbox/src/egress/proxy.ts",
+        "packages/contracts/src/m5/tunnels.ts",
+        "packages/persistence/migrations/sqlite/0025_tunnels.sql",
+        "packages/persistence/migrations/postgres/0025_tunnels.sql",
+        "apps/server/src/routes/tunnels.ts",
+        "apps/server/src/server.ts",
+        "apps/cli/src/tunnels.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012). Controller, relay, remote workers, tunnel agents and Docker share one host; the laptop is a loopback app beside the agent and the partition is a stalling TCP relay between one agent and the controller's TLS proxy. The relay runs in the API process with sessions in memory, so a session needs the API process that opened it.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-041 SEC-044 a remote worker reaches only the tunnel's loopback target, end to end over TLS the relay cannot read",
+          "packages/application/src/tunnels.test.ts::REQ-037 a Run is admitted through an active tunnel of its project only, to the tunnel's target and in the Docker sandbox"
+        ],
+        "negative": [
+          "packages/application/src/approvals.test.ts::SEC-042 a Run through a tunnel needs a bound approval naming that tunnel even outside production",
+          "packages/application/src/tunnels.test.ts::SEC-043 a tunnel that ends cancels every Run still bound to it with tunnel_lost",
+          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-043 owner revocation closes the active stream within 5 s, refuses new ones and cancels the bound Run with tunnel_lost",
+          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-043 a silent control channel and the TTL end the session on both sides and cancel the bound Run"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/approvals.test.ts",
+            "assertion": "expect(approvals.verify(tunnelled, test, env)?.id).toBe(named.id);"
+          },
+          {
+            "path": "packages/application/src/tunnels.test.ts",
+            "assertion": "expect(required.details.reasonCode).toBe(\"approval_required\");"
+          },
+          {
+            "path": "packages/application/src/tunnels.test.ts",
+            "assertion": "expect(ended.details.reasonCode).toBe(\"tunnel_lost\");"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(await completionReason(runId)).toBe(\"tunnel_lost\");"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(await completionReason(expiringRun)).toBe(\"tunnel_lost\");"
+          },
+          {
+            "path": "packages/sandbox/src/egress/proxy.test.ts",
+            "assertion": "expect(direct).toBe(0);"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(laptop.connections()).toBe(1);"
+          }
+        ]
+      }
     },
     {
       "id": "INT-025",
@@ -7645,7 +7719,7 @@
           },
           {
             "path": "tools/src/security/threat-model-acceptance.test.ts",
-            "assertion": "\"capability:tunnels is enabled in code but modelled under disabled boundary B-16\","
+            "assertion": "\"capability:distributed is enabled in code but modelled under disabled boundary B-30\","
           },
           {
             "path": "packages/sandbox/src/process/executor.test.ts",
@@ -10547,7 +10621,7 @@
         "validation/journeys/m5-remote-workers.docker.test.ts::M5-01 a partitioned remote worker loses its lease: its egress ends, its stale publication is refused with lease_lost and the Run completes from the worker that reclaimed it",
         "validation/journeys/m5-remote-workers.docker.test.ts::M5-01 an external effect in flight on a partitioned remote worker stays uncertain and its Run is not retried",
         "packages/application/src/remote-workers.test.ts::M5-01 a remote worker whose lease expired publishes nothing: upload, heartbeat and finalize are refused with lease_lost and the Run is reclaimed",
-        "apps/server/src/workers-deliveries.test.ts::M5-01 the remote worker routes answer only the worker's own credential and refuse an attempt it does not hold"
+        "apps/server/src/workers-deliveries.test.ts::M5-01 the remote worker routes answer only calls signed with the worker's bound key and refuse an attempt it does not hold"
       ],
       "oracle": [
         "On the real server profile (PostgreSQL, server start --mode server behind TLS) remote workers without database credentials run Attempts on the host Docker daemon over HTTPS: a worker partitioned from the controller mid-Attempt stops its sandbox and egress within one lease period (the held target connection closes, no container is left), the reconciler retries the Run under a new fence on a second worker which passes it, and the healed worker's settle is refused with lease_lost with no artifact for the stale Attempt; a POST in flight with a planned resource on a partitioned worker ends retry_unsafe_external_effect with one Attempt, one target POST and the resource uncertain; a shared pool worker flooded by one workspace claims another workspace's Run within its first three claims (six-run flood, two slots)."
@@ -10573,7 +10647,7 @@
         "apps/server/src/server.ts",
         "apps/cli/src/workers.ts"
       ],
-      "note": "Verified by automated oracles only (ADR-012). Controller, workers and Docker share one host; the partition is a blackholing TCP relay between one worker and the controller's TLS proxy. Remote calls need the API process that answered the claim (affinity on the worker id). The distributed deployment profile of specs/08-operations.md (stateless API replicas, elected scheduler, shared object storage, mTLS service identities) and its capability stay disabled; mTLS identities belong to M5-02.",
+      "note": "Verified by automated oracles only (ADR-012). Controller, workers and Docker share one host; the partition is a blackholing TCP relay between one worker and the controller's TLS proxy. Remote calls need the API process that answered the claim (affinity on the worker id). The distributed deployment profile of specs/08-operations.md (stateless API replicas, elected scheduler, shared object storage, mTLS service identities) and its capability stay disabled; remote worker identity is the proof of possession of ADR-031.",
       "coverage": {
         "positive": [
           "validation/journeys/m5-remote-workers.docker.test.ts::M5-01 one workspace flooding the shared pool worker does not monopolize it: another workspace's Run starts while the flood is still queued",
@@ -10583,7 +10657,7 @@
           "validation/journeys/m5-remote-workers.docker.test.ts::M5-01 a partitioned remote worker loses its lease: its egress ends, its stale publication is refused with lease_lost and the Run completes from the worker that reclaimed it",
           "validation/journeys/m5-remote-workers.docker.test.ts::M5-01 an external effect in flight on a partitioned remote worker stays uncertain and its Run is not retried",
           "packages/application/src/remote-workers.test.ts::M5-01 a remote worker whose lease expired publishes nothing: upload, heartbeat and finalize are refused with lease_lost and the Run is reclaimed",
-          "apps/server/src/workers-deliveries.test.ts::M5-01 the remote worker routes answer only the worker's own credential and refuse an attempt it does not hold"
+          "apps/server/src/workers-deliveries.test.ts::M5-01 the remote worker routes answer only calls signed with the worker's bound key and refuse an attempt it does not hold"
         ],
         "criticalAssertions": [
           {
@@ -10623,11 +10697,114 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M5",
       "ownerRole": "Execution",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-041 SEC-044 a remote worker reaches only the tunnel's loopback target, end to end over TLS the relay cannot read",
+        "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-042 SEC-044 the relay admits a stream only for a held Attempt of the tunnel's Run, refuses the 33rd without affecting another tenant and is never a general proxy",
+        "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-043 stopping a borrowing worker leaves the owner's tunnel open and the next worker completes the Run through it",
+        "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-043 owner revocation closes the active stream within 5 s, refuses new ones and cancels the bound Run with tunnel_lost",
+        "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-043 a silent control channel and the TTL end the session on both sides and cancel the bound Run",
+        "packages/application/src/tunnels.test.ts::SEC-042 an open token opens its own tunnel once, before it expires, and is stored only as a hash",
+        "packages/application/src/tunnels.test.ts::REQ-037 a Run is admitted through an active tunnel of its project only, to the tunnel's target and in the Docker sandbox",
+        "packages/application/src/tunnels.test.ts::SEC-043 a tunnel that ends cancels every Run still bound to it with tunnel_lost",
+        "packages/application/src/tunnel-frames.test.ts::SEC-043 a replayed, reordered, unknown or oversized frame breaks the session",
+        "packages/sandbox/src/egress/proxy.test.ts::ADR-031 a forwarded request with a dialer travels on the dialed connection and never dials the target"
+      ],
+      "oracle": [
+        "On the real server profile (PostgreSQL, server start --mode server behind TLS) a tunnel agent started with tunnel start --target 127.0.0.1:<port> opens an outbound session to the relay in the API process, and a remote worker without database credentials runs a tunnelled Run in the host Docker sandbox: the Run passes by reading a marker only the loopback app serves, the app sees exactly one connection (the tunnel stream), and the bytes the relay forwarded contain neither the marker, the request line nor the target address because the worker and the agent speak TLS end to end with the agent's pinned certificate.",
+        "The relay admits a stream only for an Attempt the calling worker holds for the tunnel's Run and only with that worker's proof of possession; the 33rd stream of a session answers 429 QUOTA_EXCEEDED while another tenant's tunnelled Run passes; a request naming another host reaches only the tunnel's own target; stopping a borrowing worker leaves the owner's session live and the next worker completes the Run through it; owner revocation refuses new streams at once, closes the held stream within 5 s and cancels the bound Run with tunnel_lost; a silent control channel ends the session after three missed heartbeats and the TTL ends it on both sides."
+      ],
+      "evidence": [
+        "validation/results/M5-02-tunnels.json",
+        "validation/journeys/m5-tunnels.docker.test.ts",
+        "docs/adr/031-tunnels-and-worker-proof-of-possession.md",
+        "docs/operations/tunnels.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "packages/application/src/tunnels.ts",
+        "packages/application/src/tunnel-relay.ts",
+        "packages/application/src/tunnel-agent.ts",
+        "packages/application/src/tunnel-dialer.ts",
+        "packages/application/src/tunnel-frames.ts",
+        "packages/application/src/tunnel-certificate.ts",
+        "packages/application/src/remote-worker-agent.ts",
+        "packages/application/src/approvals.ts",
+        "packages/sandbox/src/egress/proxy.ts",
+        "packages/contracts/src/m5/tunnels.ts",
+        "packages/persistence/migrations/sqlite/0025_tunnels.sql",
+        "packages/persistence/migrations/postgres/0025_tunnels.sql",
+        "apps/server/src/routes/tunnels.ts",
+        "apps/server/src/server.ts",
+        "apps/cli/src/tunnels.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012). Controller, relay, remote workers, tunnel agents and Docker share one host; the laptop is a loopback app beside the agent and the partition is a stalling TCP relay between one agent and the controller's TLS proxy. The relay runs in the API process with sessions in memory, so a session needs the API process that opened it.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-041 SEC-044 a remote worker reaches only the tunnel's loopback target, end to end over TLS the relay cannot read",
+          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-043 stopping a borrowing worker leaves the owner's tunnel open and the next worker completes the Run through it",
+          "packages/application/src/tunnels.test.ts::REQ-037 a Run is admitted through an active tunnel of its project only, to the tunnel's target and in the Docker sandbox"
+        ],
+        "negative": [
+          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-042 SEC-044 the relay admits a stream only for a held Attempt of the tunnel's Run, refuses the 33rd without affecting another tenant and is never a general proxy",
+          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-043 owner revocation closes the active stream within 5 s, refuses new ones and cancels the bound Run with tunnel_lost",
+          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-043 a silent control channel and the TTL end the session on both sides and cancel the bound Run",
+          "packages/application/src/tunnels.test.ts::SEC-042 an open token opens its own tunnel once, before it expires, and is stored only as a hash",
+          "packages/application/src/tunnels.test.ts::SEC-043 a tunnel that ends cancels every Run still bound to it with tunnel_lost",
+          "packages/application/src/tunnel-frames.test.ts::SEC-043 a replayed, reordered, unknown or oversized frame breaks the session",
+          "packages/sandbox/src/egress/proxy.test.ts::ADR-031 a forwarded request with a dialer travels on the dialed connection and never dials the target"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(laptop.connections()).toBe(1);"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(relayed.includes(Buffer.from(clear)), clear).toBe(false);"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(flood).toMatchObject({ status: 429, code: \"QUOTA_EXCEEDED\" });"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(tenantRun.outcome).toBe(\"passed\");"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(main.agent.child.exitCode).toBeNull();"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(laptop.hits(\"/once-borrower\")).toBe(2);"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(await agentResult(agent)).toMatchObject({ tunnelId, reason: \"owner_revoked\" });"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(await completionReason(runId)).toBe(\"tunnel_lost\");"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(ended).toMatchObject({ state: \"closed\", closeReason: \"heartbeat_lost\" });"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(await completionReason(expiringRun)).toBe(\"tunnel_lost\");"
+          },
+          {
+            "path": "packages/application/src/tunnels.test.ts",
+            "assertion": "expect(stored).not.toContain(openToken);"
+          },
+          {
+            "path": "packages/sandbox/src/egress/proxy.test.ts",
+            "assertion": "expect(direct).toBe(0);"
+          }
+        ]
+      }
     },
     {
       "id": "M5-03",
@@ -11815,7 +11992,7 @@
           },
           {
             "path": "apps/cli/src/cli.test.ts",
-            "assertion": "expect(result.document.error).toMatchObject({\n      code: \"CAPABILITY_UNAVAILABLE\",\n      details: { capability: \"tunnels\", milestone: \"M5\" },\n    });"
+            "assertion": "expect(result.document.error).toMatchObject({\n      code: \"CAPABILITY_UNAVAILABLE\",\n      details: { capability: \"memory\", milestone: \"M5\" },\n    });"
           }
         ]
       }
@@ -17817,11 +17994,82 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M5",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-041 SEC-044 a remote worker reaches only the tunnel's loopback target, end to end over TLS the relay cannot read",
+        "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-043 stopping a borrowing worker leaves the owner's tunnel open and the next worker completes the Run through it",
+        "packages/application/src/tunnels.test.ts::REQ-037 a Run is admitted through an active tunnel of its project only, to the tunnel's target and in the Docker sandbox",
+        "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-043 owner revocation closes the active stream within 5 s, refuses new ones and cancels the bound Run with tunnel_lost",
+        "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-043 a silent control channel and the TTL end the session on both sides and cancel the bound Run",
+        "packages/application/src/tunnels.test.ts::SEC-043 a tunnel that ends cancels every Run still bound to it with tunnel_lost"
+      ],
+      "oracle": [
+        "On the real server profile (PostgreSQL, server start --mode server behind TLS) a tunnel agent started with tunnel start --target 127.0.0.1:<port> opens an outbound session to the relay in the API process, and a remote worker without database credentials runs a tunnelled Run in the host Docker sandbox: the Run passes by reading a marker only the loopback app serves, the app sees exactly one connection (the tunnel stream), and the bytes the relay forwarded contain neither the marker, the request line nor the target address because the worker and the agent speak TLS end to end with the agent's pinned certificate.",
+        "Admission binds a Run to an active tunnel of its own project, to the tunnel's exact target and to the Docker sandbox: another project's tunnel is NOT_FOUND, another port is tunnel_target_mismatch, an ended tunnel is tunnel_lost; Runs bound to one tunnel run one after another on several workers (owner and borrower) and a tunnel that ends cancels every Run still bound to it with tunnel_lost."
+      ],
+      "evidence": [
+        "validation/results/M5-02-tunnels.json",
+        "validation/journeys/m5-tunnels.docker.test.ts",
+        "docs/adr/031-tunnels-and-worker-proof-of-possession.md",
+        "docs/operations/tunnels.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "packages/application/src/tunnels.ts",
+        "packages/application/src/tunnel-relay.ts",
+        "packages/application/src/tunnel-agent.ts",
+        "packages/application/src/tunnel-dialer.ts",
+        "packages/application/src/tunnel-frames.ts",
+        "packages/application/src/tunnel-certificate.ts",
+        "packages/application/src/remote-worker-agent.ts",
+        "packages/application/src/approvals.ts",
+        "packages/sandbox/src/egress/proxy.ts",
+        "packages/contracts/src/m5/tunnels.ts",
+        "packages/persistence/migrations/sqlite/0025_tunnels.sql",
+        "packages/persistence/migrations/postgres/0025_tunnels.sql",
+        "apps/server/src/routes/tunnels.ts",
+        "apps/server/src/server.ts",
+        "apps/cli/src/tunnels.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012). Controller, relay, remote workers, tunnel agents and Docker share one host; the laptop is a loopback app beside the agent and the partition is a stalling TCP relay between one agent and the controller's TLS proxy. The relay runs in the API process with sessions in memory, so a session needs the API process that opened it.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-041 SEC-044 a remote worker reaches only the tunnel's loopback target, end to end over TLS the relay cannot read",
+          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-043 stopping a borrowing worker leaves the owner's tunnel open and the next worker completes the Run through it",
+          "packages/application/src/tunnels.test.ts::REQ-037 a Run is admitted through an active tunnel of its project only, to the tunnel's target and in the Docker sandbox"
+        ],
+        "negative": [
+          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-043 owner revocation closes the active stream within 5 s, refuses new ones and cancels the bound Run with tunnel_lost",
+          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-043 a silent control channel and the TTL end the session on both sides and cancel the bound Run",
+          "packages/application/src/tunnels.test.ts::SEC-043 a tunnel that ends cancels every Run still bound to it with tunnel_lost"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(laptop.connections()).toBe(1);"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": ").toMatchObject({ code: \"POLICY_DENIED\", details: { reasonCode: \"tunnel_target_mismatch\" } });"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(laptop.hits(\"/once-borrower\")).toBe(2);"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(await completionReason(runId)).toBe(\"tunnel_lost\");"
+          },
+          {
+            "path": "packages/application/src/tunnels.test.ts",
+            "assertion": "expect(admissible(\"http://127.0.0.1:8080\", \"docker\", other.id).code).toBe(\"NOT_FOUND\");"
+          },
+          {
+            "path": "packages/application/src/tunnels.test.ts",
+            "assertion": "expect(ended.details.reasonCode).toBe(\"tunnel_lost\");"
+          }
+        ]
+      }
     },
     {
       "id": "REQ-038",
@@ -17842,7 +18090,7 @@
         "validation/journeys/notifications-workers.portal.test.ts::M4-08 REQ-038 a viewer gets the forbidden view for workers, not an empty list, and the API refuses the same read",
         "validation/journeys/notifications-workers.portal.test.ts::INT-004 REQ-038 every /v1 request the pages made is a catalog route and nothing else was called",
         "validation/journeys/m5-remote-workers.docker.test.ts::M5-01 a partitioned remote worker loses its lease: its egress ends, its stale publication is refused with lease_lost and the Run completes from the worker that reclaimed it",
-        "apps/server/src/workers-deliveries.test.ts::M5-01 the remote worker routes answer only the worker's own credential and refuse an attempt it does not hold"
+        "apps/server/src/workers-deliveries.test.ts::M5-01 the remote worker routes answer only calls signed with the worker's bound key and refuse an attempt it does not hold"
       ],
       "oracle": [
         "A one-use enrollment token enrolls one worker, resumes it on re-presentation and is refused when unknown, expired or revoked; the heartbeat route renews the held lease, records liveness and never undoes an administrator's drain, and refuses a lost lease, a stale version and a foreign, unenrolled or revoked credential. Silent workers go offline and are announced. Only administrators manage workers, and the portal shows the token once. A remote worker enrolled over HTTPS (M5-01, ADR-030) runs Attempts without database credentials, needs no inbound port, and its routes answer only its own credential."
@@ -17883,12 +18131,12 @@
           "packages/application/src/worker-pool.test.ts::M4-08 REQ-038 a read-only identity can neither list, enroll, drain nor revoke workers while an administrator can",
           "validation/journeys/notifications-workers.portal.test.ts::M4-08 REQ-038 a viewer gets the forbidden view for workers, not an empty list, and the API refuses the same read",
           "validation/journeys/notifications-workers.portal.test.ts::INT-004 REQ-038 every /v1 request the pages made is a catalog route and nothing else was called",
-          "apps/server/src/workers-deliveries.test.ts::M5-01 the remote worker routes answer only the worker's own credential and refuse an attempt it does not hold"
+          "apps/server/src/workers-deliveries.test.ts::M5-01 the remote worker routes answer only calls signed with the worker's bound key and refuse an attempt it does not hold"
         ],
         "criticalAssertions": [
           {
             "path": "packages/application/src/worker-pool.test.ts",
-            "assertion": "    expect(first).toEqual({ workspaceId, workerId: created.worker.id, resumed: false });"
+            "assertion": "    expect(first).toEqual({\n      workspaceId,\n      workerId: created.worker.id,\n      resumed: false,\n      shared: false,\n    });"
           },
           {
             "path": "packages/application/src/worker-pool.test.ts",
@@ -18562,7 +18810,7 @@
         "tools/src/security/threat-model-acceptance.test.ts::fails a control that cites a missing test, a missing file, a non-test file or too little evidence",
         "tools/src/security/threat-model-acceptance.test.ts::fails an executor, transport or capability present in code but absent from the model",
         "tools/src/security/threat-model-acceptance.test.ts::fails when code enables a boundary the model still lists as disabled, and when the model drops coverage",
-        "tools/src/security/threat-model-acceptance.test.ts::tunnel, distributed workers, multi-user and every other M4+ capability stay disabled and refuse use"
+        "tools/src/security/threat-model-acceptance.test.ts::distributed profile, SSO, SCIM and every other unimplemented M4+ capability stay disabled and refuse use"
       ],
       "oracle": [
         "Deterministic checker parses the versioned threat model and proves boundary+control+asset+abuse+residual risk and existing enforcing tests for import, LLM, worker, viewer and tunnel (plus every other boundary), that every executor/transport/capability derived from code (sandbox executors, execution.executor enum, apps/*, capability registry) is modelled with a status equal to its enabled state in code, that shared-kernel and host-administrator residuals stay explicit, and that mutated copies (removed boundary, blanked field, missing/renamed test, new executor/transport/capability, enabled-but-disabled boundary) fail."
@@ -18605,7 +18853,7 @@
           },
           {
             "path": "tools/src/security/threat-model-acceptance.test.ts",
-            "assertion": "\"capability:tunnels is enabled in code but modelled under disabled boundary B-16\","
+            "assertion": "\"capability:distributed is enabled in code but modelled under disabled boundary B-30\","
           },
           {
             "path": "tools/src/security/threat-model-acceptance.test.ts",
@@ -21644,11 +21892,76 @@
       "sourceFile": "specs/07-security.md",
       "milestone": "M5",
       "ownerRole": "Security",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-041 SEC-044 a remote worker reaches only the tunnel's loopback target, end to end over TLS the relay cannot read",
+        "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-042 SEC-044 the relay admits a stream only for a held Attempt of the tunnel's Run, refuses the 33rd without affecting another tenant and is never a general proxy",
+        "packages/sandbox/src/egress/proxy.test.ts::ADR-031 a forwarded request with a dialer travels on the dialed connection and never dials the target"
+      ],
+      "oracle": [
+        "tunnel start and POST /v1/tunnels accept only a literal 127.0.0.1 or ::1 address with a port: localhost, a LAN address, the metadata address and a wildcard are refused with INVALID_ARGUMENT before any session. A stream names no destination, so the agent dials only the tunnel's own target: a redirect to another loopback port the environment allows never reaches that port, a request naming the metadata host lands on the tunnel's target, and a Run whose environment names another port is refused with tunnel_target_mismatch."
+      ],
+      "evidence": [
+        "validation/results/M5-02-tunnels.json",
+        "validation/journeys/m5-tunnels.docker.test.ts",
+        "docs/adr/031-tunnels-and-worker-proof-of-possession.md",
+        "docs/operations/tunnels.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "packages/application/src/tunnels.ts",
+        "packages/application/src/tunnel-relay.ts",
+        "packages/application/src/tunnel-agent.ts",
+        "packages/application/src/tunnel-dialer.ts",
+        "packages/application/src/tunnel-frames.ts",
+        "packages/application/src/tunnel-certificate.ts",
+        "packages/application/src/remote-worker-agent.ts",
+        "packages/application/src/approvals.ts",
+        "packages/sandbox/src/egress/proxy.ts",
+        "packages/contracts/src/m5/tunnels.ts",
+        "packages/persistence/migrations/sqlite/0025_tunnels.sql",
+        "packages/persistence/migrations/postgres/0025_tunnels.sql",
+        "apps/server/src/routes/tunnels.ts",
+        "apps/server/src/server.ts",
+        "apps/cli/src/tunnels.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012). Controller, relay, remote workers, tunnel agents and Docker share one host; the laptop is a loopback app beside the agent and the partition is a stalling TCP relay between one agent and the controller's TLS proxy. The relay runs in the API process with sessions in memory, so a session needs the API process that opened it.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-041 SEC-044 a remote worker reaches only the tunnel's loopback target, end to end over TLS the relay cannot read"
+        ],
+        "negative": [
+          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-041 SEC-044 a remote worker reaches only the tunnel's loopback target, end to end over TLS the relay cannot read",
+          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-042 SEC-044 the relay admits a stream only for a held Attempt of the tunnel's Run, refuses the 33rd without affecting another tenant and is never a general proxy",
+          "packages/sandbox/src/egress/proxy.test.ts::ADR-031 a forwarded request with a dialer travels on the dialed connection and never dials the target"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(JSON.parse(refused.stdout()).error.code, target).toBe(\"INVALID_ARGUMENT\");"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(admin.hits(\"/\")).toBe(adminHitsBefore);"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": ").toMatchObject({ code: \"POLICY_DENIED\", details: { reasonCode: \"tunnel_target_mismatch\" } });"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(laptop.seen.at(-1)).toEqual({ host: \"169.254.169.254\", path: \"/latest/meta-data/\" });"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(laptop.connections()).toBe(1);"
+          },
+          {
+            "path": "packages/sandbox/src/egress/proxy.test.ts",
+            "assertion": "expect(direct).toBe(0);"
+          }
+        ]
+      }
     },
     {
       "id": "SEC-042",
@@ -21656,11 +21969,76 @@
       "sourceFile": "specs/07-security.md",
       "milestone": "M5",
       "ownerRole": "Security",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-042 SEC-044 the relay admits a stream only for a held Attempt of the tunnel's Run, refuses the 33rd without affecting another tenant and is never a general proxy",
+        "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-043 owner revocation closes the active stream within 5 s, refuses new ones and cancels the bound Run with tunnel_lost",
+        "packages/application/src/tunnels.test.ts::SEC-042 an open token opens its own tunnel once, before it expires, and is stored only as a hash",
+        "packages/application/src/approvals.test.ts::SEC-042 a Run through a tunnel needs a bound approval naming that tunnel even outside production",
+        "apps/server/src/workers-deliveries.test.ts::M5-01 the remote worker routes answer only calls signed with the worker's bound key and refuse an attempt it does not hold"
+      ],
+      "oracle": [
+        "The relay authenticates the agent session with a one-time open token stored only as a hash and each stream with the calling worker's proof of possession of its bound key: anonymous upgrades of the published session and stream addresses answer 401, a stream asked for under a forged worker id answers 401, another tenant's worker and an Attempt that already settled are refused with PRECONDITION_FAILED, a replayed open token answers 401 UNAUTHENTICATED and is audited as tunnel.open.denied without the token, and a tunnelled Run needs an approval naming the tunnel. Remote worker calls are signed over the request path, so a bearer exposed in a URL is not sufficient."
+      ],
+      "evidence": [
+        "validation/results/M5-02-tunnels.json",
+        "validation/journeys/m5-tunnels.docker.test.ts",
+        "docs/adr/031-tunnels-and-worker-proof-of-possession.md",
+        "docs/operations/tunnels.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "packages/application/src/tunnels.ts",
+        "packages/application/src/tunnel-relay.ts",
+        "packages/application/src/tunnel-agent.ts",
+        "packages/application/src/tunnel-dialer.ts",
+        "packages/application/src/tunnel-frames.ts",
+        "packages/application/src/tunnel-certificate.ts",
+        "packages/application/src/remote-worker-agent.ts",
+        "packages/application/src/approvals.ts",
+        "packages/sandbox/src/egress/proxy.ts",
+        "packages/contracts/src/m5/tunnels.ts",
+        "packages/persistence/migrations/sqlite/0025_tunnels.sql",
+        "packages/persistence/migrations/postgres/0025_tunnels.sql",
+        "apps/server/src/routes/tunnels.ts",
+        "apps/server/src/server.ts",
+        "apps/cli/src/tunnels.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012). Controller, relay, remote workers, tunnel agents and Docker share one host; the laptop is a loopback app beside the agent and the partition is a stalling TCP relay between one agent and the controller's TLS proxy. The relay runs in the API process with sessions in memory, so a session needs the API process that opened it.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-042 SEC-044 the relay admits a stream only for a held Attempt of the tunnel's Run, refuses the 33rd without affecting another tenant and is never a general proxy"
+        ],
+        "negative": [
+          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-042 SEC-044 the relay admits a stream only for a held Attempt of the tunnel's Run, refuses the 33rd without affecting another tenant and is never a general proxy",
+          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-043 owner revocation closes the active stream within 5 s, refuses new ones and cancels the bound Run with tunnel_lost",
+          "packages/application/src/tunnels.test.ts::SEC-042 an open token opens its own tunnel once, before it expires, and is stored only as a hash",
+          "packages/application/src/approvals.test.ts::SEC-042 a Run through a tunnel needs a bound approval naming that tunnel even outside production",
+          "apps/server/src/workers-deliveries.test.ts::M5-01 the remote worker routes answer only calls signed with the worker's bound key and refuse an attempt it does not hold"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect((await openStream(own, tenantWorkerId, attempt.id)).status).toBe(401);"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": ").rejects.toMatchObject({ status: 401, code: \"UNAUTHENTICATED\" });"
+          },
+          {
+            "path": "packages/application/src/tunnels.test.ts",
+            "assertion": "expect(stored).not.toContain(openToken);"
+          },
+          {
+            "path": "packages/application/src/approvals.test.ts",
+            "assertion": "expect(approvals.verify(tunnelled, test, env)?.id).toBe(named.id);"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(flood).toMatchObject({ status: 429, code: \"QUOTA_EXCEEDED\" });"
+          }
+        ]
+      }
     },
     {
       "id": "SEC-043",
@@ -21668,11 +22046,99 @@
       "sourceFile": "specs/07-security.md",
       "milestone": "M5",
       "ownerRole": "Security",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-043 stopping a borrowing worker leaves the owner's tunnel open and the next worker completes the Run through it",
+        "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-043 owner revocation closes the active stream within 5 s, refuses new ones and cancels the bound Run with tunnel_lost",
+        "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-043 a silent control channel and the TTL end the session on both sides and cancel the bound Run",
+        "packages/application/src/tunnels.test.ts::SEC-043 the reconciler ends a session at its TTL and after three missed heartbeats, not before",
+        "packages/application/src/tunnels.test.ts::SEC-043 a tunnel that ends cancels every Run still bound to it with tunnel_lost",
+        "packages/application/src/tunnel-frames.test.ts::SEC-043 a replayed, reordered, unknown or oversized frame breaks the session",
+        "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-042 SEC-044 the relay admits a stream only for a held Attempt of the tunnel's Run, refuses the 33rd without affecting another tenant and is never a general proxy"
+      ],
+      "oracle": [
+        "Owner revocation refuses new streams at once, closes the held stream within 5 s on a healthy network and the agent exits with owner_revoked; a control channel that stalls ends the session after three missed 10 s heartbeats (closed, heartbeat_lost, measured between 20 s and 50 s after the partition) on both relay and agent; the TTL ends the session on both sides (expired, ttl_expired); each end cancels the Runs still bound with tunnel_lost; a used open token never opens a second session, and a replayed, reordered, unknown or oversized frame breaks the session instead of resuming a byte stream. Stopping a borrowing worker ends only its streams: the owner's session stays live. Cancelling a held tunnelled Run ends it cancelled while the tunnel stays live."
+      ],
+      "evidence": [
+        "validation/results/M5-02-tunnels.json",
+        "validation/journeys/m5-tunnels.docker.test.ts",
+        "docs/adr/031-tunnels-and-worker-proof-of-possession.md",
+        "docs/operations/tunnels.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "packages/application/src/tunnels.ts",
+        "packages/application/src/tunnel-relay.ts",
+        "packages/application/src/tunnel-agent.ts",
+        "packages/application/src/tunnel-dialer.ts",
+        "packages/application/src/tunnel-frames.ts",
+        "packages/application/src/tunnel-certificate.ts",
+        "packages/application/src/remote-worker-agent.ts",
+        "packages/application/src/approvals.ts",
+        "packages/sandbox/src/egress/proxy.ts",
+        "packages/contracts/src/m5/tunnels.ts",
+        "packages/persistence/migrations/sqlite/0025_tunnels.sql",
+        "packages/persistence/migrations/postgres/0025_tunnels.sql",
+        "apps/server/src/routes/tunnels.ts",
+        "apps/server/src/server.ts",
+        "apps/cli/src/tunnels.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012). Controller, relay, remote workers, tunnel agents and Docker share one host; the laptop is a loopback app beside the agent and the partition is a stalling TCP relay between one agent and the controller's TLS proxy. The relay runs in the API process with sessions in memory, so a session needs the API process that opened it.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-043 stopping a borrowing worker leaves the owner's tunnel open and the next worker completes the Run through it"
+        ],
+        "negative": [
+          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-043 owner revocation closes the active stream within 5 s, refuses new ones and cancels the bound Run with tunnel_lost",
+          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-043 a silent control channel and the TTL end the session on both sides and cancel the bound Run",
+          "packages/application/src/tunnels.test.ts::SEC-043 the reconciler ends a session at its TTL and after three missed heartbeats, not before",
+          "packages/application/src/tunnels.test.ts::SEC-043 a tunnel that ends cancels every Run still bound to it with tunnel_lost",
+          "packages/application/src/tunnel-frames.test.ts::SEC-043 a replayed, reordered, unknown or oversized frame breaks the session",
+          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-042 SEC-044 the relay admits a stream only for a held Attempt of the tunnel's Run, refuses the 33rd without affecting another tenant and is never a general proxy"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(await agentResult(agent)).toMatchObject({ tunnelId, reason: \"owner_revoked\" });"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(await completionReason(runId)).toBe(\"tunnel_lost\");"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(ended).toMatchObject({ state: \"closed\", closeReason: \"heartbeat_lost\" });"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(await completionReason(expiringRun)).toBe(\"tunnel_lost\");"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": ").rejects.toMatchObject({ status: 401, code: \"UNAUTHENTICATED\" });"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(main.agent.child.exitCode).toBeNull();"
+          },
+          {
+            "path": "packages/application/src/tunnels.test.ts",
+            "assertion": "expect(state(app, expiring)).toEqual([\"expired\", \"ttl_expired\"]);"
+          },
+          {
+            "path": "packages/application/src/tunnels.test.ts",
+            "assertion": "expect(state(app, quiet)).toEqual([\"closed\", \"heartbeat_lost\"]);"
+          },
+          {
+            "path": "packages/application/src/tunnel-frames.test.ts",
+            "assertion": "expect(violation(() => replay.push(first))).toBe(\"sequence\");"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(cancelled.outcome).toBe(\"cancelled\");"
+          }
+        ]
+      }
     },
     {
       "id": "SEC-044",
@@ -21680,11 +22146,77 @@
       "sourceFile": "specs/07-security.md",
       "milestone": "M5",
       "ownerRole": "Security",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-041 SEC-044 a remote worker reaches only the tunnel's loopback target, end to end over TLS the relay cannot read",
+        "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-042 SEC-044 the relay admits a stream only for a held Attempt of the tunnel's Run, refuses the 33rd without affecting another tenant and is never a general proxy",
+        "packages/application/src/tunnel-frames.test.ts::SEC-043 a writer stops at one unacknowledged window and resumes on credit",
+        "packages/application/src/tunnel-frames.test.ts::SEC-043 a meter that refuses received bytes aborts the stream without acknowledging them"
+      ],
+      "oracle": [
+        "A session admits at most 32 concurrent streams: the 33rd answers 429 QUOTA_EXCEEDED, the refusal shows in the tunnel's live usage, the tunnel stays live and another tenant's tunnelled Run passes; each stream's writer stops at one unacknowledged window and a meter that refuses bytes aborts the stream without acknowledging them, so memory stays bounded; the relay sees only TLS ciphertext between worker and agent (the agent's certificate matches the pinned fingerprint); the audit records tunnel.create/open/stream allowances and tunnel.stream_quota.denied with ids and hashes only, never the payload marker."
+      ],
+      "evidence": [
+        "validation/results/M5-02-tunnels.json",
+        "validation/journeys/m5-tunnels.docker.test.ts",
+        "docs/adr/031-tunnels-and-worker-proof-of-possession.md",
+        "docs/operations/tunnels.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "packages/application/src/tunnels.ts",
+        "packages/application/src/tunnel-relay.ts",
+        "packages/application/src/tunnel-agent.ts",
+        "packages/application/src/tunnel-dialer.ts",
+        "packages/application/src/tunnel-frames.ts",
+        "packages/application/src/tunnel-certificate.ts",
+        "packages/application/src/remote-worker-agent.ts",
+        "packages/application/src/approvals.ts",
+        "packages/sandbox/src/egress/proxy.ts",
+        "packages/contracts/src/m5/tunnels.ts",
+        "packages/persistence/migrations/sqlite/0025_tunnels.sql",
+        "packages/persistence/migrations/postgres/0025_tunnels.sql",
+        "apps/server/src/routes/tunnels.ts",
+        "apps/server/src/server.ts",
+        "apps/cli/src/tunnels.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012). Controller, relay, remote workers, tunnel agents and Docker share one host; the laptop is a loopback app beside the agent and the partition is a stalling TCP relay between one agent and the controller's TLS proxy. The relay runs in the API process with sessions in memory, so a session needs the API process that opened it.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-041 SEC-044 a remote worker reaches only the tunnel's loopback target, end to end over TLS the relay cannot read"
+        ],
+        "negative": [
+          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-042 SEC-044 the relay admits a stream only for a held Attempt of the tunnel's Run, refuses the 33rd without affecting another tenant and is never a general proxy",
+          "packages/application/src/tunnel-frames.test.ts::SEC-043 a writer stops at one unacknowledged window and resumes on credit",
+          "packages/application/src/tunnel-frames.test.ts::SEC-043 a meter that refuses received bytes aborts the stream without acknowledging them"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(flood).toMatchObject({ status: 429, code: \"QUOTA_EXCEEDED\" });"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(tenantRun.outcome).toBe(\"passed\");"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(relayed.includes(Buffer.from(clear)), clear).toBe(false);"
+          },
+          {
+            "path": "validation/journeys/m5-tunnels.docker.test.ts",
+            "assertion": "expect(JSON.stringify(audit)).not.toContain(MARKER);"
+          },
+          {
+            "path": "packages/application/src/tunnel-frames.test.ts",
+            "assertion": "expect(sent()).toBe(TUNNEL_STREAM_WINDOW_BYTES);"
+          },
+          {
+            "path": "packages/application/src/tunnel-frames.test.ts",
+            "assertion": "expect((await closed)?.message).toBe(\"quota_exhausted\");"
+          }
+        ]
+      }
     },
     {
       "id": "SEC-045",
@@ -29412,8 +29944,8 @@
     {
       "id": "tunnels",
       "milestone": "M5",
-      "requirements": ["REQ-037", "API-008"],
-      "gate": "M5 normative acceptance; capability unavailable until milestone"
+      "requirements": ["M5-02", "REQ-037", "INT-024", "SEC-041", "SEC-042", "SEC-043", "SEC-044", "API-008"],
+      "gate": "M5 self-hosted tunnels (ADR-031); positive/negative evidence and protected assertions"
     },
     {
       "id": "matrix-advanced",

@@ -214,6 +214,11 @@ export const RunRequest = Obj({
   ),
   /** Frozen repetition identity for flake studies; distinct repetitions are never deduplicated. */
   repetitionIndex: Type.Optional(Type.Integer({ minimum: 0, maximum: 99 })),
+  /**
+   * Run through this active tunnel of the test's project (ADR-031): the environment's base URL
+   * must be the tunnel's loopback target, and only a remote worker claims it.
+   */
+  tunnelId: Type.Optional(id("tun")),
   extensions: Type.Optional(Extensions),
 });
 /**

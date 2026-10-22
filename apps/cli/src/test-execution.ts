@@ -38,8 +38,14 @@ function replayOptions(options: Options): void {
     throw new ContractError("POLICY_DENIED", "Strict CI forbids automatic healing");
   if (options.heal === "propose" && options.wait !== true)
     throw new ContractError("PRECONDITION_FAILED", "Post-failure healing requires --wait");
-  if (string(options, "executor") === "remote" || string(options, "tunnel"))
-    unavailable("distributed");
+  if (string(options, "executor") === "remote") unavailable("distributed");
+  // A tunnel carries a remote worker's traffic; a local run already reaches the local target.
+  if (string(options, "tunnel"))
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      "--tunnel runs a test through a server endpoint; select one with --endpoint",
+      { option: "tunnel" },
+    );
   if (string(options, "executor") && !["docker", "process"].includes(String(options.executor)))
     throw new ContractError("INVALID_ARGUMENT", "Invalid executor");
 }

@@ -1,6 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
-import { issueLocalToken, scaffoldPlan } from "@testmaster/application";
+import {
+  createPopKey,
+  issueLocalToken,
+  popAuthorization,
+  popPublicKey,
+  scaffoldPlan,
+} from "@testmaster/application";
 import {
   createNotificationHarness,
   type NotificationHarness,
@@ -138,7 +144,7 @@ it("REQ-038 the heartbeat route renews a lease with the worker credential and re
   expect(stale.json().error.code).toBe("REVISION_CONFLICT");
 });
 
-it("M5-01 the remote worker routes answer only the worker's own credential and refuse an attempt it does not hold", async () => {
+it("M5-01 the remote worker routes answer only calls signed with the worker's bound key and refuse an attempt it does not hold", async () => {
   const f = await fixture();
   const enroll = async (name: string) =>
     (await f.call("POST", "/v1/workers", { payload: { name } })).json().data as {
@@ -147,30 +153,66 @@ it("M5-01 the remote worker routes answer only the worker's own credential and r
     };
   const a = await enroll("remote-a");
   const b = await enroll("remote-b");
-  const post = (url: string, token?: string) =>
+  const keyA = createPopKey();
+  const keyB = createPopKey();
+  const post = (url: string, headers: Record<string, string> = {}) =>
     f.app.inject({
       method: "POST",
       url,
-      headers: {
-        "content-type": "application/json",
-        ...(token ? { authorization: `Bearer ${token}` } : {}),
-      },
+      headers: { "content-type": "application/json", ...headers },
       payload: "{}",
     });
-  const identity = await post("/v1/workers/enroll", a.enrollmentToken);
+  const enrollAs = (token: string, key = keyA, now = Date.now()) =>
+    post("/v1/workers/enroll", {
+      authorization: `Bearer ${token}`,
+      "testmaster-proof": popAuthorization(
+        key,
+        popPublicKey(key),
+        "POST",
+        "/v1/workers/enroll",
+        now,
+      ),
+    });
+  const identity = await enrollAs(a.enrollmentToken);
   expect(identity.statusCode).toBe(200);
   expect(identity.json().data).toMatchObject({ workerId: a.worker.id, shared: false });
-  expect((await post("/v1/workers/enroll", b.enrollmentToken)).statusCode).toBe(200);
+  expect((await enrollAs(b.enrollmentToken, keyB)).statusCode).toBe(200);
+  // A restarted worker with its own key resumes; a stolen credential with another key does not.
+  expect((await enrollAs(a.enrollmentToken)).statusCode).toBe(200);
+  expect((await enrollAs(a.enrollmentToken, keyB)).statusCode).toBe(401);
+  expect((await enrollAs(a.enrollmentToken, keyA, Date.now() - 120_000)).statusCode).toBe(401);
+  expect(
+    (await post("/v1/workers/enroll", { authorization: `Bearer ${a.enrollmentToken}` })).statusCode,
+  ).toBe(401);
 
   const heartbeat = `/v1/workers/${a.worker.id}/attempts/att_${randomUUID()}/heartbeat`;
-  const lost = await post(heartbeat, a.enrollmentToken);
+  const signedBy = (key = keyA, keyId = a.worker.id, url = heartbeat, now = Date.now()) => ({
+    authorization: popAuthorization(key, keyId, "POST", url, now),
+  });
+  const proof = signedBy();
+  const lost = await post(heartbeat, proof);
   expect(lost.statusCode).toBe(422);
   expect(lost.json().error.details.reasonCode).toBe("lease_lost");
-  // Negative controls: no credential, a user token, another worker's credential.
+  // Negative controls: a replayed proof, a stale one, one signed for another path, another
+  // worker's key, a proof naming another worker, the bare credential, a user token, nothing.
+  expect((await post(heartbeat, proof)).statusCode).toBe(401);
+  expect(
+    (await post(heartbeat, signedBy(keyA, a.worker.id, heartbeat, Date.now() - 120_000)))
+      .statusCode,
+  ).toBe(401);
+  expect((await post(heartbeat, signedBy(keyA, a.worker.id, `${heartbeat}?x=1`))).statusCode).toBe(
+    401,
+  );
+  expect((await post(heartbeat, signedBy(keyB))).statusCode).toBe(401);
+  expect((await post(heartbeat, signedBy(keyB, b.worker.id))).statusCode).toBe(401);
+  expect((await post(heartbeat, { authorization: `Bearer ${a.enrollmentToken}` })).statusCode).toBe(
+    401,
+  );
+  expect((await post(heartbeat, { authorization: `Bearer ${f.admin.token}` })).statusCode).toBe(
+    401,
+  );
   expect((await post(heartbeat)).statusCode).toBe(401);
-  expect((await post(heartbeat, f.admin.token)).statusCode).toBe(401);
-  expect((await post(heartbeat, b.enrollmentToken)).statusCode).toBe(401);
-  expect((await post("/v1/workers/enroll", f.admin.token)).statusCode).toBe(401);
+  expect((await enrollAs(f.admin.token)).statusCode).toBe(401);
   // An administrator cannot label a private worker as the operator's shared pool worker.
   expect(
     (

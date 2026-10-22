@@ -25,7 +25,7 @@ it("C4 registers a handler for every catalog route except the ones catalogued as
     const key = `${route.method} ${route.path}`;
     expect(table.has(key), key).toBe(route.response.kind !== "unavailable");
   }
-  expect(() => buildRouteTable([{ handlers: { "POST /tunnels": () => ({}) } }])).toThrow(
+  expect(() => buildRouteTable([{ handlers: { "POST /visual-baselines": () => ({}) } }])).toThrow(
     /catalogued as unavailable/,
   );
 });

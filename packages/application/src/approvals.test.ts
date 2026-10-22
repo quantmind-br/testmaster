@@ -313,6 +313,47 @@ describe("bound production approvals", () => {
     code(() => denied.list(), "FORBIDDEN");
     code(() => denied.verify(run, test, env), "FORBIDDEN");
   });
+  it("SEC-042 a Run through a tunnel needs a bound approval naming that tunnel even outside production", async () => {
+    const { approvals, test, revision, ctx } = await setup(scaffoldPlan("backend"));
+    const staging = new EnvironmentsService(ctx).create({
+      projectId: test.projectId,
+      name: "laptop",
+      baseUrl: "http://127.0.0.1:8080",
+      production: false,
+    });
+    const env = ctx.entities.get(
+      "EnvironmentRevision",
+      ctx.workspaceId,
+      staging.activeRevisionId,
+    ) as EnvironmentRevision;
+    const tunnelId = uuidV7IdGenerator.next("tun");
+    const direct = {
+      testId: test.id,
+      revisionId: revision.id,
+      environmentRevisionId: env.id,
+      gatePolicy: { policyHash: "a".repeat(64) },
+    };
+    // Control: the same Run without the tunnel needs no approval outside production.
+    expect(approvals.verify(direct, test, env)).toBeNull();
+
+    const tunnelled = { ...direct, matrixCell: { tunnelId } };
+    const binding = {
+      revisionHash: revision.contentHash,
+      environmentRevisionId: env.id,
+      originSet: ["http://127.0.0.1:8080"],
+      policyHash: "a".repeat(64),
+      reason: "Reach the laptop's API through the tunnel",
+    };
+    code(() => approvals.verify(tunnelled, test, env), "POLICY_DENIED");
+    approvals.create({ ...binding, actionSet: ["read"] });
+    approvals.create({ ...binding, actionSet: [`tunnel:${uuidV7IdGenerator.next("tun")}`] });
+    code(() => approvals.verify(tunnelled, test, env), "POLICY_DENIED");
+
+    const named = approvals.create({ ...binding, actionSet: [`tunnel:${tunnelId}`] });
+    expect(approvals.verify(tunnelled, test, env)?.id).toBe(named.id);
+    // The approval is consumed: the next Run through the tunnel needs a new one.
+    code(() => approvals.verify(tunnelled, test, env), "POLICY_DENIED");
+  });
   it("rejects approval expiry and disabled reviewers at admission", async () => {
     const { approvals, run, test, env, input, ctx } = await setup();
     const expired = approvals.create(input);

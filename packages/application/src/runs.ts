@@ -44,6 +44,7 @@ import { runtimeIdentity } from "./runtime-identity.js";
 import { type EvidenceLimits, runEvidenceBytes } from "./storage-admission.js";
 import { clockDomain, timingBoundary } from "./timing.js";
 import { isTrialTest } from "./trial-tests.js";
+import { assertTunnelAdmissible } from "./tunnels.js";
 
 export interface BatchProvenance {
   suiteId: string | null;
@@ -414,6 +415,8 @@ export class RunsService {
     const maxConcurrency =
       request.extensions?.["testmaster:maxConcurrency"] ?? config.execution?.concurrency ?? 2;
     const ownership = this.host.liveWorker() ? "worker" : "ephemeral";
+    if (request.tunnelId !== undefined)
+      assertTunnelAdmissible(this.ctx, request.tunnelId, String(test.projectId), baseUrl, executor);
     const provenance = admissionSnapshot(
       this.ctx,
       revision,
@@ -452,6 +455,7 @@ export class RunsService {
         ...(request.limits?.stepTimeoutMs === undefined
           ? {}
           : { stepTimeoutCapMs: limits.stepTimeoutMs }),
+        ...(request.tunnelId === undefined ? {} : { tunnelId: request.tunnelId }),
         healingPolicy: request.healingPolicy ?? "off",
         ...(request.origin === "verification" &&
         request.extensions?.["testmaster:healingProposalId"]
@@ -1163,6 +1167,20 @@ export class RunsService {
     if (proposal?.approvalMode === "manual" && proposal.verificationRunId === id)
       this.ctx.authorize("W", String(test.projectId));
     else this.ctx.authorize("X", String(test.projectId));
+    return this.requestCancel(id, "user_cancelled");
+  }
+  /**
+   * Cancels a Run whose tunnel stopped being active (ADR-031): the caller is the tunnel's own
+   * lifecycle, so no principal authorizes it. A failure already proven stays failed.
+   */
+  cancelTunnelLost(id: string): { runId: string; result: "requested" | "already_terminal" } {
+    const { runId, result } = this.requestCancel(id, "tunnel_lost");
+    return { runId, result };
+  }
+  private requestCancel(
+    id: string,
+    reasonCode: "user_cancelled" | "tunnel_lost",
+  ): { runId: string; result: "requested" | "already_terminal"; status: string } {
     const cancel = () => {
       const current = this.get(id);
       if (current.phase === "completed")
@@ -1180,7 +1198,7 @@ export class RunsService {
           {
             requestedBy: this.ctx.principalId,
             cancelRequestedAt: new Date().toISOString(),
-            reasonCode: "user_cancelled",
+            reasonCode,
           },
         );
         if (current.phase === "queued") {
@@ -1206,7 +1224,7 @@ export class RunsService {
             this.ctx.workspaceId,
             id,
             "run.completed",
-            { outcome: "cancelled", reasonCode: "user_cancelled" },
+            { outcome: "cancelled", reasonCode },
           );
         }
       }

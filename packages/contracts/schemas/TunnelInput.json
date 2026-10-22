@@ -2,29 +2,44 @@
   "additionalProperties": false,
   "type": "object",
   "required": [
-    "binding",
-    "ttlMs",
-    "host",
-    "port"
+    "projectId",
+    "target"
   ],
   "properties": {
-    "binding": {
-      "minLength": 1,
-      "maxLength": 200,
+    "projectId": {
+      "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
       "type": "string"
     },
-    "ttlMs": {
-      "minimum": 1,
-      "type": "integer"
+    "target": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "address",
+        "port"
+      ],
+      "properties": {
+        "address": {
+          "anyOf": [
+            {
+              "const": "127.0.0.1",
+              "type": "string"
+            },
+            {
+              "const": "::1",
+              "type": "string"
+            }
+          ]
+        },
+        "port": {
+          "minimum": 1,
+          "maximum": 65535,
+          "type": "integer"
+        }
+      }
     },
-    "host": {
-      "minLength": 1,
-      "maxLength": 200,
-      "type": "string"
-    },
-    "port": {
-      "minimum": 1,
-      "maximum": 65535,
+    "ttlSeconds": {
+      "minimum": 60,
+      "maximum": 3600,
       "type": "integer"
     }
   },

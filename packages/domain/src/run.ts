@@ -25,6 +25,8 @@ export interface AttemptObservation {
   reasonCode?: string;
   blockedBeforeStart?: boolean;
   cancelAuthorized?: boolean;
+  /** Why the Run was cancelled (`user_cancelled`, `tunnel_lost`); absent means a user cancel. */
+  cancelReasonCode?: string;
   stopConfirmed?: boolean;
   externalEffectUncertain?: boolean;
 }
@@ -175,7 +177,8 @@ export function reduceOutcome(
   )
     return {
       outcome: "cancelled",
-      reasonCode: "user_cancelled",
+      reasonCode:
+        ordered.find((attempt) => attempt.cancelReasonCode)?.cancelReasonCode ?? "user_cancelled",
       passedOnRetry: false,
       firstAttemptOutcome,
     };

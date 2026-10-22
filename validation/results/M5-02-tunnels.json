@@ -1,0 +1,105 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "M5-02-tunnels",
+  "class": "deterministic-e2e",
+  "runner": "real-docker-remote-workers",
+  "externalDependency": "local-loopback-target",
+  "observedAt": "2026-10-22T06:44:46.691Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [],
+  "runIds": [
+    "run_01a16259-3a50-72de-83d7-9b501d34796b",
+    "run_01a16259-3fa4-7324-984f-a8ca170ebfa8",
+    "run_01a16259-4713-77d2-8c10-367f526fef4e",
+    "run_01a16259-4f01-718e-8f5c-2f6016873fe0",
+    "run_01a16259-7319-7291-9e33-1f08295ed01d",
+    "run_01a16259-ee7b-77a1-b375-6db673513294",
+    "run_01a16259-fb0d-773e-aa13-4669bf651ae8",
+    "run_01a16259-fb2d-710b-a2f6-e5e778df4eae"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "tunnelReachesOnlyItsTarget",
+      "healthy": true,
+      "tunnelId": "tun_01a16259-33b2-7296-ac69-7935ff5834b2",
+      "markerRun": {
+        "runId": "run_01a16259-3a50-72de-83d7-9b501d34796b",
+        "outcome": "passed"
+      },
+      "redirectToAdmin": {
+        "outcome": "failed",
+        "adminHits": 0
+      },
+      "refusedTargets": [
+        "localhost:8080",
+        "10.0.0.5:80",
+        "169.254.169.254:80",
+        "0.0.0.0:80"
+      ],
+      "relayedBytes": 8607,
+      "plaintextInRelay": false
+    },
+    {
+      "check": "streamAuthorityAndQuota",
+      "healthy": true,
+      "tunnelId": "tun_01a16259-33b2-7296-ac69-7935ff5834b2",
+      "anonymous": 401,
+      "foreignWorker": "PRECONDITION_FAILED",
+      "finishedAttempt": "PRECONDITION_FAILED",
+      "forgedWorkerId": 401,
+      "streamsBeforeRefusal": 32,
+      "thirtyThird": "QUOTA_EXCEEDED",
+      "otherTenantRun": "passed",
+      "metadataRequestLandedOn": "loopback target",
+      "auditActions": [
+        "tunnel.create.allowed",
+        "tunnel.open.allowed",
+        "tunnel.stream.allowed",
+        "tunnel.stream_quota.denied"
+      ],
+      "cancelClosedStreamAfterMs": 6738
+    },
+    {
+      "check": "borrowerStopKeepsOwner",
+      "healthy": true,
+      "tunnelId": "tun_01a16259-33b2-7296-ac69-7935ff5834b2",
+      "runId": "run_01a16259-7319-7291-9e33-1f08295ed01d",
+      "outcome": "passed",
+      "tunnelStateAfterBorrowerStop": "active"
+    },
+    {
+      "check": "ownerRevocation",
+      "healthy": true,
+      "tunnelId": "tun_01a16259-33b2-7296-ac69-7935ff5834b2",
+      "runId": "run_01a16259-ee7b-77a1-b375-6db673513294",
+      "streamClosedAfterRevocationMs": 1,
+      "runReason": "tunnel_lost",
+      "agentReason": "owner_revoked",
+      "replayedOpenToken": "UNAUTHENTICATED"
+    },
+    {
+      "check": "heartbeatLossAndTtl",
+      "healthy": true,
+      "silentTunnel": {
+        "tunnelId": "tun_01a16259-f793-7109-8256-35b9f9f4107e",
+        "endedAfterPartitionMs": 37620,
+        "boundRunOutcome": "inconclusive",
+        "boundRunReason": "insufficient_evidence"
+      },
+      "expiringTunnel": {
+        "tunnelId": "tun_01a16259-facb-7494-ba22-cef40760c476",
+        "reason": "ttl_expired"
+      },
+      "boundRunReason": "tunnel_lost"
+    }
+  ],
+  "limitations": [
+    "Developer machine, relay, remote workers and Docker share one physical host: the target listens on host loopback, so the journey proves the worker's egress reaches it only through the tunnel by refusing every other loopback port the environment allows.",
+    "The heartbeat loss is a blackholing TCP relay between one agent and the API's TLS proxy; the relay sees the API side of that proxy, which stands in for Caddy."
+  ]
+}

@@ -19,6 +19,12 @@ export interface ProxyOptions {
   maxLogBytes?: number;
   requestTimeoutMs?: number;
   maxBodyBytes?: number;
+  /**
+   * Opens the connection to an authorized target itself, after the policy allowed it: a remote
+   * worker reaches a tunnelled loopback target through the relay (ADR-031). Null connects
+   * directly; a `PolicyDenied` refuses the target.
+   */
+  dial?: (target: AuthorizedTarget) => Promise<Socket | null>;
 }
 export interface EgressDecision {
   origin: string | null;
@@ -163,7 +169,11 @@ export class EgressProxy {
       if (parsed.protocol !== "http") throw new PolicyDenied("absolute_https_requires_connect");
       validateHeaders(request, parsed as AuthorizedTarget);
       const target = await this.authorize(parsed.url);
-      if (this.closed) throw new PolicyDenied("proxy_closed");
+      const dialed = this.options.dial ? await this.options.dial(target) : null;
+      if (this.closed) {
+        dialed?.destroy();
+        throw new PolicyDenied("proxy_closed");
+      }
       const headers: http.OutgoingHttpHeaders = {
         ...request.headers,
         host: request.headers.host,
@@ -181,7 +191,9 @@ export class EgressProxy {
           method: request.method,
           path: target.path,
           headers,
-          agent: false,
+          // `agent: false` would make a fresh Agent that ignores `createConnection` and dials the
+          // target directly; a dialed connection must carry the request itself (ADR-031).
+          ...(dialed ? { createConnection: () => dialed } : { agent: false }),
         },
         (incoming) => {
           const safeHeaders = { ...incoming.headers };
@@ -249,17 +261,24 @@ export class EgressProxy {
       if (request.headers["content-length"] || request.headers["transfer-encoding"])
         throw new PolicyDenied("invalid_connect");
       const target = await this.authorize(parsed.url);
-      if (this.closed) throw new PolicyDenied("proxy_closed");
-      const upstream = this.track(connect({ host: target.pinnedIp, port: target.port }));
+      const dialed = this.options.dial ? await this.options.dial(target) : null;
+      if (this.closed) {
+        dialed?.destroy();
+        throw new PolicyDenied("proxy_closed");
+      }
+      const upstream = this.track(dialed ?? connect({ host: target.pinnedIp, port: target.port }));
       upstream.setTimeout(this.options.requestTimeoutMs ?? 30000, () => upstream.destroy());
       socket.on("close", () => upstream.destroy());
       upstream.on("close", () => socket.destroy());
-      upstream.once("connect", () => {
+      const established = () => {
         socket.write("HTTP/1.1 200 Connection Established\r\n\r\n");
         if (head.length) upstream.write(head);
         socket.pipe(upstream).pipe(socket);
         this.log({ origin, decision: "allow", reason: "allowed", pinnedIp: target.pinnedIp });
-      });
+      };
+      // A dialed connection is already established; a direct one waits for its handshake.
+      if (dialed) established();
+      else upstream.once("connect", established);
     } catch (error) {
       this.log({
         origin,

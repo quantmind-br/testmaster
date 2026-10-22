@@ -1,0 +1,52 @@
+# ADR-031: Self-hosted tunnels and proof-of-possession for remote callers
+
+- Status: accepted
+- Date: 2026-10-22
+- Scope: ROADMAP M5-02 (self-hosted relay/tunnel): REQ-037, INT-024 and SEC-041–044. It also changes how remote workers authenticate ([ADR-030](030-remote-workers.md)), because SEC-042 names the worker among the identities that need proof of possession. The `distributed` profile stays out of scope.
+
+## Context
+
+A remote worker (ADR-030) runs Attempts on another host. When the application under test listens only on a developer's loopback interface (`http://127.0.0.1:3000`), a worker on another machine cannot reach it, and the worker's own `127.0.0.1` is a different machine. `specs/07-security.md` §10 describes the tunnel: an agent on the developer's machine connects outbound to a relay, and the relay forwards the worker's connections to that one approved loopback address and port. It is not a SOCKS proxy, VPN or general reverse proxy.
+
+SEC-042 requires mTLS or an equivalent service credential with proof of possession for the agent, the relay and the worker. ADR-030's worker credential is a bearer token, which is not proof of possession. The server profile terminates TLS at a trusted reverse proxy (Caddy in `deploy/compose`), so client certificates would end at the proxy, and the proxy would become the trust anchor.
+
+The operator approved these choices on 2026-10-22:
+
+- proof of possession by request signatures with Ed25519 keys created by the caller, not mTLS;
+- one HTTPS origin: the tunnel uses HTTP/1.1 `Upgrade` on the API server's origin, with TestMaster's own stream multiplexing and per-stream flow control;
+- the relay runs inside `server start`;
+- end-to-end TLS between the worker and the agent, always on;
+- the spec's limits as written (`specs/08-operations.md` table, SEC-041–044).
+
+## Decision
+
+### Proof of possession for remote workers
+
+- A remote worker creates an Ed25519 key pair the first time it starts and keeps the private key in `<data-dir>/worker-key.pem` (mode 0600). Its enrollment call (`POST /workers/enroll`) presents the one-use `tm_wrk_` token as before, plus a `TestMaster-Proof` header in the format below whose `keyId` is the raw public key (base64url). The first enrollment binds the key to the worker; a later enrollment with the same token is accepted only with the same key, so a stolen token cannot take over an enrolled worker. A refused key is audited as `worker.key_mismatch.denied`.
+- Every other remote worker call carries `Authorization: TM-PoP keyId="<workerId>", created=<unix ms>, nonce="<random>", signature="<base64url>"` instead of the bearer token. The signature covers `tm-pop-v1`, the method, the path with its query, `created`, `nonce` and `keyId`. The server checks it against the bound key, refuses a `created` more than 60 s away from its clock, and refuses a nonce it has seen within that window. The window bounds the memory the nonce cache needs, and ADR-030 already requires synchronised clocks. The body is not signed (as in DPoP); TLS protects it.
+- The credential still expires and is revoked as before: a signature from a revoked or expired worker is `UNAUTHENTICATED`. The M4 route `POST /workers/{id}/heartbeat` keeps the bearer credential: server-mode workers use it, and it only renews that worker's own lease.
+
+### Tunnels
+
+- **Resource and permissions.** A tunnel (`tun_…`) belongs to one project and one target: a literal `127.0.0.1` or `::1` address and a port. Creating, listing and revoking need `tunnel:X` on the project (`GET/POST /tunnels`, `GET/DELETE /tunnels/{id}`). `POST /tunnels` answers the tunnel and a one-use open token (`tm_tun_…`) valid for 60 s. The TTL defaults to 900 s, with a maximum of 3600 s. The states are `requested`, `active`, `closing` (the relay is closing the streams of a session that ended), `closed`, `expired` and `revoked`. They are not Run states.
+- **The agent.** `testmaster tunnel start --project <id> --target 127.0.0.1:<port> [--ttl <s>]` runs in the foreground against a server endpoint (`--endpoint`, with the caller's API token). It creates the tunnel, creates an Ed25519 key and a self-signed certificate for this session only, and opens the session: `GET /v1/tunnels/{id}/session` with `Upgrade: testmaster-tunnel/1`, the open token, its public key, its certificate fingerprint and a signature by the key. The agent accepts only a literal loopback IP and a port, never a name; it connects only to that address and port, and a stream request carries no destination. It enforces the TTL and the heartbeat itself, even when the relay is unreachable. Stopping it closes the tunnel.
+- **The relay.** The API server accepts the upgrade on its own origin, behind the same trusted-proxy TLS rule as every other route. It keeps the session in memory, like remote Attempt sessions. It enforces 32 concurrent streams, 10 MiB/s aggregate and 512 MiB in total per session, sends a heartbeat every 10 s, and closes the session after three missed heartbeats. Revocation refuses new streams at once and closes the active ones on both sides within 5 s. A session the relay no longer holds (server restart) is closed by the reconciler.
+- **Frames.** Each upgraded connection carries frames with a type, a stream id, a sequence number that grows monotonically in each direction, and a payload of at most 64 KiB: `session.ready`, `stream.open`, `stream.ready`, `stream.data`, `stream.credit`, `stream.end` (half-close), `stream.close` (abort), `heartbeat`, `session.revoke` and `session.close`. The connection was authenticated when it opened, so it identifies the session. A stream may have 256 KiB of unacknowledged data in each direction; past that the sender waits for a `stream.credit`, so a slow reader cannot make the other side buffer without bound. The relay meters the bytes of both directions when it forwards or acknowledges them.
+- **Runs through a tunnel.** `RunRequest.tunnelId` (CLI `test run --tunnel <id>` against an endpoint) admits a Run only when the tunnel is active and in the test's project, and the environment revision's base URL is the tunnel's target (`localhost` counts as `127.0.0.1`). Such a Run needs a SEC-039 approval even outside production: its binding's `actionSet` must contain `tunnel:<tunnelId>`, and the refusal (`approval_required`) carries that binding. A tunnelled Run is claimed only by remote workers. When the tunnel stops being active (closed, expired, revoked, heartbeat lost), every Run bound to it that has not completed is cancelled with `reasonCode: tunnel_lost`; a failure already proven stays failed.
+- **The worker's side.** For a tunnelled Attempt, the claim's dispatch names the tunnel, its target and its certificate fingerprint. The sandbox's egress proxy keeps every policy decision, and it dials the tunnel's target through the relay instead of opening a socket, for CONNECT and plain HTTP alike: one upgraded request per connection, `GET /v1/workers/{id}/attempts/{attemptId}/tunnel`, signed by the worker. The relay accepts it only for an Attempt that worker holds under the current fence and whose Run is bound to that tunnel. Any other loopback destination of a tunnelled Attempt is refused, so the worker's own loopback is never reached. When a borrower Attempt settles or loses its lease, the relay closes that Attempt's streams; the owner's session stays open for the other Runs (SEC-043, M5-02). A cancelled Run's streams close when its worker stops the Attempt, which it learns from its next heartbeat, so the result says `cancelled` rather than reporting the cut connection as an inconclusive step. When the tunnel itself ends, the Attempt's transport is gone before its worker hears of the cancel; the Attempt settling afterwards is the confirmed stop, and its Run ends `cancelled` with `tunnel_lost` unless a failure was already proven.
+- **End-to-end TLS.** Inside every stream the worker opens TLS to the agent and checks that the certificate's SHA-256 fingerprint is the one the agent registered. The relay forwards only ciphertext. The agent ends TLS and talks plain HTTP (or whatever the target speaks) to the loopback target, on the developer's machine. The relay sees only metadata: stream count, bytes, timing and the Attempt. Those metadata, quotas and consumption are audited; payloads are not.
+
+### Alternatives rejected
+
+- **mTLS.** The trusted proxy would terminate it and forward the identity in a header. SEC-042 rejects headers as proof of ownership, and every deployment would need a CA.
+- **WebSocket.** It needs a new dependency (`ws`), and it would still need the same stream multiplexing and flow control on top. A custom `Upgrade` passes through Node's HTTP stack and through reverse proxies that relay `101 Switching Protocols`.
+- **One approval per tunnel instead of per Run.** SEC-039 binds an approval to a revision, an environment and an action set and consumes it. A tunnel approval would let any later revision run against the developer's machine.
+- **Relay as a separate process.** It would need its own identity, and the controller would have to authorize streams across processes. One API process already holds the remote Attempt sessions (ADR-030).
+
+## Consequences
+
+- Remote workers enrolled under ADR-030's bearer protocol re-enroll: they bind a key on their next start. A worker without its key file cannot resume an identity whose key is bound; the administrator revokes it and enrolls a new one.
+- The tunnel and its worker streams must reach the API process that holds the session and the Attempt (the same affinity as ADR-030). A restart of that process closes every tunnel, and its Runs end `cancelled` with `tunnel_lost`.
+- A reverse proxy in front of the server must forward `Upgrade: testmaster-tunnel/1` and the `101` answer. Caddy's `reverse_proxy` relays upgrades in general [unverified by this change for a non-WebSocket token]; the journeys use their own TLS proxy, which relays upgrades.
+- The relay is part of the TestMaster server. End-to-end TLS keeps payloads from the relay process, but the server operator controls the fingerprint the worker receives. A server operator who wants to read traffic can substitute it, so the tunnel's confidentiality is against network observers and the relay's memory, not against the operator.
+- The agent's machine exposes exactly one loopback port to the Attempts the owner approved, for at most the TTL. The tunnel never publishes the machine's administrative API and never reaches the LAN.

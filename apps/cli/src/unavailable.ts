@@ -3,7 +3,6 @@ import { type Runtime, unavailable } from "./runtime.js";
 
 export function unavailableCommands(program: Command, runtime: Runtime): void {
   const groups: ReadonlyArray<{ name: string; capability: string; commands: readonly string[] }> = [
-    { name: "tunnel", capability: "tunnels", commands: ["start", "list", "status", "stop"] },
     {
       name: "memory",
       capability: "memory",

@@ -2,7 +2,14 @@ import { randomUUID } from "node:crypto";
 import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import { ContractError, type ErrorCode, errorRegistry } from "@testmaster/contracts";
+import { TunnelAgent } from "@testmaster/application";
+import {
+  ContractError,
+  type ErrorCode,
+  errorRegistry,
+  type TunnelOpening,
+  type TunnelTarget,
+} from "@testmaster/contracts";
 import type { Command } from "commander";
 import { runListFilter } from "./run-filter.js";
 import { type Options, type Result, type Runtime, required, string, strings } from "./runtime.js";
@@ -120,6 +127,10 @@ export class RemoteClient {
     private readonly signal: AbortSignal,
     private readonly timeoutSeconds = 30,
   ) {}
+  /** The server the client calls; a tunnel agent opens its session on the same origin. */
+  get endpoint(): URL {
+    return this.target.endpoint;
+  }
   async request<T>(
     method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
     path: string,
@@ -196,7 +207,21 @@ type RemoteHandler = (
   client: RemoteClient,
   args: unknown[],
   options: Options,
+  rt: Runtime,
 ) => Promise<Result> | Result;
+
+/** A tunnel target is a literal loopback IP and a port, never a name (SEC-041). */
+function tunnelTarget(value: string): TunnelTarget {
+  const match = /^(?:(127\.0\.0\.1)|\[(::1)\]):(\d{1,5})$/.exec(value);
+  const port = Number(match?.[3]);
+  if (!match || !Number.isInteger(port) || port < 1 || port > 65535)
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      "--target must be 127.0.0.1:<port> or [::1]:<port>",
+      { option: "target" },
+    );
+  return { address: (match[1] ?? match[2]) as TunnelTarget["address"], port };
+}
 
 async function projectOf(client: RemoteClient, options: Options): Promise<string> {
   const explicit = string(options, "project") ?? process.env.TESTMASTER_PROJECT_ID;
@@ -260,6 +285,7 @@ export const remoteHandlers: Readonly<Record<string, RemoteHandler>> = {
       "project",
       "requestTimeout",
       "env",
+      "tunnel",
     ]);
     const unsupported = Object.keys(options).filter(
       (key) =>
@@ -272,13 +298,49 @@ export const remoteHandlers: Readonly<Record<string, RemoteHandler>> = {
       throw unavailableRemote(
         unsupported.length ? `test run --${unsupported[0]}` : "test run with several ids",
       );
+    const tunnelId = string(options, "tunnel");
     return {
       data: await client.request("POST", "/runs", {
         testId: ids[0],
         environmentId: required(options, "env"),
+        ...(tunnelId ? { tunnelId } : {}),
       }),
     };
   },
+  /**
+   * Creates a tunnel and serves it in the foreground until it ends or the process is stopped
+   * (ADR-031). Lifecycle facts go to stderr as JSON lines; the open token is never printed.
+   */
+  "tunnel start": async (client, _args, options, rt) => {
+    const target = tunnelTarget(required(options, "target"));
+    const ttl = options.ttl === undefined ? undefined : Number(options.ttl);
+    if (ttl !== undefined && (!Number.isInteger(ttl) || ttl < 60 || ttl > 3600))
+      throw new ContractError("INVALID_ARGUMENT", "--ttl must be 60 to 3600 seconds");
+    const opening = await client.request<TunnelOpening>("POST", "/tunnels", {
+      projectId: await projectOf(client, options),
+      target,
+      ...(ttl === undefined ? {} : { ttlSeconds: ttl }),
+    });
+    const tunnelId = opening.tunnel.id;
+    const log = (entry: Record<string, unknown>) => rt.stderr.write(`${JSON.stringify(entry)}\n`);
+    log({ event: "tunnel.created", tunnelId, expiresAt: opening.tunnel.expiresAt });
+    const { reason } = await new TunnelAgent({
+      endpoint: client.endpoint.href,
+      tunnelId,
+      openToken: opening.openToken,
+      target,
+      expiresAt: opening.tunnel.expiresAt,
+      log,
+    }).run(rt.controller.signal);
+    return { data: { tunnelId, reason } };
+  },
+  "tunnel list": async (client) => ({ data: await client.list("/tunnels") }),
+  "tunnel status": async (client, args) => ({
+    data: await client.request("GET", `/tunnels/${encodeURIComponent(String(args[0]))}`),
+  }),
+  "tunnel stop": async (client, args) => ({
+    data: await client.request("DELETE", `/tunnels/${encodeURIComponent(String(args[0]))}`),
+  }),
 };
 /** Commands that manage the connection itself and never need a stored credential. */
 export const remoteExempt: ReadonlySet<string> = new Set([

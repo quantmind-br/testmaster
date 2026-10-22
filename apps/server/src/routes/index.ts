@@ -15,6 +15,7 @@ import { runViewRoutes } from "./run-views.js";
 import { scheduleRoutes } from "./schedules.js";
 import { settingsRoutes } from "./settings.js";
 import { suiteRoutes } from "./suites.js";
+import { tunnelRoutes } from "./tunnels.js";
 import type { RouteHandler, RouteModule } from "./types.js";
 import { workerRoutes } from "./workers.js";
 
@@ -35,6 +36,7 @@ export const routeModules: RouteModule[] = [
   runViewRoutes,
   deliveryRoutes,
   workerRoutes,
+  tunnelRoutes,
   authRoutes,
   operationsRoutes,
 ];

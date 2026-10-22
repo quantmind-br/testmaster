@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { EgressPolicy, type NetworkPolicy, type Resolver } from "./policy.js";
-import { EgressProxy } from "./proxy.js";
+import { EgressProxy, type ProxyOptions } from "./proxy.js";
 
 const resources: (() => Promise<unknown>)[] = [];
 afterEach(async () => {
@@ -20,7 +20,12 @@ const config = (origins: string[]): NetworkPolicy => ({
   maxRedirects: 10,
   allowInsecureTls: false,
 });
-async function setup(policy: EgressPolicy, resolver?: Resolver, maxLogBytes?: number) {
+async function setup(
+  policy: EgressPolicy,
+  resolver?: Resolver,
+  maxLogBytes?: number,
+  dial?: ProxyOptions["dial"],
+) {
   const directory = await mkdtemp(join(tmpdir(), "tm-proxy-"));
   resources.push(() => rm(directory, { recursive: true, force: true }));
   const socketPath = join(directory, "egress.sock");
@@ -31,6 +36,7 @@ async function setup(policy: EgressPolicy, resolver?: Resolver, maxLogBytes?: nu
     logPath,
     ...(resolver ? { resolver } : {}),
     ...(maxLogBytes ? { maxLogBytes } : {}),
+    ...(dial ? { dial } : {}),
   });
   await proxy.listen();
   resources.push(() => proxy.close());
@@ -253,6 +259,53 @@ it("drops forwarding headers from a forwarded request instead of refusing it, an
   ]);
   for (const leaked of ["canary", "attacker.test", "user@example.test", "nested"])
     expect(log).not.toContain(leaked);
+});
+it("ADR-031 a forwarded request with a dialer travels on the dialed connection and never dials the target", async () => {
+  const listen = async (server: http.Server) => {
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    resources.push(() => {
+      server.closeAllConnections();
+      return new Promise<void>((resolve) => server.close(() => resolve()));
+    });
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("address");
+    return address.port;
+  };
+  let direct = 0;
+  const pinned = http.createServer((_request, response) => response.end("direct"));
+  pinned.on("connection", () => direct++);
+  const port = await listen(pinned);
+  const tunnel = await listen(
+    http.createServer((request, response) => {
+      response.writeHead(200, { connection: "close" });
+      response.end(`tunnelled ${request.url}`);
+    }),
+  );
+  const url = `http://fixture.test:${port}`;
+  const policy = config([url]);
+  policy.privateTargets = [{ hostname: "fixture.test", cidr: "127.0.0.1/32", port }];
+  const dialed: string[] = [];
+  const proxy = await setup(
+    new EgressPolicy(policy),
+    async () => ["127.0.0.1"],
+    undefined,
+    async (target) => {
+      dialed.push(`${target.pinnedIp}:${target.port}`);
+      const socket = connect(tunnel, "127.0.0.1");
+      await new Promise<void>((resolve, reject) => {
+        socket.once("connect", resolve);
+        socket.once("error", reject);
+      });
+      return socket;
+    },
+  );
+  const response = await raw(
+    proxy.socketPath,
+    `GET ${url}/api HTTP/1.1\r\nHost: fixture.test:${port}\r\nConnection: close\r\n\r\n`,
+  );
+  expect(response).toContain("tunnelled /api");
+  expect(dialed).toEqual([`127.0.0.1:${port}`]);
+  expect(direct).toBe(0);
 });
 it("closes live CONNECT tunnels immediately on revocation", async () => {
   const upstream = await target();

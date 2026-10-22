@@ -48,6 +48,7 @@ export const entityPrefixes = [
   "mry",
   "vbl",
   "evl",
+  "tun",
 ] as const;
 export type EntityPrefix = (typeof entityPrefixes)[number];
 export const uuidPattern = "[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";

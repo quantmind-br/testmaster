@@ -1,5 +1,5 @@
+import type { IncomingHttpHeaders } from "node:http";
 import { BlockList, isIP } from "node:net";
-import type { FastifyRequest } from "fastify";
 
 /** Browser session cookie; the `__Host-` prefix pins it to this origin over HTTPS. */
 export const sessionCookieName = "__Host-tm_session";
@@ -15,6 +15,11 @@ export interface TransportView {
   /** Address of the original client as far as trusted proxies vouch for it. */
   clientIp: string;
 }
+/** The parts of a request (routed or upgraded) the transport is read from. */
+export interface TransportRequest {
+  readonly socket: { readonly remoteAddress?: string | undefined };
+  readonly headers: IncomingHttpHeaders;
+}
 /** Resolves scheme and client address, honouring `X-Forwarded-*` only from trusted proxies. */
 export function transportResolver(trustedProxies: readonly string[]) {
   const trusted = new BlockList();
@@ -29,7 +34,7 @@ export function transportResolver(trustedProxies: readonly string[]) {
     const family = isIP(plain);
     return family !== 0 && trusted.check(plain, family === 6 ? "ipv6" : "ipv4");
   };
-  return (request: FastifyRequest): TransportView => {
+  return (request: TransportRequest): TransportView => {
     const peer = plainAddress(request.socket.remoteAddress ?? "");
     if (!isTrusted(peer)) return { scheme: "http", clientIp: peer };
     const protocol = String(request.headers["x-forwarded-proto"] ?? "")

@@ -10,8 +10,10 @@ import {
   statfs,
   writeFile,
 } from "node:fs/promises";
+import type { IncomingMessage } from "node:http";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
+import type { Duplex } from "node:stream";
 import { fileURLToPath } from "node:url";
 import {
   ContractError,
@@ -146,6 +148,8 @@ import {
 import { ApiMetrics, TelemetryService } from "./telemetry.js";
 import { TestDraftsService } from "./test-drafts.js";
 import type { TokenData, TokenKind } from "./tokens.js";
+import { TunnelRelay } from "./tunnel-relay.js";
+import { runTunnelId, TunnelsService } from "./tunnels.js";
 import { WorkerService } from "./worker.js";
 import { WorkerPoolService } from "./worker-pool.js";
 
@@ -209,6 +213,8 @@ interface SharedRuntime {
   ephemeralSecrets: Map<string, string>;
   /** Attempts remote workers run, held by this API process (ADR-030). */
   remoteAttempts?: RemoteAttemptRegistry;
+  /** Tunnel sessions this API process relays (ADR-031). */
+  tunnelRelay?: TunnelRelay;
 }
 const IMAGE_REMEDY =
   "reinstall TestMaster (`make install` in a source checkout) or rebuild the runner images (`containers/build.sh`) so the installed image lock and the local Docker image store agree";
@@ -285,6 +291,8 @@ export class Application {
   readonly workerPool: WorkerPoolService;
   /** The remote worker protocol (ADR-030); every scoped instance shares the held Attempts. */
   readonly remoteWorkers: RemoteWorkerService;
+  /** Tunnels to developers' loopback targets (ADR-031); the relay is shared by every scope. */
+  readonly tunnels: TunnelsService;
   readonly github: GithubService;
   readonly agentSkills: AgentSkillsService;
   readonly model: ModelService;
@@ -575,6 +583,12 @@ export class Application {
     this.workerPool = new WorkerPoolService(this.context);
     this.shared.remoteAttempts ??= new RemoteAttemptRegistry();
     this.remoteWorkers = new RemoteWorkerService(this, this.shared.remoteAttempts);
+    this.shared.tunnelRelay ??= this.createTunnelRelay(this.shared.remoteAttempts);
+    this.tunnels = new TunnelsService(
+      this.context,
+      () => this.shared.tunnelRelay,
+      (runId) => this.runs.cancelTunnelLost(runId),
+    );
     this.notifications = new NotificationsService(this.context, this.integrations, this.batches, {
       publicOrigin,
     });
@@ -594,6 +608,35 @@ export class Application {
         return { value, allowedOrigins: metadata.allowedOrigins };
       },
     };
+  }
+
+  /** The relay reads attempts, workers and tunnels of every workspace through system scopes. */
+  private createTunnelRelay(attempts: RemoteAttemptRegistry): TunnelRelay {
+    const all = this.root.forWorkspace("*");
+    return new TunnelRelay({
+      proofs: attempts.proofs,
+      tunnelWorkspace: (tunnelId) => {
+        const row = all.get("SELECT workspace_id FROM tunnels WHERE id=?", tunnelId);
+        return row ? String(row.workspace_id) : null;
+      },
+      tunnels: (workspaceId) => this.systemScope(workspaceId).tunnels,
+      identifyWorker: (proof, request, workerId) =>
+        this.remoteWorkers.identify(proof, request, workerId),
+      heldAttempt: (attemptId) => {
+        const attempt = attempts.get(attemptId);
+        return attempt
+          ? {
+              workerId: attempt.workerId,
+              workspaceId: attempt.workspaceId,
+              runId: attempt.runId,
+              settled: attempt.settled,
+              released: attempt.released.signal,
+              assertCurrent: () => attempt.session.assertCurrent(),
+            }
+          : undefined;
+      },
+      runTunnel: (workspaceId, runId) => runTunnelId(this.systemScope(workspaceId).runs.get(runId)),
+    });
   }
 
   /** The workspace system principal for background loops; cached, unlike `forWorkspaceSystem`. */
@@ -665,7 +708,16 @@ export class Application {
     return application;
   }
   close(): void {
+    // A stopping process ends the sessions it relays; their Runs end `tunnel_lost` (ADR-031).
+    this.shared.tunnelRelay?.closeAll();
     this.root.close();
+  }
+  /**
+   * Serves a tunnel upgrade (an agent's session or a worker's stream) on the API origin; answers
+   * false for any other upgrade, which the caller refuses (ADR-031).
+   */
+  handleTunnelUpgrade(request: IncomingMessage, socket: Duplex, head: Buffer): boolean {
+    return this.shared.tunnelRelay?.handleUpgrade(request, socket, head) ?? false;
   }
   /**
    * Request-scoped services bound to the identity's workspace. Without a `workspaceId` (a plain

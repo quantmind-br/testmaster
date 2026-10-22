@@ -30,7 +30,7 @@ import {
   prepareSocketsDir,
 } from "../docker/executor.js";
 import { PolicyDenied } from "../egress/policy.js";
-import { EgressProxy } from "../egress/proxy.js";
+import { EgressProxy, type ProxyOptions } from "../egress/proxy.js";
 import { attemptEgressPolicy } from "./egress.js";
 import {
   captureServerLog,
@@ -152,6 +152,8 @@ export interface AttemptInput {
   serverLog?: ServerLogCapture;
   /** Secret values the host knows besides the attempt's own (scrubbed from host-read logs). */
   hostSecretValues?: readonly string[];
+  /** Opens connections to authorized targets for the egress proxy (see `ProxyOptions.dial`). */
+  dial?: ProxyOptions["dial"];
 }
 export interface AttemptResult {
   outcome: "passed" | "failed" | "blocked" | "cancelled" | "inconclusive";
@@ -220,6 +222,7 @@ export class AttemptExecutor {
       policy: egress,
       logPath: join(sockets, "egress.ndjson"),
       ...(input.bodyBytes ? { maxBodyBytes: input.bodyBytes } : {}),
+      ...(input.dial ? { dial: input.dial } : {}),
     });
     const validator = new RunnerSessionValidator({ attemptId: input.attemptId, nonce });
     let captureStorageUnavailable = false;

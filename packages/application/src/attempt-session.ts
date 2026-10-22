@@ -67,6 +67,7 @@ import {
 } from "./runs.js";
 import type { SecretsService } from "./secrets.js";
 import { RuntimeTimer } from "./timing.js";
+import { type TunnelDispatch, tunnelDispatch } from "./tunnels.js";
 import { isWriterContention, retryWriterContention } from "./writer-contention.js";
 
 /** Maps a revision runner to the sandbox executor kind; the Playwright runner uses the browser envelope. */
@@ -110,13 +111,17 @@ export function planSteps(plan: ExecutablePlan): PlanStep[] {
 }
 /** True once a cancel was requested for the Run; the request is an outbox record, never undone. */
 export function runCancelRequested(ctx: ServiceContext, runId: string): boolean {
-  return Boolean(
-    ctx.database.get(
-      "SELECT 1 FROM outbox WHERE workspace_id=? AND aggregate_id=? AND type='run.cancel_requested'",
-      ctx.workspaceId,
-      runId,
-    ),
+  return runCancelReason(ctx, runId) !== null;
+}
+/** The reason of the Run's cancel request (`user_cancelled`, `tunnel_lost`), null when none. */
+export function runCancelReason(ctx: ServiceContext, runId: string): string | null {
+  const row = ctx.database.get(
+    "SELECT json_extract(data_json,'$.reasonCode') AS reason FROM outbox WHERE workspace_id=? AND aggregate_id=? AND type='run.cancel_requested'",
+    ctx.workspaceId,
+    runId,
   );
+  if (!row) return null;
+  return typeof row.reason === "string" ? row.reason : "user_cancelled";
 }
 /** The producers a Run consumes, frozen into its matrix cell at admission. */
 export function runDependencies(run: EntityDocument): ResolvedDependency[] {
@@ -130,6 +135,7 @@ export function attemptObservations(
   plan: ExecutablePlan | null,
 ): AttemptObservation[] {
   const steps = plan ? planSteps(plan) : [];
+  const cancelReason = runCancelReason(ctx, runId);
   return ctx.database
     .all(
       "SELECT * FROM attempts WHERE workspace_id=? AND run_id=? ORDER BY number",
@@ -194,8 +200,9 @@ export function attemptObservations(
         reasonCode:
           (malformed ? "insufficient_evidence" : finished?.payload.reasonCode) ??
           (row.outcome === "inconclusive" ? "worker_lost" : "insufficient_evidence"),
-        cancelAuthorized: runCancelRequested(ctx, runId),
-        stopConfirmed: row.phase === "completed" && runCancelRequested(ctx, runId),
+        cancelAuthorized: cancelReason !== null,
+        ...(cancelReason ? { cancelReasonCode: cancelReason } : {}),
+        stopConfirmed: row.phase === "completed" && cancelReason !== null,
         externalEffectUncertain:
           malformed ||
           events.some(
@@ -283,11 +290,19 @@ export interface AttemptSessionOptions {
  */
 export type AttemptDispatch = Omit<
   AttemptInput,
-  "seccompPath" | "secretRefs" | "protectCapture" | "onEvent" | "onAuthState" | "resolveAction"
+  | "seccompPath"
+  | "secretRefs"
+  | "protectCapture"
+  | "onEvent"
+  | "onAuthState"
+  | "resolveAction"
+  | "dial"
 > & {
   secretRefs: { secretRef: string; secretVersion: number }[];
   /** The isolation the Run was admitted with; `process` is the explicit unsafe executor. */
   executor: "docker" | "process";
+  /** The tunnel a remote worker dials the Run's loopback target through (ADR-031). */
+  tunnel?: TunnelDispatch;
 };
 /** The session callbacks a sandbox `AttemptExecutor` running in the controller's process uses. */
 export type AttemptBindings = Required<
@@ -934,6 +949,10 @@ export class AttemptSession {
       },
       attemptTimeoutMs: this.attemptDeadlineMs,
       executor: cell.executor === "process" ? "process" : "docker",
+      // A tunnel that is no longer active refuses the dispatch with `tunnel_lost` (ADR-031).
+      ...(typeof cell.tunnelId === "string"
+        ? { tunnel: tunnelDispatch(this.ctx, cell.tunnelId) }
+        : {}),
     };
   }
 
@@ -1386,9 +1405,13 @@ export class AttemptSession {
     }
     const attempts = attemptObservations(this.ctx, run.id, plan);
     const current = attempts.find((attempt) => attempt.attemptId === fence.attemptId);
+    // A tunnel that ended cut the Attempt's transport before the worker heard of the cancel: the
+    // Attempt settling afterwards is its confirmed stop (ADR-031, spec 11 `tunnel_lost`).
+    const stopConfirmed =
+      result.outcome === "cancelled" || runCancelReason(this.ctx, run.id) === "tunnel_lost";
     if (current) {
       current.reasonCode = result.reasonCode;
-      current.stopConfirmed = result.outcome === "cancelled";
+      current.stopConfirmed = stopConfirmed;
       if (
         (result.outcome === "blocked" || result.outcome === "inconclusive") &&
         canRetry(current, limits.maxAttempts ?? 2)
@@ -1400,7 +1423,7 @@ export class AttemptSession {
     }
     const reduced = reduceOutcome(attempts, this.assertions, this.requiredSteps, {
       authorized: this.cancelled(),
-      stopConfirmed: result.outcome === "cancelled",
+      stopConfirmed,
     });
     if (reduced.outcome === "passed" && result.outcome !== "passed") {
       reduced.outcome = result.outcome === "blocked" ? "blocked" : "inconclusive";

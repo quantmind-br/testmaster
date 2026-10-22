@@ -6,6 +6,12 @@ import { LeaseRepository } from "@testmaster/persistence";
 import { afterEach, expect, it } from "vitest";
 import { Application } from "./application.js";
 import { scaffoldPlan } from "./authoring.js";
+import {
+  createPopKey,
+  parsePopAuthorization,
+  popAuthorization,
+  popPublicKey,
+} from "./proof-of-possession.js";
 import { localHandshake } from "./worker-handshake.js";
 
 const roots: string[] = [];
@@ -57,14 +63,31 @@ async function claimInput(app: Application): Promise<RemoteClaimInput> {
   };
 }
 
-/** Enrolls a private remote worker and answers the caller its credential identifies. */
+const signed = (header: string) => {
+  const proof = parsePopAuthorization(header);
+  if (!proof) throw new Error("unparsable proof");
+  return proof;
+};
+
+/** Enrolls a private remote worker and answers the caller a signed call identifies. */
 function enrolled(app: Application, name: string, labels?: Record<string, string>) {
   const { enrollmentToken } = app.workerPool.createEnrollment({
     name,
     ...(labels ? { labels } : {}),
   });
-  app.remoteWorkers.enroll(enrollmentToken);
-  return app.remoteWorkers.identify(enrollmentToken, null);
+  const key = createPopKey();
+  const enroll = { method: "POST", path: "/v1/workers/enroll" };
+  const { workerId } = app.remoteWorkers.enroll(
+    enrollmentToken,
+    signed(popAuthorization(key, popPublicKey(key), enroll.method, enroll.path)),
+    enroll,
+  );
+  const claim = { method: "POST", path: `/v1/workers/${workerId}/claims` };
+  return app.remoteWorkers.identify(
+    signed(popAuthorization(key, workerId, claim.method, claim.path)),
+    claim,
+    workerId,
+  );
 }
 
 async function refusal(call: () => Promise<unknown>): Promise<Record<string, unknown>> {

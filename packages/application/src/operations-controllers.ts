@@ -50,7 +50,8 @@ export const retentionController: Controller = {
 
 /**
  * Expires the leases of lost workers and settles their Runs. A remote worker has no database to
- * do this itself, so the server process runs it for every pool (ADR-030).
+ * do this itself, so the server process runs it for every pool (ADR-030). It also ends tunnels
+ * whose token, TTL, heartbeat or owner lapsed, even when no relay holds them (ADR-031).
  */
 export const leaseReconcilerController: Controller = {
   name: "lease-reconciler",
@@ -60,6 +61,7 @@ export const leaseReconcilerController: Controller = {
       const workspace = scope.systemScope(id);
       if (workspace.operations.isolated()) continue;
       workspace.worker.settleLeases();
+      workspace.tunnels.sweep();
     }
     await scope.remoteWorkers.sweep();
   },

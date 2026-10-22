@@ -55,6 +55,13 @@ Claim SQL requires `workers.state = 'ready'`.
    The worker verifies its own image lock, enrolls, and prints one JSON line per lifecycle fact on
    stderr (`worker.ready`, `attempt.claimed`, `attempt.settled`, `attempt.lease_expired`,
    `attempt.lease_lost`, `worker.draining`, `worker.stopped`).
+
+   On first start the worker creates an Ed25519 key in `<data-dir>/worker-key.pem` (mode 0600)
+   and its enrollment binds that key to the worker (ADR-031). Every later call is signed with it
+   (`Authorization: TM-PoP …`, a fresh nonce per call, within 60 s of the server's clock); the
+   `tm_wrk_` token is presented only on enrollment, and a copy of it without the key file can
+   neither resume the worker nor act for it. Keep the data directory with the token: a worker
+   whose key file is lost must be revoked and enrolled again.
 3. The worker claims through `POST /v1/workers/{id}/claims`, downloads the Attempt's inputs, runs
    the sandbox on its own Docker daemon and sends every event, secret release, capture, upload and
    the final result back over HTTPS. The API process applies each call under the lease fence.

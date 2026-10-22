@@ -1,5 +1,10 @@
-import { stat } from "node:fs/promises";
-import { httpsWorkerTransport, RemoteWorkerAgent } from "@testmaster/application";
+import { mkdir, stat } from "node:fs/promises";
+import { join } from "node:path";
+import {
+  httpsWorkerTransport,
+  loadOrCreatePopKey,
+  RemoteWorkerAgent,
+} from "@testmaster/application";
 import { ContractError } from "@testmaster/contracts";
 import { type Command, Option } from "commander";
 import { type Options, type Runtime, required, string } from "./runtime.js";
@@ -31,8 +36,9 @@ function announceContention(rt: Runtime, elapsedMs: number): void {
 }
 
 /**
- * A worker without database credentials (ADR-030): it claims from the server over HTTPS with its
- * `tm_wrk_` credential and prints one JSON line per lifecycle fact on stderr.
+ * A worker without database credentials (ADR-030): it claims from the server over HTTPS, signing
+ * every call with the key in `<data-dir>/worker-key.pem` (ADR-031), and prints one JSON line per
+ * lifecycle fact on stderr.
  */
 async function runRemoteWorker(
   rt: Runtime,
@@ -49,13 +55,16 @@ async function runRemoteWorker(
     );
   const credential = await readEnrollmentToken(rt, required(options, "enrollTokenFile"));
   const caFile = string(options, "caFile");
+  const root = await rt.confinedPath(dataDir);
+  await mkdir(root, { recursive: true, mode: 0o700 });
   const agent = new RemoteWorkerAgent({
     transport: httpsWorkerTransport({
       endpoint: required(options, "controller"),
       credential,
+      key: await loadOrCreatePopKey(join(root, "worker-key.pem")),
       ...(caFile ? { ca: await rt.readInput(caFile) } : {}),
     }),
-    dataDir: await rt.confinedPath(dataDir),
+    dataDir: root,
     slots,
     log: (entry) => rt.stderr.write(`${JSON.stringify(entry)}\n`),
   });

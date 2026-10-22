@@ -644,7 +644,10 @@ export class ApprovalsService {
         }
         return approval;
       }
-      if (!revision.plan) {
+      // A Run through a tunnel reaches a developer's machine: it needs a bound approval naming
+      // the tunnel even outside production (ADR-031, SEC-039).
+      const tunnelAction = typeof cell.tunnelId === "string" ? `tunnel:${cell.tunnelId}` : null;
+      if (!revision.plan && !tunnelAction) {
         const policy = run.gatePolicy as Record<string, unknown>;
         if (!environment.production && revision.codeRef && policy.executor === "docker")
           return null;
@@ -653,8 +656,12 @@ export class ApprovalsService {
           "Production or unsafe code execution requires a separately approved policy",
         );
       }
-      const actions = planRiskActions(revision.plan).filter((action) => action.risk !== "read");
-      if (!environment.production || !actions.length) return null;
+      const risky = revision.plan
+        ? planRiskActions(revision.plan).filter((action) => action.risk !== "read")
+        : [];
+      // Outside production only the tunnel needs approving; risky actions are allowed there.
+      const actions = environment.production ? risky : [];
+      if (!tunnelAction && !actions.length) return null;
       const policy =
         run.gatePolicy && typeof run.gatePolicy === "object" && !Array.isArray(run.gatePolicy)
           ? (run.gatePolicy as Record<string, unknown>)
@@ -685,10 +692,11 @@ export class ApprovalsService {
           }
         }
       };
-      visit(revision.plan.steps);
+      if (revision.plan) visit(revision.plan.steps);
       const actorId = run.actorId ?? this.ctx.principalId;
       const approvalPolicy = this.policyFor(test.projectId);
-      const cell = run.matrixCell as Record<string, unknown> | undefined;
+      const tunnelNamed = (candidate: Stored<Approval>) =>
+        !tunnelAction || candidate.actionSet.includes(tunnelAction);
       const chosen = this.independentApprovals(
         (allEntities(this.ctx, "Approval") as Stored<Approval>[]).filter(
           (candidate) =>
@@ -703,7 +711,8 @@ export class ApprovalsService {
               (action) =>
                 candidate.actionSet.includes(action.risk) ||
                 candidate.actionSet.includes(action.stepId),
-            ),
+            ) &&
+            tunnelNamed(candidate),
         ),
         actorId,
         approvalPolicy,
@@ -729,9 +738,11 @@ export class ApprovalsService {
         () => {
           throw new ContractError(
             "POLICY_DENIED",
-            approvalPolicy.requiredApprovers > 1
-              ? "Risky production actions require current bound approvals from independent reviewers"
-              : "Risky production actions require a current bound approval",
+            !actions.length
+              ? "A Run through a tunnel requires a current bound approval naming the tunnel"
+              : approvalPolicy.requiredApprovers > 1
+                ? "Risky production actions require current bound approvals from independent reviewers"
+                : "Risky production actions require a current bound approval",
             {
               reasonCode: "approval_required",
               actions,
@@ -742,7 +753,12 @@ export class ApprovalsService {
                 revisionHash: revision.contentHash,
                 environmentRevisionId: environment.id,
                 originSet: [...origins].sort(),
-                actionSet: [...new Set(actions.map((action) => action.risk))].sort(),
+                actionSet: [
+                  ...new Set([
+                    ...actions.map((action) => action.risk),
+                    ...(tunnelAction ? [tunnelAction] : []),
+                  ]),
+                ].sort(),
                 policyHash,
                 actorId,
               },

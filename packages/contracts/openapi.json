@@ -10417,12 +10417,59 @@
         "x-scope": "tunnel:X",
         "x-milestone": "M5",
         "responses": {
-          "422": {
-            "description": "Capability unavailable: M5 has no handler for this route",
+          "200": {
+            "description": "Successful operation",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items",
+                        "hasMore",
+                        "nextCursor"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Tunnel"
+                          }
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        },
+                        "nextCursor": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
                 }
               }
             }
@@ -10437,8 +10484,7 @@
               }
             }
           }
-        },
-        "x-unavailable": true
+        }
       },
       "post": {
         "operationId": "post__tunnels",
@@ -10449,12 +10495,36 @@
         "x-scope": "tunnel:X",
         "x-milestone": "M5",
         "responses": {
-          "422": {
-            "description": "Capability unavailable: M5 has no handler for this route",
+          "201": {
+            "description": "Created",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TunnelOpening"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
                 }
               }
             }
@@ -10470,7 +10540,6 @@
             }
           }
         },
-        "x-unavailable": true,
         "requestBody": {
           "required": true,
           "content": {
@@ -10484,6 +10553,70 @@
       }
     },
     "/tunnels/{id}": {
+      "get": {
+        "operationId": "get__tunnels_id_",
+        "tags": [
+          "M5"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "tunnel:X",
+        "x-milestone": "M5",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Tunnel"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
       "delete": {
         "operationId": "delete__tunnels_id_",
         "tags": [
@@ -10502,12 +10635,36 @@
         "x-scope": "tunnel:X",
         "x-milestone": "M5",
         "responses": {
-          "422": {
-            "description": "Capability unavailable: M5 has no handler for this route",
+          "200": {
+            "description": "Successful operation",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Tunnel"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
                 }
               }
             }
@@ -10522,8 +10679,7 @@
               }
             }
           }
-        },
-        "x-unavailable": true
+        }
       }
     },
     "/workers": {
@@ -57312,6 +57468,10 @@
                   "maximum": 99,
                   "type": "integer"
                 },
+                "tunnelId": {
+                  "pattern": "^tun_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
                 "extensions": {
                   "additionalProperties": false,
                   "type": "object",
@@ -60960,7 +61120,7 @@
                     "owner": {
                       "anyOf": [
                         {
-                          "pattern": "^(ws|usr|svc|mem|prj|env|evr|sec|src|svr|csp|fea|req|dsc|pbt|pro|tst|rev|sui|bat|run|att|stp|var|res|art|snp|ana|hea|sch|mdl|aud|idr|job|evt|apr|aup|acp|wrk|dlv|del|mry|vbl|evl)_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                          "pattern": "^(ws|usr|svc|mem|prj|env|evr|sec|src|svr|csp|fea|req|dsc|pbt|pro|tst|rev|sui|bat|run|att|stp|var|res|art|snp|ana|hea|sch|mdl|aud|idr|job|evt|apr|aup|acp|wrk|dlv|del|mry|vbl|evl|tun)_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
                           "type": "string"
                         },
                         {
@@ -68797,7 +68957,7 @@
         "$defs": {}
       },
       "EntityId": {
-        "pattern": "^(ws|usr|svc|mem|prj|env|evr|sec|src|svr|csp|fea|req|dsc|pbt|pro|tst|rev|sui|bat|run|att|stp|var|res|art|snp|ana|hea|sch|mdl|aud|idr|job|evt|apr|aup|acp|wrk|dlv|del|mry|vbl|evl)_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "pattern": "^(ws|usr|svc|mem|prj|env|evr|sec|src|svr|csp|fea|req|dsc|pbt|pro|tst|rev|sui|bat|run|att|stp|var|res|art|snp|ana|hea|sch|mdl|aud|idr|job|evt|apr|aup|acp|wrk|dlv|del|mry|vbl|evl|tun)_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
         "type": "string",
         "$defs": {}
       },
@@ -153874,7 +154034,7 @@
                   "type": "string"
                 },
                 "owner": {
-                  "pattern": "^(ws|usr|svc|mem|prj|env|evr|sec|src|svr|csp|fea|req|dsc|pbt|pro|tst|rev|sui|bat|run|att|stp|var|res|art|snp|ana|hea|sch|mdl|aud|idr|job|evt|apr|aup|acp|wrk|dlv|del|mry|vbl|evl)_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "pattern": "^(ws|usr|svc|mem|prj|env|evr|sec|src|svr|csp|fea|req|dsc|pbt|pro|tst|rev|sui|bat|run|att|stp|var|res|art|snp|ana|hea|sch|mdl|aud|idr|job|evt|apr|aup|acp|wrk|dlv|del|mry|vbl|evl|tun)_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
                   "type": "string"
                 },
                 "reason": {
@@ -195730,7 +195890,7 @@
             "type": "string"
           },
           "owner": {
-            "pattern": "^(ws|usr|svc|mem|prj|env|evr|sec|src|svr|csp|fea|req|dsc|pbt|pro|tst|rev|sui|bat|run|att|stp|var|res|art|snp|ana|hea|sch|mdl|aud|idr|job|evt|apr|aup|acp|wrk|dlv|del|mry|vbl|evl)_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "pattern": "^(ws|usr|svc|mem|prj|env|evr|sec|src|svr|csp|fea|req|dsc|pbt|pro|tst|rev|sui|bat|run|att|stp|var|res|art|snp|ana|hea|sch|mdl|aud|idr|job|evt|apr|aup|acp|wrk|dlv|del|mry|vbl|evl|tun)_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
             "type": "string"
           },
           "reason": {
@@ -195772,7 +195932,7 @@
             "type": "string"
           },
           "owner": {
-            "pattern": "^(ws|usr|svc|mem|prj|env|evr|sec|src|svr|csp|fea|req|dsc|pbt|pro|tst|rev|sui|bat|run|att|stp|var|res|art|snp|ana|hea|sch|mdl|aud|idr|job|evt|apr|aup|acp|wrk|dlv|del|mry|vbl|evl)_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "pattern": "^(ws|usr|svc|mem|prj|env|evr|sec|src|svr|csp|fea|req|dsc|pbt|pro|tst|rev|sui|bat|run|att|stp|var|res|art|snp|ana|hea|sch|mdl|aud|idr|job|evt|apr|aup|acp|wrk|dlv|del|mry|vbl|evl|tun)_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
             "type": "string"
           },
           "reason": {
@@ -222335,6 +222495,10 @@
             "maximum": 99,
             "type": "integer"
           },
+          "tunnelId": {
+            "pattern": "^tun_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
           "extensions": {
             "additionalProperties": false,
             "type": "object",
@@ -228622,7 +228786,7 @@
                 "owner": {
                   "anyOf": [
                     {
-                      "pattern": "^(ws|usr|svc|mem|prj|env|evr|sec|src|svr|csp|fea|req|dsc|pbt|pro|tst|rev|sui|bat|run|att|stp|var|res|art|snp|ana|hea|sch|mdl|aud|idr|job|evt|apr|aup|acp|wrk|dlv|del|mry|vbl|evl)_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "pattern": "^(ws|usr|svc|mem|prj|env|evr|sec|src|svr|csp|fea|req|dsc|pbt|pro|tst|rev|sui|bat|run|att|stp|var|res|art|snp|ana|hea|sch|mdl|aud|idr|job|evt|apr|aup|acp|wrk|dlv|del|mry|vbl|evl|tun)_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
                       "type": "string"
                     },
                     {
@@ -229623,7 +229787,7 @@
                 "owner": {
                   "anyOf": [
                     {
-                      "pattern": "^(ws|usr|svc|mem|prj|env|evr|sec|src|svr|csp|fea|req|dsc|pbt|pro|tst|rev|sui|bat|run|att|stp|var|res|art|snp|ana|hea|sch|mdl|aud|idr|job|evt|apr|aup|acp|wrk|dlv|del|mry|vbl|evl)_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "pattern": "^(ws|usr|svc|mem|prj|env|evr|sec|src|svr|csp|fea|req|dsc|pbt|pro|tst|rev|sui|bat|run|att|stp|var|res|art|snp|ana|hea|sch|mdl|aud|idr|job|evt|apr|aup|acp|wrk|dlv|del|mry|vbl|evl|tun)_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
                       "type": "string"
                     },
                     {
@@ -310207,58 +310371,458 @@
         },
         "$defs": {}
       },
-      "TunnelInput": {
+      "Tunnel": {
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "binding",
-          "ttlMs",
-          "host",
-          "port"
+          "id",
+          "projectId",
+          "target",
+          "state",
+          "createdBy",
+          "createdAt",
+          "expiresAt",
+          "openedAt",
+          "closedAt",
+          "closeReason",
+          "live",
+          "lastHeartbeatAt",
+          "certificateSha256",
+          "usage",
+          "version"
         ],
         "properties": {
-          "binding": {
+          "id": {
+            "pattern": "^tun_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "projectId": {
+            "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "target": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "address",
+              "port"
+            ],
+            "properties": {
+              "address": {
+                "anyOf": [
+                  {
+                    "const": "127.0.0.1",
+                    "type": "string"
+                  },
+                  {
+                    "const": "::1",
+                    "type": "string"
+                  }
+                ]
+              },
+              "port": {
+                "minimum": 1,
+                "maximum": 65535,
+                "type": "integer"
+              }
+            }
+          },
+          "state": {
+            "anyOf": [
+              {
+                "const": "requested",
+                "type": "string"
+              },
+              {
+                "const": "active",
+                "type": "string"
+              },
+              {
+                "const": "closing",
+                "type": "string"
+              },
+              {
+                "const": "closed",
+                "type": "string"
+              },
+              {
+                "const": "expired",
+                "type": "string"
+              },
+              {
+                "const": "revoked",
+                "type": "string"
+              }
+            ]
+          },
+          "createdBy": {
             "minLength": 1,
             "maxLength": 200,
             "type": "string"
           },
-          "ttlMs": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "host": {
-            "minLength": 1,
-            "maxLength": 200,
+          "createdAt": {
+            "format": "date-time",
+            "pattern": "Z$",
             "type": "string"
           },
-          "port": {
+          "expiresAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "openedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "closedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "closeReason": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "live": {
+            "type": "boolean"
+          },
+          "lastHeartbeatAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "certificateSha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "usage": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "streamsOpened",
+              "streamsRefused",
+              "activeStreams",
+              "bytes"
+            ],
+            "properties": {
+              "streamsOpened": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "streamsRefused": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "activeStreams": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "bytes": {
+                "minimum": 0,
+                "type": "integer"
+              }
+            }
+          },
+          "version": {
             "minimum": 1,
-            "maximum": 65535,
             "type": "integer"
           }
         },
         "$defs": {}
       },
-      "TunnelMetadata": {
+      "TunnelInput": {
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "id",
-          "binding",
-          "expiresAt"
+          "projectId",
+          "target"
         ],
         "properties": {
-          "id": {
-            "minLength": 1,
-            "maxLength": 200,
+          "projectId": {
+            "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
             "type": "string"
           },
-          "binding": {
-            "minLength": 1,
-            "maxLength": 200,
+          "target": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "address",
+              "port"
+            ],
+            "properties": {
+              "address": {
+                "anyOf": [
+                  {
+                    "const": "127.0.0.1",
+                    "type": "string"
+                  },
+                  {
+                    "const": "::1",
+                    "type": "string"
+                  }
+                ]
+              },
+              "port": {
+                "minimum": 1,
+                "maximum": 65535,
+                "type": "integer"
+              }
+            }
+          },
+          "ttlSeconds": {
+            "minimum": 60,
+            "maximum": 3600,
+            "type": "integer"
+          }
+        },
+        "$defs": {}
+      },
+      "TunnelOpening": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tunnel",
+          "openToken",
+          "openTokenExpiresAt"
+        ],
+        "properties": {
+          "tunnel": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "id",
+              "projectId",
+              "target",
+              "state",
+              "createdBy",
+              "createdAt",
+              "expiresAt",
+              "openedAt",
+              "closedAt",
+              "closeReason",
+              "live",
+              "lastHeartbeatAt",
+              "certificateSha256",
+              "usage",
+              "version"
+            ],
+            "properties": {
+              "id": {
+                "pattern": "^tun_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "projectId": {
+                "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "target": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "address",
+                  "port"
+                ],
+                "properties": {
+                  "address": {
+                    "anyOf": [
+                      {
+                        "const": "127.0.0.1",
+                        "type": "string"
+                      },
+                      {
+                        "const": "::1",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "port": {
+                    "minimum": 1,
+                    "maximum": 65535,
+                    "type": "integer"
+                  }
+                }
+              },
+              "state": {
+                "anyOf": [
+                  {
+                    "const": "requested",
+                    "type": "string"
+                  },
+                  {
+                    "const": "active",
+                    "type": "string"
+                  },
+                  {
+                    "const": "closing",
+                    "type": "string"
+                  },
+                  {
+                    "const": "closed",
+                    "type": "string"
+                  },
+                  {
+                    "const": "expired",
+                    "type": "string"
+                  },
+                  {
+                    "const": "revoked",
+                    "type": "string"
+                  }
+                ]
+              },
+              "createdBy": {
+                "minLength": 1,
+                "maxLength": 200,
+                "type": "string"
+              },
+              "createdAt": {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              },
+              "expiresAt": {
+                "format": "date-time",
+                "pattern": "Z$",
+                "type": "string"
+              },
+              "openedAt": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "pattern": "Z$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "closedAt": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "pattern": "Z$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "closeReason": {
+                "anyOf": [
+                  {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "live": {
+                "type": "boolean"
+              },
+              "lastHeartbeatAt": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "pattern": "Z$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "certificateSha256": {
+                "anyOf": [
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "usage": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "streamsOpened",
+                  "streamsRefused",
+                  "activeStreams",
+                  "bytes"
+                ],
+                "properties": {
+                  "streamsOpened": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "streamsRefused": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "activeStreams": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "bytes": {
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                }
+              },
+              "version": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            }
+          },
+          "openToken": {
+            "pattern": "^tm_tun_[A-Za-z0-9_-]{43}$",
             "type": "string"
           },
-          "expiresAt": {
+          "openTokenExpiresAt": {
             "format": "date-time",
             "pattern": "Z$",
             "type": "string"

@@ -1,9 +1,10 @@
 import { execFile } from "node:child_process";
 import { createHash, X509Certificate } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { request as httpRequest } from "node:http";
+import { request as httpRequest, type IncomingMessage } from "node:http";
 import { createServer as createTlsServer, request as httpsRequest, type Server } from "node:https";
 import { join } from "node:path";
+import type { Duplex } from "node:stream";
 import { promisify } from "node:util";
 
 const exec = promisify(execFile);
@@ -117,6 +118,8 @@ export interface TlsProxy {
   readonly port: number;
   /** Requests seen, as `METHOD path`, for assertions about what the browser called. */
   readonly requests: string[];
+  /** Every byte that crossed an upgraded connection, both directions, for confidentiality checks. */
+  upgradedTraffic(): Buffer;
   /** Drops every open connection (live SSE streams included) while the listener keeps accepting new ones. */
   severConnections(): void;
   close(): Promise<void>;
@@ -125,7 +128,8 @@ export interface TlsProxy {
 /**
  * TLS-terminating reverse proxy in front of an HTTP upstream, standing in for Caddy. It forwards
  * `X-Forwarded-Proto: https` and the client address, replacing anything the client sent, exactly
- * as a trusted proxy must. Responses stream, so server-sent events work.
+ * as a trusted proxy must. Responses stream, so server-sent events work, and upgrades (`101`)
+ * are relayed byte for byte, as Caddy's `reverse_proxy` relays them.
  */
 export async function startTlsProxy(options: {
   ca: TestCa;
@@ -133,24 +137,35 @@ export async function startTlsProxy(options: {
   upstreamPort: () => number;
 }): Promise<TlsProxy> {
   const requests: string[] = [];
+  const traffic: Buffer[] = [];
+  const upgradedSockets = new Set<Duplex>();
+  const forwardedHeaders = (incoming: IncomingMessage) => {
+    const headers: Record<string, string | string[]> = {};
+    for (const [name, value] of Object.entries(incoming.headers))
+      if (value !== undefined && !hopByHop.has(name) && !name.startsWith("x-forwarded-"))
+        headers[name] = value;
+    headers.host = incoming.headers.host ?? "";
+    headers["x-forwarded-proto"] = "https";
+    headers["x-forwarded-for"] = incoming.socket.remoteAddress ?? "127.0.0.1";
+    return headers;
+  };
+  const statusHead = (response: IncomingMessage) => {
+    const lines = [`HTTP/1.1 ${response.statusCode} ${response.statusMessage ?? ""}`];
+    for (let index = 0; index < response.rawHeaders.length; index += 2)
+      lines.push(`${response.rawHeaders[index]}: ${response.rawHeaders[index + 1]}`);
+    return `${lines.join("\r\n")}\r\n\r\n`;
+  };
   const server: Server = createTlsServer(
     { key: options.ca.leafKey, cert: options.ca.leafCert },
     (incoming, outgoing) => {
       requests.push(`${incoming.method} ${incoming.url}`);
-      const headers: Record<string, string | string[]> = {};
-      for (const [name, value] of Object.entries(incoming.headers))
-        if (value !== undefined && !hopByHop.has(name) && !name.startsWith("x-forwarded-"))
-          headers[name] = value;
-      headers.host = incoming.headers.host ?? "";
-      headers["x-forwarded-proto"] = "https";
-      headers["x-forwarded-for"] = incoming.socket.remoteAddress ?? "127.0.0.1";
       const upstream = httpRequest(
         {
           host: "127.0.0.1",
           port: options.upstreamPort(),
           method: incoming.method,
           path: incoming.url,
-          headers,
+          headers: forwardedHeaders(incoming),
         },
         (response) => {
           const forwarded: Record<string, string | string[]> = {};
@@ -168,6 +183,48 @@ export async function startTlsProxy(options: {
       incoming.pipe(upstream);
     },
   );
+  server.on("upgrade", (incoming: IncomingMessage, socket: Duplex, head: Buffer) => {
+    requests.push(`${incoming.method} ${incoming.url}`);
+    socket.on("error", () => socket.destroy());
+    const upstream = httpRequest({
+      host: "127.0.0.1",
+      port: options.upstreamPort(),
+      method: incoming.method,
+      path: incoming.url,
+      headers: {
+        ...forwardedHeaders(incoming),
+        connection: "Upgrade",
+        upgrade: incoming.headers.upgrade ?? "",
+      },
+    });
+    upstream.on("upgrade", (response, upstreamSocket, upstreamHead) => {
+      upstreamSocket.on("error", () => upstreamSocket.destroy());
+      socket.write(statusHead(response));
+      const relay = (from: Duplex, to: Duplex, first: Buffer) => {
+        upgradedSockets.add(from);
+        if (first.length) {
+          traffic.push(Buffer.from(first));
+          to.write(first);
+        }
+        from.on("data", (chunk: Buffer) => {
+          traffic.push(Buffer.from(chunk));
+          to.write(chunk);
+        });
+        from.on("close", () => {
+          upgradedSockets.delete(from);
+          to.destroy();
+        });
+      };
+      relay(upstreamSocket, socket, upstreamHead);
+      relay(socket, upstreamSocket, head);
+    });
+    upstream.on("response", (response) => {
+      socket.write(statusHead(response));
+      response.pipe(socket);
+    });
+    upstream.on("error", () => socket.destroy());
+    upstream.end();
+  });
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);
     server.listen(0, "127.0.0.1", resolve);
@@ -178,11 +235,14 @@ export async function startTlsProxy(options: {
     origin: `https://127.0.0.1:${address.port}`,
     port: address.port,
     requests,
+    upgradedTraffic: () => Buffer.concat(traffic),
     severConnections() {
       server.closeAllConnections();
+      for (const socket of upgradedSockets) socket.destroy();
     },
     async close() {
       server.closeAllConnections();
+      for (const socket of upgradedSockets) socket.destroy();
       await new Promise<void>((resolve) => server.close(() => resolve()));
     },
   };

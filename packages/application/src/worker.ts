@@ -713,6 +713,8 @@ export class WorkerService {
     reserved: () => ExecutorKind[];
     /** Whether the Run's worst-case evidence fits next to the work in progress. */
     storage: (runId: string) => boolean;
+    /** A remote worker's claim: only it may take a Run admitted through a tunnel (ADR-031). */
+    remote?: boolean;
   }): (Fence & { runId: string; expiresAt: string; number: number }) | null {
     const database = this.ctx.database;
     const { handshake, lock, runIds } = input;
@@ -727,6 +729,7 @@ export class WorkerService {
         const run = this.host.runs.get(id);
         const cancelled = this.cancelled(id);
         const predecessor = runMatrixCell(run).flakePredecessorRunId;
+        if (!input.remote && runMatrixCell(run).tunnelId !== undefined) return false;
         return (
           (cancelled ||
             typeof predecessor !== "string" ||
@@ -839,6 +842,7 @@ export class WorkerService {
               })
             );
           },
+          remote: true,
         }),
       { inTransaction: () => database.inTransaction },
     );

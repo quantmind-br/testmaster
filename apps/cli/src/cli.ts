@@ -37,6 +37,7 @@ import { setupCommands } from "./setup.js";
 import { sourceCommands } from "./sources.js";
 import { testCommands } from "./tests.js";
 import { tokenCommands } from "./tokens.js";
+import { tunnelCommands } from "./tunnels.js";
 import { unavailableCommands } from "./unavailable.js";
 import { usageCommands } from "./usage.js";
 import { workerCommands } from "./workers.js";
@@ -111,6 +112,7 @@ export function createCli(runtime: Runtime): Command {
   scheduleCommands(program, runtime);
   remoteCommands(program, runtime);
   githubCommands(program, runtime);
+  tunnelCommands(program, runtime);
   unavailableCommands(program, runtime);
   declareExampleVariants(program);
   return program;

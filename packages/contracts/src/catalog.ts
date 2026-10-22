@@ -20,6 +20,7 @@ import { settingsContracts } from "./m4/settings.js";
 import { sourceInsightContracts } from "./m4/sources.js";
 import { workerContracts } from "./m4/workers.js";
 import { remoteWorkerContracts } from "./m5/remote-workers.js";
+import { tunnelContracts } from "./m5/tunnels.js";
 import * as Metrics from "./metrics.js";
 import * as Ops from "./operations.js";
 import * as Plans from "./plans.js";
@@ -699,13 +700,6 @@ const supplemental = {
   }),
   BatchCancelReceipt: P.Obj({ batchId: P.id("bat"), members: Type.Array(Ops.CancelReceipt) }),
   CleanupInput: P.Obj({ approval: Type.Optional(P.id("apr")), ownerProof: P.EvidenceRef }),
-  TunnelInput: P.Obj({
-    binding: P.Name,
-    ttlMs: P.Positive,
-    host: P.Name,
-    port: Type.Integer({ minimum: 1, maximum: 65535 }),
-  }),
-  TunnelMetadata: P.Obj({ id: P.Name, binding: P.Name, expiresAt: P.Timestamp }),
   HeartbeatInput: P.Obj({
     leaseId: P.id("job"),
     state: P.Enum(["ready", "draining", "offline"]),
@@ -1043,6 +1037,7 @@ export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({
   ...deliveryContracts,
   ...workerContracts,
   ...remoteWorkerContracts,
+  ...tunnelContracts,
   ...githubContracts,
   ...identityContracts,
   ...settingsContracts,

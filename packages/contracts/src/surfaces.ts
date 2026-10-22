@@ -335,14 +335,16 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ["GET", "/schedules/{id}/firings", "schedules:R", "M4", "Empty", "ScheduledFire"],
   ["GET", "/resources", "runs:R", "M2", "Empty", "ResourceDetail"],
   ["POST", "/resources/{id}/cleanup", "cleanup:X", "M2", "CleanupInput", "CleanupReceipt"],
-  ["GET,POST", "/tunnels", "tunnel:X", "M5", "TunnelInput", "TunnelMetadata"],
-  ["DELETE", "/tunnels/{id}", "tunnel:X", "M5", "Empty", "TunnelMetadata"],
+  ["GET", "/tunnels", "tunnel:X", "M5", "Empty", "Tunnel"],
+  ["POST", "/tunnels", "tunnel:X", "M5", "TunnelInput", "TunnelOpening"],
+  ["GET,DELETE", "/tunnels/{id}", "tunnel:X", "M5", "Empty", "Tunnel"],
   ["GET", "/workers", "workers:A", "M4", "Empty", "Worker"],
   ["POST", "/workers", "workers:A", "M4", "WorkerEnrollmentInput", "WorkerEnrollment"],
   ["GET", "/workers/{id}", "workers:A", "M4", "Empty", "Worker"],
   // Authenticated by the route itself with the worker credential (tm_wrk_), never by a user session.
   ["POST", "/workers/{id}/heartbeat", "signature", "M4", "HeartbeatInput", "Worker"],
-  // Remote worker protocol (ADR-030): the worker's `tm_wrk_` credential, scoped to the path's worker.
+  // Remote worker protocol (ADR-030, ADR-031): enrollment presents the `tm_wrk_` credential and
+  // binds the worker's key; every other call is signed with that key for the path's worker.
   ["POST", "/workers/enroll", "worker", "M5", "Empty", "RemoteWorkerIdentity"],
   ["POST", "/workers/{id}/claims", "worker", "M5", "RemoteClaimInput", "RemoteClaim"],
   ...(
@@ -607,6 +609,7 @@ const responseOverrides: Readonly<Record<string, ResponseOverride>> = {
     "GET /schedules/{id}/revisions",
     "GET /schedules/{id}/firings",
     "GET /suites",
+    "GET /tunnels",
   ]),
   // Lists that the service bounds itself: `{items}` without a cursor.
   ...keysWith({ kind: "items" }, ["GET /workspaces", "GET /identity/sessions"]),
@@ -634,6 +637,7 @@ const responseOverrides: Readonly<Record<string, ResponseOverride>> = {
     "POST /schedules",
     "POST /suites",
     "POST /workers",
+    "POST /tunnels",
   ]),
   ...keysWith({ status: 202 }, [
     "POST /runs",
@@ -659,9 +663,6 @@ const responseOverrides: Readonly<Record<string, ResponseOverride>> = {
   "GET /discovery/{id}/events": { kind: "stream" },
   // Reserved for M5/M6: no handler is registered, every call answers CAPABILITY_UNAVAILABLE.
   ...keysWith({ kind: "unavailable" }, [
-    "GET /tunnels",
-    "POST /tunnels",
-    "DELETE /tunnels/{id}",
     "GET /projects/{id}/memory",
     "POST /projects/{id}/memory",
     "PATCH /memory/{id}",

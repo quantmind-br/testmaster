@@ -24,6 +24,7 @@ import type { Application } from "./application.js";
 import { type AttemptSession, executorKindOf } from "./attempt-session.js";
 import { runMatrixCell } from "./comparisons.js";
 import { requireEntity } from "./context.js";
+import { type PopProof, PopVerifier } from "./proof-of-possession.js";
 import { type EvidenceLimits, runEvidenceBytes } from "./storage-admission.js";
 import type { RemoteWorkerCaller } from "./worker-pool.js";
 
@@ -48,7 +49,10 @@ interface RemoteAttempt {
   readonly kind: ExecutorKind;
   readonly worstCaseBytes: number;
   readonly session: AttemptSession;
+  /** Aborts on a cancel request too: it stops the controller's own waits for the Attempt. */
   readonly controller: AbortController;
+  /** Aborts only when the controller stops holding the Attempt: settled or lease lost. */
+  readonly released: AbortController;
   readonly inputDir: string;
   readonly inputFiles: Map<string, InputFile>;
   /** Server staging of the uploaded bundle; created by the first upload. */
@@ -64,6 +68,8 @@ interface RemoteAttempt {
 /** The remote Attempts this API process holds; shared by every scoped `Application`. */
 export class RemoteAttemptRegistry {
   private readonly attempts = new Map<string, RemoteAttempt>();
+  /** One nonce cache per process, so a captured signed call is refused by every scope (ADR-031). */
+  readonly proofs = new PopVerifier();
   add(attempt: RemoteAttempt): void {
     this.attempts.set(attempt.attemptId, attempt);
   }
@@ -81,6 +87,7 @@ export class RemoteAttemptRegistry {
     if (this.attempts.get(attempt.attemptId) !== attempt) return;
     this.attempts.delete(attempt.attemptId);
     attempt.controller.abort();
+    attempt.released.abort();
     await rm(attempt.inputDir, { recursive: true, force: true });
     if (attempt.uploadPath) await rm(attempt.uploadPath, { recursive: true, force: true });
     await attempt.session.close();
@@ -153,19 +160,37 @@ export class RemoteWorkerService {
     return this.root.controllerScope().context.database;
   }
 
-  /** Resolves a `tm_wrk_` credential; `workerId` is the path's worker, null when enrolling. */
-  identify(token: string, workerId: string | null): RemoteWorkerCaller {
-    return this.root.controllerScope().workerPool.remoteCaller(token, workerId);
+  /**
+   * Resolves a signed remote call (ADR-031): the proof names the path's worker, signs this
+   * request with the key that worker bound at enrollment and was never presented before.
+   */
+  identify(
+    proof: PopProof,
+    request: { readonly method: string; readonly path: string },
+    workerId: string,
+  ): RemoteWorkerCaller {
+    const bound =
+      proof.keyId === workerId ? this.root.controllerScope().workerPool.remoteKey(workerId) : null;
+    if (!bound || !this.registry.proofs.verify(proof, request, bound.publicKey))
+      throw new ContractError("UNAUTHENTICATED", "A valid worker proof is required");
+    return bound.caller;
   }
 
   /**
-   * Enrolls a fresh credential (once) and answers the worker's identity. A started worker process
-   * serves again: a drain lasts as long as the process that was drained, as for a local worker.
+   * Enrolls a fresh credential (once) and answers the worker's identity. The enrollment carries a
+   * proof whose key id is the worker's public key: the first enrollment binds it, later ones must
+   * present the same key (ADR-031). A started worker process serves again: a drain lasts as long
+   * as the process that was drained, as for a local worker.
    */
-  enroll(token: string): RemoteWorkerIdentity {
+  enroll(
+    token: string,
+    proof: PopProof,
+    request: { readonly method: string; readonly path: string },
+  ): RemoteWorkerIdentity {
+    if (!this.registry.proofs.verify(proof, request, proof.keyId))
+      throw new ContractError("UNAUTHENTICATED", "A valid proof of the worker key is required");
     const pool = this.root.controllerScope().workerPool;
-    pool.enroll(token);
-    const caller = pool.remoteCaller(token, null);
+    const caller = pool.enroll(token, proof.keyId);
     const database = this.controllerDatabase();
     const worker = database.withTx(() => {
       for (const row of database.all(
@@ -305,6 +330,7 @@ export class RemoteWorkerService {
         worstCaseBytes: runEvidenceBytes(runMatrixCell(run).limits as EvidenceLimits),
         session,
         controller,
+        released: new AbortController(),
         inputDir,
         inputFiles: await listFiles(inputDir),
         uploadPath: null,

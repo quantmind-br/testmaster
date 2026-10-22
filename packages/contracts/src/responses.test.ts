@@ -30,7 +30,7 @@ describe("route response metadata", () => {
     expect(Object.keys(operation("GET", "/metrics").responses["200"]?.content ?? {})).toEqual([
       "text/plain",
     ]);
-    const reserved = operation("POST", "/tunnels").responses;
+    const reserved = operation("POST", "/visual-baselines").responses;
     expect(reserved).toHaveProperty("422");
     expect(reserved).not.toHaveProperty("200");
   });
@@ -53,7 +53,7 @@ describe("route response metadata", () => {
   it("refuses a status or a body kind the route does not advertise", () => {
     expect(() => responseIssues("POST", "/projects", 200, envelope({}))).toThrow(/status 200/);
     expect(() => responseIssues("GET", "/metrics", 200, "text")).toThrow(/no JSON success body/);
-    expect(() => responseIssues("POST", "/tunnels", 200, envelope({}))).toThrow(
+    expect(() => responseIssues("POST", "/visual-baselines", 200, envelope({}))).toThrow(
       /no JSON success body/,
     );
     expect(() => responseIssues("GET", "/nope", 200, {})).toThrow(/not a catalog route/);

@@ -1,0 +1,198 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "id",
+    "projectId",
+    "target",
+    "state",
+    "createdBy",
+    "createdAt",
+    "expiresAt",
+    "openedAt",
+    "closedAt",
+    "closeReason",
+    "live",
+    "lastHeartbeatAt",
+    "certificateSha256",
+    "usage",
+    "version"
+  ],
+  "properties": {
+    "id": {
+      "pattern": "^tun_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "projectId": {
+      "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "target": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "address",
+        "port"
+      ],
+      "properties": {
+        "address": {
+          "anyOf": [
+            {
+              "const": "127.0.0.1",
+              "type": "string"
+            },
+            {
+              "const": "::1",
+              "type": "string"
+            }
+          ]
+        },
+        "port": {
+          "minimum": 1,
+          "maximum": 65535,
+          "type": "integer"
+        }
+      }
+    },
+    "state": {
+      "anyOf": [
+        {
+          "const": "requested",
+          "type": "string"
+        },
+        {
+          "const": "active",
+          "type": "string"
+        },
+        {
+          "const": "closing",
+          "type": "string"
+        },
+        {
+          "const": "closed",
+          "type": "string"
+        },
+        {
+          "const": "expired",
+          "type": "string"
+        },
+        {
+          "const": "revoked",
+          "type": "string"
+        }
+      ]
+    },
+    "createdBy": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "expiresAt": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "openedAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "closedAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "closeReason": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "live": {
+      "type": "boolean"
+    },
+    "lastHeartbeatAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "pattern": "Z$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "certificateSha256": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "usage": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "streamsOpened",
+        "streamsRefused",
+        "activeStreams",
+        "bytes"
+      ],
+      "properties": {
+        "streamsOpened": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "streamsRefused": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "activeStreams": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "bytes": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      }
+    },
+    "version": {
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:Tunnel",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

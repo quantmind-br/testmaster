@@ -314,6 +314,7 @@ export const implementedFeatures: ReadonlySet<string> = new Set([
   ...["admin-operations", "metrics", "incidents", "server-backup"],
   "terminal",
   "remote-workers",
+  "tunnels",
 ]);
 export const capabilityRegistry: Readonly<Record<string, Capability>> = Object.freeze(
   Object.fromEntries(

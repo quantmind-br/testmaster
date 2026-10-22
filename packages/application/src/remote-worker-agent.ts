@@ -1,10 +1,11 @@
-import { createHash } from "node:crypto";
+import { createHash, type KeyObject } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
 import { chmod, lstat, mkdir, readdir, rm, statfs } from "node:fs/promises";
 import type { ClientRequest, IncomingMessage } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { arch, availableParallelism, platform, totalmem } from "node:os";
 import { dirname, join } from "node:path";
+import type { Duplex } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
@@ -23,6 +24,7 @@ import {
   type RemoteFailInput,
   type RemoteFinalizeInput,
   type RemoteWorkerIdentity,
+  TUNNEL_PROTOCOL,
 } from "@testmaster/contracts";
 import { EvidenceQuotaError, FileEvidenceStore } from "@testmaster/evidence";
 import {
@@ -38,6 +40,8 @@ import {
   verifyImageLock,
 } from "@testmaster/sandbox";
 import type { AttemptDispatch } from "./attempt-session.js";
+import { popAuthorization, popPublicKey } from "./proof-of-possession.js";
+import { tunnelDialer } from "./tunnel-dialer.js";
 import { validateCapacity, type WorkerCapacity } from "./worker-capacity.js";
 import { localHandshake } from "./worker-handshake.js";
 
@@ -67,6 +71,8 @@ export interface RemoteWorkerTransport {
   download(path: string, destination: string, signal?: AbortSignal): Promise<void>;
   /** PUTs the bytes of the file at `source` and answers the envelope's `data`. */
   upload<T>(path: string, source: string, sizeBytes: number, signal?: AbortSignal): Promise<T>;
+  /** Upgrades a GET to the tunnel protocol and answers the connection (ADR-031). */
+  openStream(path: string, signal?: AbortSignal): Promise<Duplex>;
 }
 
 async function readAll(response: IncomingMessage): Promise<Buffer> {
@@ -75,7 +81,8 @@ async function readAll(response: IncomingMessage): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
-async function refusal(response: IncomingMessage): Promise<RemoteCallError> {
+/** The controller's refusal of a call, read from its error envelope. */
+export async function remoteRefusal(response: IncomingMessage): Promise<RemoteCallError> {
   const status = response.statusCode ?? 0;
   let envelope: unknown = null;
   try {
@@ -101,12 +108,14 @@ async function refusal(response: IncomingMessage): Promise<RemoteCallError> {
 }
 
 /**
- * The HTTPS transport of a remote worker: every call presents the `tm_wrk_` credential and trusts
- * only `ca` (or the system roots). Plain HTTP is refused, so the credential never travels in clear.
+ * The HTTPS transport of a remote worker, trusting only `ca` (or the system roots). Every call is
+ * signed with the worker's key (ADR-031); the `tm_wrk_` credential travels only on enrollment,
+ * which binds the key, so a copied credential alone authorizes nothing. Plain HTTP is refused.
  */
 export function httpsWorkerTransport(options: {
   endpoint: string;
   credential: string;
+  key: KeyObject;
   ca?: string | Buffer;
 }): RemoteWorkerTransport {
   const base = new URL(options.endpoint.endsWith("/") ? options.endpoint : `${options.endpoint}/`);
@@ -114,30 +123,49 @@ export function httpsWorkerTransport(options: {
     throw new ContractError("INVALID_ARGUMENT", "A remote worker connects over HTTPS only", {
       reason: "tls_required",
     });
+  const publicKey = popPublicKey(options.key);
+  const authorize = (method: string, path: string, url: URL): Record<string, string> => {
+    const target = `${url.pathname}${url.search}`;
+    if (path === "/workers/enroll")
+      return {
+        authorization: `Bearer ${options.credential}`,
+        "testmaster-proof": popAuthorization(options.key, publicKey, method, target),
+      };
+    // Every other worker route is `/workers/{id}/…`: the worker id is the proof's key id.
+    const workerId = path.split("/")[2] ?? "";
+    return { authorization: popAuthorization(options.key, workerId, method, target) };
+  };
   const send = (
     method: "GET" | "POST" | "PUT",
     path: string,
     headers: Record<string, string>,
     write: (request: ClientRequest) => Promise<unknown> | undefined,
     signal?: AbortSignal,
+    upgraded?: (socket: Duplex) => void,
   ): Promise<IncomingMessage> => {
     const { promise, resolve, reject } = Promise.withResolvers<IncomingMessage>();
+    const url = new URL(`v1${path}`, base);
     const request = httpsRequest(
-      new URL(`v1${path}`, base),
+      url,
       {
         method,
-        headers: { authorization: `Bearer ${options.credential}`, ...headers },
+        headers: { ...authorize(method, path, url), ...headers },
         ...(options.ca ? { ca: options.ca } : {}),
         ...(signal ? { signal } : {}),
       },
       resolve,
     );
     request.on("error", reject);
+    if (upgraded)
+      request.on("upgrade", (_response, socket, head) => {
+        if (head.length) socket.unshift(head);
+        upgraded(socket);
+      });
     write(request)?.catch((error: unknown) => request.destroy(error as Error));
     return promise;
   };
   const data = async <T>(response: IncomingMessage): Promise<T> => {
-    if ((response.statusCode ?? 0) >= 400) throw await refusal(response);
+    if ((response.statusCode ?? 0) >= 400) throw await remoteRefusal(response);
     // The controller answers its success envelope; the schema of `data` is the route's.
     const envelope: { data: T } = JSON.parse((await readAll(response)).toString("utf8"));
     return envelope.data;
@@ -168,7 +196,7 @@ export function httpsWorkerTransport(options: {
         },
         signal,
       );
-      if ((response.statusCode ?? 0) >= 400) throw await refusal(response);
+      if ((response.statusCode ?? 0) >= 400) throw await remoteRefusal(response);
       await pipeline(response, createWriteStream(destination, { flags: "wx", mode: 0o600 }));
     },
     async upload<T>(path: string, source: string, sizeBytes: number, signal?: AbortSignal) {
@@ -180,6 +208,21 @@ export function httpsWorkerTransport(options: {
         signal,
       );
       return data<T>(response);
+    },
+    async openStream(path: string, signal?: AbortSignal) {
+      const { promise, resolve, reject } = Promise.withResolvers<Duplex>();
+      send(
+        "GET",
+        path,
+        { connection: "Upgrade", upgrade: TUNNEL_PROTOCOL },
+        (request) => {
+          request.end();
+          return undefined;
+        },
+        signal,
+        resolve,
+      ).then(async (response) => reject(await remoteRefusal(response)), reject);
+      return promise;
     },
   };
 }
@@ -474,12 +517,13 @@ export class RemoteWorkerAgent {
 
   /** The sandbox input: the controller's dispatch plus bindings that call back over HTTPS. */
   private input(
+    workerId: string,
     attempt: RemoteClaimedAttempt,
     inputDir: string,
     lock: ImageLock,
     call: <T>(path: string, body: unknown) => Promise<T>,
   ): AttemptInput {
-    const { executor, secretRefs, ...dispatch } = attempt.dispatch as unknown as Omit<
+    const { executor, secretRefs, tunnel, ...dispatch } = attempt.dispatch as unknown as Omit<
       AttemptDispatch,
       "inputDir"
     >;
@@ -515,6 +559,15 @@ export class RemoteWorkerAgent {
       },
       resolveAction: async (stepId, observation) =>
         (await call<RemoteAction>("actions", { stepId, observation })).action,
+      ...(tunnel
+        ? {
+            dial: tunnelDialer({
+              transport: this.options.transport,
+              path: `/workers/${workerId}/attempts/${attempt.attemptId}/tunnel`,
+              tunnel,
+            }),
+          }
+        : {}),
     };
   }
 
@@ -527,8 +580,11 @@ export class RemoteWorkerAgent {
     const { transport, dataDir } = this.options;
     const { attemptId } = attempt;
     const base = `/workers/${workerId}/attempts/${attemptId}`;
-    // `stop` ends the sandbox; `renewals` ends the heartbeat, which also runs while settling.
+    // `stop` ends the sandbox and the Attempt's calls; `renewals` ends the heartbeat, which also
+    // runs while settling. A cancel request stops only the sandbox: the calls keep publishing the
+    // events the runner reports while it stops, so the result says `cancelled`.
     const stop = new AbortController();
+    const cancel = new AbortController();
     const renewals = new AbortController();
     const forceStop = () => stop.abort();
     force?.addEventListener("abort", forceStop, { once: true });
@@ -552,7 +608,7 @@ export class RemoteWorkerAgent {
         (lease) => {
           deadline = Date.parse(lease.leaseExpiresAt);
           arm();
-          if (lease.cancelRequested) stop.abort();
+          if (lease.cancelRequested) cancel.abort();
         },
         (error: unknown) => {
           // A lost renewal changes nothing: the deadline already armed stops the Attempt.
@@ -580,7 +636,10 @@ export class RemoteWorkerAgent {
           store,
           this.docker,
           await this.runtimeRoot(),
-        ).execute(this.input(attempt, inputDir, lock, call), stop.signal);
+        ).execute(
+          this.input(workerId, attempt, inputDir, lock, call),
+          AbortSignal.any([stop.signal, cancel.signal]),
+        );
         bundleDir = result.bundle?.bundleDir;
         outcome = { result };
       } catch (error) {

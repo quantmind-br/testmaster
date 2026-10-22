@@ -19,10 +19,10 @@ import type { RouteContext, RouteModule } from "./types.js";
 
 const id = (context: RouteContext): string => context.params.id as string;
 const attemptId = (context: RouteContext): string => context.params.attemptId as string;
-/** The worker the server's hook identified from its credential (ADR-030). */
+/** The worker the server's hook identified from its signed call (ADR-031). */
 const caller = (context: RouteContext): RemoteWorkerCaller => {
   const caller = context.worker?.caller;
-  if (!caller) throw new ContractError("UNAUTHENTICATED", "A valid worker credential is required");
+  if (!caller) throw new ContractError("UNAUTHENTICATED", "A worker proof is required");
   return caller;
 };
 const filePath = (context: RouteContext): string => {
@@ -53,9 +53,13 @@ export const workerRoutes: RouteModule = {
         .workerPool.heartbeat(token, id(context), body as WorkerHeartbeat);
     },
     "POST /workers/enroll": (context) => {
-      const token = context.worker?.token;
-      if (!token) throw new ContractError("UNAUTHENTICATED", "A worker credential is required");
-      return context.service.remoteWorkers.enroll(token);
+      const enrollment = context.worker?.enrollment;
+      if (!enrollment)
+        throw new ContractError("UNAUTHENTICATED", "A worker credential is required");
+      return context.service.remoteWorkers.enroll(enrollment.token, enrollment.proof, {
+        method: context.request.method,
+        path: context.request.url,
+      });
     },
     "POST /workers/{id}/claims": (context) =>
       context.service.remoteWorkers.claim(caller(context), context.body as RemoteClaimInput),

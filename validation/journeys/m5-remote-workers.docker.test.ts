@@ -2,12 +2,6 @@ import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createServer as createHttpServer, type Server } from "node:http";
-import {
-  connect,
-  createServer as createTcpServer,
-  type Socket,
-  type Server as TcpServer,
-} from "node:net";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import type { ExecutablePlan, PlanStep } from "@testmaster/contracts";
@@ -28,6 +22,10 @@ import {
   object,
   text,
 } from "./harness.js";
+import {
+  type PartitionRelay as Relay,
+  startPartitionRelay as startRelay,
+} from "./partition-relay.js";
 import { type ServerStack, type Spawned, startServerStack } from "./server-stack.js";
 
 const exec = promisify(execFile);
@@ -126,70 +124,6 @@ async function startTarget() {
   };
 }
 
-/**
- * A TCP relay between one worker and the controller's TLS proxy. `partition()` blackholes it:
- * open connections stay open but carry nothing, new ones are accepted and never forwarded, as
- * when a network path drops packets. `heal()` resets the silent connections and forwards again.
- */
-async function startRelay(upstreamPort: number) {
-  const silent = new Set<Socket>();
-  const live = new Map<Socket, () => void>();
-  let cut = false;
-  const server: TcpServer = createTcpServer((client) => {
-    client.on("error", () => undefined);
-    if (cut) {
-      client.pause();
-      silent.add(client);
-      return;
-    }
-    const upstream = connect(upstreamPort, "127.0.0.1");
-    upstream.on("error", () => client.destroy());
-    client.on("close", () => {
-      upstream.destroy();
-      live.delete(client);
-      silent.delete(client);
-    });
-    upstream.on("close", () => {
-      if (!silent.has(client)) client.destroy();
-    });
-    client.pipe(upstream);
-    upstream.pipe(client);
-    live.set(client, () => {
-      client.unpipe(upstream);
-      upstream.unpipe(client);
-      client.pause();
-      silent.add(client);
-      upstream.destroy();
-    });
-  });
-  const listening = Promise.withResolvers<void>();
-  server.once("error", listening.reject);
-  server.listen(0, "127.0.0.1", listening.resolve);
-  await listening.promise;
-  const address = server.address();
-  if (!address || typeof address === "string") throw new Error("relay has no port");
-  return {
-    origin: `https://127.0.0.1:${address.port}`,
-    partition() {
-      cut = true;
-      for (const silence of live.values()) silence();
-      live.clear();
-    },
-    heal() {
-      cut = false;
-      for (const client of silent) client.destroy();
-      silent.clear();
-    },
-    async close() {
-      for (const client of [...live.keys(), ...silent]) client.destroy();
-      const closed = Promise.withResolvers<void>();
-      server.close(() => closed.resolve());
-      await closed.promise;
-    },
-  };
-}
-
-type Relay = Awaited<ReturnType<typeof startRelay>>;
 type Target = Awaited<ReturnType<typeof startTarget>>;
 
 interface WorkerLine {

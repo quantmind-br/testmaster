@@ -414,7 +414,7 @@ export class Runtime {
       const timeout =
         typeof this.options.requestTimeout === "number" ? this.options.requestTimeout : undefined;
       const client = new RemoteClient(target, this.requestId, this.controller.signal, timeout);
-      const outcome = await remote(client, args, this.options);
+      const outcome = await remote(client, args, this.options, this);
       if (this.signal) throw this.interrupted();
       this.pending = outcome;
       return;

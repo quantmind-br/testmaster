@@ -1,5 +1,7 @@
 import { readFile } from "node:fs/promises";
+import type { IncomingMessage } from "node:http";
 import { join } from "node:path";
+import type { Duplex } from "node:stream";
 import {
   type Application,
   type AuthenticatedIdentity,
@@ -9,6 +11,8 @@ import {
   correlationId,
   executeIdempotent,
   OperationalLogger,
+  type PopProof,
+  parsePopAuthorization,
   type RemoteWorkerCaller,
   type ServerConfig,
   SignedCursorCodec,
@@ -82,10 +86,13 @@ interface PresentedCredential {
   kind: "bearer" | "session";
   secret: string;
 }
-/** The credential a remote worker presented; `caller` is null only on enrollment (ADR-030). */
+/**
+ * What a remote worker presented (ADR-031): a signed call names its worker (`caller`); the
+ * enrollment call carries the `tm_wrk_` credential and a proof of the key it binds.
+ */
 interface WorkerCredential {
-  token: string;
   caller: RemoteWorkerCaller | null;
+  enrollment: { token: string; proof: PopProof } | null;
 }
 /** Routes without explicit config (404s) are authenticated like any other route. */
 function routeConfig(request: FastifyRequest): RouteConfig {
@@ -264,20 +271,32 @@ export function createServer(options: ServerOptions): FastifyInstance {
       return;
     }
     if (route.auth === "worker") {
-      // A remote worker presents its own `tm_wrk_` credential; only a refused one costs budget.
-      const authorization = request.headers.authorization;
-      const bearer =
-        typeof authorization === "string" ? /^Bearer (\S+)$/.exec(authorization) : null;
-      if (!bearer) throw new ContractError("UNAUTHENTICATED", "A worker credential is required");
+      // A remote worker proves possession of its enrolled key; only a refused call costs budget.
       const params = request.params as Record<string, string | undefined>;
       try {
-        workers.set(request, {
-          token: bearer[1] as string,
-          caller:
-            params.id === undefined
-              ? null
-              : options.application.remoteWorkers.identify(bearer[1] as string, params.id),
-        });
+        if (params.id === undefined) {
+          const authorization = request.headers.authorization;
+          const bearer =
+            typeof authorization === "string" ? /^Bearer (\S+)$/.exec(authorization) : null;
+          const proof = parsePopAuthorization(request.headers["testmaster-proof"]);
+          if (!bearer || !proof)
+            throw new ContractError(
+              "UNAUTHENTICATED",
+              "Enrollment requires a worker credential and a proof of the worker key",
+            );
+          workers.set(request, { caller: null, enrollment: { token: bearer[1] as string, proof } });
+        } else {
+          const proof = parsePopAuthorization(request.headers.authorization);
+          if (!proof) throw new ContractError("UNAUTHENTICATED", "A worker proof is required");
+          workers.set(request, {
+            caller: options.application.remoteWorkers.identify(
+              proof,
+              { method: request.method, path: request.url },
+              params.id,
+            ),
+            enrollment: null,
+          });
+        }
       } catch (error) {
         budget.tokens--;
         throw error;
@@ -397,6 +416,25 @@ export function createServer(options: ServerOptions): FastifyInstance {
       error: errorBody({ code: "NOT_FOUND", message: "Route not found" }),
     }),
   );
+  // Tunnel sessions and worker streams upgrade on the API origin (ADR-031). They are held to the
+  // same HTTPS rule as every route; the relay authenticates them and refuses anything else.
+  app.server.on("upgrade", (request: IncomingMessage, socket: Duplex, head: Buffer) => {
+    socket.on("error", () => socket.destroy());
+    if (server && resolveTransport(request).scheme !== "https") {
+      const body = JSON.stringify({
+        schemaVersion: "1.0.0",
+        requestId: correlationId(),
+        error: errorBody(
+          new ContractError("FORBIDDEN", "HTTPS is required", { reason: "tls_required" }),
+        ),
+      });
+      socket.end(
+        `HTTP/1.1 403 Forbidden\r\ncontent-type: application/json\r\ncontent-length: ${Buffer.byteLength(body)}\r\nconnection: close\r\n\r\n${body}`,
+      );
+      return;
+    }
+    if (!options.application.handleTunnelUpgrade(request, socket, head)) socket.destroy();
+  });
   app.get("/v1/openapi.json", async (_request, reply) =>
     reply
       .type("application/json")
