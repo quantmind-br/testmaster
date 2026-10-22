@@ -6769,7 +6769,8 @@
         "validation/journeys/m3-history-acceptance.docker.test.ts::distinguishes real intermittent transport loss from intermittent business assertions without inferring cause confirmation from counts",
         "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
         "packages/application/src/flake.test.ts::retains fixed source, fixture, environment and runtime identity while excluding repetition/run IDs",
-        "packages/application/src/flake.test.ts::never treats absent source or measured browser identity as comparable cohort proof"
+        "packages/application/src/flake.test.ts::never treats absent source or measured browser identity as comparable cohort proof",
+        "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 a missing baseline blocks with a candidate, an approved baseline passes and another engine's cell finds none"
       ],
       "oracle": [
         "Real clean source commits A/B bind strict immutable first-Attempt samples; independent alternating HTTP body and socket-loss recorders distinguish suspected flake, deterministic defect and unstable infrastructure. SHA/revision/environment split cohort and windows; separate diagnostic pass cannot enter prior study or rewrite failure."
@@ -6780,7 +6781,9 @@
         "validation/results/m3-acceptance/001-history-gaps-final/created/validation/results/m3-infrastructure-flake.json",
         "validation/journeys/m3-history-selection.docker.test.ts",
         "packages/application/src/flake.test.ts",
-        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-history-flake-quarantine.json"
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-history-flake-quarantine.json",
+        "validation/journeys/m5-matrix-visual.docker.test.ts",
+        "validation/results/M5-03-visual-baselines.json"
       ],
       "code": [
         "packages/application/src/flake.ts",
@@ -6798,7 +6801,8 @@
           "validation/journeys/m3-history-acceptance.docker.test.ts::accumulates verified-source strict product samples, splits changed SHA/revision/environment windows and excludes diagnostic rerun passes",
           "validation/journeys/m3-history-acceptance.docker.test.ts::distinguishes real intermittent transport loss from intermittent business assertions without inferring cause confirmation from counts",
           "packages/application/src/flake.test.ts::retains fixed source, fixture, environment and runtime identity while excluding repetition/run IDs",
-          "packages/application/src/flake.test.ts::never treats absent source or measured browser identity as comparable cohort proof"
+          "packages/application/src/flake.test.ts::never treats absent source or measured browser identity as comparable cohort proof",
+          "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 a missing baseline blocks with a candidate, an approved baseline passes and another engine's cell finds none"
         ],
         "criticalAssertions": [
           {
@@ -6860,20 +6864,14 @@
           {
             "path": "packages/application/src/flake.test.ts",
             "assertion": "expect(flakeIdentity(right).identityHash).not.toBe(flakeIdentity(left).identityHash);"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(comparison.reasons).toContain(\"execution-config-changed\");"
           }
         ]
       },
-      "deferred": [
-        {
-          "milestone": "M5",
-          "scope": "advanced browser matrix (Chromium/Firefox/WebKit) and visual cohorts (J08 matriz)",
-          "specQuote": {
-            "path": "specs/10-validation.md",
-            "text": "VAL-010–013/040; M3/M5"
-          }
-        }
-      ],
-      "note": "Local verified-source-bound M3 cohorts, cause separation, changed SHA/revision/environment windows and historical quarantine controls are proven. The Chromium/Firefox/WebKit advanced matrix cohort is M5 scope and not exercised."
+      "note": "Local verified-source-bound M3 cohorts, cause separation, changed SHA/revision/environment windows and historical quarantine controls are proven. Since M5-03 a browser cell is part of the frozen effective configuration: Chromium, Firefox and WebKit Runs of one test are never compared as the same execution (execution-config-changed), so their histories stay apart (validation/journeys/m5-matrix-visual.docker.test.ts)."
     },
     {
       "id": "J09",
@@ -9299,13 +9297,13 @@
       "milestone": "M3",
       "ownerRole": "Core",
       "status": "verified",
-      "note": "M3 local source-bound cohorts and generated/manual comparison are retained. Real pre-action infrastructure recovery is outside strict samples; assertion failures are not automatically retried, and a distinct diagnostic pass never clears the first failure. Advanced visual/cross-browser execution remains M5, outside this roadmap item’s local acceptance.",
+      "note": "M3 local source-bound cohorts and generated/manual comparison are retained. Real pre-action infrastructure recovery is outside strict samples; assertion failures are not automatically retried, and a distinct diagnostic pass never clears the first failure. Visual and cross-browser execution is verified under M5-03.",
       "scenario": [
         "validation/journeys/m3-history-acceptance.docker.test.ts::accumulates verified-source strict product samples, splits changed SHA/revision/environment windows and excludes diagnostic rerun passes",
         "validation/journeys/m3-history-acceptance.docker.test.ts::distinguishes real intermittent transport loss from intermittent business assertions without inferring cause confirmation from counts",
         "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::retains a real pre-action retry recovery outside strict study samples and reports its nonpassing first attempt",
         "validation/journeys/m3-history-acceptance.docker.test.ts::compares persisted batch members by logical identity, reports additions/removals and refuses ambiguous duplicate matches",
-        "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::reports persisted generated-to-manual model provenance and refuses unsupported visual baseline execution",
+        "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::reports persisted generated-to-manual model provenance",
         "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
         "packages/application/src/flake.test.ts::retains fixed source, fixture, environment and runtime identity while excluding repetition/run IDs",
         "packages/domain/src/flake-statistics.test.ts::reports exact zero-failure bounds for n=%i without invented confirmation",
@@ -9340,7 +9338,7 @@
           "validation/journeys/m3-history-acceptance.docker.test.ts::distinguishes real intermittent transport loss from intermittent business assertions without inferring cause confirmation from counts",
           "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::retains a real pre-action retry recovery outside strict study samples and reports its nonpassing first attempt",
           "validation/journeys/m3-history-acceptance.docker.test.ts::compares persisted batch members by logical identity, reports additions/removals and refuses ambiguous duplicate matches",
-          "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::reports persisted generated-to-manual model provenance and refuses unsupported visual baseline execution",
+          "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::reports persisted generated-to-manual model provenance",
           "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine"
         ],
         "negative": [
@@ -9348,7 +9346,7 @@
           "validation/journeys/m3-history-acceptance.docker.test.ts::distinguishes real intermittent transport loss from intermittent business assertions without inferring cause confirmation from counts",
           "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::retains a real pre-action retry recovery outside strict study samples and reports its nonpassing first attempt",
           "validation/journeys/m3-history-acceptance.docker.test.ts::compares persisted batch members by logical identity, reports additions/removals and refuses ambiguous duplicate matches",
-          "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::reports persisted generated-to-manual model provenance and refuses unsupported visual baseline execution",
+          "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::reports persisted generated-to-manual model provenance",
           "packages/application/src/flake.test.ts::retains fixed source, fixture, environment and runtime identity while excluding repetition/run IDs",
           "packages/domain/src/flake-statistics.test.ts::reports exact zero-failure bounds for n=%i without invented confirmation",
           "packages/application/src/comparisons.test.ts::binds cursors to both immutable comparison inputs and validates limits"
@@ -9405,10 +9403,6 @@
           {
             "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
             "assertion": "expect(membership).toEqual(\n        expect.arrayContaining([\n          { field: expect.any(String), left: left.allMembers[1], right: null },\n          { field: expect.any(String), left: null, right: right.allMembers[0] },\n        ]),\n      );\n      const duplicate = app.comparisons.batches(ids[3]!, ids[1]!);\n      expect(duplicate.comparability).toBe(\"incomparable\");\n      expect(duplicate.reasons).toContain(\"ambiguous-logical-member-key\");\n      expect(duplicate.differences.find((row) => row.field.startsWith(\"ambiguous-\"))!.left).toEqual(\n        ambiguous.allMembers,\n      );\n      expect(app.comparisons.runs(left.allMembers[0]!, left.allMembers[1]!).comparability).toBe(\n        \"incomparable\",\n      );"
-          },
-          {
-            "path": "validation/journeys/m3-history-provenance-acceptance.docker.test.ts",
-            "assertion": "expect(() => app!.tests.create({ projectId, plan: unsupportedVisual })).toThrow(\n        expect.objectContaining({ code: \"CAPABILITY_UNAVAILABLE\" }),\n      );\n      expect(app.tests.list(projectId).map((test) => test.id)).toEqual(beforeTests);"
           },
           {
             "path": "validation/journeys/m3-history-provenance-acceptance.docker.test.ts",
@@ -10830,11 +10824,134 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M5",
       "ownerRole": "Execution",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 the same plan runs on chromium, firefox and webkit cells with distinct identities",
+        "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 a missing baseline blocks with a candidate, an approved baseline passes and another engine's cell finds none",
+        "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 the visual-price-color mutant fails visualMatches with a diff artifact",
+        "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 a masked region change still passes",
+        "packages/application/src/selection.test.ts::ADR-032 runs one Run per matrix cell and refuses a matrix over the batch cell limit",
+        "packages/application/src/visual-baselines.test.ts::the creator cannot approve their own draft and another principal can",
+        "packages/application/src/visual-baselines.test.ts::stored bytes reach a runner only when they still hash to the approved sha256",
+        "packages/contracts/src/browser-plan.test.ts::ADR-032 refuses a mask that hides an element an assertion checks and accepts any other",
+        "packages/runner/src/visual.test.ts::hides a change under a mask painted on both images and keeps a change outside it",
+        "packages/runner/src/visual.test.ts::accepts a differing fraction equal to the threshold and rejects one above it"
+      ],
+      "oracle": [
+        "The same Playwright plan run with --browser chromium, firefox and webkit passes three times; each Run's frozen effective configuration names its engine, its admission runtime identity names that engine with a distinct measured version, and a forwarder in front of the reference shop sees only that engine's User-Agent. A selection of 5 tests over 3 engines × 20 viewports × 2 colour schemes (600 cells) is refused with INVALID_ARGUMENT/matrix_too_large and leaves runs, batches, outbox and leases unchanged, while 3 engines × 2 viewports create exactly the six cartesian cells.",
+        "On the real server profile a visualMatches Run without an approved baseline ends blocked/visual_baseline_missing with visual/<step>-candidate.png; a draft alone keeps it blocked; the creator's approval is refused (FORBIDDEN, self_approval) and a second human with a tests:approve grant approves; the next Run passes with actual and diff images; the same test on Firefox finds no baseline and its Run is not comparable as the same execution (execution-config-changed). Against the visual-price-color mutant the Run fails with assertion_mismatch and a diff image, and an independent pixel oracle finds that most changed pixels are red; with the price cells masked the same mutant passes. A mask equal to an asserted locator is refused at validation."
+      ],
+      "evidence": [
+        "validation/results/M5-03-matrix-engines.json",
+        "validation/results/M5-03-visual-baselines.json",
+        "validation/journeys/m5-matrix-visual.docker.test.ts",
+        "docs/adr/032-matrix-visual-accessibility.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "packages/contracts/src/operations.ts",
+        "packages/application/src/run-config.ts",
+        "packages/application/src/selection.ts",
+        "packages/application/src/runs.ts",
+        "packages/application/src/runtime-identity.ts",
+        "packages/runner/src/browser.ts",
+        "packages/runner/src/harness.ts",
+        "apps/cli/src/matrix.ts",
+        "apps/cli/src/test-execution.ts",
+        "apps/cli/src/selection.ts",
+        "packages/contracts/src/plans.ts",
+        "packages/contracts/src/validation.ts",
+        "packages/contracts/src/entities.ts",
+        "packages/domain/src/visual.ts",
+        "packages/application/src/visual-cell.ts",
+        "packages/application/src/visual-baselines.ts",
+        "packages/application/src/attempt-session.ts",
+        "packages/application/src/comparisons.ts",
+        "packages/runner/src/visual.ts",
+        "packages/runner/src/visual-assertion.ts",
+        "packages/persistence/migrations/sqlite/0026_visual_baselines.sql",
+        "packages/persistence/migrations/postgres/0026_visual_baselines.sql",
+        "apps/server/src/routes/visual-baselines.ts",
+        "apps/cli/src/visual-baselines.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012) on the Linux x64 runner image: Chromium, Firefox and WebKit are the Playwright 1.63 builds pinned in that image, and the engine that drove each page is read from the User-Agent the target received. Visual baselines are bound to the cell digest (engine, viewport, locale, timezone, colour scheme, reduced motion, platform, runner image id), so an image update needs new approvals; no real-device, Windows or macOS rendering is claimed. Firefox and WebKit rely on the container sandbox (B-31).",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 the same plan runs on chromium, firefox and webkit cells with distinct identities",
+          "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 a missing baseline blocks with a candidate, an approved baseline passes and another engine's cell finds none",
+          "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 a masked region change still passes",
+          "packages/application/src/selection.test.ts::ADR-032 runs one Run per matrix cell and refuses a matrix over the batch cell limit"
+        ],
+        "negative": [
+          "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 a missing baseline blocks with a candidate, an approved baseline passes and another engine's cell finds none",
+          "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 the visual-price-color mutant fails visualMatches with a diff artifact",
+          "packages/application/src/selection.test.ts::ADR-032 runs one Run per matrix cell and refuses a matrix over the batch cell limit",
+          "packages/application/src/visual-baselines.test.ts::the creator cannot approve their own draft and another principal can",
+          "packages/contracts/src/browser-plan.test.ts::ADR-032 refuses a mask that hides an element an assertion checks and accepts any other"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(agents, engine).toEqual([engine]);"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(new Set(versions).size).toBe(3);"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(first.verdict, first.runId).toBe(\"blocked/visual_baseline_missing\");"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(stillMissing.verdict, stillMissing.runId).toBe(\"blocked/visual_baseline_missing\");"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(second.verdict, second.runId).toBe(\"passed/assertions_satisfied\");"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(firefox.verdict, firefox.runId).toBe(\"blocked/visual_baseline_missing\");"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(object(object(self.json()).error).details).toMatchObject({ reason: \"self_approval\" });"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(mutant.verdict, mutant.runId).toBe(\"failed/assertion_mismatch\");"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(red / changed.length).toBeGreaterThan(0.5);"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(mutant.verdict, mutant.runId).toBe(\"passed/assertions_satisfied\");"
+          },
+          {
+            "path": "packages/application/src/selection.test.ts",
+            "assertion": "details: { reason: \"matrix_too_large\", cells: 600, limit: 500 },"
+          },
+          {
+            "path": "packages/application/src/selection.test.ts",
+            "assertion": "expect(rows(app)).toEqual(before);"
+          },
+          {
+            "path": "packages/application/src/visual-baselines.test.ts",
+            "assertion": "expect(refused.details).toMatchObject({ reason: \"self_approval\" });"
+          },
+          {
+            "path": "packages/contracts/src/browser-plan.test.ts",
+            "assertion": "rule: \"mask_hides_assertion\","
+          },
+          {
+            "path": "packages/runner/src/visual.test.ts",
+            "assertion": "expect(mask([{ x: 3, y: 4, width: 3, height: 3 }])).toBe(0);"
+          }
+        ]
+      }
     },
     {
       "id": "M5-04",
@@ -17291,13 +17408,14 @@
       "status": "verified",
       "scenario": [
         "validation/journeys/m3-history-acceptance.docker.test.ts::compares persisted batch members by logical identity, reports additions/removals and refuses ambiguous duplicate matches",
-        "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::reports persisted generated-to-manual model provenance and refuses unsupported visual baseline execution",
+        "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::reports persisted generated-to-manual model provenance",
         "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
         "packages/application/src/comparisons.test.ts::does not confuse outcome differences with identity changes",
         "packages/application/src/comparisons.test.ts::binds cursors to both immutable comparison inputs and validates limits",
         "packages/application/src/comparisons.test.ts::excludes outcome and correlation noise from logical keys but retains repetitions",
         "packages/application/src/comparisons.test.ts::reports changed environment and generation model as discriminated reasons without changing outcome identity",
-        "packages/application/src/comparisons.test.ts::reports a changed step as a difference while outcome changes never alter comparability"
+        "packages/application/src/comparisons.test.ts::reports a changed step as a difference while outcome changes never alter comparability",
+        "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 a missing baseline blocks with a candidate, an approved baseline passes and another engine's cell finds none"
       ],
       "oracle": [
         "Immutable run comparisons distinguish outcome from logical identity/revision provenance; pagination binds both inputs; batch logical keys exclude correlation noise and preserve repetition."
@@ -17309,7 +17427,9 @@
         "validation/results/m3-acceptance/001-history-gaps-final/created/validation/results/m3-model-baseline-comparison.json",
         "validation/journeys/m3-history-selection.docker.test.ts",
         "packages/application/src/comparisons.test.ts",
-        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-history-flake-quarantine.json"
+        "validation/results/m3-acceptance/001-docker-m3-5/created/validation/results/m3-history-flake-quarantine.json",
+        "validation/journeys/m5-matrix-visual.docker.test.ts",
+        "validation/results/M5-03-visual-baselines.json"
       ],
       "code": [
         "packages/application/src/comparisons.ts"
@@ -17317,7 +17437,7 @@
       "coverage": {
         "positive": [
           "validation/journeys/m3-history-acceptance.docker.test.ts::compares persisted batch members by logical identity, reports additions/removals and refuses ambiguous duplicate matches",
-          "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::reports persisted generated-to-manual model provenance and refuses unsupported visual baseline execution",
+          "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::reports persisted generated-to-manual model provenance",
           "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
           "packages/application/src/comparisons.test.ts::does not confuse outcome differences with identity changes",
           "packages/application/src/comparisons.test.ts::reports changed environment and generation model as discriminated reasons without changing outcome identity",
@@ -17325,12 +17445,13 @@
         ],
         "negative": [
           "validation/journeys/m3-history-acceptance.docker.test.ts::compares persisted batch members by logical identity, reports additions/removals and refuses ambiguous duplicate matches",
-          "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::reports persisted generated-to-manual model provenance and refuses unsupported visual baseline execution",
+          "validation/journeys/m3-history-provenance-acceptance.docker.test.ts::reports persisted generated-to-manual model provenance",
           "packages/application/src/comparisons.test.ts::binds cursors to both immutable comparison inputs and validates limits",
           "packages/application/src/comparisons.test.ts::does not confuse outcome differences with identity changes",
           "packages/application/src/comparisons.test.ts::excludes outcome and correlation noise from logical keys but retains repetitions",
           "packages/application/src/comparisons.test.ts::reports changed environment and generation model as discriminated reasons without changing outcome identity",
-          "packages/application/src/comparisons.test.ts::reports a changed step as a difference while outcome changes never alter comparability"
+          "packages/application/src/comparisons.test.ts::reports a changed step as a difference while outcome changes never alter comparability",
+          "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 a missing baseline blocks with a candidate, an approved baseline passes and another engine's cell finds none"
         ],
         "criticalAssertions": [
           {
@@ -17340,10 +17461,6 @@
           {
             "path": "validation/journeys/m3-history-acceptance.docker.test.ts",
             "assertion": "expect(membership).toEqual(\n        expect.arrayContaining([\n          { field: expect.any(String), left: left.allMembers[1], right: null },\n          { field: expect.any(String), left: null, right: right.allMembers[0] },\n        ]),\n      );\n      const duplicate = app.comparisons.batches(ids[3]!, ids[1]!);\n      expect(duplicate.comparability).toBe(\"incomparable\");\n      expect(duplicate.reasons).toContain(\"ambiguous-logical-member-key\");\n      expect(duplicate.differences.find((row) => row.field.startsWith(\"ambiguous-\"))!.left).toEqual(\n        ambiguous.allMembers,\n      );\n      expect(app.comparisons.runs(left.allMembers[0]!, left.allMembers[1]!).comparability).toBe(\n        \"incomparable\",\n      );"
-          },
-          {
-            "path": "validation/journeys/m3-history-provenance-acceptance.docker.test.ts",
-            "assertion": "expect(() => app!.tests.create({ projectId, plan: unsupportedVisual })).toThrow(\n        expect.objectContaining({ code: \"CAPABILITY_UNAVAILABLE\" }),\n      );\n      expect(app.tests.list(projectId).map((test) => test.id)).toEqual(beforeTests);"
           },
           {
             "path": "validation/journeys/m3-history-provenance-acceptance.docker.test.ts",
@@ -17372,20 +17489,14 @@
           {
             "path": "packages/application/src/comparisons.test.ts",
             "assertion": ").toEqual([{ field: \"steps\", left: [{ status: \"passed\" }], right: [{ status: \"failed\" }] }]);"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(comparison.reasons).toContain(\"execution-config-changed\");"
           }
         ]
       },
-      "deferred": [
-        {
-          "milestone": "M5",
-          "scope": "visual baseline execution and cross-browser visual comparison (matriz cross-browser visual)",
-          "specQuote": {
-            "path": "specs/10-validation.md",
-            "text": "**M5 — remote/distributed/matrix/advanced/memory** | Workers remotos com leases/fencing/partições, tunnels, issue import/link; matriz cross-browser visual/a11y"
-          }
-        }
-      ],
-      "note": "Run and batch comparison discriminates revision, environment, execution config, admission provenance, generation model and step differences; outcome is a difference, never identity. A persisted Run comparison carrying a visual baseline is CAPABILITY_UNAVAILABLE before persistence; baseline-difference metadata is not visual execution acceptance (M5)."
+      "note": "Run and batch comparison discriminates revision, environment, execution config, admission provenance, generation model and step differences; outcome is a difference, never identity. Since M5-03 a Run comparison reports the visual baselines each side compared against as frozen at admission, and Runs of different browser cells differ by execution configuration (validation/journeys/m5-matrix-visual.docker.test.ts)."
     },
     {
       "id": "REQ-029",
@@ -18444,11 +18555,66 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M5",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 the same plan runs on chromium, firefox and webkit cells with distinct identities",
+        "packages/application/src/selection.test.ts::ADR-032 runs one Run per matrix cell and refuses a matrix over the batch cell limit",
+        "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 a missing baseline blocks with a candidate, an approved baseline passes and another engine's cell finds none"
+      ],
+      "oracle": [
+        "The same Playwright plan run with --browser chromium, firefox and webkit passes three times; each Run's frozen effective configuration names its engine, its admission runtime identity names that engine with a distinct measured version, and a forwarder in front of the reference shop sees only that engine's User-Agent. A selection of 5 tests over 3 engines × 20 viewports × 2 colour schemes (600 cells) is refused with INVALID_ARGUMENT/matrix_too_large and leaves runs, batches, outbox and leases unchanged, while 3 engines × 2 viewports create exactly the six cartesian cells."
+      ],
+      "evidence": [
+        "validation/results/M5-03-matrix-engines.json",
+        "validation/results/M5-03-visual-baselines.json",
+        "validation/journeys/m5-matrix-visual.docker.test.ts",
+        "docs/adr/032-matrix-visual-accessibility.md"
+      ],
+      "code": [
+        "packages/contracts/src/operations.ts",
+        "packages/application/src/run-config.ts",
+        "packages/application/src/selection.ts",
+        "packages/application/src/runs.ts",
+        "packages/application/src/runtime-identity.ts",
+        "packages/runner/src/browser.ts",
+        "packages/runner/src/harness.ts",
+        "apps/cli/src/matrix.ts",
+        "apps/cli/src/test-execution.ts",
+        "apps/cli/src/selection.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012) on the Linux x64 runner image: Chromium, Firefox and WebKit are the Playwright 1.63 builds pinned in that image, and the engine that drove each page is read from the User-Agent the target received. Visual baselines are bound to the cell digest (engine, viewport, locale, timezone, colour scheme, reduced motion, platform, runner image id), so an image update needs new approvals; no real-device, Windows or macOS rendering is claimed. Firefox and WebKit rely on the container sandbox (B-31).",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 the same plan runs on chromium, firefox and webkit cells with distinct identities",
+          "packages/application/src/selection.test.ts::ADR-032 runs one Run per matrix cell and refuses a matrix over the batch cell limit"
+        ],
+        "negative": [
+          "packages/application/src/selection.test.ts::ADR-032 runs one Run per matrix cell and refuses a matrix over the batch cell limit",
+          "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 a missing baseline blocks with a candidate, an approved baseline passes and another engine's cell finds none"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(agents, engine).toEqual([engine]);"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(new Set(versions).size).toBe(3);"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(firefox.verdict, firefox.runId).toBe(\"blocked/visual_baseline_missing\");"
+          },
+          {
+            "path": "packages/application/src/selection.test.ts",
+            "assertion": "details: { reason: \"matrix_too_large\", cells: 600, limit: 500 },"
+          },
+          {
+            "path": "packages/application/src/selection.test.ts",
+            "assertion": "expect(rows(app)).toEqual(before);"
+          }
+        ]
+      }
     },
     {
       "id": "REQ-046",
@@ -18456,11 +18622,92 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M5",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 a missing baseline blocks with a candidate, an approved baseline passes and another engine's cell finds none",
+        "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 the visual-price-color mutant fails visualMatches with a diff artifact",
+        "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 a masked region change still passes",
+        "packages/application/src/visual-baselines.test.ts::the creator cannot approve their own draft and another principal can",
+        "packages/application/src/visual-baselines.test.ts::stored bytes reach a runner only when they still hash to the approved sha256",
+        "packages/contracts/src/browser-plan.test.ts::ADR-032 refuses a mask that hides an element an assertion checks and accepts any other"
+      ],
+      "oracle": [
+        "On the real server profile a visualMatches Run without an approved baseline ends blocked/visual_baseline_missing with visual/<step>-candidate.png; a draft alone keeps it blocked; the creator's approval is refused (FORBIDDEN, self_approval) and a second human with a tests:approve grant approves; the next Run passes with actual and diff images; the same test on Firefox finds no baseline and its Run is not comparable as the same execution (execution-config-changed). Against the visual-price-color mutant the Run fails with assertion_mismatch and a diff image, and an independent pixel oracle finds that most changed pixels are red; with the price cells masked the same mutant passes. A mask equal to an asserted locator is refused at validation."
+      ],
+      "evidence": [
+        "validation/results/M5-03-visual-baselines.json",
+        "validation/journeys/m5-matrix-visual.docker.test.ts",
+        "docs/adr/032-matrix-visual-accessibility.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "packages/contracts/src/plans.ts",
+        "packages/contracts/src/validation.ts",
+        "packages/contracts/src/entities.ts",
+        "packages/domain/src/visual.ts",
+        "packages/application/src/visual-cell.ts",
+        "packages/application/src/visual-baselines.ts",
+        "packages/application/src/attempt-session.ts",
+        "packages/application/src/comparisons.ts",
+        "packages/runner/src/visual.ts",
+        "packages/runner/src/visual-assertion.ts",
+        "packages/persistence/migrations/sqlite/0026_visual_baselines.sql",
+        "packages/persistence/migrations/postgres/0026_visual_baselines.sql",
+        "apps/server/src/routes/visual-baselines.ts",
+        "apps/cli/src/visual-baselines.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012) on the Linux x64 runner image: Chromium, Firefox and WebKit are the Playwright 1.63 builds pinned in that image, and the engine that drove each page is read from the User-Agent the target received. Visual baselines are bound to the cell digest (engine, viewport, locale, timezone, colour scheme, reduced motion, platform, runner image id), so an image update needs new approvals; no real-device, Windows or macOS rendering is claimed. Firefox and WebKit rely on the container sandbox (B-31).",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 a missing baseline blocks with a candidate, an approved baseline passes and another engine's cell finds none",
+          "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 a masked region change still passes"
+        ],
+        "negative": [
+          "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 a missing baseline blocks with a candidate, an approved baseline passes and another engine's cell finds none",
+          "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 the visual-price-color mutant fails visualMatches with a diff artifact",
+          "packages/application/src/visual-baselines.test.ts::the creator cannot approve their own draft and another principal can",
+          "packages/application/src/visual-baselines.test.ts::stored bytes reach a runner only when they still hash to the approved sha256",
+          "packages/contracts/src/browser-plan.test.ts::ADR-032 refuses a mask that hides an element an assertion checks and accepts any other"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(first.verdict, first.runId).toBe(\"blocked/visual_baseline_missing\");"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(stillMissing.verdict, stillMissing.runId).toBe(\"blocked/visual_baseline_missing\");"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(second.verdict, second.runId).toBe(\"passed/assertions_satisfied\");"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(object(object(self.json()).error).details).toMatchObject({ reason: \"self_approval\" });"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(mutant.verdict, mutant.runId).toBe(\"failed/assertion_mismatch\");"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(red / changed.length).toBeGreaterThan(0.5);"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(mutant.verdict, mutant.runId).toBe(\"passed/assertions_satisfied\");"
+          },
+          {
+            "path": "packages/application/src/visual-baselines.test.ts",
+            "assertion": "expect(refused.details).toMatchObject({ reason: \"self_approval\" });"
+          },
+          {
+            "path": "packages/contracts/src/browser-plan.test.ts",
+            "assertion": "rule: \"mask_hides_assertion\","
+          }
+        ]
+      }
     },
     {
       "id": "REQ-047",
@@ -28786,11 +29033,55 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M5",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 the same plan runs on chromium, firefox and webkit cells with distinct identities",
+        "packages/application/src/selection.test.ts::ADR-032 runs one Run per matrix cell and refuses a matrix over the batch cell limit"
+      ],
+      "oracle": [
+        "The same Playwright plan run with --browser chromium, firefox and webkit passes three times; each Run's frozen effective configuration names its engine, its admission runtime identity names that engine with a distinct measured version, and a forwarder in front of the reference shop sees only that engine's User-Agent. A selection of 5 tests over 3 engines × 20 viewports × 2 colour schemes (600 cells) is refused with INVALID_ARGUMENT/matrix_too_large and leaves runs, batches, outbox and leases unchanged, while 3 engines × 2 viewports create exactly the six cartesian cells."
+      ],
+      "evidence": [
+        "validation/results/M5-03-matrix-engines.json",
+        "validation/journeys/m5-matrix-visual.docker.test.ts",
+        "docs/adr/032-matrix-visual-accessibility.md"
+      ],
+      "code": [
+        "packages/contracts/src/operations.ts",
+        "packages/application/src/run-config.ts",
+        "packages/application/src/selection.ts",
+        "packages/application/src/runs.ts",
+        "packages/application/src/runtime-identity.ts",
+        "packages/runner/src/browser.ts",
+        "packages/runner/src/harness.ts",
+        "apps/cli/src/matrix.ts",
+        "apps/cli/src/test-execution.ts",
+        "apps/cli/src/selection.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012) on the Linux x64 runner image: Chromium, Firefox and WebKit are the Playwright 1.63 builds pinned in that image, and the engine that drove each page is read from the User-Agent the target received. Visual baselines are bound to the cell digest (engine, viewport, locale, timezone, colour scheme, reduced motion, platform, runner image id), so an image update needs new approvals; no real-device, Windows or macOS rendering is claimed. Firefox and WebKit rely on the container sandbox (B-31).",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 the same plan runs on chromium, firefox and webkit cells with distinct identities",
+          "packages/application/src/selection.test.ts::ADR-032 runs one Run per matrix cell and refuses a matrix over the batch cell limit"
+        ],
+        "negative": [
+          "packages/application/src/selection.test.ts::ADR-032 runs one Run per matrix cell and refuses a matrix over the batch cell limit"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(agents, engine).toEqual([engine]);"
+          },
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(new Set(versions).size).toBe(3);"
+          },
+          {
+            "path": "packages/application/src/selection.test.ts",
+            "assertion": "details: { reason: \"matrix_too_large\", cells: 600, limit: 500 },"
+          }
+        ]
+      }
     },
     {
       "id": "VAL-041",
@@ -28802,7 +29093,8 @@
       "scenario": [],
       "oracle": [],
       "evidence": [],
-      "code": []
+      "code": [],
+      "note": "The visual half is in place since M5-03: baselines are approved by a reviewer other than their creator, captures run with animations disabled and the caret hidden, masks are bounded (1 to 10) and may not hide an asserted element (validation/journeys/m5-matrix-visual.docker.test.ts, validation/results/M5-03-visual-baselines.json). The accessibility half (automated audit, non-automatable criteria reported unverified) closes with M5-04."
     },
     {
       "id": "VAL-042",
@@ -29829,13 +30121,13 @@
       "id": "run-comparison",
       "milestone": "M3",
       "requirements": ["REQ-028", "API-008"],
-      "gate": "M3 persisted immutable Run and generated/manual provenance comparison exercised; real visual-baseline-bearing comparison remains M5 residual in REQ-028."
+      "gate": "M3 persisted immutable Run and generated/manual provenance comparison exercised; Run comparisons report the frozen visual baselines and separate browser cells since M5-03."
     },
     {
       "id": "batch-comparison",
       "milestone": "M3",
       "requirements": ["REQ-028", "API-008"],
-      "gate": "M3 persisted logical BatchRun matching, additions/removals and ambiguity acceptance retained; real visual-baseline-bearing comparison remains M5 residual in REQ-028."
+      "gate": "M3 persisted logical BatchRun matching, additions/removals and ambiguity acceptance retained; Run comparisons report the frozen visual baselines and separate browser cells since M5-03."
     },
     {
       "id": "flake-study",
@@ -29996,14 +30288,14 @@
     {
       "id": "matrix-advanced",
       "milestone": "M5",
-      "requirements": ["REQ-045", "API-008"],
-      "gate": "M5 normative acceptance; capability unavailable until milestone"
+      "requirements": ["M5-03", "REQ-045", "VAL-040", "API-008"],
+      "gate": "M5 Chromium, Firefox and WebKit matrix cells (ADR-032); positive/negative evidence and protected assertions"
     },
     {
       "id": "visualMatches",
       "milestone": "M5",
-      "requirements": ["REQ-046", "API-008"],
-      "gate": "M5 normative acceptance; capability unavailable until milestone"
+      "requirements": ["M5-03", "REQ-046", "API-008"],
+      "gate": "M5 visual comparison against approved baselines (ADR-032); positive/negative evidence and protected assertions"
     },
     {
       "id": "accessibilityViolations",
@@ -30020,8 +30312,8 @@
     {
       "id": "visual-baselines",
       "milestone": "M5",
-      "requirements": ["REQ-046", "API-008"],
-      "gate": "M5 normative acceptance; capability unavailable until milestone"
+      "requirements": ["M5-03", "REQ-046", "API-008"],
+      "gate": "M5 visual baselines approved by a second reviewer (ADR-032); positive/negative evidence and protected assertions"
     },
     {
       "id": "sso",
