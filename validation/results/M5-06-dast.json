@@ -1,0 +1,419 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "M5-06-dast",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-22T20:46:15.220Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "M5-06-dast",
+        "--base-url",
+        "http://127.0.0.1:36431",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_7f22dceb-0c3c-4e23-843c-30db11e918f4",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "probe",
+        "create",
+        "--file",
+        "/tmp/tm-m1-p9V93B/repo/search-dast.probe.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_fce42fb6-2c33-4ab7-ae42-ffd46071f4ea",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1655c-b856-760e-ba1d-2622c5e90114",
+        "--wait",
+        "--timeout",
+        "900",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "signal": null,
+      "requestId": "cli_bdf7a896-4a27-4a3c-9437-47d92b4ab7d2",
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "A dast probe requires a current bound securityProbe approval",
+        "retryable": false,
+        "details": {
+          "reasonCode": "approval_required",
+          "actions": [
+            {
+              "stepId": "dast",
+              "risk": "securityProbe",
+              "basis": "dast probe"
+            }
+          ],
+          "requiredApprovers": 1,
+          "separationOfDuties": false,
+          "binding": {
+            "revisionHash": "093b012e885a28a6b563cac6477a7a1556099bfa9d9c391a98b6758a43227807",
+            "environmentRevisionId": "evr_01a1655c-b567-7527-848c-5352bc6042d2",
+            "originSet": [
+              "http://127.0.0.1:36431"
+            ],
+            "actionSet": [
+              "securityProbe"
+            ],
+            "policyHash": "fc8d9d616974fb656f7630c8527c1c54d689ee660e9bd23e71777f52dd66c82f",
+            "actorId": "usr_01a1655c-b55a-760b-915f-e858610a7304",
+            "limits": {
+              "executionTimeoutMs": 150000,
+              "attemptTimeoutMs": 120000,
+              "stepTimeoutMs": 5000,
+              "networkRequestTimeoutMs": 90000,
+              "preparationTimeoutMs": 120000,
+              "collectionGraceMs": 60000,
+              "analysisGraceMs": 60000,
+              "maxAttempts": 1,
+              "bodyBytes": 10485760,
+              "artifactBytes": 67108864,
+              "attemptArtifactBytes": 268435456,
+              "logBytes": 10485760
+            }
+          }
+        },
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "approval",
+        "create",
+        "--revision-hash",
+        "093b012e885a28a6b563cac6477a7a1556099bfa9d9c391a98b6758a43227807",
+        "--environment-revision",
+        "evr_01a1655c-b567-7527-848c-5352bc6042d2",
+        "--policy-hash",
+        "fc8d9d616974fb656f7630c8527c1c54d689ee660e9bd23e71777f52dd66c82f",
+        "--origin",
+        "http://127.0.0.1:36431",
+        "--action",
+        "securityProbe",
+        "--reason",
+        "Probe the reference app",
+        "--limits",
+        "{\"executionTimeoutMs\":150000,\"attemptTimeoutMs\":120000,\"stepTimeoutMs\":5000,\"networkRequestTimeoutMs\":90000,\"preparationTimeoutMs\":120000,\"collectionGraceMs\":60000,\"analysisGraceMs\":60000,\"maxAttempts\":1,\"bodyBytes\":10485760,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"logBytes\":10485760}",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_44f82648-b0ec-4530-a5d9-990a21bab220",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1655c-b856-760e-ba1d-2622c5e90114",
+        "--wait",
+        "--timeout",
+        "900",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_36ab586d-11d8-41e0-822b-a0e3872594cb",
+      "warnings": [
+        "--timeout and --request-timeout do not end a run this command executes: the wait continues until the run completes or the command is interrupted. The limit applies only to waits on worker-owned runs."
+      ],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "steps",
+        "run_01a1655c-cdd7-77f6-b9d4-b0c74f8c482b",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_6f982ca6-7b85-4fc2-886b-67b4c481b78e",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1655c-b856-760e-ba1d-2622c5e90114",
+        "--wait",
+        "--timeout",
+        "900",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "signal": null,
+      "requestId": "cli_c276fffc-9de6-4d0e-9909-d56f864afc31",
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "A dast probe requires a current bound securityProbe approval",
+        "retryable": false,
+        "details": {
+          "reasonCode": "approval_required",
+          "actions": [
+            {
+              "stepId": "dast",
+              "risk": "securityProbe",
+              "basis": "dast probe"
+            }
+          ],
+          "requiredApprovers": 1,
+          "separationOfDuties": false,
+          "binding": {
+            "revisionHash": "093b012e885a28a6b563cac6477a7a1556099bfa9d9c391a98b6758a43227807",
+            "environmentRevisionId": "evr_01a1655c-b567-7527-848c-5352bc6042d2",
+            "originSet": [
+              "http://127.0.0.1:36431"
+            ],
+            "actionSet": [
+              "securityProbe"
+            ],
+            "policyHash": "fc8d9d616974fb656f7630c8527c1c54d689ee660e9bd23e71777f52dd66c82f",
+            "actorId": "usr_01a1655c-b55a-760b-915f-e858610a7304",
+            "limits": {
+              "executionTimeoutMs": 150000,
+              "attemptTimeoutMs": 120000,
+              "stepTimeoutMs": 5000,
+              "networkRequestTimeoutMs": 90000,
+              "preparationTimeoutMs": 120000,
+              "collectionGraceMs": 60000,
+              "analysisGraceMs": 60000,
+              "maxAttempts": 1,
+              "bodyBytes": 10485760,
+              "artifactBytes": 67108864,
+              "attemptArtifactBytes": 268435456,
+              "logBytes": 10485760
+            }
+          }
+        },
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "approval",
+        "create",
+        "--revision-hash",
+        "093b012e885a28a6b563cac6477a7a1556099bfa9d9c391a98b6758a43227807",
+        "--environment-revision",
+        "evr_01a1655c-b567-7527-848c-5352bc6042d2",
+        "--policy-hash",
+        "fc8d9d616974fb656f7630c8527c1c54d689ee660e9bd23e71777f52dd66c82f",
+        "--origin",
+        "http://127.0.0.1:36431",
+        "--action",
+        "securityProbe",
+        "--reason",
+        "Probe the reference app",
+        "--limits",
+        "{\"executionTimeoutMs\":150000,\"attemptTimeoutMs\":120000,\"stepTimeoutMs\":5000,\"networkRequestTimeoutMs\":90000,\"preparationTimeoutMs\":120000,\"collectionGraceMs\":60000,\"analysisGraceMs\":60000,\"maxAttempts\":1,\"bodyBytes\":10485760,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"logBytes\":10485760}",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_28e8d9f1-632e-4b78-a0ad-1a0d1910f4ff",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1655c-b856-760e-ba1d-2622c5e90114",
+        "--wait",
+        "--timeout",
+        "900",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "requestId": "cli_e2a4f159-ebd4-45ad-987a-6c542b574214",
+      "warnings": [
+        "--timeout and --request-timeout do not end a run this command executes: the wait continues until the run completes or the command is interrupted. The limit applies only to waits on worker-owned runs."
+      ],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "steps",
+        "run_01a1655d-1688-7222-8601-725423f93dda",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d82deb69-5f21-40c1-88ad-63c1affda06a",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a1655c-cdd7-77f6-b9d4-b0c74f8c482b",
+    "run_01a1655d-1688-7222-8601-725423f93dda"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "dastProbe",
+      "healthy": {
+        "exitCode": 0,
+        "runId": "run_01a1655c-cdd7-77f6-b9d4-b0c74f8c482b",
+        "outcome": "passed/assertions_satisfied",
+        "steps": {
+          "dast:spider": {
+            "status": "passed",
+            "check": null,
+            "evidence": []
+          },
+          "dast:active-scan": {
+            "status": "passed",
+            "check": null,
+            "evidence": []
+          },
+          "dast:high": {
+            "status": "passed",
+            "check": null,
+            "evidence": []
+          },
+          "dast:medium": {
+            "status": "passed",
+            "check": null,
+            "evidence": [
+              "dast/alerts.json"
+            ]
+          },
+          "dast:low": {
+            "status": "passed",
+            "check": null,
+            "evidence": [
+              "dast/alerts.json"
+            ]
+          },
+          "dast:informational": {
+            "status": "passed",
+            "check": null,
+            "evidence": []
+          },
+          "dast": {
+            "status": "passed",
+            "check": null,
+            "evidence": []
+          }
+        }
+      },
+      "reflected": {
+        "exitCode": 1,
+        "runId": "run_01a1655d-1688-7222-8601-725423f93dda",
+        "outcome": "failed/assertion_mismatch",
+        "steps": {
+          "dast:spider": {
+            "status": "passed",
+            "check": null,
+            "evidence": []
+          },
+          "dast:active-scan": {
+            "status": "passed",
+            "check": null,
+            "evidence": []
+          },
+          "dast:high": {
+            "status": "failed",
+            "check": "dast_alert",
+            "evidence": [
+              "dast/alerts.json"
+            ]
+          },
+          "dast:medium": {
+            "status": "passed",
+            "check": null,
+            "evidence": [
+              "dast/alerts.json"
+            ]
+          },
+          "dast:low": {
+            "status": "passed",
+            "check": null,
+            "evidence": [
+              "dast/alerts.json"
+            ]
+          },
+          "dast:informational": {
+            "status": "passed",
+            "check": null,
+            "evidence": []
+          },
+          "dast": {
+            "status": "failed",
+            "check": "dast_alert",
+            "evidence": []
+          }
+        }
+      },
+      "highAlerts": [
+        "Cross Site Scripting (Reflected)"
+      ]
+    }
+  ],
+  "limitations": [
+    "OWASP ZAP 2.17.0 in the pinned optional DAST image, api-minimal scan policy, one start path."
+  ]
+}

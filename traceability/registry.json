@@ -7568,11 +7568,103 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M5",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 the visual-price-color mutant fails visualMatches with a diff artifact",
+        "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 a missing baseline blocks with a candidate, an approved baseline passes and another engine's cell finds none",
+        "validation/journeys/m5-accessibility.docker.test.ts::M5-04 the a11y-missing-label mutant fails with a serious violation artifact",
+        "validation/journeys/m5-accessibility.docker.test.ts::M5-04 the healthy shop passes with automated_scan_only limitation",
+        "validation/journeys/m5-api-property.docker.test.ts::M5-05 a healthy shop passes, a renamed field fails response_schema_conformance with a replayable reproduction",
+        "validation/journeys/m5-api-property.docker.test.ts::M5-05 a degraded health answer and an orders endpoint that ignores authentication fail their checks",
+        "validation/journeys/m5-security-load.docker.test.ts::M5-06 an access probe passes when the intruder is refused and fails when an anonymous caller reads orders",
+        "validation/journeys/m5-security-load.docker.test.ts::M5-06 a DAST probe passes the escaped search page and fails on the reflected XSS mutant",
+        "validation/journeys/m5-security-load.docker.test.ts::M5-06 a load probe reports latency, stops on its error-rate condition, cancels, and is refused in production",
+        "packages/application/src/probes.test.ts::REQ-048 REQ-049 a production environment never receives DAST or load traffic, even with a bound approval",
+        "packages/application/src/probes.test.ts::VAL-043 an approval for the environment's origins does not cover a target override"
+      ],
+      "oracle": [
+        "Advanced quality runs against the controlled reference shop only, each security or load probe under a bound securityProbe approval consumed by one Run: an approved visual baseline catches the visual-price-color mutant per cell (M5-03), the a11y-missing-label mutant fails with a real serious violation while the healthy shop passes as an automated scan only (M5-04), property probes observe the schema-field-renamed and orders-auth-bypass mutants (M5-05), and access, DAST and load probes find the authorization bypass, the reflected XSS and the error-rate stop condition (M5-06), with a long load test cancelled.",
+        "A production environment refuses DAST and load probes with POLICY_DENIED production_load_refused even with a bound securityProbe approval, before any other approval is consulted, while an access probe is not refused for production; a Run aimed at another origin through --target-url is refused with approval_required and its binding names that origin, and an approval naming only the environment's origins does not admit it."
+      ],
+      "evidence": [
+        "validation/results/M5-03-visual-baselines.json",
+        "validation/results/M5-04-accessibility-mutant.json",
+        "validation/results/M5-04-accessibility-healthy.json",
+        "validation/results/M5-05-property-openapi.json",
+        "validation/results/M5-05-property-auth.json",
+        "validation/results/M5-06-access.json",
+        "validation/results/M5-06-dast.json",
+        "validation/results/M5-06-load.json",
+        "validation/journeys/m5-security-load.docker.test.ts",
+        "docs/adr/033-api-probes.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "packages/application/src/approvals.ts",
+        "packages/application/src/attempt-session.ts",
+        "packages/application/src/probes.ts",
+        "packages/application/src/runner-kinds.ts",
+        "packages/application/src/runs.ts",
+        "packages/contracts/src/m5/probes.ts",
+        "packages/runner/src/accessibility.ts",
+        "packages/runner/src/visual.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012) on the local reference shop, Linux x64, rootful Docker: OWASP ZAP 2.17.0 in the optional pinned testmaster-runner-zap image with the api-minimal policy and one start path; access and load in the Node runner image. A DAST pass is not a penetration test; load and target shared one host, so latency figures describe this machine. J18 composes the M5-03 to M5-06 journeys on the same reference shop; there is no separate admin enablement step because these capabilities are enabled per installation and each probe Run is approved individually.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 a missing baseline blocks with a candidate, an approved baseline passes and another engine's cell finds none",
+          "validation/journeys/m5-accessibility.docker.test.ts::M5-04 the healthy shop passes with automated_scan_only limitation",
+          "validation/journeys/m5-api-property.docker.test.ts::M5-05 a healthy shop passes, a renamed field fails response_schema_conformance with a replayable reproduction",
+          "validation/journeys/m5-security-load.docker.test.ts::M5-06 an access probe passes when the intruder is refused and fails when an anonymous caller reads orders",
+          "validation/journeys/m5-security-load.docker.test.ts::M5-06 a DAST probe passes the escaped search page and fails on the reflected XSS mutant"
+        ],
+        "negative": [
+          "validation/journeys/m5-matrix-visual.docker.test.ts::M5-03 the visual-price-color mutant fails visualMatches with a diff artifact",
+          "validation/journeys/m5-accessibility.docker.test.ts::M5-04 the a11y-missing-label mutant fails with a serious violation artifact",
+          "validation/journeys/m5-api-property.docker.test.ts::M5-05 a degraded health answer and an orders endpoint that ignores authentication fail their checks",
+          "validation/journeys/m5-security-load.docker.test.ts::M5-06 a load probe reports latency, stops on its error-rate condition, cancels, and is refused in production",
+          "packages/application/src/probes.test.ts::REQ-048 REQ-049 a production environment never receives DAST or load traffic, even with a bound approval",
+          "packages/application/src/probes.test.ts::VAL-043 an approval for the environment's origins does not cover a target override"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m5-matrix-visual.docker.test.ts",
+            "assertion": "expect(mutant.verdict, mutant.runId).toBe(\"failed/assertion_mismatch\");"
+          },
+          {
+            "path": "validation/journeys/m5-accessibility.docker.test.ts",
+            "assertion": "expect(label?.impact, engine).toBe(\"critical\");"
+          },
+          {
+            "path": "validation/journeys/m5-api-property.docker.test.ts",
+            "assertion": "steps: { \"property:GET /api/orders\": { status: \"failed\", check: \"ignored_auth\" } },"
+          },
+          {
+            "path": "validation/journeys/m5-security-load.docker.test.ts",
+            "assertion": "check: \"access_granted\","
+          },
+          {
+            "path": "validation/journeys/m5-security-load.docker.test.ts",
+            "assertion": "\"dast:high\": { status: \"failed\", check: \"dast_alert\" },"
+          },
+          {
+            "path": "validation/journeys/m5-security-load.docker.test.ts",
+            "assertion": "load: { status: \"failed\", check: \"stop_condition\" },"
+          },
+          {
+            "path": "validation/journeys/m5-security-load.docker.test.ts",
+            "assertion": "expect(cancelled).toMatchObject({ runId, outcome: \"cancelled/user_cancelled\" });"
+          },
+          {
+            "path": "validation/journeys/m5-security-load.docker.test.ts",
+            "assertion": "details: { reasonCode: \"production_load_refused\", probe: \"load\" },"
+          },
+          {
+            "path": "validation/journeys/m5-security-load.docker.test.ts",
+            "assertion": "\"https://load-target.example\","
+          }
+        ]
+      }
     },
     {
       "id": "M0-01",
@@ -11146,11 +11238,110 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M5",
       "ownerRole": "Security",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-security-load.docker.test.ts::M5-06 an access probe passes when the intruder is refused and fails when an anonymous caller reads orders",
+        "validation/journeys/m5-security-load.docker.test.ts::M5-06 a DAST probe passes the escaped search page and fails on the reflected XSS mutant",
+        "validation/journeys/m5-security-load.docker.test.ts::M5-06 a load probe reports latency, stops on its error-rate condition, cancels, and is refused in production",
+        "packages/application/src/probes.test.ts::REQ-048 REQ-049 a production environment never receives DAST or load traffic, even with a bound approval",
+        "packages/application/src/probes.test.ts::REQ-049 a load test whose schedule outlasts the Attempt is refused before it is queued",
+        "packages/application/src/probes.test.ts::VAL-043 an approval for the environment's origins does not cover a target override",
+        "packages/application/src/probes.test.ts::REQ-048 an access intruder holding an owner credential is refused",
+        "packages/runner/src/access.test.ts::passes an operation the intruder is refused on and the owner may use",
+        "packages/runner/src/access.test.ts::fails an intruder that receives data, keeping credentials out of the artifact",
+        "packages/runner/src/access.test.ts::is inconclusive when the owner is refused too",
+        "packages/runner/src/access.test.ts::refuses a path that leaves the target origin before sending anything",
+        "packages/runner/src/load.test.ts::sends at the target rate over a stage and reports a measured summary",
+        "packages/runner/src/load.test.ts::stops sending and fails when the rolling p95 exceeds its limit",
+        "packages/runner/src/load.test.ts::fails on the rolling error rate of an erroring target",
+        "packages/runner/src/load.test.ts::sends exactly the budgeted requests and withholds percentiles that lack samples",
+        "packages/runner/src/load.test.ts::counts a due request that finds the concurrency bound full as saturated and does not send it",
+        "packages/runner/src/load.test.ts::reports a cancel as cancelled and sends nothing after it",
+        "packages/runner/src/load.test.ts::refuses a path that leaves the target origin before sending anything",
+        "python/tests/unit/test_zap_adapter.py::test_risks_at_or_above_fail_on_fail_the_matching_steps_and_the_aggregate",
+        "python/tests/unit/test_zap_adapter.py::test_api_minimal_enables_only_the_injection_and_traversal_rules",
+        "python/tests/unit/test_zap_adapter.py::test_alerts_keep_only_triage_fields_and_never_a_secret",
+        "python/tests/unit/test_zap_adapter.py::test_a_secret_that_reaches_an_artifact_is_refused",
+        "python/tests/unit/test_zap_adapter.py::test_a_spider_that_finds_nothing_is_inconclusive_and_proves_nothing_about_risks",
+        "python/tests/unit/test_zap_adapter.py::test_scans_are_polled_until_done_with_no_deadline",
+        "python/tests/unit/test_zap_adapter.py::test_credentials_become_request_header_replacer_rules"
+      ],
+      "oracle": [
+        "On the healthy reference shop an access probe for GET /api/orders with the owner's bearer secret and an anonymous intruder passes (intruder 401, owner 200); against the orders-auth-bypass mutant the step fails with access_granted and seals access/1.json with intruder and owner statuses 200; no sealed bundle contains the owner's token. An intruder holding an owner credential is refused at creation.",
+        "A DAST probe spidering /search?q=shoes with an api-minimal active scan and failOn high passes on the escaped healthy search page (medium header alerts reported, not failing); against the search-reflected-xss mutant dast:high fails with dast_alert and dast/alerts.json lists a high Cross Site Scripting (Reflected) alert on /search.",
+        "A two-stage load probe on GET /api/products passes with zero errors and a load/summary.json reporting the target's count, p50/p95, the runner's scheduler lag over every request, the hardware, the request and each stage's rate; anonymous GET /api/orders at 50 rps fails stage 1 and the aggregate with stop_condition maxErrorRate within seconds; a 240 s schedule is refused for a 120 s Attempt with INVALID_ARGUMENT and, approved with a 300 s Attempt, ends cancelled/user_cancelled on run cancel.",
+        "A production environment refuses DAST and load probes with POLICY_DENIED production_load_refused even with a bound securityProbe approval, before any other approval is consulted, while an access probe is not refused for production; a Run aimed at another origin through --target-url is refused with approval_required and its binding names that origin, and an approval naming only the environment's origins does not admit it."
+      ],
+      "evidence": [
+        "validation/results/M5-06-access.json",
+        "validation/results/M5-06-dast.json",
+        "validation/results/M5-06-load.json",
+        "validation/journeys/m5-security-load.docker.test.ts",
+        "docs/adr/033-api-probes.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "containers/build.mjs",
+        "containers/zap/Dockerfile",
+        "containers/zap/adapter.py",
+        "packages/application/src/approvals.ts",
+        "packages/application/src/attempt-session.ts",
+        "packages/application/src/probes.ts",
+        "packages/application/src/runner-kinds.ts",
+        "packages/application/src/runs.ts",
+        "packages/contracts/src/m5/probes.ts",
+        "packages/domain/src/latency.ts",
+        "packages/runner/src/access.ts",
+        "packages/runner/src/load.ts",
+        "packages/runner/src/probe-support.ts",
+        "packages/sandbox/src/docker/executor.ts",
+        "packages/sandbox/src/images/lock.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012) on the local reference shop, Linux x64, rootful Docker: OWASP ZAP 2.17.0 in the optional pinned testmaster-runner-zap image with the api-minimal policy and one start path; access and load in the Node runner image. A DAST pass is not a penetration test; load and target shared one host, so latency figures describe this machine.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m5-security-load.docker.test.ts::M5-06 an access probe passes when the intruder is refused and fails when an anonymous caller reads orders",
+          "validation/journeys/m5-security-load.docker.test.ts::M5-06 a DAST probe passes the escaped search page and fails on the reflected XSS mutant",
+          "packages/runner/src/load.test.ts::sends at the target rate over a stage and reports a measured summary",
+          "packages/runner/src/access.test.ts::passes an operation the intruder is refused on and the owner may use"
+        ],
+        "negative": [
+          "validation/journeys/m5-security-load.docker.test.ts::M5-06 a load probe reports latency, stops on its error-rate condition, cancels, and is refused in production",
+          "packages/application/src/probes.test.ts::REQ-048 REQ-049 a production environment never receives DAST or load traffic, even with a bound approval",
+          "packages/application/src/probes.test.ts::VAL-043 an approval for the environment's origins does not cover a target override",
+          "packages/application/src/probes.test.ts::REQ-048 an access intruder holding an owner credential is refused"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m5-security-load.docker.test.ts",
+            "assertion": "check: \"access_granted\","
+          },
+          {
+            "path": "validation/journeys/m5-security-load.docker.test.ts",
+            "assertion": "\"dast:high\": { status: \"failed\", check: \"dast_alert\" },"
+          },
+          {
+            "path": "validation/journeys/m5-security-load.docker.test.ts",
+            "assertion": "load: { status: \"failed\", check: \"stop_condition\" },"
+          },
+          {
+            "path": "validation/journeys/m5-security-load.docker.test.ts",
+            "assertion": "details: { reasonCode: \"production_load_refused\", probe: \"load\" },"
+          },
+          {
+            "path": "validation/journeys/m5-security-load.docker.test.ts",
+            "assertion": "expect(cancelled).toMatchObject({ runId, outcome: \"cancelled/user_cancelled\" });"
+          },
+          {
+            "path": "packages/application/src/probes.test.ts",
+            "assertion": "expect(binding.originSet).toContain(\"http://127.0.0.1:9911\");"
+          },
+          {
+            "path": "packages/application/src/probes.test.ts",
+            "assertion": "expect(environmentOnly.details.reasonCode).toBe(\"approval_required\");"
+          }
+        ]
+      }
     },
     {
       "id": "M5-07",
@@ -18960,11 +19151,96 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M5",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-security-load.docker.test.ts::M5-06 an access probe passes when the intruder is refused and fails when an anonymous caller reads orders",
+        "validation/journeys/m5-security-load.docker.test.ts::M5-06 a DAST probe passes the escaped search page and fails on the reflected XSS mutant",
+        "packages/application/src/probes.test.ts::REQ-048 REQ-049 a production environment never receives DAST or load traffic, even with a bound approval",
+        "packages/application/src/probes.test.ts::VAL-043 an approval for the environment's origins does not cover a target override",
+        "packages/application/src/probes.test.ts::REQ-048 an access intruder holding an owner credential is refused",
+        "packages/runner/src/access.test.ts::passes an operation the intruder is refused on and the owner may use",
+        "packages/runner/src/access.test.ts::fails an intruder that receives data, keeping credentials out of the artifact",
+        "packages/runner/src/access.test.ts::is inconclusive when the owner is refused too",
+        "packages/runner/src/access.test.ts::refuses a path that leaves the target origin before sending anything",
+        "python/tests/unit/test_zap_adapter.py::test_risks_at_or_above_fail_on_fail_the_matching_steps_and_the_aggregate",
+        "python/tests/unit/test_zap_adapter.py::test_api_minimal_enables_only_the_injection_and_traversal_rules",
+        "python/tests/unit/test_zap_adapter.py::test_alerts_keep_only_triage_fields_and_never_a_secret",
+        "python/tests/unit/test_zap_adapter.py::test_a_secret_that_reaches_an_artifact_is_refused",
+        "python/tests/unit/test_zap_adapter.py::test_a_spider_that_finds_nothing_is_inconclusive_and_proves_nothing_about_risks",
+        "python/tests/unit/test_zap_adapter.py::test_scans_are_polled_until_done_with_no_deadline",
+        "python/tests/unit/test_zap_adapter.py::test_credentials_become_request_header_replacer_rules"
+      ],
+      "oracle": [
+        "On the healthy reference shop an access probe for GET /api/orders with the owner's bearer secret and an anonymous intruder passes (intruder 401, owner 200); against the orders-auth-bypass mutant the step fails with access_granted and seals access/1.json with intruder and owner statuses 200; no sealed bundle contains the owner's token. An intruder holding an owner credential is refused at creation.",
+        "A DAST probe spidering /search?q=shoes with an api-minimal active scan and failOn high passes on the escaped healthy search page (medium header alerts reported, not failing); against the search-reflected-xss mutant dast:high fails with dast_alert and dast/alerts.json lists a high Cross Site Scripting (Reflected) alert on /search.",
+        "A production environment refuses DAST and load probes with POLICY_DENIED production_load_refused even with a bound securityProbe approval, before any other approval is consulted, while an access probe is not refused for production; a Run aimed at another origin through --target-url is refused with approval_required and its binding names that origin, and an approval naming only the environment's origins does not admit it."
+      ],
+      "evidence": [
+        "validation/results/M5-06-access.json",
+        "validation/results/M5-06-dast.json",
+        "validation/journeys/m5-security-load.docker.test.ts",
+        "docs/adr/033-api-probes.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "containers/build.mjs",
+        "containers/zap/Dockerfile",
+        "containers/zap/adapter.py",
+        "packages/application/src/approvals.ts",
+        "packages/application/src/attempt-session.ts",
+        "packages/application/src/probes.ts",
+        "packages/application/src/runner-kinds.ts",
+        "packages/application/src/runs.ts",
+        "packages/contracts/src/m5/probes.ts",
+        "packages/runner/src/access.ts",
+        "packages/runner/src/probe-support.ts",
+        "packages/sandbox/src/docker/executor.ts",
+        "packages/sandbox/src/images/lock.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012) on the local reference shop, Linux x64, rootful Docker: OWASP ZAP 2.17.0 in the optional pinned testmaster-runner-zap image with the api-minimal policy and one start path; access and load in the Node runner image. A DAST pass is not a penetration test; load and target shared one host, so latency figures describe this machine.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m5-security-load.docker.test.ts::M5-06 an access probe passes when the intruder is refused and fails when an anonymous caller reads orders",
+          "validation/journeys/m5-security-load.docker.test.ts::M5-06 a DAST probe passes the escaped search page and fails on the reflected XSS mutant",
+          "packages/runner/src/access.test.ts::passes an operation the intruder is refused on and the owner may use"
+        ],
+        "negative": [
+          "packages/application/src/probes.test.ts::REQ-048 REQ-049 a production environment never receives DAST or load traffic, even with a bound approval",
+          "packages/application/src/probes.test.ts::VAL-043 an approval for the environment's origins does not cover a target override",
+          "packages/application/src/probes.test.ts::REQ-048 an access intruder holding an owner credential is refused",
+          "packages/runner/src/access.test.ts::fails an intruder that receives data, keeping credentials out of the artifact"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m5-security-load.docker.test.ts",
+            "assertion": "check: \"access_granted\","
+          },
+          {
+            "path": "validation/journeys/m5-security-load.docker.test.ts",
+            "assertion": "expect(await bundleText(session, verdict.runId)).not.toContain(owner.token);"
+          },
+          {
+            "path": "validation/journeys/m5-security-load.docker.test.ts",
+            "assertion": "\"dast:high\": { status: \"failed\", check: \"dast_alert\" },"
+          },
+          {
+            "path": "packages/application/src/probes.test.ts",
+            "assertion": "expect(refused.details.reasonCode).toBe(\"production_load_refused\");"
+          },
+          {
+            "path": "packages/application/src/probes.test.ts",
+            "assertion": "expect(binding.originSet).toContain(\"http://127.0.0.1:9911\");"
+          },
+          {
+            "path": "packages/runner/src/access.test.ts",
+            "assertion": "error: { code: \"access_granted\" },"
+          },
+          {
+            "path": "packages/runner/src/access.test.ts",
+            "assertion": "error: { code: \"owner_refused\" },"
+          }
+        ]
+      }
     },
     {
       "id": "REQ-049",
@@ -18972,11 +19248,87 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M5",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-security-load.docker.test.ts::M5-06 a load probe reports latency, stops on its error-rate condition, cancels, and is refused in production",
+        "packages/application/src/probes.test.ts::REQ-048 REQ-049 a production environment never receives DAST or load traffic, even with a bound approval",
+        "packages/application/src/probes.test.ts::REQ-049 a load test whose schedule outlasts the Attempt is refused before it is queued",
+        "packages/runner/src/load.test.ts::sends at the target rate over a stage and reports a measured summary",
+        "packages/runner/src/load.test.ts::stops sending and fails when the rolling p95 exceeds its limit",
+        "packages/runner/src/load.test.ts::fails on the rolling error rate of an erroring target",
+        "packages/runner/src/load.test.ts::sends exactly the budgeted requests and withholds percentiles that lack samples",
+        "packages/runner/src/load.test.ts::counts a due request that finds the concurrency bound full as saturated and does not send it",
+        "packages/runner/src/load.test.ts::reports a cancel as cancelled and sends nothing after it",
+        "packages/runner/src/load.test.ts::refuses a path that leaves the target origin before sending anything"
+      ],
+      "oracle": [
+        "A two-stage load probe on GET /api/products passes with zero errors and a load/summary.json reporting the target's count, p50/p95, the runner's scheduler lag over every request, the hardware, the request and each stage's rate; anonymous GET /api/orders at 50 rps fails stage 1 and the aggregate with stop_condition maxErrorRate within seconds; a 240 s schedule is refused for a 120 s Attempt with INVALID_ARGUMENT and, approved with a 300 s Attempt, ends cancelled/user_cancelled on run cancel.",
+        "A production environment refuses DAST and load probes with POLICY_DENIED production_load_refused even with a bound securityProbe approval, before any other approval is consulted, while an access probe is not refused for production; a Run aimed at another origin through --target-url is refused with approval_required and its binding names that origin, and an approval naming only the environment's origins does not admit it."
+      ],
+      "evidence": [
+        "validation/results/M5-06-load.json",
+        "validation/journeys/m5-security-load.docker.test.ts",
+        "docs/adr/033-api-probes.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "packages/application/src/approvals.ts",
+        "packages/application/src/attempt-session.ts",
+        "packages/application/src/probes.ts",
+        "packages/application/src/runner-kinds.ts",
+        "packages/application/src/runs.ts",
+        "packages/contracts/src/m5/probes.ts",
+        "packages/domain/src/latency.ts",
+        "packages/runner/src/load.ts",
+        "packages/runner/src/probe-support.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012) on the local reference shop, Linux x64, rootful Docker: OWASP ZAP 2.17.0 in the optional pinned testmaster-runner-zap image with the api-minimal policy and one start path; access and load in the Node runner image. A DAST pass is not a penetration test; load and target shared one host, so latency figures describe this machine.",
+      "coverage": {
+        "positive": [
+          "packages/runner/src/load.test.ts::sends at the target rate over a stage and reports a measured summary",
+          "packages/runner/src/load.test.ts::sends exactly the budgeted requests and withholds percentiles that lack samples"
+        ],
+        "negative": [
+          "validation/journeys/m5-security-load.docker.test.ts::M5-06 a load probe reports latency, stops on its error-rate condition, cancels, and is refused in production",
+          "packages/application/src/probes.test.ts::REQ-048 REQ-049 a production environment never receives DAST or load traffic, even with a bound approval",
+          "packages/application/src/probes.test.ts::REQ-049 a load test whose schedule outlasts the Attempt is refused before it is queued",
+          "packages/runner/src/load.test.ts::stops sending and fails when the rolling p95 exceeds its limit"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m5-security-load.docker.test.ts",
+            "assertion": "load: { status: \"failed\", check: \"stop_condition\" },"
+          },
+          {
+            "path": "validation/journeys/m5-security-load.docker.test.ts",
+            "assertion": "expect(object(stopSummary.stopCondition).atSeconds).toBeLessThan(60);"
+          },
+          {
+            "path": "validation/journeys/m5-security-load.docker.test.ts",
+            "assertion": "details: { reasonCode: \"production_load_refused\", probe: \"load\" },"
+          },
+          {
+            "path": "validation/journeys/m5-security-load.docker.test.ts",
+            "assertion": "expect(cancelled).toMatchObject({ runId, outcome: \"cancelled/user_cancelled\" });"
+          },
+          {
+            "path": "validation/journeys/m5-security-load.docker.test.ts",
+            "assertion": "expect(outlasting.exitCode, outlasting.stdout).toBe(5);"
+          },
+          {
+            "path": "packages/application/src/probes.test.ts",
+            "assertion": "expect(outlasting.code).toBe(\"INVALID_ARGUMENT\");"
+          },
+          {
+            "path": "packages/runner/src/load.test.ts",
+            "assertion": "expect(summary.stages[0].sent + summary.target.saturated).toBe(20);"
+          },
+          {
+            "path": "packages/runner/src/load.test.ts",
+            "assertion": "expect(summary.stopCondition).toMatchObject({ name: \"maxP95Ms\", limit: 50 });"
+          }
+        ]
+      }
     },
     {
       "id": "REQ-050",
@@ -29686,11 +30038,87 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M5",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-security-load.docker.test.ts::M5-06 an access probe passes when the intruder is refused and fails when an anonymous caller reads orders",
+        "validation/journeys/m5-security-load.docker.test.ts::M5-06 a DAST probe passes the escaped search page and fails on the reflected XSS mutant",
+        "validation/journeys/m5-security-load.docker.test.ts::M5-06 a load probe reports latency, stops on its error-rate condition, cancels, and is refused in production",
+        "packages/application/src/probes.test.ts::REQ-048 REQ-049 a production environment never receives DAST or load traffic, even with a bound approval",
+        "packages/application/src/probes.test.ts::VAL-043 an approval for the environment's origins does not cover a target override",
+        "packages/application/src/probes.test.ts::REQ-048 an access intruder holding an owner credential is refused",
+        "packages/runner/src/access.test.ts::fails an intruder that receives data, keeping credentials out of the artifact",
+        "packages/runner/src/access.test.ts::refuses a path that leaves the target origin before sending anything",
+        "python/tests/unit/test_zap_adapter.py::test_alerts_keep_only_triage_fields_and_never_a_secret",
+        "python/tests/unit/test_zap_adapter.py::test_a_secret_that_reaches_an_artifact_is_refused",
+        "python/tests/unit/test_zap_adapter.py::test_a_spider_that_finds_nothing_is_inconclusive_and_proves_nothing_about_risks"
+      ],
+      "oracle": [
+        "A production environment refuses DAST and load probes with POLICY_DENIED production_load_refused even with a bound securityProbe approval, before any other approval is consulted, while an access probe is not refused for production; a Run aimed at another origin through --target-url is refused with approval_required and its binding names that origin, and an approval naming only the environment's origins does not admit it.",
+        "On the healthy reference shop an access probe for GET /api/orders with the owner's bearer secret and an anonymous intruder passes (intruder 401, owner 200); against the orders-auth-bypass mutant the step fails with access_granted and seals access/1.json with intruder and owner statuses 200; no sealed bundle contains the owner's token. An intruder holding an owner credential is refused at creation.",
+        "A DAST probe spidering /search?q=shoes with an api-minimal active scan and failOn high passes on the escaped healthy search page (medium header alerts reported, not failing); against the search-reflected-xss mutant dast:high fails with dast_alert and dast/alerts.json lists a high Cross Site Scripting (Reflected) alert on /search."
+      ],
+      "evidence": [
+        "validation/results/M5-06-access.json",
+        "validation/results/M5-06-dast.json",
+        "validation/results/M5-06-load.json",
+        "validation/journeys/m5-security-load.docker.test.ts",
+        "docs/adr/033-api-probes.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "containers/build.mjs",
+        "containers/zap/Dockerfile",
+        "containers/zap/adapter.py",
+        "packages/application/src/approvals.ts",
+        "packages/application/src/attempt-session.ts",
+        "packages/application/src/probes.ts",
+        "packages/application/src/runner-kinds.ts",
+        "packages/application/src/runs.ts",
+        "packages/contracts/src/m5/probes.ts",
+        "packages/runner/src/access.ts",
+        "packages/runner/src/probe-support.ts",
+        "packages/sandbox/src/docker/executor.ts",
+        "packages/sandbox/src/images/lock.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012) on the local reference shop, Linux x64, rootful Docker: OWASP ZAP 2.17.0 in the optional pinned testmaster-runner-zap image with the api-minimal policy and one start path; access and load in the Node runner image. A DAST pass is not a penetration test; load and target shared one host, so latency figures describe this machine.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m5-security-load.docker.test.ts::M5-06 an access probe passes when the intruder is refused and fails when an anonymous caller reads orders",
+          "validation/journeys/m5-security-load.docker.test.ts::M5-06 a DAST probe passes the escaped search page and fails on the reflected XSS mutant"
+        ],
+        "negative": [
+          "packages/application/src/probes.test.ts::REQ-048 REQ-049 a production environment never receives DAST or load traffic, even with a bound approval",
+          "packages/application/src/probes.test.ts::VAL-043 an approval for the environment's origins does not cover a target override",
+          "packages/application/src/probes.test.ts::REQ-048 an access intruder holding an owner credential is refused",
+          "packages/runner/src/access.test.ts::fails an intruder that receives data, keeping credentials out of the artifact"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m5-security-load.docker.test.ts",
+            "assertion": "details: { reasonCode: \"production_load_refused\", probe: \"load\" },"
+          },
+          {
+            "path": "validation/journeys/m5-security-load.docker.test.ts",
+            "assertion": "\"https://load-target.example\","
+          },
+          {
+            "path": "validation/journeys/m5-security-load.docker.test.ts",
+            "assertion": "expect(await bundleText(session, verdict.runId)).not.toContain(owner.token);"
+          },
+          {
+            "path": "packages/application/src/probes.test.ts",
+            "assertion": "expect(binding.originSet).toContain(\"http://127.0.0.1:9911\");"
+          },
+          {
+            "path": "packages/application/src/probes.test.ts",
+            "assertion": "expect(environmentOnly.details.reasonCode).toBe(\"approval_required\");"
+          },
+          {
+            "path": "packages/runner/src/access.test.ts",
+            "assertion": "error: { code: \"access_granted\" },"
+          }
+        ]
+      }
     },
     {
       "id": "VAL-044",
@@ -29698,11 +30126,66 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M5",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-security-load.docker.test.ts::M5-06 a load probe reports latency, stops on its error-rate condition, cancels, and is refused in production",
+        "packages/application/src/probes.test.ts::REQ-049 a load test whose schedule outlasts the Attempt is refused before it is queued",
+        "packages/runner/src/load.test.ts::sends at the target rate over a stage and reports a measured summary",
+        "packages/runner/src/load.test.ts::stops sending and fails when the rolling p95 exceeds its limit",
+        "packages/runner/src/load.test.ts::fails on the rolling error rate of an erroring target",
+        "packages/runner/src/load.test.ts::sends exactly the budgeted requests and withholds percentiles that lack samples",
+        "packages/runner/src/load.test.ts::counts a due request that finds the concurrency bound full as saturated and does not send it",
+        "packages/runner/src/load.test.ts::reports a cancel as cancelled and sends nothing after it"
+      ],
+      "oracle": [
+        "A two-stage load probe on GET /api/products passes with zero errors and a load/summary.json reporting the target's count, p50/p95, the runner's scheduler lag over every request, the hardware, the request and each stage's rate; anonymous GET /api/orders at 50 rps fails stage 1 and the aggregate with stop_condition maxErrorRate within seconds; a 240 s schedule is refused for a 120 s Attempt with INVALID_ARGUMENT and, approved with a 300 s Attempt, ends cancelled/user_cancelled on run cancel."
+      ],
+      "evidence": [
+        "validation/results/M5-06-load.json",
+        "validation/journeys/m5-security-load.docker.test.ts",
+        "docs/adr/033-api-probes.md"
+      ],
+      "code": [
+        "packages/application/src/probes.ts",
+        "packages/contracts/src/m5/probes.ts",
+        "packages/domain/src/latency.ts",
+        "packages/runner/src/load.ts",
+        "packages/runner/src/probe-support.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012) on the local reference shop, Linux x64, rootful Docker: OWASP ZAP 2.17.0 in the optional pinned testmaster-runner-zap image with the api-minimal policy and one start path; access and load in the Node runner image. A DAST pass is not a penetration test; load and target shared one host, so latency figures describe this machine.",
+      "coverage": {
+        "positive": [
+          "packages/runner/src/load.test.ts::sends at the target rate over a stage and reports a measured summary",
+          "packages/runner/src/load.test.ts::sends exactly the budgeted requests and withholds percentiles that lack samples"
+        ],
+        "negative": [
+          "validation/journeys/m5-security-load.docker.test.ts::M5-06 a load probe reports latency, stops on its error-rate condition, cancels, and is refused in production",
+          "packages/application/src/probes.test.ts::REQ-049 a load test whose schedule outlasts the Attempt is refused before it is queued",
+          "packages/runner/src/load.test.ts::counts a due request that finds the concurrency bound full as saturated and does not send it"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m5-security-load.docker.test.ts",
+            "assertion": "expect(object(object(object(summary.platform).schedulerLagMs).p95).n).toBe(target.count);"
+          },
+          {
+            "path": "validation/journeys/m5-security-load.docker.test.ts",
+            "assertion": "load: { status: \"failed\", check: \"stop_condition\" },"
+          },
+          {
+            "path": "validation/journeys/m5-security-load.docker.test.ts",
+            "assertion": "expect(outlasting.exitCode, outlasting.stdout).toBe(5);"
+          },
+          {
+            "path": "packages/runner/src/load.test.ts",
+            "assertion": "expect(summary.stages[0].sent + summary.target.saturated).toBe(20);"
+          },
+          {
+            "path": "packages/runner/src/load.test.ts",
+            "assertion": "expect(summary.stopCondition).toMatchObject({ name: \"maxP95Ms\", limit: 50 });"
+          }
+        ]
+      }
     },
     {
       "id": "VAL-045",
@@ -30886,6 +31369,24 @@
       "milestone": "M5",
       "requirements": ["M5-05", "REQ-050", "API-008"],
       "gate": "M5 GraphQL property probes, separate from the REST parser (ADR-033); positive/negative evidence and protected assertions"
+    },
+    {
+      "id": "dast",
+      "milestone": "M5",
+      "requirements": ["M5-06", "REQ-048", "VAL-043", "API-008"],
+      "gate": "M5 OWASP ZAP DAST probes in the optional pinned image, refused in production (ADR-033); positive/negative evidence and protected assertions"
+    },
+    {
+      "id": "security-checks",
+      "milestone": "M5",
+      "requirements": ["M5-06", "REQ-048", "VAL-043", "API-008"],
+      "gate": "M5 owner/intruder access-control probes under a bound securityProbe approval (ADR-033); positive/negative evidence and protected assertions"
+    },
+    {
+      "id": "load-tests",
+      "milestone": "M5",
+      "requirements": ["M5-06", "REQ-049", "VAL-044", "API-008"],
+      "gate": "M5 open-loop load probes with stages, budget and stop conditions, refused in production (ADR-033); positive/negative evidence and protected assertions"
     },
     {
       "id": "memory",

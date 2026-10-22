@@ -1,0 +1,428 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "M5-06-access",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-22T20:45:36.267Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "M5-06-access",
+        "--base-url",
+        "http://127.0.0.1:39431",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_2fd7d6cd-9478-4608-9374-3872ad772cde",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "secret",
+        "set",
+        "owner-healthy",
+        "--from-env",
+        "SHOP_TOKEN",
+        "--allowed-origin",
+        "http://127.0.0.1:39431",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_9bdd731f-f620-4294-a27f-58424f7e249c",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "probe",
+        "create",
+        "--file",
+        "/tmp/tm-m1-Ooj8MX/repo/orders-access-healthy.probe.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_7d5d6d33-8d1d-4d34-a3ad-6fdb69e76084",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1655c-6533-762b-ab3c-64cce5aa83f2",
+        "--wait",
+        "--timeout",
+        "900",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "signal": null,
+      "requestId": "cli_d8f49f5d-8fe1-43f8-a812-bb64ed0beb8d",
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "A access probe requires a current bound securityProbe approval",
+        "retryable": false,
+        "details": {
+          "reasonCode": "approval_required",
+          "actions": [
+            {
+              "stepId": "access",
+              "risk": "securityProbe",
+              "basis": "access probe"
+            }
+          ],
+          "requiredApprovers": 1,
+          "separationOfDuties": false,
+          "binding": {
+            "revisionHash": "9c348a0138d1db54ea2b06e92493e83801fbcdaed1f66af6ae0109fd482608a7",
+            "environmentRevisionId": "evr_01a1655c-5c5e-770b-a133-68a891e88903",
+            "originSet": [
+              "http://127.0.0.1:39431"
+            ],
+            "actionSet": [
+              "securityProbe"
+            ],
+            "policyHash": "567c6eee313781da66c710acd5b582f3e9e8fc9fa332424102c08cdb3b05e77e",
+            "actorId": "usr_01a1655c-5c51-74b9-8c82-2d549efa69d9",
+            "limits": {
+              "executionTimeoutMs": 150000,
+              "attemptTimeoutMs": 120000,
+              "stepTimeoutMs": 5000,
+              "networkRequestTimeoutMs": 90000,
+              "preparationTimeoutMs": 120000,
+              "collectionGraceMs": 60000,
+              "analysisGraceMs": 60000,
+              "maxAttempts": 1,
+              "bodyBytes": 10485760,
+              "artifactBytes": 67108864,
+              "attemptArtifactBytes": 268435456,
+              "logBytes": 10485760
+            }
+          }
+        },
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "approval",
+        "create",
+        "--revision-hash",
+        "9c348a0138d1db54ea2b06e92493e83801fbcdaed1f66af6ae0109fd482608a7",
+        "--environment-revision",
+        "evr_01a1655c-5c5e-770b-a133-68a891e88903",
+        "--policy-hash",
+        "567c6eee313781da66c710acd5b582f3e9e8fc9fa332424102c08cdb3b05e77e",
+        "--origin",
+        "http://127.0.0.1:39431",
+        "--action",
+        "securityProbe",
+        "--reason",
+        "Probe the reference app",
+        "--limits",
+        "{\"executionTimeoutMs\":150000,\"attemptTimeoutMs\":120000,\"stepTimeoutMs\":5000,\"networkRequestTimeoutMs\":90000,\"preparationTimeoutMs\":120000,\"collectionGraceMs\":60000,\"analysisGraceMs\":60000,\"maxAttempts\":1,\"bodyBytes\":10485760,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"logBytes\":10485760}",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ea4bb29f-21e0-4937-a911-7d0020e9bdcd",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1655c-6533-762b-ab3c-64cce5aa83f2",
+        "--wait",
+        "--timeout",
+        "900",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_6f4665ba-0583-43c7-9645-2fce466a6833",
+      "warnings": [
+        "--timeout and --request-timeout do not end a run this command executes: the wait continues until the run completes or the command is interrupted. The limit applies only to waits on worker-owned runs."
+      ],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "steps",
+        "run_01a1655c-7e79-75fe-94bf-6bb61f1b973c",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_7d63e086-9954-4ed4-95c9-58a32a3072c6",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "secret",
+        "set",
+        "owner-orders-auth-bypass",
+        "--from-env",
+        "SHOP_TOKEN",
+        "--allowed-origin",
+        "http://127.0.0.1:39431",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_32f37cb4-d8a2-4246-8c7b-787874891b11",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "probe",
+        "create",
+        "--file",
+        "/tmp/tm-m1-Ooj8MX/repo/orders-access-orders-auth-bypass.probe.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_c1c00464-d191-410f-91e8-34843f7236a9",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1655c-919c-76b0-be5d-df6dc1d8b615",
+        "--wait",
+        "--timeout",
+        "900",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "signal": null,
+      "requestId": "cli_9a70b9ec-b125-49bf-b218-c026b1ca6d5c",
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "A access probe requires a current bound securityProbe approval",
+        "retryable": false,
+        "details": {
+          "reasonCode": "approval_required",
+          "actions": [
+            {
+              "stepId": "access",
+              "risk": "securityProbe",
+              "basis": "access probe"
+            }
+          ],
+          "requiredApprovers": 1,
+          "separationOfDuties": false,
+          "binding": {
+            "revisionHash": "b3272481fe39f26348c31429a22a760bd4da418307ef2715c231e6da7d31c40f",
+            "environmentRevisionId": "evr_01a1655c-5c5e-770b-a133-68a891e88903",
+            "originSet": [
+              "http://127.0.0.1:39431"
+            ],
+            "actionSet": [
+              "securityProbe"
+            ],
+            "policyHash": "567c6eee313781da66c710acd5b582f3e9e8fc9fa332424102c08cdb3b05e77e",
+            "actorId": "usr_01a1655c-5c51-74b9-8c82-2d549efa69d9",
+            "limits": {
+              "executionTimeoutMs": 150000,
+              "attemptTimeoutMs": 120000,
+              "stepTimeoutMs": 5000,
+              "networkRequestTimeoutMs": 90000,
+              "preparationTimeoutMs": 120000,
+              "collectionGraceMs": 60000,
+              "analysisGraceMs": 60000,
+              "maxAttempts": 1,
+              "bodyBytes": 10485760,
+              "artifactBytes": 67108864,
+              "attemptArtifactBytes": 268435456,
+              "logBytes": 10485760
+            }
+          }
+        },
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "approval",
+        "create",
+        "--revision-hash",
+        "b3272481fe39f26348c31429a22a760bd4da418307ef2715c231e6da7d31c40f",
+        "--environment-revision",
+        "evr_01a1655c-5c5e-770b-a133-68a891e88903",
+        "--policy-hash",
+        "567c6eee313781da66c710acd5b582f3e9e8fc9fa332424102c08cdb3b05e77e",
+        "--origin",
+        "http://127.0.0.1:39431",
+        "--action",
+        "securityProbe",
+        "--reason",
+        "Probe the reference app",
+        "--limits",
+        "{\"executionTimeoutMs\":150000,\"attemptTimeoutMs\":120000,\"stepTimeoutMs\":5000,\"networkRequestTimeoutMs\":90000,\"preparationTimeoutMs\":120000,\"collectionGraceMs\":60000,\"analysisGraceMs\":60000,\"maxAttempts\":1,\"bodyBytes\":10485760,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"logBytes\":10485760}",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_33479fc3-3780-48ff-9431-672def9af509",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1655c-919c-76b0-be5d-df6dc1d8b615",
+        "--wait",
+        "--timeout",
+        "900",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "requestId": "cli_31b55f43-fe95-47f9-a363-33c264fb5a85",
+      "warnings": [
+        "--timeout and --request-timeout do not end a run this command executes: the wait continues until the run completes or the command is interrupted. The limit applies only to waits on worker-owned runs."
+      ],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "steps",
+        "run_01a1655c-a79f-75ea-9764-675825e2401b",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_2a1954e7-98b4-42ac-b6dc-7f36048117d0",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a1655c-7e79-75fe-94bf-6bb61f1b973c",
+    "run_01a1655c-a79f-75ea-9764-675825e2401b"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "accessProbe",
+      "healthy": {
+        "exitCode": 0,
+        "runId": "run_01a1655c-7e79-75fe-94bf-6bb61f1b973c",
+        "outcome": "passed/assertions_satisfied",
+        "steps": {
+          "access:GET /api/orders": {
+            "status": "passed",
+            "check": null,
+            "evidence": []
+          },
+          "access": {
+            "status": "passed",
+            "check": null,
+            "evidence": []
+          }
+        }
+      },
+      "bypass": {
+        "exitCode": 1,
+        "runId": "run_01a1655c-a79f-75ea-9764-675825e2401b",
+        "outcome": "failed/assertion_mismatch",
+        "steps": {
+          "access:GET /api/orders": {
+            "status": "failed",
+            "check": "access_granted",
+            "evidence": [
+              "access/1.json"
+            ]
+          },
+          "access": {
+            "status": "failed",
+            "check": null,
+            "evidence": []
+          }
+        }
+      },
+      "finding": {
+        "operation": {
+          "method": "GET",
+          "path": "/api/orders"
+        },
+        "intruderStatus": 200,
+        "ownerStatus": 200,
+        "expected": [
+          401,
+          403
+        ]
+      }
+    }
+  ],
+  "limitations": [
+    "The owner is the fixture's synthetic user; the intruder is anonymous."
+  ]
+}

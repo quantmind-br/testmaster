@@ -1,0 +1,895 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "M5-06-load",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-22T20:47:01.823Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "M5-06-load",
+        "--base-url",
+        "http://127.0.0.1:45729",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_58bce014-3605-40a9-a0a7-2d60012a61d3",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "probe",
+        "create",
+        "--file",
+        "/tmp/tm-m1-S8TqiM/repo/catalog-load.probe.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_3a7c111f-3ed6-46c0-833e-b1edaec5b7ca",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1655d-5079-74ce-be2d-0a93308ded54",
+        "--wait",
+        "--timeout",
+        "900",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "signal": null,
+      "requestId": "cli_8af1f03a-ae4a-44c3-a062-be83c529fcff",
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "A load probe requires a current bound securityProbe approval",
+        "retryable": false,
+        "details": {
+          "reasonCode": "approval_required",
+          "actions": [
+            {
+              "stepId": "load",
+              "risk": "securityProbe",
+              "basis": "load probe"
+            }
+          ],
+          "requiredApprovers": 1,
+          "separationOfDuties": false,
+          "binding": {
+            "revisionHash": "d1eda2e75a21465abf3aace87cc984628bee61b823a4a640945dd66c3f84a54c",
+            "environmentRevisionId": "evr_01a1655d-4d7e-7793-88c6-72dcd33d35fb",
+            "originSet": [
+              "http://127.0.0.1:45729"
+            ],
+            "actionSet": [
+              "securityProbe"
+            ],
+            "policyHash": "44647adedb24eacbf86e7ba40ca42984014bc22f8fc1c8238193b5ef9ed35a09",
+            "actorId": "usr_01a1655d-4d70-720a-9bcb-340aaefff0fa",
+            "limits": {
+              "executionTimeoutMs": 150000,
+              "attemptTimeoutMs": 120000,
+              "stepTimeoutMs": 5000,
+              "networkRequestTimeoutMs": 90000,
+              "preparationTimeoutMs": 120000,
+              "collectionGraceMs": 60000,
+              "analysisGraceMs": 60000,
+              "maxAttempts": 1,
+              "bodyBytes": 10485760,
+              "artifactBytes": 67108864,
+              "attemptArtifactBytes": 268435456,
+              "logBytes": 10485760
+            }
+          }
+        },
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "approval",
+        "create",
+        "--revision-hash",
+        "d1eda2e75a21465abf3aace87cc984628bee61b823a4a640945dd66c3f84a54c",
+        "--environment-revision",
+        "evr_01a1655d-4d7e-7793-88c6-72dcd33d35fb",
+        "--policy-hash",
+        "44647adedb24eacbf86e7ba40ca42984014bc22f8fc1c8238193b5ef9ed35a09",
+        "--origin",
+        "http://127.0.0.1:45729",
+        "--action",
+        "securityProbe",
+        "--reason",
+        "Probe the reference app",
+        "--limits",
+        "{\"executionTimeoutMs\":150000,\"attemptTimeoutMs\":120000,\"stepTimeoutMs\":5000,\"networkRequestTimeoutMs\":90000,\"preparationTimeoutMs\":120000,\"collectionGraceMs\":60000,\"analysisGraceMs\":60000,\"maxAttempts\":1,\"bodyBytes\":10485760,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"logBytes\":10485760}",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_9f838bd0-e6f3-44c9-ad91-2d9159bd3530",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1655d-5079-74ce-be2d-0a93308ded54",
+        "--wait",
+        "--timeout",
+        "900",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_e1512350-f0c5-4ce1-aab8-352779a6e4bc",
+      "warnings": [
+        "--timeout and --request-timeout do not end a run this command executes: the wait continues until the run completes or the command is interrupted. The limit applies only to waits on worker-owned runs."
+      ],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "steps",
+        "run_01a1655d-662a-70a1-8ace-6753d5f6a1bf",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_87f18210-3ffc-49aa-8c9a-9a4593ad5c3a",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "probe",
+        "create",
+        "--file",
+        "/tmp/tm-m1-S8TqiM/repo/orders-load.probe.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_0a885ac4-d452-4d0b-91a2-57538e80b490",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1655d-9777-76f5-9fa6-8d04d2b4fb46",
+        "--wait",
+        "--timeout",
+        "900",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "signal": null,
+      "requestId": "cli_eabfb0b4-aa25-4a56-a14e-571f5cdbd941",
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "A load probe requires a current bound securityProbe approval",
+        "retryable": false,
+        "details": {
+          "reasonCode": "approval_required",
+          "actions": [
+            {
+              "stepId": "load",
+              "risk": "securityProbe",
+              "basis": "load probe"
+            }
+          ],
+          "requiredApprovers": 1,
+          "separationOfDuties": false,
+          "binding": {
+            "revisionHash": "388a34f50da09087399d0201f1cc5a25b0169e2ef275ee316513711cd690e262",
+            "environmentRevisionId": "evr_01a1655d-4d7e-7793-88c6-72dcd33d35fb",
+            "originSet": [
+              "http://127.0.0.1:45729"
+            ],
+            "actionSet": [
+              "securityProbe"
+            ],
+            "policyHash": "44647adedb24eacbf86e7ba40ca42984014bc22f8fc1c8238193b5ef9ed35a09",
+            "actorId": "usr_01a1655d-4d70-720a-9bcb-340aaefff0fa",
+            "limits": {
+              "executionTimeoutMs": 150000,
+              "attemptTimeoutMs": 120000,
+              "stepTimeoutMs": 5000,
+              "networkRequestTimeoutMs": 90000,
+              "preparationTimeoutMs": 120000,
+              "collectionGraceMs": 60000,
+              "analysisGraceMs": 60000,
+              "maxAttempts": 1,
+              "bodyBytes": 10485760,
+              "artifactBytes": 67108864,
+              "attemptArtifactBytes": 268435456,
+              "logBytes": 10485760
+            }
+          }
+        },
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "approval",
+        "create",
+        "--revision-hash",
+        "388a34f50da09087399d0201f1cc5a25b0169e2ef275ee316513711cd690e262",
+        "--environment-revision",
+        "evr_01a1655d-4d7e-7793-88c6-72dcd33d35fb",
+        "--policy-hash",
+        "44647adedb24eacbf86e7ba40ca42984014bc22f8fc1c8238193b5ef9ed35a09",
+        "--origin",
+        "http://127.0.0.1:45729",
+        "--action",
+        "securityProbe",
+        "--reason",
+        "Probe the reference app",
+        "--limits",
+        "{\"executionTimeoutMs\":150000,\"attemptTimeoutMs\":120000,\"stepTimeoutMs\":5000,\"networkRequestTimeoutMs\":90000,\"preparationTimeoutMs\":120000,\"collectionGraceMs\":60000,\"analysisGraceMs\":60000,\"maxAttempts\":1,\"bodyBytes\":10485760,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"logBytes\":10485760}",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_c034f944-b7ca-4d7a-84f0-9a78950a1707",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1655d-9777-76f5-9fa6-8d04d2b4fb46",
+        "--wait",
+        "--timeout",
+        "900",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "requestId": "cli_a5045a56-b2ed-4266-90eb-b07d92ebd76d",
+      "warnings": [
+        "--timeout and --request-timeout do not end a run this command executes: the wait continues until the run completes or the command is interrupted. The limit applies only to waits on worker-owned runs."
+      ],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "steps",
+        "run_01a1655d-ad10-77d8-8e87-9c4b6a26b764",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_e9073a60-7096-400d-bf41-627009915a2c",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "probe",
+        "create",
+        "--file",
+        "/tmp/tm-m1-S8TqiM/repo/long-load.probe.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_4a3a077d-7db2-4c3a-b850-16b924259bf1",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1655d-bebf-734a-824a-31e40b3c485f",
+        "--wait",
+        "--timeout",
+        "900",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 5,
+      "signal": null,
+      "requestId": "cli_818e2b5b-81c8-47d2-8615-943dc096186d",
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "The load test's schedule outlasts the Attempt; raise limits.attemptTimeoutMs",
+        "retryable": false,
+        "details": {
+          "scheduledMs": 240000,
+          "attemptTimeoutMs": 120000
+        },
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1655d-bebf-734a-824a-31e40b3c485f",
+        "--attempt-timeout",
+        "300",
+        "--execution-timeout",
+        "600",
+        "--wait",
+        "--timeout",
+        "900",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "signal": null,
+      "requestId": "cli_394be2fe-c674-4cc5-978a-e97c1058e8dd",
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "A load probe requires a current bound securityProbe approval",
+        "retryable": false,
+        "details": {
+          "reasonCode": "approval_required",
+          "actions": [
+            {
+              "stepId": "load",
+              "risk": "securityProbe",
+              "basis": "load probe"
+            }
+          ],
+          "requiredApprovers": 1,
+          "separationOfDuties": false,
+          "binding": {
+            "revisionHash": "8f4be2d39e996f8d6e7194e80708c919168db2ff84daf6c264a94f2ccaa99329",
+            "environmentRevisionId": "evr_01a1655d-4d7e-7793-88c6-72dcd33d35fb",
+            "originSet": [
+              "http://127.0.0.1:45729"
+            ],
+            "actionSet": [
+              "securityProbe"
+            ],
+            "policyHash": "44647adedb24eacbf86e7ba40ca42984014bc22f8fc1c8238193b5ef9ed35a09",
+            "actorId": "usr_01a1655d-4d70-720a-9bcb-340aaefff0fa",
+            "limits": {
+              "executionTimeoutMs": 600000,
+              "attemptTimeoutMs": 300000,
+              "stepTimeoutMs": 5000,
+              "networkRequestTimeoutMs": 90000,
+              "preparationTimeoutMs": 120000,
+              "collectionGraceMs": 60000,
+              "analysisGraceMs": 60000,
+              "maxAttempts": 1,
+              "bodyBytes": 10485760,
+              "artifactBytes": 67108864,
+              "attemptArtifactBytes": 268435456,
+              "logBytes": 10485760
+            }
+          }
+        },
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "approval",
+        "create",
+        "--revision-hash",
+        "8f4be2d39e996f8d6e7194e80708c919168db2ff84daf6c264a94f2ccaa99329",
+        "--environment-revision",
+        "evr_01a1655d-4d7e-7793-88c6-72dcd33d35fb",
+        "--policy-hash",
+        "44647adedb24eacbf86e7ba40ca42984014bc22f8fc1c8238193b5ef9ed35a09",
+        "--origin",
+        "http://127.0.0.1:45729",
+        "--action",
+        "securityProbe",
+        "--reason",
+        "Probe the reference app",
+        "--limits",
+        "{\"executionTimeoutMs\":600000,\"attemptTimeoutMs\":300000,\"stepTimeoutMs\":5000,\"networkRequestTimeoutMs\":90000,\"preparationTimeoutMs\":120000,\"collectionGraceMs\":60000,\"analysisGraceMs\":60000,\"maxAttempts\":1,\"bodyBytes\":10485760,\"artifactBytes\":67108864,\"attemptArtifactBytes\":268435456,\"logBytes\":10485760}",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_fce774a0-8c47-47f6-8c20-340718e13c53",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "list",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d33de7cf-e40e-4802-9952-364a2987cbe0",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "list",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_9d27aa59-ce32-49c6-95da-f54724d4b215",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "list",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_13fef546-6d6f-4adb-866f-09e8943d887c",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "list",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_0a6a9ef4-5324-4c12-bfff-ec7460d89df5",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "cancel",
+        "run_01a1655d-dcef-7794-82e6-45128662ed36",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_d4f74f1b-2d48-4e1f-9fba-f5ffdf7a100e",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1655d-bebf-734a-824a-31e40b3c485f",
+        "--attempt-timeout",
+        "300",
+        "--execution-timeout",
+        "600",
+        "--wait",
+        "--timeout",
+        "900",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "requestId": "cli_d471f874-09ef-4b4f-8bdf-b7d2b3779536",
+      "warnings": [
+        "--timeout and --request-timeout do not end a run this command executes: the wait continues until the run completes or the command is interrupted. The limit applies only to waits on worker-owned runs."
+      ],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "steps",
+        "run_01a1655d-dcef-7794-82e6-45128662ed36",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_f122371d-64e8-47b7-8fbc-66d876d6eec2",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "env",
+        "create",
+        "--name",
+        "production",
+        "--base-url",
+        "http://127.0.0.1:45729",
+        "--production",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_ba869c56-4a03-4009-bd0a-5de8a77e9c74",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1655d-5079-74ce-be2d-0a93308ded54",
+        "--env",
+        "production",
+        "--wait",
+        "--timeout",
+        "900",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "signal": null,
+      "requestId": "cli_f82c428a-8225-4b1a-8065-9e534cd4d210",
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "A load probe never runs against a production environment",
+        "retryable": false,
+        "details": {
+          "reasonCode": "production_load_refused",
+          "probe": "load"
+        },
+        "nextActions": []
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1655d-5079-74ce-be2d-0a93308ded54",
+        "--target-url",
+        "https://load-target.example",
+        "--wait",
+        "--timeout",
+        "900",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 9,
+      "signal": null,
+      "requestId": "cli_a2744fda-031d-46a3-ada3-1d7d08a8cab9",
+      "error": {
+        "code": "POLICY_DENIED",
+        "message": "A load probe requires a current bound securityProbe approval",
+        "retryable": false,
+        "details": {
+          "reasonCode": "approval_required",
+          "actions": [
+            {
+              "stepId": "load",
+              "risk": "securityProbe",
+              "basis": "load probe"
+            }
+          ],
+          "requiredApprovers": 1,
+          "separationOfDuties": false,
+          "binding": {
+            "revisionHash": "d1eda2e75a21465abf3aace87cc984628bee61b823a4a640945dd66c3f84a54c",
+            "environmentRevisionId": "evr_01a1655d-4d7e-7793-88c6-72dcd33d35fb",
+            "originSet": [
+              "http://127.0.0.1:45729",
+              "https://load-target.example"
+            ],
+            "actionSet": [
+              "securityProbe"
+            ],
+            "policyHash": "44647adedb24eacbf86e7ba40ca42984014bc22f8fc1c8238193b5ef9ed35a09",
+            "actorId": "usr_01a1655d-4d70-720a-9bcb-340aaefff0fa",
+            "limits": {
+              "executionTimeoutMs": 150000,
+              "attemptTimeoutMs": 120000,
+              "stepTimeoutMs": 5000,
+              "networkRequestTimeoutMs": 90000,
+              "preparationTimeoutMs": 120000,
+              "collectionGraceMs": 60000,
+              "analysisGraceMs": 60000,
+              "maxAttempts": 1,
+              "bodyBytes": 10485760,
+              "artifactBytes": 67108864,
+              "attemptArtifactBytes": 268435456,
+              "logBytes": 10485760
+            }
+          }
+        },
+        "nextActions": []
+      },
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a1655d-662a-70a1-8ace-6753d5f6a1bf",
+    "run_01a1655d-ad10-77d8-8e87-9c4b6a26b764",
+    "run_01a1655d-dcef-7794-82e6-45128662ed36"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "loadProbe",
+      "steady": {
+        "exitCode": 0,
+        "runId": "run_01a1655d-662a-70a1-8ace-6753d5f6a1bf",
+        "outcome": "passed/assertions_satisfied",
+        "steps": {
+          "load:stage-1": {
+            "status": "passed",
+            "check": null,
+            "evidence": []
+          },
+          "load:stage-2": {
+            "status": "passed",
+            "check": null,
+            "evidence": [
+              "load/summary.json"
+            ]
+          },
+          "load": {
+            "status": "passed",
+            "check": null,
+            "evidence": [
+              "load/summary.json"
+            ]
+          }
+        }
+      },
+      "summary": {
+        "target": {
+          "count": 150,
+          "errors": 0,
+          "errorRate": 0,
+          "saturated": 0,
+          "p50": {
+            "valueMs": 1.411,
+            "n": 150
+          },
+          "p95": {
+            "valueMs": 2.388,
+            "n": 150
+          },
+          "p99": {
+            "valueMs": null,
+            "n": 150
+          }
+        },
+        "platform": {
+          "schedulerLagMs": {
+            "p95": {
+              "valueMs": 1.104,
+              "n": 150
+            }
+          }
+        },
+        "hardware": {
+          "cpus": 32,
+          "cpuModel": "AMD Ryzen 9 9950X3D 16-Core Processor",
+          "totalMemoryBytes": 64945299456
+        },
+        "dataset": {
+          "method": "GET",
+          "path": "/api/products",
+          "bodyBytes": 0
+        },
+        "stages": [
+          {
+            "index": 1,
+            "durationSeconds": 5,
+            "targetRps": 10,
+            "sent": 50,
+            "achievedRps": 9.997
+          },
+          {
+            "index": 2,
+            "durationSeconds": 5,
+            "targetRps": 20,
+            "sent": 100,
+            "achievedRps": 19.997
+          }
+        ],
+        "stopCondition": null,
+        "budgetExhausted": null
+      },
+      "stopped": {
+        "exitCode": 1,
+        "runId": "run_01a1655d-ad10-77d8-8e87-9c4b6a26b764",
+        "outcome": "failed/assertion_mismatch",
+        "steps": {
+          "load:stage-1": {
+            "status": "failed",
+            "check": "stop_condition",
+            "evidence": [
+              "load/summary.json"
+            ]
+          },
+          "load": {
+            "status": "failed",
+            "check": "stop_condition",
+            "evidence": [
+              "load/summary.json"
+            ]
+          }
+        }
+      },
+      "stopCondition": {
+        "name": "maxErrorRate",
+        "observed": 1,
+        "limit": 0.1,
+        "atSeconds": 2.001
+      },
+      "cancelled": {
+        "exitCode": 1,
+        "runId": "run_01a1655d-dcef-7794-82e6-45128662ed36",
+        "outcome": "cancelled/user_cancelled",
+        "steps": {
+          "load:stage-1": {
+            "status": "cancelled",
+            "check": null,
+            "evidence": []
+          },
+          "load": {
+            "status": "cancelled",
+            "check": null,
+            "evidence": []
+          }
+        }
+      },
+      "production": {
+        "code": "POLICY_DENIED",
+        "message": "A load probe never runs against a production environment",
+        "retryable": false,
+        "details": {
+          "reasonCode": "production_load_refused",
+          "probe": "load"
+        },
+        "nextActions": []
+      },
+      "external": {
+        "code": "POLICY_DENIED",
+        "message": "A load probe requires a current bound securityProbe approval",
+        "retryable": false,
+        "details": {
+          "reasonCode": "approval_required",
+          "actions": [
+            {
+              "stepId": "load",
+              "risk": "securityProbe",
+              "basis": "load probe"
+            }
+          ],
+          "requiredApprovers": 1,
+          "separationOfDuties": false,
+          "binding": {
+            "revisionHash": "d1eda2e75a21465abf3aace87cc984628bee61b823a4a640945dd66c3f84a54c",
+            "environmentRevisionId": "evr_01a1655d-4d7e-7793-88c6-72dcd33d35fb",
+            "originSet": [
+              "http://127.0.0.1:45729",
+              "https://load-target.example"
+            ],
+            "actionSet": [
+              "securityProbe"
+            ],
+            "policyHash": "44647adedb24eacbf86e7ba40ca42984014bc22f8fc1c8238193b5ef9ed35a09",
+            "actorId": "usr_01a1655d-4d70-720a-9bcb-340aaefff0fa",
+            "limits": {
+              "executionTimeoutMs": 150000,
+              "attemptTimeoutMs": 120000,
+              "stepTimeoutMs": 5000,
+              "networkRequestTimeoutMs": 90000,
+              "preparationTimeoutMs": 120000,
+              "collectionGraceMs": 60000,
+              "analysisGraceMs": 60000,
+              "maxAttempts": 1,
+              "bodyBytes": 10485760,
+              "artifactBytes": 67108864,
+              "attemptArtifactBytes": 268435456,
+              "logBytes": 10485760
+            }
+          }
+        },
+        "nextActions": []
+      }
+    }
+  ],
+  "limitations": [
+    "Load and target share one host, so latency figures describe this machine, not a deployment."
+  ]
+}
