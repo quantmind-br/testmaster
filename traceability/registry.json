@@ -7154,12 +7154,16 @@
         "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-018 SEC-047 INT-017 a malicious fork gets no secret, no check outside its own SHA and no path to the internal network",
         "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green",
         "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit",
-        "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 tampering with any retained hosted GitHub App record makes the matching rule fail"
+        "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 tampering with any retained hosted GitHub App record makes the matching rule fail",
+        "validation/journeys/j12-tunnel.docker.test.ts::J12 tunnel: a same-repository PR preview runs through an approved tunnel and only the approved head turns green",
+        "validation/journeys/j12-tunnel.docker.test.ts::J12 tunnel: revoking the tunnel stops the in-flight preview without a green check",
+        "packages/application/src/integrations/github/github-setup.test.ts::INT-024 a repository preview tunnel must be an active tunnel of the bound project"
       ],
       "oracle": [
         "Local Checks HTTP retry/external_id reconciliation, strict required-gate mapping, frozen SHA refusal and Action input/environment controls; local failed delivery never changes local verdict; a fork pull request is refused by policy before runtime installation and the hosted cross-owner fork run had no secret, no write token (HTTP 403 on every write API) and no execution.",
         "J12 automated part with a fake GitHub: push A then B, deployment ordering, duplicate and tampered webhooks, a malicious fork and the Docker-sandbox preview run; the real installed App is a W2 hosted proof.",
-        "Hosted proof on real GitHub.com: a real GitHub App created through the manifest flow, installed on a disposable public repository, real signed webhooks through a cloudflared quick tunnel to a server-profile TestMaster; both checks on the PR head SHA, one comment, a redelivery that created nothing, push A/B/C with B superseded, a failing preview that failed the gate, and an uninstall that revoked the installation. The fork case could not be exercised on real GitHub (one account) and stays proven by the fake-GitHub J12 suite."
+        "Hosted proof on real GitHub.com: a real GitHub App created through the manifest flow, installed on a disposable public repository, real signed webhooks through a cloudflared quick tunnel to a server-profile TestMaster; both checks on the PR head SHA, one comment, a redelivery that created nothing, push A/B/C with B superseded, a failing preview that failed the gate, and an uninstall that revoked the installation. The fork case could not be exercised on real GitHub (one account) and stays proven by the fake-GitHub J12 suite.",
+        "Tunnel variant (INT-024, M5): on PostgreSQL with the real HTTP server and relay behind TLS, a remote worker and a `tunnel start` agent, a same-repository head A is denied with admission_failed:POLICY_DENIED and non-success checks; after a reviewer approves the binding the refusal named (actorId and limits included), head B runs through the tunnel against the developer's loopback app and only B turns green; head C is denied again because the approval was consumed; a fork runs on its fixture without tunnelId and leaves the tunnel's stream counter unchanged; revoking the tunnel during a held preview cancels the Run with tunnel_lost and no check turns green."
       ],
       "evidence": [
         "packages/application/src/delivery.test.ts",
@@ -7180,7 +7184,10 @@
         "validation/results/m4-acceptance/hosted/06-failing-preview/check-runs-C.json",
         "validation/results/m4-acceptance/hosted/09-uninstall/testmaster-installations-after.json",
         "validation/results/m4-acceptance/w2c/005-w2c-hosted-evidence/output.log",
-        "validation/results/m4-acceptance/w2c/005-w2c-hosted-evidence/manifest.json"
+        "validation/results/m4-acceptance/w2c/005-w2c-hosted-evidence/manifest.json",
+        "validation/journeys/j12-tunnel.docker.test.ts",
+        "validation/results/J12-tunnel.json",
+        "packages/application/src/integrations/github/github-setup.test.ts"
       ],
       "code": [
         "packages/application/src/delivery.ts",
@@ -7189,7 +7196,9 @@
         "packages/application/src/ci.ts",
         "packages/application/src/integrations/github/service.ts",
         "tools/src/github-app/hosted-evidence.ts",
-        "validation/hosted/github-app-hosted.mjs"
+        "validation/hosted/github-app-hosted.mjs",
+        "packages/application/src/selection.ts",
+        "packages/application/src/approvals.ts"
       ],
       "coverage": {
         "positive": [
@@ -7199,7 +7208,8 @@
           "tools/src/github-action/inputs.test.ts::rejects shell injection IDs, credential URLs, wrong SHA, unknown inputs and floating manifests",
           "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-015 INT-019 INT-014 push A then B: A publishes only on SHA A, B waits for its own preview, and a late status for A starts nothing",
           "validation/journeys/j12-github.docker.test.ts::J12 M4-07 REQ-033 INT-015 INT-017 INT-019 INT-021 the Docker sandbox runs the pull request against its preview and only that SHA turns green",
-          "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit"
+          "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 the hosted GitHub App proof retains raw GitHub and TestMaster records that bind both checks, the comment and the revocation to the right commit",
+          "validation/journeys/j12-tunnel.docker.test.ts::J12 tunnel: a same-repository PR preview runs through an approved tunnel and only the approved head turns green"
         ],
         "negative": [
           "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
@@ -7209,7 +7219,9 @@
           "tools/src/github-action/main.test.ts::refuses a fork pull request before runtime installation",
           "tools/src/github-action/hosted-evidence.test.ts::HOSTED-FORK a cross-owner fork PR with its guard removed gets no secret, writable token, check or execution",
           "validation/journeys/j12-github.pg.test.ts::J12 M4-07 REQ-033 INT-018 SEC-047 INT-017 a malicious fork gets no secret, no check outside its own SHA and no path to the internal network",
-          "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 tampering with any retained hosted GitHub App record makes the matching rule fail"
+          "tools/src/github-app/hosted-evidence.test.ts::M4-07 J12 tampering with any retained hosted GitHub App record makes the matching rule fail",
+          "validation/journeys/j12-tunnel.docker.test.ts::J12 tunnel: revoking the tunnel stops the in-flight preview without a green check",
+          "packages/application/src/integrations/github/github-setup.test.ts::INT-024 a repository preview tunnel must be an active tunnel of the bound project"
         ],
         "criticalAssertions": [
           {
@@ -7239,20 +7251,26 @@
           {
             "path": "tools/src/github-app/hosted-evidence.test.ts",
             "assertion": "    ).toBe(true);"
+          },
+          {
+            "path": "validation/journeys/j12-tunnel.docker.test.ts",
+            "assertion": "    expect(tunnelOf(runB as { matrixCell: unknown })).toBe(main.tunnelId);"
+          },
+          {
+            "path": "validation/journeys/j12-tunnel.docker.test.ts",
+            "assertion": "    expect(tunnelOf(forkRun as { matrixCell: unknown })).toBeUndefined();"
+          },
+          {
+            "path": "validation/journeys/j12-tunnel.docker.test.ts",
+            "assertion": "    expect(tunnel().usage.streamsOpened).toBe(streamsAfterB);"
+          },
+          {
+            "path": "validation/journeys/j12-tunnel.docker.test.ts",
+            "assertion": "    expect(Object.values(verdict(SHA_E))).not.toContain(\"success\");"
           }
         ]
       },
-      "deferred": [
-        {
-          "milestone": "M5",
-          "scope": "tunnel variant of INT-024 (not an App prerequisite)",
-          "specQuote": {
-            "path": "specs/10-validation.md",
-            "text": "Túnel de INT-024 é variante M5"
-          }
-        }
-      ],
-      "note": "M3 satisfies the policy-blocks branch of the fork clause: execution is refused before runtime installation (main.test.ts) and the hosted cross-owner proof shows an empty secret and HTTP 403 on writes. Claim limit: the hosted acceptance does not probe internal network reachability; do not claim more than refused execution. Installed GitHub App, preview deployments and the tunnel variant are M4/M5. M4 S7 adds the automated J12 journey against a fake GitHub; the real App installation remains for W2. W2c hosted proof on real GitHub.com added; the real fork case was not exercised (a single GitHub account cannot fork its own repository) and remains covered by the fake-GitHub suite. A real GitHub App on GitHub.com was installed on a disposable repository and exercised through signed webhooks; the fork case was not exercised there (one GitHub account) and stays proven by the fake-GitHub suite."
+      "note": "M3 satisfies the policy-blocks branch of the fork clause: execution is refused before runtime installation (main.test.ts) and the hosted cross-owner proof shows an empty secret and HTTP 403 on writes. Claim limit: the hosted acceptance does not probe internal network reachability; do not claim more than refused execution. Installed GitHub App, preview deployments and the tunnel variant are M4/M5. M4 S7 adds the automated J12 journey against a fake GitHub; the real App installation remains for W2. W2c hosted proof on real GitHub.com added; the real fork case was not exercised (a single GitHub account cannot fork its own repository) and remains covered by the fake-GitHub suite. A real GitHub App on GitHub.com was installed on a disposable repository and exercised through signed webhooks; the fork case was not exercised there (one GitHub account) and stays proven by the fake-GitHub suite. M5 closes the tunnel variant (j12-tunnel.docker.test.ts): the HTTP server and relay run in the test process because a spawned server has no GitHub API base override and would publish to api.github.com."
     },
     {
       "id": "J13",
@@ -14820,14 +14838,19 @@
         "packages/application/src/integrations/github/github-setup.test.ts::INT-014 repository bindings need a project the integration may use and reject unknown repositories",
         "apps/server/src/github.routes.test.ts::INT-018 INT-017 repository settings and manual previews are administrator-only, validated and idempotent",
         "apps/server/src/integrations.test.ts::OPS-035 INT-004 a caller without administrator scope can neither pause nor revoke an integration over HTTP, and an administrator can do both",
-        "apps/server/src/auth-routes.test.ts::OPS-035 SEC-023 a viewer and a runner cannot revoke an authenticated session, and an owner can"
+        "apps/server/src/auth-routes.test.ts::OPS-035 SEC-023 a viewer and a runner cannot revoke an authenticated session, and an owner can",
+        "packages/application/src/operations-claims.test.ts::OPS-035 paused worker claims keep a queued Run queued until resume while the running Attempt finishes",
+        "apps/cli/src/remote.test.ts::OPS-035 ops status, admission and worker-claim commands act on the server workspace through --endpoint",
+        "packages/application/src/tunnels.test.ts::OPS-035 a viewer cannot kill a tunnel and the tunnel stays active",
+        "apps/server/src/workers-deliveries.test.ts::OPS-035 over HTTP a reader cannot kill a tunnel and a writer cannot pause worker claims, while an administrator can do both"
       ],
       "oracle": [
         "Every runbook command resolves to an implemented CLI command with its options; a viewer cannot drain, stop, revoke images or remove secrets and state is unchanged; each incident is either exercised by a cited test or listed as an unexercised gap with a resumption decider; exercises use local fixtures only.",
         "The portal grant editor issues allow and deny grants by resource type, actions, projects, environments and expiry, lists them, and the server refuses grants beyond the issuer; the member editor changes roles with If-Match and refuses self-promotion.",
         "M4 (S3) adds the auth-dynamic operator surfaces: profile, test sign-in, checkpoint and session-revocation routes, CLI commands and portal pages, each refusing callers without the role and returning no credential value.",
         "GitHub surfaces: the CLI manifest setup helper, per-repository settings (validated, administrator-only) and the portal settings form bind errors to their fields.",
-        "Over HTTP a caller without administrator scope cannot pause or revoke a webhook integration and an administrator can; a viewer and a runner cannot revoke an authenticated session of an auth profile (state unchanged) and an owner can."
+        "Over HTTP a caller without administrator scope cannot pause or revoke a webhook integration and an administrator can; a viewer and a runner cannot revoke an authenticated session of an auth profile (state unchanged) and an owner can.",
+        "M5 tunnel kill and worker pause: an administrator pauses claims for every worker of the workspace (a queued Run stays queued while the running Attempt finishes, resume claims it, both audited); a viewer cannot kill a tunnel and it stays active; over HTTP a reader cannot kill a tunnel and a writer cannot pause claims while an administrator can do both; every ops status, admission and claim command runs against a server through --endpoint."
       ],
       "evidence": [
         "docs/operations/local-operations.md",
@@ -14851,7 +14874,11 @@
         "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/output.log",
         "validation/results/m4-acceptance/s7/008-s7-postgres-github-v2/created/validation/results/j12-github.json",
         "validation/results/m4-acceptance/w2b/002-w2b-unit-final/output.log",
-        "validation/results/m4-acceptance/w2b/006-w2b-portal-clean/output.log"
+        "validation/results/m4-acceptance/w2b/006-w2b-portal-clean/output.log",
+        "packages/application/src/operations-claims.test.ts",
+        "packages/application/src/tunnels.test.ts",
+        "apps/server/src/workers-deliveries.test.ts",
+        "apps/cli/src/remote.test.ts"
       ],
       "code": [
         "docs/operations/local-operations.md",
@@ -14872,9 +14899,16 @@
         "apps/cli/src/github.ts",
         "apps/server/src/routes/github.ts",
         "packages/application/src/integrations/service.ts",
-        "packages/application/src/auth/profiles.ts"
+        "packages/application/src/auth/profiles.ts",
+        "packages/application/src/operations-claims.ts",
+        "packages/application/src/operations.ts",
+        "packages/application/src/tunnels.ts",
+        "apps/server/src/routes/operations.ts",
+        "apps/server/src/routes/tunnels.ts",
+        "apps/cli/src/operations.ts",
+        "apps/cli/src/remote.ts"
       ],
-      "note": "Executable local containment subset. The tabletop record lists sandbox/egress bypass and secret/token exposure as unexercised end to end and names who decides resumption. Global pause, tunnels, S3 outage, webhook replay and the multi-user grant editor are later surfaces. M4 added the multi-user grant editor surface (team.portal.test.ts). M4 S8 added the workers and notification-delivery surfaces with administrator-only refusal. M4 (S3) added the auth dynamic operator surfaces (profiles, checkpoints, revocation, storage-state import/export) over HTTP, CLI and the portal. M4 S7 adds the GitHub App setup and settings surfaces. M4 W2b closed the M4 scope with a viewer/runner refusal and owner/administrator control for every M4 operator surface: grant editor (team.portal), GitHub settings and previews (github.routes, github-portal), webhook integrations (integrations.test), auth profiles and checkpoints (auth-routes, auth-pages) and workers and notification deliveries (workers-deliveries, notifications-workers); webhook replay and the S3 outage repair remain M6.",
+      "note": "Executable local containment subset. The tabletop record lists sandbox/egress bypass and secret/token exposure as unexercised end to end and names who decides resumption. Global pause, tunnels, S3 outage, webhook replay and the multi-user grant editor are later surfaces. M4 added the multi-user grant editor surface (team.portal.test.ts). M4 S8 added the workers and notification-delivery surfaces with administrator-only refusal. M4 (S3) added the auth dynamic operator surfaces (profiles, checkpoints, revocation, storage-state import/export) over HTTP, CLI and the portal. M4 S7 adds the GitHub App setup and settings surfaces. M4 W2b closed the M4 scope with a viewer/runner refusal and owner/administrator control for every M4 operator surface: grant editor (team.portal), GitHub settings and previews (github.routes, github-portal), webhook integrations (integrations.test), auth profiles and checkpoints (auth-routes, auth-pages) and workers and notification deliveries (workers-deliveries, notifications-workers); webhook replay and the S3 outage repair remain M6. M5 adds the tunnel kill (tunnel stop --endpoint, DELETE /v1/tunnels/{id}) and the workspace worker-claim pause (ops workers pause|resume, POST /v1/operations/worker-claims) with viewer and writer refusal; every ops status, admission and claim command runs remotely through --endpoint.",
       "coverage": {
         "positive": [
           "packages/application/src/governance-runtime.test.ts::allows the local admin to drain and stop while refusing a viewer without changing worker state",
@@ -14891,7 +14925,9 @@
           "validation/journeys/github-portal.portal.test.ts::OPS-035 INT-018 INT-020 saves per-repository settings, binds a fork-policy error to its field and shows the saved result",
           "apps/cli/src/github.test.ts::INT-014 SEC-047 the setup helper serves the manifest on loopback, posts nothing itself and stores the App credentials as GitHub-bound secrets",
           "apps/server/src/integrations.test.ts::OPS-035 INT-004 a caller without administrator scope can neither pause nor revoke an integration over HTTP, and an administrator can do both",
-          "apps/server/src/auth-routes.test.ts::OPS-035 SEC-023 a viewer and a runner cannot revoke an authenticated session, and an owner can"
+          "apps/server/src/auth-routes.test.ts::OPS-035 SEC-023 a viewer and a runner cannot revoke an authenticated session, and an owner can",
+          "packages/application/src/operations-claims.test.ts::OPS-035 paused worker claims keep a queued Run queued until resume while the running Attempt finishes",
+          "apps/cli/src/remote.test.ts::OPS-035 ops status, admission and worker-claim commands act on the server workspace through --endpoint"
         ],
         "negative": [
           "packages/application/src/governance-runtime.test.ts::allows the local admin to drain and stop while refusing a viewer without changing worker state",
@@ -14904,7 +14940,9 @@
           "packages/application/src/integrations/github/github-setup.test.ts::INT-014 repository bindings need a project the integration may use and reject unknown repositories",
           "apps/server/src/github.routes.test.ts::INT-018 INT-017 repository settings and manual previews are administrator-only, validated and idempotent",
           "apps/server/src/integrations.test.ts::OPS-035 INT-004 a caller without administrator scope can neither pause nor revoke an integration over HTTP, and an administrator can do both",
-          "apps/server/src/auth-routes.test.ts::OPS-035 SEC-023 a viewer and a runner cannot revoke an authenticated session, and an owner can"
+          "apps/server/src/auth-routes.test.ts::OPS-035 SEC-023 a viewer and a runner cannot revoke an authenticated session, and an owner can",
+          "packages/application/src/tunnels.test.ts::OPS-035 a viewer cannot kill a tunnel and the tunnel stays active",
+          "apps/server/src/workers-deliveries.test.ts::OPS-035 over HTTP a reader cannot kill a tunnel and a writer cannot pause worker claims, while an administrator can do both"
         ],
         "criticalAssertions": [
           {
@@ -14966,18 +15004,26 @@
           {
             "path": "apps/server/src/auth-routes.test.ts",
             "assertion": "    expect(await sessionState()).toBe(before);"
+          },
+          {
+            "path": "packages/application/src/operations-claims.test.ts",
+            "assertion": "  expect(app.runs.get(second).phase).toBe(\"queued\");"
+          },
+          {
+            "path": "packages/application/src/tunnels.test.ts",
+            "assertion": "    expect(state(app, tunnel.id)).toEqual([\"active\", null]);"
+          },
+          {
+            "path": "apps/server/src/workers-deliveries.test.ts",
+            "assertion": "  expect((await f.call(\"GET\", \"/v1/operations/status\")).json().data.claims.paused).toBe(false);"
+          },
+          {
+            "path": "apps/cli/src/remote.test.ts",
+            "assertion": "    expect(f.application.operations.status().claims.paused).toBe(true);"
           }
         ]
       },
       "deferred": [
-        {
-          "milestone": "M5",
-          "scope": "Tunnel kill and global worker pause surfaces",
-          "specQuote": {
-            "path": "specs/08-operations.md",
-            "text": "M5 | OPS-007–012/015/019/028–034/037: workers distribuídos/túneis/matriz/modos avançados/memória"
-          }
-        },
         {
           "milestone": "M6",
           "scope": "Remaining runbook surfaces of the OPS-035 milestone range (S3 outage repair, webhook replay)",
