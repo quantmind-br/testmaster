@@ -21,7 +21,8 @@ import { ViewState } from "./view-state";
 interface RevisionRecord {
   readonly id: string;
   readonly ordinal: number;
-  readonly plan: PlanLike & { readonly name: string };
+  /** Null for imported code and property probes, which have no declarative plan. */
+  readonly plan: (PlanLike & { readonly name: string }) | null;
 }
 interface ResourceRow {
   readonly id: string;
@@ -250,7 +251,7 @@ export function DataFlowPanel({ runId, testId, revisionId }: DataFlowPanelProps)
     [resources.items, attempt],
   );
   const view = useMemo(() => {
-    if (!revision) return null;
+    if (!revision?.plan) return null;
     const graph = buildDataFlow(revision.plan, attemptSteps, flowResources);
     return {
       graph,
@@ -268,6 +269,14 @@ export function DataFlowPanel({ runId, testId, revisionId }: DataFlowPanelProps)
         kind={revisions.status === "forbidden" ? "forbidden" : "error"}
         error={revisions.error}
         onRetry={() => void revisions.reload()}
+      />
+    );
+  else if (revision && !revision.plan)
+    body = (
+      <ViewState
+        kind="empty"
+        title="No declarative plan"
+        message="This Run's revision is imported code or a property probe; it declares no plan steps, so there is no data flow to draw."
       />
     );
   else if (!view)
@@ -326,7 +335,7 @@ export function DataFlowPanel({ runId, testId, revisionId }: DataFlowPanelProps)
           </p>
         ) : null}
         <p>
-          Plan: <UntrustedText value={revision?.plan.name} maxLength={160} /> (revision{" "}
+          Plan: <UntrustedText value={revision?.plan?.name} maxLength={160} /> (revision{" "}
           {revision?.ordinal}).
         </p>
         {orphans.length > 0 ? (

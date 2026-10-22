@@ -4,10 +4,10 @@ import { ContractError } from "@testmaster/contracts";
 import { exitCodeForRun } from "@testmaster/domain";
 import { formatDiagnosisSummary } from "@testmaster/reporting";
 import type { Command } from "commander";
-import { waitForRun } from "./execution.js";
+import { receiptResult, WAIT_LIMIT_HELP, waitForRun } from "./execution.js";
 import { listOrPage, withPaging } from "./paging.js";
 import { runListBinding, runListFilter } from "./run-filter.js";
-import { integer, type Result, type Runtime, seconds, string } from "./runtime.js";
+import { integer, type Result, type Runtime, required, seconds, string } from "./runtime.js";
 
 /** Steps per page by default: the page size of the MCP resource `testmaster://runs/{id}/steps`. */
 const STEP_PAGE = 50;
@@ -130,6 +130,30 @@ export function runCommands(program: Command, runtime: Runtime): void {
       if (receipt.result !== "requested") return { data: receipt };
       const run = await waitForRun(rt, app, id, options);
       return { data: { receipt, run } };
+    },
+  );
+  runtime.bind(
+    group
+      .command("reproduce <id>")
+      .description(
+        "Turn a minimized failure a property probe Run stored into its own test and admit a replay Run of it, with the probe Run's environment and seed",
+      )
+      .requiredOption(
+        "--artifact <artifact>",
+        "Bundle path of the replay plan, for example property/1-replay.plan.json",
+      )
+      .option("--wait")
+      .option("--timeout <seconds>", WAIT_LIMIT_HELP, seconds)
+      .option("--idempotency-key <key>", "Admission idempotency key"),
+    async (rt, args, options) => {
+      const app = await rt.app();
+      const key = string(options, "idempotencyKey");
+      const receipt = await app.reproductions.reproduce(
+        String(args[0]),
+        { artifact: required(options, "artifact") },
+        { origin: "cli", wait: options.wait === true, ...(key ? { idempotencyKey: key } : {}) },
+      );
+      return receiptResult(rt, app, receipt, options);
     },
   );
   runtime.bind(

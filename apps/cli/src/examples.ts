@@ -351,6 +351,24 @@ export const inputExamples: Record<string, InputExample> = {
     }),
   },
   "test create": planInput("--plan"),
+  // `sourceRevisionId` names an OpenAPI or GraphQL source added with `testmaster source add`; the
+  // credential's secret is the whole header value.
+  "test probe create": {
+    option: "--file",
+    contract: "ProbeInput",
+    content: () => ({
+      name: "orders API properties",
+      spec: {
+        kind: "property",
+        api: "openapi",
+        sourceRevisionId: "svr_01900000-0000-7000-8000-000000000050",
+        operations: ["GET /api/products", "GET /api/orders/{id}"],
+        stateful: true,
+        maxExamples: 100,
+        credentials: [{ header: "Authorization", secretRef: secret(3) }],
+      },
+    }),
+  },
   "test lint": planInput("--plan"),
   "test revision create": planInput("--plan"),
   "plan edit": planInput("--plan"),

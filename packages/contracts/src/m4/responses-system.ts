@@ -118,9 +118,9 @@ const ExecutionConfig = P.Obj({
 const CapabilityReport = P.Obj({
   schemaVersion: Type.Literal("1.0.0"),
   features: Type.Array(CapabilityFeature),
-  /** Empty when the pinned runner images are not ready, otherwise all four. */
-  runners: Type.Array(P.Enum(["playwright", "http", "python", "terminal"]), {
-    maxItems: 4,
+  /** Empty when the pinned runner images are not ready, otherwise all five. */
+  runners: Type.Array(P.Enum(["playwright", "http", "python", "terminal", "probe"]), {
+    maxItems: 5,
     uniqueItems: true,
   }),
   sandbox: SandboxReport,

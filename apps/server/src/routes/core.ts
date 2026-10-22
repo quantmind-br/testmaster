@@ -3,6 +3,8 @@ import { type Application, type ArtifactStream, runVerdict } from "@testmaster/a
 import {
   type BatchRequest,
   ContractError,
+  type ProbeInput,
+  type ReproductionInput,
   type RunRequest,
   type TestRevisionInput,
   validateDocument,
@@ -116,6 +118,9 @@ const handlers: Record<string, RouteHandler> = {
       ...(input.justification ? { justification: input.justification } : {}),
     });
   }),
+  "POST /projects/{id}/probes": h(({ app, id, body }) =>
+    app.tests.createProbe(id, body as unknown as ProbeInput),
+  ),
   "GET /tests/{id}": h(({ app, id }) => app.tests.get(id)),
   "PATCH /tests/{id}": h(({ app, id, body, ifMatch }) => app.tests.update(id, body, ifMatch())),
   "DELETE /tests/{id}": h(({ app, id, body, ifMatch }) =>
@@ -175,6 +180,12 @@ const handlers: Record<string, RouteHandler> = {
   "POST /runs/{id}/cancel": h(({ app, id }) => app.runs.cancel(id)),
   "POST /runs/{id}/rerun": h(({ app, id, body, key }) =>
     app.runs.rerun(id, { ...body, idempotencyKey: key } as Parameters<typeof app.runs.rerun>[1]),
+  ),
+  "POST /runs/{id}/reproductions": h(({ app, id, body, key }) =>
+    app.reproductions.reproduce(id, body as unknown as ReproductionInput, {
+      origin: "api",
+      ...(key ? { idempotencyKey: key } : {}),
+    }),
   ),
   "GET /runs/{id}/steps": h(({ app, id, query, page }) =>
     page(app.runs.steps(id, query.attemptId)),
@@ -474,6 +485,7 @@ export const coreRoutes: RouteModule = {
     "DELETE /environments/{id}",
     "POST /projects/{id}/default-environment",
     "POST /projects/{id}/tests",
+    "POST /projects/{id}/probes",
     "PATCH /tests/{id}",
     "DELETE /tests/{id}",
     "POST /tests/{id}/revisions",

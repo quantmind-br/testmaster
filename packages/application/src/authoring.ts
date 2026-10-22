@@ -7,6 +7,7 @@ import {
   type EnvironmentRevision,
   type EnvironmentRevisionView,
   type ExecutablePlan,
+  type ProbeInput,
   type Project,
   parseAndValidate,
   type ServerLogSource,
@@ -25,6 +26,7 @@ import {
 } from "@testmaster/sandbox";
 import { assertCitedSchemasUsable } from "./ai/source-documents.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "./context.js";
+import { assertProbeUsable, normalizeProbe } from "./probes.js";
 import { type RevisionStanding, revisionStanding } from "./revision-standing.js";
 import { isTrialTest } from "./trial-tests.js";
 
@@ -906,6 +908,45 @@ export class TestsService {
       const revision = new RevisionsService(this.ctx).create(value.id, plan, undefined, {
         ...(input.justification ? { justification: input.justification } : {}),
       });
+      const next = { ...value, activeRevisionId: revision.id, version: 2 };
+      this.ctx.entities.update("TestCase", this.ctx.workspaceId, value.id, 1, next);
+      auditPromotion(this.ctx, value.id, revision.id, null);
+      return next;
+    });
+  }
+  /**
+   * Creates a test whose only revision runs a probe instead of a plan (ADR-033). The probe is
+   * stored with its defaults filled in, and its content hash is the hash of that probe.
+   */
+  createProbe(projectId: string, input: ProbeInput): Stored<TestCase> {
+    const request = validate<ProbeInput>("ProbeInput", input);
+    this.ctx.authorize("W", projectId);
+    return authoringTransaction(this.ctx, () => {
+      active(project(this.ctx, projectId));
+      assertProbeUsable(this.ctx, projectId, request.spec);
+      const probe = normalizeProbe(request.spec);
+      const value = entity(this.ctx, "tst", {
+        projectId,
+        name: request.name ?? `Property ${probe.api} probe`,
+        activeRevisionId: null,
+        tags: [],
+        priority: "normal",
+        archivedAt: null,
+      }) as Stored<TestCase>;
+      this.ctx.entities.insert("TestCase", value);
+      const revision = entity(this.ctx, "rev", {
+        testId: value.id,
+        ordinal: 1,
+        contentHash: semanticHash({ runnerKind: "probe", probe }),
+        plan: null,
+        codeArtifactId: null,
+        probe,
+        runnerKind: "probe",
+        author: this.ctx.principalId,
+        parentId: null,
+        origin: "manual",
+      }) as Stored<TestRevision>;
+      this.ctx.entities.insert("TestRevision", revision);
       const next = { ...value, activeRevisionId: revision.id, version: 2 };
       this.ctx.entities.update("TestCase", this.ctx.workspaceId, value.id, 1, next);
       auditPromotion(this.ctx, value.id, revision.id, null);

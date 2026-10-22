@@ -50,6 +50,7 @@ export * from "./operations.js";
 export * from "./operations-controllers.js";
 export * from "./operations-state.js";
 export * from "./plan-trial.js";
+export * from "./probes.js";
 export * from "./proof-of-possession.js";
 export * from "./provenance.js";
 export * from "./quarantine.js";

@@ -64,7 +64,7 @@ function download(revision: RevisionDoc): void {
       revisionId: revision.id,
       ordinal: revision.ordinal,
       contentHash: revision.contentHash,
-      plan: revision.plan,
+      ...(revision.probe ? { probe: revision.probe } : { plan: revision.plan }),
     },
     null,
     2,
@@ -564,7 +564,16 @@ function TestView({
           />
         </StatusView>
       </section>
-      {base ? (
+      {base?.probe ? (
+        <section aria-labelledby="probe-heading" data-testid="probe-spec">
+          <h2 id="probe-heading">Property probe</h2>
+          <p className="hint">
+            This revision generates requests from an API description; it has no plan to edit. Each
+            Run stores minimized reproductions that replay as their own tests.
+          </p>
+          <pre>{prettyPlan(base.probe)}</pre>
+        </section>
+      ) : base ? (
         <Editor
           key={`${base.id}:${storedDraft?.id ?? "none"}:${storedDraft?.version ?? 0}`}
           test={test}

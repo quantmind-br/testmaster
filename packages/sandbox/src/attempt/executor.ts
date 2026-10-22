@@ -63,8 +63,12 @@ export function storageStateValues(storageState: string): string[] {
     return [];
   }
 }
-/** Ids the runner itself gives steps that are not plan steps (imported code, the attempt-wide egress denial). */
-const RUNNER_STEP_ID = /^(?:attempt|imported-code|imported-test-\d+|imported-step-\d+)$/u;
+/**
+ * Ids the runner itself gives steps that are not plan steps (imported code, the attempt-wide
+ * egress denial, and a probe's aggregate, stateful and per-operation steps, ADR-033).
+ */
+const RUNNER_STEP_ID =
+  /^(?:attempt|imported-code|imported-test-\d+|imported-step-\d+|property(?::(?:stateful|[A-Z]+ \/\S*|[_A-Za-z][_0-9A-Za-z]*))?)$/u;
 /**
  * Puts back, in a redacted event payload, the identifiers the redaction rewrote although they are
  * plan text: `stepId`, the name of a captured variable, a resource handle reference, and the

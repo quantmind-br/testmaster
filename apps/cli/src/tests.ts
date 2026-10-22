@@ -1,5 +1,5 @@
 import { generateTests, scaffoldPlan } from "@testmaster/application";
-import { ContractError } from "@testmaster/contracts";
+import { ContractError, type ProbeInput, parseStrictJson, validate } from "@testmaster/contracts";
 import { batchExitCode, exitCodeForGate, exitCodeForRun } from "@testmaster/domain";
 import { importCode as validateCode } from "@testmaster/planner";
 import type { Command } from "commander";
@@ -113,6 +113,32 @@ export function testCommands(program: Command, runtime: Runtime): void {
       }
       await rt.plan(required(options, "plan"));
       metadata(options);
+      return { data: null };
+    },
+  );
+  const probes = group
+    .command("probe")
+    .description("Property probes: tests generated from an OpenAPI or GraphQL source (ADR-033)");
+  const readProbe = async (rt: Runtime, options: Options): Promise<ProbeInput> =>
+    validate<ProbeInput>(
+      "ProbeInput",
+      parseStrictJson(await rt.readInput(required(options, "file"))),
+    );
+  runtime.bind(
+    probes
+      .command("create")
+      .description(
+        "Create a test whose active revision is a property probe; each Run needs a bound securityProbe approval",
+      )
+      .requiredOption("--file <file>", "ProbeInput JSON; the project comes from --project"),
+    async (rt, _args, options) => {
+      const input = await readProbe(rt, options);
+      return {
+        data: (await rt.app()).tests.createProbe(await rt.project(options), input),
+      };
+    },
+    async (rt, _args, options) => {
+      await readProbe(rt, options);
       return { data: null };
     },
   );

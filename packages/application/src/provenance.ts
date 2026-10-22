@@ -30,6 +30,7 @@ import type { ImageLock } from "@testmaster/sandbox";
 import type { ResolvedConfig } from "./config.js";
 import { requireEntity, type ServiceContext } from "./context.js";
 import { fixtureInputHashes } from "./input-fixtures.js";
+import { runnerImageOf } from "./runner-kinds.js";
 
 export interface RepositoryProvenance {
   repositoryId: string | null;
@@ -533,6 +534,8 @@ export function admissionSnapshot(
       for (const child of Object.values(value)) visit(child);
   };
   visit(revision.plan);
+  // A probe binds the API description it generates examples from (ADR-033).
+  visit(revision.probe);
   const requirementIds = (
     revision.plan && typeof revision.plan === "object" && "requirementRefs" in revision.plan
       ? revision.plan.requirementRefs
@@ -586,9 +589,7 @@ export function admissionSnapshot(
     limitations.push("remote-model-snapshot-unavailable");
   if (revision.origin === "generated" && !call?.modelConfigHash)
     limitations.push("generation-model-config-hash-unavailable");
-  const imageName =
-    revision.runnerKind === "python" ? "testmaster-runner-python" : "testmaster-runner";
-  const image = images?.[imageName];
+  const image = images?.[runnerImageOf(revision.runnerKind)];
   const codeRef =
     revision.codeRef && typeof revision.codeRef === "object"
       ? (revision.codeRef as Record<string, unknown>)

@@ -40,6 +40,7 @@ import {
   verifyAdmission,
 } from "./provenance.js";
 import { browserCellOf, withBrowserCell, withUsedEnvironment } from "./run-config.js";
+import { runnerImageOf } from "./runner-kinds.js";
 import { runtimeIdentity } from "./runtime-identity.js";
 import { type EvidenceLimits, runEvidenceBytes } from "./storage-admission.js";
 import { clockDomain, timingBoundary } from "./timing.js";
@@ -322,7 +323,7 @@ export class RunsService {
       "TestRevision",
       request.revisionId ?? String(test.activeRevisionId),
     );
-    if (revision.testId !== test.id || (!revision.plan && !revision.codeRef))
+    if (revision.testId !== test.id || (!revision.plan && !revision.codeRef && !revision.probe))
       throw new ContractError(
         "PRECONDITION_FAILED",
         "Revision does not belong to test or has no executable plan",
@@ -406,8 +407,12 @@ export class RunsService {
       }
     };
     inspectSecrets(revision.plan);
+    inspectSecrets(revision.probe);
     const executor =
       request.extensions?.["testmaster:executor"] ?? config.execution?.executor ?? "docker";
+    // A probe's generator ships only in the Python runner image (ADR-033).
+    if (revision.probe && executor === "process")
+      throw new ContractError("PRECONDITION_FAILED", "A probe runs only in the Docker sandbox");
     const maxConcurrency =
       request.extensions?.["testmaster:maxConcurrency"] ?? config.execution?.concurrency ?? 2;
     const ownership = this.host.liveWorker() ? "worker" : "ephemeral";
@@ -428,9 +433,7 @@ export class RunsService {
       executor === "process"
         ? null
         : runtimeIdentity(
-            this.host.admittedImages()?.[
-              revision.runnerKind === "python" ? "testmaster-runner-python" : "testmaster-runner"
-            ]?.imageId,
+            this.host.admittedImages()?.[runnerImageOf(revision.runnerKind)]?.imageId,
             effectiveConfig.config.browser?.name ?? "chromium",
           ),
     );

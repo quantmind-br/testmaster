@@ -12400,6 +12400,111 @@
         }
       }
     },
+    "probe": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "kind",
+        "api",
+        "sourceRevisionId",
+        "stateful"
+      ],
+      "properties": {
+        "kind": {
+          "const": "property",
+          "type": "string"
+        },
+        "api": {
+          "anyOf": [
+            {
+              "const": "openapi",
+              "type": "string"
+            },
+            {
+              "const": "graphql",
+              "type": "string"
+            }
+          ]
+        },
+        "sourceRevisionId": {
+          "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "operations": {
+          "minItems": 1,
+          "maxItems": 200,
+          "uniqueItems": true,
+          "type": "array",
+          "items": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          }
+        },
+        "stateful": {
+          "type": "boolean"
+        },
+        "maxExamples": {
+          "minimum": 1,
+          "maximum": 1000,
+          "type": "integer"
+        },
+        "checks": {
+          "minItems": 1,
+          "maxItems": 5,
+          "uniqueItems": true,
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "const": "not_a_server_error",
+                "type": "string"
+              },
+              {
+                "const": "status_code_conformance",
+                "type": "string"
+              },
+              {
+                "const": "content_type_conformance",
+                "type": "string"
+              },
+              {
+                "const": "response_schema_conformance",
+                "type": "string"
+              },
+              {
+                "const": "ignored_auth",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "credentials": {
+          "minItems": 1,
+          "maxItems": 8,
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "header",
+              "secretRef"
+            ],
+            "properties": {
+              "header": {
+                "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$",
+                "maxLength": 200,
+                "type": "string"
+              },
+              "secretRef": {
+                "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
     "runnerKind": {
       "anyOf": [
         {
@@ -12416,6 +12521,10 @@
         },
         {
           "const": "terminal",
+          "type": "string"
+        },
+        {
+          "const": "probe",
           "type": "string"
         }
       ]

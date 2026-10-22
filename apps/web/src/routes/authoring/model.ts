@@ -157,6 +157,8 @@ export interface RevisionDoc {
   readonly ordinal: number;
   readonly contentHash: string;
   readonly plan: Plan | null;
+  /** A property probe's generator configuration; such a revision has no plan (ADR-033). */
+  readonly probe?: unknown;
   readonly origin: string;
   readonly author: string;
   readonly parentId: string | null;

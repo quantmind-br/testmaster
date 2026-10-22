@@ -360,7 +360,8 @@ export type StepPrivacy =
 
 interface PlanRevision {
   readonly id: string;
-  readonly plan: PlanLike;
+  readonly plan: PlanLike | null;
+  readonly probe?: unknown;
 }
 
 /**
@@ -383,7 +384,15 @@ export function useStepPrivacy(testId: string, revisionId: string): StepPrivacy 
         );
         const revision = result.data.items.find((item) => item.id === revisionId);
         if (revision) {
-          setPrivacy({ status: "ready", sensitive: sensitiveStepIds(revision.plan) });
+          // A probe captures nothing: its credentials are headers the host redacts. Imported code
+          // declares no sensitivity, so it stays closed (ADR-033).
+          setPrivacy(
+            revision.plan
+              ? { status: "ready", sensitive: sensitiveStepIds(revision.plan) }
+              : revision.probe
+                ? { status: "ready", sensitive: new Set() }
+                : { status: "unknown" },
+          );
           return;
         }
         if (!result.data.hasMore || !result.data.nextCursor) break;

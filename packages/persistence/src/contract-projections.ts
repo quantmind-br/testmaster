@@ -131,6 +131,8 @@ function currentEnum(table: string, column: string): string {
     throw new Error(`${table}.${column} is not a contract enum`);
   return children.map((child) => `'${String(child.const).replaceAll("'", "''")}'`).join(",");
 }
+/** The runner kinds 0022 admitted; later kinds arrive in their own migration. */
+const terminalRunnerKinds = ["playwright", "http", "python", "terminal"] as const;
 /**
  * `test_revisions` carried the runner kinds as an inline CHECK and in generated constraints since
  * 0001/0004. 0022 adds `terminal`: SQLite cannot alter a CHECK, so the table is rebuilt with every
@@ -138,12 +140,26 @@ function currentEnum(table: string, column: string): string {
  * in 0002; `database.ts` migrates with foreign keys off and verifies them afterwards).
  */
 function terminalRunnerPrologue(engine: Engine): string {
-  const kinds = currentEnum("test_revisions", "runner_kind");
+  return runnerKindPrologue(
+    engine,
+    terminalRunnerKinds.map((kind) => `'${kind}'`).join(","),
+    "test_revisions_terminal",
+  );
+}
+/** 0027 adds the `probe` runner kind (ADR-033) the same way 0022 added `terminal`. */
+function probeRunnerPrologue(engine: Engine): string {
+  return runnerKindPrologue(
+    engine,
+    currentEnum("test_revisions", "runner_kind"),
+    "test_revisions_probe",
+  );
+}
+function runnerKindPrologue(engine: Engine, kinds: string, scratch: string): string {
   if (engine === "postgres")
     return `ALTER TABLE test_revisions DROP CONSTRAINT test_revisions_runner_kind_check;\nALTER TABLE test_revisions DROP CONSTRAINT contract_test_revisions_projection;\nALTER TABLE test_revisions ADD CONSTRAINT test_revisions_runner_kind_check CHECK (runner_kind IN (${kinds}));\n`;
   const columns =
     "workspace_id,id,created_at,version,data_json,test_id,ordinal,parent_id,content_hash,runner_kind,origin,code_artifact_id";
-  return `CREATE TABLE test_revisions_terminal (
+  return `CREATE TABLE ${scratch} (
   workspace_id TEXT NOT NULL,
   id TEXT NOT NULL,
   created_at TEXT NOT NULL,
@@ -158,9 +174,9 @@ function terminalRunnerPrologue(engine: Engine): string {
   UNIQUE(workspace_id,test_id,ordinal),
   UNIQUE(workspace_id,id,test_id)
 ) STRICT;
-INSERT INTO test_revisions_terminal(${columns}) SELECT ${columns} FROM test_revisions;
+INSERT INTO ${scratch}(${columns}) SELECT ${columns} FROM test_revisions;
 DROP TABLE test_revisions;
-ALTER TABLE test_revisions_terminal RENAME TO test_revisions;
+ALTER TABLE ${scratch} RENAME TO test_revisions;
 CREATE TRIGGER test_revisions_no_update BEFORE UPDATE ON test_revisions BEGIN SELECT RAISE(ABORT,'immutable'); END;
 CREATE TRIGGER test_revisions_no_delete BEFORE DELETE ON test_revisions BEGIN SELECT RAISE(ABORT,'immutable'); END;
 `;
@@ -228,9 +244,16 @@ export const constraintMigrations = {
       "healing_proposals.reviewer_id": { anyOf: [{ type: "string" }, { type: "null" }] },
     },
   },
-  "0022_terminal_runner": { tables: ["test_revisions"], prologue: terminalRunnerPrologue },
+  "0022_terminal_runner": {
+    tables: ["test_revisions"],
+    prologue: terminalRunnerPrologue,
+    frozen: {
+      "test_revisions.runner_kind": { anyOf: terminalRunnerKinds.map((kind) => ({ const: kind })) },
+    },
+  },
   "0023_artifact_storage_key": { tables: ["artifacts"], prologue: artifactStorageKeyPrologue },
   "0026_visual_baselines": { tables: ["visual_baselines"], prologue: visualBaselinesPrologue },
+  "0027_probe_runner": { tables: ["test_revisions"], prologue: probeRunnerPrologue },
 } as const satisfies Record<string, ConstraintMigrationSpec>;
 export type ConstraintMigration = keyof typeof constraintMigrations;
 export function generatedConstraintMigrations(

@@ -112,6 +112,7 @@ import { OperationsService } from "./operations.js";
 import { registerOperationsControllers } from "./operations-controllers.js";
 import { PlanTrialService } from "./plan-trial.js";
 import { PlanValidationService } from "./plan-validation.js";
+import { ReproductionsService } from "./probes.js";
 import { QuarantineService } from "./quarantine.js";
 import { revokedImageIds, revokeImage } from "./release.js";
 import { RemoteAttemptRegistry, RemoteWorkerService } from "./remote-workers.js";
@@ -280,6 +281,8 @@ export class Application {
   readonly quarantine: QuarantineService;
   readonly worker: WorkerService;
   readonly artifacts: ArtifactsService;
+  /** Replays a probe's minimized failure as its own test (ADR-033). */
+  readonly reproductions: ReproductionsService;
   readonly reports: ReportsService;
   readonly runViews: RunViewsService;
   readonly artifactLinks: ArtifactLinksService;
@@ -487,6 +490,12 @@ export class Application {
     this.quarantine = new QuarantineService(this.context);
     this.selection = new SelectionService(this.context, this.runs, this.batches, this.quarantine);
     this.artifacts = new ArtifactsService(this.context, config, this.runs);
+    this.reproductions = new ReproductionsService(
+      this.context,
+      this.artifacts,
+      this.runs,
+      this.tests,
+    );
     this.visualBaselines = new VisualBaselinesService(
       this.context,
       config,
@@ -1743,7 +1752,7 @@ export class Application {
     return {
       schemaVersion: "1.0.0",
       features,
-      runners: imageReady ? ["playwright", "http", "python", "terminal"] : [],
+      runners: imageReady ? ["playwright", "http", "python", "terminal", "probe"] : [],
       sandbox: docker,
       limits: this.config.effectiveConfig.config.execution,
     };

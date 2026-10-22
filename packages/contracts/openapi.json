@@ -5992,6 +5992,82 @@
         }
       }
     },
+    "/projects/{id}/probes": {
+      "post": {
+        "operationId": "post__projects_id_probes",
+        "tags": [
+          "M5"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "tests:W",
+        "x-milestone": "M5",
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TestCase"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProbeInput"
+              }
+            }
+          }
+        }
+      }
+    },
     "/tests/{id}": {
       "get": {
         "operationId": "get__tests_id_",
@@ -7072,6 +7148,82 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/RerunInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/runs/{id}/reproductions": {
+      "post": {
+        "operationId": "post__runs_id_reproductions",
+        "tags": [
+          "M5"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-scope": "runs:X",
+        "x-milestone": "M5",
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ReproductionReceipt"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReproductionInput"
               }
             }
           }
@@ -37946,6 +38098,14 @@
                             "type": "string"
                           },
                           {
+                            "const": "property_schema_invalid",
+                            "type": "string"
+                          },
+                          {
+                            "const": "property_dependency_missing",
+                            "type": "string"
+                          },
+                          {
                             "const": "worker_lost",
                             "type": "string"
                           },
@@ -38360,6 +38520,14 @@
                           },
                           {
                             "const": "visual_baseline_unsupported",
+                            "type": "string"
+                          },
+                          {
+                            "const": "property_schema_invalid",
+                            "type": "string"
+                          },
+                          {
+                            "const": "property_dependency_missing",
                             "type": "string"
                           },
                           {
@@ -57892,6 +58060,14 @@
                 "type": "string"
               },
               {
+                "const": "property_schema_invalid",
+                "type": "string"
+              },
+              {
+                "const": "property_dependency_missing",
+                "type": "string"
+              },
+              {
                 "const": "worker_lost",
                 "type": "string"
               },
@@ -58118,6 +58294,14 @@
                     },
                     {
                       "const": "visual_baseline_unsupported",
+                      "type": "string"
+                    },
+                    {
+                      "const": "property_schema_invalid",
+                      "type": "string"
+                    },
+                    {
+                      "const": "property_dependency_missing",
                       "type": "string"
                     },
                     {
@@ -59184,6 +59368,14 @@
                       "type": "string"
                     },
                     {
+                      "const": "property_schema_invalid",
+                      "type": "string"
+                    },
+                    {
+                      "const": "property_dependency_missing",
+                      "type": "string"
+                    },
+                    {
                       "const": "worker_lost",
                       "type": "string"
                     },
@@ -59843,6 +60035,14 @@
                       "type": "string"
                     },
                     {
+                      "const": "property_schema_invalid",
+                      "type": "string"
+                    },
+                    {
+                      "const": "property_dependency_missing",
+                      "type": "string"
+                    },
+                    {
                       "const": "worker_lost",
                       "type": "string"
                     },
@@ -60284,6 +60484,14 @@
                       "type": "string"
                     },
                     {
+                      "const": "property_schema_invalid",
+                      "type": "string"
+                    },
+                    {
+                      "const": "property_dependency_missing",
+                      "type": "string"
+                    },
+                    {
                       "const": "worker_lost",
                       "type": "string"
                     },
@@ -60689,6 +60897,14 @@
                               "type": "string"
                             },
                             {
+                              "const": "property_schema_invalid",
+                              "type": "string"
+                            },
+                            {
+                              "const": "property_dependency_missing",
+                              "type": "string"
+                            },
+                            {
                               "const": "worker_lost",
                               "type": "string"
                             },
@@ -60962,6 +61178,14 @@
                         },
                         {
                           "const": "visual_baseline_unsupported",
+                          "type": "string"
+                        },
+                        {
+                          "const": "property_schema_invalid",
+                          "type": "string"
+                        },
+                        {
+                          "const": "property_dependency_missing",
                           "type": "string"
                         },
                         {
@@ -62251,7 +62475,7 @@
             }
           },
           "runners": {
-            "maxItems": 4,
+            "maxItems": 5,
             "uniqueItems": true,
             "type": "array",
             "items": {
@@ -62270,6 +62494,10 @@
                 },
                 {
                   "const": "terminal",
+                  "type": "string"
+                },
+                {
+                  "const": "probe",
                   "type": "string"
                 }
               ]
@@ -63076,6 +63304,14 @@
                   },
                   {
                     "const": "visual_baseline_unsupported",
+                    "type": "string"
+                  },
+                  {
+                    "const": "property_schema_invalid",
+                    "type": "string"
+                  },
+                  {
+                    "const": "property_dependency_missing",
                     "type": "string"
                   },
                   {
@@ -95128,6 +95364,14 @@
                       "type": "string"
                     },
                     {
+                      "const": "property_schema_invalid",
+                      "type": "string"
+                    },
+                    {
+                      "const": "property_dependency_missing",
+                      "type": "string"
+                    },
+                    {
                       "const": "worker_lost",
                       "type": "string"
                     },
@@ -103495,6 +103739,14 @@
                     },
                     {
                       "const": "visual_baseline_unsupported",
+                      "type": "string"
+                    },
+                    {
+                      "const": "property_schema_invalid",
+                      "type": "string"
+                    },
+                    {
+                      "const": "property_dependency_missing",
                       "type": "string"
                     },
                     {
@@ -125986,6 +126238,14 @@
                 "type": "string"
               },
               {
+                "const": "property_schema_invalid",
+                "type": "string"
+              },
+              {
+                "const": "property_dependency_missing",
+                "type": "string"
+              },
+              {
                 "const": "worker_lost",
                 "type": "string"
               },
@@ -138799,6 +139059,111 @@
                   }
                 }
               },
+              "probe": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "kind",
+                  "api",
+                  "sourceRevisionId",
+                  "stateful"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "property",
+                    "type": "string"
+                  },
+                  "api": {
+                    "anyOf": [
+                      {
+                        "const": "openapi",
+                        "type": "string"
+                      },
+                      {
+                        "const": "graphql",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "sourceRevisionId": {
+                    "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "operations": {
+                    "minItems": 1,
+                    "maxItems": 200,
+                    "uniqueItems": true,
+                    "type": "array",
+                    "items": {
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "type": "string"
+                    }
+                  },
+                  "stateful": {
+                    "type": "boolean"
+                  },
+                  "maxExamples": {
+                    "minimum": 1,
+                    "maximum": 1000,
+                    "type": "integer"
+                  },
+                  "checks": {
+                    "minItems": 1,
+                    "maxItems": 5,
+                    "uniqueItems": true,
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "const": "not_a_server_error",
+                          "type": "string"
+                        },
+                        {
+                          "const": "status_code_conformance",
+                          "type": "string"
+                        },
+                        {
+                          "const": "content_type_conformance",
+                          "type": "string"
+                        },
+                        {
+                          "const": "response_schema_conformance",
+                          "type": "string"
+                        },
+                        {
+                          "const": "ignored_auth",
+                          "type": "string"
+                        }
+                      ]
+                    }
+                  },
+                  "credentials": {
+                    "minItems": 1,
+                    "maxItems": 8,
+                    "type": "array",
+                    "items": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "header",
+                        "secretRef"
+                      ],
+                      "properties": {
+                        "header": {
+                          "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$",
+                          "maxLength": 200,
+                          "type": "string"
+                        },
+                        "secretRef": {
+                          "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
               "runnerKind": {
                 "anyOf": [
                   {
@@ -138815,6 +139180,10 @@
                   },
                   {
                     "const": "terminal",
+                    "type": "string"
+                  },
+                  {
+                    "const": "probe",
                     "type": "string"
                   }
                 ]
@@ -155605,6 +155974,14 @@
                       "type": "string"
                     },
                     {
+                      "const": "property_schema_invalid",
+                      "type": "string"
+                    },
+                    {
+                      "const": "property_dependency_missing",
+                      "type": "string"
+                    },
+                    {
                       "const": "worker_lost",
                       "type": "string"
                     },
@@ -155839,6 +156216,14 @@
                           },
                           {
                             "const": "visual_baseline_unsupported",
+                            "type": "string"
+                          },
+                          {
+                            "const": "property_schema_invalid",
+                            "type": "string"
+                          },
+                          {
+                            "const": "property_dependency_missing",
                             "type": "string"
                           },
                           {
@@ -156450,6 +156835,14 @@
                     "type": "string"
                   },
                   {
+                    "const": "property_schema_invalid",
+                    "type": "string"
+                  },
+                  {
+                    "const": "property_dependency_missing",
+                    "type": "string"
+                  },
+                  {
                     "const": "worker_lost",
                     "type": "string"
                   },
@@ -156778,6 +157171,14 @@
                         },
                         {
                           "const": "visual_baseline_unsupported",
+                          "type": "string"
+                        },
+                        {
+                          "const": "property_schema_invalid",
+                          "type": "string"
+                        },
+                        {
+                          "const": "property_dependency_missing",
                           "type": "string"
                         },
                         {
@@ -157166,6 +157567,232 @@
             ]
           }
         }
+      },
+      "ProbeInput": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "spec"
+        ],
+        "properties": {
+          "spec": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "kind",
+              "api",
+              "sourceRevisionId",
+              "stateful"
+            ],
+            "properties": {
+              "kind": {
+                "const": "property",
+                "type": "string"
+              },
+              "api": {
+                "anyOf": [
+                  {
+                    "const": "openapi",
+                    "type": "string"
+                  },
+                  {
+                    "const": "graphql",
+                    "type": "string"
+                  }
+                ]
+              },
+              "sourceRevisionId": {
+                "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "operations": {
+                "minItems": 1,
+                "maxItems": 200,
+                "uniqueItems": true,
+                "type": "array",
+                "items": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                }
+              },
+              "stateful": {
+                "type": "boolean"
+              },
+              "maxExamples": {
+                "minimum": 1,
+                "maximum": 1000,
+                "type": "integer"
+              },
+              "checks": {
+                "minItems": 1,
+                "maxItems": 5,
+                "uniqueItems": true,
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "const": "not_a_server_error",
+                      "type": "string"
+                    },
+                    {
+                      "const": "status_code_conformance",
+                      "type": "string"
+                    },
+                    {
+                      "const": "content_type_conformance",
+                      "type": "string"
+                    },
+                    {
+                      "const": "response_schema_conformance",
+                      "type": "string"
+                    },
+                    {
+                      "const": "ignored_auth",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "credentials": {
+                "minItems": 1,
+                "maxItems": 8,
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "header",
+                    "secretRef"
+                  ],
+                  "properties": {
+                    "header": {
+                      "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$",
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    "secretRef": {
+                      "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "name": {
+            "minLength": 1,
+            "maxLength": 200,
+            "type": "string"
+          }
+        },
+        "$defs": {}
+      },
+      "ProbeSpec": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "api",
+          "sourceRevisionId",
+          "stateful"
+        ],
+        "properties": {
+          "kind": {
+            "const": "property",
+            "type": "string"
+          },
+          "api": {
+            "anyOf": [
+              {
+                "const": "openapi",
+                "type": "string"
+              },
+              {
+                "const": "graphql",
+                "type": "string"
+              }
+            ]
+          },
+          "sourceRevisionId": {
+            "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "operations": {
+            "minItems": 1,
+            "maxItems": 200,
+            "uniqueItems": true,
+            "type": "array",
+            "items": {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          "stateful": {
+            "type": "boolean"
+          },
+          "maxExamples": {
+            "minimum": 1,
+            "maximum": 1000,
+            "type": "integer"
+          },
+          "checks": {
+            "minItems": 1,
+            "maxItems": 5,
+            "uniqueItems": true,
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "const": "not_a_server_error",
+                  "type": "string"
+                },
+                {
+                  "const": "status_code_conformance",
+                  "type": "string"
+                },
+                {
+                  "const": "content_type_conformance",
+                  "type": "string"
+                },
+                {
+                  "const": "response_schema_conformance",
+                  "type": "string"
+                },
+                {
+                  "const": "ignored_auth",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "credentials": {
+            "minItems": 1,
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "header",
+                "secretRef"
+              ],
+              "properties": {
+                "header": {
+                  "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$",
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "secretRef": {
+                  "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "$defs": {}
       },
       "Project": {
         "additionalProperties": false,
@@ -220381,6 +221008,14 @@
                             "type": "string"
                           },
                           {
+                            "const": "property_schema_invalid",
+                            "type": "string"
+                          },
+                          {
+                            "const": "property_dependency_missing",
+                            "type": "string"
+                          },
+                          {
                             "const": "worker_lost",
                             "type": "string"
                           },
@@ -221753,6 +222388,14 @@
                             "type": "string"
                           },
                           {
+                            "const": "property_schema_invalid",
+                            "type": "string"
+                          },
+                          {
+                            "const": "property_dependency_missing",
+                            "type": "string"
+                          },
+                          {
                             "const": "worker_lost",
                             "type": "string"
                           },
@@ -222569,6 +223212,14 @@
                                 },
                                 {
                                   "const": "visual_baseline_unsupported",
+                                  "type": "string"
+                                },
+                                {
+                                  "const": "property_schema_invalid",
+                                  "type": "string"
+                                },
+                                {
+                                  "const": "property_dependency_missing",
                                   "type": "string"
                                 },
                                 {
@@ -223944,6 +224595,14 @@
                                   "type": "string"
                                 },
                                 {
+                                  "const": "property_schema_invalid",
+                                  "type": "string"
+                                },
+                                {
+                                  "const": "property_dependency_missing",
+                                  "type": "string"
+                                },
+                                {
                                   "const": "worker_lost",
                                   "type": "string"
                                 },
@@ -224506,6 +225165,197 @@
                 "type": "string"
               }
             }
+          }
+        },
+        "$defs": {}
+      },
+      "ReproductionInput": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "artifact"
+        ],
+        "properties": {
+          "artifact": {
+            "pattern": "^property/[1-9][0-9]{0,5}-replay\\.plan\\.json$",
+            "type": "string"
+          }
+        },
+        "$defs": {}
+      },
+      "ReproductionReceipt": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "testId",
+          "runId",
+          "status",
+          "revisionId",
+          "environmentRevisionId",
+          "acceptedAt",
+          "links",
+          "idempotencyKey",
+          "ownership"
+        ],
+        "properties": {
+          "testId": {
+            "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "runId": {
+            "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "const": "queued",
+                    "type": "string"
+                  },
+                  {
+                    "const": "preparing",
+                    "type": "string"
+                  },
+                  {
+                    "const": "running",
+                    "type": "string"
+                  },
+                  {
+                    "const": "collecting",
+                    "type": "string"
+                  },
+                  {
+                    "const": "analyzing",
+                    "type": "string"
+                  },
+                  {
+                    "const": "completed",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "anyOf": [
+                  {
+                    "const": "passed",
+                    "type": "string"
+                  },
+                  {
+                    "const": "failed",
+                    "type": "string"
+                  },
+                  {
+                    "const": "blocked",
+                    "type": "string"
+                  },
+                  {
+                    "const": "cancelled",
+                    "type": "string"
+                  },
+                  {
+                    "const": "inconclusive",
+                    "type": "string"
+                  }
+                ]
+              }
+            ]
+          },
+          "revisionId": {
+            "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "environmentRevisionId": {
+            "pattern": "^evr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          },
+          "acceptedAt": {
+            "format": "date-time",
+            "pattern": "Z$",
+            "type": "string"
+          },
+          "links": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "self",
+              "events",
+              "bundle"
+            ],
+            "properties": {
+              "self": {
+                "type": "string"
+              },
+              "events": {
+                "type": "string"
+              },
+              "bundle": {
+                "type": "string"
+              }
+            }
+          },
+          "idempotencyKey": {
+            "minLength": 16,
+            "maxLength": 128,
+            "type": "string"
+          },
+          "queue": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "reason",
+              "position",
+              "queued",
+              "limit",
+              "oldestQueuedAgeMs"
+            ],
+            "properties": {
+              "reason": {
+                "anyOf": [
+                  {
+                    "const": "waiting_for_worker",
+                    "type": "string"
+                  },
+                  {
+                    "const": "no_ready_worker",
+                    "type": "string"
+                  },
+                  {
+                    "const": "admission_paused",
+                    "type": "string"
+                  }
+                ]
+              },
+              "position": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "queued": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "limit": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "oldestQueuedAgeMs": {
+                "minimum": 0,
+                "type": "integer"
+              }
+            }
+          },
+          "ownership": {
+            "anyOf": [
+              {
+                "const": "worker",
+                "type": "string"
+              },
+              {
+                "const": "ephemeral",
+                "type": "string"
+              }
+            ]
           }
         },
         "$defs": {}
@@ -228619,6 +229469,14 @@
                 "type": "string"
               },
               {
+                "const": "property_schema_invalid",
+                "type": "string"
+              },
+              {
+                "const": "property_dependency_missing",
+                "type": "string"
+              },
+              {
                 "const": "worker_lost",
                 "type": "string"
               },
@@ -229295,6 +230153,14 @@
                 "type": "string"
               },
               {
+                "const": "property_schema_invalid",
+                "type": "string"
+              },
+              {
+                "const": "property_dependency_missing",
+                "type": "string"
+              },
+              {
                 "const": "worker_lost",
                 "type": "string"
               },
@@ -229823,6 +230689,14 @@
                       },
                       {
                         "const": "visual_baseline_unsupported",
+                        "type": "string"
+                      },
+                      {
+                        "const": "property_schema_invalid",
+                        "type": "string"
+                      },
+                      {
+                        "const": "property_dependency_missing",
                         "type": "string"
                       },
                       {
@@ -231195,6 +232069,14 @@
                       },
                       {
                         "const": "visual_baseline_unsupported",
+                        "type": "string"
+                      },
+                      {
+                        "const": "property_schema_invalid",
+                        "type": "string"
+                      },
+                      {
+                        "const": "property_dependency_missing",
                         "type": "string"
                       },
                       {
@@ -233878,6 +234760,14 @@
                 "type": "string"
               },
               {
+                "const": "property_schema_invalid",
+                "type": "string"
+              },
+              {
+                "const": "property_dependency_missing",
+                "type": "string"
+              },
+              {
                 "const": "worker_lost",
                 "type": "string"
               },
@@ -235160,6 +236050,14 @@
                     },
                     {
                       "const": "visual_baseline_unsupported",
+                      "type": "string"
+                    },
+                    {
+                      "const": "property_schema_invalid",
+                      "type": "string"
+                    },
+                    {
+                      "const": "property_dependency_missing",
                       "type": "string"
                     },
                     {
@@ -256065,6 +256963,14 @@
                 "type": "string"
               },
               {
+                "const": "property_schema_invalid",
+                "type": "string"
+              },
+              {
+                "const": "property_dependency_missing",
+                "type": "string"
+              },
+              {
                 "const": "worker_lost",
                 "type": "string"
               },
@@ -256530,6 +257436,14 @@
               },
               {
                 "const": "visual_baseline_unsupported",
+                "type": "string"
+              },
+              {
+                "const": "property_schema_invalid",
+                "type": "string"
+              },
+              {
+                "const": "property_dependency_missing",
                 "type": "string"
               },
               {
@@ -257481,6 +258395,14 @@
                       "type": "string"
                     },
                     {
+                      "const": "property_schema_invalid",
+                      "type": "string"
+                    },
+                    {
+                      "const": "property_dependency_missing",
+                      "type": "string"
+                    },
+                    {
                       "const": "worker_lost",
                       "type": "string"
                     },
@@ -258270,6 +259192,14 @@
                       },
                       {
                         "const": "visual_baseline_unsupported",
+                        "type": "string"
+                      },
+                      {
+                        "const": "property_schema_invalid",
+                        "type": "string"
+                      },
+                      {
+                        "const": "property_dependency_missing",
                         "type": "string"
                       },
                       {
@@ -288390,6 +289320,111 @@
               }
             }
           },
+          "probe": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "kind",
+              "api",
+              "sourceRevisionId",
+              "stateful"
+            ],
+            "properties": {
+              "kind": {
+                "const": "property",
+                "type": "string"
+              },
+              "api": {
+                "anyOf": [
+                  {
+                    "const": "openapi",
+                    "type": "string"
+                  },
+                  {
+                    "const": "graphql",
+                    "type": "string"
+                  }
+                ]
+              },
+              "sourceRevisionId": {
+                "pattern": "^svr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              "operations": {
+                "minItems": 1,
+                "maxItems": 200,
+                "uniqueItems": true,
+                "type": "array",
+                "items": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "type": "string"
+                }
+              },
+              "stateful": {
+                "type": "boolean"
+              },
+              "maxExamples": {
+                "minimum": 1,
+                "maximum": 1000,
+                "type": "integer"
+              },
+              "checks": {
+                "minItems": 1,
+                "maxItems": 5,
+                "uniqueItems": true,
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "const": "not_a_server_error",
+                      "type": "string"
+                    },
+                    {
+                      "const": "status_code_conformance",
+                      "type": "string"
+                    },
+                    {
+                      "const": "content_type_conformance",
+                      "type": "string"
+                    },
+                    {
+                      "const": "response_schema_conformance",
+                      "type": "string"
+                    },
+                    {
+                      "const": "ignored_auth",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "credentials": {
+                "minItems": 1,
+                "maxItems": 8,
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "header",
+                    "secretRef"
+                  ],
+                  "properties": {
+                    "header": {
+                      "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$",
+                      "maxLength": 200,
+                      "type": "string"
+                    },
+                    "secretRef": {
+                      "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
           "runnerKind": {
             "anyOf": [
               {
@@ -288406,6 +289441,10 @@
               },
               {
                 "const": "terminal",
+                "type": "string"
+              },
+              {
+                "const": "probe",
                 "type": "string"
               }
             ]

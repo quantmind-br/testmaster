@@ -8,6 +8,7 @@ import {
   type EffectiveConfig,
   type ExecutablePlan,
   type PlanStep,
+  type ProbeSpec,
   type RunnerEvent,
   reasonRegistry,
   type VariableValue,
@@ -57,8 +58,10 @@ import { entity, requireEntity, type ServiceContext } from "./context.js";
 import { type ReuseBinding, resolveReuse } from "./dependency-reuse.js";
 import { fixtureRevoked, planRunnerPolicy, stageFixtureInputs } from "./input-fixtures.js";
 import { correlationId } from "./observability.js";
+import { probeSchemaFile } from "./probes.js";
 import { reproduction, verifyAdmission } from "./provenance.js";
 import { assertArtifactPublishable } from "./retention.js";
+import { PROBE_STEP_ID, runnerImageOf } from "./runner-kinds.js";
 import {
   captureDeclarations,
   cleanupHandleDeclarations,
@@ -72,8 +75,12 @@ import { readVisualBaselineBytes } from "./visual-baselines.js";
 import type { FrozenVisualBaseline } from "./visual-cell.js";
 import { isWriterContention, retryWriterContention } from "./writer-contention.js";
 
-/** Maps a revision runner to the sandbox executor kind; the Playwright runner uses the browser envelope. */
+/**
+ * Maps a revision runner to the sandbox executor kind; the Playwright runner uses the browser
+ * envelope and a probe runs in the Python runner (ADR-033).
+ */
 export function executorKindOf(runner: unknown): ExecutorKind {
+  if (runner === "probe") return "python";
   return runner === "python" || runner === "http" || runner === "terminal" ? runner : "browser";
 }
 /**
@@ -130,6 +137,11 @@ export function runDependencies(run: EntityDocument): ResolvedDependency[] {
   const cell = run.matrixCell as Record<string, unknown>;
   return (cell.dependencyBindings ?? []) as ResolvedDependency[];
 }
+/**
+ * Without a plan the runner's own steps are the assertions: imported code reports one aggregate
+ * step, and a probe reports one per operation plus its aggregate (ADR-033).
+ */
+const PLANLESS_ASSERTION = /^(?:imported-code|property|property:.+)$/u;
 /** What every Attempt of a Run observed, read back from its accepted events for the reducer. */
 export function attemptObservations(
   ctx: ServiceContext,
@@ -179,7 +191,7 @@ export function attemptObservations(
               Boolean(step && "expectation" in step) ||
               (event.payload.status === "failed" &&
                 reasonRegistry[String(event.payload.reasonCode)]?.effect === "failed")
-            : event.payload.stepId === "imported-code",
+            : PLANLESS_ASSERTION.test(event.payload.stepId),
           reliable: event.payload.status === "passed" || event.payload.status === "failed",
           ...(event.payload.reasonCode ? { reasonCode: event.payload.reasonCode } : {}),
         });
@@ -411,8 +423,9 @@ export class AttemptSession {
       .map((step) => step.id);
     this.requiredSteps = required.map((step) => step.id);
     if (!this.plan) {
-      this.assertions.push("imported-code");
-      this.requiredSteps.push("imported-code");
+      const aggregate = this.revision.probe ? PROBE_STEP_ID : "imported-code";
+      this.assertions.push(aggregate);
+      this.requiredSteps.push(aggregate);
     }
   }
 
@@ -697,9 +710,11 @@ export class AttemptSession {
       return null;
     }
     await mkdir(inputDir, { recursive: true, mode: 0o755 });
-    const imported = !plan
-      ? await new CodeImportService(this.ctx, this.host.config).readBundle(revision.id)
-      : null;
+    const probe = (revision.probe ?? null) as ProbeSpec | null;
+    const imported =
+      !plan && !probe
+        ? await new CodeImportService(this.ctx, this.host.config).readBundle(revision.id)
+        : null;
     if (imported) {
       if (cell.executor === "process")
         throw new ContractError("POLICY_DENIED", "Imported code requires Docker isolation");
@@ -708,6 +723,15 @@ export class AttemptSession {
         await mkdir(join(destination, ".."), { recursive: true, mode: 0o755 });
         await writeFile(destination, text, { mode: 0o644, flag: "wx" });
       }
+    }
+    // A probe reads the exact bytes its source was imported from (ADR-033).
+    const probeSchema = probe ? await probeSchemaFile(this.ctx, this.host.config, probe) : null;
+    if (probeSchema) {
+      await mkdir(join(inputDir, "property"), { recursive: true, mode: 0o755 });
+      await writeFile(join(inputDir, "property", probeSchema.fileName), probeSchema.bytes, {
+        mode: 0o644,
+        flag: "wx",
+      });
     }
     execution.progress(this.fence, "running");
     const currentImages = cell.executor === "process" ? null : await this.host.images();
@@ -805,6 +829,7 @@ export class AttemptSession {
       }
     };
     inspect(plan);
+    inspect(probe);
     // A code test reads secrets only through its declared bindings.
     const codeSecrets = imported
       ? codeSecretBindings(revision.codeRef as CodeReference | undefined, this.host.secrets)
@@ -884,10 +909,13 @@ export class AttemptSession {
         run.mode === "agent",
       ),
       snapshotId: this.snapshotId,
-      kind: imported?.bundle.format === "pytest" ? "python" : executorKindOf(plan?.runner),
+      kind:
+        imported?.bundle.format === "pytest"
+          ? "python"
+          : executorKindOf(probe ? "probe" : plan?.runner),
       imageId:
         imported?.dependencyLock.imageId ??
-        lock?.["testmaster-runner"].imageId ??
+        lock?.[runnerImageOf(probe ? "probe" : plan?.runner)].imageId ??
         `sha256:${"0".repeat(64)}`,
       inputDir,
       ...(plan ? { plan } : {}),
@@ -927,6 +955,21 @@ export class AttemptSession {
                   ...(usesProfile ? { profile: true } : {}),
                 },
               }
+          : {}),
+        ...(probe && probeSchema
+          ? {
+              seed: Number(cell.seed ?? 0),
+              property: {
+                ...probe,
+                credentials: (probe.credentials ?? []).map((credential) => ({
+                  ...credential,
+                  secretVersion: this.releases.find(
+                    (release) => release.secretRef === credential.secretRef,
+                  )?.secretVersion,
+                })),
+                schemaPath: `/run/testmaster/input/property/${probeSchema.fileName}`,
+              },
+            }
           : {}),
         baseUrl: String(cell.baseUrl),
         ...(prepared?.runnerAuth ? { auth: prepared.runnerAuth } : {}),

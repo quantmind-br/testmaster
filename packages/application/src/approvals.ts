@@ -17,6 +17,7 @@ import { type EntityDocument, OutboxRepository } from "@testmaster/persistence";
 import { authoringTransaction } from "./authoring.js";
 import type { ResolvedConfig } from "./config.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "./context.js";
+import { PROBE_STEP_ID } from "./runner-kinds.js";
 
 type Stored<T> = T & EntityDocument;
 export interface ApprovalInput {
@@ -257,6 +258,7 @@ export class ApprovalsService {
       }
     };
     collect(revision.plan);
+    collect(revision.probe);
     collect(environment.variables);
     const authProfiles = environment.authProfileRefs.map((id) =>
       requireEntity(this.ctx, "AuthProfile", id),
@@ -652,7 +654,7 @@ export class ApprovalsService {
       // A Run through a tunnel reaches a developer's machine: it needs a bound approval naming
       // the tunnel even outside production (ADR-031, SEC-039).
       const tunnelAction = typeof cell.tunnelId === "string" ? `tunnel:${cell.tunnelId}` : null;
-      if (!revision.plan && !tunnelAction) {
+      if (!revision.plan && !revision.probe && !tunnelAction) {
         const policy = run.gatePolicy as Record<string, unknown>;
         if (!environment.production && revision.codeRef && policy.executor === "docker")
           return null;
@@ -664,8 +666,15 @@ export class ApprovalsService {
       const risky = revision.plan
         ? planRiskActions(revision.plan).filter((action) => action.risk !== "read")
         : [];
-      // Outside production only the tunnel needs approving; risky actions are allowed there.
-      const actions = environment.production ? risky : [];
+      // Outside production only the tunnel needs approving; risky actions are allowed there. A
+      // probe sends generated traffic, so it needs a bound approval in every environment, consumed
+      // by one Run (ADR-033, SEC-039).
+      const actions: RiskAction[] = [
+        ...(environment.production ? risky : []),
+        ...(revision.probe
+          ? [{ stepId: PROBE_STEP_ID, risk: "securityProbe" as const, basis: "property probe" }]
+          : []),
+      ];
       if (!tunnelAction && !actions.length) return null;
       const policy =
         run.gatePolicy && typeof run.gatePolicy === "object" && !Array.isArray(run.gatePolicy)
@@ -745,9 +754,11 @@ export class ApprovalsService {
             "POLICY_DENIED",
             !actions.length
               ? "A Run through a tunnel requires a current bound approval naming the tunnel"
-              : approvalPolicy.requiredApprovers > 1
-                ? "Risky production actions require current bound approvals from independent reviewers"
-                : "Risky production actions require a current bound approval",
+              : revision.probe && !environment.production
+                ? "A property probe requires a current bound securityProbe approval"
+                : approvalPolicy.requiredApprovers > 1
+                  ? "Risky production actions require current bound approvals from independent reviewers"
+                  : "Risky production actions require a current bound approval",
             {
               reasonCode: "approval_required",
               actions,

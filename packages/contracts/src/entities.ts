@@ -1,6 +1,7 @@
 import { type Static, type TSchema, Type } from "@sinclair/typebox";
 import { authCheckpointKinds } from "./m4/auth.js";
 import { SuiteMemberInterval, SuiteSelection, suiteStates } from "./m4/lists.js";
+import { ProbeSpec } from "./m5/probes.js";
 import {
   ArtifactManifest,
   BatchCounts,
@@ -247,7 +248,9 @@ export const entities = {
     plan: nullable(ExecutablePlan),
     codeArtifactId: nullable(id("art")),
     codeRef: Type.Optional(CodeReference),
-    runnerKind: Enum(["playwright", "http", "python", "terminal"]),
+    /** A probe revision has no plan and no code: the probe is what it runs (ADR-033). */
+    probe: Type.Optional(ProbeSpec),
+    runnerKind: Enum(["playwright", "http", "python", "terminal", "probe"]),
     author: Name,
     parentId: nullable(id("rev")),
     origin: Enum(["manual", "generated", "healed", "imported"]),

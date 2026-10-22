@@ -19,6 +19,7 @@ import { scheduleContracts } from "./m4/schedules.js";
 import { settingsContracts } from "./m4/settings.js";
 import { sourceInsightContracts } from "./m4/sources.js";
 import { workerContracts } from "./m4/workers.js";
+import { probeContracts } from "./m5/probe-runs.js";
 import { remoteWorkerContracts } from "./m5/remote-workers.js";
 import { tunnelContracts } from "./m5/tunnels.js";
 import * as Metrics from "./metrics.js";
@@ -1047,6 +1048,7 @@ export const schemaCatalog: Readonly<Record<string, TSchema>> = Object.freeze({
   ...notificationContracts,
   ...deliveryContracts,
   ...workerContracts,
+  ...probeContracts,
   ...remoteWorkerContracts,
   ...tunnelContracts,
   ...githubContracts,

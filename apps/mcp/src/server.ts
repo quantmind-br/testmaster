@@ -2112,7 +2112,9 @@ export class TestMasterMcp {
           if (!revision.plan)
             throw new ContractError(
               "NOT_FOUND",
-              `Revision ${id} is generated code and has no plan; read its code at testmaster://revisions/${id}/code`,
+              revision.probe
+                ? `Revision ${id} is a property probe and has no plan; its spec is the probe field of testmaster://revisions/${id}`
+                : `Revision ${id} is generated code and has no plan; read its code at testmaster://revisions/${id}/code`,
               { revisionId: id, testId: revision.testId, origin: revision.origin },
             );
           return { json: revision.plan };
@@ -2376,7 +2378,8 @@ export class TestMasterMcp {
       ...revision,
       resources: {
         ...(revision.plan ? { plan: `testmaster://revisions/${id}/plan` } : {}),
-        code: `testmaster://revisions/${id}/code`,
+        // A probe is a generator configuration; it has neither a plan nor code (ADR-033).
+        ...(revision.probe ? {} : { code: `testmaster://revisions/${id}/code` }),
       },
     };
   }

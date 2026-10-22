@@ -67,6 +67,12 @@ const reasonGroups: ReadonlyArray<{ codes: readonly string[]; mapping: ReasonMap
     mapping: { effect: "blocked", gate: "required_failure", exit: 1, reporter: "error" },
   },
   {
+    // A property probe whose API description the runner cannot load, or whose generator is missing
+    // from the runner image: no example ran, so nothing was proven either way (ADR-033).
+    codes: ["property_schema_invalid", "property_dependency_missing"],
+    mapping: { effect: "blocked", gate: "required_failure", exit: 1, reporter: "error" },
+  },
+  {
     codes: [
       "worker_lost",
       "worker_lease_expired",
@@ -291,6 +297,8 @@ const features: Record<Milestone, readonly string[]> = {
     "memory",
     "visual-baselines",
     "terminal",
+    "api-property",
+    "graphql-property",
   ],
   M6: ["sso", "scim", "portability", "break-glass"],
 };
@@ -325,6 +333,8 @@ export const implementedFeatures: ReadonlySet<string> = new Set([
   "visualMatches",
   "visual-baselines",
   "accessibilityViolations",
+  "api-property",
+  "graphql-property",
 ]);
 export const capabilityRegistry: Readonly<Record<string, Capability>> = Object.freeze(
   Object.fromEntries(

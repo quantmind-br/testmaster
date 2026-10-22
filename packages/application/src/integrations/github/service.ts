@@ -872,7 +872,7 @@ export class GithubService {
       if (test.projectId !== projectId || test.archivedAt || !test.activeRevisionId) continue;
       if (selection.kind === "tests" && !selection.testIds.includes(String(test.id))) continue;
       const revision = requireEntity(acting.context, "TestRevision", String(test.activeRevisionId));
-      if (hasSecretRef(revision.plan)) return true;
+      if (hasSecretRef(revision.plan) || hasSecretRef(revision.probe)) return true;
     }
     return false;
   }

@@ -260,6 +260,7 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
     "ProposalDecisionReceipt",
   ],
   ["GET,POST", "/projects/{id}/tests", "tests:R/W", "M1", "TestRevisionInput", "TestCase"],
+  ["POST", "/projects/{id}/probes", "tests:W", "M5", "ProbeInput", "TestCase"],
   ["GET,PATCH,DELETE", "/tests/{id}", "tests:R/W", "M1", "TestMetadataInput", "TestCase"],
   [
     "GET,PUT,DELETE",
@@ -277,6 +278,7 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ["GET", "/runs/{id}", "runs:R", "M1", "Empty", "RunView"],
   ["POST", "/runs/{id}/cancel", "runs:X", "M1", "CancelInput", "CancelReceipt"],
   ["POST", "/runs/{id}/rerun", "runs:X", "M1", "RerunInput", "OwnedRunReceipt"],
+  ["POST", "/runs/{id}/reproductions", "runs:X", "M5", "ReproductionInput", "ReproductionReceipt"],
   ["GET", "/runs/{id}/steps", "runs:R", "M1", "Empty", "StepResultRecord"],
   ["GET", "/runs/{id}/events", "runs:R", "M1", "Empty", "RunEventView"],
   ["GET", "/runs/{id}/bundle", "artifacts:R", "M1", "Empty", "EvidenceBundleView"],
@@ -642,9 +644,11 @@ const responseOverrides: Readonly<Record<string, ResponseOverride>> = {
     "POST /workers",
     "POST /tunnels",
     "POST /visual-baselines",
+    "POST /projects/{id}/probes",
   ]),
   ...keysWith({ status: 202 }, [
     "POST /runs",
+    "POST /runs/{id}/reproductions",
     "POST /batches",
     "POST /projects/{id}/discovery",
     "POST /projects/{id}/proposal-batches",
