@@ -1,17 +1,15 @@
+import { minimumSamples, percentile, summarizeLatencies } from "@testmaster/domain";
 import { describe, expect, it } from "vitest";
 import {
   closedLoop,
   evaluateTargets,
   exceedanceSamples,
   judgeUpperBound,
-  minimumSamples,
   type Nfr006Target,
   nfr006Targets,
   type OperationResult,
   parseArguments,
-  percentile,
   type Sample,
-  summarizeLatencies,
   summarizeOperation,
 } from "./server-load.js";
 
