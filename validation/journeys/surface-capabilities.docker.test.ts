@@ -76,9 +76,7 @@ it("capabilities HTTP endpoint refuses to advertise missing runner images and di
           });
         }
         expect(
-          features
-            .filter((f) => ["sso", "scim"].includes(f.id))
-            .every((f) => !f.enabled),
+          features.filter((f) => ["sso", "scim"].includes(f.id)).every((f) => !f.enabled),
         ).toBe(true);
         session.oracles.push({
           check: "missingImageUnavailable",
