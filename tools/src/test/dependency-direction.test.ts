@@ -29,6 +29,7 @@ const layers: Record<string, number> = {
   "reference-hostel": 0,
   "reference-library": 0,
   "reference-auth": 0,
+  "reference-graphql": 0,
   tools: 8,
   validation: 8,
 };
