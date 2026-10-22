@@ -228,6 +228,58 @@ describe("selection", () => {
       app.close();
     }
   });
+  it("ADR-032 runs one Run per matrix cell and refuses a matrix over the batch cell limit", async () => {
+    const { app, input, init } = await fixture();
+    try {
+      const viewports = [
+        { width: 320, height: 568 },
+        { width: 1280, height: 720 },
+      ];
+      await app.selection.run(
+        { ...input, matrix: { browsers: ["chromium", "firefox", "webkit"], viewports } },
+        { wait: true },
+      );
+      const cells = app.runs.list().map((run) => {
+        const browser = (
+          run.matrixCell as { effectiveConfig: { config: { browser: Record<string, unknown> } } }
+        ).effectiveConfig.config.browser;
+        const viewport = browser.viewport as { width: number; height: number };
+        return `${String(browser.name)}@${viewport.width}x${viewport.height}`;
+      });
+      expect(cells.sort()).toEqual([
+        "chromium@1280x720",
+        "chromium@320x568",
+        "firefox@1280x720",
+        "firefox@320x568",
+        "webkit@1280x720",
+        "webkit@320x568",
+      ]);
+
+      // 5 tests × 3 browsers × 20 viewports × 2 schemes = 600 cells, over the 500-cell limit.
+      const testIds = [
+        ...input.testIds,
+        ...Array.from(
+          { length: 4 },
+          () => app.tests.create({ projectId: init.projectId, plan: scaffoldPlan("backend") }).id,
+        ),
+      ];
+      const wide = {
+        browsers: ["chromium", "firefox", "webkit"] as ("chromium" | "firefox" | "webkit")[],
+        viewports: Array.from({ length: 20 }, (_, index) => ({ width: 400 + index, height: 600 })),
+        colorSchemes: ["light", "dark"] as ("light" | "dark")[],
+      };
+      const before = rows(app);
+      await expect(
+        app.selection.run({ ...input, testIds, matrix: wide }, { wait: true }),
+      ).rejects.toMatchObject({
+        code: "INVALID_ARGUMENT",
+        details: { reason: "matrix_too_large", cells: 600, limit: 500 },
+      });
+      expect(rows(app)).toEqual(before);
+    } finally {
+      app.close();
+    }
+  });
   it("expands quarantined producers for consumers and refuses failed, foreign and expired fixture reuse", async () => {
     const { app, input } = await fixture();
     try {

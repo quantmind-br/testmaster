@@ -260,9 +260,14 @@ async function runImported(runtime: Runtime): Promise<RunnerResult> {
     reporter: [["/opt/testmaster/runner/dist/reporter.js"], ["line"]],
     use: {
       baseURL: runtime.input.baseUrl,
-      browserName: "chromium",
+      // The Run's matrix cell (ADR-032); only Chromium has a browser sandbox switch.
+      browserName: runtime.input.browser?.name ?? "chromium",
       headless: true,
-      launchOptions: { chromiumSandbox: true },
+      launchOptions:
+        (runtime.input.browser?.name ?? "chromium") === "chromium" ? { chromiumSandbox: true } : {},
+      viewport: runtime.input.browser?.viewport ?? { width: 1280, height: 720 },
+      colorScheme: runtime.input.browser?.colorScheme ?? "light",
+      reducedMotion: runtime.input.browser?.reducedMotion ?? "no-preference",
       proxy: { server: process.env.TESTMASTER_EGRESS_PROXY, bypass: "<-loopback>" },
       trace: "off",
       video: "off",

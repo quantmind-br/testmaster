@@ -16,7 +16,22 @@ export interface RunnerInput {
   baseUrl: string;
   locale?: string;
   timezone?: string;
-  browser?: { viewport?: { width: number; height: number }; testIdAttributes?: string[] };
+  /** The Run's frozen matrix cell (ADR-032); an absent field renders the Chromium defaults. */
+  browser?: {
+    name?: "chromium" | "firefox" | "webkit";
+    viewport?: { width: number; height: number };
+    colorScheme?: "light" | "dark";
+    reducedMotion?: "reduce" | "no-preference";
+    testIdAttributes?: string[];
+  };
+  /**
+   * The baseline the host froze for each `visualMatches` step id (ADR-032): `available` names the
+   * verified image in the read-only input bind; a missing or stale baseline blocks the step.
+   */
+  visualBaselines?: Record<
+    string,
+    { state: "available"; path: string } | { state: "missing" | "stale" }
+  >;
   plan?: ExecutablePlan;
   networkPolicy: NetworkPolicy;
   secrets: { secretRef: string; secretVersion: number }[];

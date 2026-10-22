@@ -61,6 +61,12 @@ const reasonGroups: ReadonlyArray<{ codes: readonly string[]; mapping: ReasonMap
     },
   },
   {
+    // A visual assertion with no approved baseline for its cell, a baseline approved for other
+    // masks, or an image outside the in-house PNG subset: never a pass, never a proven failure.
+    codes: ["visual_baseline_missing", "visual_baseline_stale", "visual_baseline_unsupported"],
+    mapping: { effect: "blocked", gate: "required_failure", exit: 1, reporter: "error" },
+  },
+  {
     codes: [
       "worker_lost",
       "worker_lease_expired",
@@ -315,6 +321,9 @@ export const implementedFeatures: ReadonlySet<string> = new Set([
   "terminal",
   "remote-workers",
   "tunnels",
+  "matrix-advanced",
+  "visualMatches",
+  "visual-baselines",
 ]);
 export const capabilityRegistry: Readonly<Record<string, Capability>> = Object.freeze(
   Object.fromEntries(

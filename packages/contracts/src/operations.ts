@@ -137,6 +137,29 @@ export const NetworkPolicy = Obj({
   allowInsecureTls: Type.Optional(Type.Boolean()),
   baseUrl: Type.Optional(Type.String({ format: "uri" })),
 });
+export const BrowserName = Enum(["chromium", "firefox", "webkit"]);
+export const Viewport = Obj({
+  width: Type.Integer({ minimum: 320, maximum: 3840 }),
+  height: Type.Integer({ minimum: 240, maximum: 2160 }),
+});
+export const ColorScheme = Enum(["light", "dark"]);
+export const ReducedMotion = Enum(["reduce", "no-preference"]);
+/**
+ * The browser cell one Run executes in. Admission resolves every omitted field from the project
+ * configuration and freezes the result, so a replay renders in the same cell (ADR-032).
+ */
+export const MatrixCell = Obj({
+  browser: Type.Optional(BrowserName),
+  viewport: Type.Optional(Viewport),
+  colorScheme: Type.Optional(ColorScheme),
+  reducedMotion: Type.Optional(ReducedMotion),
+});
+/** Axes a selection expands to their cartesian product of cells for every selected test. */
+export const MatrixAxes = Obj({
+  browsers: Type.Optional(Type.Array(BrowserName, { minItems: 1, uniqueItems: true })),
+  viewports: Type.Optional(Type.Array(Viewport, { minItems: 1, maxItems: 20, uniqueItems: true })),
+  colorSchemes: Type.Optional(Type.Array(ColorScheme, { minItems: 1, uniqueItems: true })),
+});
 export const ProjectConfig = Obj({
   schemaVersion: Type.Literal("1.0.0"),
   project: Type.Optional(Obj({ name: Name, id: Type.Optional(id("prj")) })),
@@ -159,8 +182,10 @@ export const ProjectConfig = Obj({
   ),
   browser: Type.Optional(
     Obj({
-      name: Enum(["chromium", "firefox", "webkit"]),
-      viewport: Type.Optional(Obj({ width: Positive, height: Positive })),
+      name: BrowserName,
+      viewport: Type.Optional(Viewport),
+      colorScheme: Type.Optional(ColorScheme),
+      reducedMotion: Type.Optional(ReducedMotion),
       testIdAttributes: Type.Optional(Type.Array(Name, { minItems: 1 })),
     }),
   ),
@@ -219,6 +244,8 @@ export const RunRequest = Obj({
    * must be the tunnel's loopback target, and only a remote worker claims it.
    */
   tunnelId: Type.Optional(id("tun")),
+  /** Browser cell of this Run; omitted fields resolve from the project configuration. */
+  cell: Type.Optional(MatrixCell),
   extensions: Type.Optional(Extensions),
 });
 /**
@@ -460,6 +487,8 @@ export type ExecutionLimits = Static<typeof ExecutionLimits>;
 export type NetworkPolicy = Static<typeof NetworkPolicy>;
 export type ProjectConfig = Static<typeof ProjectConfig>;
 export type EffectiveConfig = Static<typeof EffectiveConfig>;
+export type MatrixCell = Static<typeof MatrixCell>;
+export type MatrixAxes = Static<typeof MatrixAxes>;
 export type RunRequest = Static<typeof RunRequest>;
 export type QueueAdmission = Static<typeof QueueAdmission>;
 export type RunReceipt = Static<typeof RunReceipt>;

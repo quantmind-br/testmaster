@@ -9,15 +9,7 @@ import { Runtime } from "./runtime.js";
 
 const repo = fileURLToPath(new URL("../../../", import.meta.url));
 const runbook = join(repo, "docs/operations/local-operations.md");
-const unavailableGroups = [
-  "auth",
-  "suite",
-  "schedule",
-  "memory",
-  "visual-baseline",
-  "export",
-  "import",
-];
+const unavailableGroups = ["auth", "suite", "schedule", "memory", "export", "import"];
 
 function sink(): Writable {
   return new Writable({

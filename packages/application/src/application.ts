@@ -150,6 +150,7 @@ import { TestDraftsService } from "./test-drafts.js";
 import type { TokenData, TokenKind } from "./tokens.js";
 import { TunnelRelay } from "./tunnel-relay.js";
 import { runTunnelId, TunnelsService } from "./tunnels.js";
+import { VisualBaselinesService } from "./visual-baselines.js";
 import { WorkerService } from "./worker.js";
 import { WorkerPoolService } from "./worker-pool.js";
 
@@ -293,6 +294,8 @@ export class Application {
   readonly remoteWorkers: RemoteWorkerService;
   /** Tunnels to developers' loopback targets (ADR-031); the relay is shared by every scope. */
   readonly tunnels: TunnelsService;
+  /** Approved images `visualMatches` compares against (ADR-032). */
+  readonly visualBaselines: VisualBaselinesService;
   readonly github: GithubService;
   readonly agentSkills: AgentSkillsService;
   readonly model: ModelService;
@@ -484,6 +487,12 @@ export class Application {
     this.quarantine = new QuarantineService(this.context);
     this.selection = new SelectionService(this.context, this.runs, this.batches, this.quarantine);
     this.artifacts = new ArtifactsService(this.context, config, this.runs);
+    this.visualBaselines = new VisualBaselinesService(
+      this.context,
+      config,
+      this.artifacts,
+      this.runs,
+    );
     this.backups = new BackupsService(this.context, config, this.secrets);
     this.agentSkills = new AgentSkillsService(this.context, config.cwd);
     this.model = new ModelService(this.context, config);
@@ -1010,7 +1019,7 @@ export class Application {
    */
   private authorizeNamed(
     action: "approve" | "delete" | "export",
-    resourceType: "Artifact" | "SecretReference" | "AgentPullRequest",
+    resourceType: "Artifact" | "SecretReference" | "AgentPullRequest" | "VisualBaseline",
     projectId: string,
     environmentId: string | null,
   ): void {
@@ -1028,6 +1037,7 @@ export class Application {
         Artifact: ["Artifact", "artifacts", "*"],
         SecretReference: ["SecretReference", "secrets", "*"],
         AgentPullRequest: ["AgentPullRequest", "github", "*"],
+        VisualBaseline: ["VisualBaseline", "tests", "*"],
       };
       const column: RbacColumn =
         action === "approve" ? "write" : action === "export" ? "export" : "admin";
@@ -1048,7 +1058,7 @@ export class Application {
         ? rbacMatrix[role][column] === "allow"
         : decision.allowed && decision.granted;
       if (!decision.allowed || !allowed) {
-        const scope = `${{ Artifact: "artifacts", SecretReference: "secrets", AgentPullRequest: "github" }[resourceType]}:${action}`;
+        const scope = `${{ Artifact: "artifacts", SecretReference: "secrets", AgentPullRequest: "github", VisualBaseline: "tests" }[resourceType]}:${action}`;
         throw new ContractError("FORBIDDEN", "Action is not authorized", { scope });
       }
       auditSecurity(this.context, "grant", projectId, "allowed");

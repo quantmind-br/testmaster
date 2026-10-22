@@ -107,6 +107,8 @@ export function scalarPredicate(schema: Record<string, unknown>, expression: str
 }
 /** Tables introduced after 0004; each one receives its generated constraints in its own forward migration. */
 const introducedAfter0004 = ["analyses", "healing_proposals", "deliveries"] as const;
+/** Tables whose constraints a later migration generates, so the 0004 `null` selection leaves them out. */
+const excludedFrom0004: readonly string[] = [...introducedAfter0004, "visual_baselines"];
 type Engine = "sqlite" | "postgres";
 interface ConstraintMigrationSpec {
   /** Tables whose constraints the migration generates; `null` is every table not introduced later. */
@@ -175,6 +177,40 @@ function artifactStorageKeyPrologue(engine: Engine): string {
     return "ALTER TABLE artifacts DROP CONSTRAINT contract_artifacts_projection;\n";
   return "DROP TRIGGER contract_artifacts_insert;\nDROP TRIGGER contract_artifacts_update;\n";
 }
+/**
+ * `visual_baselines` (ADR-032) holds the images `visualMatches` compares against. It is a table of
+ * its own, so the prologue creates it and the generated section constrains its scalar columns.
+ * Test, project and workspace are foreign keys; the artifact and Run a baseline was copied from are
+ * not, because retention may purge them while the approved baseline must stay comparable.
+ */
+function visualBaselinesPrologue(engine: Engine): string {
+  const statuses = currentEnum("visual_baselines", "status");
+  const postgres = engine === "postgres";
+  const sqlite = !postgres;
+  return `CREATE TABLE visual_baselines (
+  workspace_id TEXT NOT NULL${postgres ? " REFERENCES workspaces(id) DEFERRABLE INITIALLY DEFERRED" : ""},
+  id TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  version ${postgres ? "BIGINT" : "INTEGER"} NOT NULL DEFAULT 1 CHECK(version>=1),
+  data_json TEXT NOT NULL DEFAULT '{}',
+  project_id TEXT NOT NULL,
+  test_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  matrix_digest TEXT NOT NULL,
+  source_run_id TEXT NOT NULL,
+  artifact_id TEXT NOT NULL,
+  sha256 TEXT NOT NULL,
+  mask_hash TEXT NOT NULL,
+  status TEXT NOT NULL CHECK(status IN (${statuses})),
+  created_by TEXT NOT NULL,
+  approved_by TEXT,
+  PRIMARY KEY(workspace_id,id),${sqlite ? "\n  FOREIGN KEY(workspace_id) REFERENCES workspaces(id) DEFERRABLE INITIALLY DEFERRED," : ""}
+  FOREIGN KEY(workspace_id,project_id) REFERENCES projects(workspace_id,id) DEFERRABLE INITIALLY DEFERRED,
+  FOREIGN KEY(workspace_id,test_id) REFERENCES tests(workspace_id,id) DEFERRABLE INITIALLY DEFERRED
+)${sqlite ? " STRICT" : ""};
+CREATE INDEX visual_baselines_effective ON visual_baselines(workspace_id,test_id,name,matrix_digest,status);
+${postgres ? "SELECT tm_enable_tenant_rls('visual_baselines');\n" : ""}`;
+}
 export const constraintMigrations = {
   "0004_contract_constraints": {
     tables: null,
@@ -194,6 +230,7 @@ export const constraintMigrations = {
   },
   "0022_terminal_runner": { tables: ["test_revisions"], prologue: terminalRunnerPrologue },
   "0023_artifact_storage_key": { tables: ["artifacts"], prologue: artifactStorageKeyPrologue },
+  "0026_visual_baselines": { tables: ["visual_baselines"], prologue: visualBaselinesPrologue },
 } as const satisfies Record<string, ConstraintMigrationSpec>;
 export type ConstraintMigration = keyof typeof constraintMigrations;
 export function generatedConstraintMigrations(
@@ -209,9 +246,7 @@ export function generatedConstraintMigrations(
     .filter(
       (rule) =>
         scalarPredicate(rule.schema, rule.column) !== "1=1" &&
-        (spec.tables
-          ? spec.tables.includes(rule.table)
-          : !(introducedAfter0004 as readonly string[]).includes(rule.table)),
+        (spec.tables ? spec.tables.includes(rule.table) : !excludedFrom0004.includes(rule.table)),
     );
   const grouped = new Map<string, ScalarRule[]>();
   for (const rule of rules) {

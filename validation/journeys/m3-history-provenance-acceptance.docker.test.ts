@@ -4,7 +4,6 @@ import { createServer } from "node:http";
 import { join } from "node:path";
 import { Application } from "@testmaster/application";
 import type { RunRequest } from "@testmaster/contracts";
-import { uuidV7IdGenerator } from "@testmaster/domain";
 import { expect, it, vi } from "vitest";
 import { completion, testProvider } from "../../packages/model-gateway/src/test-support.js";
 import { AttemptExecutor } from "../../packages/sandbox/src/index.js";
@@ -29,7 +28,7 @@ async function batch(app: Application, selection: RunRequest[]) {
   return receipt;
 }
 
-it("reports persisted generated-to-manual model provenance and refuses unsupported visual baseline execution", async () => {
+it("reports persisted generated-to-manual model provenance", async () => {
   await journey("m3-model-baseline-comparison", async (session) => {
     let providerOutput: unknown;
     const modelPayloads: Record<string, unknown>[] = [];
@@ -160,23 +159,6 @@ it("reports persisted generated-to-manual model provenance and refuses unsupport
       const manualRun = await batch(app, [
         { testId: generated.id, revisionId: manualRevision.id, environmentId },
       ]);
-      const beforeTests = app.tests.list(projectId).map((test) => test.id);
-      const unsupportedVisual = executable("M5 baseline admission refusal", "playwright", [
-        action("open", "navigate", { path: "/" }),
-        assertion("business", { locator: { by: "testId", value: "stable" } }, "visible"),
-        {
-          ...assertion("visual", { locator: { by: "testId", value: "stable" } }, "visible"),
-          required: false,
-          expectation: {
-            predicate: "visualMatches" as const,
-            baselineId: uuidV7IdGenerator.next("vbl"),
-          },
-        },
-      ]);
-      expect(() => app!.tests.create({ projectId, plan: unsupportedVisual })).toThrow(
-        expect.objectContaining({ code: "CAPABILITY_UNAVAILABLE" }),
-      );
-      expect(app.tests.list(projectId).map((test) => test.id)).toEqual(beforeTests);
       const batches = [generatedRun, manualRun];
       app.close();
       app = await Application.open({
@@ -210,8 +192,6 @@ it("reports persisted generated-to-manual model provenance and refuses unsupport
         check: "persistedModelProvenance",
         modelCalls: modelPayloads.length,
         modelDiff,
-        limitation:
-          "Visual baseline comparison acceptance remains M5: even optional visualMatches is rejected before persistence.",
       });
     } finally {
       app?.close();

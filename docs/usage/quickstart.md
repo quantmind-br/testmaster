@@ -627,6 +627,37 @@ A Run ID reproduces that Run (same revision, environment revision and admission 
 after verifying its evidence); `--env` re-admits the same revision in another environment.
 Selection options (`--preview`, `--chain`, reuse, empty coverage) require test IDs or a diff.
 
+## Browser matrix
+
+```bash
+testmaster test run "$TEST_ID" --browser chromium --browser firefox --browser webkit --wait
+testmaster test run "$TEST_ID" --viewport 320x568 --viewport 1280x720 --color-scheme dark --reduced-motion reduce --wait
+```
+
+Each repeatable flag adds values to one axis, and every test runs once per combination of the axes (a cell).
+The cell is part of the Run's effective configuration, so comparisons, flake history and reruns keep cells
+apart. A selection of more than 500 test × cell Runs is refused with `matrix_too_large` before any Run starts.
+
+## Visual baselines
+
+A `visualMatches` assertion compares the page with an approved image named by its `baseline` field. The
+image is chosen by the test, that name and the rendering cell (browser engine, viewport, locale, timezone,
+color scheme, reduced motion and the pinned runner image, which fixes the engine build); a Run in another cell finds none and ends `blocked`
+with `visual_baseline_missing`, and one whose `masks` differ from the approved ones ends `blocked` with
+`visual_baseline_stale`. Either way the Run keeps the image it captured as `visual/<stepId>-candidate.png`.
+
+```bash
+testmaster visual baseline create "$RUN_ID" --step "$STEP_ID" --name home   # draft from that Run's captured image
+testmaster visual baseline list --test "$TEST_ID"
+testmaster visual baseline approve "$BASELINE_ID" --expected-version 1       # another principal than the creator
+```
+
+`create` needs a completed Run and copies the image the Run captured at that step (the candidate, else the
+actual). `approve` refuses its own creator (`FORBIDDEN`, `self_approval`), so a second principal reviews the
+image, for example with a second token through `--endpoint`; a bearer token needs a `tests:approve` grant. Approving supersedes the earlier approved
+baseline of the same test, name and cell; superseded baselines stay listed. A Run never creates, approves or
+updates a baseline: execution only reads the approved one frozen at admission.
+
 ## Code export and import
 
 ```bash

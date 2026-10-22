@@ -297,6 +297,8 @@ const supplemental = {
   }),
   CancelInput: P.Obj({ reason: Type.Optional(P.Description) }),
   RerunInput: P.Obj({ environmentId: Type.Optional(P.id("env")) }),
+  /** A draft baseline from the image a Run captured at one `visualMatches` step (ADR-032). */
+  VisualBaselineInput: P.Obj({ runId: P.id("run"), stepId: P.Name, name: P.Name }),
   ExpectedVersionInput: P.Obj({ expectedVersion: P.Version }),
   RunComparisonRequest: P.Obj({
     leftRunId: P.id("run"),
@@ -581,6 +583,11 @@ const supplemental = {
     targetUrl: Type.Optional(Type.String({ format: "uri", maxLength: 2048 })),
     /** Active tunnel every selected Run reaches its loopback target through (ADR-031). */
     tunnelId: Type.Optional(P.id("tun")),
+    /**
+     * Runs every selected test once per cell of the axes' cartesian product (ADR-032); more cells
+     * than `batchCells` are refused before any Run is created.
+     */
+    matrix: Type.Optional(Ops.MatrixAxes),
   }),
   SelectionPreview: P.Obj({
     selectionHash: P.ContentDigest,

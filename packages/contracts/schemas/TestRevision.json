@@ -7902,16 +7902,189 @@
                             "type": "object",
                             "required": [
                               "predicate",
-                              "baselineId"
+                              "baseline"
                             ],
                             "properties": {
                               "predicate": {
                                 "const": "visualMatches",
                                 "type": "string"
                               },
-                              "baselineId": {
-                                "pattern": "^vbl_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                              "baseline": {
+                                "minLength": 1,
+                                "maxLength": 200,
                                 "type": "string"
+                              },
+                              "masks": {
+                                "minItems": 1,
+                                "maxItems": 10,
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "additionalProperties": false,
+                                      "type": "object",
+                                      "required": [
+                                        "by",
+                                        "value"
+                                      ],
+                                      "properties": {
+                                        "by": {
+                                          "const": "testId",
+                                          "type": "string"
+                                        },
+                                        "value": {
+                                          "minLength": 1,
+                                          "maxLength": 200,
+                                          "type": "string"
+                                        },
+                                        "container": {
+                                          "$ref": "#/$defs/T1"
+                                        },
+                                        "frame": {
+                                          "$ref": "#/$defs/T1"
+                                        },
+                                        "pageAlias": {
+                                          "minLength": 1,
+                                          "maxLength": 200,
+                                          "type": "string"
+                                        },
+                                        "nth": {
+                                          "minimum": 0,
+                                          "type": "integer",
+                                          "description": "0-based index of the match to use, applied after pageAlias, frame and container scoping. The runner takes that one match and does not reject ambiguity; an index past the last match never attaches (assertion_timeout). Use it only when the target is genuinely the nth item of a list, never to paper over an ambiguous locator. Count predicates refuse a locator with nth."
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "type": "object",
+                                      "required": [
+                                        "by",
+                                        "role"
+                                      ],
+                                      "properties": {
+                                        "by": {
+                                          "const": "role",
+                                          "type": "string"
+                                        },
+                                        "role": {
+                                          "minLength": 1,
+                                          "maxLength": 200,
+                                          "type": "string"
+                                        },
+                                        "name": {
+                                          "minLength": 1,
+                                          "maxLength": 200,
+                                          "type": "string"
+                                        },
+                                        "exact": {
+                                          "type": "boolean"
+                                        },
+                                        "container": {
+                                          "$ref": "#/$defs/T1"
+                                        },
+                                        "frame": {
+                                          "$ref": "#/$defs/T1"
+                                        },
+                                        "pageAlias": {
+                                          "minLength": 1,
+                                          "maxLength": 200,
+                                          "type": "string"
+                                        },
+                                        "nth": {
+                                          "minimum": 0,
+                                          "type": "integer",
+                                          "description": "0-based index of the match to use, applied after pageAlias, frame and container scoping. The runner takes that one match and does not reject ambiguity; an index past the last match never attaches (assertion_timeout). Use it only when the target is genuinely the nth item of a list, never to paper over an ambiguous locator. Count predicates refuse a locator with nth."
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "type": "object",
+                                      "required": [
+                                        "by",
+                                        "value"
+                                      ],
+                                      "properties": {
+                                        "by": {
+                                          "anyOf": [
+                                            {
+                                              "const": "label",
+                                              "type": "string"
+                                            },
+                                            {
+                                              "const": "text",
+                                              "type": "string"
+                                            },
+                                            {
+                                              "const": "placeholder",
+                                              "type": "string"
+                                            }
+                                          ]
+                                        },
+                                        "value": {
+                                          "minLength": 1,
+                                          "maxLength": 200,
+                                          "type": "string"
+                                        },
+                                        "exact": {
+                                          "type": "boolean"
+                                        },
+                                        "container": {
+                                          "$ref": "#/$defs/T1"
+                                        },
+                                        "frame": {
+                                          "$ref": "#/$defs/T1"
+                                        },
+                                        "pageAlias": {
+                                          "minLength": 1,
+                                          "maxLength": 200,
+                                          "type": "string"
+                                        },
+                                        "nth": {
+                                          "minimum": 0,
+                                          "type": "integer",
+                                          "description": "0-based index of the match to use, applied after pageAlias, frame and container scoping. The runner takes that one match and does not reject ambiguity; an index past the last match never attaches (assertion_timeout). Use it only when the target is genuinely the nth item of a list, never to paper over an ambiguous locator. Count predicates refuse a locator with nth."
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "type": "object",
+                                      "required": [
+                                        "by",
+                                        "value"
+                                      ],
+                                      "properties": {
+                                        "by": {
+                                          "const": "css",
+                                          "type": "string"
+                                        },
+                                        "value": {
+                                          "minLength": 1,
+                                          "maxLength": 200,
+                                          "type": "string"
+                                        },
+                                        "container": {
+                                          "$ref": "#/$defs/T1"
+                                        },
+                                        "frame": {
+                                          "$ref": "#/$defs/T1"
+                                        },
+                                        "pageAlias": {
+                                          "minLength": 1,
+                                          "maxLength": 200,
+                                          "type": "string"
+                                        },
+                                        "nth": {
+                                          "minimum": 0,
+                                          "type": "integer",
+                                          "description": "0-based index of the match to use, applied after pageAlias, frame and container scoping. The runner takes that one match and does not reject ambiguity; an index past the last match never attaches (assertion_timeout). Use it only when the target is genuinely the nth item of a list, never to paper over an ambiguous locator. Count predicates refuse a locator with nth."
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
                               },
                               "threshold": {
                                 "minimum": 0,
@@ -11573,16 +11746,189 @@
                         "type": "object",
                         "required": [
                           "predicate",
-                          "baselineId"
+                          "baseline"
                         ],
                         "properties": {
                           "predicate": {
                             "const": "visualMatches",
                             "type": "string"
                           },
-                          "baselineId": {
-                            "pattern": "^vbl_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                          "baseline": {
+                            "minLength": 1,
+                            "maxLength": 200,
                             "type": "string"
+                          },
+                          "masks": {
+                            "minItems": 1,
+                            "maxItems": 10,
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "by",
+                                    "value"
+                                  ],
+                                  "properties": {
+                                    "by": {
+                                      "const": "testId",
+                                      "type": "string"
+                                    },
+                                    "value": {
+                                      "minLength": 1,
+                                      "maxLength": 200,
+                                      "type": "string"
+                                    },
+                                    "container": {
+                                      "$ref": "#/$defs/T1"
+                                    },
+                                    "frame": {
+                                      "$ref": "#/$defs/T1"
+                                    },
+                                    "pageAlias": {
+                                      "minLength": 1,
+                                      "maxLength": 200,
+                                      "type": "string"
+                                    },
+                                    "nth": {
+                                      "minimum": 0,
+                                      "type": "integer",
+                                      "description": "0-based index of the match to use, applied after pageAlias, frame and container scoping. The runner takes that one match and does not reject ambiguity; an index past the last match never attaches (assertion_timeout). Use it only when the target is genuinely the nth item of a list, never to paper over an ambiguous locator. Count predicates refuse a locator with nth."
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "by",
+                                    "role"
+                                  ],
+                                  "properties": {
+                                    "by": {
+                                      "const": "role",
+                                      "type": "string"
+                                    },
+                                    "role": {
+                                      "minLength": 1,
+                                      "maxLength": 200,
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "minLength": 1,
+                                      "maxLength": 200,
+                                      "type": "string"
+                                    },
+                                    "exact": {
+                                      "type": "boolean"
+                                    },
+                                    "container": {
+                                      "$ref": "#/$defs/T1"
+                                    },
+                                    "frame": {
+                                      "$ref": "#/$defs/T1"
+                                    },
+                                    "pageAlias": {
+                                      "minLength": 1,
+                                      "maxLength": 200,
+                                      "type": "string"
+                                    },
+                                    "nth": {
+                                      "minimum": 0,
+                                      "type": "integer",
+                                      "description": "0-based index of the match to use, applied after pageAlias, frame and container scoping. The runner takes that one match and does not reject ambiguity; an index past the last match never attaches (assertion_timeout). Use it only when the target is genuinely the nth item of a list, never to paper over an ambiguous locator. Count predicates refuse a locator with nth."
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "by",
+                                    "value"
+                                  ],
+                                  "properties": {
+                                    "by": {
+                                      "anyOf": [
+                                        {
+                                          "const": "label",
+                                          "type": "string"
+                                        },
+                                        {
+                                          "const": "text",
+                                          "type": "string"
+                                        },
+                                        {
+                                          "const": "placeholder",
+                                          "type": "string"
+                                        }
+                                      ]
+                                    },
+                                    "value": {
+                                      "minLength": 1,
+                                      "maxLength": 200,
+                                      "type": "string"
+                                    },
+                                    "exact": {
+                                      "type": "boolean"
+                                    },
+                                    "container": {
+                                      "$ref": "#/$defs/T1"
+                                    },
+                                    "frame": {
+                                      "$ref": "#/$defs/T1"
+                                    },
+                                    "pageAlias": {
+                                      "minLength": 1,
+                                      "maxLength": 200,
+                                      "type": "string"
+                                    },
+                                    "nth": {
+                                      "minimum": 0,
+                                      "type": "integer",
+                                      "description": "0-based index of the match to use, applied after pageAlias, frame and container scoping. The runner takes that one match and does not reject ambiguity; an index past the last match never attaches (assertion_timeout). Use it only when the target is genuinely the nth item of a list, never to paper over an ambiguous locator. Count predicates refuse a locator with nth."
+                                    }
+                                  }
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "by",
+                                    "value"
+                                  ],
+                                  "properties": {
+                                    "by": {
+                                      "const": "css",
+                                      "type": "string"
+                                    },
+                                    "value": {
+                                      "minLength": 1,
+                                      "maxLength": 200,
+                                      "type": "string"
+                                    },
+                                    "container": {
+                                      "$ref": "#/$defs/T1"
+                                    },
+                                    "frame": {
+                                      "$ref": "#/$defs/T1"
+                                    },
+                                    "pageAlias": {
+                                      "minLength": 1,
+                                      "maxLength": 200,
+                                      "type": "string"
+                                    },
+                                    "nth": {
+                                      "minimum": 0,
+                                      "type": "integer",
+                                      "description": "0-based index of the match to use, applied after pageAlias, frame and container scoping. The runner takes that one match and does not reject ambiguity; an index past the last match never attaches (assertion_timeout). Use it only when the target is genuinely the nth item of a list, never to paper over an ambiguous locator. Count predicates refuse a locator with nth."
+                                    }
+                                  }
+                                }
+                              ]
+                            }
                           },
                           "threshold": {
                             "minimum": 0,
@@ -19831,16 +20177,189 @@
                   "type": "object",
                   "required": [
                     "predicate",
-                    "baselineId"
+                    "baseline"
                   ],
                   "properties": {
                     "predicate": {
                       "const": "visualMatches",
                       "type": "string"
                     },
-                    "baselineId": {
-                      "pattern": "^vbl_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "baseline": {
+                      "minLength": 1,
+                      "maxLength": 200,
                       "type": "string"
+                    },
+                    "masks": {
+                      "minItems": 1,
+                      "maxItems": 10,
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "additionalProperties": false,
+                            "type": "object",
+                            "required": [
+                              "by",
+                              "value"
+                            ],
+                            "properties": {
+                              "by": {
+                                "const": "testId",
+                                "type": "string"
+                              },
+                              "value": {
+                                "minLength": 1,
+                                "maxLength": 200,
+                                "type": "string"
+                              },
+                              "container": {
+                                "$ref": "#/$defs/T1"
+                              },
+                              "frame": {
+                                "$ref": "#/$defs/T1"
+                              },
+                              "pageAlias": {
+                                "minLength": 1,
+                                "maxLength": 200,
+                                "type": "string"
+                              },
+                              "nth": {
+                                "minimum": 0,
+                                "type": "integer",
+                                "description": "0-based index of the match to use, applied after pageAlias, frame and container scoping. The runner takes that one match and does not reject ambiguity; an index past the last match never attaches (assertion_timeout). Use it only when the target is genuinely the nth item of a list, never to paper over an ambiguous locator. Count predicates refuse a locator with nth."
+                              }
+                            }
+                          },
+                          {
+                            "additionalProperties": false,
+                            "type": "object",
+                            "required": [
+                              "by",
+                              "role"
+                            ],
+                            "properties": {
+                              "by": {
+                                "const": "role",
+                                "type": "string"
+                              },
+                              "role": {
+                                "minLength": 1,
+                                "maxLength": 200,
+                                "type": "string"
+                              },
+                              "name": {
+                                "minLength": 1,
+                                "maxLength": 200,
+                                "type": "string"
+                              },
+                              "exact": {
+                                "type": "boolean"
+                              },
+                              "container": {
+                                "$ref": "#/$defs/T1"
+                              },
+                              "frame": {
+                                "$ref": "#/$defs/T1"
+                              },
+                              "pageAlias": {
+                                "minLength": 1,
+                                "maxLength": 200,
+                                "type": "string"
+                              },
+                              "nth": {
+                                "minimum": 0,
+                                "type": "integer",
+                                "description": "0-based index of the match to use, applied after pageAlias, frame and container scoping. The runner takes that one match and does not reject ambiguity; an index past the last match never attaches (assertion_timeout). Use it only when the target is genuinely the nth item of a list, never to paper over an ambiguous locator. Count predicates refuse a locator with nth."
+                              }
+                            }
+                          },
+                          {
+                            "additionalProperties": false,
+                            "type": "object",
+                            "required": [
+                              "by",
+                              "value"
+                            ],
+                            "properties": {
+                              "by": {
+                                "anyOf": [
+                                  {
+                                    "const": "label",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "const": "text",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "const": "placeholder",
+                                    "type": "string"
+                                  }
+                                ]
+                              },
+                              "value": {
+                                "minLength": 1,
+                                "maxLength": 200,
+                                "type": "string"
+                              },
+                              "exact": {
+                                "type": "boolean"
+                              },
+                              "container": {
+                                "$ref": "#/$defs/T1"
+                              },
+                              "frame": {
+                                "$ref": "#/$defs/T1"
+                              },
+                              "pageAlias": {
+                                "minLength": 1,
+                                "maxLength": 200,
+                                "type": "string"
+                              },
+                              "nth": {
+                                "minimum": 0,
+                                "type": "integer",
+                                "description": "0-based index of the match to use, applied after pageAlias, frame and container scoping. The runner takes that one match and does not reject ambiguity; an index past the last match never attaches (assertion_timeout). Use it only when the target is genuinely the nth item of a list, never to paper over an ambiguous locator. Count predicates refuse a locator with nth."
+                              }
+                            }
+                          },
+                          {
+                            "additionalProperties": false,
+                            "type": "object",
+                            "required": [
+                              "by",
+                              "value"
+                            ],
+                            "properties": {
+                              "by": {
+                                "const": "css",
+                                "type": "string"
+                              },
+                              "value": {
+                                "minLength": 1,
+                                "maxLength": 200,
+                                "type": "string"
+                              },
+                              "container": {
+                                "$ref": "#/$defs/T1"
+                              },
+                              "frame": {
+                                "$ref": "#/$defs/T1"
+                              },
+                              "pageAlias": {
+                                "minLength": 1,
+                                "maxLength": 200,
+                                "type": "string"
+                              },
+                              "nth": {
+                                "minimum": 0,
+                                "type": "integer",
+                                "description": "0-based index of the match to use, applied after pageAlias, frame and container scoping. The runner takes that one match and does not reject ambiguity; an index past the last match never attaches (assertion_timeout). Use it only when the target is genuinely the nth item of a list, never to paper over an ambiguous locator. Count predicates refuse a locator with nth."
+                              }
+                            }
+                          }
+                        ]
+                      }
                     },
                     "threshold": {
                       "minimum": 0,

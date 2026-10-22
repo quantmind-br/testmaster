@@ -39,12 +39,13 @@ import {
   admissionSnapshot,
   verifyAdmission,
 } from "./provenance.js";
-import { withUsedEnvironment } from "./run-config.js";
+import { browserCellOf, withBrowserCell, withUsedEnvironment } from "./run-config.js";
 import { runtimeIdentity } from "./runtime-identity.js";
 import { type EvidenceLimits, runEvidenceBytes } from "./storage-admission.js";
 import { clockDomain, timingBoundary } from "./timing.js";
 import { isTrialTest } from "./trial-tests.js";
 import { assertTunnelAdmissible } from "./tunnels.js";
+import { resolveVisualBaselines, runVisualDigest } from "./visual-cell.js";
 
 export interface BatchProvenance {
   suiteId: string | null;
@@ -375,11 +376,6 @@ export class RunsService {
           );
       }
     }
-    if (config.browser?.name !== "chromium" && config.browser?.name !== undefined)
-      throw new ContractError("CAPABILITY_UNAVAILABLE", "Configured browser is unavailable", {
-        capability: config.browser.name,
-        milestone: "M5",
-      });
     const limits = this.limitsFor(request.limits);
     const originalUrl = (env.targetOrigins as string[])[0];
     const targetUrl = request.extensions?.["testmaster:targetUrl"];
@@ -417,6 +413,10 @@ export class RunsService {
     const ownership = this.host.liveWorker() ? "worker" : "ephemeral";
     if (request.tunnelId !== undefined)
       assertTunnelAdmissible(this.ctx, request.tunnelId, String(test.projectId), baseUrl, executor);
+    const effectiveConfig = withBrowserCell(
+      withUsedEnvironment(this.host.config.effectiveConfig, env, baseUrl),
+      request.cell,
+    );
     const provenance = admissionSnapshot(
       this.ctx,
       revision,
@@ -431,7 +431,16 @@ export class RunsService {
             this.host.admittedImages()?.[
               revision.runnerKind === "python" ? "testmaster-runner-python" : "testmaster-runner"
             ]?.imageId,
+            effectiveConfig.config.browser?.name ?? "chromium",
           ),
+    );
+    // The baseline each visual step compares against is frozen with the cell, so a replay
+    // compares against the same image even after a newer approval (ADR-032).
+    const visualBaselines = resolveVisualBaselines(
+      this.ctx,
+      test.id,
+      (revision.plan ?? null) as ExecutablePlan | null,
+      runVisualDigest({ admissionSnapshot: provenance, effectiveConfig }),
     );
     const run = entity(this.ctx, "run", {
       testId: test.id,
@@ -448,7 +457,7 @@ export class RunsService {
         environmentName: environment.name,
         planHash: revision.contentHash,
         baseUrl,
-        effectiveConfig: withUsedEnvironment(this.host.config.effectiveConfig, env, baseUrl),
+        effectiveConfig,
         limits,
         // Only an explicit per-run request caps steps (after the operator ceiling); the project
         // default stays a default that a step's own timeout overrides.
@@ -456,6 +465,7 @@ export class RunsService {
           ? {}
           : { stepTimeoutCapMs: limits.stepTimeoutMs }),
         ...(request.tunnelId === undefined ? {} : { tunnelId: request.tunnelId }),
+        ...(Object.keys(visualBaselines).length ? { visualBaselines } : {}),
         healingPolicy: request.healingPolicy ?? "off",
         ...(request.origin === "verification" &&
         request.extensions?.["testmaster:healingProposalId"]
@@ -582,6 +592,13 @@ export class RunsService {
             (!binding.producerRevisionId || producer.revisionId === binding.producerRevisionId) &&
             cell.environmentId === binding.permittedEnvironment &&
             cell.repetitionIndex === request.repetitionIndex &&
+            // A consumer of a matrix cell binds the producer of its own cell (ADR-032).
+            semanticHash(browserCellOf(cell.effectiveConfig as EffectiveConfig)) ===
+              semanticHash(
+                browserCellOf(
+                  (run.matrixCell as Record<string, unknown>).effectiveConfig as EffectiveConfig,
+                ),
+              ) &&
             (!expectedCell ||
               Object.entries(expectedCell).every(
                 ([field, value]) => semanticHash(cell[field] ?? null) === semanticHash(value),
@@ -868,7 +885,11 @@ export class RunsService {
       usedEnvironment,
       baseUrl,
     );
-    const current = withUsedEnvironment(this.host.config.effectiveConfig, usedEnvironment, baseUrl);
+    // The verification renders in the failed Run's cell, so the cell is the same on both sides.
+    const current = withBrowserCell(
+      withUsedEnvironment(this.host.config.effectiveConfig, usedEnvironment, baseUrl),
+      browserCellOf(cell.effectiveConfig as EffectiveConfig),
+    );
     if (semanticHash(frozen) !== semanticHash(current)) {
       const overrides = this.host.config.overrides ?? [];
       // Process-level overrides lead, so the cause is never lost behind the key cap.
@@ -946,6 +967,7 @@ export class RunsService {
         origin: "verification",
         seed: Number(cell.seed ?? 0),
         limits: verificationLimits(cell),
+        cell: browserCellOf(cell.effectiveConfig as EffectiveConfig),
         extensions: {
           "testmaster:targetUrl": String(cell.baseUrl),
           "testmaster:executor": String(cell.executor ?? "docker"),

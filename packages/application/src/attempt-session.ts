@@ -68,6 +68,8 @@ import {
 import type { SecretsService } from "./secrets.js";
 import { RuntimeTimer } from "./timing.js";
 import { type TunnelDispatch, tunnelDispatch } from "./tunnels.js";
+import { readVisualBaselineBytes } from "./visual-baselines.js";
+import type { FrozenVisualBaseline } from "./visual-cell.js";
 import { isWriterContention, retryWriterContention } from "./writer-contention.js";
 
 /** Maps a revision runner to the sandbox executor kind; the Playwright runner uses the browser envelope. */
@@ -720,6 +722,12 @@ export class AttemptSession {
       admitted.inputFixtureHashes ?? {},
       limits,
     );
+    const visualBaselines = await stageVisualBaselines(
+      this.ctx,
+      this.host.config,
+      (cell.visualBaselines ?? {}) as Record<string, FrozenVisualBaseline>,
+      inputDir,
+    );
     const lock = admitted.images;
     const sealedSnapshot: Record<string, unknown> = {
       ...admitted,
@@ -924,6 +932,7 @@ export class AttemptSession {
         ...(prepared?.runnerAuth ? { auth: prepared.runnerAuth } : {}),
         variables,
         artifacts: fixtureInputs.artifacts,
+        ...(Object.keys(visualBaselines).length ? { visualBaselines } : {}),
         // Code revisions carry the schemas frozen into their bundle at generation; plans resolve
         // theirs from the cited source revisions.
         schemas: imported?.bundle.schemas ?? sourceSchemasFor(this.ctx, plan),
@@ -1654,4 +1663,39 @@ export class AttemptSession {
       outbox.append(this.ctx.workspaceId, this.run.id, "incident.created", incidentRecord);
     });
   }
+}
+/**
+ * Writes each available frozen baseline into the read-only input bind for the runner. The bytes
+ * are verified against the hash frozen at admission, so a changed file blocks the Attempt instead
+ * of comparing against an image nobody approved (ADR-032).
+ */
+async function stageVisualBaselines(
+  ctx: ServiceContext,
+  config: ResolvedConfig,
+  frozen: Record<string, FrozenVisualBaseline>,
+  inputDir: string,
+): Promise<Record<string, { state: "available"; path: string } | { state: "missing" | "stale" }>> {
+  const staged: Record<
+    string,
+    { state: "available"; path: string } | { state: "missing" | "stale" }
+  > = {};
+  for (const [stepId, baseline] of Object.entries(frozen)) {
+    if (baseline.state !== "available") {
+      staged[stepId] = { state: baseline.state };
+      continue;
+    }
+    const record = requireEntity(ctx, "VisualBaseline", baseline.baselineId);
+    if (record.sha256 !== baseline.sha256)
+      throw new ContractError("PRECONDITION_FAILED", "Visual baseline changed after admission", {
+        reasonCode: "security_precondition_failed",
+        baselineId: baseline.baselineId,
+      });
+    const name = `visual-baseline-${baseline.baselineId}.png`;
+    await writeFile(join(inputDir, name), await readVisualBaselineBytes(ctx, config, record), {
+      mode: 0o644,
+      flag: "wx",
+    });
+    staged[stepId] = { state: "available", path: `/run/testmaster/input/${name}` };
+  }
+  return staged;
 }

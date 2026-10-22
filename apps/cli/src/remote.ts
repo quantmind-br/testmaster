@@ -12,7 +12,15 @@ import {
 } from "@testmaster/contracts";
 import type { Command } from "commander";
 import { runListFilter } from "./run-filter.js";
-import { type Options, type Result, type Runtime, required, string, strings } from "./runtime.js";
+import {
+  type Options,
+  type Result,
+  type Runtime,
+  required,
+  string,
+  strings,
+  version,
+} from "./runtime.js";
 
 /**
  * Remote CLI mode (M4-01, OPS-027): the same command surface against `/v1`, authenticated with a
@@ -370,6 +378,26 @@ export const remoteHandlers: Readonly<Record<string, RemoteHandler>> = {
   }),
   "tunnel stop": async (client, args) => ({
     data: await client.request("DELETE", `/tunnels/${encodeURIComponent(String(args[0]))}`),
+  }),
+  "visual baseline list": async (client, _args, options) => {
+    const query = new URLSearchParams({ projectId: await projectOf(client, options) });
+    const test = string(options, "test");
+    if (test) query.set("testId", test);
+    return { data: await client.list(`/visual-baselines?${query}`) };
+  },
+  "visual baseline create": async (client, args, options) => ({
+    data: await client.request("POST", "/visual-baselines", {
+      runId: String(args[0]),
+      stepId: required(options, "step"),
+      name: required(options, "name"),
+    }),
+  }),
+  "visual baseline approve": async (client, args, options) => ({
+    data: await client.request(
+      "POST",
+      `/visual-baselines/${encodeURIComponent(String(args[0]))}/approve`,
+      { expectedVersion: version(options) },
+    ),
   }),
   "ops status": async (client, _args, options) => {
     assertRemoteOps("ops status", options);

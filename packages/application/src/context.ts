@@ -40,7 +40,7 @@ export interface ServiceContext {
    */
   authorizeNamed(
     action: "approve" | "delete" | "export",
-    resourceType: "Artifact" | "SecretReference" | "AgentPullRequest",
+    resourceType: "Artifact" | "SecretReference" | "AgentPullRequest" | "VisualBaseline",
     projectId: string,
     environmentId?: string | null,
   ): void;

@@ -40,6 +40,7 @@ import { tokenCommands } from "./tokens.js";
 import { tunnelCommands } from "./tunnels.js";
 import { unavailableCommands } from "./unavailable.js";
 import { usageCommands } from "./usage.js";
+import { visualBaselineCommands } from "./visual-baselines.js";
 import { workerCommands } from "./workers.js";
 
 /** Commander lists a `requiredOption` like any other flag; the help must say it is mandatory. */
@@ -113,6 +114,7 @@ export function createCli(runtime: Runtime): Command {
   remoteCommands(program, runtime);
   githubCommands(program, runtime);
   tunnelCommands(program, runtime);
+  visualBaselineCommands(program, runtime);
   unavailableCommands(program, runtime);
   declareExampleVariants(program);
   return program;

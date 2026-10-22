@@ -705,6 +705,8 @@ export function admissionInputHash(cell: Record<string, unknown>): string {
     ...(cell.stepTimeoutCapMs === undefined ? {} : { stepTimeoutCapMs: cell.stepTimeoutCapMs }),
     // Present only for a tunnelled Run, so the hash of every other run is unchanged (ADR-031).
     ...(cell.tunnelId === undefined ? {} : { tunnelId: cell.tunnelId }),
+    // Present only for a Run with visual assertions: the baselines it compares against (ADR-032).
+    ...(cell.visualBaselines === undefined ? {} : { visualBaselines: cell.visualBaselines }),
     seed: cell.seed,
     executor: cell.executor,
     repetitionIndex: cell.repetitionIndex ?? null,

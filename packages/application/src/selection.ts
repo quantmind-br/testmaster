@@ -1,7 +1,10 @@
 import {
   type BatchReceipt,
   ContractError,
+  defaults,
   type ExecutablePlan,
+  type MatrixAxes,
+  type MatrixCell,
   type RunRequest,
   validate,
 } from "@testmaster/contracts";
@@ -36,6 +39,8 @@ export interface SelectionInput {
   targetUrl?: string;
   /** Active tunnel every selected Run reaches its loopback target through (ADR-031). */
   tunnelId?: string;
+  /** Every selected test runs once per cell of the axes' cartesian product (ADR-032). */
+  matrix?: MatrixAxes;
   /** Admission origin recorded on every Run; defaults to the CLI. */
   origin?: RunRequest["origin"];
 }
@@ -401,21 +406,31 @@ export class SelectionService {
       revisionId,
       reason,
     }));
-    const requests: RunRequest[] = selected.map((item) => ({
-      testId: item.testId,
-      revisionId: item.revisionId,
-      environmentId: input.environmentId,
-      seed: input.seed ?? item.seed ?? 0,
-      mode: "replay",
-      healingPolicy: "off",
-      origin: input.origin ?? "cli",
-      ...(strict ? { limits: { maxAttempts: 1 } } : {}),
-      ...(input.provenance ? { provenance: input.provenance } : {}),
-      ...(input.tunnelId ? { tunnelId: input.tunnelId } : {}),
-      ...(item.dependencyRevisions
-        ? { extensions: { "testmaster:dependencyRevisions": item.dependencyRevisions } }
-        : {}),
-    }));
+    const cells = matrixCells(input.matrix);
+    if (selected.length * cells.length > defaults.batchCells)
+      throw new ContractError("INVALID_ARGUMENT", "Selection matrix has too many cells", {
+        reason: "matrix_too_large",
+        cells: selected.length * cells.length,
+        limit: defaults.batchCells,
+      });
+    const requests: RunRequest[] = selected.flatMap((item) =>
+      cells.map((cell) => ({
+        testId: item.testId,
+        revisionId: item.revisionId,
+        environmentId: input.environmentId,
+        seed: input.seed ?? item.seed ?? 0,
+        mode: "replay" as const,
+        healingPolicy: "off" as const,
+        origin: input.origin ?? "cli",
+        ...(strict ? { limits: { maxAttempts: 1 } } : {}),
+        ...(input.provenance ? { provenance: input.provenance } : {}),
+        ...(input.tunnelId ? { tunnelId: input.tunnelId } : {}),
+        ...(cell ? { cell } : {}),
+        ...(item.dependencyRevisions
+          ? { extensions: { "testmaster:dependencyRevisions": item.dependencyRevisions } }
+          : {}),
+      })),
+    );
     let ordered: EntityDocument[] = [];
     try {
       ordered = this.runs.prepareClosure(requests, null, {
@@ -643,4 +658,21 @@ export class SelectionService {
       excluded: resolved.preview.excluded,
     };
   }
+}
+/**
+ * The cells a selection runs: the cartesian product of the given axes, browsers outermost. No
+ * axes means one cell whose fields all resolve from the project configuration.
+ */
+export function matrixCells(axes: MatrixAxes | undefined): (MatrixCell | undefined)[] {
+  if (!axes?.browsers && !axes?.viewports && !axes?.colorSchemes) return [undefined];
+  const cells: MatrixCell[] = [];
+  for (const browser of axes.browsers ?? [undefined])
+    for (const viewport of axes.viewports ?? [undefined])
+      for (const colorScheme of axes.colorSchemes ?? [undefined])
+        cells.push({
+          ...(browser ? { browser } : {}),
+          ...(viewport ? { viewport } : {}),
+          ...(colorScheme ? { colorScheme } : {}),
+        });
+  return cells;
 }

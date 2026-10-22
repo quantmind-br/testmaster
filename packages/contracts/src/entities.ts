@@ -31,6 +31,7 @@ import {
   Obj,
   Outcome,
   Phase,
+  Positive,
   Priority,
   RedactionStatus,
   Risk,
@@ -577,13 +578,30 @@ export const entities = {
     version: Version,
     tombstoneAt: nullable(Timestamp),
   }),
+  /**
+   * An image a `visualMatches` assertion compares against (ADR-032). A Run never writes one: a
+   * baseline is created from a Run's captured image as `draft` and only another principal approves
+   * it; approving supersedes the previous approved baseline of the same test, name and cell.
+   */
   VisualBaseline: entity("vbl", {
-    revisionId: id("rev"),
+    projectId: id("prj"),
+    testId: id("tst"),
+    name: Name,
+    /** Semantic hash of the rendering cell: engine and version, viewport, locale, timezone, color scheme, reduced motion, platform and image. */
     matrixDigest: ContentDigest,
+    sourceRunId: id("run"),
+    sourceStepId: Name,
+    /** The Run evidence artifact the image was copied from. */
     artifactId: id("art"),
-    maskPolicyHash: ContentDigest,
-    thresholdVersion: Name,
-    approval: nullable(id("apr")),
+    sha256: ContentDigest,
+    width: Positive,
+    height: Positive,
+    /** Semantic hash of the assertion's mask locators; a different mask list makes the baseline stale. */
+    maskHash: ContentDigest,
+    status: Enum(["draft", "approved", "superseded"]),
+    createdBy: Name,
+    approvedBy: nullable(Name),
+    approvedAt: nullable(Timestamp),
   }),
   Evaluation: entity("evl", {
     corpusDigest: ContentDigest,

@@ -170,6 +170,22 @@ export const tableCatalog = {
       "externalId",
     ],
   },
+  VisualBaseline: {
+    table: "visual_baselines",
+    fields: [
+      "projectId",
+      "testId",
+      "name",
+      "matrixDigest",
+      "sourceRunId",
+      "artifactId",
+      "sha256",
+      "maskHash",
+      "status",
+      "createdBy",
+      "approvedBy",
+    ],
+  },
 } as const;
 export type EntityKind = keyof typeof tableCatalog;
 export const immutableKinds: Partial<Record<EntityKind, true>> = {

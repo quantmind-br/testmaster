@@ -17,6 +17,7 @@ import { settingsRoutes } from "./settings.js";
 import { suiteRoutes } from "./suites.js";
 import { tunnelRoutes } from "./tunnels.js";
 import type { RouteHandler, RouteModule } from "./types.js";
+import { visualBaselineRoutes } from "./visual-baselines.js";
 import { workerRoutes } from "./workers.js";
 
 export type { RouteContext, RouteHandler, RouteModule } from "./types.js";
@@ -37,6 +38,7 @@ export const routeModules: RouteModule[] = [
   deliveryRoutes,
   workerRoutes,
   tunnelRoutes,
+  visualBaselineRoutes,
   authRoutes,
   operationsRoutes,
 ];

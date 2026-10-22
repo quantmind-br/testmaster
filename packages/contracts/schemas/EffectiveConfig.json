@@ -203,14 +203,40 @@
               ],
               "properties": {
                 "width": {
-                  "minimum": 1,
+                  "minimum": 320,
+                  "maximum": 3840,
                   "type": "integer"
                 },
                 "height": {
-                  "minimum": 1,
+                  "minimum": 240,
+                  "maximum": 2160,
                   "type": "integer"
                 }
               }
+            },
+            "colorScheme": {
+              "anyOf": [
+                {
+                  "const": "light",
+                  "type": "string"
+                },
+                {
+                  "const": "dark",
+                  "type": "string"
+                }
+              ]
+            },
+            "reducedMotion": {
+              "anyOf": [
+                {
+                  "const": "reduce",
+                  "type": "string"
+                },
+                {
+                  "const": "no-preference",
+                  "type": "string"
+                }
+              ]
             },
             "testIdAttributes": {
               "minItems": 1,

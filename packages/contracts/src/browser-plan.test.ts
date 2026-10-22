@@ -374,3 +374,41 @@ describe("URL assertions", () => {
     expect(flagged([navigate(), visible(), menu, hidden()])).toEqual([]);
   });
 });
+
+describe("visualMatches masks", () => {
+  it("ADR-032 refuses a mask that hides an element an assertion checks and accepts any other", () => {
+    const look = (masks: Json[]): Json =>
+      check(
+        "look",
+        { locator: field("Catalog") },
+        { predicate: "visualMatches", baseline: "catalog", masks },
+      );
+    expect(() =>
+      validate("ExecutablePlan", plan([navigate(), visible(), look([{ by: "css", value: "td" }])])),
+    ).not.toThrow();
+    for (const [masked, index] of [
+      [{ by: "role", role: "heading", name: "Home" }, 1],
+      [field("Catalog"), 0],
+    ] as const)
+      expect(() =>
+        validate(
+          "ExecutablePlan",
+          plan([
+            navigate(),
+            visible(),
+            look(index ? [{ by: "css", value: "td" }, masked] : [masked]),
+          ]),
+        ),
+      ).toThrow(
+        expect.objectContaining({
+          code: "INVALID_ARGUMENT",
+          issues: [
+            expect.objectContaining({
+              rule: "mask_hides_assertion",
+              path: `/steps/2/expectation/masks/${index}`,
+            }),
+          ],
+        }),
+      );
+  });
+});

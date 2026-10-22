@@ -16,6 +16,8 @@ export const mutants = Object.freeze([
   "idempotency-ignored",
   "selector-drift",
   "products-update-ignored",
+  "visual-price-color",
+  "a11y-missing-label",
 ]);
 
 const json = (response, status, value) => {
@@ -75,7 +77,22 @@ export async function startShop({
     ["p5", "Canvas Bag", 1750],
   ])
     insertProduct.run(id, name, cents);
-  const html = await readFile(new URL("./shop.html", import.meta.url));
+  const page = (await readFile(new URL("./shop.html", import.meta.url), "utf8"))
+    // A visual-only defect: prices render red while every text and value stays correct.
+    .replace(
+      "</style>",
+      mutant === "visual-price-color"
+        ? "[data-testid=catalog-ready] td:nth-child(2){color:#c00}</style>"
+        : "</style>",
+    )
+    // An accessibility-only defect: the password field loses its label and keeps working.
+    .replace(
+      '<label>Password<input name="password" type="password" autocomplete="current-password" data-testid="password"></label>',
+      mutant === "a11y-missing-label"
+        ? '<input name="password" type="password" autocomplete="current-password" data-testid="password">'
+        : '<label>Password<input name="password" type="password" autocomplete="current-password" data-testid="password"></label>',
+    );
+  const html = Buffer.from(page);
   const server = createServer(async (request, response) => {
     try {
       const url = new URL(request.url, "http://shop.invalid");

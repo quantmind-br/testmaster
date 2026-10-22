@@ -11,6 +11,7 @@ import { allEntities, requireEntity, type ServiceContext } from "./context.js";
 import type { AdmissionSnapshot } from "./provenance.js";
 import { withoutEnvironment } from "./run-config.js";
 import type { BatchesService, RunsService } from "./runs.js";
+import type { FrozenVisualBaseline } from "./visual-cell.js";
 
 export interface ComparisonPage {
   limit?: number;
@@ -306,17 +307,21 @@ export class ComparisonsService {
     const metadata = (run: Run) => {
       const cell = runMatrixCell(run);
       const revision = requireEntity(this.ctx, "TestRevision", run.revisionId);
+      // The baselines this Run compared against are the ones frozen at admission (ADR-032).
+      const frozen = (cell.visualBaselines ?? {}) as unknown as Record<
+        string,
+        FrozenVisualBaseline
+      >;
       const baselines: { stepId: string; framePath: string[]; baselineId: string }[] = [];
       const visit = (steps: Record<string, unknown>[], framePath: string[] = []) => {
         for (const step of steps) {
-          const expectation = step.expectation as
-            | { predicate?: string; baselineId?: string }
-            | undefined;
-          if (expectation?.predicate === "visualMatches" && expectation.baselineId)
+          const expectation = step.expectation as { predicate?: string } | undefined;
+          const resolved = frozen[String(step.id)];
+          if (expectation?.predicate === "visualMatches" && resolved && "baselineId" in resolved)
             baselines.push({
               stepId: String(step.id),
               framePath,
-              baselineId: expectation.baselineId,
+              baselineId: resolved.baselineId,
             });
           const input = step.input as { childSteps?: Record<string, unknown>[] } | undefined;
           if (step.operation === "frame" && Array.isArray(input?.childSteps))

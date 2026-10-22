@@ -3,12 +3,12 @@ import { ContractError } from "@testmaster/contracts";
 import { batchExitCode, exitCodeForBatchGate, exitCodeForRun } from "@testmaster/domain";
 import type { Command } from "commander";
 import { environmentId, receiptResult, WAIT_LIMIT_HELP, waitForRun } from "./execution.js";
+import { matrixAxes, matrixOptions } from "./matrix.js";
 import { collect, type Result, type Runtime, seconds, string, strings } from "./runtime.js";
 
 export function selectionCommands(test: Command, runtime: Runtime): void {
   runtime.bind(
-    test
-      .command("rerun [ids...]")
+    matrixOptions(test.command("rerun [ids...]"))
       .option("--chain", "Resolve producer closure (default)")
       .option("--diff")
       .option("--base <ref>")
@@ -50,6 +50,9 @@ export function selectionCommands(test: Command, runtime: Runtime): void {
           "allowEmpty",
           "emptyReason",
           "expectedSelectionHash",
+          "browser",
+          "viewport",
+          "colorScheme",
         ].filter((key) => options[key] !== undefined);
         if (selectionOnly.length)
           throw new ContractError(
@@ -79,6 +82,7 @@ export function selectionCommands(test: Command, runtime: Runtime): void {
               exit: batchExitCode(results.map((result) => result.exit ?? 0)),
             };
       }
+      const axes = matrixAxes(options);
       const input: SelectionInput = {
         projectId,
         environmentId: await environmentId(rt, options, projectId),
@@ -109,6 +113,7 @@ export function selectionCommands(test: Command, runtime: Runtime): void {
         ...(string(options, "expectedSelectionHash")
           ? { expectedSelectionHash: string(options, "expectedSelectionHash") as string }
           : {}),
+        ...(axes ? { matrix: axes } : {}),
       };
       if (options.preview === true) return { data: await app.selection.preview(input) };
       const receipt = await app.selection.run(input, { wait: options.wait === true });

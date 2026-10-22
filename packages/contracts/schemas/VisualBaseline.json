@@ -3,12 +3,21 @@
   "type": "object",
   "required": [
     "id",
-    "revisionId",
+    "projectId",
+    "testId",
+    "name",
     "matrixDigest",
+    "sourceRunId",
+    "sourceStepId",
     "artifactId",
-    "maskPolicyHash",
-    "thresholdVersion",
-    "approval"
+    "sha256",
+    "width",
+    "height",
+    "maskHash",
+    "status",
+    "createdBy",
+    "approvedBy",
+    "approvedAt"
   ],
   "properties": {
     "id": {
@@ -28,31 +37,90 @@
       "minimum": 1,
       "type": "integer"
     },
-    "revisionId": {
-      "pattern": "^rev_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+    "projectId": {
+      "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "testId": {
+      "pattern": "^tst_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "name": {
+      "minLength": 1,
+      "maxLength": 200,
       "type": "string"
     },
     "matrixDigest": {
       "pattern": "^[0-9a-f]{64}$",
       "type": "string"
     },
-    "artifactId": {
-      "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+    "sourceRunId": {
+      "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
       "type": "string"
     },
-    "maskPolicyHash": {
-      "pattern": "^[0-9a-f]{64}$",
-      "type": "string"
-    },
-    "thresholdVersion": {
+    "sourceStepId": {
       "minLength": 1,
       "maxLength": 200,
       "type": "string"
     },
-    "approval": {
+    "artifactId": {
+      "pattern": "^art_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "width": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "height": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "maskHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "status": {
       "anyOf": [
         {
-          "pattern": "^apr_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "const": "draft",
+          "type": "string"
+        },
+        {
+          "const": "approved",
+          "type": "string"
+        },
+        {
+          "const": "superseded",
+          "type": "string"
+        }
+      ]
+    },
+    "createdBy": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "approvedBy": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "approvedAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "pattern": "Z$",
           "type": "string"
         },
         {

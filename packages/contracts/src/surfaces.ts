@@ -548,7 +548,8 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ["POST", "/incidents/{id}/close", "ops:A", "M4", "IncidentCloseInput", "Incident"],
   ["GET,POST", "/projects/{id}/memory", "memory:R/W", "M5", "MemoryEntry", "MemoryEntry"],
   ["PATCH,DELETE", "/memory/{id}", "memory:W", "M5", "MemoryEntry", "MemoryEntry"],
-  ["GET,POST", "/visual-baselines", "tests:R/W", "M5", "VisualBaseline", "VisualBaseline"],
+  ["GET", "/visual-baselines", "tests:R", "M5", "Empty", "VisualBaseline"],
+  ["POST", "/visual-baselines", "tests:W", "M5", "VisualBaselineInput", "VisualBaseline"],
   [
     "POST",
     "/visual-baselines/{id}/approve",
@@ -611,6 +612,7 @@ const responseOverrides: Readonly<Record<string, ResponseOverride>> = {
     "GET /schedules/{id}/firings",
     "GET /suites",
     "GET /tunnels",
+    "GET /visual-baselines",
   ]),
   // Lists that the service bounds itself: `{items}` without a cursor.
   ...keysWith({ kind: "items" }, ["GET /workspaces", "GET /identity/sessions"]),
@@ -639,6 +641,7 @@ const responseOverrides: Readonly<Record<string, ResponseOverride>> = {
     "POST /suites",
     "POST /workers",
     "POST /tunnels",
+    "POST /visual-baselines",
   ]),
   ...keysWith({ status: 202 }, [
     "POST /runs",
@@ -668,9 +671,6 @@ const responseOverrides: Readonly<Record<string, ResponseOverride>> = {
     "POST /projects/{id}/memory",
     "PATCH /memory/{id}",
     "DELETE /memory/{id}",
-    "GET /visual-baselines",
-    "POST /visual-baselines",
-    "POST /visual-baselines/{id}/approve",
     "POST /exports",
     "POST /imports",
     "POST /identity/break-glass",

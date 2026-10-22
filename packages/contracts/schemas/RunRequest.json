@@ -224,6 +224,72 @@
       "pattern": "^tun_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
       "type": "string"
     },
+    "cell": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "browser": {
+          "anyOf": [
+            {
+              "const": "chromium",
+              "type": "string"
+            },
+            {
+              "const": "firefox",
+              "type": "string"
+            },
+            {
+              "const": "webkit",
+              "type": "string"
+            }
+          ]
+        },
+        "viewport": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "width",
+            "height"
+          ],
+          "properties": {
+            "width": {
+              "minimum": 320,
+              "maximum": 3840,
+              "type": "integer"
+            },
+            "height": {
+              "minimum": 240,
+              "maximum": 2160,
+              "type": "integer"
+            }
+          }
+        },
+        "colorScheme": {
+          "anyOf": [
+            {
+              "const": "light",
+              "type": "string"
+            },
+            {
+              "const": "dark",
+              "type": "string"
+            }
+          ]
+        },
+        "reducedMotion": {
+          "anyOf": [
+            {
+              "const": "reduce",
+              "type": "string"
+            },
+            {
+              "const": "no-preference",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
     "extensions": {
       "additionalProperties": false,
       "type": "object",

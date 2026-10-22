@@ -718,6 +718,14 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
       "runner",
       `Runner ${plan.runner} does not match test type ${plan.type}: type frontend needs runner playwright, backend needs http, cli needs terminal, and integration takes playwright or http`,
     );
+  // A visual mask may never hide what an assertion checks (ADR-032, VAL-041).
+  const assertedLocators = new Set(
+    flat.flatMap(({ step }) =>
+      step.kind === "assertion" && "locator" in step.input
+        ? [canonicalLocator(step.input.locator)]
+        : [],
+    ),
+  );
   for (const { step, path } of flat) {
     if (
       plan.runner === "http" &&
@@ -754,6 +762,15 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
       if (["visualMatches", "accessibilityViolations"].includes(predicate))
         requireCapability(predicate);
       const input = step.input as Record<string, unknown>;
+      if (step.expectation.predicate === "visualMatches")
+        step.expectation.masks?.forEach((mask, index) => {
+          if (assertedLocators.has(canonicalLocator(mask)))
+            reject(
+              `${path}/expectation/masks/${index}`,
+              "mask_hides_assertion",
+              "A visual mask cannot select an element that an assertion of this plan checks",
+            );
+        });
       if (terminalPredicates.has(predicate))
         reject(
           `${path}/expectation`,
@@ -953,6 +970,19 @@ export function observesRenderedContent(step: Extract<PlanStep, { kind: "asserti
     default:
       return false;
   }
+}
+/** Key-order independent text of a locator, so two equal locators compare equal. */
+function canonicalLocator(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalLocator).join(",")}]`;
+  if (value && typeof value === "object")
+    return `{${Object.keys(value)
+      .sort()
+      .map(
+        (key) =>
+          `${JSON.stringify(key)}:${canonicalLocator((value as Record<string, unknown>)[key])}`,
+      )
+      .join(",")}}`;
+  return JSON.stringify(value);
 }
 /** A browser check that an element is absent: it also holds on a page that has not rendered yet. */
 function isNegativeBrowserCheck(step: PlanStep): boolean {

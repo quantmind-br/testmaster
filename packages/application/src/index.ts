@@ -76,6 +76,7 @@ export * from "./tokens.js";
 export * from "./tunnel-agent.js";
 export * from "./tunnel-relay.js";
 export * from "./tunnels.js";
+export * from "./visual-baselines.js";
 export * from "./worker.js";
 export * from "./worker-pool.js";
 export * from "./writer-contention.js";

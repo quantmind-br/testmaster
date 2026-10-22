@@ -8,11 +8,6 @@ export function unavailableCommands(program: Command, runtime: Runtime): void {
       capability: "memory",
       commands: ["create", "list", "get", "update", "remove"],
     },
-    {
-      name: "visual-baseline",
-      capability: "visual-baselines",
-      commands: ["create", "list", "get", "approve"],
-    },
   ];
   for (const entry of groups) {
     const group = program.command(entry.name);

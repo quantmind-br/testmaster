@@ -1,3 +1,4 @@
+import { matrixCells } from "@testmaster/application";
 import { ContractError, type RunRequest } from "@testmaster/contracts";
 import type { Command } from "commander";
 import {
@@ -7,6 +8,7 @@ import {
   receiptResult,
   waitForBatch,
 } from "./execution.js";
+import { matrixAxes, matrixOptions, reducedMotion } from "./matrix.js";
 import {
   collect,
   integer,
@@ -50,7 +52,8 @@ function replayOptions(options: Options): void {
     throw new ContractError("INVALID_ARGUMENT", "Invalid executor");
 }
 export function testExecutionCommands(test: Command, runtime: Runtime): void {
-  const run = executionOptions(test.command("run [ids...]"))
+  const run = matrixOptions(executionOptions(test.command("run [ids...]")))
+    .option("--reduced-motion <value>", "reduce or no-preference")
     .option("--all")
     .option("--tag <tag>", "Tag (repeatable)", collect)
     .option("--priority <priority>", "Priority (repeatable)", collect)
@@ -140,28 +143,35 @@ export function testExecutionCommands(test: Command, runtime: Runtime): void {
           ? { maxAttempts: integer(String(options.maxAttempts)) }
           : {}),
       };
-      const selection: RunRequest[] = ids.map((testId) => ({
-        testId,
-        environmentId: envId,
-        mode: options.mode === "agent" ? "agent" : "replay",
-        healingPolicy: "off",
-        origin: "cli",
-        ...(revision ? { revisionId: revision } : {}),
-        ...(Object.keys(limits).length ? { limits } : {}),
-        ...(targetUrl || options.maxConcurrency || options.executor
-          ? {
-              extensions: {
-                ...(targetUrl ? { "testmaster:targetUrl": targetUrl } : {}),
-                ...(typeof options.maxConcurrency === "number"
-                  ? { "testmaster:maxConcurrency": options.maxConcurrency }
-                  : {}),
-                ...(string(options, "executor")
-                  ? { "testmaster:executor": String(options.executor) }
-                  : {}),
-              },
-            }
-          : {}),
-      }));
+      const motion = reducedMotion(options);
+      const cells = matrixCells(matrixAxes(options)).map((cell) =>
+        cell || motion ? { ...cell, ...(motion ? { reducedMotion: motion } : {}) } : undefined,
+      );
+      const selection: RunRequest[] = ids.flatMap((testId) =>
+        cells.map((cell) => ({
+          testId,
+          environmentId: envId,
+          mode: options.mode === "agent" ? ("agent" as const) : ("replay" as const),
+          healingPolicy: "off" as const,
+          origin: "cli" as const,
+          ...(revision ? { revisionId: revision } : {}),
+          ...(Object.keys(limits).length ? { limits } : {}),
+          ...(cell ? { cell } : {}),
+          ...(targetUrl || options.maxConcurrency || options.executor
+            ? {
+                extensions: {
+                  ...(targetUrl ? { "testmaster:targetUrl": targetUrl } : {}),
+                  ...(typeof options.maxConcurrency === "number"
+                    ? { "testmaster:maxConcurrency": options.maxConcurrency }
+                    : {}),
+                  ...(string(options, "executor")
+                    ? { "testmaster:executor": String(options.executor) }
+                    : {}),
+                },
+              }
+            : {}),
+        })),
+      );
       if (selection.length === 1 && options.partialDispatch !== true) {
         const receipt = await app.runs.admit(selection[0] as RunRequest, admissionOptions(options));
         const result = await receiptResult(rt, app, receipt, options);
@@ -193,6 +203,8 @@ export function testExecutionCommands(test: Command, runtime: Runtime): void {
     },
     (_rt, args, options) => {
       replayOptions(options);
+      matrixAxes(options);
+      reducedMotion(options);
       if (options.all === true && Array.isArray(args[0]) && args[0].length)
         throw new ContractError(
           "INVALID_ARGUMENT",

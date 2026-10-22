@@ -39,6 +39,18 @@ export function rawRequest(baseUrl, path, { method = "GET", token, value, header
     req.end(payload);
   });
 }
+export function rawText(baseUrl, path) {
+  return new Promise((resolve, reject) => {
+    const req = request(new URL(path, baseUrl), (response) => {
+      const chunks = [];
+      response.on("data", (chunk) => chunks.push(chunk));
+      response.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+    });
+    req.on("error", reject);
+    req.setTimeout(5000, () => req.destroy(new Error("Oracle request timed out")));
+    req.end();
+  });
+}
 function state(dbPath, sql, ...parameters) {
   const db = new DatabaseSync(dbPath, { readOnly: true });
   try {
@@ -171,6 +183,23 @@ export const checks = {
       { firstId: order.body.id, secondId: second.body.id, persistedRows: rows.length },
     );
   },
+  // The shop's own stylesheet leaves price cells in the body text colour.
+  async priceColor({ url }) {
+    const html = await rawText(url, "/catalog");
+    const styles = [...html.matchAll(/<style>([\s\S]*?)<\/style>/g)].map((match) => match[1]);
+    const overrides = styles.flatMap((css) =>
+      [...css.matchAll(/([^{}]*\btd\b[^{}]*)\{([^}]*)\}/g)]
+        .filter((rule) => /(^|;)\s*color\s*:/.test(rule[2]))
+        .map((rule) => rule[1].trim()),
+    );
+    return verdict("priceColor", overrides.length === 0, { overrides });
+  },
+  // The login form's password field has an accessible name from its label.
+  async passwordLabel({ url }) {
+    const html = await rawText(url, "/login");
+    const labelled = /<label>Password<input[^>]*name="password"/.test(html);
+    return verdict("passwordLabel", labelled, { labelled });
+  },
 };
 export const mutantChecks = Object.freeze({
   "no-password-validation": "passwordValidation",
@@ -181,6 +210,8 @@ export const mutantChecks = Object.freeze({
   "schema-field-renamed": "productSchema",
   "pagination-skip": "paginationContinuity",
   "idempotency-ignored": "orderIdempotency",
+  "visual-price-color": "priceColor",
+  "a11y-missing-label": "passwordLabel",
 });
 
 export async function allChecks(instance) {

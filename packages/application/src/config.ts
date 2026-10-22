@@ -428,6 +428,8 @@ export async function resolveConfig(options: ResolveConfigOptions = {}): Promise
     browser: {
       name: "chromium",
       viewport: { width: 1280, height: 720 },
+      colorScheme: "light",
+      reducedMotion: "no-preference",
       testIdAttributes: ["data-testid"],
     },
     healing: { mode: "off" },

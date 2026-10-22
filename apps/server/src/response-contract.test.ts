@@ -202,17 +202,14 @@ it("C4 advertises the status the server answers and marks the unimplemented rout
     [
       "DELETE /memory/{id}",
       "GET /projects/{id}/memory",
-      "GET /visual-baselines",
       "PATCH /memory/{id}",
       "POST /exports",
       "POST /identity/break-glass",
       "POST /imports",
       "POST /projects/{id}/memory",
-      "POST /visual-baselines",
-      "POST /visual-baselines/{id}/approve",
     ].sort(),
   );
-  const refused = await f.post("/v1/visual-baselines", {});
+  const refused = await f.post("/v1/exports", {});
   expect(refused.statusCode).toBe(422);
   expect(refused.json().error.code).toBe("CAPABILITY_UNAVAILABLE");
 });

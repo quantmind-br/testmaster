@@ -151,9 +151,15 @@ const httpAndBrowserExpectations = [
     mimeType: Type.Optional(Name),
     sizeBytes: Type.Optional(Nonnegative),
   }),
+  /**
+   * The step's locator matches the approved baseline `baseline` of this test in the Run's matrix
+   * cell. `masks` paint the same rectangles on both images first and may never select an element
+   * another assertion of the plan checks (ADR-032).
+   */
   Obj({
     predicate: Type.Literal("visualMatches"),
-    baselineId: id("vbl"),
+    baseline: Name,
+    masks: Type.Optional(Type.Array(Locator, { minItems: 1, maxItems: 10 })),
     threshold: Type.Optional(Type.Number({ minimum: 0, maximum: 1 })),
   }),
   Obj({ predicate: Type.Literal("accessibilityViolations"), maximum: Nonnegative }),

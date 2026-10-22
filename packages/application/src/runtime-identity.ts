@@ -5,11 +5,37 @@ import { uuidV7IdGenerator } from "@testmaster/domain";
 import { DockerExecutor, type ImageLock } from "@testmaster/sandbox";
 import type { RuntimeIdentity } from "./provenance.js";
 
-const identities = new Map<string, RuntimeIdentity>();
-const measurements = new Map<string, Promise<RuntimeIdentity>>();
-export function runtimeIdentity(imageId: string | undefined): RuntimeIdentity | null {
-  return imageId ? (identities.get(imageId) ?? null) : null;
+export type BrowserEngine = "chromium" | "firefox" | "webkit";
+interface ImageIdentity {
+  imageId: string;
+  nodeVersion: string | null;
+  playwrightVersion: string | null;
+  engines: Partial<Record<BrowserEngine, string>>;
 }
+const identities = new Map<string, ImageIdentity>();
+const measurements = new Map<string, Promise<ImageIdentity>>();
+const ENGINES: readonly BrowserEngine[] = ["chromium", "firefox", "webkit"];
+/**
+ * The measured identity of `imageId` as one cell sees it: the browser fields name the cell's
+ * engine, so cells of the same image on different engines never share a runtime identity.
+ */
+export function runtimeIdentity(
+  imageId: string | undefined,
+  browser: BrowserEngine = "chromium",
+): RuntimeIdentity | null {
+  const measured = imageId ? identities.get(imageId) : undefined;
+  if (!measured) return null;
+  const version = measured.engines[browser] ?? null;
+  return {
+    imageId: measured.imageId,
+    nodeVersion: measured.nodeVersion,
+    playwrightVersion: measured.playwrightVersion,
+    browserName: version ? browser : null,
+    browserVersion: version,
+  };
+}
+// Each engine launches with the options the runner uses; Chromium alone has a sandbox switch.
+const MEASURE = `import {createRequire} from 'node:module'; const require=createRequire(import.meta.url); const out={nodeVersion:process.version,playwrightVersion:null,engines:{}}; try {out.playwrightVersion=require('playwright-core/package.json').version; const pw=require('playwright-core'); for (const name of ${JSON.stringify(ENGINES)}) { try { const browser=await pw[name].launch(name==='chromium'?{headless:true,chromiumSandbox:true}:{headless:true}); out.engines[name]=browser.version(); await browser.close(); } catch {} } } catch {} console.log(JSON.stringify(out));`;
 export async function measureRuntimeIdentities(
   images: ImageLock,
   seccompPath: string,
@@ -19,12 +45,11 @@ export async function measureRuntimeIdentities(
     let pending = measurements.get(image.imageId);
     if (!pending) {
       pending = (async () => {
-        const identity: RuntimeIdentity = {
+        const identity: ImageIdentity = {
           imageId: image.imageId,
           nodeVersion: null,
           playwrightVersion: null,
-          browserName: null,
-          browserVersion: null,
+          engines: {},
         };
         let root: string | null = null;
         try {
@@ -41,25 +66,20 @@ export async function measureRuntimeIdentities(
             seccompPath,
             // Python images may lack Playwright; require keeps that optional measurement honest.
             entrypoint: ["node"],
-            command: [
-              "--input-type=module",
-              "-e",
-              "import {createRequire} from 'node:module'; const require=createRequire(import.meta.url); const out={nodeVersion:process.version,playwrightVersion:null,browserName:null,browserVersion:null}; try {out.playwrightVersion=require('playwright-core/package.json').version; const {chromium}=require('playwright-core'); const browser=await chromium.launch({headless:true,chromiumSandbox:true}); out.browserName='chromium'; out.browserVersion=browser.version(); await browser.close();} catch {} console.log(JSON.stringify(out));",
-            ],
-            attemptTimeoutMs: 20000,
+            command: ["--input-type=module", "-e", MEASURE],
+            attemptTimeoutMs: 60000,
             cancellationGraceMs: 0,
           });
           if (result.code === 0) {
             const measured = JSON.parse(result.stdout.toString().trim()) as Record<string, unknown>;
-            for (const field of [
-              "nodeVersion",
-              "playwrightVersion",
-              "browserName",
-              "browserVersion",
-            ] as const) {
-              const value = measured[field];
-              if (typeof value === "string" && value.length > 0 && value.length <= 200)
-                identity[field] = value;
+            const text = (value: unknown) =>
+              typeof value === "string" && value.length > 0 && value.length <= 200 ? value : null;
+            identity.nodeVersion = text(measured.nodeVersion);
+            identity.playwrightVersion = text(measured.playwrightVersion);
+            const engines = (measured.engines ?? {}) as Record<string, unknown>;
+            for (const engine of ENGINES) {
+              const version = text(engines[engine]);
+              if (version) identity.engines[engine] = version;
             }
           }
         } catch {

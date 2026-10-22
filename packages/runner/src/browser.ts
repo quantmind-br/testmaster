@@ -19,8 +19,10 @@ import {
   type Download,
   errors,
   type Frame,
+  firefox,
   type Locator,
   type Page,
+  webkit,
 } from "playwright-core";
 import {
   denialDisposition,
@@ -47,6 +49,7 @@ import {
   stepTimeoutMs,
   storageStateRefusal,
 } from "./runtime.js";
+import { assertVisualMatch } from "./visual-assertion.js";
 
 type Scope = Page | Frame;
 type AssertionStep = Extract<PlanStep, { operation: "assert" }>;
@@ -453,10 +456,7 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       await http.perform(step);
       return;
     }
-    if (
-      expectation.predicate === "visualMatches" ||
-      expectation.predicate === "accessibilityViolations"
-    )
+    if (expectation.predicate === "accessibilityViolations")
       throw new RuntimeError(
         "unsupported_capability",
         `${expectation.predicate} is not enabled in this milestone`,
@@ -529,6 +529,21 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       ((expectation.predicate === "countEquals" || expectation.predicate === "countAtMost") &&
         expectation.value === 0);
     const locator = await locate(input.locator, timeout, scope, assertsAbsence ? "lazy" : "wait");
+    if (expectation.predicate === "visualMatches") {
+      const masks: Locator[] = [];
+      for (const mask of expectation.masks ?? [])
+        masks.push(await locate(mask, timeout, scope, "lazy"));
+      await assertVisualMatch({
+        runtime,
+        page,
+        stepId: step.id,
+        element: locator,
+        masks,
+        threshold: expectation.threshold ?? 0,
+        timeoutMs: timeout,
+      });
+      return;
+    }
     if (
       expectation.predicate === "countEquals" ||
       expectation.predicate === "countAtLeast" ||
@@ -1588,23 +1603,35 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
     if (runtime.signal.aborted)
       throw new RuntimeError("user_cancelled", "Attempt cancelled", "inconclusive");
     tempDirectory = await mkdtemp(join(tmpdir(), "testmaster-browser-"));
-    browser = await chromium.launch({
-      headless: true,
-      chromiumSandbox: true,
-      proxy: { server: proxy, bypass: "<-loopback>" },
-      args: [
-        "--disable-quic",
-        "--force-webrtc-ip-handling-policy=disable_non_proxied_udp",
-        "--disable-background-networking",
-        // Never let a host password manager or OS keychain autofill or leak into the target.
-        "--password-store=basic",
-        "--use-mock-keychain",
-      ],
-    });
+    const engine = runtime.input.browser?.name ?? "chromium";
+    const proxyOption = { server: proxy, bypass: "<-loopback>" };
+    browser =
+      engine === "chromium"
+        ? await chromium.launch({
+            headless: true,
+            chromiumSandbox: true,
+            proxy: proxyOption,
+            args: [
+              "--disable-quic",
+              "--force-webrtc-ip-handling-policy=disable_non_proxied_udp",
+              "--disable-background-networking",
+              // Never let a host password manager or OS keychain autofill or leak into the target.
+              "--password-store=basic",
+              "--use-mock-keychain",
+            ],
+          })
+        : // Firefox and WebKit carry no Chromium switches; the proxy and the container sandbox
+          // bound them the same way (ADR-032).
+          await (engine === "firefox" ? firefox : webkit).launch({
+            headless: true,
+            proxy: proxyOption,
+          });
     if (runtime.signal.aborted)
       throw new RuntimeError("user_cancelled", "Attempt cancelled", "inconclusive");
     context = await browser.newContext({
       viewport: runtime.input.browser?.viewport ?? { width: 1280, height: 720 },
+      colorScheme: runtime.input.browser?.colorScheme ?? "light",
+      reducedMotion: runtime.input.browser?.reducedMotion ?? "no-preference",
       locale: runtime.input.locale ?? "en-US",
       timezoneId: runtime.input.timezone ?? "UTC",
       permissions: [],
