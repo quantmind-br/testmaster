@@ -18,6 +18,7 @@ export const mutants = Object.freeze([
   "products-update-ignored",
   "visual-price-color",
   "a11y-missing-label",
+  "search-reflected-xss",
 ]);
 
 const json = (response, status, value) => {
@@ -236,6 +237,24 @@ export async function startShop({
         response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
         return response.end(
           '<!doctype html><html lang="en"><title>Terms</title><h1>Shop terms</h1><p data-testid="terms">Synthetic products only.</p></html>',
+        );
+      }
+      if (path === "/search" && method === "GET") {
+        const query = url.searchParams.get("q") ?? "";
+        // A security-only defect: the query is echoed into the page without escaping.
+        const shown =
+          mutant === "search-reflected-xss"
+            ? query
+            : query.replace(
+                /[&<>"']/g,
+                (character) =>
+                  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+                    character
+                  ],
+              );
+        response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+        return response.end(
+          `<!doctype html><html lang="en"><title>Search</title><h1>Search</h1><p data-testid="search-query">Results for ${shown}</p></html>`,
         );
       }
       if (path === "/widget") {

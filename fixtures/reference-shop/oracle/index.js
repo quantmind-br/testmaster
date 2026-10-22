@@ -200,6 +200,12 @@ export const checks = {
     const labelled = /<label>Password<input[^>]*name="password"/.test(html);
     return verdict("passwordLabel", labelled, { labelled });
   },
+  // The search page shows the query as text, never as markup.
+  async searchEscaping({ url }) {
+    const marker = `<b id="oracle-${randomUUID()}">`;
+    const html = await rawText(url, `/search?q=${encodeURIComponent(marker)}`);
+    return verdict("searchEscaping", !html.includes(marker), { reflected: html.includes(marker) });
+  },
 };
 export const mutantChecks = Object.freeze({
   "no-password-validation": "passwordValidation",
@@ -212,6 +218,7 @@ export const mutantChecks = Object.freeze({
   "idempotency-ignored": "orderIdempotency",
   "visual-price-color": "priceColor",
   "a11y-missing-label": "passwordLabel",
+  "search-reflected-xss": "searchEscaping",
 });
 
 export async function allChecks(instance) {
