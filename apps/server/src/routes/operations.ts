@@ -3,6 +3,7 @@ import type {
   IncidentCloseInput,
   IncidentEventInput,
   IncidentInput,
+  OperationsClaimsInput,
 } from "@testmaster/contracts";
 import type { RouteContext, RouteModule } from "./types.js";
 
@@ -38,6 +39,8 @@ export const operationsRoutes: RouteModule = {
     "GET /operations/{id}": (context) => context.service.operations.get(id(context)),
     "POST /operations/admission": ({ service, body }) =>
       service.operations.admission(body as AdmissionBody),
+    "POST /operations/worker-claims": ({ service, body }) =>
+      service.operations.workerClaims(body as OperationsClaimsInput),
     "POST /operations/reconcile": ({ service, body }) =>
       service.operations.reconcile(body as ReconcileBody),
     "POST /operations/backups": ({ service, body }) =>
@@ -63,6 +66,7 @@ export const operationsRoutes: RouteModule = {
     "POST /operations/dlq/requeue",
     "POST /operations/isolation/release",
     "POST /operations/admission",
+    "POST /operations/worker-claims",
     "POST /operations/backups",
     "POST /operations/restores",
     "POST /alerts/{id}/acknowledge",

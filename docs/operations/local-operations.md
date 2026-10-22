@@ -269,18 +269,21 @@ payloads as evidence.
 
 | Incident | Authorized implemented containment | Stop condition / preserved data |
 |---|---|---|
-| Suspected sandbox or egress bypass | A: `worker drain`, `worker stop`; X: `run cancel <run>`; stop controller, isolate host network as host operator | Do not restart until policy/image/seccomp and an independent boundary review pass. Keep labels, runtime facts, egress logs and original outcome. No rootless/multi-tenant certification inferred. |
+| Suspected sandbox or egress bypass | A: `testmaster ops workers pause --reason "<why>"` stops every local and remote worker from claiming the workspace's Runs while running Attempts finish, then `worker drain`, `worker stop`; X: `run cancel <run>`, `testmaster tunnel stop <id> --endpoint <url>` closes a tunnel and its streams; stop controller, isolate host network as host operator | Do not restart until policy/image/seccomp and an independent boundary review pass. Keep labels, runtime facts, egress logs and original outcome. No rootless/multi-tenant certification inferred. |
 | Secret/token exposure | A: revoke affected capability through authorized token service; `secret remove <id>` or rotate with `secret rotate <id> --from-env VAR`; X cancel affected runs, A drain/stop | Preserve secret-reference versions, release/auth denials and revocation audit, not values. Do not restore a backup without merging current revocations. Local token revocation is an application service, not a promised CLI command. |
 | Compromised/unavailable model | A/W as required: remove the provider from `allowedModelProviders` in `~/.config/testmaster/policy.json` (read when the application starts; restart a running server or worker), drain affected exploration/agent work; run deterministic replay without provider | Do not resume generation until provider authorization and grounded outputs are reviewed. Keep ModelCall usage/errors and accepted revision hashes; never rewrite deterministic verdict. |
 | Worker loss or uncertain external mutation | A: `worker reconcile --dry-run`, inspect run/resource evidence, then authorized `worker reconcile`; use explicit `resource cleanup` with resource-bound approval when applicable | Unknown effect is not a retry license. Preserve intent/created/uncertain handles, fences and cleanup results; stop if ownership proof is unavailable. |
 | Disk pressure or artifact tampering | A drain/stop; `backup create` only when safe space is available; preserve intact committed bundles and the partial failure, restore into an isolated directory if needed | Never delete active bundles or metadata to manufacture completeness. Stop if hashes or provenance disagree; no direct database repair. |
 | Migration/startup incompatibility | Stop controller/worker; preserve migration checksums/status and pre-upgrade backup; follow isolated rollback procedure above | Never downgrade schema in place or bypass compatibility refusal. |
 
-There is no implemented global tenant pause, independent audit anchoring, remote tunnel kill, S3
-outage repair, webhook replay or multi-user grant editor in M0–M2. Those incident rows remain explicitly
-unavailable, not fictitious executable procedures. Local auth/secret/export denials are audited with
-redacted refs and correlation IDs. Audit integrity verification detects changed exported bytes; a
-locally recomputed hash is not independent tamper-proof anchoring.
+Workspace claim pause (`testmaster ops workers pause --reason "<why>"`, resumed with
+`testmaster ops workers resume --reason "<why>"`) and the remote tunnel kill
+(`testmaster tunnel stop <id> --endpoint <url>`, refused to a viewer) are implemented; the `ops`
+status, admission and claim commands also accept `--endpoint <url>`. There is no implemented
+independent audit anchoring, S3 outage repair or webhook replay. Those incident rows remain
+explicitly unavailable, not fictitious executable procedures. Local auth/secret/export denials are
+audited with redacted refs and correlation IDs. Audit integrity verification detects changed exported
+bytes; a locally recomputed hash is not independent tamper-proof anchoring.
 
 Loopback failed-auth requests share an installation-wide burst of 20, replenished one per second;
 changing token guesses or forwarded addresses cannot reset it. Exhaustion returns 429 and

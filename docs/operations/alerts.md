@@ -57,7 +57,9 @@ never change a Run's verdict to make a dashboard green, and never export secret 
      OOM kills, Docker daemon and PostgreSQL latency; a worker that cannot reach the database cannot
      renew its 30 s lease.
   2. `testmaster ops reconcile preview` and review the proposed recovery, then `ops reconcile apply`.
-  3. While the cause is unknown, `testmaster ops pause --reason "<why>"` to stop new work.
+  3. While the cause is unknown, `testmaster ops pause --reason "<why>"` to stop new admissions and
+     `testmaster ops workers pause --reason "<why>"` to stop workers claiming queued Runs; Attempts
+     already running finish.
 * **Verification:** no new `attempt.lease_expired` for one full evaluation window, workers heartbeating,
   the alert resolves, and a healthy replay finishes `passed`.
 * **Escalation:** persists after a restart or affects several workers: open an incident (`outage`, high).
@@ -70,8 +72,9 @@ never change a Run's verdict to make a dashboard green, and never export secret 
 * **Trigger:** the oldest queued, dispatchable job is older than 300 s while live workers exist.
 * **Impact:** Runs start late; `queue_wait_p95` rises. Admission still accepts work.
 * **First actions:**
-  1. `testmaster ops status`: admission state, queued jobs, active Runs. A paused or draining workspace
-     stops claiming by design.
+  1. `testmaster ops status`: admission state, worker-claim state, queued jobs, active Runs. Admission
+     pause or drain stops new admissions only; `ops workers pause` stops local and remote workers from
+     claiming, so a workspace with `claims.paused` keeps its queue by design.
   2. `testmaster worker status`: free slots, required runner images and capabilities. A worker without
      the required image or with no free slot (memory, CPU, PIDs) does not claim.
   3. Look for one tenant or project filling the queue (tenant caps and fair share apply) and for

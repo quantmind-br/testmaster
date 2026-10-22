@@ -17,6 +17,7 @@ import { auditSecurity } from "./audit.js";
 import { authoringTransaction } from "./authoring.js";
 import type { ServiceContext } from "./context.js";
 import type { DeliveryService } from "./delivery.js";
+import { setWorkspaceClaims, workspaceClaimsPaused } from "./operations-claims.js";
 import { backupSettings, listServerBackups } from "./server-backup.js";
 import type { ServerConfig } from "./server-config.js";
 
@@ -227,6 +228,7 @@ export class OperationsService {
         changedBy: admission?.by ?? null,
         changedAt: admission?.at ?? null,
       },
+      claims: workspaceClaimsPaused(database, workspaceId),
       globalAdmission: String(
         database.get("SELECT value FROM operational_state WHERE key='admission'")?.value ??
           "enabled",
@@ -324,6 +326,43 @@ export class OperationsService {
         },
       );
     });
+  }
+
+  /**
+   * Pauses or resumes worker claims for this workspace (OPS-035). Admission stays as it is, so a
+   * paused workspace keeps queueing; local and remote workers stop taking its Runs together, and
+   * Attempts already running finish.
+   */
+  workerClaims(input: { action: "pause" | "resume"; reason: string }): OperationsStatus {
+    validate("OperationsClaimsInput", input);
+    this.ctx.authorize("A");
+    authoringTransaction(this.ctx, () => {
+      const before = workspaceClaimsPaused(this.ctx.database, this.ctx.workspaceId);
+      const now = new Date().toISOString();
+      setWorkspaceClaims(this.ctx.database, this.ctx.workspaceId, {
+        paused: input.action === "pause",
+        reason: input.reason,
+        actor: this.ctx.principalId,
+        at: now,
+      });
+      new AuditRepository(this.ctx.database).append({
+        workspaceId: this.ctx.workspaceId,
+        actor: this.ctx.principalId,
+        action: `ops.claims.${input.action}`,
+        resourceId: this.ctx.workspaceId,
+        requestId: this.ctx.correlationId ?? randomUUID(),
+        timestamp: now,
+        beforeHash: semanticHash({ paused: before.paused }),
+        afterHash: semanticHash({ paused: input.action === "pause", reason: input.reason }),
+      });
+      new OutboxRepository(this.ctx.database).append(
+        this.ctx.workspaceId,
+        this.ctx.workspaceId,
+        "ops.claims.changed",
+        { action: input.action, actor: this.ctx.principalId },
+      );
+    });
+    return this.status();
   }
 
   /** Previews or applies reconciliation of stale leases, orphan staging and unreachable evidence. */

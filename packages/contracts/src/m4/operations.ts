@@ -34,6 +34,7 @@ export const adminOperationKinds = [
 ] as const;
 export const adminOperationStates = ["requested", "running", "completed", "failed"] as const;
 export const admissionActions = ["pause", "drain", "resume"] as const;
+export const workerClaimsActions = ["pause", "resume"] as const;
 export const alertSeverities = ["critical", "high", "medium"] as const;
 export const alertStates = ["firing", "acknowledged", "resolved"] as const;
 export const incidentSeverities = ["critical", "high", "medium", "low"] as const;
@@ -106,12 +107,23 @@ export const operationsContracts = {
     version: P.Version,
   }),
   AdmissionInput: P.Obj({ action: P.Enum(admissionActions), reason: Reason }),
+  /** OPS-035: pauses or resumes worker claims of one workspace; admission is a separate switch. */
+  OperationsClaimsInput: P.Obj({
+    action: P.Enum(workerClaimsActions),
+    reason: Type.String({ minLength: 1, maxLength: 500 }),
+  }),
   BackupInput: P.Obj({ reason: Reason }),
   RestoreVerifyInput: P.Obj({ backupId: P.Name, reason: Reason }),
   IsolationReleaseInput: P.Obj({ reason: Reason }),
   OperationsStatus: P.Obj({
     admission: P.Obj({
       state: P.Enum(["enabled", "paused", "draining"]),
+      reason: nullable(P.Description),
+      changedBy: nullable(P.Name),
+      changedAt: nullable(P.Timestamp),
+    }),
+    claims: P.Obj({
+      paused: Type.Boolean(),
       reason: nullable(P.Description),
       changedBy: nullable(P.Name),
       changedAt: nullable(P.Timestamp),
@@ -272,6 +284,7 @@ export const operationsContracts = {
 
 export type AdminOperation = Static<typeof operationsContracts.AdminOperation>;
 export type OperationsStatus = Static<typeof operationsContracts.OperationsStatus>;
+export type OperationsClaimsInput = Static<typeof operationsContracts.OperationsClaimsInput>;
 export type DlqEntry = Static<typeof operationsContracts.DlqEntry>;
 export type DlqRequeueInput = Static<typeof operationsContracts.DlqRequeueInput>;
 export type AlertView = Static<typeof operationsContracts.Alert>;

@@ -534,6 +534,7 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ],
   ["GET", "/operations/{id}", "ops:R", "M4", "Empty", "AdminOperation"],
   ["POST", "/operations/admission", "ops:A", "M4", "AdmissionInput", "AdminOperation"],
+  ["POST", "/operations/worker-claims", "ops:A", "M5", "OperationsClaimsInput", "OperationsStatus"],
   ["POST", "/operations/reconcile", "ops:A", "M4", "ReconcileInput", "AdminOperation"],
   ["POST", "/operations/backups", "ops:A", "M4", "BackupInput", "AdminOperation"],
   ["POST", "/operations/restores", "ops:A", "M4", "RestoreVerifyInput", "AdminOperation"],

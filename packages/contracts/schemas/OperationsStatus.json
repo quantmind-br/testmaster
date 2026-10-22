@@ -3,6 +3,7 @@
   "type": "object",
   "required": [
     "admission",
+    "claims",
     "globalAdmission",
     "isolation",
     "work",
@@ -35,6 +36,56 @@
               "type": "string"
             }
           ]
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "maxLength": 8000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changedBy": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "pattern": "Z$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "claims": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "paused",
+        "reason",
+        "changedBy",
+        "changedAt"
+      ],
+      "properties": {
+        "paused": {
+          "type": "boolean"
         },
         "reason": {
           "anyOf": [

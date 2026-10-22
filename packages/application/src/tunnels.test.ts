@@ -230,4 +230,18 @@ describe("M5-02 tunnels", () => {
     const ended = await refusalOf(() => app.runs.admit({ ...request, testId: next.id }, queue));
     expect(ended.details.reasonCode).toBe("tunnel_lost");
   });
+
+  it("OPS-035 a viewer cannot kill a tunnel and the tunnel stays active", async () => {
+    const { app, init } = await open();
+    const { tunnel, openToken } = app.tunnels.create({
+      projectId: init.projectId,
+      target: { address: "127.0.0.1", port: 8080 },
+    });
+    app.tunnels.open(tunnel.id, openToken, session);
+    const viewer = app.forIdentity({ principalId: init.principalId, scopes: ["R"] });
+    expect(refusal(() => viewer.tunnels.revoke(tunnel.id)).code).toBe("FORBIDDEN");
+    expect(state(app, tunnel.id)).toEqual(["active", null]);
+    app.tunnels.revoke(tunnel.id);
+    expect(state(app, tunnel.id)).toEqual(["revoked", "owner_revoked"]);
+  });
 });

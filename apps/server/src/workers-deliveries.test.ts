@@ -39,7 +39,7 @@ async function fixture(rateLimits?: { actor?: RateBudget; tenant?: RateBudget })
   });
   const as = (token: string) => ({ authorization: `Bearer ${token}` });
   const call = (
-    method: "GET" | "POST",
+    method: "GET" | "POST" | "DELETE",
     url: string,
     options: { token?: string; payload?: object; headers?: Record<string, string> } = {},
   ) =>
@@ -48,7 +48,7 @@ async function fixture(rateLimits?: { actor?: RateBudget; tenant?: RateBudget })
       url,
       headers: {
         ...as(options.token ?? admin.token),
-        ...(method === "POST" ? { "idempotency-key": randomUUID() } : {}),
+        ...(method === "GET" ? {} : { "idempotency-key": randomUUID() }),
         ...options.headers,
       },
       ...(options.payload ? { payload: options.payload } : {}),
@@ -368,4 +368,34 @@ it("INT-026 OPS-011 the deliveries routes list check and notification deliveries
   const after = await f.call("GET", `/v1/deliveries/${delivery.id}`);
   expect(after.json().data.state).toBe("delivered");
   expect(receiver.requests.at(-1)?.headers["testmaster-delivery-id"]).toBe(delivery.id);
+});
+
+it("OPS-035 over HTTP a reader cannot kill a tunnel and a writer cannot pause worker claims, while an administrator can do both", async () => {
+  const f = await fixture();
+  const writer = await issueLocalToken(f.h.app, {
+    scopes: ["R", "W"],
+    tokenPath: join(f.h.app.config.home, "writer.token"),
+  });
+  const created = await f.call("POST", "/v1/tunnels", {
+    payload: { projectId: f.h.projectId, target: { address: "127.0.0.1", port: 8080 } },
+  });
+  expect(created.statusCode).toBe(201);
+  const tunnelId = created.json().data.tunnel.id;
+  expect(
+    (await f.call("DELETE", `/v1/tunnels/${tunnelId}`, { token: f.reader.token })).statusCode,
+  ).toBe(403);
+  expect((await f.call("GET", `/v1/tunnels/${tunnelId}`)).json().data.state).toBe("requested");
+
+  const pause = { action: "pause", reason: "suspected egress bypass" };
+  for (const token of [f.reader.token, writer.token])
+    expect(
+      (await f.call("POST", "/v1/operations/worker-claims", { token, payload: pause })).statusCode,
+    ).toBe(403);
+  expect((await f.call("GET", "/v1/operations/status")).json().data.claims.paused).toBe(false);
+
+  const paused = await f.call("POST", "/v1/operations/worker-claims", { payload: pause });
+  expect(paused.statusCode).toBe(200);
+  expect(paused.json().data.claims).toMatchObject({ paused: true, reason: pause.reason });
+  const killed = await f.call("DELETE", `/v1/tunnels/${tunnelId}`);
+  expect(killed.json().data).toMatchObject({ state: "revoked", closeReason: "owner_revoked" });
 });

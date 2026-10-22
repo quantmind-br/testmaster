@@ -138,6 +138,25 @@ export function operationsCommands(program: Command, runtime: Runtime): void {
         }),
       }),
     );
+  const workers = ops
+    .command("workers")
+    .description("Pause or resume worker claims for the workspace (OPS-035)");
+  for (const action of ["pause", "resume"] as const)
+    runtime.bind(
+      workspaceOption(
+        workers
+          .command(action)
+          .description(
+            `${action} claims by local and remote workers; running Attempts finish and admission is unchanged`,
+          ),
+      ).requiredOption("--reason <text>"),
+      async (rt, _args, options) => ({
+        data: (await target(rt, options)).operations.workerClaims({
+          action,
+          reason: required(options, "reason"),
+        }),
+      }),
+    );
   const reconcile = ops.command("reconcile");
   for (const mode of ["preview", "apply"] as const)
     runtime.bind(workspaceOption(reconcile.command(mode)), async (rt, _args, options) => ({

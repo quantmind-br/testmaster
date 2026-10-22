@@ -45,6 +45,7 @@ import type { ResolvedConfig } from "./config.js";
 import { entity, type RunActor, requireEntity, type ServiceContext } from "./context.js";
 import { memberIntervalReady } from "./member-interval.js";
 import { OperationalLogger } from "./observability.js";
+import { workspaceClaimsPaused } from "./operations-claims.js";
 import type { ResolvedDependency, RunsService } from "./runs.js";
 import type { SecretsService } from "./secrets.js";
 import {
@@ -773,7 +774,9 @@ export class WorkerService {
       : undefined;
     // The transaction makes resource reservation and lease claim indivisible across owners.
     return database.withTx(() => {
-      if (this.isQuarantined()) return null;
+      // OPS-035: a paused workspace yields no claim to any worker; running Attempts are untouched.
+      if (this.isQuarantined() || workspaceClaimsPaused(database, this.ctx.workspaceId).paused)
+        return null;
       const reserved = input.reserved();
       // A cancelled run still claims, to finalize without writing evidence.
       const eligible = candidates.filter(

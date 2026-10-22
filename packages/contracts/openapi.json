@@ -15841,6 +15841,73 @@
         }
       }
     },
+    "/operations/worker-claims": {
+      "post": {
+        "operationId": "post__operations_worker_claims",
+        "tags": [
+          "M5"
+        ],
+        "parameters": [],
+        "x-scope": "ops:A",
+        "x-milestone": "M5",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "requestId",
+                    "data",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": "1.0.0"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/OperationsStatus"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Canonical error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OperationsClaimsInput"
+              }
+            }
+          }
+        }
+      }
+    },
     "/operations/reconcile": {
       "post": {
         "operationId": "post__operations_reconcile",
@@ -150933,11 +151000,40 @@
         },
         "$defs": {}
       },
+      "OperationsClaimsInput": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "action",
+          "reason"
+        ],
+        "properties": {
+          "action": {
+            "anyOf": [
+              {
+                "const": "pause",
+                "type": "string"
+              },
+              {
+                "const": "resume",
+                "type": "string"
+              }
+            ]
+          },
+          "reason": {
+            "minLength": 1,
+            "maxLength": 500,
+            "type": "string"
+          }
+        },
+        "$defs": {}
+      },
       "OperationsStatus": {
         "additionalProperties": false,
         "type": "object",
         "required": [
           "admission",
+          "claims",
           "globalAdmission",
           "isolation",
           "work",
@@ -150970,6 +151066,56 @@
                     "type": "string"
                   }
                 ]
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "maxLength": 8000,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "changedBy": {
+                "anyOf": [
+                  {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "changedAt": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "pattern": "Z$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          },
+          "claims": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "paused",
+              "reason",
+              "changedBy",
+              "changedAt"
+            ],
+            "properties": {
+              "paused": {
+                "type": "boolean"
               },
               "reason": {
                 "anyOf": [

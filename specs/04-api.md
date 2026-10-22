@@ -138,6 +138,7 @@ Não retry de 401/403, validation, policy, crédito do provedor esgotado, produc
 | POST `/deliveries/{id}/retry` | reenviar eventId original, sem nova execução | integrations:W | M4 |
 | GET `/operations` / `/operations/{id}` | estado/progresso de jobs administrativos autorizados | ops:R | M4 |
 | POST `/operations/admission` | pause/resume com reason e escopo | ops:A | M4 |
+| POST `/operations/worker-claims` | pausa/retoma claims de workers locais e remotos do workspace; attempts em execução terminam | ops:A | M5 |
 | POST `/operations/reconcile` | preview read-only ou apply de repair aprovado; receipt, sem editar verdict | ops:A | M4 |
 | POST `/operations/backups` / `/restores` | manifest/ref, restore isolado e confirmação; job monitorável | ops:A | M4 |
 | GET/POST `/projects/{id}/memory` | fatos com source/version/TTL/approval; escrita revisada, não instrução | memory:R/W | M5 |

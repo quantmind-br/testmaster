@@ -13,7 +13,6 @@ const unavailableGroups = [
   "auth",
   "suite",
   "schedule",
-  "tunnel",
   "memory",
   "visual-baseline",
   "export",
