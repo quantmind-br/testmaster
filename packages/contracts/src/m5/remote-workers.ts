@@ -42,7 +42,14 @@ export const remoteWorkerContracts = {
       memoryBytes: Count,
       pids: Count,
       diskBytes: Count,
-      pools: P.Obj({ browser: Count, http: Count, python: Count, terminal: Count }),
+      pools: P.Obj({
+        browser: Count,
+        http: Count,
+        python: Count,
+        terminal: Count,
+        /** ZAP scanners of DAST probes; one when absent (ADR-033). */
+        dast: Type.Optional(Count),
+      }),
     }),
     /** Concurrent Attempts this worker runs; counted once in the fair-share slots. */
     slots: Type.Integer({ minimum: 1, maximum: 64 }),

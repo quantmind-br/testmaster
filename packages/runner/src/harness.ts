@@ -2,6 +2,7 @@ import { fork } from "node:child_process";
 import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
 import { StringDecoder } from "node:string_decoder";
+import { runAccess } from "./access.js";
 import { runBrowser } from "./browser.js";
 import { CODE_EGRESS_ENV, type CodeEgressPolicy, CodeEgressTally } from "./code-egress.js";
 import { FAILURE_ARTIFACT_EVENT, FailureEvidence } from "./code-evidence.js";
@@ -14,6 +15,7 @@ import {
   CODE_SECRETS_ENV,
   stageImportedModules,
 } from "./imported-modules.js";
+import { runLoad } from "./load.js";
 import { ProtocolClient } from "./protocol.js";
 import {
   abortVerdict,
@@ -100,7 +102,9 @@ export async function runHarness(): Promise<RunnerResult> {
   );
   let result: RunnerResult;
   try {
-    if (input.imported) {
+    if (input.probe?.kind === "access") result = await runAccess(runtime);
+    else if (input.probe?.kind === "load") result = await runLoad(runtime);
+    else if (input.imported) {
       await runtime.emit("step.started", { stepId: "imported-code", index: 1000000 });
       result = await runImported(runtime);
       if (shouldReport(runtime.signal))

@@ -23,6 +23,8 @@ const bases = {
     "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
   "testmaster-runner-python":
     "mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0",
+  "testmaster-runner-zap":
+    "ghcr.io/zaproxy/zaproxy@sha256:5ccfff9a411743ab2615136a2edd7416bec9ce41572fa94e935df38c14adb2b6",
 };
 function command(executable, args, capture = false) {
   const result = spawnSync(executable, args, {
@@ -64,13 +66,17 @@ const only =
       ? args[1]
       : undefined;
 if (only === undefined)
-  throw new Error("Usage: build.mjs [--only testmaster-runner|testmaster-runner-python]");
-if (only !== "testmaster-runner-python") command("pnpm", ["exec", "tsc", "-b", "packages/runner"]);
+  throw new Error(
+    "Usage: build.mjs [--only testmaster-runner|testmaster-runner-python|testmaster-runner-zap]",
+  );
+if (only === null || only === "testmaster-runner")
+  command("pnpm", ["exec", "tsc", "-b", "packages/runner"]);
 const temporary = await mkdtemp(join(tmpdir(), "testmaster-images-"));
 try {
   const runner = join(temporary, "node");
   const python = join(temporary, "python");
-  if (only !== "testmaster-runner-python") {
+  const zap = join(temporary, "zap");
+  if (only === null || only === "testmaster-runner") {
     await mkdir(join(runner, "runner/node_modules"), { recursive: true });
     await cp(join(root, "containers/runner/Dockerfile"), join(runner, "Dockerfile"));
     await cp(join(root, "packages/runner/dist"), join(runner, "runner/dist"), {
@@ -141,7 +147,7 @@ try {
       }
     }
   }
-  if (only !== "testmaster-runner") {
+  if (only === null || only === "testmaster-runner-python") {
     await mkdir(join(python, "python"), { recursive: true });
     await cp(join(root, "containers/python/Dockerfile"), join(python, "Dockerfile"));
     await cp(join(root, "python"), join(python, "python"), {
@@ -151,6 +157,18 @@ try {
           .split(/[\\/]/u)
           .some((part) => [".venv", "__pycache__", ".pytest_cache"].includes(part)),
     });
+  }
+  // The ZAP runner speaks the supervisor protocol through the Python runner's own modules.
+  if (only === null || only === "testmaster-runner-zap") {
+    await mkdir(join(zap, "python/testmaster_runner"), { recursive: true });
+    await mkdir(join(zap, "containers/zap"), { recursive: true });
+    await cp(join(root, "containers/zap/Dockerfile"), join(zap, "Dockerfile"));
+    await cp(join(root, "containers/zap/adapter.py"), join(zap, "containers/zap/adapter.py"));
+    for (const module of ["__init__.py", "protocol.py", "forwarder.py"])
+      await cp(
+        join(root, "python/testmaster_runner", module),
+        join(zap, "python/testmaster_runner", module),
+      );
   }
   // Both images replace Playwright's non-public ffmpeg build with the public LGPL recipe.
   for (const directory of [runner, python])
@@ -166,6 +184,7 @@ try {
   for (const [name, directory] of [
     ["testmaster-runner", runner],
     ["testmaster-runner-python", python],
+    ["testmaster-runner-zap", zap],
   ]) {
     if (only !== null && name !== only) continue;
     const buildInputsHash = await digest(directory);

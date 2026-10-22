@@ -172,6 +172,8 @@ Revision pode ser omitida para resolver active atomicamente; resposta sempre a i
 
 `tunnelId` (M5, opcional) admite o Run por um túnel ativo do projeto do teste cujo alvo é exatamente o host e a porta do `baseUrl` do environment (`localhost` vale `127.0.0.1`); fora isso a admissão recusa com `NOT_FOUND`, `PRECONDITION_FAILED` `tunnel_lost` ou `POLICY_DENIED` `tunnel_target_mismatch`. Só o executor Docker de um worker remoto o executa, e cada Run exige uma aprovação vinculada cujo actionSet nomeia `tunnel:<id>`, mesmo fora de produção (ADR-031, SEC-039).
 
+Um teste probe (M5, ADR-033) exige em todo environment uma aprovação vinculada `securityProbe` por Run. Probes DAST e de carga nunca são admitidos em environment `production`, com ou sem aprovação: `POLICY_DENIED` `production_load_refused` antes de consultar aprovações. Um probe DAST sem a imagem opcional `testmaster-runner-zap` recusa com `CAPABILITY_UNAVAILABLE` (`capability: "dast"`), e um teste de carga cujo cronograma (soma das etapas, limitada por `budget.maxDurationSeconds`) não termina antes do deadline do Attempt recusa com `INVALID_ARGUMENT`.
+
 ## 5. Eventos e IPC
 
 Evento `{schemaVersion,eventId,seq,type,runId,attemptId,occurredAt,payload}`. Tipos: run.accepted, attempt.started, step.started, step.finished, artifact.available, cleanup.finished, analysis.available, run.completed, run.cancel_requested. Ordem total por aggregate; eventos de runs distintas não têm ordem global.

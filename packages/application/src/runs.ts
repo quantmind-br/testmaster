@@ -8,6 +8,7 @@ import {
   type EffectiveConfig,
   type ExecutablePlan,
   type PlanStep,
+  type ProbeSpec,
   type Run,
   type RunReceipt,
   type RunRequest,
@@ -33,6 +34,7 @@ import type { ResolvedConfig } from "./config.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "./context.js";
 import { type ReuseBinding, resolveReuse } from "./dependency-reuse.js";
 import { onceSatisfiedRun } from "./once.js";
+import { assertProbeAdmissible } from "./probes.js";
 import {
   type AdmissionSnapshot,
   admissionInputHash,
@@ -40,7 +42,7 @@ import {
   verifyAdmission,
 } from "./provenance.js";
 import { browserCellOf, withBrowserCell, withUsedEnvironment } from "./run-config.js";
-import { runnerImageOf } from "./runner-kinds.js";
+import { runnerImageOf, runnerOf } from "./runner-kinds.js";
 import { runtimeIdentity } from "./runtime-identity.js";
 import { type EvidenceLimits, runEvidenceBytes } from "./storage-admission.js";
 import { clockDomain, timingBoundary } from "./timing.js";
@@ -349,6 +351,15 @@ export class RunsService {
       "EnvironmentRevision",
       String(environment.activeRevisionId),
     );
+    const limits = this.limitsFor(request.limits);
+    // A production target never receives DAST or load traffic, so no approval is consulted first.
+    if (revision.probe)
+      assertProbeAdmissible(
+        revision.probe as ProbeSpec,
+        env,
+        this.host.admittedImages() ?? null,
+        limits,
+      );
     const config = this.host.config.effectiveConfig.config;
     if (
       config.artifacts?.trace === "on" ||
@@ -377,7 +388,6 @@ export class RunsService {
           );
       }
     }
-    const limits = this.limitsFor(request.limits);
     const originalUrl = (env.targetOrigins as string[])[0];
     const targetUrl = request.extensions?.["testmaster:targetUrl"];
     const baseUrl = typeof targetUrl === "string" ? new URL(targetUrl).origin : originalUrl;
@@ -410,7 +420,7 @@ export class RunsService {
     inspectSecrets(revision.probe);
     const executor =
       request.extensions?.["testmaster:executor"] ?? config.execution?.executor ?? "docker";
-    // A probe's generator ships only in the Python runner image (ADR-033).
+    // A probe's runner ships only in the pinned runner images (ADR-033).
     if (revision.probe && executor === "process")
       throw new ContractError("PRECONDITION_FAILED", "A probe runs only in the Docker sandbox");
     const maxConcurrency =
@@ -433,7 +443,7 @@ export class RunsService {
       executor === "process"
         ? null
         : runtimeIdentity(
-            this.host.admittedImages()?.[runnerImageOf(revision.runnerKind)]?.imageId,
+            this.host.admittedImages()?.[runnerImageOf(runnerOf(revision))]?.imageId,
             effectiveConfig.config.browser?.name ?? "chromium",
           ),
     );

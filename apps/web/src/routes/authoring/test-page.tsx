@@ -445,6 +445,7 @@ function TestView({
     ) ??
     ordered[0] ??
     null;
+  const probeKind = (base?.probe as { kind?: string } | undefined)?.kind;
   const activeEnvironments = environments.items.filter((environment) => !environment.archivedAt);
 
   const columns: Column<RevisionDoc>[] = [
@@ -566,10 +567,13 @@ function TestView({
       </section>
       {base?.probe ? (
         <section aria-labelledby="probe-heading" data-testid="probe-spec">
-          <h2 id="probe-heading">Property probe</h2>
+          <h2 id="probe-heading">
+            {probeKind === "property" ? "Property probe" : `${String(probeKind)} probe`}
+          </h2>
           <p className="hint">
-            This revision generates requests from an API description; it has no plan to edit. Each
-            Run stores minimized reproductions that replay as their own tests.
+            {probeKind === "property"
+              ? "This revision generates requests from an API description; it has no plan to edit. Each Run stores minimized reproductions that replay as their own tests."
+              : "This revision runs a security or load probe against the environment; it has no plan to edit. Each Run needs a bound securityProbe approval."}
           </p>
           <pre>{prettyPlan(base.probe)}</pre>
         </section>

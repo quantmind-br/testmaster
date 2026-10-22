@@ -55,8 +55,8 @@ export class CodeExportService {
         ...(options.async === undefined ? {} : { async: options.async }),
       });
     } else if (revision.probe) {
-      // A probe is a generator configuration, not code; its reproductions export as plans.
-      throw new ContractError("PRECONDITION_FAILED", "A property probe has no exportable code", {
+      // A probe is a runner configuration, not code; property reproductions export as plans.
+      throw new ContractError("PRECONDITION_FAILED", "A probe has no exportable code", {
         revisionId,
       });
     } else {

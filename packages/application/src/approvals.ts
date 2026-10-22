@@ -17,7 +17,7 @@ import { type EntityDocument, OutboxRepository } from "@testmaster/persistence";
 import { authoringTransaction } from "./authoring.js";
 import type { ResolvedConfig } from "./config.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "./context.js";
-import { PROBE_STEP_ID } from "./runner-kinds.js";
+import { probeStepId } from "./runner-kinds.js";
 
 type Stored<T> = T & EntityDocument;
 export interface ApprovalInput {
@@ -672,7 +672,13 @@ export class ApprovalsService {
       const actions: RiskAction[] = [
         ...(environment.production ? risky : []),
         ...(revision.probe
-          ? [{ stepId: PROBE_STEP_ID, risk: "securityProbe" as const, basis: "property probe" }]
+          ? [
+              {
+                stepId: probeStepId(revision),
+                risk: "securityProbe" as const,
+                basis: `${probeStepId(revision)} probe`,
+              },
+            ]
           : []),
       ];
       if (!tunnelAction && !actions.length) return null;
@@ -682,7 +688,9 @@ export class ApprovalsService {
           : {};
       const policyHash =
         typeof policy.policyHash === "string" ? policy.policyHash : semanticHash(run.gatePolicy);
+      // The approval names every origin the Run reaches, including a target override (VAL-043).
       const origins = new Set(environment.targetOrigins);
+      if (typeof cell?.baseUrl === "string") origins.add(new URL(cell.baseUrl).origin);
       const visit = (steps: readonly PlanStep[]): void => {
         for (const step of steps) {
           if (step.operation === "frame") visit(step.input.childSteps);
@@ -755,7 +763,7 @@ export class ApprovalsService {
             !actions.length
               ? "A Run through a tunnel requires a current bound approval naming the tunnel"
               : revision.probe && !environment.production
-                ? "A property probe requires a current bound securityProbe approval"
+                ? `A ${probeStepId(revision)} probe requires a current bound securityProbe approval`
                 : approvalPolicy.requiredApprovers > 1
                   ? "Risky production actions require current bound approvals from independent reviewers"
                   : "Risky production actions require a current bound approval",

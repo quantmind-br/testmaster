@@ -118,7 +118,9 @@ export function testCommands(program: Command, runtime: Runtime): void {
   );
   const probes = group
     .command("probe")
-    .description("Property probes: tests generated from an OpenAPI or GraphQL source (ADR-033)");
+    .description(
+      "Probes: property tests from an OpenAPI or GraphQL source, DAST, access and load checks (ADR-033)",
+    );
   const readProbe = async (rt: Runtime, options: Options): Promise<ProbeInput> =>
     validate<ProbeInput>(
       "ProbeInput",
@@ -128,7 +130,7 @@ export function testCommands(program: Command, runtime: Runtime): void {
     probes
       .command("create")
       .description(
-        "Create a test whose active revision is a property probe; each Run needs a bound securityProbe approval",
+        "Create a test whose active revision is a probe; each Run needs a bound securityProbe approval",
       )
       .requiredOption("--file <file>", "ProbeInput JSON; the project comes from --project"),
     async (rt, _args, options) => {

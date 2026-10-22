@@ -2113,7 +2113,7 @@ export class TestMasterMcp {
             throw new ContractError(
               "NOT_FOUND",
               revision.probe
-                ? `Revision ${id} is a property probe and has no plan; its spec is the probe field of testmaster://revisions/${id}`
+                ? `Revision ${id} is a probe and has no plan; its spec is the probe field of testmaster://revisions/${id}`
                 : `Revision ${id} is generated code and has no plan; read its code at testmaster://revisions/${id}/code`,
               { revisionId: id, testId: revision.testId, origin: revision.origin },
             );

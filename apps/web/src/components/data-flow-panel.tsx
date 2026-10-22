@@ -21,7 +21,7 @@ import { ViewState } from "./view-state";
 interface RevisionRecord {
   readonly id: string;
   readonly ordinal: number;
-  /** Null for imported code and property probes, which have no declarative plan. */
+  /** Null for imported code and probes, which have no declarative plan. */
   readonly plan: (PlanLike & { readonly name: string }) | null;
 }
 interface ResourceRow {
@@ -276,7 +276,7 @@ export function DataFlowPanel({ runId, testId, revisionId }: DataFlowPanelProps)
       <ViewState
         kind="empty"
         title="No declarative plan"
-        message="This Run's revision is imported code or a property probe; it declares no plan steps, so there is no data flow to draw."
+        message="This Run's revision is imported code or a probe; it declares no plan steps, so there is no data flow to draw."
       />
     );
   else if (!view)

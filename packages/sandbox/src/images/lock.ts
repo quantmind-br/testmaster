@@ -16,20 +16,36 @@ export interface ImageLockEntry {
   buildInputsHash: string;
   seccomp: SeccompProvenance;
 }
-export type ImageLock = Record<"testmaster-runner" | "testmaster-runner-python", ImageLockEntry>;
+/** Images every installation pins; the runners of every plan and code test run in them. */
+export const requiredImages = ["testmaster-runner", "testmaster-runner-python"] as const;
+/**
+ * Images an installation may pin: without one, the capability that runs in it is unavailable
+ * instead of the installation (the ZAP runner of DAST probes, ADR-033).
+ */
+export const optionalImages = ["testmaster-runner-zap"] as const;
+export type ImageName = (typeof requiredImages)[number] | (typeof optionalImages)[number];
+export type ImageLock = Record<(typeof requiredImages)[number], ImageLockEntry> &
+  Partial<Record<(typeof optionalImages)[number], ImageLockEntry>>;
 export const baseImages = {
   "testmaster-runner":
     "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
   "testmaster-runner-python":
     "mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0",
-} as const;
+  "testmaster-runner-zap":
+    "ghcr.io/zaproxy/zaproxy@sha256:5ccfff9a411743ab2615136a2edd7416bec9ce41572fa94e935df38c14adb2b6",
+} as const satisfies Record<ImageName, string>;
 export async function readImageLock(path: string): Promise<ImageLock> {
   const raw: unknown = JSON.parse(await readFile(path, "utf8"));
   if (!raw || typeof raw !== "object" || Array.isArray(raw))
     throw new PolicyDenied("invalid_image_lock");
   const values = raw as Record<string, unknown>;
-  if (Object.keys(values).length !== 2) throw new PolicyDenied("invalid_image_lock");
-  for (const name of Object.keys(baseImages) as (keyof ImageLock)[]) {
+  const names = Object.keys(values) as ImageName[];
+  if (
+    requiredImages.some((name) => !(name in values)) ||
+    names.some((name) => !Object.hasOwn(baseImages, name))
+  )
+    throw new PolicyDenied("invalid_image_lock");
+  for (const name of names) {
     const value = values[name];
     if (!value || typeof value !== "object" || Array.isArray(value))
       throw new PolicyDenied("invalid_image_lock");
@@ -76,21 +92,26 @@ export async function hashBuildInputs(root: string, paths: readonly string[]): P
 export async function verifyImageLock(
   path: string,
   inspectImage: (imageId: string) => Promise<string>,
-  names: readonly (keyof ImageLock)[] = ["testmaster-runner", "testmaster-runner-python"],
+  names: readonly ImageName[] = requiredImages,
   revokedImageIds: ReadonlySet<string> = new Set(),
 ): Promise<ImageLock> {
   const lock = await readImageLock(path);
+  const pinned = names.map((name) => {
+    const entry = lock[name];
+    if (!entry) throw new PolicyDenied("image_lock_mismatch");
+    return entry;
+  });
   // A revoked digest is never usable again, even when an older lock file pins it.
-  for (const name of names)
-    if (revokedImageIds.has(lock[name].imageId)) throw new PolicyDenied("image_revoked");
+  for (const entry of pinned)
+    if (revokedImageIds.has(entry.imageId)) throw new PolicyDenied("image_revoked");
   const profileHash = createHash("sha256")
     .update(await readFile(join(path, "..", "seccomp_profile.json")))
     .digest("hex");
   for (const entry of Object.values(lock))
     if (entry.seccomp.profileSha256 !== profileHash)
       throw new PolicyDenied("seccomp_hash_mismatch");
-  for (const name of names)
-    if ((await inspectImage(lock[name].imageId)) !== lock[name].imageId)
+  for (const entry of pinned)
+    if ((await inspectImage(entry.imageId)) !== entry.imageId)
       throw new PolicyDenied("image_lock_mismatch");
   return lock;
 }

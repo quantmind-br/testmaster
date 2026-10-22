@@ -1,4 +1,10 @@
-import type { ExecutablePlan, NetworkPolicy, PlanStep } from "@testmaster/contracts";
+import type {
+  AccessProbe,
+  ExecutablePlan,
+  LoadProbe,
+  NetworkPolicy,
+  PlanStep,
+} from "@testmaster/contracts";
 import {
   AttemptClock,
   type PlanIdentifiers,
@@ -33,6 +39,11 @@ export interface RunnerInput {
     { state: "available"; path: string } | { state: "missing" | "stale" }
   >;
   plan?: ExecutablePlan;
+  /**
+   * The access or load probe a probe Run executes instead of a plan (ADR-033); every secret it
+   * names is in `secrets`.
+   */
+  probe?: AccessProbe | LoadProbe;
   networkPolicy: NetworkPolicy;
   secrets: { secretRef: string; secretVersion: number }[];
   variables?: Record<string, { value: unknown; sensitive: boolean }>;

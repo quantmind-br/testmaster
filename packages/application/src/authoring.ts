@@ -927,7 +927,9 @@ export class TestsService {
       const probe = normalizeProbe(request.spec);
       const value = entity(this.ctx, "tst", {
         projectId,
-        name: request.name ?? `Property ${probe.api} probe`,
+        name:
+          request.name ??
+          (probe.kind === "property" ? `Property ${probe.api} probe` : `${probe.kind} probe`),
         activeRevisionId: null,
         tags: [],
         priority: "normal",

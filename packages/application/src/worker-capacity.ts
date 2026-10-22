@@ -6,7 +6,11 @@ export interface WorkerCapacity {
   memoryBytes: number;
   pids: number;
   diskBytes: number;
-  pools: Record<ExecutorKind, number>;
+  /** `dast` came after remote workers shipped their capacity; one ZAP scanner when absent. */
+  pools: Record<Exclude<ExecutorKind, "dast">, number> & { dast?: number };
+}
+function poolSlots(capacity: WorkerCapacity, kind: ExecutorKind): number {
+  return kind === "dast" ? (capacity.pools.dast ?? 1) : capacity.pools[kind];
 }
 export function validateCapacity(capacity: WorkerCapacity): WorkerCapacity {
   for (const value of [
@@ -18,6 +22,7 @@ export function validateCapacity(capacity: WorkerCapacity): WorkerCapacity {
     capacity.pools.http,
     capacity.pools.python,
     capacity.pools.terminal,
+    poolSlots(capacity, "dast"),
   ])
     if (!Number.isFinite(value) || value < 0)
       throw new ContractError(
@@ -30,6 +35,7 @@ export function validateCapacity(capacity: WorkerCapacity): WorkerCapacity {
       capacity.pools.http,
       capacity.pools.python,
       capacity.pools.terminal,
+      poolSlots(capacity, "dast"),
       capacity.pids,
     ].every(Number.isInteger)
   )
@@ -58,7 +64,7 @@ export function fitsCapacity(
     { cpu: 0, memoryBytes: 0, pids: 0, diskBytes: 0 },
   );
   return (
-    active.filter((item) => item === kind).length < capacity.pools[kind] &&
+    active.filter((item) => item === kind).length < poolSlots(capacity, kind) &&
     used.cpu + requested.cpu <= capacity.cpu * 0.75 &&
     used.memoryBytes + requested.memoryBytes <= capacity.memoryBytes * 0.75 &&
     used.pids + requested.pids <= capacity.pids &&

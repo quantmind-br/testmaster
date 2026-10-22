@@ -4,13 +4,17 @@ import {
   ContractError,
   DEFAULT_PROPERTY_EXAMPLES,
   type ExecutablePlan,
+  type ProbeCredential,
   type ProbeSpec,
+  type PropertyProbe,
+  productionRefusedProbes,
   type ReproductionInput,
   resolvePropertyChecks,
   validate,
 } from "@testmaster/contracts";
 import { sha256 } from "@testmaster/domain";
 import { streamBundleArtifact } from "@testmaster/evidence";
+import type { ImageLock } from "@testmaster/sandbox";
 import { loadSourceView } from "./ai/source-documents.js";
 import { readAiState } from "./ai/sources.js";
 import type { ArtifactsService } from "./artifacts.js";
@@ -29,6 +33,7 @@ const MAX_REPLAY_PLAN_BYTES = 1024 * 1024;
 
 /** A probe with its defaults filled in, so equal probes hash, run and compare alike (ADR-033). */
 export function normalizeProbe(spec: ProbeSpec): ProbeSpec {
+  if (spec.kind !== "property") return spec;
   return {
     ...spec,
     maxExamples: spec.maxExamples ?? DEFAULT_PROPERTY_EXAMPLES,
@@ -36,12 +41,40 @@ export function normalizeProbe(spec: ProbeSpec): ProbeSpec {
   };
 }
 
+/** Every secret-held header a probe sends, whichever party it sends them as. */
+export function probeCredentials(spec: ProbeSpec): ProbeCredential[] {
+  switch (spec.kind) {
+    case "access":
+      return [...spec.owner, ...spec.intruder];
+    case "load":
+      return spec.request.credentials ?? [];
+    default:
+      return spec.credentials ?? [];
+  }
+}
+
 /**
  * Refuses a probe its project cannot run: a source of another project or of another API kind, an
- * OpenAPI operation the description does not declare, GraphQL options only OpenAPI has, or a
- * credential that does not exist.
+ * OpenAPI operation the description does not declare, GraphQL options only OpenAPI has, an access
+ * intruder holding an owner credential, or a credential that does not exist.
  */
 export function assertProbeUsable(ctx: ServiceContext, projectId: string, spec: ProbeSpec): void {
+  for (const credential of probeCredentials(spec))
+    requireEntity(ctx, "SecretReference", credential.secretRef);
+  if (spec.kind === "access") {
+    const shared = spec.intruder.find((credential) =>
+      spec.owner.some((owner) => owner.secretRef === credential.secretRef),
+    );
+    if (shared)
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        "The intruder must not hold an owner credential",
+        {
+          secretRef: shared.secretRef,
+        },
+      );
+  }
+  if (spec.kind !== "property") return;
   const source = requireEntity(ctx, "SourceRevision", spec.sourceRevisionId);
   const state = readAiState<{ projectId?: string }>(ctx, `revision:${spec.sourceRevisionId}`);
   if (state?.projectId !== projectId)
@@ -76,8 +109,52 @@ export function assertProbeUsable(ctx: ServiceContext, projectId: string, spec: 
         operation: unknown,
       });
   }
-  for (const credential of spec.credentials ?? [])
-    requireEntity(ctx, "SecretReference", credential.secretRef);
+}
+
+/**
+ * Refuses a probe Run before it is queued (ADR-033): a production environment never receives DAST
+ * or load traffic, approval or not; a DAST probe needs the optional ZAP image; and a load test
+ * whose schedule outlasts the Attempt would be cut by the Attempt's deadline.
+ */
+export function assertProbeAdmissible(
+  spec: ProbeSpec,
+  environment: { production?: unknown; [field: string]: unknown },
+  images: ImageLock | null,
+  limits: { attemptTimeoutMs?: number; executionTimeoutMs?: number },
+): void {
+  if (environment.production === true && productionRefusedProbes.includes(spec.kind))
+    throw new ContractError(
+      "POLICY_DENIED",
+      `A ${spec.kind} probe never runs against a production environment`,
+      { reasonCode: "production_load_refused", probe: spec.kind },
+    );
+  if (spec.kind === "dast" && images && !images["testmaster-runner-zap"])
+    throw new ContractError(
+      "CAPABILITY_UNAVAILABLE",
+      "The pinned ZAP runner image is not installed",
+      {
+        capability: "dast",
+        milestone: "M5",
+      },
+    );
+  if (spec.kind === "load") {
+    const scheduledMs =
+      1000 *
+      Math.min(
+        spec.stages.reduce((sum, stage) => sum + stage.durationSeconds, 0),
+        spec.budget.maxDurationSeconds,
+      );
+    const attemptMs = Math.min(
+      limits.attemptTimeoutMs ?? 300000,
+      limits.executionTimeoutMs ?? 1800000,
+    );
+    if (scheduledMs >= attemptMs)
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        "The load test's schedule outlasts the Attempt; raise limits.attemptTimeoutMs",
+        { scheduledMs, attemptTimeoutMs: attemptMs },
+      );
+  }
 }
 
 /**
@@ -88,7 +165,7 @@ export function assertProbeUsable(ctx: ServiceContext, projectId: string, spec: 
 export async function probeSchemaFile(
   ctx: ServiceContext,
   config: ResolvedConfig,
-  spec: ProbeSpec,
+  spec: PropertyProbe,
 ): Promise<{ fileName: string; bytes: Buffer }> {
   const source = requireEntity(ctx, "SourceRevision", spec.sourceRevisionId);
   const bytes = await readFile(

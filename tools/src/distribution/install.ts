@@ -69,6 +69,9 @@ function validDigest(value: unknown, bound: number): value is ArchiveDigest {
     item.size <= bound
   );
 }
+/** Every release ships both runner images; the ZAP runner of DAST probes is optional (ADR-033). */
+const REQUIRED_IMAGES = ["testmaster-runner", "testmaster-runner-python"];
+const OPTIONAL_IMAGES = ["testmaster-runner-zap"];
 export function verifyManifest(bytes: Buffer, expectedSha256: string): DistributionManifest {
   if (!/^[a-f0-9]{64}$/u.test(expectedSha256) || sha256(bytes) !== expectedSha256)
     throw new Error("Manifest hash mismatch");
@@ -83,7 +86,8 @@ export function verifyManifest(bytes: Buffer, expectedSha256: string): Distribut
     !Array.isArray(value.images) ||
     !Array.isArray(value.dependencies) ||
     value.files.length > 200_000 ||
-    value.images.length !== 2
+    value.images.length < REQUIRED_IMAGES.length ||
+    value.images.length > REQUIRED_IMAGES.length + OPTIONAL_IMAGES.length
   )
     throw new Error("Invalid distribution manifest");
   const paths = new Set<string>();
@@ -150,7 +154,7 @@ export function verifyManifest(bytes: Buffer, expectedSha256: string): Distribut
   const names = new Set<string>();
   for (const image of value.images) {
     if (
-      !["testmaster-runner", "testmaster-runner-python"].includes(image.name) ||
+      ![...REQUIRED_IMAGES, ...OPTIONAL_IMAGES].includes(image.name) ||
       names.has(image.name) ||
       !/^sha256:[a-f0-9]{64}$/u.test(image.imageId) ||
       !validDigest(image.archive, MAX_IMAGE_SIZE) ||
@@ -163,6 +167,7 @@ export function verifyManifest(bytes: Buffer, expectedSha256: string): Distribut
       throw new Error("Invalid manifest image");
     names.add(image.name);
   }
+  if (REQUIRED_IMAGES.some((name) => !names.has(name))) throw new Error("Invalid manifest image");
   return value;
 }
 export async function reassembleParts(

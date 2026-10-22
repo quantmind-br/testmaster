@@ -61,7 +61,7 @@ import { correlationId } from "./observability.js";
 import { probeSchemaFile } from "./probes.js";
 import { reproduction, verifyAdmission } from "./provenance.js";
 import { assertArtifactPublishable } from "./retention.js";
-import { PROBE_STEP_ID, runnerImageOf } from "./runner-kinds.js";
+import { probeStepId, runnerImageOf, runnerOf } from "./runner-kinds.js";
 import {
   captureDeclarations,
   cleanupHandleDeclarations,
@@ -76,11 +76,14 @@ import type { FrozenVisualBaseline } from "./visual-cell.js";
 import { isWriterContention, retryWriterContention } from "./writer-contention.js";
 
 /**
- * Maps a revision runner to the sandbox executor kind; the Playwright runner uses the browser
- * envelope and a probe runs in the Python runner (ADR-033).
+ * Maps a runner (`runnerOf`) to the sandbox executor kind: the Playwright runner uses the browser
+ * envelope, a property probe the Python runner, a DAST probe the ZAP envelope, and access and load
+ * probes the HTTP envelope of the Node runner (ADR-033).
  */
-export function executorKindOf(runner: unknown): ExecutorKind {
+export function executorKindOf(runner: string): ExecutorKind {
   if (runner === "probe") return "python";
+  if (runner === "probe:dast") return "dast";
+  if (runner === "probe:access" || runner === "probe:load") return "http";
   return runner === "python" || runner === "http" || runner === "terminal" ? runner : "browser";
 }
 /**
@@ -141,7 +144,7 @@ export function runDependencies(run: EntityDocument): ResolvedDependency[] {
  * Without a plan the runner's own steps are the assertions: imported code reports one aggregate
  * step, and a probe reports one per operation plus its aggregate (ADR-033).
  */
-const PLANLESS_ASSERTION = /^(?:imported-code|property|property:.+)$/u;
+const PLANLESS_ASSERTION = /^(?:imported-code|(?:property|dast|access|load)(?::.+)?)$/u;
 /** What every Attempt of a Run observed, read back from its accepted events for the reducer. */
 export function attemptObservations(
   ctx: ServiceContext,
@@ -423,7 +426,7 @@ export class AttemptSession {
       .map((step) => step.id);
     this.requiredSteps = required.map((step) => step.id);
     if (!this.plan) {
-      const aggregate = this.revision.probe ? PROBE_STEP_ID : "imported-code";
+      const aggregate = this.revision.probe ? probeStepId(this.revision) : "imported-code";
       this.assertions.push(aggregate);
       this.requiredSteps.push(aggregate);
     }
@@ -724,8 +727,9 @@ export class AttemptSession {
         await writeFile(destination, text, { mode: 0o644, flag: "wx" });
       }
     }
-    // A probe reads the exact bytes its source was imported from (ADR-033).
-    const probeSchema = probe ? await probeSchemaFile(this.ctx, this.host.config, probe) : null;
+    // A property probe reads the exact bytes its source was imported from (ADR-033).
+    const probeSchema =
+      probe?.kind === "property" ? await probeSchemaFile(this.ctx, this.host.config, probe) : null;
     if (probeSchema) {
       await mkdir(join(inputDir, "property"), { recursive: true, mode: 0o755 });
       await writeFile(join(inputDir, "property", probeSchema.fileName), probeSchema.bytes, {
@@ -733,6 +737,8 @@ export class AttemptSession {
         flag: "wx",
       });
     }
+    const secretVersionOf = (secretRef: string): number | undefined =>
+      this.releases.find((release) => release.secretRef === secretRef)?.secretVersion;
     execution.progress(this.fence, "running");
     const currentImages = cell.executor === "process" ? null : await this.host.images();
     const admitted = verifyAdmission(run, revision, env, currentImages, this.ctx);
@@ -910,12 +916,10 @@ export class AttemptSession {
       ),
       snapshotId: this.snapshotId,
       kind:
-        imported?.bundle.format === "pytest"
-          ? "python"
-          : executorKindOf(probe ? "probe" : plan?.runner),
+        imported?.bundle.format === "pytest" ? "python" : executorKindOf(runnerOf({ probe, plan })),
       imageId:
         imported?.dependencyLock.imageId ??
-        lock?.[runnerImageOf(probe ? "probe" : plan?.runner)].imageId ??
+        lock?.[runnerImageOf(runnerOf({ probe, plan }))]?.imageId ??
         `sha256:${"0".repeat(64)}`,
       inputDir,
       ...(plan ? { plan } : {}),
@@ -956,21 +960,34 @@ export class AttemptSession {
                 },
               }
           : {}),
-        ...(probe && probeSchema
+        ...(probe?.kind === "property" && probeSchema
           ? {
               seed: Number(cell.seed ?? 0),
               property: {
                 ...probe,
                 credentials: (probe.credentials ?? []).map((credential) => ({
                   ...credential,
-                  secretVersion: this.releases.find(
-                    (release) => release.secretRef === credential.secretRef,
-                  )?.secretVersion,
+                  secretVersion: secretVersionOf(credential.secretRef),
                 })),
                 schemaPath: `/run/testmaster/input/property/${probeSchema.fileName}`,
               },
             }
           : {}),
+        // The ZAP runner resolves secrets by version like the Python runner; the Node runner
+        // resolves them from `secrets` (ADR-033).
+        ...(probe?.kind === "dast"
+          ? {
+              probe: {
+                ...probe,
+                credentials: (probe.credentials ?? []).map((credential) => ({
+                  ...credential,
+                  secretVersion: secretVersionOf(credential.secretRef),
+                })),
+              },
+            }
+          : probe?.kind === "access" || probe?.kind === "load"
+            ? { probe }
+            : {}),
         baseUrl: String(cell.baseUrl),
         ...(prepared?.runnerAuth ? { auth: prepared.runnerAuth } : {}),
         variables,

@@ -46,6 +46,7 @@ import { entity, type RunActor, requireEntity, type ServiceContext } from "./con
 import { memberIntervalReady } from "./member-interval.js";
 import { OperationalLogger } from "./observability.js";
 import { workspaceClaimsPaused } from "./operations-claims.js";
+import { runnerOf } from "./runner-kinds.js";
 import type { ResolvedDependency, RunsService } from "./runs.js";
 import type { SecretsService } from "./secrets.js";
 import {
@@ -691,7 +692,7 @@ export class WorkerService {
   private runKind(runId: string): ExecutorKind {
     const run = this.host.runs.get(runId);
     const revision = requireEntity(this.ctx, "TestRevision", run.revisionId);
-    return executorKindOf(revision.runnerKind ?? (revision.plan as ExecutablePlan | null)?.runner);
+    return executorKindOf(runnerOf(revision));
   }
   /**
    * Selects and claims the next Run a worker may run (OPS-008, OPS-032, OPS-033): queued order,

@@ -1,7 +1,7 @@
 import { ContractError, type ExecutablePlan, Step, validate } from "@testmaster/contracts";
 import type { EntityDocument } from "@testmaster/persistence";
 import type { ImageLock } from "@testmaster/sandbox";
-import { runnerImageOf } from "./runner-kinds.js";
+import { runnerImageOf, runnerOf } from "./runner-kinds.js";
 
 export interface WorkerHandshake {
   schemaVersions: string[];
@@ -15,7 +15,17 @@ export function localHandshake(lock: ImageLock): WorkerHandshake {
   return {
     schemaVersions: ["1.0.0"],
     runnerVersion: "0.1.0",
-    runners: ["playwright", "http", "python", "terminal", "probe"],
+    // A DAST probe needs the optional ZAP image; a worker without it never claims one.
+    runners: [
+      "playwright",
+      "http",
+      "python",
+      "terminal",
+      "probe",
+      "probe:access",
+      "probe:load",
+      ...(lock["testmaster-runner-zap"] ? ["probe:dast"] : []),
+    ],
     actions: variants.map((variant) => variant.properties.operation.const),
     imageDigests: Object.values(lock).map((entry) => entry.imageId),
   };
@@ -57,12 +67,14 @@ export function supportsQueuedRun(
   } catch {
     return false;
   }
-  const runner = String(revision.runnerKind ?? revision.runner ?? plan?.runner ?? "playwright");
+  const runner = revision.probe
+    ? runnerOf(revision)
+    : String(revision.runnerKind ?? revision.runner ?? plan?.runner ?? "playwright");
   const schema = plan?.schemaVersion ?? "1.0.0";
   if (!handshake.schemaVersions.includes(schema) || !handshake.runners.includes(runner))
     return false;
-  const requiredImage = lock[runnerImageOf(runner)].imageId;
-  if (!handshake.imageDigests.includes(requiredImage)) return false;
+  const requiredImage = lock[runnerImageOf(runner)]?.imageId;
+  if (!requiredImage || !handshake.imageDigests.includes(requiredImage)) return false;
   const supports = (steps: ExecutablePlan["steps"]): boolean =>
     steps.every(
       (step) =>

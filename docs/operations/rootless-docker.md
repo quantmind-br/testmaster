@@ -12,7 +12,7 @@ rootful daemon. Rootful hardened Docker stays supported for the local profile.
 | Socket activation | `systemctl --user enable --now docker.socket` (creates `~/.config/systemd/user/sockets.target.wants/docker.socket`) |
 | Daemon socket | `unix:///run/user/<uid>/docker.sock`; data root `~/.local/share/docker` |
 | Already present | `/etc/subuid` and `/etc/subgid` (`<user>:100000:65536`), `loginctl enable-linger`, `kernel.unprivileged_userns_clone=1`, `net.ipv4.ip_unprivileged_port_start=1024` |
-| Images | the daemon has its own store: `docker save testmaster-runner:local testmaster-runner-python:local \| DOCKER_HOST=unix:///run/user/<uid>/docker.sock docker load`, and `docker pull` for the digests pinned in `deploy/compose/compose.yaml` and the PostgreSQL test image |
+| Images | the daemon has its own store: `docker save testmaster-runner:local testmaster-runner-python:local testmaster-runner-zap:local \| DOCKER_HOST=unix:///run/user/<uid>/docker.sock docker load` (the ZAP image only where DAST runs), and `docker pull` for the digests pinned in `deploy/compose/compose.yaml` and the PostgreSQL test image |
 
 `DOCKER_HOST` is never exported globally, so every other tool keeps using the rootful daemon.
 Selecting the rootless daemon is always explicit: `DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock`

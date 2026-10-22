@@ -41,6 +41,7 @@ import {
   DockerExecutor,
   dockerCommand,
   type ImageLock,
+  optionalImages,
   PolicyDenied,
   verifyImageLock,
 } from "@testmaster/sandbox";
@@ -1330,24 +1331,35 @@ export class Application {
       revokedImageIds(this.database),
     );
   }
+  /**
+   * The pinned image lock checked against this host's Docker. An optional image (`optionalImages`)
+   * the host does not hold is left out, so the capability that runs in it is unavailable instead
+   * of the host (ADR-033).
+   */
   async images(): Promise<ImageLock> {
-    const lock = await verifyImageLock(
-      this.lockPath,
-      async (imageId) => {
-        const result = await dockerCommand(
-          ["image", "inspect", imageId, "--format", "{{.Id}}"],
-          10000,
-        );
-        if (result.code !== 0)
-          throw new ContractError("POLICY_DENIED", "Pinned runner image is unavailable", {
-            diagnostic: "image_unavailable",
-            imageId,
-          });
-        return result.stdout.toString().trim();
-      },
-      undefined,
-      revokedImageIds(this.database),
-    );
+    const inspect = async (imageId: string): Promise<string> => {
+      const result = await dockerCommand(
+        ["image", "inspect", imageId, "--format", "{{.Id}}"],
+        10000,
+      );
+      if (result.code !== 0)
+        throw new ContractError("POLICY_DENIED", "Pinned runner image is unavailable", {
+          diagnostic: "image_unavailable",
+          imageId,
+        });
+      return result.stdout.toString().trim();
+    };
+    const revoked = revokedImageIds(this.database);
+    const lock: ImageLock = await verifyImageLock(this.lockPath, inspect, undefined, revoked);
+    for (const name of optionalImages) {
+      const entry = lock[name];
+      if (!entry) continue;
+      const present = await verifyImageLock(this.lockPath, inspect, [name], revoked).then(
+        () => true,
+        () => false,
+      );
+      if (!present) delete lock[name];
+    }
     this.verifiedImages = lock;
     return lock;
   }
@@ -1708,9 +1720,10 @@ export class Application {
     const docker = await new DockerExecutor().doctor();
     let imageReady = false;
     let imageReason: string | null = null;
+    let dastReady = false;
     if (docker.available) {
       try {
-        await this.images();
+        dastReady = Boolean((await this.images())["testmaster-runner-zap"]);
         imageReady = true;
       } catch (error) {
         imageReason = runnerImageProblem(error).message;
@@ -1731,11 +1744,17 @@ export class Application {
       "flake-study": true,
       "selective-run": true,
       ci: true,
+      // M5-06 probes run only in the Docker sandbox (ADR-033).
+      dast: true,
+      "security-checks": true,
+      "load-tests": true,
     };
     const features = Object.values(capabilityRegistry).map((feature) => {
       const enabled =
         feature.enabled &&
         (!sandboxFeatures[feature.id] || imageReady) &&
+        // DAST needs the optional ZAP image on top of the required ones.
+        (feature.id !== "dast" || dastReady) &&
         (feature.id !== "unsafe-local" ||
           this.config.profilePolicy.security.allowUnsafeProcessExecution);
       return {
@@ -1746,7 +1765,9 @@ export class Application {
           : (feature.disabledReason ??
             (sandboxFeatures[feature.id] && imageReason
               ? imageReason
-              : "Policy or sandbox unavailable")),
+              : feature.id === "dast" && imageReady
+                ? "The pinned ZAP runner image testmaster-runner-zap is not installed"
+                : "Policy or sandbox unavailable")),
       };
     });
     return {

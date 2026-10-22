@@ -1,8 +1,8 @@
 {
   "testmaster-runner": {
-    "imageId": "sha256:94ec7be44de50589dc42d27303eee1137a40196aa202489cf5f648abe7dea2ca",
+    "imageId": "sha256:06883f6669df2184b4aebc31a1029652a61dd6f015068aab39df6e7347d5b33f",
     "baseDigest": "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27",
-    "buildInputsHash": "499edb11d647ca1b9fd4e05ce57eb761ef334bdabf643766bbb15558cf730d8c",
+    "buildInputsHash": "d9a60212020bcd666bce1ef39bde004e0b6e374d8a697d0de6c3d3d7802df83a",
     "seccomp": {
       "engineVersion": "29.8.1",
       "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
@@ -25,9 +25,34 @@
     }
   },
   "testmaster-runner-python": {
-    "imageId": "sha256:235208479b15470d370ece5f202a249baf7f3bfddaaec1b66f21a5d599b067c8",
+    "imageId": "sha256:133c7425402d8583381aac565d3be490846d654a8df0417ea3fdeeaf34b1d65a",
     "baseDigest": "mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0",
-    "buildInputsHash": "48f382d3a4f900265a13995efb9e709a73d04f67fa9962f5482ca1f107165836",
+    "buildInputsHash": "71a08e261749eddab83a69a020a672ea3a881b33faae9758f97eb4a59f65096c",
+    "seccomp": {
+      "engineVersion": "29.8.1",
+      "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",
+      "profileModuleVersion": "v0.2.3",
+      "inputs": {
+        "engineDefault": {
+          "source": "https://raw.githubusercontent.com/moby/profiles/seccomp/v0.2.3/seccomp/default.json",
+          "sha256": "536529b665dd0972c37bfb569f5d4ac8a53592e7b00752bc39ff063ca9864c74"
+        },
+        "originalDefault": {
+          "source": "https://raw.githubusercontent.com/moby/moby/d0d99b04cf6e00ed3fc27e81fc3d94e7eda70af3/profiles/seccomp/default.json",
+          "sha256": "50fe67edba965c34491888675386f9034463a5aac2017551c8f87f9723a4d274"
+        },
+        "playwright": {
+          "source": "https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json",
+          "sha256": "cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849"
+        }
+      },
+      "profileSha256": "5ebd7d451da9e3875cc37ef09d9268148f60a0966188943d88161e1c51d52f72"
+    }
+  },
+  "testmaster-runner-zap": {
+    "imageId": "sha256:b1dd301e1140c48d889b8bb096c4daa43c454cf140a46c2057702ad4df29b7b7",
+    "baseDigest": "ghcr.io/zaproxy/zaproxy@sha256:5ccfff9a411743ab2615136a2edd7416bec9ce41572fa94e935df38c14adb2b6",
+    "buildInputsHash": "c7188903400b08b074a0ba825af10c307a5f71154faa4efd2e77d5eed7ab58e4",
     "seccomp": {
       "engineVersion": "29.8.1",
       "engineDependencySource": "https://raw.githubusercontent.com/moby/moby/docker-v29.8.1/go.mod",

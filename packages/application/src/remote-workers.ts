@@ -25,6 +25,7 @@ import { type AttemptSession, executorKindOf } from "./attempt-session.js";
 import { runMatrixCell } from "./comparisons.js";
 import { requireEntity } from "./context.js";
 import { type PopProof, PopVerifier } from "./proof-of-possession.js";
+import { runnerOf } from "./runner-kinds.js";
 import { type EvidenceLimits, runEvidenceBytes } from "./storage-admission.js";
 import type { RemoteWorkerCaller } from "./worker-pool.js";
 
@@ -324,9 +325,7 @@ export class RemoteWorkerService {
         workspaceId,
         runId: session.runId,
         attemptId: session.attemptId,
-        kind: executorKindOf(
-          revision.runnerKind ?? (revision.plan as { runner?: unknown } | null)?.runner,
-        ),
+        kind: executorKindOf(runnerOf(revision)),
         worstCaseBytes: runEvidenceBytes(runMatrixCell(run).limits as EvidenceLimits),
         session,
         controller,

@@ -15,7 +15,7 @@ export class ContainerCleanupError extends Error {
   }
 }
 
-export type ExecutorKind = "browser" | "http" | "python" | "terminal";
+export type ExecutorKind = "browser" | "http" | "python" | "terminal" | "dast";
 export const executorResources: Readonly<
   Record<ExecutorKind, { cpu: number; memoryBytes: number; pids: number; diskBytes: number }>
 > = {
@@ -23,6 +23,8 @@ export const executorResources: Readonly<
   http: { cpu: 1, memoryBytes: 512 * 1024 ** 2, pids: 128, diskBytes: 1024 ** 3 },
   python: { cpu: 1, memoryBytes: 1024 ** 3, pids: 128, diskBytes: 1024 ** 3 },
   terminal: { cpu: 1, memoryBytes: 1024 ** 3, pids: 256, diskBytes: 1024 ** 3 },
+  // ZAP is a JVM: its scanner thread pools need more threads and heap than the other runners.
+  dast: { cpu: 2, memoryBytes: 2 * 1024 ** 3, pids: 512, diskBytes: 1024 ** 3 },
 };
 const envelopes = Object.fromEntries(
   Object.entries(executorResources).map(([kind, resource]) => [

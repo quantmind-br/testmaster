@@ -26,7 +26,7 @@ per-user link in `~/.local/bin` to make `testmaster` available on PATH.
 ```bash
 pnpm install --frozen-lockfile
 pnpm build
-node containers/build.mjs          # builds and pins testmaster-runner and testmaster-runner-python
+node containers/build.mjs          # builds and pins testmaster-runner, testmaster-runner-python and the optional DAST image testmaster-runner-zap
 alias testmaster="node $PWD/apps/cli/dist/main.js"
 ```
 ### Install from the checkout with Make
@@ -722,6 +722,40 @@ testmaster run reproduce "$RUN_ID" --artifact property/1-replay.plan.json --wait
 
 A passing probe means the API answered as its description documents, not that the business behaviour is
 right.
+
+## Security and load probes
+
+DAST, access-control and load probes are created and approved like property probes, with
+`test probe create --file` and one `securityProbe` approval per Run:
+
+```json
+{ "name": "search DAST", "spec": { "kind": "dast", "startPaths": ["/search?q=shoes"],
+  "spider": { "maxDurationMinutes": 2, "maxChildren": 50 }, "activeScan": true,
+  "policy": "api-minimal", "failOn": "high" } }
+{ "name": "orders access", "spec": { "kind": "access",
+  "operations": [{ "method": "GET", "path": "/api/orders" }],
+  "owner": [{ "header": "Authorization", "secretRef": "sec_…" }], "intruder": [], "expect": [401, 403] } }
+{ "name": "catalog load", "spec": { "kind": "load",
+  "stages": [{ "durationSeconds": 30, "targetRps": 10 }, { "durationSeconds": 30, "targetRps": 50 }],
+  "maxConcurrency": 50, "request": { "method": "GET", "path": "/api/products" },
+  "stopConditions": { "maxErrorRate": 0.05, "maxP95Ms": 500 },
+  "budget": { "maxRequests": 5000, "maxDurationSeconds": 120 } } }
+```
+
+- **DAST** runs OWASP ZAP in the optional `testmaster-runner-zap` image (`node containers/build.mjs --only
+  testmaster-runner-zap`). It fails `dast:<risk>` with `dast_alert` when a risk at or above `failOn` has
+  alerts, and seals `dast/alerts.json` and ZAP's `dast/report.json`. A pass covers what the spider reached
+  and ZAP's rules check; it is not a penetration test.
+- **Access** sends each operation as the intruder (anonymous when `intruder` is empty), then as the owner.
+  The intruder must be refused with one of `expect` and the owner answered 2xx; an intruder answered 2xx
+  fails with `access_granted`, and the failure is sealed in `access/<n>.json`.
+- **Load** sends one request open-loop through its stages and seals `load/summary.json` (counts, errors,
+  saturated requests, p50/p95/p99, scheduler lag, hardware). It stops early and fails with
+  `stop_condition` when the rolling five-second error rate or p95 crosses its limit. The schedule must end
+  before the Attempt does; raise `--attempt-timeout` (at most 900 s) for a longer test.
+
+DAST and load probes never run against a `production` environment: admission refuses them with
+`POLICY_DENIED` `production_load_refused`, approval or not.
 
 ## Code export and import
 

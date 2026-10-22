@@ -68,7 +68,7 @@ export function storageStateValues(storageState: string): string[] {
  * egress denial, and a probe's aggregate, stateful and per-operation steps, ADR-033).
  */
 const RUNNER_STEP_ID =
-  /^(?:attempt|imported-code|imported-test-\d+|imported-step-\d+|property(?::(?:stateful|[A-Z]+ \/\S*|[_A-Za-z][_0-9A-Za-z]*))?)$/u;
+  /^(?:attempt|imported-code|imported-test-\d+|imported-step-\d+|property(?::(?:stateful|[A-Z]+ \/\S*|[_A-Za-z][_0-9A-Za-z]*))?|dast(?::(?:spider|active-scan|high|medium|low|informational))?|access(?::[A-Z]+ \/\S*(?: #[1-9][0-9]*)?)?|load(?::stage-[1-9][0-9]?)?)$/u;
 /**
  * Puts back, in a redacted event payload, the identifiers the redaction rewrote although they are
  * plan text: `stepId`, the name of a captured variable, a resource handle reference, and the
@@ -481,9 +481,11 @@ export class AttemptExecutor {
           seccompPath: input.seccompPath,
           ...(input.kind === "python"
             ? { command: ["--input", "/run/testmaster/input/python.json"] }
-            : input.imageCommand
-              ? { command: input.imageCommand }
-              : {}),
+            : input.kind === "dast"
+              ? { command: ["--input", "/run/testmaster/input/snapshot.json"] }
+              : input.imageCommand
+                ? { command: input.imageCommand }
+                : {}),
           attemptTimeoutMs: input.attemptTimeoutMs ?? 300000,
           clock,
           cancellationGraceMs: input.cancellationGraceMs ?? 10000,

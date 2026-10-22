@@ -30,7 +30,7 @@ import type { ImageLock } from "@testmaster/sandbox";
 import type { ResolvedConfig } from "./config.js";
 import { requireEntity, type ServiceContext } from "./context.js";
 import { fixtureInputHashes } from "./input-fixtures.js";
-import { runnerImageOf } from "./runner-kinds.js";
+import { runnerImageOf, runnerOf } from "./runner-kinds.js";
 
 export interface RepositoryProvenance {
   repositoryId: string | null;
@@ -589,7 +589,7 @@ export function admissionSnapshot(
     limitations.push("remote-model-snapshot-unavailable");
   if (revision.origin === "generated" && !call?.modelConfigHash)
     limitations.push("generation-model-config-hash-unavailable");
-  const image = images?.[runnerImageOf(revision.runnerKind)];
+  const image = images?.[runnerImageOf(runnerOf(revision))];
   const codeRef =
     revision.codeRef && typeof revision.codeRef === "object"
       ? (revision.codeRef as Record<string, unknown>)
@@ -643,7 +643,7 @@ export function admissionSnapshot(
     }),
     generationModel,
     images: images ? structuredClone(images) : null,
-    requiredCapabilities: [String(revision.runnerKind)],
+    requiredCapabilities: [runnerOf(revision)],
     policyHash: config.effectiveConfig.policyHash,
     seed,
     repository,
@@ -693,7 +693,7 @@ export function verifyAdmission(
     throw provenanceError("image_digest_changed");
   if (snapshot.runtimeIdentity && snapshot.runtimeIdentity.imageId !== snapshot.runnerImageDigest)
     throw provenanceError("runtime_identity_image_mismatch");
-  if (!snapshot.requiredCapabilities.includes(String(revision.runnerKind)))
+  if (!snapshot.requiredCapabilities.includes(runnerOf(revision)))
     throw provenanceError("capability_incompatible");
   return snapshot;
 }
