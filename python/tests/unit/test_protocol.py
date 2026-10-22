@@ -3,6 +3,7 @@ import hashlib
 import json
 import socket
 import threading
+import time
 import uuid
 
 import pytest
@@ -84,3 +85,48 @@ def test_summary_never_executes_and_confines_symlink(tmp_path):
     assert result["files"][0]["routes"][0]["method"] == "GET"
     assert result["files"][0]["tests"][0]["name"] == "test_health"
     assert len(result["diagnostics"]) == 2
+
+
+def test_secret_request_blocks_until_the_matching_value_arrives(channel):
+    client, events, _ = channel
+    secret_ref = "sec_01900000-0000-7000-8000-000000000001"
+    result = {}
+    waiter = threading.Thread(target=lambda: result.update(value=client.secret(secret_ref, 2)), daemon=True)
+    waiter.start()
+    deadline = time.monotonic() + 3
+    while not any(event["type"] == "secret.request" for event in events) and time.monotonic() < deadline:
+        time.sleep(0.01)
+    request = next(event["payload"] for event in events if event["type"] == "secret.request")
+    assert (request["secretRef"], request["secretVersion"]) == (secret_ref, 2)
+    assert waiter.is_alive()
+    with pytest.raises(ProtocolError):
+        client.deliver_secret({"requestId": "secret-unknown", "secretRef": secret_ref, "secretVersion": 2, "value": "x"})
+    client.deliver_secret({"requestId": request["requestId"], "secretRef": secret_ref, "secretVersion": 2, "value": "the-value"})
+    waiter.join(3)
+    assert result["value"] == "the-value"
+    with pytest.raises(ProtocolError):
+        client.deliver_secret({"requestId": request["requestId"], "secretRef": secret_ref, "secretVersion": 2, "value": "again"})
+
+
+def test_secret_value_for_another_secret_fails_the_waiter(channel):
+    client, events, _ = channel
+    secret_ref = "sec_01900000-0000-7000-8000-000000000001"
+    failure = {}
+
+    def wait():
+        try:
+            client.secret(secret_ref, 1)
+        except ProtocolError as exc:
+            failure["error"] = exc
+
+    waiter = threading.Thread(target=wait, daemon=True)
+    waiter.start()
+    deadline = time.monotonic() + 3
+    while not any(event["type"] == "secret.request" for event in events) and time.monotonic() < deadline:
+        time.sleep(0.01)
+    request = next(event["payload"] for event in events if event["type"] == "secret.request")
+    with pytest.raises(ProtocolError):
+        client.deliver_secret({"requestId": request["requestId"], "secretRef": "sec_01900000-0000-7000-8000-000000000009", "secretVersion": 1, "value": "x"})
+    waiter.join(3)
+    assert not waiter.is_alive()
+    assert "error" in failure

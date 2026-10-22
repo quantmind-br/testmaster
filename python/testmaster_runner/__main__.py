@@ -12,7 +12,7 @@ import threading
 from pathlib import Path
 
 from .forwarder import Forwarder
-from .protocol import ProtocolClient, load_input
+from .protocol import ProtocolClient, ProtocolError, load_input
 
 
 def admitted_files(root: Path, files: list[str]) -> list[str]:
@@ -64,7 +64,9 @@ def run(input_path: str | None) -> int:
                     os._exit(1)
                 if event.get("type") == "control.cancel":
                     terminate("cancelled", "user_cancelled", 1)
-        except (OSError, ValueError):
+                if event.get("type") == "secret.value":
+                    protocol.deliver_secret(event.get("payload") or {})
+        except (OSError, ValueError, ProtocolError):
             if not stop.is_set():
                 os._exit(1)
 
@@ -74,6 +76,14 @@ def run(input_path: str | None) -> int:
     threading.Thread(target=listen, daemon=True).start()
     forwarder = None
     try:
+        if "property" in data:
+            forwarder = Forwarder()
+            proxy = "http://127.0.0.1:3128"
+            os.environ.update(HTTP_PROXY=proxy, HTTPS_PROXY=proxy, http_proxy=proxy, https_proxy=proxy, NO_PROXY="", no_proxy="")
+            from . import property as property_runner
+            outcome, reason = property_runner.run(data, protocol)
+            protocol.emit("runner.finished", {"outcome": outcome, "reasonCode": reason, "cleanupOutcome": "not_required"})
+            return {"passed": 0, "blocked": 8}.get(outcome, 1)
         protocol.emit("step.started", {"stepId": "imported-code", "index": 1000000})
         versions = {name: importlib.metadata.version(name) for name in ("pytest", "pytest-asyncio", "requests", "playwright")}
         metadata = {"imageId": data["imageId"], "python": platform.python_version(), "packages": versions,

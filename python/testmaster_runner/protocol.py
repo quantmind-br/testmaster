@@ -18,6 +18,14 @@ class ProtocolError(RuntimeError):
     """Raised when the attempt protocol cannot be used safely."""
 
 
+class _PendingSecret:
+    def __init__(self, secret_ref: str, secret_version: int) -> None:
+        self.secret_ref = secret_ref
+        self.secret_version = secret_version
+        self.event = threading.Event()
+        self.value: str | None = None
+
+
 class ProtocolClient:
     def __init__(self, attempt_id: str, nonce: str, socket_path: str = "/run/testmaster/sockets/protocol.sock") -> None:
         self.attempt_id = attempt_id
@@ -27,7 +35,10 @@ class ProtocolClient:
         self._socket.settimeout(10)
         self._socket.connect(socket_path)
         self._file = self._socket.makefile("wb")
-        self.emit("runner.hello", {"nonce": nonce, "capabilities": ["python", "pytest", "requests", "playwright"]})
+        self._secret_counter = 0
+        self._secret_lock = threading.Lock()
+        self._pending_secrets: dict[str, _PendingSecret] = {}
+        self.emit("runner.hello", {"nonce": nonce, "capabilities": ["python", "pytest", "requests", "playwright", "property"]})
 
     def emit(self, event_type: str, payload: dict[str, Any]) -> None:
         with self._lock:
@@ -79,7 +90,38 @@ class ProtocolClient:
             for descriptor in reversed(descriptors):
                 os.close(descriptor)
 
+    def secret(self, secret_ref: str, secret_version: int) -> str:
+        """Ask the host for a secret value and block until the listener delivers it."""
+        with self._secret_lock:
+            request_id = f"secret-{self._secret_counter}"
+            self._secret_counter += 1
+            pending = _PendingSecret(secret_ref, secret_version)
+            self._pending_secrets[request_id] = pending
+        self.emit("secret.request", {"requestId": request_id, "secretRef": secret_ref, "secretVersion": secret_version})
+        pending.event.wait()
+        if pending.value is None:
+            raise ProtocolError("secret value unavailable: protocol closed or the value did not match its request")
+        return pending.value
+
+    def deliver_secret(self, payload: dict[str, Any]) -> None:
+        """Route a `secret.value` supervisor event to the waiting `secret` call."""
+        with self._secret_lock:
+            pending = self._pending_secrets.pop(payload.get("requestId"), None)
+        if pending is None:
+            raise ProtocolError("unsolicited secret.value")
+        value = payload.get("value")
+        if payload.get("secretRef") != pending.secret_ref or payload.get("secretVersion") != pending.secret_version or not isinstance(value, str):
+            pending.event.set()  # the waiter fails with a protocol error instead of hanging
+            raise ProtocolError("secret.value does not match its request")
+        pending.value = value
+        pending.event.set()
+
     def close(self) -> None:
+        with self._secret_lock:
+            waiting = list(self._pending_secrets.values())
+            self._pending_secrets.clear()
+        for pending in waiting:
+            pending.event.set()
         try:
             self._file.close()
         finally:
