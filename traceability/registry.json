@@ -29401,8 +29401,14 @@
     {
       "id": "distributed",
       "milestone": "M5",
+      "requirements": ["OPS-001", "OPS-028", "SEC-030", "API-008"],
+      "gate": "M5 distributed profile (stateless API replicas, elected scheduler, shared PostgreSQL and S3 storage, service identities); capability unavailable until the whole profile is accepted"
+    },
+    {
+      "id": "remote-workers",
+      "milestone": "M5",
       "requirements": ["M5-01", "API-008"],
-      "gate": "M5 normative acceptance; capability unavailable until milestone"
+      "gate": "M5 remote workers over HTTPS (ADR-030); positive/negative evidence and protected assertions"
     },
     {
       "id": "tunnels",

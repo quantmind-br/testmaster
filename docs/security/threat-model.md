@@ -72,7 +72,7 @@ The acceptance checker derives the real executors, transports and capabilities f
 | B-26 | `capability:suites`, `capability:schedules` |
 | B-27 | `capability:admin-operations`, `capability:metrics`, `capability:incidents`, `capability:server-backup` |
 | B-28 | `capability:terminal` |
-| B-29 | none |
+| B-29 | `capability:remote-workers` |
 
 ## STRIDE threat register
 

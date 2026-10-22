@@ -277,6 +277,7 @@ const features: Record<Milestone, readonly string[]> = {
   ],
   M5: [
     "distributed",
+    "remote-workers",
     "tunnels",
     "matrix-advanced",
     "visualMatches",
@@ -312,6 +313,7 @@ export const implementedFeatures: ReadonlySet<string> = new Set([
   ],
   ...["admin-operations", "metrics", "incidents", "server-backup"],
   "terminal",
+  "remote-workers",
 ]);
 export const capabilityRegistry: Readonly<Record<string, Capability>> = Object.freeze(
   Object.fromEntries(
