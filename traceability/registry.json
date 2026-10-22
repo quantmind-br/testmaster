@@ -11041,11 +11041,104 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M5",
       "ownerRole": "Execution",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-api-property.docker.test.ts::M5-05 a healthy shop passes, a renamed field fails response_schema_conformance with a replayable reproduction",
+        "validation/journeys/m5-api-property.docker.test.ts::M5-05 a degraded health answer and an orders endpoint that ignores authentication fail their checks",
+        "validation/journeys/m5-api-property.docker.test.ts::M5-05 a GraphQL probe passes the healthy schema and finds the server error a negative limit causes",
+        "packages/application/src/probes.test.ts::REQ-050 every probe Run needs its own bound securityProbe approval, outside production too",
+        "packages/application/src/probes.test.ts::REQ-050 a probe runs only in the Docker sandbox",
+        "packages/application/src/probes.test.ts::REQ-050 a probe is refused when its source, operations, options or credentials do not fit the project",
+        "packages/persistence/src/probe-runner-migration.test.ts::REQ-050 migration 0027 rebuilds test_revisions keeping every row and reference, and admits probe revisions",
+        "packages/persistence/src/probe-runner.pg.test.ts::REQ-050 migration 0027 admits probe revisions on a populated v26 database without touching existing rows",
+        "python/tests/unit/test_property.py::test_server_error_is_shrunk_and_replay_plan_lists_documented_statuses",
+        "python/tests/unit/test_property.py::test_the_input_seed_fixes_the_generated_requests",
+        "python/tests/unit/test_property.py::test_credentials_in_a_replay_plan_are_secret_references",
+        "python/tests/unit/test_property.py::test_secret_echoed_by_the_target_is_redacted_everywhere",
+        "python/tests/unit/test_property.py::test_invalid_schema_blocks_the_run",
+        "python/tests/unit/test_property.py::test_missing_dependencies_block_with_an_aggregate_step",
+        "python/tests/unit/test_property.py::test_stateful_links_report_the_failing_sequence",
+        "python/tests/unit/test_property.py::test_ignored_auth_replays_without_credentials_and_never_leaks_the_secret"
+      ],
+      "oracle": [
+        "On the healthy reference shop a property probe over GET /api/products and GET /health passes with one passed step per operation and a passed aggregate step; against the schema-field-renamed mutant the GET /api/products step fails with response_schema_conformance and names property/1-reproduction.json and property/1-replay.plan.json, while GET /health still passes. run reproduce on that replay plan, twice, creates one HTTP test that fails with assertion_mismatch both times; the same test passes once the healthy shop is back.",
+        "The health-degraded mutant fails GET /health with response_schema_conformance. With a bearer credential held as a secret reference, the healthy shop passes GET /api/orders and the link-following stateful step; the orders-auth-bypass mutant fails GET /api/orders with ignored_auth. No sealed bundle of these Runs contains the token.",
+        "A GraphQL probe over the products field passes on the healthy reference GraphQL app and fails with not_a_server_error against the server-error-on-negative-limit mutant.",
+        "A probe Run is refused with POLICY_DENIED approval_required until a bound securityProbe approval exists, in a non-production environment too; the approval admits one Run with its requested seed frozen and the next Run is refused again; the process executor refuses a probe with PRECONDITION_FAILED; an undeclared operation, a GraphQL source mismatch, an unknown secret and another project's source are refused, and an accepted probe revision has runner kind probe, no plan and frozen defaults."
+      ],
+      "evidence": [
+        "validation/results/M5-05-property-openapi.json",
+        "validation/results/M5-05-property-auth.json",
+        "validation/results/M5-05-property-graphql.json",
+        "validation/journeys/m5-api-property.docker.test.ts",
+        "docs/adr/033-api-probes.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "packages/contracts/src/m5/probes.ts",
+        "packages/contracts/src/m5/probe-runs.ts",
+        "packages/application/src/probes.ts",
+        "packages/application/src/attempt-session.ts",
+        "packages/application/src/approvals.ts",
+        "python/testmaster_runner/property.py",
+        "containers/python/Dockerfile",
+        "python/uv.lock",
+        "packages/persistence/migrations/sqlite/0027_probe_runner.sql",
+        "apps/cli/src/tests.ts",
+        "apps/cli/src/runs.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012): Schemathesis 4.32.3 in the pinned Linux x64 Python runner image against the local reference shop and reference GraphQL app, with examples per operation capped in the journeys. Stateful sequences are reported unshrunk, as Schemathesis runs its state machines; GraphQL runs not_a_server_error only. A passing probe is conformance to the API description, not business acceptance.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m5-api-property.docker.test.ts::M5-05 a healthy shop passes, a renamed field fails response_schema_conformance with a replayable reproduction",
+          "validation/journeys/m5-api-property.docker.test.ts::M5-05 a GraphQL probe passes the healthy schema and finds the server error a negative limit causes",
+          "packages/application/src/probes.test.ts::REQ-050 a probe is refused when its source, operations, options or credentials do not fit the project",
+          "packages/persistence/src/probe-runner-migration.test.ts::REQ-050 migration 0027 rebuilds test_revisions keeping every row and reference, and admits probe revisions"
+        ],
+        "negative": [
+          "validation/journeys/m5-api-property.docker.test.ts::M5-05 a degraded health answer and an orders endpoint that ignores authentication fail their checks",
+          "packages/application/src/probes.test.ts::REQ-050 every probe Run needs its own bound securityProbe approval, outside production too",
+          "packages/application/src/probes.test.ts::REQ-050 a probe runs only in the Docker sandbox"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m5-api-property.docker.test.ts",
+            "assertion": "expect(evidence).toEqual([\"property/1-reproduction.json\", \"property/1-replay.plan.json\"]);"
+          },
+          {
+            "path": "validation/journeys/m5-api-property.docker.test.ts",
+            "assertion": "expect(first.outcome).toBe(\"failed/assertion_mismatch\");"
+          },
+          {
+            "path": "validation/journeys/m5-api-property.docker.test.ts",
+            "assertion": "expect(second).toEqual(first);"
+          },
+          {
+            "path": "validation/journeys/m5-api-property.docker.test.ts",
+            "assertion": "expect(await bundleText(session, verdict.runId)).not.toContain(token);"
+          },
+          {
+            "path": "validation/journeys/m5-api-property.docker.test.ts",
+            "assertion": "steps: { \"property:GET /api/orders\": { status: \"failed\", check: \"ignored_auth\" } },"
+          },
+          {
+            "path": "validation/journeys/m5-api-property.docker.test.ts",
+            "assertion": "steps: { \"property:products\": { status: \"failed\", check: \"not_a_server_error\" } },"
+          },
+          {
+            "path": "packages/application/src/probes.test.ts",
+            "assertion": "expect(binding.actionSet).toEqual([\"securityProbe\"]);"
+          },
+          {
+            "path": "packages/application/src/probes.test.ts",
+            "assertion": "expect(again.details.reasonCode).toBe(\"approval_required\");"
+          },
+          {
+            "path": "packages/application/src/probes.test.ts",
+            "assertion": "expect((app.runs.get(runId).matrixCell as Record<string, unknown>).seed).toBe(7);"
+          }
+        ]
+      }
     },
     {
       "id": "M5-06",
@@ -18891,11 +18984,101 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M5",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-api-property.docker.test.ts::M5-05 a healthy shop passes, a renamed field fails response_schema_conformance with a replayable reproduction",
+        "validation/journeys/m5-api-property.docker.test.ts::M5-05 a degraded health answer and an orders endpoint that ignores authentication fail their checks",
+        "validation/journeys/m5-api-property.docker.test.ts::M5-05 a GraphQL probe passes the healthy schema and finds the server error a negative limit causes",
+        "packages/application/src/probes.test.ts::REQ-050 every probe Run needs its own bound securityProbe approval, outside production too",
+        "packages/application/src/probes.test.ts::REQ-050 a probe runs only in the Docker sandbox",
+        "packages/application/src/probes.test.ts::REQ-050 a probe is refused when its source, operations, options or credentials do not fit the project",
+        "packages/persistence/src/probe-runner-migration.test.ts::REQ-050 migration 0027 rebuilds test_revisions keeping every row and reference, and admits probe revisions",
+        "packages/persistence/src/probe-runner.pg.test.ts::REQ-050 migration 0027 admits probe revisions on a populated v26 database without touching existing rows",
+        "python/tests/unit/test_property.py::test_server_error_is_shrunk_and_replay_plan_lists_documented_statuses",
+        "python/tests/unit/test_property.py::test_the_input_seed_fixes_the_generated_requests",
+        "python/tests/unit/test_property.py::test_credentials_in_a_replay_plan_are_secret_references",
+        "python/tests/unit/test_property.py::test_secret_echoed_by_the_target_is_redacted_everywhere",
+        "python/tests/unit/test_property.py::test_invalid_schema_blocks_the_run",
+        "python/tests/unit/test_property.py::test_missing_dependencies_block_with_an_aggregate_step",
+        "python/tests/unit/test_property.py::test_stateful_links_report_the_failing_sequence",
+        "python/tests/unit/test_property.py::test_ignored_auth_replays_without_credentials_and_never_leaks_the_secret"
+      ],
+      "oracle": [
+        "On the healthy reference shop a property probe over GET /api/products and GET /health passes with one passed step per operation and a passed aggregate step; against the schema-field-renamed mutant the GET /api/products step fails with response_schema_conformance and names property/1-reproduction.json and property/1-replay.plan.json, while GET /health still passes. run reproduce on that replay plan, twice, creates one HTTP test that fails with assertion_mismatch both times; the same test passes once the healthy shop is back.",
+        "The health-degraded mutant fails GET /health with response_schema_conformance. With a bearer credential held as a secret reference, the healthy shop passes GET /api/orders and the link-following stateful step; the orders-auth-bypass mutant fails GET /api/orders with ignored_auth. No sealed bundle of these Runs contains the token.",
+        "A GraphQL probe over the products field passes on the healthy reference GraphQL app and fails with not_a_server_error against the server-error-on-negative-limit mutant.",
+        "A probe Run is refused with POLICY_DENIED approval_required until a bound securityProbe approval exists, in a non-production environment too; the approval admits one Run with its requested seed frozen and the next Run is refused again; the process executor refuses a probe with PRECONDITION_FAILED; an undeclared operation, a GraphQL source mismatch, an unknown secret and another project's source are refused, and an accepted probe revision has runner kind probe, no plan and frozen defaults."
+      ],
+      "evidence": [
+        "validation/results/M5-05-property-openapi.json",
+        "validation/results/M5-05-property-auth.json",
+        "validation/results/M5-05-property-graphql.json",
+        "validation/journeys/m5-api-property.docker.test.ts",
+        "docs/adr/033-api-probes.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "packages/contracts/src/m5/probes.ts",
+        "packages/contracts/src/m5/probe-runs.ts",
+        "packages/application/src/probes.ts",
+        "packages/application/src/attempt-session.ts",
+        "packages/application/src/approvals.ts",
+        "python/testmaster_runner/property.py",
+        "containers/python/Dockerfile",
+        "python/uv.lock"
+      ],
+      "note": "Verified by automated oracles only (ADR-012): Schemathesis 4.32.3 in the pinned Linux x64 Python runner image against the local reference shop and reference GraphQL app, with examples per operation capped in the journeys. Stateful sequences are reported unshrunk, as Schemathesis runs its state machines; GraphQL runs not_a_server_error only. A passing probe is conformance to the API description, not business acceptance.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m5-api-property.docker.test.ts::M5-05 a healthy shop passes, a renamed field fails response_schema_conformance with a replayable reproduction",
+          "validation/journeys/m5-api-property.docker.test.ts::M5-05 a GraphQL probe passes the healthy schema and finds the server error a negative limit causes",
+          "packages/application/src/probes.test.ts::REQ-050 a probe is refused when its source, operations, options or credentials do not fit the project",
+          "packages/persistence/src/probe-runner-migration.test.ts::REQ-050 migration 0027 rebuilds test_revisions keeping every row and reference, and admits probe revisions"
+        ],
+        "negative": [
+          "validation/journeys/m5-api-property.docker.test.ts::M5-05 a degraded health answer and an orders endpoint that ignores authentication fail their checks",
+          "packages/application/src/probes.test.ts::REQ-050 every probe Run needs its own bound securityProbe approval, outside production too",
+          "packages/application/src/probes.test.ts::REQ-050 a probe runs only in the Docker sandbox"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m5-api-property.docker.test.ts",
+            "assertion": "expect(evidence).toEqual([\"property/1-reproduction.json\", \"property/1-replay.plan.json\"]);"
+          },
+          {
+            "path": "validation/journeys/m5-api-property.docker.test.ts",
+            "assertion": "expect(first.outcome).toBe(\"failed/assertion_mismatch\");"
+          },
+          {
+            "path": "validation/journeys/m5-api-property.docker.test.ts",
+            "assertion": "expect(second).toEqual(first);"
+          },
+          {
+            "path": "validation/journeys/m5-api-property.docker.test.ts",
+            "assertion": "expect(await bundleText(session, verdict.runId)).not.toContain(token);"
+          },
+          {
+            "path": "validation/journeys/m5-api-property.docker.test.ts",
+            "assertion": "steps: { \"property:GET /api/orders\": { status: \"failed\", check: \"ignored_auth\" } },"
+          },
+          {
+            "path": "validation/journeys/m5-api-property.docker.test.ts",
+            "assertion": "steps: { \"property:products\": { status: \"failed\", check: \"not_a_server_error\" } },"
+          },
+          {
+            "path": "packages/application/src/probes.test.ts",
+            "assertion": "expect(binding.actionSet).toEqual([\"securityProbe\"]);"
+          },
+          {
+            "path": "packages/application/src/probes.test.ts",
+            "assertion": "expect(again.details.reasonCode).toBe(\"approval_required\");"
+          },
+          {
+            "path": "packages/application/src/probes.test.ts",
+            "assertion": "expect((app.runs.get(runId).matrixCell as Record<string, unknown>).seed).toBe(7);"
+          }
+        ]
+      }
     },
     {
       "id": "REQ-051",
@@ -28543,11 +28726,65 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M5",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-api-property.docker.test.ts::M5-05 a healthy shop passes, a renamed field fails response_schema_conformance with a replayable reproduction",
+        "validation/journeys/m5-api-property.docker.test.ts::M5-05 a GraphQL probe passes the healthy schema and finds the server error a negative limit causes",
+        "python/tests/unit/test_property.py::test_server_error_is_shrunk_and_replay_plan_lists_documented_statuses",
+        "python/tests/unit/test_property.py::test_the_input_seed_fixes_the_generated_requests",
+        "python/tests/unit/test_property.py::test_credentials_in_a_replay_plan_are_secret_references",
+        "python/tests/unit/test_property.py::test_secret_echoed_by_the_target_is_redacted_everywhere",
+        "python/tests/unit/test_property.py::test_invalid_schema_blocks_the_run",
+        "python/tests/unit/test_property.py::test_missing_dependencies_block_with_an_aggregate_step",
+        "python/tests/unit/test_property.py::test_stateful_links_report_the_failing_sequence",
+        "python/tests/unit/test_property.py::test_ignored_auth_replays_without_credentials_and_never_leaks_the_secret"
+      ],
+      "oracle": [
+        "The Python 3.12 runner image runs Schemathesis 4.32.3: a failing stateless example is shrunk before it is reported (GET /items with limit -1, the smallest failing value), the same seed generates the same requests and another seed different ones, and the stored replay plan reproduces the example against the real reference shop as an HTTP Run without Schemathesis or a model. A missing dependency ends blocked property_dependency_missing and an unreadable description blocked property_schema_invalid, never passed; failed steps name their check in run steps and reports.",
+        "On the healthy reference shop a property probe over GET /api/products and GET /health passes with one passed step per operation and a passed aggregate step; against the schema-field-renamed mutant the GET /api/products step fails with response_schema_conformance and names property/1-reproduction.json and property/1-replay.plan.json, while GET /health still passes. run reproduce on that replay plan, twice, creates one HTTP test that fails with assertion_mismatch both times; the same test passes once the healthy shop is back."
+      ],
+      "evidence": [
+        "validation/results/M5-05-property-openapi.json",
+        "validation/results/M5-05-property-auth.json",
+        "validation/results/M5-05-property-graphql.json",
+        "validation/journeys/m5-api-property.docker.test.ts",
+        "docs/adr/033-api-probes.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "python/testmaster_runner/property.py",
+        "python/testmaster_runner/__main__.py",
+        "python/pyproject.toml",
+        "python/uv.lock",
+        "containers/python/Dockerfile"
+      ],
+      "note": "Verified by automated oracles only (ADR-012): Schemathesis 4.32.3 in the pinned Linux x64 Python runner image against the local reference shop and reference GraphQL app, with examples per operation capped in the journeys. Stateful sequences are reported unshrunk, as Schemathesis runs its state machines; GraphQL runs not_a_server_error only. A passing probe is conformance to the API description, not business acceptance.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m5-api-property.docker.test.ts::M5-05 a healthy shop passes, a renamed field fails response_schema_conformance with a replayable reproduction"
+        ],
+        "negative": [
+          "validation/journeys/m5-api-property.docker.test.ts::M5-05 a GraphQL probe passes the healthy schema and finds the server error a negative limit causes"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m5-api-property.docker.test.ts",
+            "assertion": "expect(evidence).toEqual([\"property/1-reproduction.json\", \"property/1-replay.plan.json\"]);"
+          },
+          {
+            "path": "validation/journeys/m5-api-property.docker.test.ts",
+            "assertion": "expect(first.outcome).toBe(\"failed/assertion_mismatch\");"
+          },
+          {
+            "path": "validation/journeys/m5-api-property.docker.test.ts",
+            "assertion": "expect(second).toEqual(first);"
+          },
+          {
+            "path": "validation/journeys/m5-api-property.docker.test.ts",
+            "assertion": "steps: { \"property:products\": { status: \"failed\", check: \"not_a_server_error\" } },"
+          }
+        ]
+      }
     },
     {
       "id": "VAL-031",
@@ -29367,11 +29604,81 @@
       "sourceFile": "specs/10-validation.md",
       "milestone": "M5",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/m5-api-property.docker.test.ts::M5-05 a healthy shop passes, a renamed field fails response_schema_conformance with a replayable reproduction",
+        "validation/journeys/m5-api-property.docker.test.ts::M5-05 a degraded health answer and an orders endpoint that ignores authentication fail their checks",
+        "validation/journeys/m5-api-property.docker.test.ts::M5-05 a GraphQL probe passes the healthy schema and finds the server error a negative limit causes",
+        "packages/application/src/probes.test.ts::REQ-050 every probe Run needs its own bound securityProbe approval, outside production too",
+        "python/tests/unit/test_property.py::test_server_error_is_shrunk_and_replay_plan_lists_documented_statuses",
+        "python/tests/unit/test_property.py::test_the_input_seed_fixes_the_generated_requests",
+        "python/tests/unit/test_property.py::test_credentials_in_a_replay_plan_are_secret_references",
+        "python/tests/unit/test_property.py::test_secret_echoed_by_the_target_is_redacted_everywhere",
+        "python/tests/unit/test_property.py::test_invalid_schema_blocks_the_run",
+        "python/tests/unit/test_property.py::test_missing_dependencies_block_with_an_aggregate_step",
+        "python/tests/unit/test_property.py::test_stateful_links_report_the_failing_sequence",
+        "python/tests/unit/test_property.py::test_ignored_auth_replays_without_credentials_and_never_leaks_the_secret"
+      ],
+      "oracle": [
+        "On the healthy reference shop a property probe over GET /api/products and GET /health passes with one passed step per operation and a passed aggregate step; against the schema-field-renamed mutant the GET /api/products step fails with response_schema_conformance and names property/1-reproduction.json and property/1-replay.plan.json, while GET /health still passes. run reproduce on that replay plan, twice, creates one HTTP test that fails with assertion_mismatch both times; the same test passes once the healthy shop is back.",
+        "The health-degraded mutant fails GET /health with response_schema_conformance. With a bearer credential held as a secret reference, the healthy shop passes GET /api/orders and the link-following stateful step; the orders-auth-bypass mutant fails GET /api/orders with ignored_auth. No sealed bundle of these Runs contains the token.",
+        "A GraphQL probe over the products field passes on the healthy reference GraphQL app and fails with not_a_server_error against the server-error-on-negative-limit mutant.",
+        "The Python 3.12 runner image runs Schemathesis 4.32.3: a failing stateless example is shrunk before it is reported (GET /items with limit -1, the smallest failing value), the same seed generates the same requests and another seed different ones, and the stored replay plan reproduces the example against the real reference shop as an HTTP Run without Schemathesis or a model. A missing dependency ends blocked property_dependency_missing and an unreadable description blocked property_schema_invalid, never passed; failed steps name their check in run steps and reports."
+      ],
+      "evidence": [
+        "validation/results/M5-05-property-openapi.json",
+        "validation/results/M5-05-property-auth.json",
+        "validation/results/M5-05-property-graphql.json",
+        "validation/journeys/m5-api-property.docker.test.ts",
+        "docs/adr/033-api-probes.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "packages/contracts/src/m5/probes.ts",
+        "packages/contracts/src/m5/probe-runs.ts",
+        "packages/application/src/probes.ts",
+        "packages/application/src/attempt-session.ts",
+        "packages/application/src/approvals.ts",
+        "python/testmaster_runner/property.py",
+        "containers/python/Dockerfile",
+        "python/uv.lock"
+      ],
+      "note": "Verified by automated oracles only (ADR-012): Schemathesis 4.32.3 in the pinned Linux x64 Python runner image against the local reference shop and reference GraphQL app, with examples per operation capped in the journeys. Stateful sequences are reported unshrunk, as Schemathesis runs its state machines; GraphQL runs not_a_server_error only. A passing probe is conformance to the API description, not business acceptance.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/m5-api-property.docker.test.ts::M5-05 a healthy shop passes, a renamed field fails response_schema_conformance with a replayable reproduction"
+        ],
+        "negative": [
+          "validation/journeys/m5-api-property.docker.test.ts::M5-05 a degraded health answer and an orders endpoint that ignores authentication fail their checks",
+          "validation/journeys/m5-api-property.docker.test.ts::M5-05 a GraphQL probe passes the healthy schema and finds the server error a negative limit causes"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/m5-api-property.docker.test.ts",
+            "assertion": "expect(evidence).toEqual([\"property/1-reproduction.json\", \"property/1-replay.plan.json\"]);"
+          },
+          {
+            "path": "validation/journeys/m5-api-property.docker.test.ts",
+            "assertion": "expect(first.outcome).toBe(\"failed/assertion_mismatch\");"
+          },
+          {
+            "path": "validation/journeys/m5-api-property.docker.test.ts",
+            "assertion": "expect(second).toEqual(first);"
+          },
+          {
+            "path": "validation/journeys/m5-api-property.docker.test.ts",
+            "assertion": "expect(await bundleText(session, verdict.runId)).not.toContain(token);"
+          },
+          {
+            "path": "validation/journeys/m5-api-property.docker.test.ts",
+            "assertion": "steps: { \"property:GET /api/orders\": { status: \"failed\", check: \"ignored_auth\" } },"
+          },
+          {
+            "path": "validation/journeys/m5-api-property.docker.test.ts",
+            "assertion": "steps: { \"property:products\": { status: \"failed\", check: \"not_a_server_error\" } },"
+          }
+        ]
+      }
     },
     {
       "id": "VAL-043",
@@ -30567,6 +30874,18 @@
       "milestone": "M5",
       "requirements": ["M5-04", "REQ-047", "API-008"],
       "gate": "M5 automated axe-core scans reported as not establishing conformance (ADR-032); positive/negative evidence and protected assertions"
+    },
+    {
+      "id": "api-property",
+      "milestone": "M5",
+      "requirements": ["M5-05", "REQ-050", "VAL-030", "VAL-042", "API-008"],
+      "gate": "M5 OpenAPI property and stateful probes with Schemathesis (ADR-033); positive/negative evidence and protected assertions"
+    },
+    {
+      "id": "graphql-property",
+      "milestone": "M5",
+      "requirements": ["M5-05", "REQ-050", "API-008"],
+      "gate": "M5 GraphQL property probes, separate from the REST parser (ADR-033); positive/negative evidence and protected assertions"
     },
     {
       "id": "memory",

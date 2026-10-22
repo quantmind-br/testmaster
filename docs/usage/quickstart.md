@@ -682,6 +682,47 @@ violations, the rules that need review, the WCAG 2.2 A/AA criteria a rule judged
 carry the limitation `automated_scan_only` and the count of unverified criteria. Keyboard flows use `press`
 steps; a `press` on the locator `{"by": "css", "value": ":focus"}` follows the page's own focus order.
 
+## API property probes
+
+A property probe generates requests from an imported OpenAPI or GraphQL description with Schemathesis and
+checks every response against it. Import the description as a source, then create the probe test:
+
+```bash
+testmaster source add openapi.json --role api-spec --format openapi
+cat > orders.probe.json <<'EOF'
+{
+  "name": "orders API properties",
+  "spec": {
+    "kind": "property",
+    "api": "openapi",
+    "sourceRevisionId": "svr_…",
+    "operations": ["GET /api/orders"],
+    "stateful": true,
+    "maxExamples": 100,
+    "credentials": [{ "header": "Authorization", "secretRef": "sec_…" }]
+  }
+}
+EOF
+testmaster test probe create --file orders.probe.json
+testmaster test run "$TEST_ID" --wait
+```
+
+Each probe Run, in every environment, needs its own `securityProbe` approval: the first `test run` is refused
+with `POLICY_DENIED` and `details.binding`, and `approval create … --action securityProbe` with that binding's
+revision hash, environment revision, policy hash and origins approves one Run. A probe runs only in the
+Docker sandbox. Each operation is a step `property:<METHOD> <path>` (GraphQL `property:<field>`), OpenAPI
+links add `property:stateful`, and a failed step names its check. The secret holds the whole header value
+(`Bearer …`); without credentials the `ignored_auth` check is left out. A failure stores
+`property/<n>-reproduction.json` and `property/<n>-replay.plan.json`; turn the latter into an HTTP test that
+replays the example without Schemathesis or a model:
+
+```bash
+testmaster run reproduce "$RUN_ID" --artifact property/1-replay.plan.json --wait
+```
+
+A passing probe means the API answered as its description documents, not that the business behaviour is
+right.
+
 ## Code export and import
 
 ```bash
