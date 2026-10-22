@@ -1,0 +1,187 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "M5-04-accessibility-healthy",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-22T16:44:59.564Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "M5-04-accessibility-healthy",
+        "--base-url",
+        "http://127.0.0.1:35413",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_4018d96d-6fb2-448f-a95a-de7e0a25bffb",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-S2o6hN/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_1bce6f84-1b6e-40c5-8401-4186f39b29ad",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a16480-550a-7377-b575-87941f66094c",
+        "--wait",
+        "--timeout",
+        "240",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_160957e7-f5c5-4823-b97e-bdceba36c33f",
+      "warnings": [
+        "--timeout and --request-timeout do not end a run this command executes: the wait continues until the run completes or the command is interrupted. The limit applies only to waits on worker-owned runs."
+      ],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "report",
+        "export",
+        "run_01a16480-5dd7-73f3-a0f9-44df839e0be3",
+        "--format",
+        "markdown",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_77bb6154-467e-40b3-b62f-7dc425effd84",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "report",
+        "export",
+        "run_01a16480-5dd7-73f3-a0f9-44df839e0be3",
+        "--format",
+        "html",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_3473ade6-495c-4920-ac6c-0e9cd39ad58a",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a16480-5dd7-73f3-a0f9-44df839e0be3"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "cleanScanReportedAsLimited",
+      "runId": "run_01a16480-5dd7-73f3-a0f9-44df839e0be3",
+      "axe": "axe-core@4.14.0",
+      "exercisedCriteria": [
+        "1.3.5",
+        "1.4.3",
+        "2.5.8",
+        "3.3.2",
+        "4.1.2"
+      ],
+      "notVerified": [
+        "1.1.1",
+        "1.2.1",
+        "1.2.2",
+        "1.2.3",
+        "1.2.4",
+        "1.2.5",
+        "1.3.1",
+        "1.3.2",
+        "1.3.3",
+        "1.3.4",
+        "1.4.1",
+        "1.4.2",
+        "1.4.4",
+        "1.4.5",
+        "1.4.10",
+        "1.4.11",
+        "1.4.12",
+        "1.4.13",
+        "2.1.1",
+        "2.1.2",
+        "2.1.4",
+        "2.2.1",
+        "2.2.2",
+        "2.3.1",
+        "2.4.1",
+        "2.4.2",
+        "2.4.3",
+        "2.4.4",
+        "2.4.5",
+        "2.4.6",
+        "2.4.7",
+        "2.4.11",
+        "2.5.1",
+        "2.5.2",
+        "2.5.3",
+        "2.5.4",
+        "2.5.7",
+        "3.1.1",
+        "3.1.2",
+        "3.2.1",
+        "3.2.2",
+        "3.2.3",
+        "3.2.4",
+        "3.2.6",
+        "3.3.1",
+        "3.3.3",
+        "3.3.4",
+        "3.3.7",
+        "3.3.8",
+        "4.1.3"
+      ],
+      "reports": {
+        "markdown": "- Accessibility login\\-form\\-scan: 0 serious or critical violations; 50 WCAG 2\\.2 A/AA criteria not verified; automated scan only, it does not establish WCAG conformance",
+        "html": "Accessibility login-form-scan: 0 serious or critical violations; 50 WCAG 2.2 A/AA criteria not verified; automated scan only, it does not establish WCAG conformance</li>"
+      }
+    }
+  ],
+  "limitations": [
+    "The scan is axe-core 4.14.0 shipped in the runner image; it judges only what its rules automate and never establishes WCAG conformance.",
+    "Automated oracle only (the reference shop's own markup); no model is involved."
+  ]
+}

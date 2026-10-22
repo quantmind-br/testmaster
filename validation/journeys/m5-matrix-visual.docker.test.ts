@@ -16,6 +16,7 @@ import {
   data,
   eventually,
   executable,
+  items,
   Journey,
   journey,
   literal,
@@ -180,6 +181,109 @@ it("M5-03 the same plan runs on chromium, firefox and webkit cells with distinct
       limitations: [
         "Linux x64 runner image only; the three engines are the Playwright builds pinned in that image.",
         "Automated oracle only (User-Agent seen by the target); no model is involved.",
+      ],
+    },
+  );
+}, 900_000);
+
+/** A page that writes the time its script reads from `Date` into `#now`. */
+async function clockPage() {
+  const server: Server = createServer((_, response) => {
+    response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    response.end(
+      '<!doctype html><html lang="en"><title>Clock</title><p id="now"></p><script>document.getElementById("now").textContent = new Date().toISOString();</script></html>',
+    );
+  });
+  const listening = Promise.withResolvers<void>();
+  server.once("error", listening.reject);
+  server.listen(0, "127.0.0.1", listening.resolve);
+  await listening.promise;
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("clock page has no port");
+  return {
+    url: `http://127.0.0.1:${address.port}`,
+    async close() {
+      server.closeAllConnections();
+      const closed = Promise.withResolvers<void>();
+      server.close(() => closed.resolve());
+      await closed.promise;
+    },
+  };
+}
+
+it("M5-03 a visual plan renders under a fixed clock and other plans keep the real clock", async () => {
+  await journey(
+    "M5-03-visual-clock",
+    async (session) => {
+      const page = await clockPage();
+      try {
+        await session.init(page.url);
+        const now = { by: "css", value: "#now" };
+        const fixed = "2026-01-01T00:00:00.000Z";
+        const reads = (id: string) =>
+          assertion(id, { locator: now }, "textEquals", fixed) as PlanStep;
+        const visual = text(
+          (
+            await session.createTest(
+              executable("Clock with a visual check", "playwright", [
+                action("open", "navigate", { path: "/" }),
+                reads("fixed-time"),
+                {
+                  id: "clock-look",
+                  kind: "assertion",
+                  operation: "assert",
+                  description: "The clock looks like its approved baseline",
+                  input: { locator: now },
+                  expectation: { predicate: "visualMatches", baseline: "clock" },
+                } as PlanStep,
+              ]),
+            )
+          ).id,
+        );
+        const plain = text(
+          (
+            await session.createTest(
+              executable("Clock without a visual check", "playwright", [
+                action("open", "navigate", { path: "/" }),
+                reads("fixed-time"),
+              ]),
+            )
+          ).id,
+        );
+        const verdict = async (testId: string) => {
+          const result = await session.start(["test", "run", testId, "--wait", "--timeout", "240"])
+            .result;
+          const run = object(data(result.json).run);
+          const listed = await session.command(["run", "steps", text(run.id)]);
+          const steps = items(Array.isArray(listed) ? listed : (listed.items ?? listed.steps));
+          return {
+            runId: text(run.id),
+            outcome: `${text(run.outcome)}/${text(run.reasonCode)}`,
+            fixedTime: steps.find((step) => step.planStepId === "fixed-time")?.status,
+          };
+        };
+        const withVisual = await verdict(visual);
+        // The page read the fixed time; the image step itself has no approved baseline yet.
+        expect(withVisual).toMatchObject({
+          outcome: "blocked/visual_baseline_missing",
+          fixedTime: "passed",
+        });
+        const withoutVisual = await verdict(plain);
+        expect(withoutVisual).toMatchObject({
+          outcome: "failed/assertion_mismatch",
+          fixedTime: "failed",
+        });
+        session.oracles.push({ check: "visualFixedClock", withVisual, withoutVisual });
+      } finally {
+        await page.close();
+      }
+    },
+    {
+      class: "deterministic-e2e",
+      runner: "real-docker",
+      externalDependency: "local-clock-page",
+      limitations: [
+        "Chromium cell only; the fixed time is the runner's constant, so a page's Date reads it while its timers keep running.",
       ],
     },
   );

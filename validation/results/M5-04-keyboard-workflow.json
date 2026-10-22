@@ -1,0 +1,87 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "M5-04-keyboard-workflow",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-22T16:45:05.018Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "M5-04-keyboard-workflow",
+        "--base-url",
+        "http://127.0.0.1:44039",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_016bec2f-4e59-4bcc-a3a6-8d75ce6e2980",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-0bWXZE/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_c2a24fc1-6cc2-433a-bdaf-e534c3df9a2f",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a16480-6ed1-7655-8a73-4691e3832be5",
+        "--wait",
+        "--timeout",
+        "240",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_dabac431-2bd4-4a24-a730-501d0c844c5a",
+      "warnings": [
+        "--timeout and --request-timeout do not end a run this command executes: the wait continues until the run completes or the command is interrupted. The limit applies only to waits on worker-owned runs."
+      ],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a16480-77fa-735c-a479-5347a378c3d1"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "keyboardSignIn",
+      "runId": "run_01a16480-77fa-735c-a479-5347a378c3d1"
+    }
+  ],
+  "limitations": [
+    "The scan is axe-core 4.14.0 shipped in the runner image; it judges only what its rules automate and never establishes WCAG conformance.",
+    "Automated oracle only (the reference shop's own markup); no model is involved."
+  ]
+}

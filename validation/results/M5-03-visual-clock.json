@@ -1,0 +1,166 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "M5-03-visual-clock",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-clock-page",
+  "observedAt": "2026-10-22T16:44:39.646Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "M5-03-visual-clock",
+        "--base-url",
+        "http://127.0.0.1:40977",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_753774fe-5ba9-4322-8f46-c06709d21b2b",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-KGAudU/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_28a042c7-6539-4bf5-933b-7ec7a6133ca3",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-KGAudU/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_b2d74c8b-7dcb-4f04-95c6-69c9517c8038",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1647f-812b-72f7-87bb-1ab151df668d",
+        "--wait",
+        "--timeout",
+        "240",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "requestId": "cli_76020ea0-e76c-4372-a954-af874c734cd5",
+      "warnings": [
+        "--timeout and --request-timeout do not end a run this command executes: the wait continues until the run completes or the command is interrupted. The limit applies only to waits on worker-owned runs."
+      ],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "steps",
+        "run_01a1647f-8ef1-76c1-9b14-8052ef634e90",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_1dabcaa6-44f0-42d3-b3cf-99bc1640865a",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a1647f-8555-7058-bbb6-63a2cff434b7",
+        "--wait",
+        "--timeout",
+        "240",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "requestId": "cli_66d9128e-f12c-499d-b647-218678b7e307",
+      "warnings": [
+        "--timeout and --request-timeout do not end a run this command executes: the wait continues until the run completes or the command is interrupted. The limit applies only to waits on worker-owned runs."
+      ],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "run",
+        "steps",
+        "run_01a1647f-9eae-74c9-ac4c-e844a4c58c4b",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_9bda6976-96ab-472a-8dc5-777f66403a3a",
+      "warnings": [],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a1647f-8ef1-76c1-9b14-8052ef634e90",
+    "run_01a1647f-9eae-74c9-ac4c-e844a4c58c4b"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "visualFixedClock",
+      "withVisual": {
+        "runId": "run_01a1647f-8ef1-76c1-9b14-8052ef634e90",
+        "outcome": "blocked/visual_baseline_missing",
+        "fixedTime": "passed"
+      },
+      "withoutVisual": {
+        "runId": "run_01a1647f-9eae-74c9-ac4c-e844a4c58c4b",
+        "outcome": "failed/assertion_mismatch",
+        "fixedTime": "failed"
+      }
+    }
+  ],
+  "limitations": [
+    "Chromium cell only; the fixed time is the runner's constant, so a page's Date reads it while its timers keep running."
+  ]
+}

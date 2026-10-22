@@ -1,0 +1,165 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "M5-04-accessibility-mutant",
+  "class": "deterministic-e2e",
+  "runner": "real-docker",
+  "externalDependency": "local-reference-shop",
+  "observedAt": "2026-10-22T16:44:53.012Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "init",
+        "--mode",
+        "local",
+        "--name",
+        "M5-04-accessibility-mutant",
+        "--base-url",
+        "http://127.0.0.1:45403",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_3383a55a-e941-4ce8-9f71-5b2aa1e82610",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "create",
+        "--plan",
+        "/tmp/tm-m1-bVBAmd/repo/plan.json",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 0,
+      "signal": null,
+      "requestId": "cli_cc36894d-a988-4063-996b-1e406dca2782",
+      "warnings": [],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a16480-21f2-76f6-862a-7d759a22a945",
+        "--browser",
+        "chromium",
+        "--wait",
+        "--timeout",
+        "240",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "requestId": "cli_fd1eff0d-e16a-40e1-99c4-99c0cd71e12e",
+      "warnings": [
+        "--timeout and --request-timeout do not end a run this command executes: the wait continues until the run completes or the command is interrupted. The limit applies only to waits on worker-owned runs."
+      ],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a16480-21f2-76f6-862a-7d759a22a945",
+        "--browser",
+        "firefox",
+        "--wait",
+        "--timeout",
+        "240",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "requestId": "cli_f2c732ec-ad5e-4b83-bb20-e80e3b98c2f4",
+      "warnings": [
+        "--timeout and --request-timeout do not end a run this command executes: the wait continues until the run completes or the command is interrupted. The limit applies only to waits on worker-owned runs."
+      ],
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/diogo/dev/testmaster/apps/cli/dist/main.js",
+        "test",
+        "run",
+        "tst_01a16480-21f2-76f6-862a-7d759a22a945",
+        "--browser",
+        "webkit",
+        "--wait",
+        "--timeout",
+        "240",
+        "--output",
+        "json",
+        "--no-color"
+      ],
+      "exitCode": 1,
+      "signal": null,
+      "requestId": "cli_66cf54ca-6a85-4b7f-9212-192fb137a02a",
+      "warnings": [
+        "--timeout and --request-timeout do not end a run this command executes: the wait continues until the run completes or the command is interrupted. The limit applies only to waits on worker-owned runs."
+      ],
+      "stderr": ""
+    }
+  ],
+  "runIds": [
+    "run_01a16480-2b01-74fb-bca4-5db9772de418",
+    "run_01a16480-3860-7522-a69c-bf8fd1ec3247",
+    "run_01a16480-48ea-7440-9887-de80a942cae8"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "missingLabelDetected",
+      "observed": {
+        "chromium": {
+          "runId": "run_01a16480-2b01-74fb-bca4-5db9772de418",
+          "axe": "axe-core@4.14.0",
+          "counted": 1,
+          "violations": [
+            "label:critical"
+          ],
+          "notVerified": 50
+        },
+        "firefox": {
+          "runId": "run_01a16480-3860-7522-a69c-bf8fd1ec3247",
+          "axe": "axe-core@4.14.0",
+          "counted": 1,
+          "violations": [
+            "label:critical"
+          ],
+          "notVerified": 50
+        },
+        "webkit": {
+          "runId": "run_01a16480-48ea-7440-9887-de80a942cae8",
+          "axe": "axe-core@4.14.0",
+          "counted": 1,
+          "violations": [
+            "label:critical"
+          ],
+          "notVerified": 50
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "The scan is axe-core 4.14.0 shipped in the runner image; it judges only what its rules automate and never establishes WCAG conformance.",
+    "Automated oracle only (the reference shop's own markup); no model is involved."
+  ]
+}
