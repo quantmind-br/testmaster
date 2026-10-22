@@ -37,6 +37,31 @@ const HELD_STEP_TIMEOUT_MS = 240_000;
 const SLOW_RESPONSE_MS = 4_000;
 const FLOOD_RUNS = 6;
 
+/**
+ * The second Docker daemon of this host: the rootless one the `docker-rootless` project names. A
+ * missing socket or a rootful daemon behind it fails the OPS-033 scenario instead of skipping it.
+ */
+const rootlessDockerHost =
+  process.env.TESTMASTER_ROOTLESS_DOCKER_HOST ??
+  `unix://${process.env.XDG_RUNTIME_DIR ?? `/run/user/${process.getuid?.() ?? 1000}`}/docker.sock`;
+
+async function daemonIdentity(host?: string) {
+  const env = { ...process.env };
+  if (host) env.DOCKER_HOST = host;
+  const { stdout } = await exec(
+    "docker",
+    ["info", "--format", "{{.ID}}|{{json .SecurityOptions}}"],
+    { env },
+  ).catch((error: unknown) => {
+    throw new Error(`Docker daemon ${host ?? "default"} is unreachable: ${String(error)}`);
+  });
+  const [id = "", options = "[]"] = stdout.trim().split("|");
+  return {
+    id,
+    rootless: (JSON.parse(options) as string[]).some((option) => option.includes("name=rootless")),
+  };
+}
+
 interface Held {
   readonly path: string;
   readonly openedAt: number;
@@ -298,11 +323,32 @@ describe("M5-01 remote workers", () => {
     return text(enrollment.enrollmentToken);
   };
 
+  /** A shared pool worker enrolled by the operator with `server worker-enrollment`. */
+  const enrollShared = async (name: string) => {
+    const { stack } = live();
+    const directory = join(stack.cwd, ".workers", name);
+    await mkdir(directory, { recursive: true, mode: 0o700 });
+    const tokenFile = join(directory, "issued.token");
+    const enrollment = stack.spawn([
+      "server",
+      "worker-enrollment",
+      "--config",
+      stack.configPath,
+      "--name",
+      name,
+      "--out",
+      tokenFile,
+    ]);
+    expect(await enrollment.exited, enrollment.stderr()).toBe(0);
+    return (await readFile(tokenFile, "utf8")).trim();
+  };
+
   const startWorker = async (
     name: string,
     token: string,
     controller: string,
     slots = 2,
+    env: Readonly<Record<string, string>> = {},
   ): Promise<Spawned> => {
     const { stack } = live();
     const directory = join(stack.cwd, ".workers", name);
@@ -311,22 +357,25 @@ describe("M5-01 remote workers", () => {
     const caFile = join(directory, "ca.pem");
     await writeFile(tokenFile, token, { mode: 0o600 });
     await writeFile(caFile, stack.ca.caPem, { mode: 0o600 });
-    const worker = stack.spawn([
-      "worker",
-      "start",
-      "--mode",
-      "remote",
-      "--controller",
-      controller,
-      "--ca-file",
-      caFile,
-      "--enroll-token-file",
-      tokenFile,
-      "--data-dir",
-      join(directory, "data"),
-      "--slots",
-      String(slots),
-    ]);
+    const worker = stack.spawn(
+      [
+        "worker",
+        "start",
+        "--mode",
+        "remote",
+        "--controller",
+        controller,
+        "--ca-file",
+        caFile,
+        "--enroll-token-file",
+        tokenFile,
+        "--data-dir",
+        join(directory, "data"),
+        "--slots",
+        String(slots),
+      ],
+      env,
+    );
     await eventually(
       async () => workerLines(worker),
       (lines) =>
@@ -358,8 +407,8 @@ describe("M5-01 remote workers", () => {
       runner: "real-docker-remote-workers",
       externalDependency: "local-held-target",
       limitations: [
-        "Controller, workers and Docker share one host; the partition is a blackholing TCP relay between one worker and the controller's TLS proxy.",
-        "Remote workers verify their own image lock on the same Docker daemon the controller host uses.",
+        "Controller, workers and both Docker daemons share one physical host; the partition is a blackholing TCP relay between one worker and the controller's TLS proxy.",
+        "Remote workers verify their own image lock on their own daemon: the host's default daemon, and for OPS-033 also its rootless daemon. Fair share across hosts is proven across two daemons, not across two machines.",
       ],
     });
     postgres = await startPostgresTestServer();
@@ -575,21 +624,7 @@ describe("M5-01 remote workers", () => {
   it("M5-01 one workspace flooding the shared pool worker does not monopolize it: another workspace's Run starts while the flood is still queued", async () => {
     await record(async () => {
       const { stack, session } = live();
-      const directory = join(stack.cwd, ".workers", "shared");
-      await mkdir(directory, { recursive: true, mode: 0o700 });
-      const tokenFile = join(directory, "issued.token");
-      const enrollment = stack.spawn([
-        "server",
-        "worker-enrollment",
-        "--config",
-        stack.configPath,
-        "--name",
-        "shared-pool",
-        "--out",
-        tokenFile,
-      ]);
-      expect(await enrollment.exited, enrollment.stderr()).toBe(0);
-      const token = (await readFile(tokenFile, "utf8")).trim();
+      const token = await enrollShared("shared-pool");
 
       // Admission needs a live worker in each workspace: the shared worker's first claim gives it
       // a ready row in every workspace it serves.
@@ -632,6 +667,85 @@ describe("M5-01 remote workers", () => {
         floodRuns: FLOOD_RUNS,
         claimOrder: order,
         otherClaimPosition: otherPosition,
+      });
+    });
+  }, 600_000);
+
+  it("OPS-033 two shared workers on two Docker daemons pool their slots: a flooding workspace holds at most its share of both and another workspace's Run takes the next free slot", async () => {
+    await record(async () => {
+      const { stack, session } = live();
+      const rootful = await daemonIdentity();
+      const rootless = await daemonIdentity(rootlessDockerHost);
+      expect(rootful.rootless).toBe(false);
+      expect(rootless.rootless).toBe(true);
+      expect(rootless.id).not.toBe(rootful.id);
+
+      // One slot on each daemon: two slots in the pool, two workspaces competing for them.
+      const workers = [
+        await startWorker(
+          "pool-rootful",
+          await enrollShared("pool-rootful"),
+          stack.proxy.origin,
+          1,
+        ),
+        await startWorker(
+          "pool-rootless",
+          await enrollShared("pool-rootless"),
+          stack.proxy.origin,
+          1,
+          { DOCKER_HOST: rootlessDockerHost },
+        ),
+      ];
+      const workerIds = workers.map((worker) => text(lineOf(worker, "worker.ready")?.workerId));
+      const scope = await stack.scope();
+      await eventually(
+        async () =>
+          scope.database.all(
+            "SELECT workspace_id FROM workers WHERE id IN (?,?) AND state='ready'",
+            ...workerIds,
+          ),
+        (rows) => rows.length === 4,
+        30_000,
+      );
+      const flood = await createTest(0, healthPlan("ok", "slow-pool-flood"));
+      const other = await createTest(1, healthPlan("ok", "slow-pool-other"));
+      const floodRuns: string[] = [];
+      for (let index = 0; index < FLOOD_RUNS; index++) floodRuns.push(await admit(0, flood));
+      const otherRun = await admit(1, other);
+      for (const runId of floodRuns) expect((await completed(0, runId)).outcome).toBe("passed");
+      expect((await completed(1, otherRun)).outcome).toBe("passed");
+
+      const runIds = [...floodRuns, otherRun];
+      const claimed = scope.database.all(
+        `SELECT run_id, worker_id FROM attempts WHERE run_id IN (${runIds.map(() => "?").join(",")}) ORDER BY created_at, run_id`,
+        ...runIds,
+      );
+      const order = claimed.map((row) => (row.run_id === otherRun ? "other" : "flood"));
+      const otherPosition = order.indexOf("other");
+      // The flood may take both slots before the other workspace admits; from then on it may hold
+      // only one of the two slots the daemons offer together, so the other Run takes the next one.
+      expect(otherPosition).toBeGreaterThanOrEqual(0);
+      expect(otherPosition).toBeLessThanOrEqual(2);
+      expect(
+        order.slice(otherPosition + 1).filter((kind) => kind === "flood").length,
+      ).toBeGreaterThanOrEqual(FLOOD_RUNS - 2);
+      // Both daemons ran Attempts of the pool.
+      expect(new Set(claimed.map((row) => String(row.worker_id)))).toEqual(new Set(workerIds));
+      for (const worker of workers) await stopWorker(worker);
+      session.oracles.push({
+        check: "twoDaemonFairShare",
+        healthy: true,
+        daemons: [
+          { worker: workerIds[0], rootless: false },
+          { worker: workerIds[1], rootless: true },
+        ],
+        slotsPerWorker: 1,
+        floodRuns: FLOOD_RUNS,
+        claimOrder: order,
+        otherClaimPosition: otherPosition,
+        attemptsPerWorker: workerIds.map(
+          (id) => claimed.filter((row) => String(row.worker_id) === id).length,
+        ),
       });
     });
   }, 600_000);

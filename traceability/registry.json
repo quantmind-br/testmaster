@@ -14468,29 +14468,33 @@
         "packages/application/src/worker-pool.pg.test.ts::OPS-033 PostgreSQL: admission answers each tenant with its own queue only and a full tenant never blocks another",
         "apps/server/src/workers-deliveries.test.ts::OPS-033 the HTTP admission receipt explains the wait and a full tenant queue answers 429 with Retry-After",
         "apps/server/src/workers-deliveries.test.ts::OPS-033 the per-actor and the per-tenant budgets refuse mutations with Retry-After while reads stay free",
-        "packages/application/src/worker-pool.pg.test.ts::OPS-033 M4-08 INT-026 PostgreSQL: the worker, notification and delivery tables enforce tenant row-level security"
+        "packages/application/src/worker-pool.pg.test.ts::OPS-033 M4-08 INT-026 PostgreSQL: the worker, notification and delivery tables enforce tenant row-level security",
+        "validation/journeys/m5-remote-workers.docker.test.ts::OPS-033 two shared workers on two Docker daemons pool their slots: a flooding workspace holds at most its share of both and another workspace's Run takes the next free slot"
       ],
       "oracle": [
-        "A tenant with a thousand queued jobs is held to its fair share of worker slots while another tenant is served, and the cap lifts once nobody competes; a full tenant queue answers 429 queue_overflow with Retry-After and the admission receipt shows only the caller's own queue. Per-actor and per-tenant mutation budgets refuse with Retry-After while reads stay free. Distributed scale and fairness move to M5."
+        "A tenant with a thousand queued jobs is held to its fair share of worker slots while another tenant is served, and the cap lifts once nobody competes; a full tenant queue answers 429 queue_overflow with Retry-After and the admission receipt shows only the caller's own queue. Per-actor and per-tenant mutation budgets refuse with Retry-After while reads stay free. Across hosts, two shared remote workers on two Docker daemons pool their slots: a workspace flooding them holds at most its share of both, and another workspace's Run takes the next free slot."
       ],
       "evidence": [
         "validation/results/m4-acceptance/s8/131-s8-v2-unit/output.log",
         "validation/results/m4-acceptance/s8/132-s8-v2-pg/output.log",
-        "validation/results/m4-acceptance/s8/139-s8-v2-portal-c/output.log"
+        "validation/results/m4-acceptance/s8/139-s8-v2-portal-c/output.log",
+        "validation/results/M5-01-remote-workers.json"
       ],
       "code": [
         "packages/application/src/worker-pool.ts",
         "packages/application/src/runs.ts",
         "packages/persistence/src/repositories.ts",
         "apps/server/src/server.ts",
-        "packages/contracts/src/m4/workers.ts"
+        "packages/contracts/src/m4/workers.ts",
+        "packages/application/src/remote-workers.ts"
       ],
       "coverage": {
         "positive": [
           "packages/application/src/worker-pool.test.ts::OPS-033 fair share caps the flooding tenant while another waits and lifts the cap when nobody competes",
           "packages/application/src/worker-pool.pg.test.ts::OPS-033 PostgreSQL: a flooding tenant is held to its share, the other tenant is served and the cap lifts once nobody competes",
           "packages/application/src/worker-pool.pg.test.ts::OPS-033 PostgreSQL: admission answers each tenant with its own queue only and a full tenant never blocks another",
-          "apps/server/src/workers-deliveries.test.ts::OPS-033 the HTTP admission receipt explains the wait and a full tenant queue answers 429 with Retry-After"
+          "apps/server/src/workers-deliveries.test.ts::OPS-033 the HTTP admission receipt explains the wait and a full tenant queue answers 429 with Retry-After",
+          "validation/journeys/m5-remote-workers.docker.test.ts::OPS-033 two shared workers on two Docker daemons pool their slots: a flooding workspace holds at most its share of both and another workspace's Run takes the next free slot"
         ],
         "negative": [
           "apps/server/src/workers-deliveries.test.ts::OPS-033 the per-actor and the per-tenant budgets refuse mutations with Retry-After while reads stay free",
@@ -14520,19 +14524,14 @@
           {
             "path": "apps/server/src/workers-deliveries.test.ts",
             "assertion": "  expect(tenantRefused.json().error.details).toMatchObject({ scope: \"tenant\" });"
+          },
+          {
+            "path": "validation/journeys/m5-remote-workers.docker.test.ts",
+            "assertion": "      expect(new Set(claimed.map((row) => String(row.worker_id)))).toEqual(new Set(workerIds));"
           }
         ]
       },
-      "deferred": [
-        {
-          "milestone": "M5",
-          "scope": "Distributed fair-share and fairness across hosts",
-          "specQuote": {
-            "path": "ROADMAP.md",
-            "text": "Escala/fairness distribuída completa é M5"
-          }
-        }
-      ]
+      "note": "Fairness across hosts is proven across two Docker daemons (rootful and rootless) of one physical machine, each serving one remote worker; throughput across separate machines belongs to the M5-08 capacity evaluation."
     },
     {
       "id": "OPS-034",

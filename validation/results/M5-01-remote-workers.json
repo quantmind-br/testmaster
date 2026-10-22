@@ -4,7 +4,7 @@
   "class": "deterministic-e2e",
   "runner": "real-docker-remote-workers",
   "externalDependency": "local-held-target",
-  "observedAt": "2026-10-21T12:28:16.347Z",
+  "observedAt": "2026-10-22T04:55:02.477Z",
   "passed": true,
   "method": "automatic",
   "reviewer": "testmaster-automated-acceptance",
@@ -13,21 +13,28 @@
   ],
   "commands": [],
   "runIds": [
-    "run_01a15e6d-a06f-7240-9a7c-186c7857ec0e",
-    "run_01a15e6e-2994-729d-91dd-b3c78b8d92ca",
-    "run_01a15e6e-b261-7305-a336-4e4e887d667f",
-    "run_01a15e6e-b274-75e1-a575-a906225ceaa6",
-    "run_01a15e6e-b280-761a-9eea-8b494ff8ba21",
-    "run_01a15e6e-b28e-74a1-a0c5-cc12667fc8ae",
-    "run_01a15e6e-b29c-72c8-a286-715ec29d3f39",
-    "run_01a15e6e-b2a8-7344-9f22-4d623681f4e1",
-    "run_01a15e6e-b2b3-7289-96db-9ec055e4c2e3"
+    "run_01a161f4-a6a9-7036-91ae-beb22d0b709a",
+    "run_01a161f5-3093-7149-ad1b-16a6baffb52a",
+    "run_01a161f5-b89d-7799-a64b-67df410ee809",
+    "run_01a161f5-b8ab-744a-8432-1b3032d4d1c2",
+    "run_01a161f5-b8b8-77a5-9bba-43286c6b76d6",
+    "run_01a161f5-b8c5-7231-962b-64ec448d1f76",
+    "run_01a161f5-b8d3-75f6-a999-9956c39b8bc4",
+    "run_01a161f5-b8e0-75a4-88fd-a625502deb89",
+    "run_01a161f5-b8eb-7656-a27e-4ad0c8b37a2c",
+    "run_01a161f6-1883-754c-95b3-4c34422a5028",
+    "run_01a161f6-1890-700a-ad96-533ee07eebbc",
+    "run_01a161f6-189b-75a8-91ca-c283f86e1542",
+    "run_01a161f6-18a9-74e1-975d-c43db9504711",
+    "run_01a161f6-18b7-7451-9414-b8df51816442",
+    "run_01a161f6-18c5-761d-a442-64727df26a5a",
+    "run_01a161f6-18d3-720c-b514-cb0cd197afec"
   ],
   "oracleVerdicts": [
     {
       "check": "partitionedWorkerRefusedAndReclaimed",
       "healthy": true,
-      "runId": "run_01a15e6d-a06f-7240-9a7c-186c7857ec0e",
+      "runId": "run_01a161f4-a6a9-7036-91ae-beb22d0b709a",
       "attempts": [
         {
           "number": 1,
@@ -42,14 +49,14 @@
           "worker": "B"
         }
       ],
-      "egressEndedAfterPartitionMs": 29464,
+      "egressEndedAfterPartitionMs": 29506,
       "staleSettle": "lease_lost",
       "staleArtifacts": 0
     },
     {
       "check": "inFlightEffectStaysUncertain",
       "healthy": true,
-      "runId": "run_01a15e6e-2994-729d-91dd-b3c78b8d92ca",
+      "runId": "run_01a161f5-3093-7149-ad1b-16a6baffb52a",
       "outcome": "inconclusive",
       "reasonCode": "retry_unsafe_external_effect",
       "attempts": 1,
@@ -70,10 +77,40 @@
         "flood"
       ],
       "otherClaimPosition": 1
+    },
+    {
+      "check": "twoDaemonFairShare",
+      "healthy": true,
+      "daemons": [
+        {
+          "worker": "wrk_01a161f6-0f72-7647-bf61-0a36812c0722",
+          "rootless": false
+        },
+        {
+          "worker": "wrk_01a161f6-1591-7313-b463-b172ee6e335f",
+          "rootless": true
+        }
+      ],
+      "slotsPerWorker": 1,
+      "floodRuns": 6,
+      "claimOrder": [
+        "flood",
+        "other",
+        "flood",
+        "flood",
+        "flood",
+        "flood",
+        "flood"
+      ],
+      "otherClaimPosition": 1,
+      "attemptsPerWorker": [
+        4,
+        3
+      ]
     }
   ],
   "limitations": [
-    "Controller, workers and Docker share one host; the partition is a blackholing TCP relay between one worker and the controller's TLS proxy.",
-    "Remote workers verify their own image lock on the same Docker daemon the controller host uses."
+    "Controller, workers and both Docker daemons share one physical host; the partition is a blackholing TCP relay between one worker and the controller's TLS proxy.",
+    "Remote workers verify their own image lock on their own daemon: the host's default daemon, and for OPS-033 also its rootless daemon. Fair share across hosts is proven across two daemons, not across two machines."
   ]
 }

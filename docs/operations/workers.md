@@ -92,3 +92,7 @@ selector pair, local and remote alike. Without a selector any worker may claim.
 A shared pool worker serves every workspace and counts its slots once: it claims for the workspace
 whose oldest claimable job has waited longest and is still under its cap, so one workspace's flood
 cannot hold every slot while another workspace waits.
+
+`slots` in the cap is the sum over every ready worker, on whatever host or Docker daemon it runs: two
+remote workers on different daemons with one slot each form a pool of two, and a flooding workspace
+may hold one of them while another workspace waits.
