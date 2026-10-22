@@ -17,6 +17,29 @@ import {
   Value,
 } from "./primitives.js";
 
+/** The axe-core rule tags an `accessibilityViolations` assertion may select. */
+export const accessibilityTags = [
+  "wcag2a",
+  "wcag2aa",
+  "wcag2aaa",
+  "wcag21a",
+  "wcag21aa",
+  "wcag22aa",
+  "best-practice",
+  "section508",
+  "EN-301-549",
+  "ACT",
+] as const;
+/** The tags scanned when an assertion names none: WCAG 2.2 AA and axe best practices. */
+export const defaultAccessibilityTags: readonly (typeof accessibilityTags)[number][] = [
+  "wcag2a",
+  "wcag2aa",
+  "wcag21a",
+  "wcag21aa",
+  "wcag22aa",
+  "best-practice",
+];
+
 /** Adds the agent-facing description of a property without changing its validation. */
 const described = <T extends TSchema>(schema: T, description: string): T =>
   ({ ...schema, description }) as T;
@@ -162,7 +185,18 @@ const httpAndBrowserExpectations = [
     masks: Type.Optional(Type.Array(Locator, { minItems: 1, maxItems: 10 })),
     threshold: Type.Optional(Type.Number({ minimum: 0, maximum: 1 })),
   }),
-  Obj({ predicate: Type.Literal("accessibilityViolations"), maximum: Nonnegative }),
+  /**
+   * An automated axe-core scan of the step's locator finds at most `maximum` serious or critical
+   * violations of the rules carrying `tags`. It never certifies conformance: the WCAG criteria a
+   * scanner cannot judge are reported as not verified (ADR-032).
+   */
+  Obj({
+    predicate: Type.Literal("accessibilityViolations"),
+    maximum: Nonnegative,
+    tags: Type.Optional(
+      Type.Array(Enum(accessibilityTags), { minItems: 1, maxItems: 10, uniqueItems: true }),
+    ),
+  }),
 ];
 export const Expectation = Type.Union([...httpAndBrowserExpectations, ...terminalExpectations]);
 /** The expectations a model may propose: those an HTTP or browser plan can execute. */

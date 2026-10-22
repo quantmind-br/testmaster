@@ -44,32 +44,6 @@ describe("shared contract conformance", () => {
     expect(() => parseStrictJson(Uint8Array.of(0xff))).toThrowError(ContractError);
     expect(() => parseStrictJson('"e\\u0301"')).toThrowError(ContractError);
   });
-  it("refuses M5 assertions and never silently accepts unavailable predicates", () => {
-    const fixture = {
-      schemaVersion: "1.0.0",
-      kind: "executable",
-      name: "Visual",
-      type: "frontend",
-      runner: "playwright",
-      requirementRefs: [],
-      steps: [
-        {
-          id: "visual",
-          kind: "assertion",
-          operation: "assert",
-          description: "Visual",
-          input: { locator: { by: "css", value: "body" } },
-          expectation: { predicate: "accessibilityViolations", maximum: 0 },
-        },
-      ],
-    };
-    expect(() => validate("ExecutablePlan", fixture)).toThrowError(
-      expect.objectContaining({
-        code: "CAPABILITY_UNAVAILABLE",
-        details: { capability: "accessibilityViolations", milestone: "M5" },
-      }),
-    );
-  });
   it("compiles every public schema under strict Ajv 2020", () => {
     for (const name of Object.keys(schemaCatalog)) {
       expect(jsonSchema(name).$schema).toContain("2020-12");

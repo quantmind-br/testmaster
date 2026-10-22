@@ -324,6 +324,7 @@ export const implementedFeatures: ReadonlySet<string> = new Set([
   "matrix-advanced",
   "visualMatches",
   "visual-baselines",
+  "accessibilityViolations",
 ]);
 export const capabilityRegistry: Readonly<Record<string, Capability>> = Object.freeze(
   Object.fromEntries(

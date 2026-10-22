@@ -658,6 +658,30 @@ image, for example with a second token through `--endpoint`; a bearer token need
 baseline of the same test, name and cell; superseded baselines stay listed. A Run never creates, approves or
 updates a baseline: execution only reads the approved one frozen at admission.
 
+## Accessibility scans
+
+An `accessibilityViolations` assertion scans the element its locator names (a form, a dialog, `body`)
+with axe-core 4.14.0 from the runner image:
+
+```json
+{
+  "id": "login-form-scan",
+  "kind": "assertion",
+  "operation": "assert",
+  "description": "The sign-in form has no serious or critical violation",
+  "input": { "locator": { "by": "css", "value": "form" } },
+  "expectation": { "predicate": "accessibilityViolations", "maximum": 0 }
+}
+```
+
+The step fails when the serious and critical violating elements exceed `maximum`; minor and moderate
+findings are reported, not counted. `tags` (for example `["wcag2a", "wcag2aa"]`) selects axe rule tags; the
+default is WCAG 2.0, 2.1 and 2.2 A/AA plus `best-practice`. Each scan writes `a11y/<stepId>.json` with the
+violations, the rules that need review, the WCAG 2.2 A/AA criteria a rule judged and the ones none judged
+(`notVerified`). A scan without findings is not a WCAG conformance statement: the step and every report
+carry the limitation `automated_scan_only` and the count of unverified criteria. Keyboard flows use `press`
+steps; a `press` on the locator `{"by": "css", "value": ":focus"}` follows the page's own focus order.
+
 ## Code export and import
 
 ```bash

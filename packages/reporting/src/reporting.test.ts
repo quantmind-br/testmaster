@@ -414,3 +414,36 @@ it("renders the Markdown source binding as code with the JSON bytes intact", () 
     .find((candidate) => candidate.startsWith("Source binding: "));
   expect(hostile).toBe(`Source binding: \`\`\`${JSON.stringify(input.provenance)}\`\`\``);
 });
+
+it("ADR-032 reports a clean accessibility scan as automated evidence with unverified criteria", () => {
+  const input = snapshot();
+  const item = input.runs[0];
+  if (!item) throw new Error("Expected a run");
+  const scanStep = {
+    id: uuidV7IdGenerator.next("stp"),
+    attemptId: uuidV7IdGenerator.next("att"),
+    planStepId: "loginScan",
+    index: 0,
+    status: "passed" as const,
+    expected: { maximum: 0, tags: ["wcag2a"] },
+    observed: {
+      counted: 0,
+      rules: [],
+      incomplete: 0,
+      notVerified: 41,
+      limitations: ["automated_scan_only"],
+      engine: "axe-core@4.14.0",
+    },
+    error: null,
+    durationMs: 5,
+    evidenceRefs: [],
+  };
+  input.runs = [{ ...item, steps: [scanStep, { ...scanStep, planStepId: "other", observed: 3 }] }];
+  for (const output of [exportMarkdown(input), exportHtml(input)]) {
+    const scans = output.split(/\n|<li>/u).filter((text) => text.includes("Accessibility "));
+    expect(scans).toHaveLength(1);
+    expect(scans[0]).toMatch(/loginScan: 0 serious or critical violations/u);
+    expect(scans[0]).toMatch(/41 WCAG .+ criteria not verified/u);
+    expect(scans[0]).toMatch(/automated scan only/u);
+  }
+});

@@ -16,6 +16,11 @@ import {
 /** Elements whose pixels may show a secret; they are painted over in every visual capture. */
 const SENSITIVE = "input, textarea, [data-sensitive], [autocomplete*=password]";
 const MASK_COLOR = "#FF00FF";
+/**
+ * The time a page of a plan with `visualMatches` reads from `Date` (ADR-032, VAL-041): a page
+ * that renders the current time looks the same in every Run. Timers keep running.
+ */
+export const VISUAL_FIXED_TIME = "2026-01-01T00:00:00.000Z";
 
 /**
  * Compares one element against the baseline the host froze for this step (ADR-032). The capture

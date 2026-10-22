@@ -46,6 +46,8 @@ const allowedRunner: Record<string, true> = {
   // `@testmaster/domain`) requires the contracts' Ajv build; declared so the shim resolves it.
   ajv: true,
   "ajv-formats": true,
+  // Target accessibility scans (ADR-032): the runner injects axe.min.js into the page under test.
+  "axe-core": true,
 };
 const testFrameworks: Record<string, true> = { vitest: true, "fast-check": true };
 const builtins = new Set(builtinModules.flatMap((name) => [name, `node:${name}`]));

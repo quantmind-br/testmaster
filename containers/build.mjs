@@ -89,6 +89,7 @@ try {
       "@xterm/headless",
       "@lydell/node-pty",
       ptyPlatform,
+      "axe-core",
     ]) {
       await cp(
         dependency === "playwright"

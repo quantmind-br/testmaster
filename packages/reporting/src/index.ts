@@ -231,6 +231,27 @@ export function exportJson(snapshot: ReportSnapshot): string {
   const { runs, ...summary } = snapshot;
   return JSON.stringify({ ...summary, gate: reportGate(snapshot), runs }, null, 2);
 }
+/**
+ * One line per accessibility scan of the Run (ADR-032). Each says the scan is automated evidence
+ * that does not establish WCAG conformance and counts the criteria no rule judged, so no report
+ * reads a scan without findings as a conformance claim.
+ */
+function accessibilityScans(item: ReportRun): string[] {
+  return item.steps.flatMap((step) => {
+    const observed = step.observed;
+    if (
+      !observed ||
+      typeof observed !== "object" ||
+      Array.isArray(observed) ||
+      !Array.isArray(observed.limitations) ||
+      !observed.limitations.includes("automated_scan_only")
+    )
+      return [];
+    return [
+      `Accessibility ${step.planStepId}: ${String(observed.counted)} serious or critical violations; ${String(observed.notVerified)} WCAG 2.2 A/AA criteria not verified; automated scan only, it does not establish WCAG conformance`,
+    ];
+  });
+}
 export function exportMarkdown(snapshot: ReportSnapshot): string {
   validateSnapshot(snapshot);
   const lines = [
@@ -289,6 +310,7 @@ export function exportMarkdown(snapshot: ReportSnapshot): string {
           ]
         : []),
       ...missing(item).map((reason) => `- Evidence: ${markdown(reason)}`),
+      ...accessibilityScans(item).map((scan) => `- ${markdown(scan)}`),
       ...(item.analysis
         ? (() => {
             const summary = diagnosisSummary(item.analysis);
@@ -341,6 +363,7 @@ export function exportHtml(snapshot: ReportSnapshot): string {
           item,
         )
           .map((reason) => `<li>Evidence: ${xml(reason)}</li>`)
+          .concat(accessibilityScans(item).map((scan) => `<li>${xml(scan)}</li>`))
           .join(
             "",
           )}${item.privacy ? `<li>Known residues: ${xml(item.privacy.knownResidues.join(" "))}; ${xml(item.privacy.limitations.join(" "))}</li>` : ""}${item.externalEffects ? `<li>External effect uncertainty: ${item.externalEffects.uncertain}; possibly affected resources: ${xml(JSON.stringify(item.externalEffects.resources))}; ${xml(item.externalEffects.limitations.join(" "))}</li>` : ""}${item.reproduction ? `<li>Reproduction: ${xml(item.reproduction.degree)}; execution: ${xml(item.reproduction.executionDegree)} (${xml(item.reproduction.limitations.join(", "))})</li>` : ""}${item.freshness ? `<li>Context: ${xml(item.freshness.state)}${item.freshness.reasons.length ? ` (${xml(item.freshness.reasons.join(", "))})` : ""}</li>` : ""}</ul>${item.analysis ? diagnosisHtml(item.analysis) : ""}</section>`,

@@ -24,6 +24,7 @@ import {
   type Page,
   webkit,
 } from "playwright-core";
+import { assertAccessibility } from "./accessibility.js";
 import {
   denialDisposition,
   deniedOrigin,
@@ -49,7 +50,7 @@ import {
   stepTimeoutMs,
   storageStateRefusal,
 } from "./runtime.js";
-import { assertVisualMatch } from "./visual-assertion.js";
+import { assertVisualMatch, VISUAL_FIXED_TIME } from "./visual-assertion.js";
 
 type Scope = Page | Frame;
 type AssertionStep = Extract<PlanStep, { operation: "assert" }>;
@@ -456,11 +457,6 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       await http.perform(step);
       return;
     }
-    if (expectation.predicate === "accessibilityViolations")
-      throw new RuntimeError(
-        "unsupported_capability",
-        `${expectation.predicate} is not enabled in this milestone`,
-      );
     if (expectation.predicate === "downloadMatches") {
       if (!("outputName" in input) || input.outputName !== expectation.outputName)
         throw new RuntimeError(
@@ -540,6 +536,18 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
         element: locator,
         masks,
         threshold: expectation.threshold ?? 0,
+        timeoutMs: timeout,
+      });
+      return;
+    }
+    if (expectation.predicate === "accessibilityViolations") {
+      await unique(locator, timeout);
+      await assertAccessibility({
+        runtime,
+        stepId: step.id,
+        element: locator,
+        maximum: expectation.maximum,
+        tags: expectation.tags,
         timeoutMs: timeout,
       });
       return;
@@ -1641,6 +1649,9 @@ export async function runBrowser(runtime: Runtime): Promise<RunnerResult> {
       ...(storageState ? { storageState } : {}),
       ...(policy.video === true ? { recordVideo: { dir: tempDirectory } } : {}),
     });
+    // A plan that compares images reads one fixed time, so the current time a page renders never
+    // differs between the baseline and a later Run (ADR-032, VAL-041).
+    if (runtime.input.visualBaselines) await context.clock.setFixedTime(VISUAL_FIXED_TIME);
     await context.route("**/*", async (route) => {
       if (
         runtime.input.agent &&

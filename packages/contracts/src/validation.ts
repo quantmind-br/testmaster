@@ -13,7 +13,7 @@ import {
 } from "./plans.js";
 import type { JsonValue } from "./primitives.js";
 import type { RunnerEvent } from "./protocol.js";
-import { ContractError, requireCapability, type ValidationIssue } from "./registries.js";
+import { ContractError, type ValidationIssue } from "./registries.js";
 import { parseXmlPath } from "./xml-path.js";
 
 /** The predicates that read an XML response body through `xmlPath`. */
@@ -759,8 +759,6 @@ export function validatePlanSemantics(plan: ExecutablePlan): void {
     if (step.kind === "assertion" && plan.runner === "terminal") continue;
     if (step.kind === "assertion") {
       const predicate = step.expectation.predicate;
-      if (["visualMatches", "accessibilityViolations"].includes(predicate))
-        requireCapability(predicate);
       const input = step.input as Record<string, unknown>;
       if (step.expectation.predicate === "visualMatches")
         step.expectation.masks?.forEach((mask, index) => {
