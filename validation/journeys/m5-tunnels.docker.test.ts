@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
-import { createServer as createHttpServer, type Server } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { join } from "node:path";
 import type { Duplex } from "node:stream";
@@ -31,91 +30,20 @@ import {
 } from "./harness.js";
 import { type PartitionRelay, startPartitionRelay } from "./partition-relay.js";
 import { type ServerStack, type Spawned, startServerStack } from "./server-stack.js";
+import {
+  admitThroughTunnel,
+  type Laptop,
+  lineOf,
+  lines,
+  startLaptop,
+  startCliAgent as startTunnelAgent,
+} from "./tunnel-helpers.js";
 
 /** Text only the developer's loopback target serves: it must never cross the relay in clear. */
 const MARKER = "laptop-only-7f3c9e1a5b";
 const TENANT_MARKER = "tenant-two-2d8b6f04";
 /** A held step waits far longer than any check below; only the tunnel or the Run may end it. */
 const HELD_STEP_TIMEOUT_MS = 240_000;
-
-interface Held {
-  readonly path: string;
-  readonly openedAt: number;
-  closedAt: number | null;
-}
-
-interface Seen {
-  readonly host: string;
-  readonly path: string;
-}
-
-/**
- * The developer's loopback app. `/health` answers the marker; `/hold-*` holds every request open
- * and `/once-*` holds only its first, trickling a byte every 2 s so only the end of the stream
- * closes it; `/to-admin` redirects to the machine's admin API, which the tunnel must not reach.
- */
-async function startLaptop(marker: string, adminOrigin?: string) {
-  const held: Held[] = [];
-  const seen: Seen[] = [];
-  const hits = new Map<string, number>();
-  const server: Server = createHttpServer((incoming, outgoing) => {
-    const path = new URL(incoming.url ?? "/", "http://laptop").pathname;
-    const count = (hits.get(path) ?? 0) + 1;
-    hits.set(path, count);
-    seen.push({ host: incoming.headers.host ?? "", path });
-    incoming.resume();
-    if (path === "/to-admin" && adminOrigin) {
-      outgoing.writeHead(302, { location: `${adminOrigin}/` });
-      outgoing.end();
-      return;
-    }
-    if (path.startsWith("/hold-") || (path.startsWith("/once-") && count === 1)) {
-      const entry: Held = { path, openedAt: Date.now(), closedAt: null };
-      held.push(entry);
-      outgoing.writeHead(200, { "content-type": "application/json" });
-      outgoing.write("{");
-      // A real trickle against the real egress proxy's idle timer; fake timers cannot reach it.
-      const trickle = setInterval(() => outgoing.write(" "), 2_000);
-      // The agent closing the connection ends it: its FIN, or the reset a later trickle meets.
-      const closed = () => {
-        if (entry.closedAt !== null) return;
-        clearInterval(trickle);
-        entry.closedAt = Date.now();
-      };
-      outgoing.once("close", closed);
-      incoming.socket.once("end", closed);
-      return;
-    }
-    outgoing.writeHead(200, { "content-type": "application/json" });
-    outgoing.end(JSON.stringify({ status: "ok", marker }));
-  });
-  // Every TCP connection the app accepts: through the tunnel, each is one agent stream.
-  let connections = 0;
-  server.on("connection", () => connections++);
-  const listening = Promise.withResolvers<void>();
-  server.once("error", listening.reject);
-  server.listen(0, "127.0.0.1", listening.resolve);
-  await listening.promise;
-  const address = server.address();
-  if (!address || typeof address === "string") throw new Error("laptop has no port");
-  return {
-    port: address.port,
-    url: `http://127.0.0.1:${address.port}`,
-    held,
-    seen,
-    hits: (path: string) => hits.get(path) ?? 0,
-    connections: () => connections,
-    heldAt: (path: string) => held.filter((entry) => entry.path === path),
-    async close() {
-      server.closeAllConnections();
-      const closed = Promise.withResolvers<void>();
-      server.close(() => closed.resolve());
-      await closed.promise;
-    },
-  };
-}
-
-type Laptop = Awaited<ReturnType<typeof startLaptop>>;
 
 function markerPlan(marker: string): ExecutablePlan {
   return executable(
@@ -147,31 +75,6 @@ function heldPlan(path: string): ExecutablePlan {
     ),
   };
 }
-
-interface Line {
-  readonly event: string;
-  readonly tunnelId?: string;
-  readonly workerId?: string;
-  readonly attemptId?: string;
-  readonly reason?: string;
-}
-
-function lines(process: Spawned): Line[] {
-  return process
-    .stderr()
-    .split("\n")
-    .filter((line) => line.startsWith("{"))
-    .flatMap((line) => {
-      try {
-        return [JSON.parse(line) as Line];
-      } catch {
-        return [];
-      }
-    });
-}
-
-const lineOf = (process: Spawned, event: string) =>
-  lines(process).find((line) => line.event === event);
 
 interface Upgrade {
   readonly status: number;
@@ -251,20 +154,11 @@ describe("M5-02 tunnels", () => {
     tunnelId: string,
     environmentId = ids.environment[workspace],
   ) => {
-    const request = { testId, environmentId, tunnelId, mode: "replay", healingPolicy: "off" };
-    const required = await refusal(workspace, "POST", "/v1/runs", request);
-    expect(required.details.reasonCode).toBe("approval_required");
-    const binding = object(required.details.binding);
-    expect(binding.actionSet).toEqual([`tunnel:${tunnelId}`]);
-    await data(workspace, "POST", "/v1/approvals", {
-      revisionHash: binding.revisionHash,
-      environmentRevisionId: binding.environmentRevisionId,
-      originSet: binding.originSet,
-      actionSet: binding.actionSet,
-      policyHash: binding.policyHash,
-      reason: "Run against the developer's loopback app through the tunnel",
+    const runId = await admitThroughTunnel(live().stack, workspace, {
+      testId,
+      environmentId: environmentId as string,
+      tunnelId,
     });
-    const runId = text((await data(workspace, "POST", "/v1/runs", request)).runId);
     live().session.runIds.push(runId);
     return runId;
   };
@@ -304,35 +198,20 @@ describe("M5-02 tunnels", () => {
     object((await tunnel(workspace, tunnelId)).usage);
 
   /** `tunnel start` of the built CLI, in the foreground until it ends. */
-  const startCliAgent = async (
+  const startCliAgent = (
     workspace: number,
     target: string,
     extra: string[] = [],
     endpoint = live().stack.baseUrl,
-  ) => {
-    const agent = live().stack.spawn(
-      [
-        "--endpoint",
-        endpoint,
-        "tunnel",
-        "start",
-        "--project",
-        ids.project[workspace] as string,
-        "--target",
-        target,
-        ...extra,
-      ],
-      { TESTMASTER_API_KEY: tokens[workspace] as string, NODE_EXTRA_CA_CERTS: caFile },
-    );
-    await eventually(
-      async () => lines(agent),
-      (seen) => seen.some((line) => line.event === "tunnel.ready") || agent.child.exitCode !== null,
-      60_000,
-    );
-    if (agent.child.exitCode !== null)
-      throw new Error(`tunnel start exited: ${agent.stderr()} ${agent.stdout()}`);
-    return { agent, tunnelId: text(lineOf(agent, "tunnel.created")?.tunnelId) };
-  };
+  ) =>
+    startTunnelAgent(live().stack, {
+      projectId: ids.project[workspace] as string,
+      token: tokens[workspace] as string,
+      caFile,
+      target,
+      extra,
+      endpoint,
+    });
 
   const agentResult = async (agent: Spawned) => {
     await agent.exited;

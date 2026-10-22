@@ -1,0 +1,69 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "J12-tunnel",
+  "class": "deterministic-e2e",
+  "runner": "real-docker-remote-workers",
+  "externalDependency": "local-fake-github-and-loopback-target",
+  "observedAt": "2026-10-22T13:39:07.283Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "scenario": "approved-head-through-tunnel",
+      "tunnelId": "tun_01a163d6-2aa4-7329-8e28-418f007f5c09",
+      "runThroughTunnel": "run_01a163d6-2b85-7759-a50f-a5bf8f61c589",
+      "forkRun": "run_01a163d6-3010-70c8-8feb-7c8892a78e01",
+      "verdicts": [
+        {
+          "sha": "a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7",
+          "verdict": {
+            "TestMaster / required-gate": "failure",
+            "TestMaster / result": "action_required"
+          }
+        },
+        {
+          "sha": "b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8",
+          "verdict": {
+            "TestMaster / required-gate": "success",
+            "TestMaster / result": "success"
+          }
+        },
+        {
+          "sha": "c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9",
+          "verdict": {
+            "TestMaster / result": "action_required",
+            "TestMaster / required-gate": "failure"
+          }
+        },
+        {
+          "sha": "fcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfc",
+          "verdict": {
+            "TestMaster / result": "neutral",
+            "TestMaster / required-gate": "failure"
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "revoked-tunnel-in-flight",
+      "run": "run_01a163d6-3753-7353-8464-30cd7e7695cc",
+      "pull": "completed",
+      "gate": "failed",
+      "verdict": {
+        "TestMaster / required-gate": "failure",
+        "TestMaster / result": "cancelled"
+      }
+    }
+  ],
+  "limitations": [
+    "Local fake GitHub API and webhook sender; no real GitHub App is exercised.",
+    "The HTTP server and tunnel relay run in the test process (createServer) rather than a spawned `server start`: a spawned server's GitHub reconciler has no API base override and would publish to api.github.com.",
+    "Developer machine, relay, remote worker and Docker share one physical host."
+  ]
+}

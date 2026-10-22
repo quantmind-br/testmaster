@@ -144,7 +144,8 @@ export interface Spawned {
   readonly exited: Promise<number | null>;
 }
 
-function spawnCli(args: string[], env: NodeJS.ProcessEnv, cwd: string): Spawned {
+/** Spawns the built CLI with `--json`, capturing both streams. */
+export function spawnCli(args: string[], env: NodeJS.ProcessEnv, cwd: string): Spawned {
   const child = spawn(process.execPath, [cli, ...args, "--json"], {
     cwd,
     env,
