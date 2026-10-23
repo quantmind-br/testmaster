@@ -55,6 +55,8 @@ interface Controller {
   origin: string;
   /** Bytes this controller's listener has read from every connection so far. */
   bytesRead: () => number;
+  /** Connections of this controller's listener that are still open. */
+  openConnections: () => number;
 }
 
 /** Two controllers of one deployment: two Applications on one database, each listening on loopback. */
@@ -97,6 +99,7 @@ async function deployment(options: { connectionTimeoutMs?: number } = {}) {
       server,
       origin,
       bytesRead: () => sockets.reduce((total, socket) => total + socket.bytesRead, 0),
+      openConnections: () => sockets.filter((socket) => !socket.destroyed).length,
     });
   }
   cleanups.push(() => rm(root, { recursive: true, force: true }));
@@ -665,6 +668,11 @@ it("ADR-035 a forwarded body stops at the worker body limit before the rest reac
   }).catch(() => null);
   // Either the refusal arrives or the connection is cut once the limit is passed; never a success.
   if (response) expect(response.status).toBe(413);
+  // The body was abandoned half-read, so the connection must not wait for the rest as a keep-alive.
+  const deadline = Date.now() + 3000;
+  while (b.openConnections() > 0 && Date.now() < deadline)
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  expect(b.openConnections()).toBe(0);
   expect(a.bytesRead() - before).toBeLessThan(
     (REMOTE_WORKER_BODY_LIMIT_BYTES / chunk.length + 4) * chunk.length,
   );

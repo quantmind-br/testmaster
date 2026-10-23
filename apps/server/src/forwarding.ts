@@ -145,6 +145,9 @@ export class Forwarder {
         reply.raw.destroy();
         return;
       }
+      // The relayed body was abandoned part-way: the connection cannot carry another request, and
+      // an idle-keep-alive wait on it would hold the server's close for the whole timeout.
+      if (!request.raw.complete) reply.header("connection", "close");
       reject(
         error instanceof ContractError
           ? error

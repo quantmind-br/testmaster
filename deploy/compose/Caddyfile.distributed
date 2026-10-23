@@ -1,6 +1,7 @@
 # Public entry of the distributed profile (ADR-035). TLS terminates here; both controllers are
-# upstreams. Requests are spread round robin; a controller that fails its health probe leaves the
-# rotation until it passes again. A worker's call for an Attempt that another controller holds is
+# upstreams. Requests are spread round robin; a controller that fails two health probes in a row
+# leaves the rotation until it passes again, so one slow probe of a busy controller does not empty
+# it. A worker's call for an Attempt that another controller holds is
 # relayed by the controller that received it (the Forwarder), so no session affinity is needed.
 # `reverse_proxy` relays an Upgrade (the tunnel stream of `testmaster-tunnel/1`) byte for byte, and
 # `flush_interval -1` streams server-sent events without buffering.
@@ -34,6 +35,12 @@
 		header_up X-Forwarded-For {remote_host}
 		health_uri /v1/health/live
 		health_interval 5s
+		health_fails 2
+		# Idle upstream connections close well before the controllers' 65 s keepAliveTimeout, so a
+		# request is never written to a socket a stalled controller is closing (a spurious 502).
+		transport http {
+			keepalive 30s
+		}
 	}
 	header {
 		Strict-Transport-Security "max-age=31536000"

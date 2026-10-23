@@ -137,7 +137,10 @@ export function createServer(options: ServerOptions): FastifyInstance {
     bodyLimit: 10 * 1024 * 1024,
     requestTimeout: 30000,
     connectionTimeout: options.connectionTimeoutMs ?? 30000,
-    keepAliveTimeout: 5000,
+    // A proxy reuses idle upstream sockets for up to its own idle time (Caddy: 30 s in the
+    // distributed profile). The server must keep them longer, or a request written to a socket
+    // that a busy controller closes when its timer fires late is reset and answered 502.
+    keepAliveTimeout: 65000,
   });
   const identities = new WeakMap<FastifyRequest, AuthenticatedIdentity>();
   const credentials = new WeakMap<FastifyRequest, PresentedCredential>();

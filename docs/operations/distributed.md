@@ -149,3 +149,8 @@ after the evidence bucket was emptied and the database dropped; timings are in
 - `backup list` reads one catalog object per backup; its time was not measured.
 - Caddy retries only a connection that failed to open. A request that failed after reaching a
   controller is the client's to repeat.
+- The reference `Caddyfile.distributed` drops a controller from the rotation after two failed health
+  probes in a row (`health_fails 2`, one probe every 5 s) and closes idle upstream connections after
+  30 s (`transport http { keepalive 30s }`), well inside the controllers' 65 s `keepAliveTimeout`. A
+  shorter controller timeout, or no proxy keep-alive limit, lets a stalled controller reset a socket
+  the proxy is about to reuse, which surfaces as a bare 502 with no API envelope.
