@@ -2843,7 +2843,40 @@ async function containerImages(stack: DistributedBenchStack) {
   return out;
 }
 
-function nfrVerdicts(soak: SoakResult | null) {
+/** Where a run stopped: the phase that threw and why, kept in the result instead of the run. */
+export interface PhaseFailure {
+  readonly phase: string;
+  readonly error: string;
+}
+
+/** Keeps the thrown message and stack, which is what tells a lapsed session from a server fault afterwards. */
+export function describeFailure(phase: string, error: unknown): PhaseFailure {
+  return {
+    phase,
+    error: error instanceof Error ? (error.stack ?? error.message) : String(error),
+  };
+}
+
+/**
+ * Status and reason of a phase that produced no result. The phase that threw is `failed`; every
+ * later phase is `not run` and names the failure, so a partial file never reads as a clean skip.
+ */
+export function absentPhase(
+  failure: PhaseFailure | null,
+  phase: string,
+  fallback: string,
+): { status: "failed" | "not run"; reason: string } {
+  if (!failure) return { status: "not run", reason: fallback };
+  const firstLine = failure.error.split("\n")[0] ?? failure.error;
+  return failure.phase === phase
+    ? { status: "failed", reason: `The ${phase} phase failed: ${firstLine}` }
+    : {
+        status: "not run",
+        reason: `Not run: the ${failure.phase} phase failed first: ${firstLine}`,
+      };
+}
+
+function nfrVerdicts(soak: SoakResult | null, soakMissing: string) {
   const none = (id: string, item: string, target: string, reason: string) => ({
     id,
     item,
@@ -2853,7 +2886,7 @@ function nfrVerdicts(soak: SoakResult | null) {
     reason,
   });
   if (!soak) {
-    const reason = "The soak phase did not run; these targets are measured from the soak window.";
+    const reason = `${soakMissing} These targets are measured from the soak window.`;
     return [
       none("NFR-006/admission-latency", "Admission latency", "p95 < 2 s", reason),
       none("NFR-006/queue-start-lag", "Queue start lag", "p95 < 60 s with slots available", reason),
@@ -2931,84 +2964,109 @@ export async function runCapacity(options: CapacityOptions): Promise<Record<stri
   const stack = await startDistributedBenchStack({ root, workDirectory: options.workDirectory });
   const workers: RemoteWorker[] = [];
   let keepStack = false;
-  try {
-    for (let index = 1; index <= options.workers; index++)
-      workers.push(await stack.startWorker(`cap-w${index}`, options.slots));
-    const target = await createTarget(stack, fixture.url, "Capacity");
-    const context: Context = {
-      stack,
-      fixture,
-      evidenceLayoutVerified: false,
-      options,
-      target,
-      workers,
-      runners: [],
-      scheduleId: null,
-      slowFixture: null,
-    };
-
-    // Warm-up and calibration: one Run must pass and leave its manifest where the audit looks for it.
-    const [warmPrincipal] = await principalsFor(context, 1);
-    if (!warmPrincipal) throw new Error("No warm-up principal");
-    const warm = new RunDriver(stack, [warmPrincipal], target);
-    await warm.run(1, () => false, 2);
-    const warmRuns = warm.records.filter((record) => record.outcome === "passed");
-    const referenceRunId = warmRuns[0]?.runId;
-    if (!referenceRunId)
-      throw new Error(
-        `Warm-up Runs did not pass (outcomes: ${warm.records.map((record) => record.outcome).join(", ")}); worker log: ${workers[0]?.process.stderr().slice(-2000)}`,
-      );
-    const warmRows = await fetchAudit(context, Date.now() - 600_000, Date.now() + 1000);
-    context.evidenceLayoutVerified =
-      (
-        await auditEvidence(
-          stack.evidence,
-          stack.workspaceId,
-          warmRows.filter((row) => row.runId === referenceRunId),
-        )
-      ).missing.length === 0;
-
-    // A schedule that fires every minute through the soak and the chaos cases, so a duplicate or a
-    // lost firing under a fault shows up in `schedule_firings`.
-    if (options.phases.includes("soak") || options.phases.includes("chaos")) {
-      const scheduled = await createTarget(stack, fixture.url, "Capacity schedule");
-      const session = stack.principals.ownerSession;
-      const suite = jsonAt(
-        jsonBody(
-          await session("POST", "/v1/suites", {
-            name: `capacity-suite-${randomUUID().slice(0, 8)}`,
-            selection: {
-              kind: "dynamic",
-              projects: [
-                { projectId: scheduled.projectId, environmentId: scheduled.environmentId },
-              ],
-            },
-          }),
-          "suite",
-        ),
-        "data",
-        "id",
-      );
-      const schedule = jsonAt(
-        jsonBody(
-          await session("POST", "/v1/schedules", {
-            name: `capacity-every-minute-${randomUUID().slice(0, 8)}`,
-            selection: { kind: "suite", suiteId: suite },
-            trigger: {
-              kind: "interval",
-              everySeconds: 60,
-              anchor: new Date(Date.now() + 5000).toISOString(),
-            },
-          }),
-          "schedule",
-        ),
-        "data",
-        "id",
-      );
-      context.scheduleId = typeof schedule === "string" ? schedule : null;
+  // The first failure stops the run but not the report: a run of an hour is never lost to one phase.
+  const state: { failure: PhaseFailure | null } = { failure: null };
+  const ready: {
+    context: Context | null;
+    referenceRunId: string;
+    hardware: Record<string, unknown> | null;
+  } = { context: null, referenceRunId: "", hardware: null };
+  const guarded = async <T>(phase: string, run: () => Promise<T>): Promise<T | null> => {
+    if (state.failure) return null;
+    try {
+      return await run();
+    } catch (error) {
+      state.failure = describeFailure(phase, error);
+      console.error(`[capacity] ${phase} failed: ${state.failure.error}`);
+      return null;
     }
+  };
+  const need = (): Context => {
+    if (!ready.context) throw new Error("setup did not complete");
+    return ready.context;
+  };
+  try {
+    await guarded("setup", async () => {
+      for (let index = 1; index <= options.workers; index++)
+        workers.push(await stack.startWorker(`cap-w${index}`, options.slots));
+      const target = await createTarget(stack, fixture.url, "Capacity");
+      const context: Context = {
+        stack,
+        fixture,
+        evidenceLayoutVerified: false,
+        options,
+        target,
+        workers,
+        runners: [],
+        scheduleId: null,
+        slowFixture: null,
+      };
 
-    const hardware = {
+      // Warm-up and calibration: one Run must pass and leave its manifest where the audit looks for it.
+      const [warmPrincipal] = await principalsFor(context, 1);
+      if (!warmPrincipal) throw new Error("No warm-up principal");
+      const warm = new RunDriver(stack, [warmPrincipal], target);
+      await warm.run(1, () => false, 2);
+      const warmRuns = warm.records.filter((record) => record.outcome === "passed");
+      const referenceRunId = warmRuns[0]?.runId;
+      if (!referenceRunId)
+        throw new Error(
+          `Warm-up Runs did not pass (outcomes: ${warm.records.map((record) => record.outcome).join(", ")}); worker log: ${workers[0]?.process.stderr().slice(-2000)}`,
+        );
+      const warmRows = await fetchAudit(context, Date.now() - 600_000, Date.now() + 1000);
+      context.evidenceLayoutVerified =
+        (
+          await auditEvidence(
+            stack.evidence,
+            stack.workspaceId,
+            warmRows.filter((row) => row.runId === referenceRunId),
+          )
+        ).missing.length === 0;
+
+      // A schedule that fires every minute through the soak and the chaos cases, so a duplicate or a
+      // lost firing under a fault shows up in `schedule_firings`.
+      if (options.phases.includes("soak") || options.phases.includes("chaos")) {
+        const scheduled = await createTarget(stack, fixture.url, "Capacity schedule");
+        const session = stack.principals.ownerSession;
+        const suite = jsonAt(
+          jsonBody(
+            await session("POST", "/v1/suites", {
+              name: `capacity-suite-${randomUUID().slice(0, 8)}`,
+              selection: {
+                kind: "dynamic",
+                projects: [
+                  { projectId: scheduled.projectId, environmentId: scheduled.environmentId },
+                ],
+              },
+            }),
+            "suite",
+          ),
+          "data",
+          "id",
+        );
+        const schedule = jsonAt(
+          jsonBody(
+            await session("POST", "/v1/schedules", {
+              name: `capacity-every-minute-${randomUUID().slice(0, 8)}`,
+              selection: { kind: "suite", suiteId: suite },
+              trigger: {
+                kind: "interval",
+                everySeconds: 60,
+                anchor: new Date(Date.now() + 5000).toISOString(),
+              },
+            }),
+            "schedule",
+          ),
+          "data",
+          "id",
+        );
+        context.scheduleId = typeof schedule === "string" ? schedule : null;
+      }
+      ready.referenceRunId = referenceRunId;
+      ready.context = context;
+    });
+
+    ready.hardware = await guarded("hardware", async () => ({
       ...(await hardwareFacts(options.workDirectory, commit)),
       disk: await diskFacts(options.workDirectory),
       images: {
@@ -3016,47 +3074,60 @@ export async function runCapacity(options: CapacityOptions): Promise<Record<stri
         referenced: await imageFacts(["testmaster-runner:local", "testmaster-server:local"]),
       },
       loadAverageAtStart: loadStart.map((value) => rounded(value)),
-    };
+    }));
 
     const phases: Record<string, unknown> = {};
     const skipped = (name: PhaseName) => ({
       status: "not run",
       reason: `--phases did not include ${name}`,
     });
+    const absent = (key: string) => absentPhase(state.failure, key, "The phase did not run.");
+    const throughput = options.phases.includes("throughput")
+      ? await guarded("throughput", () => phaseThroughput(need(), ready.referenceRunId))
+      : null;
     phases.throughput = options.phases.includes("throughput")
-      ? await phaseThroughput(context, referenceRunId)
+      ? (throughput ?? absent("throughput"))
       : skipped("throughput");
     let soak: SoakResult | null = null;
     if (options.phases.includes("soak")) {
-      soak = await phaseSoak(context);
-      phases.soak = soak;
+      soak = await guarded("soak", () => phaseSoak(need()));
+      phases.soak = soak ?? absent("soak");
     } else phases.soak = skipped("soak");
     const chaos: ChaosResult[] = [];
     if (options.phases.includes("chaos")) {
-      if (options.chaosCases.includes("controller_kill"))
-        chaos.push(await chaosKillController(context));
-      if (options.chaosCases.includes("minio_restart"))
-        chaos.push(await chaosRestartMinio(context));
-      if (options.chaosCases.includes("worker_partition"))
-        chaos.push(await chaosPartitionWorker(context));
-      phases.chaos = { cases: chaos };
+      const cases: [string, (context: Context) => Promise<ChaosResult>][] = [
+        ["controller_kill", chaosKillController],
+        ["minio_restart", chaosRestartMinio],
+        ["worker_partition", chaosPartitionWorker],
+      ];
+      for (const [name, run] of cases) {
+        if (!options.chaosCases.includes(name as (typeof chaosCaseNames)[number])) continue;
+        const found = await guarded(`chaos/${name}`, () => run(need()));
+        if (found) chaos.push(found);
+      }
+      phases.chaos = {
+        cases: chaos,
+        ...(state.failure?.phase.startsWith("chaos/") ? { failed: state.failure } : {}),
+      };
     } else phases.chaos = skipped("chaos");
     // Backpressure goes last: it leaves the queue full and the workers stopped.
     let backpressure: BackpressureResult | null = null;
     if (options.phases.includes("backpressure")) {
-      backpressure = await phaseBackpressure(context);
-      phases.backpressure = backpressure;
+      backpressure = await guarded("backpressure", () => phaseBackpressure(need()));
+      phases.backpressure = backpressure ?? absent("backpressure");
     } else phases.backpressure = skipped("backpressure");
+    const failure = state.failure;
 
     const verdicts = [
-      ...nfrVerdicts(soak),
+      ...nfrVerdicts(soak, absentPhase(failure, "soak", "The soak phase did not run.").reason),
       {
         id: "M5-08/soak",
         item: `Soak of ${options.soakMinutes} min at ${options.soakConcurrency} Runs in flight`,
         target: "no error, no invented result, no restart; drift reported",
         measured: soak ? { runs: soak.runs.completed, windowSeconds: soak.window.seconds } : null,
         verdict: soak?.verdict ?? ("not measured" as Verdict),
-        reason: soak?.verdictReason ?? "The soak phase did not run.",
+        reason:
+          soak?.verdictReason ?? absentPhase(failure, "soak", "The soak phase did not run.").reason,
       },
       ...chaosCaseNames.map((name) => {
         const found = chaos.find((entry) => entry.case === name);
@@ -3069,9 +3140,13 @@ export async function runCapacity(options: CapacityOptions): Promise<Record<stri
           verdict: found?.verdict ?? ("not measured" as Verdict),
           reason:
             found?.verdictReason ??
-            (options.phases.includes("chaos")
-              ? "--chaos-cases did not include this case."
-              : "The chaos phase did not run."),
+            absentPhase(
+              failure,
+              `chaos/${name}`,
+              options.phases.includes("chaos")
+                ? "--chaos-cases did not include this case."
+                : "The chaos phase did not run.",
+            ).reason,
         };
       }),
       {
@@ -3081,13 +3156,17 @@ export async function runCapacity(options: CapacityOptions): Promise<Record<stri
           "refusals with Retry-After at the queue bound, 0 crashes (specs/08-operations.md OPS-033/034)",
         measured: backpressure?.queueBound ?? null,
         verdict: backpressure?.verdict ?? ("not measured" as Verdict),
-        reason: backpressure?.verdictReason ?? "The backpressure phase did not run.",
+        reason:
+          backpressure?.verdictReason ??
+          absentPhase(failure, "backpressure", "The backpressure phase did not run.").reason,
       },
     ];
 
     // A failing verdict leaves the project up when asked, so the logs, the database and the bucket
     // can be read before anything is removed.
-    keepStack = options.keepStackOnFailure && verdicts.some((entry) => entry.verdict === "not met");
+    keepStack =
+      options.keepStackOnFailure &&
+      (failure !== null || verdicts.some((entry) => entry.verdict === "not met"));
     const finishedAt = new Date();
     return {
       schemaVersion: "1.0.0",
@@ -3095,8 +3174,10 @@ export async function runCapacity(options: CapacityOptions): Promise<Record<stri
       startedAt: startedAt.toISOString(),
       finishedAt: finishedAt.toISOString(),
       durationSeconds: rounded((finishedAt.getTime() - startedAt.getTime()) / 1000),
+      complete: failure === null,
+      failure,
       options: { ...options, out: undefined, workDirectory: undefined },
-      hardware,
+      hardware: ready.hardware,
       stack: {
         profile: "distributed",
         compose: "deploy/compose/compose.distributed.yaml",
@@ -3191,6 +3272,7 @@ if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.m
       await mkdir(dirname(parsed.out), { recursive: true });
       await writeFile(parsed.out, `${JSON.stringify(result, null, 2)}\n`);
       console.error(`[capacity] wrote ${parsed.out}`);
+      if (result.failure) process.exitCode = 1;
     }
   } catch (error) {
     console.error(error instanceof Error ? (error.stack ?? error.message) : String(error));

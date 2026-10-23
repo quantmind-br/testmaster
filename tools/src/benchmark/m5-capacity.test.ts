@@ -4,12 +4,14 @@ import type { EvidenceReader } from "./distributed-stack.js";
 import {
   type AdmissionSample,
   type AuditRow,
+  absentPhase,
   aggregateTimings,
   auditEvidence,
   auditRuns,
   classifyAdmission,
   cpuCoresSeries,
   decomposeRuns,
+  describeFailure,
   duplicateFirings,
   errorLogLines,
   executionBound,
@@ -37,6 +39,7 @@ import {
   verifyEvidenceBundle,
   wallTimes,
 } from "./m5-capacity.js";
+import { isSessionExpired } from "./server-load-stack.js";
 
 const ramp = (count: number) => Array.from({ length: count }, (_, index) => index + 1);
 
@@ -802,5 +805,48 @@ describe("evidence audited through the object store", () => {
     expect(outside.detail).toContain("outside it: run_3");
     expect(judgeGateFailedPasses(rows.slice(0, 2), null).ok).toBe(false);
     expect(judgeGateFailedPasses(rows.slice(0, 1), null).ok).toBe(true);
+  });
+});
+
+describe("a run that stops part-way", () => {
+  const failure = describeFailure("backpressure", new Error("member creation failed: 401"));
+
+  it("keeps the thrown message and names the failing phase apart from the ones it cut off", () => {
+    expect(failure.error).toContain("member creation failed: 401");
+    expect(absentPhase(failure, "backpressure", "unused")).toEqual({
+      status: "failed",
+      reason: "The backpressure phase failed: Error: member creation failed: 401",
+    });
+    const later = absentPhase(failure, "chaos/minio_restart", "unused");
+    expect(later.status).toBe("not run");
+    expect(later.reason).toContain("the backpressure phase failed first");
+    expect(later.reason).toContain("member creation failed: 401");
+  });
+
+  it("falls back to the plain reason when nothing failed", () => {
+    expect(absentPhase(null, "soak", "The soak phase did not run.")).toEqual({
+      status: "not run",
+      reason: "The soak phase did not run.",
+    });
+    expect(describeFailure("setup", "plain text").error).toBe("plain text");
+  });
+});
+
+describe("session expiry", () => {
+  const envelope = (code: string, message: string) =>
+    JSON.stringify({ error: { code, message, retryable: false } });
+
+  it("recognises only the lapsed-session answer", () => {
+    const lapsed = envelope("UNAUTHENTICATED", "Session is invalid or expired");
+    expect(isSessionExpired(401, Buffer.from(lapsed))).toBe(true);
+    expect(isSessionExpired(401, lapsed)).toBe(true);
+    // Other refusals must reach the caller instead of being retried on a new login.
+    expect(isSessionExpired(401, envelope("UNAUTHENTICATED", "Invalid credentials"))).toBe(false);
+    expect(isSessionExpired(403, lapsed)).toBe(false);
+    expect(isSessionExpired(401, envelope("FORBIDDEN", "Session is invalid or expired"))).toBe(
+      false,
+    );
+    expect(isSessionExpired(401, "<html>proxy</html>")).toBe(false);
+    expect(isSessionExpired(401, "")).toBe(false);
   });
 });

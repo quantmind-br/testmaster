@@ -270,6 +270,24 @@ export interface Principals {
 }
 
 /**
+ * Whether an answer says the owner's browser session lapsed. The server ends a session after 30
+ * minutes without a request or 12 hours after login (`sessionPolicy` in packages/application/src/
+ * identity.ts), and the benchmark's owner session is idle whenever the load runs on bearer tokens,
+ * so a long run outlives it. Any other 401 (a revoked token, a bad credential) is not expiry and
+ * must reach the caller unchanged.
+ */
+export function isSessionExpired(status: number, body: Buffer | string): boolean {
+  if (status !== 401) return false;
+  try {
+    const error = (JSON.parse(body.toString()) as { error?: { code?: unknown; message?: unknown } })
+      .error;
+    return error?.code === "UNAUTHENTICATED" && error.message === "Session is invalid or expired";
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Adopts the owner from the bootstrap recovery token, issues the owner's bearer token and returns
  * the means to create runner principals. Setup calls share the server's per-address authentication
  * budget, so they wait for it to refill instead of failing.
@@ -318,21 +336,38 @@ export async function bootstrapPrincipals(
     });
     if (recovered.status !== 200)
       throw new Error(`recovery for ${login} failed: ${recovered.status} ${recovered.body}`);
-    return signIn(login, password);
+    return { ...(await signIn(login, password)), password };
   };
 
-  const ownerSession = await adopt(ownerLogin, recoveryToken);
-  const sessionCall = async (method: string, path: string, body?: unknown) =>
-    setupCall(method, path, {
-      body,
-      token: null,
-      idempotent: true,
-      headers: {
-        ...baseHeaders,
-        cookie: ownerSession.cookie,
-        "x-csrf-token": ownerSession.csrfToken,
-      },
-    });
+  let ownerSession = await adopt(ownerLogin, recoveryToken);
+  const ownerPassword = ownerSession.password;
+  let relogin: Promise<void> | null = null;
+  const sessionCall = async (method: string, path: string, body?: unknown) => {
+    const send = () =>
+      setupCall(method, path, {
+        body,
+        token: null,
+        idempotent: true,
+        headers: {
+          ...baseHeaders,
+          cookie: ownerSession.cookie,
+          "x-csrf-token": ownerSession.csrfToken,
+        },
+      });
+    const response = await send();
+    if (!isSessionExpired(response.status, response.body)) return response;
+    // A call refused as unauthenticated changed nothing, so it is safe to repeat once on a fresh
+    // session. Concurrent callers share one login.
+    relogin ??= signIn(ownerLogin, ownerPassword)
+      .then((fresh) => {
+        ownerSession = { ...ownerSession, ...fresh };
+      })
+      .finally(() => {
+        relogin = null;
+      });
+    await relogin;
+    return send();
+  };
   const issueToken = async (principalId: string, scopes: string[]): Promise<string> => {
     const issued = await sessionCall("POST", "/v1/tokens", {
       name: `bench-${randomBytes(3).toString("hex")}`,
