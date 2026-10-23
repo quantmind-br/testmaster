@@ -41,9 +41,9 @@ const SourceOverview = Obj({
   }),
   /** Where the bytes came from and whether that origin still matches the active revision. */
   origin: Obj({
-    kind: Enum(["local-file", "upload"]),
+    kind: Enum(["local-file", "upload", "tracker"]),
     path: nullable(Type.String({ maxLength: 1024 })),
-    state: Enum(["unchanged", "changed", "missing", "upload"]),
+    state: Enum(["unchanged", "changed", "missing", "upload", "remote"]),
   }),
   dependents: Obj({
     /** Active tests that may rest on something the newest revision changed or removed. */

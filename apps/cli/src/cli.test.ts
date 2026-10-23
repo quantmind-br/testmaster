@@ -194,11 +194,11 @@ describe("CLI machine output and offline authoring", () => {
     expect(Object.keys(workflow.jobs)).toEqual(["execute", "publish"]);
   });
   it("does not turn future capabilities into success even in dry-run", async () => {
-    const result = await invoke(["--json", "memory", "create", "--dry-run"]);
+    const result = await invoke(["--json", "export", "--dry-run"]);
     expect(result.exit).toBe(8);
     expect(result.document.error).toMatchObject({
       code: "CAPABILITY_UNAVAILABLE",
-      details: { capability: "memory", milestone: "M5" },
+      details: { capability: "portability", milestone: "M6" },
     });
   });
   it("rejects inline secret argv without echoing the secret", async () => {

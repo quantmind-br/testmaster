@@ -132,7 +132,12 @@ const migrationLockKey = 7_340_042;
  * They run with foreign keys off, as SQLite requires for that recipe, and the migration is rolled
  * back if the copy leaves a dangling reference.
  */
-const tableRebuildMigrations = ["authored_code_artifacts", "terminal_runner", "probe_runner"];
+const tableRebuildMigrations = [
+  "authored_code_artifacts",
+  "terminal_runner",
+  "probe_runner",
+  "trackers",
+];
 const migrationTimeoutMs = 600_000;
 const bypassRefusal = "Database role bypasses row-level security";
 

@@ -4,7 +4,15 @@ import * as P from "../primitives.js";
 
 /** Largest inbound webhook body the receiver reads (ADR-020: 5 MiB, refused before any signature work). */
 export const INBOUND_WEBHOOK_MAX_BYTES = 5 * 1024 * 1024;
-export const integrationProviderIds = ["github", "slack", "email", "webhook"] as const;
+/** Providers that deliver notifications (ADR-021). */
+export const notificationProviderIds = ["slack", "email", "webhook"] as const;
+/** Issue trackers a ticket is imported from and an issue is linked to or created in (ADR-034). */
+export const trackerProviderIds = ["jira", "linear"] as const;
+export const integrationProviderIds = [
+  "github",
+  ...notificationProviderIds,
+  ...trackerProviderIds,
+] as const;
 export type IntegrationProviderIdValue = (typeof integrationProviderIds)[number];
 export const integrationStates = ["active", "paused", "revoked"] as const;
 

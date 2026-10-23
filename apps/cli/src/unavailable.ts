@@ -2,20 +2,6 @@ import type { Command } from "commander";
 import { type Runtime, unavailable } from "./runtime.js";
 
 export function unavailableCommands(program: Command, runtime: Runtime): void {
-  const groups: ReadonlyArray<{ name: string; capability: string; commands: readonly string[] }> = [
-    {
-      name: "memory",
-      capability: "memory",
-      commands: ["create", "list", "get", "update", "remove"],
-    },
-  ];
-  for (const entry of groups) {
-    const group = program.command(entry.name);
-    const deny = (): never => unavailable(entry.capability);
-    runtime.bind(group.allowUnknownOption().allowExcessArguments(), deny, deny);
-    for (const name of entry.commands)
-      runtime.bind(group.command(name).allowUnknownOption().allowExcessArguments(), deny, deny);
-  }
   for (const [name, capability] of [
     ["export", "portability"],
     ["import", "portability"],

@@ -43,6 +43,7 @@ export * from "./incidents.js";
 export * from "./integrations/index.js";
 export * from "./jobs.js";
 export * from "./local-auth.js";
+export * from "./memory.js";
 export * from "./notifications/index.js";
 export * from "./observability.js";
 export * from "./onboarding.js";

@@ -5,7 +5,11 @@ import { Client } from "pg";
 import { expect, it } from "vitest";
 import { constraintErrorClass, constraintFixtures, constraintSeed } from "./constraint-fixtures.js";
 import { projectionRules } from "./contract-projections.js";
-import { fixtureInsert, relationalFixtures } from "./contract-relational-fixtures.js";
+import {
+  fixtureInsert,
+  relationalFixtures,
+  relationalParents,
+} from "./contract-relational-fixtures.js";
 import { loadMigrations, PersistenceDatabase } from "./database.js";
 
 export const POSTGRES_CONFORMANCE_IMAGE =
@@ -96,7 +100,7 @@ it("PostgreSQL and SQLite enforce identical constraint fixtures", async () => {
     await client.query("BEGIN");
     sqlite.exec("BEGIN");
     try {
-      for (const fixture of generated) {
+      for (const fixture of [...generated, ...relationalParents(generated)]) {
         const statement = fixtureInsert(fixture);
         sqlite.run(statement.sql, ...statement.values);
         let index = 0;

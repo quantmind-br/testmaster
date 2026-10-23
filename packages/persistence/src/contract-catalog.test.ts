@@ -19,7 +19,11 @@ import {
   generatedConstraintMigrations,
   projectionRules,
 } from "./contract-projections.js";
-import { fixtureInsert, relationalFixtures } from "./contract-relational-fixtures.js";
+import {
+  fixtureInsert,
+  relationalFixtures,
+  relationalParents,
+} from "./contract-relational-fixtures.js";
 import { PersistenceDatabase } from "./database.js";
 import { OutboxRepository } from "./repositories.js";
 
@@ -132,6 +136,10 @@ it("every public entity has catalog-generated DTO/null/default/enum/limit/event 
         const row = { ...fixture.row };
         for (const column of defaultColumns) delete row[column.name];
         const statement = fixtureInsert({ ...fixture, row });
+        db.run(statement.sql, ...statement.values);
+      }
+      for (const parent of relationalParents(relational)) {
+        const statement = fixtureInsert(parent);
         db.run(statement.sql, ...statement.values);
       }
       const violations = db.all("PRAGMA foreign_key_check");

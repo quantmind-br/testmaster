@@ -1543,7 +1543,7 @@ Claim limits (what M4 does not show):
   denial is proven by `validation/journeys/j12-github.pg.test.ts` only. `github.suiteId` list admission is not implemented: pull-request runs use the
   repository selection. GitHub Enterprise Server and vendor preview APIs are not validated.
 - Dynamic authentication evidence uses the local `fixtures/reference-auth` provider; no hosted identity provider was tested. Notification delivery makes
-  no exactly-once claim, and there is no Jira/Linear tracker (M5).
+  no exactly-once claim, and the Jira/Linear trackers ([ADR-034](adr/034-trackers-memory.md)) were exercised against local fakes only.
 - Operations: one disaster-recovery rehearsal (RPO 2.6 s, RTO 8.9 s on the reference host) and one capacity benchmark on Linux x64
   (`validation/results/m4-dr-rehearsal.json`, `m4-capacity-benchmark.json`); proposed objectives are not measured service levels. Volume encryption is an
   operator attestation. No SCIM revocation source (OPS-019: M6).

@@ -401,9 +401,9 @@ it("M4-05 lists environment revisions over HTTP newest first and answers every p
     expect(table.has(key)).toBe(false);
   }
   // Negative control: a catalog row no module implements still answers CAPABILITY_UNAVAILABLE.
-  expect(table.has("GET /projects/{id}/memory")).toBe(false);
-  const memory = await f.call("GET", `/projects/${f.init.projectId}/memory`, owner.token);
-  expect(memory.json().error.code).toBe("CAPABILITY_UNAVAILABLE");
+  expect(table.has("POST /exports")).toBe(false);
+  const exported = await f.call("POST", "/exports", owner.token);
+  expect(exported.json().error.code).toBe("CAPABILITY_UNAVAILABLE");
 });
 
 /** One completed Run of a fresh Test with a live artifact row and file, written without a worker. */

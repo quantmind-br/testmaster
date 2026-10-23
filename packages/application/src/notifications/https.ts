@@ -24,7 +24,14 @@ export interface EgressOptions {
 }
 
 export type PostResult =
-  | { kind: "response"; status: number; headers: IncomingHttpHeaders; body: string }
+  | {
+      kind: "response";
+      status: number;
+      headers: IncomingHttpHeaders;
+      body: string;
+      /** True when the answer held more bytes than `maxResponseBytes`; `body` is then cut. */
+      truncated: boolean;
+    }
   | { kind: "denied"; reason: string }
   /** `sent` is true when the request bytes were flushed before the failure: delivery is uncertain. */
   | { kind: "error"; code: string; sent: boolean }
@@ -47,14 +54,15 @@ export function httpsOrigin(url: string): string | null {
 }
 
 /**
- * POST over TLS with a freshly evaluated egress decision: the hostname is resolved, every address
- * is classified, the connection is pinned to the authorized address and redirects are never
- * followed. A retry calls this again, so a policy change takes effect on the next attempt.
+ * One HTTPS request with a freshly evaluated egress decision: the hostname is resolved, every
+ * address is classified, the connection is pinned to the authorized address and redirects are
+ * never followed. A retry calls this again, so a policy change takes effect on the next attempt.
  */
-export async function postHttps(
+export async function requestHttps(
+  method: "GET" | "POST",
   url: string,
   headers: Readonly<Record<string, string>>,
-  body: Buffer,
+  body: Buffer | null,
   options: EgressOptions = {},
 ): Promise<PostResult> {
   const origin = httpsOrigin(url);
@@ -99,12 +107,12 @@ export async function postHttps(
     };
     const request = https.request(
       {
-        method: "POST",
+        method,
         hostname: target.hostname,
         port: target.port,
         path: target.path,
         servername: isIP(target.hostname) === 0 ? target.hostname : undefined,
-        headers: { ...headers, "content-length": String(body.length) },
+        headers: { ...headers, ...(body ? { "content-length": String(body.length) } : {}) },
         agent: false,
         ...(options.ca ? { ca: options.ca } : {}),
         lookup: (_hostname, lookupOptions, callback) => {
@@ -125,6 +133,7 @@ export async function postHttps(
             status: response.statusCode ?? 0,
             headers: response.headers,
             body: Buffer.concat(chunks).subarray(0, maxResponseBytes).toString("utf8"),
+            truncated: size > maxResponseBytes,
           }),
         );
         response.on("error", () => finish({ kind: "error", code: "response_aborted", sent: true }));
@@ -140,6 +149,16 @@ export async function postHttps(
     request.on("error", (error: NodeJS.ErrnoException) =>
       finish({ kind: "error", code: error.code ?? "network_error", sent }),
     );
-    request.end(body);
+    request.end(body ?? undefined);
   });
+}
+
+/** POST over TLS; see {@link requestHttps}. */
+export function postHttps(
+  url: string,
+  headers: Readonly<Record<string, string>>,
+  body: Buffer,
+  options: EgressOptions = {},
+): Promise<PostResult> {
+  return requestHttps("POST", url, headers, body, options);
 }

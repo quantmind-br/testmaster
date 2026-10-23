@@ -11,6 +11,8 @@ import {
   type TunnelTarget,
 } from "@testmaster/contracts";
 import type { Command } from "commander";
+import { acknowledged } from "./issues.js";
+import { memoryCreateBody, memoryEditBody } from "./memory.js";
 import { runListFilter } from "./run-filter.js";
 import {
   type Options,
@@ -398,6 +400,83 @@ export const remoteHandlers: Readonly<Record<string, RemoteHandler>> = {
       `/visual-baselines/${encodeURIComponent(String(args[0]))}/approve`,
       { expectedVersion: version(options) },
     ),
+  }),
+  "issue import": async (client, args, options) => ({
+    data: await client.request(
+      "POST",
+      `/integrations/${encodeURIComponent(required(options, "integration"))}/issues/import`,
+      { projectId: await projectOf(client, options), issueKey: String(args[0]) },
+    ),
+  }),
+  "issue draft": async (client, args, options) => {
+    const analysis = string(options, "analysis");
+    return {
+      data: await client.request("POST", "/issue-links", {
+        runId: String(args[0]),
+        integrationId: required(options, "integration"),
+        ...(analysis ? { analysisId: analysis } : {}),
+      }),
+    };
+  },
+  "issue list": async (client, _args, options) => {
+    const run = string(options, "run");
+    const query = new URLSearchParams(
+      run ? { runId: run } : { projectId: await projectOf(client, options) },
+    );
+    return { data: await client.list(`/issue-links?${query}`) };
+  },
+  "issue preview": async (client, args) => ({
+    data: await client.request(
+      "POST",
+      `/issue-links/${encodeURIComponent(String(args[0]))}/preview`,
+      {},
+    ),
+  }),
+  "issue execute": async (client, args, options) => ({
+    data: await client.request(
+      "POST",
+      `/issue-links/${encodeURIComponent(String(args[0]))}/execute`,
+      { payloadHash: required(options, "payloadHash"), acknowledge: acknowledged(options) },
+    ),
+  }),
+  "issue sync": async (client, _args, options) => ({
+    data: await client.request(
+      "POST",
+      `/projects/${encodeURIComponent(await projectOf(client, options))}/issue-links/sync`,
+      {},
+    ),
+  }),
+  "memory list": async (client, _args, options) => ({
+    data: await client.list(
+      `/projects/${encodeURIComponent(await projectOf(client, options))}/memory`,
+    ),
+  }),
+  "memory add": async (client, _args, options) => ({
+    data: await client.request(
+      "POST",
+      `/projects/${encodeURIComponent(await projectOf(client, options))}/memory`,
+      memoryCreateBody(options),
+    ),
+  }),
+  "memory edit": async (client, args, options) => ({
+    data: await client.request(
+      "PATCH",
+      `/memory/${encodeURIComponent(String(args[0]))}`,
+      memoryEditBody(options),
+    ),
+  }),
+  "memory approve": async (client, args, options) => {
+    const reason = string(options, "reason");
+    return {
+      data: await client.request("PATCH", `/memory/${encodeURIComponent(String(args[0]))}`, {
+        expectedVersion: version(options),
+        approve: true,
+        ...(reason !== undefined ? { reason } : {}),
+      }),
+    };
+  },
+  "memory forget": async (client, args) => ({
+    data: await client.request("DELETE", `/memory/${encodeURIComponent(String(args[0]))}`),
   }),
   "ops status": async (client, _args, options) => {
     assertRemoteOps("ops status", options);

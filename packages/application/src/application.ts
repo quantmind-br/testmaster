@@ -99,8 +99,12 @@ import {
   type IntegrationSecrets,
   IntegrationsService,
   integrationProviders,
+  issueLinkSyncController,
+  registerTrackerProviders,
+  TrackersService,
 } from "./integrations/index.js";
 import { JobsService } from "./jobs.js";
+import { MemoryService } from "./memory.js";
 import {
   defaultPublicOrigin,
   NotificationsService,
@@ -293,6 +297,8 @@ export class Application {
   readonly suites: SuitesService;
   readonly schedules: SchedulesService;
   readonly notifications: NotificationsService;
+  /** Jira/Linear tickets as sources and failed Runs as previewed, acknowledged issues (ADR-034). */
+  readonly trackers: TrackersService;
   readonly workerPool: WorkerPoolService;
   /** The remote worker protocol (ADR-030); every scoped instance shares the held Attempts. */
   readonly remoteWorkers: RemoteWorkerService;
@@ -300,6 +306,8 @@ export class Application {
   readonly tunnels: TunnelsService;
   /** Approved images `visualMatches` compares against (ADR-032). */
   readonly visualBaselines: VisualBaselinesService;
+  /** Approved project memory that reaches planning, analysis and healing prompts as data (ADR-034). */
+  readonly memory: MemoryService;
   readonly github: GithubService;
   readonly agentSkills: AgentSkillsService;
   readonly model: ModelService;
@@ -506,6 +514,7 @@ export class Application {
     this.backups = new BackupsService(this.context, config, this.secrets);
     this.agentSkills = new AgentSkillsService(this.context, config.cwd);
     this.model = new ModelService(this.context, config);
+    this.memory = new MemoryService(this.context, config);
     this.uploads = new UploadsService(this.context, config);
     this.sources = new SourcesService(this.context, config, this.uploads);
     this.discovery = new DiscoveryService(this.context, config, this.sources);
@@ -611,6 +620,12 @@ export class Application {
     this.notifications = new NotificationsService(this.context, this.integrations, this.batches, {
       publicOrigin,
     });
+    this.trackers = new TrackersService(this.context, {
+      integrations: this.integrations,
+      sources: this.sources,
+      analysis: this.analysis,
+      publicOrigin,
+    });
     this.operations.registerDlqSource("notification", {
       list: () => this.notifications.deadLetterEntries(),
       requeue: (id) => this.notifications.requeue(id),
@@ -714,6 +729,7 @@ export class Application {
     );
     application.controllers.register(schedulerController());
     registerNotificationProviders();
+    registerTrackerProviders();
     for (const controller of notificationControllers) application.controllers.register(controller);
     // Server-only (no `local` flag): reconciles pull requests, check publication and comments.
     application.controllers.register({
@@ -723,6 +739,8 @@ export class Application {
         await scope.github.reconcile();
       },
     });
+    // Server-only: records what trackers say about executed issue links; never touches a Run.
+    application.controllers.register(issueLinkSyncController);
     registerOperationsControllers(application.controllers);
     return application;
   }

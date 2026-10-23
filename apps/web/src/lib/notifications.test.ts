@@ -5,8 +5,8 @@ import {
   subscribableNotificationTypes as contractSubscribable,
   notificationTypes as contractTypes,
   entities,
-  integrationProviderIds,
   notificationDeliveryStates,
+  notificationProviderIds,
   notificationRedactionLevels,
   validate,
 } from "../../../../packages/contracts/src/index.js";
@@ -59,9 +59,7 @@ describe("the portal vocabulary mirrors the contracts", () => {
     expect([...subscribableNotificationTypes]).toEqual([...contractSubscribable]);
     expect([...deliveryStates]).toEqual([...notificationDeliveryStates]);
     expect([...redactionLevels]).toEqual([...notificationRedactionLevels]);
-    expect([...notificationProviders].sort()).toEqual(
-      integrationProviderIds.filter((provider) => provider !== "github").sort(),
-    );
+    expect([...notificationProviders].sort()).toEqual([...notificationProviderIds].sort());
     // Negative control: the labelled test event is never subscribable.
     expect(subscribableNotificationTypes).not.toContain("integration.test");
   });

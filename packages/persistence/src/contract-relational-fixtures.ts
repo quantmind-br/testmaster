@@ -104,7 +104,33 @@ export function relationalFixtures(database: PersistenceDatabase): RelationalFix
   }
   return fixtures;
 }
-export function fixtureInsert(fixture: RelationalFixture): {
+/**
+ * Rows of tables no entity projects that a relational fixture references by foreign key. Insert
+ * them with the fixtures; they are not entity documents, so no contract validates them.
+ */
+export function relationalParents(
+  fixtures: readonly RelationalFixture[],
+): Pick<RelationalFixture, "table" | "row">[] {
+  const link = fixtures.find((fixture) => fixture.kind === "IssueLink");
+  if (!link) return [];
+  const integration = { provider: "jira", name: "fixture" };
+  return [
+    {
+      table: "integrations",
+      row: {
+        workspace_id: String(link.row.workspace_id),
+        id: String(link.row.integration_id),
+        created_at: String(link.row.created_at),
+        version: 1,
+        data_json: JSON.stringify(integration),
+        provider: integration.provider,
+        name: integration.name,
+        state: "active",
+      },
+    },
+  ];
+}
+export function fixtureInsert(fixture: Pick<RelationalFixture, "table" | "row">): {
   sql: string;
   values: SQLInputValue[];
 } {

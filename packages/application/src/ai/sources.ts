@@ -375,13 +375,36 @@ interface SourceState {
   /** Principal that first imported the source; absent on sources created before M4. */
   ownerId?: string;
 }
+/** Where a ticket-derived source came from; the checksum is the hash of the imported text bytes. */
+export interface TrackerOrigin {
+  kind: "tracker";
+  provider: string;
+  integrationId: string;
+  issueKey: string;
+  /** The tracker's own revision marker: the issue's last update time. */
+  revision: string;
+  checksum: string;
+}
+type RevisionOrigin = { kind: "local-file" | "upload"; path?: string } | TrackerOrigin;
+/** Text that is not a file: a ticket rendered by the tracker integration. Always untrusted data. */
+export interface SourceTextInput {
+  projectId: string;
+  role: string;
+  /** Display name of a new source; at most 200 characters. */
+  name: string;
+  text: string;
+  format: SourceFormat;
+  origin: TrackerOrigin;
+  sourceId?: string;
+  expectedVersion?: number;
+}
 interface RevisionState {
   sourceId: string;
   projectId: string;
   result: SourceParseResult;
   importedBy?: string;
   importedAt?: string;
-  origin?: { kind: "local-file" | "upload"; path?: string };
+  origin?: RevisionOrigin;
 }
 /** Where a revision sits in its source, for evidence links from requirements and the feature map. */
 export interface RevisionLocation {
@@ -459,20 +482,7 @@ export class SourcesService {
         "INVALID_ARGUMENT",
         "Select exactly one local path or completed upload",
       );
-    let previous: SourceDetail | undefined;
-    if (input.sourceId) {
-      previous = this.get(input.sourceId);
-      if (previous.source.projectId !== input.projectId)
-        throw new ContractError("FORBIDDEN", "Source belongs to another project");
-      if (previous.archivedAt) throw new ContractError("PRECONDITION_FAILED", "Source is archived");
-      if (input.expectedVersion === undefined)
-        throw new ContractError(
-          "PRECONDITION_REQUIRED",
-          "Source revision requires expected version",
-        );
-      if (input.expectedVersion !== previous.source.version)
-        throw new ContractError("REVISION_CONFLICT", "Source version changed");
-    }
+    const previous = this.previousOf(input);
     const root = await realpath(this.config.cwd);
     let bytes: Buffer;
     let mediaType = "text/plain";
@@ -496,12 +506,83 @@ export class SourcesService {
         );
       ({ bytes, mediaType } = await this.uploads.bytes(input.uploadId as string));
     }
+    return this.commit({
+      body: input,
+      idempotencyKey: input.idempotencyKey,
+      projectId: input.projectId,
+      role: input.role,
+      displayName: input.name ?? basename(input.path ?? "Uploaded source"),
+      sourceOrigin: input.path ? "local-file" : "upload",
+      revisionOrigin: relativePath
+        ? { kind: "local-file", path: relativePath }
+        : { kind: "upload" },
+      format: sourceFormat(input, mediaType),
+      bytes,
+      relativePath,
+      previous,
+    });
+  }
+  /**
+   * Stores text (a rendered ticket) as a source revision through the same path as `add`: a new
+   * source, or the next revision of `sourceId`. The caller decides whether the text changed.
+   */
+  async addText(input: SourceTextInput): Promise<SourceDetail> {
+    this.ctx.authorize("W", input.projectId);
+    const project = requireEntity(this.ctx, "Project", input.projectId);
+    if (project.archivedAt) throw new ContractError("PRECONDITION_FAILED", "Project is archived");
+    const previous = this.previousOf(input);
+    return this.commit({
+      body: input,
+      idempotencyKey: undefined,
+      projectId: input.projectId,
+      role: input.role,
+      displayName: input.name,
+      sourceOrigin: input.origin.kind,
+      revisionOrigin: input.origin,
+      format: input.format,
+      bytes: Buffer.from(input.text, "utf8"),
+      relativePath: undefined,
+      previous,
+    });
+  }
+  /** The source a revision request continues, after the project, archive and version checks. */
+  private previousOf(input: {
+    projectId: string;
+    sourceId?: string | undefined;
+    expectedVersion?: number | undefined;
+  }): SourceDetail | undefined {
+    if (!input.sourceId) return undefined;
+    const previous = this.get(input.sourceId);
+    if (previous.source.projectId !== input.projectId)
+      throw new ContractError("FORBIDDEN", "Source belongs to another project");
+    if (previous.archivedAt) throw new ContractError("PRECONDITION_FAILED", "Source is archived");
+    if (input.expectedVersion === undefined)
+      throw new ContractError("PRECONDITION_REQUIRED", "Source revision requires expected version");
+    if (input.expectedVersion !== previous.source.version)
+      throw new ContractError("REVISION_CONFLICT", "Source version changed");
+    return previous;
+  }
+  /** Parses and stores one revision, atomically with its source row and requirement reset. */
+  private async commit(request: {
+    body: unknown;
+    idempotencyKey: string | undefined;
+    projectId: string;
+    role: string;
+    displayName: string;
+    sourceOrigin: string;
+    revisionOrigin: RevisionOrigin;
+    format: SourceFormat;
+    bytes: Buffer;
+    relativePath: string | undefined;
+    previous: SourceDetail | undefined;
+  }): Promise<SourceDetail> {
+    const { previous, bytes, projectId, relativePath } = request;
     const id = uuidV7IdGenerator.next("svr");
     const result = await parseSource({
       revisionId: id,
       workspaceId: this.ctx.workspaceId,
       parentId: previous?.revision.id ?? null,
-      format: sourceFormat(input, mediaType),
+      format: request.format,
       bytes,
       maxBytes: MAX_SOURCE_BYTES,
       ...(relativePath ? { relativePath } : {}),
@@ -509,10 +590,10 @@ export class SourcesService {
     const source =
       previous?.source ??
       (entity(this.ctx, "src", {
-        projectId: input.projectId,
-        role: input.role,
-        displayName: input.name ?? basename(input.path ?? "Uploaded source"),
-        origin: input.path ? "local-file" : "upload",
+        projectId,
+        role: request.role,
+        displayName: request.displayName,
+        origin: request.sourceOrigin,
         activeRevisionId: null,
       }) as StoredSource);
     const next = { ...source, activeRevisionId: id };
@@ -527,8 +608,8 @@ export class SourcesService {
           workspaceId: this.ctx.workspaceId,
           actorScope: this.ctx.principalId,
           operation: "source.add",
-          key: input.idempotencyKey ?? randomBytes(24).toString("hex"),
-          body: input,
+          key: request.idempotencyKey ?? randomBytes(24).toString("hex"),
+          body: request.body,
         },
         () => {
           // A new source is stored with its first revision already active, so it starts at version 1;
@@ -549,11 +630,11 @@ export class SourcesService {
             );
           saveAiState(this.ctx, `revision:${id}`, {
             sourceId: source.id,
-            projectId: input.projectId,
+            projectId,
             result,
             importedBy: this.ctx.principalId,
             importedAt: new Date().toISOString(),
-            origin: relativePath ? { kind: "local-file", path: relativePath } : { kind: "upload" },
+            origin: request.revisionOrigin,
           } satisfies RevisionState);
           saveAiState(this.ctx, `source:${source.id}`, {
             archivedAt: null,
@@ -566,7 +647,7 @@ export class SourcesService {
           // cites, so the reset waits for the next revision that parses.
           const reset =
             previous && result.revision.status !== "invalid"
-              ? resetRequirementsForSourceRevision(this.ctx, input.projectId, {
+              ? resetRequirementsForSourceRevision(this.ctx, projectId, {
                   revisionId: id,
                   replacedRevisionIds: new Set(
                     this.chainOf(previous.source).map((node) => node.id),
@@ -583,6 +664,27 @@ export class SourcesService {
       await rm(path, { force: true });
       throw error;
     }
+  }
+  /** The live source an issue was imported into, with the tracker origin of its active revision. */
+  trackerSource(
+    projectId: string,
+    integrationId: string,
+    issueKey: string,
+  ): { detail: SourceDetail; origin: TrackerOrigin } | null {
+    for (const source of this.list(projectId)) {
+      if (source.origin !== "tracker" || !source.activeRevisionId) continue;
+      const origin = readAiState<RevisionState>(
+        this.ctx,
+        `revision:${source.activeRevisionId}`,
+      )?.origin;
+      if (
+        origin?.kind === "tracker" &&
+        origin.integrationId === integrationId &&
+        origin.issueKey === issueKey
+      )
+        return { detail: this.get(source.id), origin };
+    }
+    return null;
   }
   archive(id: string, expectedVersion: number): StoredSource {
     const detail = this.get(id);
@@ -737,11 +839,12 @@ export class SourcesService {
     const active = chain[0];
     if (!active) throw new ContractError("PRECONDITION_FAILED", "Source has no revision");
     const result = active.state.result;
-    const origin = active.state.origin ?? {
+    const origin: RevisionOrigin = active.state.origin ?? {
       kind: source.origin === "local-file" ? "local-file" : "upload",
     };
     let originState: SourceOverview["origin"]["state"] = "upload";
-    if (origin.kind === "local-file") {
+    if (origin.kind === "tracker") originState = "remote";
+    else if (origin.kind === "local-file") {
       originState = "missing";
       try {
         const root = await realpath(this.config.cwd);
@@ -773,7 +876,11 @@ export class SourcesService {
         importedAt: active.state.importedAt ?? null,
         importedBy: active.state.importedBy ?? null,
       },
-      origin: { kind: origin.kind, path: origin.path ?? null, state: originState },
+      origin: {
+        kind: origin.kind,
+        path: origin.kind === "tracker" ? null : (origin.path ?? null),
+        state: originState,
+      },
       dependents: {
         staleTests: staleTestsFor(
           this.ctx,

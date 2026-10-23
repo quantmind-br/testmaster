@@ -548,8 +548,34 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ["GET", "/incidents/{id}", "ops:R", "M4", "Empty", "Incident"],
   ["POST", "/incidents/{id}/events", "ops:A", "M4", "IncidentEventInput", "Incident"],
   ["POST", "/incidents/{id}/close", "ops:A", "M4", "IncidentCloseInput", "Incident"],
-  ["GET,POST", "/projects/{id}/memory", "memory:R/W", "M5", "MemoryEntry", "MemoryEntry"],
-  ["PATCH,DELETE", "/memory/{id}", "memory:W", "M5", "MemoryEntry", "MemoryEntry"],
+  [
+    "GET,POST",
+    "/projects/{id}/memory",
+    "memory:R/W",
+    "M5",
+    "MemoryEntryInput",
+    "MemoryEntryView",
+  ],
+  ["PATCH,DELETE", "/memory/{id}", "memory:W", "M5", "MemoryEntryPatchInput", "MemoryEntryView"],
+  [
+    "POST",
+    "/integrations/{id}/issues/import",
+    "integrations:W",
+    "M5",
+    "IssueImportInput",
+    "IssueImportReceipt",
+  ],
+  ["GET,POST", "/issue-links", "issues:R/W", "M5", "IssueLinkDraftInput", "IssueLink"],
+  ["POST", "/issue-links/{id}/preview", "issues:W", "M5", "Empty", "IssueLinkPreview"],
+  ["POST", "/issue-links/{id}/execute", "issues:W", "M5", "IssueLinkExecuteInput", "IssueLink"],
+  [
+    "POST",
+    "/projects/{id}/issue-links/sync",
+    "issues:W",
+    "M5",
+    "Empty",
+    "IssueLinkSyncReceipt",
+  ],
   ["GET", "/visual-baselines", "tests:R", "M5", "Empty", "VisualBaseline"],
   ["POST", "/visual-baselines", "tests:W", "M5", "VisualBaselineInput", "VisualBaseline"],
   [
@@ -615,6 +641,8 @@ const responseOverrides: Readonly<Record<string, ResponseOverride>> = {
     "GET /suites",
     "GET /tunnels",
     "GET /visual-baselines",
+    "GET /projects/{id}/memory",
+    "GET /issue-links",
   ]),
   // Lists that the service bounds itself: `{items}` without a cursor.
   ...keysWith({ kind: "items" }, ["GET /workspaces", "GET /identity/sessions"]),
@@ -645,6 +673,8 @@ const responseOverrides: Readonly<Record<string, ResponseOverride>> = {
     "POST /tunnels",
     "POST /visual-baselines",
     "POST /projects/{id}/probes",
+    "POST /projects/{id}/memory",
+    "POST /issue-links",
   ]),
   ...keysWith({ status: 202 }, [
     "POST /runs",
@@ -669,12 +699,8 @@ const responseOverrides: Readonly<Record<string, ResponseOverride>> = {
   "GET /metrics": { kind: "text" },
   "GET /runs/{id}/events": { kind: "stream" },
   "GET /discovery/{id}/events": { kind: "stream" },
-  // Reserved for M5/M6: no handler is registered, every call answers CAPABILITY_UNAVAILABLE.
+  // Reserved for M6: no handler is registered, every call answers CAPABILITY_UNAVAILABLE.
   ...keysWith({ kind: "unavailable" }, [
-    "GET /projects/{id}/memory",
-    "POST /projects/{id}/memory",
-    "PATCH /memory/{id}",
-    "DELETE /memory/{id}",
     "POST /exports",
     "POST /imports",
     "POST /identity/break-glass",

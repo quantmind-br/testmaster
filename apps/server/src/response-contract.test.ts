@@ -199,15 +199,7 @@ it("C4 advertises the status the server answers and marks the unimplemented rout
   // Reserved routes have no handler: every call is refused, and the catalog says so.
   const reserved = routeCatalog.filter((item) => item.response.kind === "unavailable");
   expect(reserved.map((item) => `${item.method} ${item.path}`).sort()).toEqual(
-    [
-      "DELETE /memory/{id}",
-      "GET /projects/{id}/memory",
-      "PATCH /memory/{id}",
-      "POST /exports",
-      "POST /identity/break-glass",
-      "POST /imports",
-      "POST /projects/{id}/memory",
-    ].sort(),
+    ["POST /exports", "POST /identity/break-glass", "POST /imports"].sort(),
   );
   const refused = await f.post("/v1/exports", {});
   expect(refused.statusCode).toBe(422);

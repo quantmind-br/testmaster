@@ -26,6 +26,6 @@ it("C4 registers a handler for every catalog route except the ones catalogued as
     expect(table.has(key), key).toBe(route.response.kind !== "unavailable");
   }
   expect(() =>
-    buildRouteTable([{ handlers: { "POST /projects/{id}/memory": () => ({}) } }]),
+    buildRouteTable([{ handlers: { "POST /exports": () => ({}) } }]),
   ).toThrow(/catalogued as unavailable/);
 });

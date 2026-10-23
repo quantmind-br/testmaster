@@ -1,0 +1,38 @@
+{
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "baseUrl",
+    "email",
+    "apiTokenSecretRef",
+    "projectKey"
+  ],
+  "properties": {
+    "baseUrl": {
+      "minLength": 1,
+      "maxLength": 2048,
+      "type": "string"
+    },
+    "email": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "apiTokenSecretRef": {
+      "pattern": "^sec_[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "projectKey": {
+      "pattern": "^[A-Z][A-Z0-9_]{0,19}$",
+      "type": "string"
+    },
+    "issueType": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    }
+  },
+  "$defs": {},
+  "$id": "urn:testmaster:JiraSettings",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

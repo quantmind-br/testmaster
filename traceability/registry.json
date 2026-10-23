@@ -12481,7 +12481,7 @@
           },
           {
             "path": "apps/cli/src/cli.test.ts",
-            "assertion": "expect(result.document.error).toMatchObject({\n      code: \"CAPABILITY_UNAVAILABLE\",\n      details: { capability: \"memory\", milestone: \"M5\" },\n    });"
+            "assertion": "expect(result.document.error).toMatchObject({\n      code: \"CAPABILITY_UNAVAILABLE\",\n      details: { capability: \"portability\", milestone: \"M6\" },\n    });"
           }
         ]
       }
@@ -31391,8 +31391,14 @@
     {
       "id": "memory",
       "milestone": "M5",
-      "requirements": ["REQ-044", "API-008"],
-      "gate": "M5 normative acceptance; capability unavailable until milestone"
+      "requirements": ["M5-07", "REQ-044", "API-008"],
+      "gate": "M5 approved project memory carried as prompt data (ADR-034); positive/negative evidence and protected assertions"
+    },
+    {
+      "id": "issue-tracker",
+      "milestone": "M5",
+      "requirements": ["M5-07", "REQ-043", "INT-030", "INT-031", "INT-032", "INT-033", "API-008"],
+      "gate": "M5 Jira and Linear import, previewed and acknowledged issue links and sync (ADR-034); positive/negative evidence and protected assertions"
     },
     {
       "id": "visual-baselines",

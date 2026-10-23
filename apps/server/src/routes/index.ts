@@ -9,12 +9,14 @@ import { eventRoutes } from "./events.js";
 import { githubRoutes } from "./github.js";
 import { identityRoutes } from "./identity.js";
 import { integrationRoutes } from "./integrations.js";
+import { memoryRoutes } from "./memory.js";
 import { onboardingRoutes } from "./onboarding.js";
 import { operationsRoutes } from "./operations.js";
 import { runViewRoutes } from "./run-views.js";
 import { scheduleRoutes } from "./schedules.js";
 import { settingsRoutes } from "./settings.js";
 import { suiteRoutes } from "./suites.js";
+import { trackerRoutes } from "./trackers.js";
 import { tunnelRoutes } from "./tunnels.js";
 import type { RouteHandler, RouteModule } from "./types.js";
 import { visualBaselineRoutes } from "./visual-baselines.js";
@@ -38,6 +40,8 @@ export const routeModules: RouteModule[] = [
   deliveryRoutes,
   workerRoutes,
   tunnelRoutes,
+  memoryRoutes,
+  trackerRoutes,
   visualBaselineRoutes,
   authRoutes,
   operationsRoutes,

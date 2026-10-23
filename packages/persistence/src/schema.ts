@@ -186,6 +186,19 @@ export const tableCatalog = {
       "approvedBy",
     ],
   },
+  IssueLink: {
+    table: "issue_links",
+    fields: [
+      "projectId",
+      "integrationId",
+      "runId",
+      "kind",
+      "status",
+      "signature",
+      "issueKey",
+      "syncState",
+    ],
+  },
 } as const;
 export type EntityKind = keyof typeof tableCatalog;
 export const immutableKinds: Partial<Record<EntityKind, true>> = {

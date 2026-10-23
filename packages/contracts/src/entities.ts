@@ -1,6 +1,7 @@
 import { type Static, type TSchema, Type } from "@sinclair/typebox";
 import { authCheckpointKinds } from "./m4/auth.js";
 import { SuiteMemberInterval, SuiteSelection, suiteStates } from "./m4/lists.js";
+import { IssueKey, IssuePayload } from "./m5/issues.js";
 import { ProbeSpec } from "./m5/probes.js";
 import {
   ArtifactManifest,
@@ -580,6 +581,41 @@ export const entities = {
     approval: nullable(id("apr")),
     version: Version,
     tombstoneAt: nullable(Timestamp),
+  }),
+  /**
+   * A draft, previewed or executed link between a failed Run and a tracker issue (ADR-034). Nothing
+   * creates an issue automatically: a draft is previewed and executed with the previewed hash and
+   * an explicit acknowledgement. Sync records the issue's external state and never changes the Run.
+   */
+  IssueLink: entity("isl", {
+    projectId: id("prj"),
+    integrationId: Type.String({ pattern: `^int_${uuidPattern}$` }),
+    runId: id("run"),
+    analysisId: nullable(id("ana")),
+    /** `create` files a new issue; `link` attaches the Run to an existing one. */
+    kind: Enum(["link", "create"]),
+    status: Enum(["draft", "previewed", "executed", "failed"]),
+    issueKey: nullable(IssueKey),
+    /** Defect signature (INT-033): project, test revision, environment and the diagnosis shape. */
+    signature: ContentDigest,
+    scope: Obj({
+      testId: id("tst"),
+      revisionId: id("rev"),
+      environmentId: id("env"),
+      environmentRevisionId: id("evr"),
+    }),
+    /** True when the cause is not established; the payload then never claims a defect (INT-031). */
+    uncertain: Type.Boolean(),
+    payload: IssuePayload,
+    payloadHash: nullable(ContentDigest),
+    externalStatus: nullable(Name),
+    externalStatusCategory: nullable(Enum(["open", "closed"])),
+    syncState: Enum(["ok", "deleted", "conflict", "revoked"]),
+    createdBy: Name,
+    executedBy: nullable(Name),
+    executedAt: nullable(Timestamp),
+    syncedAt: nullable(Timestamp),
+    failure: nullable(Obj({ reasonCode: Name, detail: Description })),
   }),
   /**
    * An image a `visualMatches` assertion compares against (ADR-032). A Run never writes one: a

@@ -141,5 +141,6 @@ secret in the GitHub App settings within that window.
 - Agent-created branches and pull requests need `allowAgentPullRequests`, an installation with
   `contents: write`, and an explicit human `approve` grant for the agent. They only create new `testmaster/…`
   branches and draft pull requests, never touch the base branch or workflow files.
-- This release does not publish a Jira or Linear tracker, and the test suite for a project (`github.suiteId`)
-  is not yet selectable; a repository runs all tests of its project or an explicit list.
+- Jira and Linear trackers are separate integrations ([ADR-034](../adr/034-trackers-memory.md)); a pull
+  request check never files an issue. The test suite for a project (`github.suiteId`) is not yet
+  selectable; a repository runs all tests of its project or an explicit list.

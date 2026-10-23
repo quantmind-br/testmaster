@@ -26,4 +26,4 @@ Notifications leave the trust boundary: payloads must be redacted, destinations 
 ## Consequences
 
 - No exactly-once claim: consumers dedupe on the delivery ID.
-- Tracker integrations (Jira/Linear) are M5.
+- Tracker integrations (Jira/Linear) are M5; they shipped as integrations of their own in [ADR-034](034-trackers-memory.md).
