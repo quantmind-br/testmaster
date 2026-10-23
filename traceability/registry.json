@@ -5775,11 +5775,11 @@
           },
           {
             "path": "packages/evidence/src/evidence.test.ts",
-            "assertion": "await expect(\n      verifyBundle(result.bundleDir, { ...ids, workspaceId: uuidV7IdGenerator.next(\"ws\") }),\n    ).rejects.toThrow(\"Foreign\");"
+            "assertion": "await expect(\n      verifyBundle(...at(rootDir, ids), { ...ids, workspaceId: uuidV7IdGenerator.next(\"ws\") }),\n    ).rejects.toThrow(\"Foreign\");"
           },
           {
             "path": "packages/evidence/src/evidence.test.ts",
-            "assertion": "await expect(verifyBundle(result.bundleDir, ids)).rejects.toThrow();"
+            "assertion": "await expect(verifyBundle(...at(rootDir, ids), ids)).rejects.toThrow();"
           }
         ]
       }
@@ -8074,7 +8074,7 @@
           },
           {
             "path": "tools/src/security/threat-model-acceptance.test.ts",
-            "assertion": "\"capability:distributed is enabled in code but modelled under disabled boundary B-30\","
+            "assertion": "\"capability:sso is enabled in code but modelled under disabled boundary B-17\","
           },
           {
             "path": "packages/sandbox/src/process/executor.test.ts",
@@ -12838,7 +12838,12 @@
         "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result",
         "packages/sandbox/src/docker/executor.test.ts::OPS-001 stops an attempt whose container lost a resource limit and removes it",
         "packages/application/src/server-profile.pg.test.ts::OPS-001 server readiness reports the failing probe with its reason code",
-        "packages/application/src/server-profile.pg.test.ts::OPS-001 doctor in server mode fails closed on a failing server probe and lists it as blocking"
+        "packages/application/src/server-profile.pg.test.ts::OPS-001 doctor in server mode fails closed on a failing server probe and lists it as blocking",
+        "validation/journeys/m5-distributed.docker.test.ts::M5 distributed two controllers share PostgreSQL and S3 evidence",
+        "validation/journeys/deploy-compose.test.ts::OPS-001 the shipped distributed example is a valid distributed profile and refuses to degrade",
+        "validation/journeys/m5-distributed.docker.test.ts::M5 distributed refuses SQLite and filesystem storage",
+        "packages/application/src/server-config.test.ts::OPS-001 the distributed profile needs PostgreSQL and shared storage and refuses to degrade",
+        "apps/cli/src/server-profile.test.ts::OPS-001 the CLI refuses a distributed profile that is not PostgreSQL on shared storage before it touches any database"
       ],
       "oracle": [
         "Doctor exits FAIL with reasons on an unsupported Node or unwritable data dir; the CLI refuses every command on an unsupported Node before opening state; installing/initialising opens no network listener; unwritable storage never admits a container Run; checks split blocking vs recommendation; effective config is redacted.",
@@ -12855,7 +12860,9 @@
         "packages/sandbox/src/docker/executor.test.ts",
         "validation/results/m4-acceptance/s2a/043-s2a-unit-final/output.log",
         "validation/results/m4-acceptance/s2a/044-s2a-postgres-final/output.log",
-        "validation/results/m4-acceptance/s2a/046-s2a-docker-rootless-final/output.log"
+        "validation/results/m4-acceptance/s2a/046-s2a-docker-rootless-final/output.log",
+        "validation/results/m5-distributed.json",
+        "docs/adr/035-distributed-profile.md"
       ],
       "code": [
         "packages/application/src/application.ts",
@@ -12864,9 +12871,11 @@
         "packages/sandbox/src/docker/executor.ts",
         "apps/server/src/server.ts",
         "packages/application/src/server-profile.ts",
-        "docs/operations/rootless-docker.md"
+        "docs/operations/rootless-docker.md",
+        "packages/application/src/server-config.ts",
+        "apps/cli/src/server.ts"
       ],
-      "note": "Doctor now checks Node, writable paths, database, timezone, network policy, browser sandbox (advisory, so the HTTP runner stays ready) and redacted config, and reports blocking checks apart from recommendations. Rootless validation is deferred to M4 (ADR-014); the approved rootful hardened deviation stays in force. PostgreSQL/server probe is M4 and the distributed profile refusal is M5. M4 validated rootless Docker as the reference daemon and added server-profile readiness probes.",
+      "note": "Doctor now checks Node, writable paths, database, timezone, network policy, browser sandbox (advisory, so the HTTP runner stays ready) and redacted config, and reports blocking checks apart from recommendations. Rootless validation is deferred to M4 (ADR-014); the approved rootful hardened deviation stays in force. PostgreSQL/server probe is M4 and the distributed profile refusal is M5. M4 validated rootless Docker as the reference daemon and added server-profile readiness probes. M5 closes the distributed profile refusal: a distributed configuration with SQLite or with filesystem storage is refused (distributed_requires_postgres, distributed_requires_shared_storage) before any database is touched, and the two-controller compose stack proves the accepted profile (ADR-035).",
       "coverage": {
         "positive": [
           "packages/application/src/doctor.test.ts::doctor reports blocking failures apart from recommendations and exposes only redacted effective config",
@@ -12879,7 +12888,9 @@
           "validation/journeys/rootless-daemon.docker.test.ts::OPS-001 container users map into the operator's subordinate uid range, never host root or the operator",
           "validation/journeys/rootless-daemon.docker.test.ts::OPS-001 memory, swap and pid limits are enforced by the rootless cgroup and visible to the container",
           "validation/journeys/rootless-daemon.docker.test.ts::OPS-001 a container without capabilities cannot regain privileges or write its root filesystem",
-          "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result"
+          "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result",
+          "validation/journeys/m5-distributed.docker.test.ts::M5 distributed two controllers share PostgreSQL and S3 evidence",
+          "validation/journeys/deploy-compose.test.ts::OPS-001 the shipped distributed example is a valid distributed profile and refuses to degrade"
         ],
         "negative": [
           "packages/application/src/doctor.test.ts::doctor fails closed on an unsupported Node major and on an unwritable data directory",
@@ -12889,7 +12900,10 @@
           "apps/server/src/server.test.ts::refuses any non-loopback listen host and never listens publicly",
           "packages/sandbox/src/docker/executor.test.ts::OPS-001 stops an attempt whose container lost a resource limit and removes it",
           "packages/application/src/server-profile.pg.test.ts::OPS-001 server readiness reports the failing probe with its reason code",
-          "packages/application/src/server-profile.pg.test.ts::OPS-001 doctor in server mode fails closed on a failing server probe and lists it as blocking"
+          "packages/application/src/server-profile.pg.test.ts::OPS-001 doctor in server mode fails closed on a failing server probe and lists it as blocking",
+          "validation/journeys/m5-distributed.docker.test.ts::M5 distributed refuses SQLite and filesystem storage",
+          "packages/application/src/server-config.test.ts::OPS-001 the distributed profile needs PostgreSQL and shared storage and refuses to degrade",
+          "apps/cli/src/server-profile.test.ts::OPS-001 the CLI refuses a distributed profile that is not PostgreSQL on shared storage before it touches any database"
         ],
         "criticalAssertions": [
           {
@@ -12963,19 +12977,21 @@
           {
             "path": "validation/journeys/rootless-daemon.docker.test.ts",
             "assertion": "    expect(JSON.parse(attempt.stdout)).toEqual({ write: \"EROFS\", caps: \"0000000000000000\" });"
+          },
+          {
+            "path": "validation/journeys/m5-distributed.docker.test.ts",
+            "assertion": "expect(refused.sqlite?.reasonCode).toBe(\"distributed_requires_postgres\");"
+          },
+          {
+            "path": "validation/journeys/m5-distributed.docker.test.ts",
+            "assertion": "expect(refused.filesystem?.reasonCode).toBe(\"distributed_requires_shared_storage\");"
+          },
+          {
+            "path": "packages/application/src/server-config.test.ts",
+            "assertion": "details: { reasonCode: \"distributed_requires_shared_storage\" },"
           }
         ]
-      },
-      "deferred": [
-        {
-          "milestone": "M5",
-          "scope": "Distributed profile refusal when only SQLite storage is configured",
-          "specQuote": {
-            "path": "specs/08-operations.md",
-            "text": "Perfis e preflight (M0–M1/M4/M5)"
-          }
-        }
-      ]
+      }
     },
     {
       "id": "OPS-002",
@@ -14940,7 +14956,12 @@
       "scenario": [
         "tools/src/operations/dr-evidence.test.ts::OPS-026 the retained rehearsal restored content, hashes and access on a fresh stack from only the backup and keys",
         "tools/src/operations/dr-evidence.test.ts::OPS-026 a restored hash, an access check, a failed step or a missing measurement is reported instead of accepted",
-        "tools/src/operations/dr-evidence.test.ts::OPS-026 never accepts a claim about S3 loss or a verdict that its rows contradict"
+        "tools/src/operations/dr-evidence.test.ts::OPS-026 never accepts a verdict that its rows contradict",
+        "validation/journeys/m5-distributed.docker.test.ts::M5 distributed backups land in the locked bucket and restore after S3 loss",
+        "packages/application/src/fault-matrix-s3.docker.test.ts::restores a fresh database and the emptied evidence bucket from the locked backup alone",
+        "tools/src/operations/dr-evidence.test.ts::OPS-026 the retained S3 loss rehearsal restored every evidence object from the locked backup and names what it did not measure",
+        "packages/application/src/fault-matrix-s3.docker.test.ts::neither the evidence credential, nor the backup credential, nor root can delete a locked backup",
+        "tools/src/operations/dr-evidence.test.ts::OPS-026 an S3 loss is accepted only with the rows that prove it"
       ],
       "oracle": [
         "A rehearsal loses the source PostgreSQL container, data volume, evidence directory and server configuration, restores a fresh stack from only the encrypted backup and the two key files, and proves identical row counts, audit digest, evidence file hashes and principals, a rejected pre-backup token, an owner who recovers access, and isolation until review; the post-backup write is absent.",
@@ -14952,21 +14973,32 @@
         "validation/results/m4-acceptance/s2b/029-s2b-dr-rehearsal-final-2/manifest.json",
         "validation/results/m4-acceptance/s2b/029-s2b-dr-rehearsal-final-2/output.log",
         "validation/results/m4-dr-rehearsal.json",
-        "validation/results/m4-acceptance/s2b/029-s2b-dr-rehearsal-final-2/created/validation/results/m4-dr-rehearsal.json"
+        "validation/results/m4-acceptance/s2b/029-s2b-dr-rehearsal-final-2/created/validation/results/m4-dr-rehearsal.json",
+        "validation/results/m5-s3-loss-rehearsal.json",
+        "validation/results/m5-distributed.json",
+        "docs/operations/disaster-recovery.md",
+        "docs/operations/backups.md"
       ],
       "code": [
         "deploy/compose/dr-rehearsal.sh",
         "deploy/compose/dr-rehearsal-helper.mjs",
         "tools/src/operations/dr-evidence.ts",
-        "docs/operations/disaster-recovery.md"
+        "docs/operations/disaster-recovery.md",
+        "packages/application/src/server-backup-media.ts",
+        "packages/application/src/server-backup.ts"
       ],
       "coverage": {
         "positive": [
-          "tools/src/operations/dr-evidence.test.ts::OPS-026 the retained rehearsal restored content, hashes and access on a fresh stack from only the backup and keys"
+          "tools/src/operations/dr-evidence.test.ts::OPS-026 the retained rehearsal restored content, hashes and access on a fresh stack from only the backup and keys",
+          "validation/journeys/m5-distributed.docker.test.ts::M5 distributed backups land in the locked bucket and restore after S3 loss",
+          "packages/application/src/fault-matrix-s3.docker.test.ts::restores a fresh database and the emptied evidence bucket from the locked backup alone",
+          "tools/src/operations/dr-evidence.test.ts::OPS-026 the retained S3 loss rehearsal restored every evidence object from the locked backup and names what it did not measure"
         ],
         "negative": [
           "tools/src/operations/dr-evidence.test.ts::OPS-026 a restored hash, an access check, a failed step or a missing measurement is reported instead of accepted",
-          "tools/src/operations/dr-evidence.test.ts::OPS-026 never accepts a claim about S3 loss or a verdict that its rows contradict"
+          "tools/src/operations/dr-evidence.test.ts::OPS-026 never accepts a verdict that its rows contradict",
+          "packages/application/src/fault-matrix-s3.docker.test.ts::neither the evidence credential, nor the backup credential, nor root can delete a locked backup",
+          "tools/src/operations/dr-evidence.test.ts::OPS-026 an S3 loss is accepted only with the rows that prove it"
         ],
         "criticalAssertions": [
           {
@@ -14980,20 +15012,18 @@
           {
             "path": "tools/src/operations/dr-evidence.test.ts",
             "assertion": "expect(findDrRehearsalViolations(digest)).toContain(\"comparison row auditEvents.digest differs\");"
+          },
+          {
+            "path": "packages/application/src/fault-matrix-s3.docker.test.ts",
+            "assertion": "expect(appCredentialDenied).toBe(true);"
+          },
+          {
+            "path": "packages/application/src/fault-matrix-s3.docker.test.ts",
+            "assertion": "expect(await asRoot.deleteVersions(manifestKey)).toEqual({ deleted: false, locked: true });"
           }
         ]
       },
-      "deferred": [
-        {
-          "milestone": "M5",
-          "scope": "S3 evidence loss and off-host object-store protection in the disaster-recovery checklist and rehearsal (the M4 server profile stores evidence on the filesystem only)",
-          "specQuote": {
-            "path": "specs/08-operations.md",
-            "text": "PostgreSQL + S3 compatível compartilhados | Identidades de serviço, TLS/mTLS, leases e fencing | M5"
-          }
-        }
-      ],
-      "note": "The rehearsal ran on one host against the filesystem profile with a small seeded dataset: RTO and RPO describe that dataset only. Host, database and key loss are covered by docs/operations/disaster-recovery.md; S3 loss and larger datasets are not measured."
+      "note": "The rehearsal ran on one host against the filesystem profile with a small seeded dataset: RTO and RPO describe that dataset only. Host, database and key loss are covered by docs/operations/disaster-recovery.md; S3 loss and larger datasets are not measured. M5 adds S3 loss: backups go to a separate COMPLIANCE-locked bucket written with a backup credential the controllers do not hold, and a rehearsal restored a fresh database and an emptied evidence bucket with identical hashes from the locked backup alone (MinIO only, one physical host; lock expiry and AWS S3 are not measured)."
     },
     {
       "id": "OPS-027",
@@ -15123,7 +15153,17 @@
         "packages/application/src/alerts.pg.test.ts::OPS-028 stays quiet on a healthy deployment and below every threshold",
         "packages/application/src/alerts.pg.test.ts::OPS-028 raises one alert per condition, refreshes it, keeps acknowledgement and never hides a failing rule",
         "packages/application/src/alerts.pg.test.ts::OPS-028 evaluates each workspace on its own findings",
-        "packages/application/src/telemetry.pg.test.ts::NFR-010 does not charge target timeouts or cancellations to the platform budget but charges lost leases"
+        "packages/application/src/telemetry.pg.test.ts::NFR-010 does not charge target timeouts or cancellations to the platform budget but charges lost leases",
+        "packages/application/src/telemetry.pg.test.ts::OPS-028 adds the counters of every live controller to the SLO and leaves out a stopped one",
+        "packages/application/src/telemetry.pg.test.ts::OPS-028 measures how long the scheduler lease has been without a holder",
+        "packages/application/src/alerts.pg.test.ts::OPS-028 scheduler_leaderless fires from a synthetic condition with its outbox event and audit row, then resolves",
+        "packages/application/src/alerts.pg.test.ts::OPS-028 controllers_below_expected fires from a synthetic condition with its outbox event and audit row, then resolves",
+        "packages/application/src/alerts.pg.test.ts::OPS-028 remote_worker_heartbeat_lost fires from a synthetic condition with its outbox event and audit row, then resolves",
+        "packages/application/src/alerts.pg.test.ts::OPS-028 artifact_gateway_errors fires from a synthetic condition with its outbox event and audit row, then resolves",
+        "packages/application/src/alerts.pg.test.ts::OPS-028 object_store_publish_failing fires from a synthetic condition with its outbox event and audit row, then resolves",
+        "validation/journeys/m5-distributed.docker.test.ts::M5 distributed killing the leader moves scheduled loops to the survivor",
+        "packages/application/src/controllers-election.test.ts::aborts a running elected tick when another controller took the lease",
+        "packages/application/src/controller-leases.pg.test.ts::judges lease expiry on the database clock, so a controller whose clock runs ahead cannot take a live lease"
       ],
       "oracle": [
         "Ten alert rules cover every OPS-028 condition (abnormal lease expirations, oldest queue age, storage 80% and 90%, continuous backup failure, non-empty DLQ, audit unavailable, cancellation with a live worker, cross-tenant suspicion and egress denied), each with an owner, a severity and a runbook anchor that exists in docs/operations/alerts.md; no budget-exhaustion rule exists (ADR-026).",
@@ -15131,14 +15171,19 @@
       ],
       "evidence": [
         "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/manifest.json",
-        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/output.log"
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/output.log",
+        "docs/operations/slo.md",
+        "docs/operations/alerts.md",
+        "validation/results/m5-distributed.json"
       ],
       "code": [
         "packages/application/src/alerts.ts",
         "packages/application/src/operations-controllers.ts",
         "packages/application/src/telemetry.ts",
         "docs/operations/alerts.md",
-        "docs/operations/slo.md"
+        "docs/operations/slo.md",
+        "packages/application/src/controllers.ts",
+        "packages/application/src/controller-leases.ts"
       ],
       "coverage": {
         "positive": [
@@ -15155,13 +15200,23 @@
           "packages/application/src/alerts.pg.test.ts::OPS-028 egress_denied fires from a synthetic condition with its outbox event and audit row, then resolves",
           "packages/application/src/telemetry.pg.test.ts::NFR-010 reports each SLO with its denominator, window, histogram and a proposed target kept apart from the observation",
           "validation/journeys/operations.portal.test.ts::M4-02 alert acknowledge and DLQ requeue are visible and audited",
-          "validation/journeys/operations.portal.test.ts::M4-02 SLO page separates proposed target from observed and shows not measured"
+          "validation/journeys/operations.portal.test.ts::M4-02 SLO page separates proposed target from observed and shows not measured",
+          "packages/application/src/telemetry.pg.test.ts::OPS-028 adds the counters of every live controller to the SLO and leaves out a stopped one",
+          "packages/application/src/telemetry.pg.test.ts::OPS-028 measures how long the scheduler lease has been without a holder",
+          "packages/application/src/alerts.pg.test.ts::OPS-028 scheduler_leaderless fires from a synthetic condition with its outbox event and audit row, then resolves",
+          "packages/application/src/alerts.pg.test.ts::OPS-028 controllers_below_expected fires from a synthetic condition with its outbox event and audit row, then resolves",
+          "packages/application/src/alerts.pg.test.ts::OPS-028 remote_worker_heartbeat_lost fires from a synthetic condition with its outbox event and audit row, then resolves",
+          "packages/application/src/alerts.pg.test.ts::OPS-028 artifact_gateway_errors fires from a synthetic condition with its outbox event and audit row, then resolves",
+          "packages/application/src/alerts.pg.test.ts::OPS-028 object_store_publish_failing fires from a synthetic condition with its outbox event and audit row, then resolves",
+          "validation/journeys/m5-distributed.docker.test.ts::M5 distributed killing the leader moves scheduled loops to the survivor"
         ],
         "negative": [
           "packages/application/src/alerts.pg.test.ts::OPS-028 stays quiet on a healthy deployment and below every threshold",
           "packages/application/src/alerts.pg.test.ts::OPS-028 raises one alert per condition, refreshes it, keeps acknowledgement and never hides a failing rule",
           "packages/application/src/alerts.pg.test.ts::OPS-028 evaluates each workspace on its own findings",
-          "packages/application/src/telemetry.pg.test.ts::NFR-010 does not charge target timeouts or cancellations to the platform budget but charges lost leases"
+          "packages/application/src/telemetry.pg.test.ts::NFR-010 does not charge target timeouts or cancellations to the platform budget but charges lost leases",
+          "packages/application/src/controllers-election.test.ts::aborts a running elected tick when another controller took the lease",
+          "packages/application/src/controller-leases.pg.test.ts::judges lease expiry on the database clock, so a controller whose clock runs ahead cannot take a live lease"
         ],
         "criticalAssertions": [
           {
@@ -15179,20 +15234,22 @@
           {
             "path": "packages/application/src/alerts.pg.test.ts",
             "assertion": "expect(quiet).toEqual({ fired: [], resolved: [], errors: {} });"
+          },
+          {
+            "path": "packages/application/src/telemetry.pg.test.ts",
+            "assertion": "expect(indicator(stack, \"api_availability\")).toMatchObject({ numerator: 5, denominator: 6 });"
+          },
+          {
+            "path": "packages/application/src/alerts.pg.test.ts",
+            "assertion": "firesAndResolves(\"scheduler_leaderless\"));"
+          },
+          {
+            "path": "packages/application/src/alerts.pg.test.ts",
+            "assertion": "firesAndResolves(\"object_store_publish_failing\"));"
           }
         ]
       },
-      "deferred": [
-        {
-          "milestone": "M5",
-          "scope": "SLO indicators and alert rules for the distributed profile (elected scheduler, remote workers, artifact gateway); the M4 indicators describe the single-host server profile only",
-          "specQuote": {
-            "path": "specs/08-operations.md",
-            "text": "API/controller stateless, scheduler eleito, workers remotos e artifact gateway | PostgreSQL + S3 compatível compartilhados | Identidades de serviço, TLS/mTLS, leases e fencing | M5"
-          }
-        }
-      ],
-      "note": "Alert rules and thresholds are defined for the single-host server profile."
+      "note": "Alert rules and thresholds are defined for the single-host server profile. M5 adds the distributed indicators (controller availability, scheduler leader gap, artifact gateway availability) aggregated across live controllers, and alert rules for a leaderless scheduler, missing controllers, lost remote worker heartbeats, artifact gateway errors and failing object-store publication; leases are judged on the database clock."
     },
     {
       "id": "OPS-029",
@@ -15907,7 +15964,9 @@
         "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
         "apps/cli/src/ci-workflow.test.ts::isolates assessed execution from pinned clean publication and denies forks before setup/download",
         "packages/reporting/src/reporting.test.ts::exports honest partial evidence while retaining original failure in every format",
-        "packages/application/src/server-s3-refusal.test.ts::OPS-037 an S3-only server profile is refused with CAPABILITY_UNAVAILABLE and never served from the filesystem",
+        "packages/application/src/storage-s3.docker.test.ts::OPS-037 an upload becomes a source and its bytes are read back for a probe from another controller",
+        "packages/application/src/storage-s3.docker.test.ts::OPS-037 with the bucket unreachable readiness is degraded, new work is refused and nothing falls back to disk",
+        "packages/application/src/storage-s3.docker.test.ts::OPS-037 an Attempt whose evidence cannot be published ends non-green with storage_unavailable and publishes no bundle",
         "packages/application/src/notifications/resilience.test.ts::INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched",
         "packages/application/src/notifications/notifications.pg.test.ts::INT-003 ARCH-004 OPS-037 PostgreSQL: a destination outage dead-letters visibly and leaves the Run, the gate and the Run count untouched",
         "packages/application/src/notifications/rules.test.ts::REQ-042 fan-out is idempotent: rescanning the outbox creates no second delivery for an event",
@@ -15918,7 +15977,7 @@
       ],
       "oracle": [
         "Local JUnit/JSON/HTML exports never call GitHub; GitHub 401 dead-letters without changing the local result; a newer SHA is refused; the execute job has no checks permission and no token in the download step; absent committed bytes produce partial without fake evidence.",
-        "A server configuration with S3 storage is refused with CAPABILITY_UNAVAILABLE for M5 at parse time and at application open, while the filesystem option is accepted.",
+        "A server configured exclusively with S3-compatible storage never falls back to the filesystem: with the bucket unreachable, readiness and doctor report storage_unavailable and new Runs are refused, and an Attempt whose evidence cannot be published ends non-green with storage_unavailable and publishes no bundle.",
         "A revoked or suspended GitHub App installation stays revoked after restoring a backup taken while it was active (the operational_state tombstone wins, even on a row restored as active) and an installation that was never revoked keeps working; the check output links to the authenticated portal Run and batch pages and the portal lists them."
       ],
       "evidence": [
@@ -15948,7 +16007,8 @@
         "packages/application/src/notifications/service.ts",
         "packages/application/src/integrations/github/service.ts",
         "packages/application/src/backups.ts",
-        "apps/web/src/routes/github.tsx"
+        "apps/web/src/routes/github.tsx",
+        "packages/application/src/storage-health.ts"
       ],
       "coverage": {
         "positive": [
@@ -15957,7 +16017,7 @@
           "packages/application/src/delivery.test.ts::maps informational and required checks without turning empty, partial, cancelled or unbound coverage green",
           "packages/application/src/delivery.test.ts::refuses publication to a newer SHA instead of retargeting the old snapshot",
           "apps/cli/src/ci-workflow.test.ts::isolates assessed execution from pinned clean publication and denies forks before setup/download",
-          "packages/application/src/server-s3-refusal.test.ts::OPS-037 an S3-only server profile is refused with CAPABILITY_UNAVAILABLE and never served from the filesystem",
+          "packages/application/src/storage-s3.docker.test.ts::OPS-037 an upload becomes a source and its bytes are read back for a probe from another controller",
           "packages/application/src/notifications/resilience.test.ts::INT-003 ARCH-004 OPS-037 a destination outage retries with backoff, dead-letters visibly and leaves the Run and gate untouched",
           "packages/application/src/notifications/notifications.pg.test.ts::INT-003 ARCH-004 OPS-037 PostgreSQL: a destination outage dead-letters visibly and leaves the Run, the gate and the Run count untouched",
           "packages/application/src/integrations/github/github-restore.test.ts::OPS-037 a restored installation that was never revoked keeps working (the tombstone is not a blanket block)",
@@ -15968,7 +16028,8 @@
           "packages/application/src/delivery.test.ts::uses real HTTP retry responses, bounded backoff and external_id reconciliation before create",
           "packages/application/src/retention.test.ts::reports absent committed bytes as partial without changing the persisted outcome and propagates unknown errors",
           "packages/reporting/src/reporting.test.ts::exports honest partial evidence while retaining original failure in every format",
-          "packages/application/src/server-s3-refusal.test.ts::OPS-037 an S3-only server profile is refused with CAPABILITY_UNAVAILABLE and never served from the filesystem",
+          "packages/application/src/storage-s3.docker.test.ts::OPS-037 with the bucket unreachable readiness is degraded, new work is refused and nothing falls back to disk",
+          "packages/application/src/storage-s3.docker.test.ts::OPS-037 an Attempt whose evidence cannot be published ends non-green with storage_unavailable and publishes no bundle",
           "packages/application/src/notifications/rules.test.ts::REQ-042 fan-out is idempotent: rescanning the outbox creates no second delivery for an event",
           "packages/application/src/integrations/github/github-restore.test.ts::OPS-037 OPS-025 a revoked installation stays revoked after restoring a backup taken while it was active",
           "packages/application/src/integrations/github/github-delivery.test.ts::OPS-037 the tombstone alone revokes an installation row that a restore brought back as active and closes its pull requests"
@@ -15999,14 +16060,6 @@
             "assertion": "expect(command.exitCode).toBe(mutant === \"healthy\" ? 0 : 1);"
           },
           {
-            "path": "packages/application/src/server-s3-refusal.test.ts",
-            "assertion": "  expect(() => parseServerConfig(document({ kind: \"s3\" }))).toThrowError(refused);"
-          },
-          {
-            "path": "packages/application/src/server-s3-refusal.test.ts",
-            "assertion": "  expect(() => filesystemRoot({ kind: \"s3\" })).toThrowError(refused);"
-          },
-          {
             "path": "packages/application/src/notifications/resilience.test.ts",
             "assertion": "    expect(runRow(h, runId)).toEqual(before);"
           },
@@ -16021,10 +16074,18 @@
           {
             "path": "packages/application/src/integrations/github/github-delivery.test.ts",
             "assertion": "    expect(w.pull(SHA_A).state).toBe(\"closed\");"
+          },
+          {
+            "path": "packages/application/src/storage-s3.docker.test.ts",
+            "assertion": ").rejects.toMatchObject({ details: { reasonCode: \"storage_unavailable\" } });"
+          },
+          {
+            "path": "packages/application/src/storage-s3.docker.test.ts",
+            "assertion": "expect(failure).toMatchObject({ details: { reasonCode: \"storage_unavailable\" } });"
           }
         ]
       },
-      "note": "Token isolation is proven by static workflow assertions (execute job has no checks permission; the download step carries no token) plus the hosted cross-owner fork acceptance (m3-ci-integration gate, 2026-10-11); it is not a runtime proof for every GitHub configuration. Local export works without GitHub, 401 deliveries dead-letter without changing the local result, absent bytes yield partial evidence. Notifications, webhooks, the S3-only server profile, revoked App integration and the authorized check link are M4 scope. M4 refuses S3-only server profiles instead of falling back to the filesystem (ADR-016). M4 S8 proves notification fan-out dedupe and that a failing webhook preserves the Run and dead-letters. M4 re-applies GitHub installation tombstones on restore and links check output to authenticated portal pages."
+      "note": "Token isolation is proven by static workflow assertions (execute job has no checks permission; the download step carries no token) plus the hosted cross-owner fork acceptance (m3-ci-integration gate, 2026-10-11); it is not a runtime proof for every GitHub configuration. Local export works without GitHub, 401 deliveries dead-letter without changing the local result, absent bytes yield partial evidence. Notifications, webhooks, the S3-only server profile, revoked App integration and the authorized check link are M4 scope. M4 refuses S3-only server profiles instead of falling back to the filesystem (ADR-016). M4 S8 proves notification fan-out dedupe and that a failing webhook preserves the Run and dead-letters. M4 re-applies GitHub installation tombstones on restore and links check output to authenticated portal pages. M5 replaces that refusal with S3-compatible storage (ADR-035): an S3-only server or distributed profile reports storage_unavailable and refuses new work while the bucket is unreachable, and never publishes to an unshared filesystem."
     },
     {
       "id": "OPS-038",
@@ -20230,7 +20291,7 @@
         "tools/src/security/threat-model-acceptance.test.ts::fails a control that cites a missing test, a missing file, a non-test file or too little evidence",
         "tools/src/security/threat-model-acceptance.test.ts::fails an executor, transport or capability present in code but absent from the model",
         "tools/src/security/threat-model-acceptance.test.ts::fails when code enables a boundary the model still lists as disabled, and when the model drops coverage",
-        "tools/src/security/threat-model-acceptance.test.ts::distributed profile, SSO, SCIM and every other unimplemented M4+ capability stay disabled and refuse use"
+        "tools/src/security/threat-model-acceptance.test.ts::SSO, SCIM and every other unimplemented M4+ capability stay disabled and refuse use"
       ],
       "oracle": [
         "Deterministic checker parses the versioned threat model and proves boundary+control+asset+abuse+residual risk and existing enforcing tests for import, LLM, worker, viewer and tunnel (plus every other boundary), that every executor/transport/capability derived from code (sandbox executors, execution.executor enum, apps/*, capability registry) is modelled with a status equal to its enabled state in code, that shared-kernel and host-administrator residuals stay explicit, and that mutated copies (removed boundary, blanked field, missing/renamed test, new executor/transport/capability, enabled-but-disabled boundary) fail."
@@ -20273,7 +20334,7 @@
           },
           {
             "path": "tools/src/security/threat-model-acceptance.test.ts",
-            "assertion": "\"capability:distributed is enabled in code but modelled under disabled boundary B-30\","
+            "assertion": "\"capability:sso is enabled in code but modelled under disabled boundary B-17\","
           },
           {
             "path": "tools/src/security/threat-model-acceptance.test.ts",
@@ -21297,19 +21358,19 @@
           },
           {
             "path": "packages/evidence/src/evidence.test.ts",
-            "assertion": "await expect(\n      verifyBundle(result.bundleDir, { ...ids, workspaceId: uuidV7IdGenerator.next(\"ws\") }),\n    ).rejects.toThrow(\"Foreign\");"
+            "assertion": "await expect(\n      verifyBundle(...at(rootDir, ids), { ...ids, workspaceId: uuidV7IdGenerator.next(\"ws\") }),\n    ).rejects.toThrow(\"Foreign\");"
           },
           {
             "path": "packages/evidence/src/evidence.test.ts",
-            "assertion": "await expect(\n      verifyBundle(result.bundleDir, { ...ids, snapshotId: uuidV7IdGenerator.next(\"snp\") }),\n    ).rejects.toThrow(\"Foreign\");"
+            "assertion": "await expect(\n      verifyBundle(...at(rootDir, ids), { ...ids, snapshotId: uuidV7IdGenerator.next(\"snp\") }),\n    ).rejects.toThrow(\"Foreign\");"
           },
           {
             "path": "packages/evidence/src/evidence.test.ts",
-            "assertion": "await expect(verifyBundle(result.bundleDir, ids)).rejects.toThrow();"
+            "assertion": "await expect(verifyBundle(...at(rootDir, ids), ids)).rejects.toThrow();"
           },
           {
             "path": "packages/evidence/src/evidence.test.ts",
-            "assertion": "await expect(verifyBundle(result.bundleDir, ids)).rejects.toThrow();"
+            "assertion": "await expect(verifyBundle(...at(rootDir, ids), ids)).rejects.toThrow();"
           },
           {
             "path": "packages/evidence/src/adversarial.test.ts",
@@ -22271,7 +22332,14 @@
         "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 an idempotency key is scoped to the tenant that sent it",
         "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 identical artifact bytes in two tenants stay in separate workspace-scoped blobs",
         "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 SEC-022 a secret of tenant A cannot be listed, deleted or shadowed by tenant B",
-        "validation/journeys/tenant-isolation.docker.test.ts::NFR-003 SEC-030 M4-01 a hostile attempt of tenant A cannot read tenant B's evidence, secret or network service"
+        "validation/journeys/tenant-isolation.docker.test.ts::NFR-003 SEC-030 M4-01 a hostile attempt of tenant A cannot read tenant B's evidence, secret or network service",
+        "packages/application/src/storage-s3.docker.test.ts::SEC-030 a secret set on one controller is read, rotated and read again on another through the bucket",
+        "validation/journeys/m5-distributed.docker.test.ts::M5 distributed two controllers share PostgreSQL and S3 evidence",
+        "packages/application/src/storage-s3.docker.test.ts::SEC-030 a controller that missed a key rewrap fails closed and cannot write under the old key",
+        "packages/application/src/fault-matrix-s3.docker.test.ts::neither the evidence credential, nor the backup credential, nor root can delete a locked backup",
+        "validation/journeys/deploy-compose.test.ts::SEC-030 OPS-026 credentials are files, and the backup bucket credential is only read by the bootstrap",
+        "packages/application/src/server-config.test.ts::SEC-030 a backup destination that shares the evidence storage identity is refused",
+        "packages/application/src/storage-s3.docker.test.ts::SEC-030 another workspace cannot read a published bundle, artifact, source or secret and learns nothing from the store"
       ],
       "oracle": [
         "A raw SELECT through a connection scoped to workspace A returns zero rows of workspace B on every workspace_id table; tenant B cannot read, list, stream, cancel, page, condition on, deduplicate against or download tenant A's objects through REST, SSE, MCP, CLI, cache headers, idempotency keys or artifact blobs, and every foreign probe is byte-identical to a missing identifier.",
@@ -22279,7 +22347,10 @@
       ],
       "evidence": [
         "validation/results/m4-acceptance/s1/104-s1-final-pg/output.log",
-        "validation/results/m4-acceptance/s1/105-s1-final-docker/output.log"
+        "validation/results/m4-acceptance/s1/105-s1-final-docker/output.log",
+        "validation/results/m5-distributed.json",
+        "docs/adr/035-distributed-profile.md",
+        "docs/security/threat-model.md"
       ],
       "code": [
         "packages/persistence/migrations/postgres/0011_tenant_rls.sql",
@@ -22287,16 +22358,22 @@
         "packages/persistence/src/repositories.ts",
         "packages/application/src/http-support.ts",
         "packages/evidence/src/store.ts",
-        "apps/server/src/server.ts"
+        "apps/server/src/server.ts",
+        "packages/evidence/src/object-store.ts",
+        "packages/application/src/storage-config.ts",
+        "packages/application/src/secrets.ts"
       ],
       "coverage": {
         "positive": [
           "packages/application/src/tenancy.pg.test.ts::SEC-030 a tenant cannot read, list, stream or cancel another tenant's objects by identifier",
           "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 list filters and cursors never cross the tenant boundary",
           "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 conditional requests and cache headers never let one tenant's response stand in for another's",
-          "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 identical artifact bytes in two tenants stay in separate workspace-scoped blobs"
+          "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 identical artifact bytes in two tenants stay in separate workspace-scoped blobs",
+          "packages/application/src/storage-s3.docker.test.ts::SEC-030 a secret set on one controller is read, rotated and read again on another through the bucket",
+          "validation/journeys/m5-distributed.docker.test.ts::M5 distributed two controllers share PostgreSQL and S3 evidence"
         ],
         "negative": [
+          "packages/application/src/storage-s3.docker.test.ts::SEC-030 another workspace cannot read a published bundle, artifact, source or secret and learns nothing from the store",
           "packages/application/src/tenancy.pg.test.ts::SEC-030 NFR-003 a raw query through one workspace scope never returns another workspace's rows",
           "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 M4-01 tenant B reading tenant A's objects by identifier gets the answer for a missing identifier",
           "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 list filters and cursors never cross the tenant boundary",
@@ -22305,7 +22382,11 @@
           "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 M4-01 the remote CLI with tenant B's token cannot read tenant A's Run",
           "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 NFR-003 an idempotency key is scoped to the tenant that sent it",
           "validation/journeys/tenant-isolation.pg.test.ts::SEC-030 SEC-022 a secret of tenant A cannot be listed, deleted or shadowed by tenant B",
-          "validation/journeys/tenant-isolation.docker.test.ts::NFR-003 SEC-030 M4-01 a hostile attempt of tenant A cannot read tenant B's evidence, secret or network service"
+          "validation/journeys/tenant-isolation.docker.test.ts::NFR-003 SEC-030 M4-01 a hostile attempt of tenant A cannot read tenant B's evidence, secret or network service",
+          "packages/application/src/storage-s3.docker.test.ts::SEC-030 a controller that missed a key rewrap fails closed and cannot write under the old key",
+          "packages/application/src/fault-matrix-s3.docker.test.ts::neither the evidence credential, nor the backup credential, nor root can delete a locked backup",
+          "validation/journeys/deploy-compose.test.ts::SEC-030 OPS-026 credentials are files, and the backup bucket credential is only read by the bootstrap",
+          "packages/application/src/server-config.test.ts::SEC-030 a backup destination that shares the evidence storage identity is refused"
         ],
         "criticalAssertions": [
           {
@@ -22351,20 +22432,18 @@
           {
             "path": "validation/journeys/tenant-isolation.docker.test.ts",
             "assertion": "    expect(found.env_has_b_secret).toBe(\"false\");"
+          },
+          {
+            "path": "packages/application/src/storage-s3.docker.test.ts",
+            "assertion": ").rejects.toMatchObject({ details: { reasonCode: \"vault_key_stale\" } });"
+          },
+          {
+            "path": "packages/application/src/fault-matrix-s3.docker.test.ts",
+            "assertion": "expect(appCredentialDenied).toBe(true);"
           }
         ]
       },
-      "deferred": [
-        {
-          "milestone": "M5",
-          "scope": "S3-compatible shared storage keys and IAM isolation between tenants (service identities, TLS/mTLS, leases and fencing); M4 proves PostgreSQL plus filesystem evidence storage on one host.",
-          "specQuote": {
-            "path": "specs/08-operations.md",
-            "text": "PostgreSQL + S3 compatível compartilhados | Identidades de serviço, TLS/mTLS, leases e fencing | M5"
-          }
-        }
-      ],
-      "note": "SEC-030 verified for PostgreSQL with row-level security plus filesystem evidence on one host. S3 keys and IAM are not claimed."
+      "note": "SEC-030 verified for PostgreSQL with row-level security plus filesystem evidence on one host. S3 keys and IAM are not claimed. M5 extends SEC-030 to S3-compatible storage: object keys are derived from the authenticated workspace, the evidence and backup buckets use separate service identities limited to one bucket each, workers never receive a storage credential, and there is no cross-tenant dedup. Tenants share one bucket and one evidence identity; per-tenant IAM is not used (MinIO only, one physical host). Another workspace reading a bundle, artifact, source or secret by id on the shared bucket gets the same answer as for a missing id and no object outside its own workspace keys is requested."
     },
     {
       "id": "SEC-031",
@@ -30666,7 +30745,7 @@
         "validation/journeys/crash-recovery.docker.test.ts::J17 backup during active Docker execution is coherent, incomplete objects are explicit and restore merges later revocation",
         "packages/application/src/secrets.test.ts::SEC-036 restores real backup metadata but missing vault key denies release without replacement",
         "packages/persistence/src/disk-pressure.docker.test.ts::OPS-023 physical tmpfs ENOSPC preserves SQLite integrity and reserves recovery space without fictitious artifacts",
-        "packages/application/src/fault-matrix.pg.test.ts::VAL-045 the fault matrix names every write boundary of retention, backup and restore found in the implementation",
+        "packages/application/src/fault-matrix.pg.test.ts::VAL-045 the fault matrix names every write boundary of retention, backup, restore and evidence publication found in the implementation",
         "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash while removing an expired backup leaves every backup authentic and the next pass finishes",
         "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at purge.run_deleted leaves retention consistent, never half purged, and a rerun converges",
         "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at purge.runs_committed leaves retention consistent, never half purged, and a rerun converges",
@@ -30685,7 +30764,12 @@
         "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at restore.database_restored keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore",
         "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at restore.migrated keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore",
         "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at restore.finalizing keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore",
-        "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at restore.finalized keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore"
+        "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at restore.finalized keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore",
+        "packages/application/src/fault-matrix-s3.docker.test.ts::a backup under an unexpired lock stays listed, whole and retried: the refused removal is not an error and loses nothing",
+        "packages/application/src/fault-matrix-s3.docker.test.ts::restores a fresh database and the emptied evidence bucket from the locked backup alone",
+        "packages/application/src/fault-matrix-s3.docker.test.ts::a backup never overwrites an object that already exists",
+        "packages/application/src/fault-matrix-s3.docker.test.ts::a restore into an evidence bucket that holds foreign objects is refused and leaves them",
+        "packages/application/src/fault-matrix-s3.docker.test.ts::the leftovers of a crashed backup stay while their lock holds, even past the grace"
       ],
       "oracle": [
         "No false promoted partial bundle or rewritten terminal verdict; original metadata/hash integrity across kill points at the publication boundaries, multipart abort and hash mismatch, GC concurrent with publication, restore with a missing key and later revocation, and real ENOSPC.",
@@ -30698,7 +30782,8 @@
         "packages/evidence/src/publication-recovery.test.ts",
         "packages/persistence/src/disk-pressure.docker.test.ts",
         "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/manifest.json",
-        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/output.log"
+        "validation/results/m4-acceptance/s2b/040-s2b-r3-owned-pg/output.log",
+        "validation/results/m5-s3-loss-rehearsal.json"
       ],
       "code": [
         "packages/evidence/src/store.ts",
@@ -30707,16 +30792,20 @@
         "packages/persistence/src/database.ts",
         "packages/application/src/retention-purge.ts",
         "packages/application/src/server-backup.ts",
-        "packages/application/src/fault-matrix.pg.test.ts"
+        "packages/application/src/fault-matrix.pg.test.ts",
+        "packages/application/src/server-backup-media.ts",
+        "packages/evidence/src/bundle.ts"
       ],
-      "note": "Covered: three publication kill points (not six), multipart abort/hash mismatch, GC concurrent with publication, restore with missing key and revocation merge, real tmpfs ENOSPC. Existing boundary coverage must not be generalized to every write boundary: the exhaustive fault matrix for restore/import/migration/installer/retention is M4 (PostgreSQL/S3 profiles) and M6 (import/migration/installer governance). S2b proved every write boundary of retention, backup and restore on the PostgreSQL filesystem profile; the S3 part moves to M5.",
+      "note": "Covered: three publication kill points (not six), multipart abort/hash mismatch, GC concurrent with publication, restore with missing key and revocation merge, real tmpfs ENOSPC. Existing boundary coverage must not be generalized to every write boundary: the exhaustive fault matrix for restore/import/migration/installer/retention is M4 (PostgreSQL/S3 profiles) and M6 (import/migration/installer governance). S2b proved every write boundary of retention, backup and restore on the PostgreSQL filesystem profile; the S3 part moves to M5. M5 runs the fault matrix on the S3 profile: a crash at every write boundary of S3 publication, backup, restore and retention (PostgreSQL plus MinIO) never leaves a falsely complete bundle or backup and a rerun converges with identical hashes.",
       "coverage": {
         "positive": [
           "packages/evidence/src/publication-recovery.test.ts::OPS-020 interrupted multipart artifacts and mismatched hashes never become available",
           "validation/journeys/crash-recovery.docker.test.ts::J17 kills publication before DB commit, after DB commit and after finalization without false or duplicate publication",
           "packages/persistence/src/disk-pressure.docker.test.ts::OPS-023 physical tmpfs ENOSPC preserves SQLite integrity and reserves recovery space without fictitious artifacts",
-          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 the fault matrix names every write boundary of retention, backup and restore found in the implementation",
-          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash while removing an expired backup leaves every backup authentic and the next pass finishes"
+          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 the fault matrix names every write boundary of retention, backup, restore and evidence publication found in the implementation",
+          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash while removing an expired backup leaves every backup authentic and the next pass finishes",
+          "packages/application/src/fault-matrix-s3.docker.test.ts::a backup under an unexpired lock stays listed, whole and retried: the refused removal is not an error and loses nothing",
+          "packages/application/src/fault-matrix-s3.docker.test.ts::restores a fresh database and the emptied evidence bucket from the locked backup alone"
         ],
         "negative": [
           "packages/evidence/src/publication-recovery.test.ts::OPS-021 filesystem publication concurrent with orphan GC keeps objects protected by the live DB reference recheck",
@@ -30739,7 +30828,10 @@
           "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at restore.database_restored keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore",
           "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at restore.migrated keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore",
           "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at restore.finalizing keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore",
-          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at restore.finalized keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore"
+          "packages/application/src/fault-matrix.pg.test.ts::VAL-045 a crash at restore.finalized keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore",
+          "packages/application/src/fault-matrix-s3.docker.test.ts::a backup never overwrites an object that already exists",
+          "packages/application/src/fault-matrix-s3.docker.test.ts::a restore into an evidence bucket that holds foreign objects is refused and leaves them",
+          "packages/application/src/fault-matrix-s3.docker.test.ts::the leftovers of a crashed backup stay while their lock holds, even past the grace"
         ],
         "criticalAssertions": [
           {
@@ -30779,14 +30871,6 @@
           "specQuote": {
             "path": "specs/10-validation.md",
             "text": "**M6 — SSO/SCIM/plugins/portability/governance/GA** | SSO OIDC/SAML/SCIM, import/export nativo/TestSprite manual, plugins, schema migration/backup restore, installer governance"
-          }
-        },
-        {
-          "milestone": "M5",
-          "scope": "every-write-boundary fault matrix for retention and restore on the S3 profile (no S3 storage is implemented)",
-          "specQuote": {
-            "path": "specs/08-operations.md",
-            "text": "PostgreSQL + S3 compatível compartilhados | Identidades de serviço, TLS/mTLS, leases e fencing | M5"
           }
         }
       ]
@@ -31791,7 +31875,7 @@
       "id": "distributed",
       "milestone": "M5",
       "requirements": ["OPS-001", "OPS-028", "SEC-030", "API-008"],
-      "gate": "M5 distributed profile (stateless API replicas, elected scheduler, shared PostgreSQL and S3 storage, service identities); capability unavailable until the whole profile is accepted"
+      "gate": "M5 distributed profile (stateless API controllers, elected scheduler and loops, shared PostgreSQL and S3-compatible storage, separate evidence and backup service identities, holder-routed worker and tunnel traffic), accepted by the two-controller compose journey (ADR-035)"
     },
     {
       "id": "remote-workers",
