@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ContractError, type ExecutablePlan, type PlanStep, validate } from "@testmaster/contracts";
 import { AttemptClock, semanticHash, uuidV7IdGenerator } from "@testmaster/domain";
-import { FileEvidenceStore } from "@testmaster/evidence";
+import { bundleKeyFor, FileEvidenceStore, type ObjectStore } from "@testmaster/evidence";
 import type { EntityDocument } from "@testmaster/persistence";
 import {
   type BrowserObservation,
@@ -27,7 +27,7 @@ const loginRoute = /(^|\/)(log-?in|sign-?in)(\/|$)/i;
  * the outcome and reason code.
  */
 async function failureCause(
-  bundleDir: string | undefined,
+  bundleText: ((path: string) => Promise<string>) | undefined,
   outcome: string,
   reasonCode: string | null | undefined,
   resolutionFailure: { stepId: string; code: string; message: string } | undefined,
@@ -41,10 +41,10 @@ async function failureCause(
     at.hash = "";
     return `Exploration observed no same-origin link at ${at.href}: ${emptyFirst.controls?.length ?? 0} form controls, ${emptyFirst.hasPasswordField ? "password field present" : "no password field"}, 0 approved actions.${emptyFirst.settled === false ? " The page had not settled." : ""}`;
   }
-  if (bundleDir) {
+  if (bundleText) {
     try {
       // The runtime scrubbed the log before it was stored.
-      const log = JSON.parse(await readFile(join(bundleDir, "browser/network.json"), "utf8")) as {
+      const log = JSON.parse(await bundleText("browser/network.json")) as {
         entries?: { url?: unknown; failure?: unknown }[];
       };
       const hit = log.entries?.find(
@@ -57,6 +57,18 @@ async function failureCause(
     }
   }
   return `Exploration ended ${outcome} (${reasonCode ?? "no reason code"}) without observing the target.`;
+}
+/** The text of a bundle file straight from the store; the exploration reads its own just-sealed bundle. */
+async function readBundleText(
+  store: ObjectStore,
+  bundleKey: string,
+  path: string,
+): Promise<string> {
+  const body = await store.get(`${bundleKey}/${path}`);
+  if (!body) return "";
+  const chunks: Buffer[] = [];
+  for await (const chunk of body) chunks.push(Buffer.from(chunk));
+  return Buffer.concat(chunks).toString("utf8");
 }
 export interface ExploreInput {
   projectId: string;
@@ -88,11 +100,14 @@ interface PreparedExploration {
   features: EntityDocument[];
   previous: EntityDocument | null;
 }
+/** How often the controller that runs an exploration looks for a cancel request made elsewhere. */
+const CANCEL_POLL_MS = 1000;
 export class ExploreService {
   private static readonly controllers = new Map<string, AbortController>();
   constructor(
     readonly ctx: ServiceContext,
     readonly config: ResolvedConfig,
+    private readonly objectStore: ObjectStore,
   ) {}
   get(id: string) {
     const job = requireEntity(this.ctx, "DiscoveryJob", id);
@@ -102,18 +117,48 @@ export class ExploreService {
     );
     return job;
   }
-  /** True while this process runs the exploration: only its holder can stop it. */
-  running(id: string): boolean {
-    return ExploreService.controllers.has(id);
-  }
+  /**
+   * Records the cancel request in the job row, so the controller that runs the exploration stops it
+   * whichever process answers the request, and aborts it at once when this process holds it. A job
+   * that already ended keeps its phase and its request stays unset.
+   */
   cancel(id: string) {
     const job = this.get(id);
     this.ctx.authorize(
       "X",
       String((job.extensions as Record<string, unknown>)["testmaster:projectId"]),
     );
+    this.ctx.database.run(
+      "UPDATE discovery_jobs SET cancel_requested_at=? WHERE workspace_id=? AND id=? AND cancel_requested_at IS NULL AND phase NOT IN ('completed','cancelled','failed')",
+      new Date().toISOString(),
+      this.ctx.workspaceId,
+      id,
+    );
     ExploreService.controllers.get(id)?.abort();
     return this.get(id);
+  }
+  /**
+   * Looks for a cancel request in the job row now and then every second, and aborts `cancellation`
+   * when it finds one. The request may have been written by another controller; the holder is the only
+   * process that can act on it. Returns the function that stops the watch.
+   */
+  private watchCancel(jobId: string, cancellation: AbortController): () => void {
+    const check = () => {
+      try {
+        const row = this.ctx.database.get(
+          "SELECT cancel_requested_at FROM discovery_jobs WHERE workspace_id=? AND id=?",
+          this.ctx.workspaceId,
+          jobId,
+        );
+        if (row?.cancel_requested_at) cancellation.abort();
+      } catch {
+        // A closed or briefly unavailable database ends this look; the next one retries.
+      }
+    };
+    check();
+    const timer = setInterval(check, CANCEL_POLL_MS);
+    timer.unref();
+    return () => clearInterval(timer);
   }
   begin(
     input: ExploreInput,
@@ -277,6 +322,7 @@ export class ExploreService {
       const clock = new AttemptClock();
       const stopTimer = clock.deadline(prepared.budget.timeMs, abort);
       ExploreService.controllers.set(prepared.job.id, cancellation);
+      const stopWatching = this.watchCancel(prepared.job.id, cancellation);
       try {
         const results: EntityDocument[] = [];
         for (const feature of prepared.features) {
@@ -358,6 +404,7 @@ export class ExploreService {
         stopTimer();
         signal?.removeEventListener("abort", cancel);
         ExploreService.controllers.delete(prepared.job.id);
+        stopWatching();
       }
     }
     const { job, env, origins, budget, plan } = prepared;
@@ -378,7 +425,6 @@ export class ExploreService {
       snapshotId: uuidV7IdGenerator.next("snp"),
     };
     const inputDir = join(this.config.dataDir, "cache", "explore", job.id);
-    await mkdir(inputDir, { recursive: true, mode: 0o755 });
     const observations: {
       featureId: string;
       status: string;
@@ -412,6 +458,7 @@ export class ExploreService {
     const cancel = () => cancellation.abort();
     signal?.addEventListener("abort", cancel, { once: true });
     ExploreService.controllers.set(job.id, cancellation);
+    const stopWatching = this.watchCancel(job.id, cancellation);
     if (signal?.aborted) cancel();
     const controller = new AbortController();
     const abort = () => controller.abort();
@@ -425,6 +472,7 @@ export class ExploreService {
     const stopTimer = clock.deadline(budget.timeMs, abort);
     const runtimeRoot = `/tmp/testmaster-runtime-${process.getuid?.() ?? "unknown"}`;
     try {
+      await mkdir(inputDir, { recursive: true, mode: 0o755 });
       await mkdir(runtimeRoot, { recursive: true, mode: 0o700 });
       const runtimeInfo = await lstat(runtimeRoot);
       if (
@@ -444,7 +492,7 @@ export class ExploreService {
         ),
       );
       const result = await new AttemptExecutor(
-        new FileEvidenceStore({ rootDir: this.config.dataDir }),
+        new FileEvidenceStore({ rootDir: this.config.dataDir, objectStore: this.objectStore }),
         undefined,
         runtimeRoot,
       ).execute(
@@ -631,6 +679,9 @@ export class ExploreService {
         sourceRevisionIds: [],
         status: "partial",
       });
+      const bundleText = result.bundle
+        ? (path: string) => readBundleText(this.objectStore, bundleKeyFor(ids), path)
+        : undefined;
       const next = {
         ...job,
         version: 2,
@@ -671,7 +722,7 @@ export class ExploreService {
             ? {}
             : {
                 "testmaster:errorMessage": await failureCause(
-                  result.bundle?.bundleDir,
+                  bundleText,
                   result.outcome,
                   result.reasonCode,
                   resolutionFailures[0],
@@ -684,13 +735,11 @@ export class ExploreService {
             state: result.status === "ready" ? "full" : result.status,
             reason: result.errors[0] ?? null,
           })),
-          "testmaster:diagnostics": result.bundle
+          "testmaster:diagnostics": bundleText
             ? await Promise.all(
                 ["logs/protocol.json"].map(async (path) => ({
                   path,
-                  text: await readFile(join(result.bundle?.bundleDir ?? "", path), "utf8").catch(
-                    () => "",
-                  ),
+                  text: await bundleText(path).catch(() => ""),
                 })),
               )
             : [],
@@ -726,6 +775,7 @@ export class ExploreService {
       throw error;
     } finally {
       ExploreService.controllers.delete(job.id);
+      stopWatching();
       stopTimer();
       signal?.removeEventListener("abort", cancel);
       await rm(inputDir, { recursive: true, force: true });

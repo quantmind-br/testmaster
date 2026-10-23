@@ -39,11 +39,16 @@ All windows are rolling 30 days, evaluated per workspace.
 | `run_platform_success` | ratio | Terminal Runs without platform loss | Terminal Runs | 0.99 |
 | `evidence_availability` | ratio | Artifacts still `available` | Artifacts that retention has not expired or deleted | 0.999 |
 | `backup_freshness` | seconds | Age of the newest authentic successful backup | 1 when `backup` is configured, else not measured | 86400 s (24 h) |
+| `controller_availability` | ratio | Live controllers, capped at the expected count | `controller.expectedControllers` (1 when unset); not measured until a controller registered | 1 |
+| `scheduler_leader_gap` | seconds | Seconds since the `scheduler` lease lapsed (0 while held) | 1 when a lease row exists, else not measured | 60 s |
+| `artifact_gateway_availability` | ratio | Artifact downloads answered below 500 | Artifact downloads since the live controllers started | 0.999 |
 
 Proposed targets: 99.5 % availability, p95 below 2 s and queue start p95 below 60 s come from
 `specs/08-operations.md` §9.2; 0.99, 0.999 and 24 h are proposals of this slice and are open to change
-after a measured baseline exists. `backup_freshness` matches the `backup_failing` alert, which fires
-when the newest successful backup is older than 24 h.
+after a measured baseline exists. `backup_freshness` keeps the 24 h proposed target; the
+`backup_failing` alert is looser on purpose: it fires only when backups are configured, the newest
+attempt failed and no backup has succeeded in 26 h (`backupStaleHours`), so a single late scheduled run
+never pages.
 
 **Platform loss** (for `run_platform_success`) is a Run that ended `inconclusive` because an Attempt
 lost its lease (`attempt.lease_expired`): worker death, crash or partition. A target timeout is a
@@ -60,7 +65,7 @@ width.
 | `api_latency_p95` | 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10 |
 | `queue_wait_p95` | 1, 5, 15, 30, 60, 120, 300, 600, 1800 |
 
-Ratio indicators and `backup_freshness` carry no buckets.
+Ratio indicators, `backup_freshness` and `scheduler_leader_gap` carry no buckets.
 
 ### Error budget
 
@@ -79,8 +84,16 @@ when the indicator is not measured.
   default.
 * Alerts that watch the same signals and their runbooks are in [alerts.md](alerts.md).
 
-## Not covered
+## Several controllers
 
-Distributed SLOs (several controllers or regions) are an M5 topic. Cancellation latency, scheduler
-firing delay and artifact publication latency from the specification's reference table are not yet
-reported as indicators. No indicator is a commercial SLA.
+With more than one controller on the shared database (ADR-035), each controller counts its own API
+responses and artifact downloads and writes the counters to `controller_metrics` every 60 s, one row
+per controller, metric and hour. `api_availability`, `api_latency_p95` and
+`artifact_gateway_availability` add the rows of every live controller (a heartbeat newer than 30 s)
+and this process's unflushed counters; a stopped or silent controller's rows are left out, as its
+memory-only counters were before. Up to 60 s of another controller's traffic is therefore not visible
+yet. Gateway counters are deployment-wide: a signed download link names no workspace.
+
+Not covered: cancellation latency, scheduler firing delay and artifact publication latency from the
+specification's reference table are not yet reported as indicators, and there are no regional SLOs. No
+indicator is a commercial SLA.

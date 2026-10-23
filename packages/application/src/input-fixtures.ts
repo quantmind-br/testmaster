@@ -1,9 +1,10 @@
 import { ContractError, defaults, type ExecutablePlan, type PlanStep } from "@testmaster/contracts";
 import { canonicalJson, sha256, uuidV7IdGenerator } from "@testmaster/domain";
-import { ConfinedRoot } from "@testmaster/evidence";
+import { ConfinedRoot, type ObjectStore } from "@testmaster/evidence";
 import { AuditRepository } from "@testmaster/persistence";
 import type { ResolvedConfig } from "./config.js";
 import { requireEntity, type ServiceContext } from "./context.js";
+import { readObjectBytes } from "./object-bytes.js";
 
 export interface FixtureInput extends Record<string, unknown> {
   id: string;
@@ -144,6 +145,7 @@ export function fixtureInputHashes(
 export async function importFixtureInput(
   ctx: ServiceContext,
   config: ResolvedConfig,
+  objectStore: ObjectStore,
   input: FixtureImportInput,
 ): Promise<FixtureImportReceipt> {
   ctx.authorize("W", input.projectId);
@@ -177,65 +179,46 @@ export async function importFixtureInput(
   const contentHash = sha256(bytes);
   const id = uuidV7IdGenerator.next("art");
   const storageKey = `fixture-inputs/${ctx.workspaceId}/${input.projectId}/${contentHash}`;
-  const root = new ConfinedRoot(config.dataDir, true);
-  try {
-    try {
-      const file = await root.openFile(storageKey, true);
-      try {
-        await file.writeFile(bytes);
-        await file.sync();
-      } finally {
-        await file.close();
-      }
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-      const file = await root.openFile(storageKey);
-      try {
-        if (
-          (await file.stat()).size !== bytes.byteLength ||
-          sha256(await file.readFile()) !== contentHash
-        )
-          refuse(id, "stored_hash_mismatch");
-      } finally {
-        await file.close();
-      }
-    }
-    ctx.database.withTx(() => {
-      ctx.authorize("W", input.projectId);
-      ctx.database.run(
-        "INSERT INTO fixture_inputs(workspace_id,id,project_id,name,mime_type,content_hash,size_bytes,storage_key,created_at,created_by) VALUES(?,?,?,?,?,?,?,?,?,?)",
-        ctx.workspaceId,
-        id,
-        input.projectId,
-        input.name,
-        input.mimeType,
-        contentHash,
-        bytes.byteLength,
-        storageKey,
-        new Date().toISOString(),
-        ctx.principalId,
-      );
-      new AuditRepository(ctx.database).append({
-        workspaceId: ctx.workspaceId,
-        actor: ctx.principalId,
-        action: "artifact.fixture_imported",
-        resourceId: id,
-        requestId: ctx.correlationId ?? id,
-        timestamp: new Date().toISOString(),
-        beforeHash: null,
-        afterHash: sha256(
-          canonicalJson({ contentHash, sizeBytes: bytes.byteLength, projectId: input.projectId }),
-        ),
-      });
-    });
-  } finally {
-    root.close();
+  const stored = await objectStore.put(storageKey, bytes, { ifNoneMatch: true });
+  if (!stored.created) {
+    // Same content hash, same key: the bytes already stored must be the ones named.
+    const existing = await readObjectBytes(objectStore, storageKey, maximum);
+    if (!existing || existing.byteLength !== bytes.byteLength || sha256(existing) !== contentHash)
+      refuse(id, "stored_hash_mismatch");
   }
+  ctx.database.withTx(() => {
+    ctx.authorize("W", input.projectId);
+    ctx.database.run(
+      "INSERT INTO fixture_inputs(workspace_id,id,project_id,name,mime_type,content_hash,size_bytes,storage_key,created_at,created_by) VALUES(?,?,?,?,?,?,?,?,?,?)",
+      ctx.workspaceId,
+      id,
+      input.projectId,
+      input.name,
+      input.mimeType,
+      contentHash,
+      bytes.byteLength,
+      storageKey,
+      new Date().toISOString(),
+      ctx.principalId,
+    );
+    new AuditRepository(ctx.database).append({
+      workspaceId: ctx.workspaceId,
+      actor: ctx.principalId,
+      action: "artifact.fixture_imported",
+      resourceId: id,
+      requestId: ctx.correlationId ?? id,
+      timestamp: new Date().toISOString(),
+      beforeHash: null,
+      afterHash: sha256(
+        canonicalJson({ contentHash, sizeBytes: bytes.byteLength, projectId: input.projectId }),
+      ),
+    });
+  });
   return { id, contentHash, sizeBytes: bytes.byteLength };
 }
 export async function stageFixtureInputs(
   ctx: ServiceContext,
-  config: ResolvedConfig,
+  objectStore: ObjectStore,
   projectId: string,
   plan: ExecutablePlan | null,
   inputDir: string,
@@ -250,7 +233,6 @@ export async function stageFixtureInputs(
   > = {};
   if (!Object.keys(hashes).length) return { artifacts, inputFixtureHashes: hashes };
   const programs = terminalProgramRefIds(plan);
-  const source = new ConfinedRoot(config.dataDir);
   const destination = new ConfinedRoot(inputDir);
   let total = 0;
   try {
@@ -280,21 +262,17 @@ export async function stageFixtureInputs(
           maximumBytes: limits.attemptArtifactBytes ?? defaults.attemptArtifactBytes,
           totalBytes: total,
         });
-      let bytes: Buffer;
-      try {
-        const file = await source.openFile(expectedPath);
-        try {
-          if ((await file.stat()).size !== row.size_bytes) refuse(id, "size_mismatch");
-          bytes = await file.readFile();
-        } finally {
-          await file.close();
-        }
-      } catch (error) {
-        if (error instanceof ContractError) throw error;
-        refuse(id, "input_bytes_unavailable");
-      }
-      if (bytes.byteLength !== row.size_bytes || sha256(bytes) !== hash)
-        refuse(id, "content_hash_mismatch");
+      const bytes = await readObjectBytes(objectStore, expectedPath, row.size_bytes).catch(
+        (error: unknown) => {
+          // An object larger than the recorded size is a mismatch; an outage is not hidden.
+          if (error instanceof ContractError && error.code === "PAYLOAD_TOO_LARGE")
+            refuse(id, "size_mismatch");
+          throw error;
+        },
+      );
+      if (!bytes) refuse(id, "input_bytes_unavailable");
+      if (bytes.byteLength !== row.size_bytes) refuse(id, "size_mismatch");
+      if (sha256(bytes) !== hash) refuse(id, "content_hash_mismatch");
       if (fixtureRevoked(ctx, id)) refuse(id, "revoked");
       const name = `fixture-${id}`;
       const file = await destination.openFile(name, true);
@@ -313,7 +291,6 @@ export async function stageFixtureInputs(
     }
   } finally {
     destination.close();
-    source.close();
   }
   return { artifacts, inputFixtureHashes: hashes };
 }

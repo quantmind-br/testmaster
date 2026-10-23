@@ -3,7 +3,9 @@ import { setTimeout as delay } from "node:timers/promises";
 import {
   type Application,
   assertBackupSeparation,
+  closeObjectStore,
   issueLocalToken,
+  openEvidenceStore,
   readServerConfig,
   runControllers,
   type ServerConfig,
@@ -112,7 +114,7 @@ async function startServerProfile(
   const controller = new AbortController();
   const loops = controllerLoops(rt, application, "server", controller.signal);
   const address = await app.listen({ host, port });
-  const receipt = { address, publicOrigin: server.server.publicOrigin, mode: "server" };
+  const receipt = { address, publicOrigin: server.server.publicOrigin, mode: server.mode };
   rt.emit({
     data: receipt,
     text: `Server listening at ${address} (public origin ${server.server.publicOrigin})\n`,
@@ -134,14 +136,22 @@ export function serverCommands(program: Command, runtime: Runtime): void {
       .command("start")
       .option("--host <host>", "Loopback bind address", "127.0.0.1")
       .option("--port <port>", "HTTP port", integer, 7331)
-      .addOption(modeOption())
+      .addOption(modeOption(["distributed"]))
       .option("--origin <origin>", "Allowed browser Origin (repeatable)", collect, [])
       .option("--token-file <path>", "Private capability token file")
       .option("--print-token", "Explicitly emit the capability token")
-      .description("Start the API; --mode server reads the deployment file named by --config"),
+      .description(
+        "Start the API; --mode server or distributed reads the deployment file named by --config",
+      ),
     async (rt, _args, options) => {
-      if (options.mode === "server") {
-        const { application, server } = await rt.serverApp();
+      if (options.mode === "distributed" && string(options, "config") === undefined)
+        throw new ContractError(
+          "POLICY_DENIED",
+          "The distributed profile needs the PostgreSQL deployment file (--config); the local profile is SQLite",
+          { reasonCode: "distributed_requires_postgres" },
+        );
+      if (options.mode === "server" || options.mode === "distributed") {
+        const { application, server } = await rt.serverApp(options.mode);
         return startServerProfile(rt, application, server);
       }
       const host = string(options, "host") ?? "127.0.0.1";
@@ -322,8 +332,9 @@ export function serverCommands(program: Command, runtime: Runtime): void {
         ...server.database,
         applicationName: "testmaster-readiness",
       });
+      const objectStore = await openEvidenceStore(server.storage);
       try {
-        const report = await serverReadiness({ database, server });
+        const report = await serverReadiness({ database, server, objectStore });
         if (report.status !== "ready") process.exitCode = 1;
         return {
           data: report,
@@ -331,6 +342,7 @@ export function serverCommands(program: Command, runtime: Runtime): void {
         };
       } finally {
         database.close();
+        closeObjectStore(objectStore);
       }
     },
   );

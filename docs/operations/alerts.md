@@ -42,6 +42,11 @@ never change a Run's verdict to make a dashboard green, and never export secret 
 | [`cancellation_stuck`](#cancellation_stuck) | high | platform-operator |
 | [`tenant_violation`](#tenant_violation) | critical | security-owner |
 | [`egress_denied`](#egress_denied) | high | security-owner |
+| [`scheduler_leaderless`](#scheduler_leaderless) | critical | platform-operator |
+| [`controllers_below_expected`](#controllers_below_expected) | high | platform-operator |
+| [`remote_worker_heartbeat_lost`](#remote_worker_heartbeat_lost) | high | platform-operator |
+| [`artifact_gateway_errors`](#artifact_gateway_errors) | high | platform-operator |
+| [`object_store_publish_failing`](#object_store_publish_failing) | critical | platform-operator |
 
 ## lease_expirations_abnormal
 
@@ -129,9 +134,9 @@ never change a Run's verdict to make a dashboard green, and never export secret 
 
 * **Owner:** platform-operator
 * **Severity:** high
-* **Trigger:** the newest backup failure is newer than the newest success, or no successful backup
-  exists within 24 h while the schedule is `daily`, or the newest backup is incomplete
-  (`missingObjects` not empty).
+* **Trigger:** backups are configured and not `disabled`, the newest backup failure is newer than the
+  newest success, and no backup has succeeded in the last 26 h (`backupStaleHours`; 24 h plus two
+  hours of grace). The `backup_freshness` indicator keeps its proposed 24 h target.
 * **Impact:** the proposed 24 h RPO is not met; a restore would lose more data or miss artifacts.
 * **First actions:**
   1. `testmaster ops status`: last success and last failure times; check the failure reason code
@@ -246,6 +251,98 @@ never change a Run's verdict to make a dashboard green, and never export secret 
   review of the boundary for the suspicious case; the alert resolves.
 * **Escalation:** suspected bypass: incident `isolation_loss`, critical; do not restart workers until
   policy, image and seccomp profile have an independent review.
+
+## scheduler_leaderless
+
+* **Owner:** platform-operator
+* **Severity:** critical
+* **Trigger:** at least one controller is live but none has held the `scheduler` lease for more than
+  60 s (twice its 30 s term). With no lease row at all the clock starts when the oldest live controller
+  started. A single failover is shorter than that: a crashed holder's lease lapses after 30 s and a
+  survivor takes it on its next 10 s look.
+* **Impact:** no Schedule fires, and no firing is recovered, until a controller leads again. Runs that
+  already started are not affected.
+* **First actions:**
+  1. `testmaster ops slo`: `scheduler_leader_gap` shows how long the lease has lapsed;
+     `controller_availability` shows how many controllers are live.
+  2. Read the logs of every controller for `scheduler` tick errors, such as a database error, and fix
+     the cause there.
+  3. Check that the controllers reach the shared database. Lease expiry and controller liveness are
+     judged on the PostgreSQL server's clock, so a controller whose own clock is wrong cannot take a
+     live lease; still keep every host's clock synchronised, because Schedule firing instants and
+     report timestamps use the host clock.
+  4. Restart the controller whose tick fails; never edit `controller_leases` by hand.
+* **Verification:** `scheduler_leader_gap` is 0 and the next due Schedule fires once; the alert resolves.
+* **Escalation:** unresolved after 15 minutes: incident (`outage`, high).
+
+## controllers_below_expected
+
+* **Owner:** platform-operator
+* **Severity:** high
+* **Trigger:** the deployment configures how many controllers it runs (`controller.expectedControllers`)
+  and fewer have a heartbeat newer than 30 s. The rule is off while no count is configured.
+* **Impact:** less headroom: the loops that are elected (alerts, retention, tracker sync, scheduler)
+  survive on one controller, but API capacity and failover margin are reduced.
+* **First actions:**
+  1. `testmaster ops slo`: `controller_availability` lists the live count over the expected count.
+  2. Find the silent controller on its host: process, container, disk and memory, network path to
+     PostgreSQL.
+  3. A controller that stopped on purpose (scale down) is removed by lowering `expectedControllers`;
+     a stopped controller is never counted as live.
+* **Verification:** the live count reaches the expected count and the alert resolves.
+* **Escalation:** two controllers lost together, or the last one: treat as an outage.
+
+## remote_worker_heartbeat_lost
+
+* **Owner:** platform-operator
+* **Severity:** high
+* **Trigger:** a remote worker (one that enrolled with a public key) was marked `offline` by the
+  heartbeat sweep in the last 15 minutes and is still offline. One alert per worker.
+* **Impact:** the worker's leases expire after 30 s and its Attempts end `inconclusive` or are retried
+  by recorded effects; the host's capacity is gone until it heartbeats again.
+* **First actions:**
+  1. `testmaster worker status`: which worker, when it last heartbeated, and what it was running.
+  2. On the worker host: process and container runtime, disk, and the path to the controllers' public
+     origin (a TLS or tunnel failure looks the same as a crash).
+  3. If the host is lost for good, revoke the worker so its remaining leases are fenced.
+* **Verification:** the worker heartbeats again (state `ready`) or is revoked; the alert resolves.
+* **Escalation:** every remote worker lost at once points at the controllers or the network: see
+  `controllers_below_expected`.
+
+## artifact_gateway_errors
+
+* **Owner:** platform-operator
+* **Severity:** high
+* **Trigger:** at least 20 artifact downloads in the current and previous hour (summed over the live
+  controllers) and more than 5 % of them answered 5xx. A 4xx answer (expired link, revoked artifact)
+  never counts.
+* **Impact:** reports, trace viewers and CI links that stream evidence fail; the evidence itself is
+  not lost.
+* **First actions:**
+  1. `testmaster ops slo`: `artifact_gateway_availability`.
+  2. Check the object store: reachability from every controller, credentials, bucket policy, and
+     latency. A missing object answers 404 and is not counted here.
+  3. Check `object_store_publish_failing`: the same cause usually breaks writes first.
+* **Verification:** downloads succeed and the 5xx share falls below the threshold; the alert resolves
+  once the failing hour has passed out of the two-hour window or successes dilute it.
+* **Escalation:** the object store is down: incident (`outage`, high).
+
+## object_store_publish_failing
+
+* **Owner:** platform-operator
+* **Severity:** critical
+* **Trigger:** in the last 15 minutes at least one Run's `run.completed` or `run.execution_error`
+  event carries the reason `storage_unavailable`: the object store refused or lost the evidence write
+  and the Run ended `inconclusive` rather than pass without its evidence.
+* **Impact:** affected Runs have no complete evidence bundle and no passing verdict; every new Run is
+  affected while the store stays unavailable.
+* **First actions:**
+  1. Check the object store endpoint, credentials, bucket and quota from a controller host.
+  2. `testmaster ops pause --reason "<why>"` if the store will stay unavailable, so no new Run is
+     admitted into a failing publish.
+  3. After the store is back, re-run the affected Runs; never mark them `passed` by hand.
+* **Verification:** a new Run publishes its bundle and ends with a verdict; the alert resolves.
+* **Escalation:** unavailable for more than 15 minutes: incident (`outage`, critical).
 
 ## Related
 

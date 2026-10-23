@@ -9,6 +9,7 @@ import {
 } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { ContractError } from "@testmaster/contracts";
+import type { PersistenceDatabase } from "@testmaster/persistence";
 
 /** The authorization scheme of a remote caller that proves possession of its key (ADR-031). */
 export const POP_SCHEME = "TM-PoP";
@@ -134,13 +135,15 @@ export function parsePopAuthorization(header: unknown): PopProof | null {
 }
 
 /**
- * Checks proofs for one server process: the signature, the time window and the nonce. A nonce
- * is remembered for twice the window, so a captured header cannot be presented again.
+ * Checks proofs for a deployment: the signature, the time window and the nonce. A nonce is stored in
+ * `worker_proof_nonces` for twice the window, so a captured header cannot be presented again to any
+ * controller sharing the database (ADR-035). The elected housekeeping loop prunes expired rows.
  */
 export class PopVerifier {
-  private readonly seen = new Map<string, number>();
-
-  constructor(private readonly now: () => number = Date.now) {}
+  constructor(
+    private readonly database: PersistenceDatabase,
+    private readonly now: () => number = Date.now,
+  ) {}
 
   /** True when `proof` signs this request with `publicKey` and was never presented before. */
   verify(
@@ -150,13 +153,6 @@ export class PopVerifier {
   ): boolean {
     const now = this.now();
     if (Math.abs(now - proof.created) > POP_WINDOW_MS) return false;
-    // Entries expire in insertion order, so pruning stops at the first live one.
-    for (const [nonce, expires] of this.seen) {
-      if (expires > now) break;
-      this.seen.delete(nonce);
-    }
-    const replayKey = `${proof.keyId}\n${proof.nonce}`;
-    if (this.seen.has(replayKey)) return false;
     const key = publicKeyObject(publicKey);
     if (!key) return false;
     const signature = Buffer.from(proof.signature, "base64url");
@@ -173,7 +169,15 @@ export class PopVerifier {
       key,
       signature,
     );
-    if (valid) this.seen.set(replayKey, now + 2 * POP_WINDOW_MS);
-    return valid;
+    // Only a valid signature spends a nonce, so unsigned garbage cannot fill the table; the insert
+    // is the freshness decision, atomic across controllers.
+    return (
+      valid &&
+      this.database.run(
+        "INSERT INTO worker_proof_nonces(key,expires_at) VALUES(?,?) ON CONFLICT(key) DO NOTHING",
+        `${proof.keyId}\n${proof.nonce}`,
+        new Date(now + 2 * POP_WINDOW_MS).toISOString(),
+      ).changes === 1
+    );
   }
 }

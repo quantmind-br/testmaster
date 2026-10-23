@@ -27,7 +27,10 @@ export interface ProfilePolicy {
 }
 export interface ResolvedConfig {
   cwd: string;
+  /** Local directory of the process: the data directory, or the staging root of the S3 profile. */
   dataDir: string;
+  /** Set only on the S3 profile: bytes of evidence the bucket may hold (`storage.capacityBytes`). */
+  evidenceCapacityBytes?: number;
   home: string;
   effectiveConfig: EffectiveConfig;
   profilePolicy: ProfilePolicy;
@@ -53,7 +56,6 @@ export function exportEffectiveConfig(
       signedArtifactLinks: "M4",
       tunnel: "M4",
       schedule: "M4",
-      distributed: "M5",
     },
   };
 }

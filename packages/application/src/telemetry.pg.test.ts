@@ -1,6 +1,12 @@
 import { afterEach, expect, it } from "vitest";
+import {
+  newControllerIdentity,
+  registerController,
+  stopController,
+} from "./controller-instances.js";
+import { acquireLease } from "./controller-leases.js";
 import { addWorkspace, type OpsStack, opsStack, seedRun } from "./ops.testkit.js";
-import { apiLatencyBuckets, queueWaitBuckets } from "./telemetry.js";
+import { ApiMetrics, apiLatencyBuckets, flushApiMetrics, queueWaitBuckets } from "./telemetry.js";
 
 const cleanups: (() => Promise<void>)[] = [];
 afterEach(async () => {
@@ -90,6 +96,9 @@ it("NFR-010 reports each SLO with its denominator, window, histogram and a propo
     "run_platform_success",
     "evidence_availability",
     "backup_freshness",
+    "controller_availability",
+    "scheduler_leader_gap",
+    "artifact_gateway_availability",
   ]);
   for (const item of empty.indicators) {
     expect(item.measurement, item.id).toBe("not_measured");
@@ -242,4 +251,63 @@ it("NFR-010 measures evidence availability and backup freshness only where they 
   });
   const bare = await freshStack({ backup: false });
   expect(indicator(bare, "backup_freshness").measurement).toBe("not_measured");
+});
+
+it("OPS-028 adds the counters of every live controller to the SLO and leaves out a stopped one", async () => {
+  const stack = await freshStack();
+  const database = stack.application.controllerScope().database;
+  const at = now.getTime();
+  const first = newControllerIdentity();
+  const second = newControllerIdentity();
+  registerController(database, first, at);
+  registerController(database, second, at);
+  const sample = (status: number) => ({
+    workspaceId: stack.workspaceId,
+    method: "GET",
+    route: "/v1/runs",
+    status,
+    seconds: 0.02,
+  });
+  const onFirst = new ApiMetrics();
+  for (const status of [200, 200, 200, 503]) onFirst.record(sample(status));
+  const onSecond = new ApiMetrics();
+  for (let index = 0; index < 6; index++) onSecond.record(sample(200));
+  onSecond.recordGateway(200);
+  onSecond.recordGateway(500);
+  flushApiMetrics(database, first.id, onFirst, at);
+  flushApiMetrics(database, second.id, onSecond, at);
+  // A second flush in the same hour adds to the row rather than replacing it.
+  onFirst.record(sample(200));
+  flushApiMetrics(database, first.id, onFirst, at + 60_000);
+
+  expect(indicator(stack, "api_availability")).toMatchObject({ numerator: 10, denominator: 11 });
+  expect(indicator(stack, "artifact_gateway_availability")).toMatchObject({
+    numerator: 1,
+    denominator: 2,
+  });
+  expect(indicator(stack, "controller_availability")).toMatchObject({
+    numerator: 1,
+    denominator: 1,
+  });
+
+  // This process's own counters join the sum before they are flushed.
+  stack.application.apiMetrics.record(sample(200));
+  expect(indicator(stack, "api_availability")).toMatchObject({ numerator: 11, denominator: 12 });
+
+  stopController(database, second.id, at + 1000);
+  expect(indicator(stack, "api_availability")).toMatchObject({ numerator: 5, denominator: 6 });
+  expect(indicator(stack, "artifact_gateway_availability").measurement).toBe("not_measured");
+});
+
+it("OPS-028 measures how long the scheduler lease has been without a holder", async () => {
+  const stack = await freshStack();
+  const database = stack.application.controllerScope().database;
+  const at = now.getTime();
+  acquireLease(database, "scheduler", "ctl_gone", 30_000, at - 100_000);
+  expect(indicator(stack, "scheduler_leader_gap")).toMatchObject({
+    measurement: "measured",
+    observed: 70,
+  });
+  acquireLease(database, "scheduler", "ctl_next", 30_000, at - 5_000);
+  expect(indicator(stack, "scheduler_leader_gap").observed).toBe(0);
 });

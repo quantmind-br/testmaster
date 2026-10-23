@@ -216,7 +216,7 @@ it("OPS-016 OPS-017 three scheduler processes with a killed leader and flapping 
   // Leadership really flapped: several fences wrote firings and the lease fence only moved forward.
   const fences = new Set(dispatched.map((row) => Number(row.lease_fence)));
   expect(fences.size).toBeGreaterThanOrEqual(2);
-  const stored = database.all("SELECT fence FROM scheduler_leases");
+  const stored = database.all("SELECT fence FROM controller_leases WHERE name='scheduler'");
   expect(stored).toHaveLength(1);
   expect(Number(stored[0]?.fence)).toBeGreaterThanOrEqual(Math.max(...fences));
   // Tenant isolation: a connection scoped to another workspace sees none of the schedule rows.

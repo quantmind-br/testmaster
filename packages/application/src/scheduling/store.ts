@@ -73,13 +73,6 @@ export interface StoredFiring {
     frozen?: FiringFrozen;
   };
 }
-export interface Lease {
-  holder: string;
-  fence: number;
-  acquiredAt: string;
-  expiresAt: string;
-}
-
 interface ScheduleRowData {
   ownerCredential: OwnerCredential;
   pausedAt: string | null;
@@ -417,55 +410,5 @@ export class ScheduleStore {
         limit,
       )
       .map(decodeFiring);
-  }
-
-  lease(name: string): Lease | null {
-    const row = this.database.get(
-      "SELECT holder,fence,acquired_at,expires_at FROM scheduler_leases WHERE name=?",
-      name,
-    );
-    return row
-      ? {
-          holder: String(row.holder),
-          fence: Number(row.fence),
-          acquiredAt: String(row.acquired_at),
-          expiresAt: String(row.expires_at),
-        }
-      : null;
-  }
-  insertLease(name: string, lease: Lease): boolean {
-    if (this.lease(name)) return false;
-    this.database.run(
-      "INSERT INTO scheduler_leases(name,holder,fence,acquired_at,expires_at) VALUES(?,?,?,?,?)",
-      name,
-      lease.holder,
-      lease.fence,
-      lease.acquiredAt,
-      lease.expiresAt,
-    );
-    return true;
-  }
-  /** Updates only if the stored fence is the one the caller saw. */
-  updateLease(name: string, seenFence: number, next: Lease): boolean {
-    return (
-      this.database.run(
-        "UPDATE scheduler_leases SET holder=?,fence=?,acquired_at=?,expires_at=? WHERE name=? AND fence=?",
-        next.holder,
-        next.fence,
-        next.acquiredAt,
-        next.expiresAt,
-        name,
-        seenFence,
-      ).changes > 0
-    );
-  }
-  expireLease(name: string, holder: string, fence: number, atIso: string): void {
-    this.database.run(
-      "UPDATE scheduler_leases SET expires_at=? WHERE name=? AND holder=? AND fence=?",
-      atIso,
-      name,
-      holder,
-      fence,
-    );
   }
 }

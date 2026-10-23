@@ -9,15 +9,7 @@ import {
   waitForBatch,
 } from "./execution.js";
 import { matrixAxes, matrixOptions, reducedMotion } from "./matrix.js";
-import {
-  collect,
-  integer,
-  type Options,
-  type Runtime,
-  string,
-  strings,
-  unavailable,
-} from "./runtime.js";
+import { collect, integer, type Options, type Runtime, string, strings } from "./runtime.js";
 
 function admissionOptions(options: Options) {
   const key = string(options, "idempotencyKey");
@@ -40,7 +32,12 @@ function replayOptions(options: Options): void {
     throw new ContractError("POLICY_DENIED", "Strict CI forbids automatic healing");
   if (options.heal === "propose" && options.wait !== true)
     throw new ContractError("PRECONDITION_FAILED", "Post-failure healing requires --wait");
-  if (string(options, "executor") === "remote") unavailable("distributed");
+  if (string(options, "executor") === "remote")
+    throw new ContractError(
+      "INVALID_ARGUMENT",
+      "The local CLI runs in-process; a remote worker takes Runs from a server (use --endpoint)",
+      { option: "executor" },
+    );
   // A tunnel carries a remote worker's traffic; a local run already reaches the local target.
   if (string(options, "tunnel"))
     throw new ContractError(

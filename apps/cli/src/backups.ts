@@ -70,11 +70,7 @@ export function backupCommands(program: Command, runtime: Runtime): void {
       ),
     async (rt, args, options) => {
       if (options.mode === "server")
-        return serverBackupRestore(
-          rt,
-          await rt.confinedPath(String(args[0])),
-          options.keepSchema === true,
-        );
+        return serverBackupRestore(rt, String(args[0]), options.keepSchema === true);
       return {
         data: await (await rt.app()).backups.restore(
           await rt.confinedPath(String(args[0])),

@@ -3,8 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { implementedFeatures } from "@testmaster/contracts";
 import { afterEach, expect, it } from "vitest";
-import { Application } from "./application.js";
-import { filesystemRoot, parseServerConfig, readServerConfig } from "./server-config.js";
+import { localDataDir, parseServerConfig, readServerConfig } from "./server-config.js";
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -33,26 +32,107 @@ async function scratch() {
   return root;
 }
 
-it("ADR-016 refuses S3 storage with CAPABILITY_UNAVAILABLE for M5 and never falls back to the filesystem", async () => {
-  const expected = expect.objectContaining({
-    code: "CAPABILITY_UNAVAILABLE",
-    details: expect.objectContaining({ capability: "s3-storage", milestone: "M5" }),
+const s3Location = {
+  endpoint: "https://s3.example:9000",
+  region: "eu-1",
+  bucket: "evidence",
+  forcePathStyle: true,
+  accessKeyIdFile: "/etc/testmaster/s3-access-key-id",
+  secretAccessKeyFile: "/etc/testmaster/s3-secret-access-key",
+};
+const distributed = (overrides: Record<string, unknown> = {}) => {
+  const base = document();
+  return {
+    ...base,
+    mode: "distributed",
+    storage: { kind: "s3", ...s3Location, capacityBytes: 1_000_000, stagingRoot: "/var/tmp/tm" },
+    server: { ...base.server, internalOrigin: "https://controller-1.internal:8443" },
+    ...overrides,
+  };
+};
+const refusal = (value: unknown) => {
+  try {
+    parseServerConfig(value);
+  } catch (error) {
+    return error as { code: string; details: Record<string, unknown> };
+  }
+  return undefined;
+};
+
+it("OPS-001 the distributed profile needs PostgreSQL and shared storage and refuses to degrade", () => {
+  const parsed = parseServerConfig(distributed());
+  expect(parsed.mode).toBe("distributed");
+  expect(parsed.storage).toMatchObject({
+    kind: "s3",
+    bucket: "evidence",
+    stagingRoot: "/var/tmp/tm",
   });
-  expect(() => parseServerConfig(document({ storage: { kind: "s3" } }))).toThrowError(expected);
-  expect(() => filesystemRoot({ kind: "s3" })).toThrowError(expected);
-  const root = await scratch();
-  const home = join(root, "home");
-  await mkdir(home);
-  const config = { ...parseServerConfig(document()), storage: { kind: "s3" as const } };
-  await expect(
-    Application.open({ cwd: root, home, env: {}, server: config }),
-  ).rejects.toMatchObject({
-    code: "CAPABILITY_UNAVAILABLE",
+  expect(localDataDir(parsed.storage)).toBe("/var/tmp/tm");
+  expect(refusal(distributed({ database: { engine: "sqlite", url: "x" } }))).toMatchObject({
+    code: "POLICY_DENIED",
+    details: { reasonCode: "distributed_requires_postgres" },
   });
-  // Positive control: the filesystem option is accepted and resolves to its root.
-  expect(filesystemRoot(parseServerConfig(document()).storage)).toBe(
-    "/var/lib/testmaster/evidence",
+  expect(
+    refusal(distributed({ storage: { kind: "filesystem", root: "/var/lib/tm" } })),
+  ).toMatchObject({
+    code: "POLICY_DENIED",
+    details: { reasonCode: "distributed_requires_shared_storage" },
+  });
+});
+
+it("OPS-001 S3 storage in the server profile needs a complete location and the internal origin follows the mode", () => {
+  const incomplete = { kind: "s3", ...s3Location, capacityBytes: 1, stagingRoot: "/var/tmp/tm" };
+  expect(refusal(document({ storage: incomplete }))).toBeUndefined();
+  expect(refusal(document({ storage: { kind: "s3" } }))?.code).toBe("INVALID_ARGUMENT");
+  expect(refusal(document({ storage: { ...incomplete, capacityBytes: 0 } }))?.code).toBe(
+    "INVALID_ARGUMENT",
   );
+  const base = distributed();
+  const { internalOrigin: _omitted, ...withoutOrigin } = base.server;
+  expect(refusal(distributed({ server: withoutOrigin }))?.code).toBe("INVALID_ARGUMENT");
+  expect(
+    refusal(document({ server: { ...document().server, internalOrigin: "https://x.internal" } }))
+      ?.code,
+  ).toBe("INVALID_ARGUMENT");
+  expect(
+    parseServerConfig(distributed({ server: { ...base.server, expectedControllers: 3 } })).server
+      .expectedControllers,
+  ).toBe(3);
+  expect(refusal(distributed({ server: { ...base.server, expectedControllers: 0 } }))?.code).toBe(
+    "INVALID_ARGUMENT",
+  );
+});
+
+it("SEC-030 a backup destination that shares the evidence storage identity is refused", () => {
+  const backup = (destination: Record<string, unknown>) =>
+    distributed({ backup: { destination: { kind: "s3", ...s3Location, ...destination } } });
+  // Same endpoint and bucket: one outage or one deletion takes both copies.
+  expect(refusal(backup({}))).toMatchObject({
+    code: "POLICY_DENIED",
+    details: { reasonCode: "backup_shares_storage_identity" },
+  });
+  // Same credential file: one leaked credential reaches both copies.
+  expect(
+    refusal(
+      backup({
+        endpoint: "https://backup.example:9000",
+        bucket: "backups",
+        secretAccessKeyFile: s3Location.secretAccessKeyFile,
+        accessKeyIdFile: "/etc/testmaster/backup-access-key-id",
+      }),
+    ),
+  ).toMatchObject({ details: { reasonCode: "backup_shares_storage_identity" } });
+  // Positive control: a separate endpoint, bucket and credentials is accepted.
+  expect(
+    refusal(
+      backup({
+        endpoint: "https://backup.example:9000",
+        bucket: "backups",
+        accessKeyIdFile: "/etc/testmaster/backup-access-key-id",
+        secretAccessKeyFile: "/etc/testmaster/backup-secret-access-key",
+      }),
+    ),
+  ).toBeUndefined();
 });
 
 it("ADR-016 rejects deployment documents with passwords, plaintext public origins and missing at-rest attestation", () => {
@@ -101,7 +181,6 @@ it("ADR-016 reads the deployment file only when it is a private regular file own
 });
 
 it("ADR-016 advertises the identity, server and PostgreSQL features as implemented from one registry", () => {
-  for (const feature of ["server", "postgres", "multi-user", "identity"])
+  for (const feature of ["server", "postgres", "multi-user", "identity", "distributed"])
     expect(implementedFeatures.has(feature)).toBe(true);
-  expect(implementedFeatures.has("s3-storage")).toBe(false);
 });

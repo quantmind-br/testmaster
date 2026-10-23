@@ -16,8 +16,12 @@ import {
 import { gateNeutralReason, semanticHash } from "@testmaster/domain";
 import {
   BundleIntegrityError,
+  BundleNotFoundError,
+  bundleKeyFor,
+  bundleLocation,
   ConfinedRoot,
   deriveFailedOnly,
+  type ObjectStore,
   streamBundleArtifact,
   UnsafePathError,
   verifyBundle,
@@ -126,9 +130,31 @@ export class ArtifactsService {
     readonly ctx: ServiceContext,
     readonly config: ResolvedConfig,
     readonly runs: RunsService,
+    readonly objectStore: ObjectStore,
   ) {}
+  /** Streams one entry of a bundle `get` returned from the object store that holds the bundle. */
+  streamEntry(
+    bundle: EvidenceBundle,
+    relativePath: string,
+    options?: { allowRestrictedRaw?: boolean; maxBytes?: number },
+  ): AsyncGenerator<Uint8Array> {
+    return streamBundleArtifact(
+      {
+        store: this.objectStore,
+        bundleKey: bundleKeyFor({
+          workspaceId: this.ctx.workspaceId,
+          runId: bundle.meta.runId,
+          attemptId: bundle.meta.attemptId,
+        }),
+        manifest: bundle.manifest,
+        meta: bundle.meta,
+      },
+      relativePath,
+      options,
+    );
+  }
   importFixtureInput(input: FixtureImportInput): Promise<FixtureImportReceipt> {
-    return importFixtureInput(this.ctx, this.config, input);
+    return importFixtureInput(this.ctx, this.config, this.objectStore, input);
   }
   private assertReadable(artifactId: string): void {
     const artifact = requireEntity(this.ctx, "Artifact", artifactId);
@@ -228,8 +254,9 @@ export class ArtifactsService {
     );
     if (!row) throw this.evidenceMissing(runId);
     const attemptId = String(row.attempt_id);
-    const bundleDir = join(this.config.dataDir, "runs", this.ctx.workspaceId, runId, attemptId);
-    const bundle = await verifyBundle(bundleDir, {
+    const ids = { workspaceId: this.ctx.workspaceId, runId, attemptId };
+    const bundleDir = bundleLocation(this.objectStore, ids);
+    const bundle = await verifyBundle(this.objectStore, bundleKeyFor(ids), {
       workspaceId: this.ctx.workspaceId,
       runId,
       attemptId,
@@ -244,7 +271,7 @@ export class ArtifactsService {
         )
         .map((artifact) => String(artifact.id)),
     }).catch((error: unknown) => {
-      if ((error as NodeJS.ErrnoException)?.code === "ENOENT") throw this.evidenceMissing(runId);
+      if (error instanceof BundleNotFoundError) throw this.evidenceMissing(runId);
       if (
         error instanceof UnsafePathError ||
         ["ELOOP", "ENOTDIR"].includes((error as NodeJS.ErrnoException)?.code ?? "")
@@ -385,10 +412,7 @@ export class ArtifactsService {
         this.assertReadable(entry.artifactId);
         const file = await root.openFile(entry.relativePath, true);
         try {
-          for await (const chunk of streamBundleArtifact(
-            { rootDir: bundle.bundleDir, manifest: bundle.manifest, meta: bundle.meta },
-            entry.relativePath,
-          )) {
+          for await (const chunk of this.streamEntry(bundle, entry.relativePath)) {
             this.assertReadable(entry.artifactId);
             await file.write(chunk);
           }
@@ -444,10 +468,7 @@ export class ArtifactsService {
     const bytes = Buffer.alloc(Math.min(maxBytes, entry.sizeBytes - offset));
     let position = 0;
     let written = 0;
-    for await (const chunk of streamBundleArtifact(
-      { rootDir: bundle.bundleDir, manifest: bundle.manifest, meta: bundle.meta },
-      relativePath,
-    )) {
+    for await (const chunk of this.streamEntry(bundle, relativePath)) {
       this.assertReadable(entry.artifactId);
       const start = Math.max(0, offset - position);
       const count = Math.min(chunk.length - start, bytes.length - written);
@@ -497,6 +518,7 @@ export class ArtifactsService {
     const relativePath = entry.relativePath;
     const ctx = this.ctx;
     const runs = this.runs;
+    const streamEntry = this.streamEntry.bind(this);
     async function* chunks() {
       const current = requireEntity(ctx, "Artifact", artifactId);
       runs.get(String(attempt.runId));
@@ -513,11 +535,9 @@ export class ArtifactsService {
       )
         throw new ContractError("NOT_FOUND", "Artifact access revoked");
       let position = 0;
-      for await (const chunk of streamBundleArtifact(
-        { rootDir: bundle.bundleDir, manifest: bundle.manifest, meta: bundle.meta },
-        relativePath,
-        { allowRestrictedRaw: options.allowRestrictedRaw === true },
-      )) {
+      for await (const chunk of streamEntry(bundle, relativePath, {
+        allowRestrictedRaw: options.allowRestrictedRaw === true,
+      })) {
         if (
           requireEntity(ctx, "Artifact", artifactId).state === "expired" ||
           ctx.database.get(

@@ -149,7 +149,7 @@ export async function startCliAgent(
  * refusal names first (SEC-039).
  */
 export async function admitThroughTunnel(
-  stack: ServerStack,
+  stack: Pick<ServerStack, "ownerClient">,
   workspace: number,
   request: { testId: string; environmentId: string; tunnelId: string },
 ): Promise<string> {

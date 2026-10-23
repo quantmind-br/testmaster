@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { access, readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { publishFaultPoints } from "@testmaster/evidence";
 import { PersistenceDatabase } from "@testmaster/persistence";
 import { afterEach, expect, it } from "vitest";
 import { readKeyFile } from "./backup-crypto.js";
@@ -73,15 +74,28 @@ function insertOldAudit(stack: OpsStack, count: number): void {
     );
 }
 
-it("VAL-045 the fault matrix names every write boundary of retention, backup and restore found in the implementation", async () => {
+it("VAL-045 the fault matrix names every write boundary of retention, backup, restore and evidence publication found in the implementation", async () => {
   const names = new Set<string>();
-  for (const file of ["retention-purge.ts", "server-backup.ts"])
+  // Every file that declares a fault point. The S3-only boundaries (restore.marker_written,
+  // retention.object_deleted, publish.*) are crashed by fault-matrix-s3.docker.test.ts.
+  for (const file of [
+    "retention-purge.ts",
+    "server-backup.ts",
+    "server-backup-media.ts",
+    "../../evidence/src/bundle.ts",
+  ])
     for (const match of (await sourceText(file)).matchAll(
       /(?:fault|hook|faultHook\?\.)\("([a-z_]+\.[a-z_]+)"\)/g,
     ))
       names.add(String(match[1]));
   expect([...names].sort()).toEqual(
-    [...purgePoints, ...backupFaultPoints, ...restoreFaultPoints, ...retentionFaultPoints].sort(),
+    [
+      ...purgePoints,
+      ...backupFaultPoints,
+      ...restoreFaultPoints,
+      ...retentionFaultPoints,
+      ...publishFaultPoints,
+    ].sort(),
   );
 });
 
@@ -317,8 +331,9 @@ async function restoreCrash(point: (typeof restoreFaultPoints)[number]): Promise
     } finally {
       empty.close();
     }
-  } else if (point === "restore.finalized") {
-    // Complete: the database opens, only the evidence marker remains, and a second restore refuses to overwrite it.
+  } else if (point === "restore.finalized" || point === "restore.marker_cleared") {
+    // Complete: the database opens and a second restore refuses to overwrite it. Only a crash
+    // before the marker is removed leaves the evidence marker behind.
     expect(await restoredDigest(target.server)).toMatchObject({
       tables: expected.tables,
       isolated: "true",
@@ -326,12 +341,14 @@ async function restoreCrash(point: (typeof restoreFaultPoints)[number]): Promise
     await expect(
       restoreServerBackup({ directory: backup.directory, server: target.server }),
     ).rejects.toMatchObject({ details: { reasonCode: "restore_target_not_empty" } });
-    await access(
+    const marker = access(
       join(
         target.server.storage.kind === "filesystem" ? target.server.storage.root : "",
         ".tm-restore-pending",
       ),
     );
+    if (point === "restore.finalized") await marker;
+    else await expect(marker).rejects.toThrow();
     return;
   } else {
     expect(() => PersistenceDatabase.openPostgres(config)).toThrowError(
@@ -392,3 +409,9 @@ it("VAL-045 a crash at restore.finalizing keeps the backup recoverable, refuses 
   restoreCrash("restore.finalizing"));
 it("VAL-045 a crash at restore.finalized keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore", () =>
   restoreCrash("restore.finalized"));
+it("VAL-045 a crash at restore.marker_cleared leaves a complete restore that a second restore refuses to overwrite", () =>
+  restoreCrash("restore.marker_cleared"));
+it("VAL-045 a crash at restore.evidence_object keeps the backup recoverable, refuses a half-restored database and a rerun equals an uninterrupted restore", () =>
+  restoreCrash("restore.evidence_object"));
+it("VAL-045 a crash at backup.evidence_object never promotes a partial backup and the next backup verifies", () =>
+  backupCrash("backup.evidence_object"));

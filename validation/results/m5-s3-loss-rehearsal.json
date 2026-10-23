@@ -1,0 +1,55 @@
+{
+  "name": "m5-s3-loss-rehearsal",
+  "profile": "distributed",
+  "minioImage": "minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e",
+  "status": "measured",
+  "milestone": "M5",
+  "scenario": "evidence-bucket-loss",
+  "evidenceObjectsLost": 3,
+  "backup": {
+    "backupId": "60931bb3-44c4-4f59-9f2c-010f2c9a299e",
+    "bucket": "backups",
+    "objectLockMode": "COMPLIANCE",
+    "objectLockDays": 1,
+    "objects": 5,
+    "authentic": true
+  },
+  "lock": {
+    "deleteRefused": true,
+    "appCredentialDenied": true
+  },
+  "restore": {
+    "exitCode": 0,
+    "emptiedBucketVerified": true,
+    "evidenceFiles": [
+      {
+        "path": "fixture-inputs/ws_01a167cb-ffb2-73d3-b950-97fa205c3368/prj_01a167cb-ffb6-7000-8f44-edb996a5b5f0/6e1b6daf8a6c3d182cabf11505d41ef43f08f98a31f49977c7e0fbfc1032f93b",
+        "source": "6e1b6daf8a6c3d182cabf11505d41ef43f08f98a31f49977c7e0fbfc1032f93b",
+        "restored": "6e1b6daf8a6c3d182cabf11505d41ef43f08f98a31f49977c7e0fbfc1032f93b",
+        "equal": true
+      },
+      {
+        "path": "fixture-inputs/ws_01a167cb-ffb2-73d3-b950-97fa205c3368/prj_01a167cb-ffb6-7000-8f44-edb996a5b5f0/9e12da3ee8ac688c4f627e14120694a100ce09965bc424503bf72e42d6e70d31",
+        "source": "9e12da3ee8ac688c4f627e14120694a100ce09965bc424503bf72e42d6e70d31",
+        "restored": "9e12da3ee8ac688c4f627e14120694a100ce09965bc424503bf72e42d6e70d31",
+        "equal": true
+      },
+      {
+        "path": "fixture-inputs/ws_01a167cb-ffb2-73d3-b950-97fa205c3368/prj_01a167cb-ffb6-7000-8f44-edb996a5b5f0/df5c0427cecef10e5f99db00f55a96588059ad7b7cc8f3b3174f28994b700b38",
+        "source": "df5c0427cecef10e5f99db00f55a96588059ad7b7cc8f3b3174f28994b700b38",
+        "restored": "df5c0427cecef10e5f99db00f55a96588059ad7b7cc8f3b3174f28994b700b38",
+        "equal": true
+      }
+    ]
+  },
+  "rpoSeconds": 0.008,
+  "rtoSeconds": 0.464,
+  "backupSeconds": 0.431,
+  "notMeasured": [
+    "Object Lock expiry: COMPLIANCE retention has a one-day minimum, so removal after expiry is exercised only on an unlocked bucket",
+    "restore of a bucket larger than the three fixture objects, and any network between hosts",
+    "AWS S3, Ceph and other S3 implementations: only the pinned MinIO image ran",
+    "the production RPO: rpoSeconds is only the test's gap between backup and loss; the real RPO is the backup interval (daily by default)",
+    "the production RTO: rtoSeconds covers three tiny objects and a near-empty database on one host"
+  ]
+}

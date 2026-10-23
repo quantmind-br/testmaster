@@ -20,6 +20,11 @@ export const TUNNEL_SILENCE_MS = TUNNEL_HEARTBEAT_INTERVAL_MS * TUNNEL_HEARTBEAT
 const DEFAULT_TTL_SECONDS = 900;
 const TERMINAL = ["closed", "expired", "revoked"] as const;
 export type TunnelEnd = (typeof TERMINAL)[number];
+/** The end a tunnel row records. */
+export interface TunnelEndRecord {
+  state: TunnelEnd;
+  reason: string;
+}
 
 /** The sessions the relay of this process holds; the service reads and closes them through it. */
 export interface TunnelSessions {
@@ -251,6 +256,23 @@ export class TunnelsService {
       this.ctx.workspaceId,
       id,
     );
+  }
+
+  /**
+   * The end recorded for a tunnel, or null while it is live. A relay uses it to notice a tunnel
+   * that another controller revoked or settled, since only the process that settles closes its
+   * own session directly.
+   */
+  endedAs(id: string): TunnelEndRecord | null {
+    const row = this.ctx.database.get(
+      "SELECT state,close_reason FROM tunnels WHERE workspace_id=? AND id=?",
+      this.ctx.workspaceId,
+      id,
+    );
+    const state = String(row?.state);
+    return (TERMINAL as readonly string[]).includes(state)
+      ? { state: state as TunnelEnd, reason: String(row?.close_reason ?? "closed") }
+      : null;
   }
 
   /** A stream decision of the relay: allowed, refused by the quota or refused by authority. */

@@ -38,7 +38,7 @@ const StepResultRecord = P.Obj({
  * never passes `out`, so `sourceBundleDir` (set only by an export) never appears.
  */
 const EvidenceBundleView = P.Obj({
-  /** Absolute server-side directory of the committed bundle. */
+  /** Server-side location of the committed bundle: an absolute directory on the filesystem profile, the object-key prefix on S3. */
   bundleDir: Type.String({ minLength: 1 }),
   manifest: Ops.ArtifactManifest,
   meta: Ops.BundleMeta,
@@ -126,7 +126,7 @@ const CleanupReceipt = P.Obj({
   operationId: P.id("job"),
   state: P.Enum(["pending", "cleaned", "cleanup_failed", "uncertain"]),
   attemptId: P.id("att"),
-  /** Absolute server-side directory of the compensation bundle, when one was committed. */
+  /** Server-side location of the compensation bundle, when one was committed: see `bundleDir` above. */
   bundleDir: Type.Optional(Type.String({ minLength: 1 })),
   reasonCode: Type.Optional(
     Type.Union([P.Enum(reasonCodes), Type.Literal("cleanup_execution_uncertain")]),

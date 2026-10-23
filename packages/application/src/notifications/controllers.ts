@@ -18,9 +18,12 @@ export const notificationRetentionController: Controller = {
   name: "notifications-retention",
   intervalMs: 3_600_000,
   local: true,
-  run(scope) {
-    for (const workspaceId of scope.operator.workspaceIds())
+  elected: true,
+  run(scope, signal) {
+    for (const workspaceId of scope.operator.workspaceIds()) {
+      if (signal.aborted) return;
       scope.systemScope(workspaceId).notifications.purge();
+    }
   },
 };
 

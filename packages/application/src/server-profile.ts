@@ -1,9 +1,12 @@
 import { randomBytes } from "node:crypto";
-import { access, constants, rm, statfs, writeFile } from "node:fs/promises";
+import { access, constants, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import type { ObjectStore } from "@testmaster/evidence";
 import type { PersistenceDatabase } from "@testmaster/persistence";
-import { serverVaultLayout, vaultHealth } from "./secrets.js";
-import { filesystemRoot, type ServerConfig } from "./server-config.js";
+import { masterKeyReadable, serverVaultLayout, vaultHealth } from "./secrets.js";
+import { localDataDir, type ServerConfig } from "./server-config.js";
+import { evidenceVolume } from "./storage-admission.js";
+import { objectStoreAvailable } from "./storage-health.js";
 
 /** A worker that has not heartbeated for this long no longer counts as present. */
 export const workerPresenceWindowMs = 30_000;
@@ -63,8 +66,13 @@ function admission(database: PersistenceDatabase): Probe {
     return failed("database_unreachable");
   }
 }
-async function storage(server: ServerConfig): Promise<Probe> {
-  const root = filesystemRoot(server.storage);
+async function storage(
+  server: ServerConfig,
+  objectStore: ObjectStore,
+  database: PersistenceDatabase,
+): Promise<Probe> {
+  // The local directory is the evidence root, or the staging root of the S3 profile.
+  const root = localDataDir(server.storage);
   const probe = join(root, `.readiness-${randomBytes(8).toString("hex")}`);
   try {
     await access(root, constants.W_OK);
@@ -74,10 +82,15 @@ async function storage(server: ServerConfig): Promise<Probe> {
   } finally {
     await rm(probe, { force: true });
   }
+  // OPS-037: an unreachable bucket blocks publication; nothing falls back to the filesystem.
+  if (!(await objectStoreAvailable(objectStore))) return failed("storage_unavailable");
   try {
-    const volume = await statfs(root);
-    if (Number(volume.bavail) < Number(volume.blocks) * storageWatermark)
-      return failed("storage_low_space");
+    const capacity = server.storage.kind === "s3" ? server.storage.capacityBytes : undefined;
+    const volume = await evidenceVolume(
+      { dataDir: root, ...(capacity === undefined ? {} : { evidenceCapacityBytes: capacity }) },
+      database,
+    );
+    if (1 - volume.usedFraction < storageWatermark) return failed("storage_low_space");
   } catch {
     return failed("storage_unwritable");
   }
@@ -94,8 +107,9 @@ async function storage(server: ServerConfig): Promise<Probe> {
 export async function serverReadiness(input: {
   database: PersistenceDatabase;
   server: ServerConfig;
+  objectStore: ObjectStore;
 }): Promise<ServerReadiness> {
-  const { database, server } = input;
+  const { database, server, objectStore } = input;
   const reachable = persistence(database);
   let schema: ServerReadiness["schema"] = {
     databaseVersion: 0,
@@ -126,8 +140,15 @@ export async function serverReadiness(input: {
     }
   }
   const admissionProbe = reachable.state === "ready" ? admission(database) : reachable;
-  const storageProbe = await storage(server);
-  const key = (await vaultHealth(serverVaultLayout(server)).catch(() => null))?.writable
+  const storageProbe = await storage(server, objectStore, database);
+  const layout = serverVaultLayout(server, { store: objectStore, database });
+  // With the bucket down the vault cannot round-trip a canary; the key file alone says whether the
+  // key is the problem, so the outage is reported once, as storage.
+  const key = (
+    storageProbe.reason === "storage_unavailable"
+      ? await masterKeyReadable(layout)
+      : (await vaultHealth(layout).catch(() => null))?.writable
+  )
     ? ok
     : failed("master_key_unavailable");
   const probes = {

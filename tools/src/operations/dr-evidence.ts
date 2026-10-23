@@ -43,6 +43,56 @@ function object(value: unknown): Json {
 function positive(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
+/**
+ * The S3-loss scenario (OPS-026): the evidence bucket is emptied, and a fresh database plus the
+ * emptied bucket are restored from the Object Lock backup bucket with only the backup key.
+ * `measured` is accepted only with the rows that prove it. `deferred` is the honest state of a
+ * rehearsal that did not exercise S3 (the retained filesystem rehearsal).
+ *
+ * Shape of a measured record:
+ *   status "measured", scenario "evidence-bucket-loss",
+ *   evidenceObjectsLost > 0 (objects deleted from the evidence bucket before the restore),
+ *   backup { backupId, bucket, objectLockMode "COMPLIANCE", objects > 0, authentic true },
+ *   lock { deleteRefused true (a locked version could not be removed, even by the backup credential),
+ *          appCredentialDenied true (the evidence credential reached nothing in the backup bucket) },
+ *   restore { exitCode 0, emptiedBucketVerified true,
+ *             evidenceFiles [{ path, source, restored, equal }] with equal hashes },
+ *   rpoSeconds > 0, rtoSeconds > 0, notMeasured string[] (what the rehearsal did not measure).
+ */
+export function findS3LossViolations(record: Json): string[] {
+  const violations: string[] = [];
+  if (record.status !== "measured") return ["S3 loss was not measured"];
+  if (record.scenario !== "evidence-bucket-loss")
+    violations.push("S3 loss record does not describe the evidence-bucket-loss scenario");
+  if (!positive(record.evidenceObjectsLost))
+    violations.push("S3 loss record does not say how many evidence objects were lost");
+  const backup = object(record.backup);
+  if (typeof backup.backupId !== "string" || typeof backup.bucket !== "string")
+    violations.push("S3 loss record does not name the backup it restored");
+  if (backup.objectLockMode !== "COMPLIANCE")
+    violations.push("S3 loss backup was not in a COMPLIANCE Object Lock bucket");
+  if (!positive(backup.objects)) violations.push("S3 loss backup holds no object");
+  if (backup.authentic !== true) violations.push("S3 loss backup was not verified authentic");
+  const lock = object(record.lock);
+  if (lock.deleteRefused !== true)
+    violations.push("S3 loss record does not prove a locked backup cannot be deleted");
+  if (lock.appCredentialDenied !== true)
+    violations.push("S3 loss record does not prove the app credential has no backup access");
+  const restore = object(record.restore);
+  if (restore.exitCode !== 0) violations.push(`S3 loss restore exited ${restore.exitCode}`);
+  if (restore.emptiedBucketVerified !== true)
+    violations.push("S3 loss restore did not start from an emptied evidence bucket");
+  const files = list(restore.evidenceFiles);
+  if (files.length === 0) violations.push("S3 loss restore lists no evidence file");
+  for (const file of files)
+    if (file.equal !== true || file.source !== file.restored)
+      violations.push(`S3 loss evidence file ${String(file.path)} hash differs after restore`);
+  if (!positive(record.rpoSeconds)) violations.push("S3 loss RPO was not measured");
+  if (!positive(record.rtoSeconds)) violations.push("S3 loss RTO was not measured");
+  if (!Array.isArray(record.notMeasured))
+    violations.push("S3 loss record does not list what it did not measure");
+  return violations;
+}
 
 export function findDrRehearsalViolations(evidence: Json): string[] {
   const violations: string[] = [];
@@ -100,8 +150,9 @@ export function findDrRehearsalViolations(evidence: Json): string[] {
     violations.push("RTO breakdown does not add up to the RTO");
 
   const s3 = object(evidence.s3Loss);
-  if (s3.status !== "deferred" || s3.milestone !== "M5")
-    violations.push("S3 loss must stay deferred to M5, not claimed");
+  if (s3.status === "measured") violations.push(...findS3LossViolations(s3));
+  else if (s3.status !== "deferred" || s3.milestone !== "M5")
+    violations.push("S3 loss is neither measured nor honestly deferred");
   if (typeof object(evidence.tools).sourceCommit !== "string")
     violations.push("record does not name the source commit it exercised");
   if (evidence.passed !== (violations.length === 0))

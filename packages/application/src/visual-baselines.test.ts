@@ -3,10 +3,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ContractError, type ExecutablePlan } from "@testmaster/contracts";
 import { sha256, uuidV7IdGenerator, visualMaskHash } from "@testmaster/domain";
+import { FileObjectStore } from "@testmaster/evidence";
 import { EntityRepository, PersistenceDatabase } from "@testmaster/persistence";
 import { afterEach, describe, expect, it } from "vitest";
 import { ProjectsService, scaffoldPlan, TestsService } from "./authoring.js";
-import type { ResolvedConfig } from "./config.js";
 import { entity, type ServiceContext } from "./context.js";
 import { readVisualBaselineBytes, VisualBaselinesService } from "./visual-baselines.js";
 import { resolveVisualBaselines } from "./visual-cell.js";
@@ -70,7 +70,13 @@ async function setup() {
   const project = new ProjectsService(ctx).create({ name: "Shop" });
   const test = new TestsService(ctx).create({ projectId: project.id, plan: visualPlan() });
   const service = (principalId: string) =>
-    new VisualBaselinesService(contextFor(principalId), {} as never, {} as never, {} as never);
+    new VisualBaselinesService(
+      contextFor(principalId),
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
   /** A baseline row as `create` leaves it, without a Run bundle to copy from. */
   const draft = (fields: Record<string, unknown> = {}) => {
     const baseline = entity(ctx, "vbl", {
@@ -198,12 +204,12 @@ describe("ADR-032 visual baselines", () => {
     const world = await setup();
     const dataDir = await mkdtemp(join(tmpdir(), "tm-visual-"));
     roots.push(dataDir);
-    const config = { dataDir } as ResolvedConfig;
+    const objectStore = new FileObjectStore(dataDir);
     const bytes = Buffer.from("not really a png, hashed all the same");
     const baseline = world.draft({ sha256: sha256(bytes) });
     const directory = join(dataDir, "visual-baselines", world.workspaceId, world.project.id);
 
-    const missing = await readVisualBaselineBytes(world.ctx, config, baseline).catch(
+    const missing = await readVisualBaselineBytes(world.ctx, objectStore, baseline).catch(
       (error: unknown) => error as ContractError,
     );
     expect(missing).toMatchObject({
@@ -213,10 +219,10 @@ describe("ADR-032 visual baselines", () => {
 
     await mkdir(directory, { recursive: true });
     await writeFile(join(directory, sha256(bytes)), bytes);
-    expect(await readVisualBaselineBytes(world.ctx, config, baseline)).toEqual(bytes);
+    expect(await readVisualBaselineBytes(world.ctx, objectStore, baseline)).toEqual(bytes);
 
     await writeFile(join(directory, sha256(bytes)), Buffer.from("tampered"));
-    const tampered = await readVisualBaselineBytes(world.ctx, config, baseline).catch(
+    const tampered = await readVisualBaselineBytes(world.ctx, objectStore, baseline).catch(
       (error: unknown) => error as ContractError,
     );
     expect(tampered).toMatchObject({

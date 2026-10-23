@@ -1,6 +1,6 @@
 import { closeSync, constants, fstatSync, mkdirSync, openSync } from "node:fs";
 import type { FileHandle } from "node:fs/promises";
-import { link, open, rename, rm, unlink } from "node:fs/promises";
+import { link, open, rename, rm, rmdir, unlink } from "node:fs/promises";
 import { isAbsolute, resolve, win32 } from "node:path";
 
 export class UnsafePathError extends Error {
@@ -180,6 +180,38 @@ export class ConfinedRoot {
       await handle.sync();
     } finally {
       await handle.close();
+    }
+  }
+  /** Durably records a link/rename into `path`'s directory (the entry survives a power cut). */
+  async syncParent(path: string): Promise<void> {
+    const parent = this.parent(path, false);
+    try {
+      const handle = await open(`/proc/self/fd/${parent.fd}`, constants.O_RDONLY);
+      try {
+        await handle.sync();
+      } finally {
+        await handle.close();
+      }
+    } finally {
+      parent.close();
+    }
+  }
+  /** Removes `path` only when it is an empty directory; false when it is not (or is already gone). */
+  async removeEmptyDirectory(path: string): Promise<boolean> {
+    const parent = this.parent(path, false);
+    try {
+      await rmdir(`/proc/self/fd/${parent.fd}/${parent.name}`);
+      return true;
+    } catch (error) {
+      if (
+        ["ENOTEMPTY", "EEXIST", "ENOENT", "ENOTDIR"].includes(
+          (error as NodeJS.ErrnoException).code ?? "",
+        )
+      )
+        return false;
+      throw error;
+    } finally {
+      parent.close();
     }
   }
 }

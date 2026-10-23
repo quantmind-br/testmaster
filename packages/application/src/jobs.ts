@@ -91,8 +91,9 @@ export class JobsService {
   /**
    * Asks a job to stop. An auxiliary job nobody holds is cancelled at once; one a process holds is
    * refused, because its model call stops only through its own caller's cancellation (Ctrl-C, a
-   * client disconnect, an MCP request cancel) and may already be billed. An exploration is stopped
-   * only by the process that runs it.
+   * client disconnect, an MCP request cancel) and may already be billed. An exploration records the
+   * request in its row and the controller that runs it stops it within a second, whichever process
+   * received the request.
    */
   async cancel(id: string, reason: string): Promise<JobCancelReceipt> {
     if (!reason.trim() || reason.length > 2000)
@@ -106,12 +107,6 @@ export class JobsService {
     return auditedOperation(this.ctx, "job.cancel", id, async () => {
       this.authorizeCancel(id);
       if (before.kind === "exploration") {
-        if (!this.explore.running(id))
-          throw new ContractError(
-            "PRECONDITION_FAILED",
-            "The exploration runs in another process; only that process can stop it",
-            { jobId: id, state: before.state },
-          );
         this.explore.cancel(id);
       } else if (before.kind === "discovery") this.discovery.cancel(id);
       else this.cancelAuxiliary(before, id, reason);

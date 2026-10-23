@@ -2,8 +2,8 @@
 
 One host: PostgreSQL 17 with TLS, the API and portal, Caddy for TLS termination (ADR-016), and
 workers as systemd user units on the same host. Storage is PostgreSQL plus a filesystem evidence
-directory; S3-compatible storage is not implemented (a `storage.kind: "s3"` configuration is
-refused at startup with `CAPABILITY_UNAVAILABLE`, milestone M5).
+directory. Two controllers over a shared PostgreSQL and an S3-compatible bucket are the
+distributed profile, described in the last section of this file.
 
 `validation/journeys/j17-server.docker.test.ts` runs exactly the sequence below (with generated
 paths and ports) on the rootless Docker daemon: image build, TLS through Caddy, migration,
@@ -104,3 +104,46 @@ Migrations of one release are additive (expand-only), so adjacent releases can o
 
 `validation/journeys/rolling-upgrade.docker.test.ts` proves steps 3 and 4 with real worker
 processes on the rootless daemon.
+
+## 6. Distributed profile: two controllers, S3 evidence, locked backups (ADR-035)
+
+`compose.distributed.yaml` is a standalone file, not an override of `compose.yaml`. It runs
+PostgreSQL 17 with TLS, MinIO with TLS and Object Lock, a one-shot `minio-init`, two controllers
+(`server`, `server-2`) and Caddy balancing both. Only Caddy publishes a non-loopback port. Remote
+workers and the backup agent run on their own hosts. The full procedure, with failure behaviour, key
+rotation and backups, is [docs/operations/distributed.md](../../docs/operations/distributed.md);
+`validation/journeys/m5-distributed.docker.test.ts` runs this sequence on a rootful daemon.
+
+```bash
+cp .env.distributed.example .env && $EDITOR .env        # paths, ports, TESTMASTER_CONTAINER_USER=$(id -u):$(id -g)
+set -a; . ./.env; set +a
+export COMPOSE_FILE=compose.distributed.yaml
+bash gen-tls.sh "$TESTMASTER_TLS_DIR"                     # CA, PostgreSQL and MinIO certificates
+testmaster server keygen --out "$TESTMASTER_KEY_DIR/master.key"
+testmaster server keygen --out /srv/testmaster-backup/backup.key   # the backup agent's host only
+# Write the secret files named in .env (mode 0600, owned by you): database passwords, MinIO root
+# user and password, one S3 access key pair for the controllers and one for the backup agent.
+docker compose up -d --wait postgres minio
+bash provision-db.sh "$TESTMASTER_DB_PASSWORD_FILE"
+docker compose run --rm minio-init                         # buckets, Object Lock, two bucket-scoped users
+testmaster db migrate --mode server --config HOST_CONFIG
+testmaster server bootstrap --config HOST_CONFIG --workspace-name Acme --owner-login owner
+docker compose up -d --build --wait server server-2 caddy
+```
+
+Create one configuration file per controller from `server.distributed.example.json`; they differ
+only in `server.internalOrigin` (`http://server:7331`, `http://server-2:7331`). Each controller's
+`server.trustedProxies` must contain the private network of the other controller and Caddy, because
+a request relayed between controllers keeps its `X-Forwarded-Proto`. The credential files of the
+controllers are mounted from the host, so they must be mode 0600 and owned by
+`TESTMASTER_CONTAINER_USER`. The backup bucket credential is read only by `minio-init`; do not mount
+it into a controller.
+
+Things to know before relying on it:
+
+- The MinIO image is pinned by digest, and Docker Hub no longer serves that repository; keep a copy
+  in your own registry or pin another image you have run the journey against.
+- `TESTMASTER_BACKUP_LOCK_DAYS` sets a COMPLIANCE retention. Nobody, including the MinIO root user,
+  can shorten it or delete a backup earlier, so choose it deliberately (the journey uses one day).
+- Controllers talk to each other over the compose network in plain HTTP. Do not publish their ports
+  beyond loopback, and do not attach other containers to that network.

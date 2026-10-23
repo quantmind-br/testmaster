@@ -14,7 +14,7 @@ it("OPS-023 storage outage keeps eight leased uploads bounded, emits alert and r
       ...app.config,
       profilePolicy: { ...app.config.profilePolicy, allowUpload: true },
     };
-    const uploads = new UploadsService(app.context, config);
+    const uploads = new UploadsService(app.context, config, app.objectStore);
     // Real read-only kernel filesystem: no mocked open/write errors.
     await symlink("/sys", join(app.config.dataDir, "uploads"));
     const receipts = Array.from({ length: 8 }, () =>

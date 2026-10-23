@@ -2,6 +2,8 @@ import { createHash, randomUUID } from "node:crypto";
 import type { FileHandle } from "node:fs/promises";
 import { type ArtifactManifest, type BundleMeta, validate } from "@testmaster/contracts";
 import { assertEntityId, canonicalJson, sha256, uuidV7IdGenerator } from "@testmaster/domain";
+import { type BundleFileSource, bundleLocation, publishBundle } from "./bundle.js";
+import { FileObjectStore, type ObjectStore } from "./object-store.js";
 import { ConfinedRoot, validateRelativePath } from "./path.js";
 
 export type ManifestEntry = ArtifactManifest["entries"][number];
@@ -38,7 +40,10 @@ export interface EvidenceStore {
 }
 export type TextScanner = (text: string) => { hit: boolean };
 export interface EvidenceStoreOptions {
+  /** Local scratch root: Attempts stage here before they are published, on every profile. */
   rootDir: string;
+  /** Where sealed bundles are published; the filesystem under `rootDir` when absent. */
+  objectStore?: ObjectStore;
   maxObjectBytes?: number;
   maxAttemptBytes?: number;
   scanText?: TextScanner;
@@ -64,7 +69,10 @@ function artifactPath(path: string): string {
   return path;
 }
 export class FileEvidenceStore implements EvidenceStore {
-  constructor(private readonly options: EvidenceStoreOptions) {}
+  private readonly objectStore: ObjectStore;
+  constructor(private readonly options: EvidenceStoreOptions) {
+    this.objectStore = options.objectStore ?? new FileObjectStore(options.rootDir);
+  }
   async openAttempt(
     ids: AttemptIds,
     options?: { scanText?: TextScanner },
@@ -90,6 +98,7 @@ export class FileEvidenceStore implements EvidenceStore {
       stagingPath,
       { ...ids },
       { ...this.options, ...(options?.scanText ? { scanText: options.scanText } : {}) },
+      this.objectStore,
     );
     return staging;
   }
@@ -99,13 +108,13 @@ class Staging implements AttemptStaging {
   private bytes = 0;
   private readonly entries = new Map<string, ManifestEntry>();
   private readonly writers = new Map<string, { abort(reason: string): Promise<void> }>();
-  private currentPath: string | undefined;
   constructor(
     private readonly base: ConfinedRoot,
     private readonly root: ConfinedRoot,
     private readonly stagingPath: string,
     private readonly ids: AttemptIds,
     private readonly options: EvidenceStoreOptions,
+    private readonly objectStore: ObjectStore,
   ) {}
   usage(): { bytes: number; objects: number } {
     return { bytes: this.bytes, objects: this.entries.size };
@@ -299,41 +308,36 @@ class Staging implements AttemptStaging {
       manifestHash: manifestSha256,
       committedAt: new Date().toISOString(),
     });
-    const manifestFile = await this.root.openFile(".tm-manifest", true);
-    await manifestFile.writeFile(manifestText);
-    await manifestFile.sync();
-    await manifestFile.close();
-    await this.root.rename(".tm-manifest", "manifest.json");
-    await this.root.sync();
     await this.options.beforeCommit?.();
-    const target = `runs/${this.ids.workspaceId}/${this.ids.runId}/${this.ids.attemptId}`;
-    // No overwrite: final Attempt directories are immutable and unique.
-    const publicationLock = await this.base.openFile(
-      `runs/${this.ids.workspaceId}/${this.ids.runId}/.tm-publish-${this.ids.attemptId}`,
-      true,
-    );
-    await publicationLock.close();
-    await this.base.rename(this.stagingPath, target);
-    this.currentPath = target;
-    await this.base.sync();
-    const finalRoot = this.root;
-    const file = await finalRoot.openFile(".tm-meta", true);
-    await file.writeFile(canonicalJson(bundleMeta));
-    await file.sync();
-    await file.close();
-    await finalRoot.rename(".tm-meta", "meta.json");
-    await finalRoot.sync();
-    finalRoot.close();
-    this.base.close();
+    const files: BundleFileSource[] = [
+      ...[...this.entries.values()]
+        .filter((entry) => entry.state === "available")
+        .map((entry) => ({
+          relativePath: entry.relativePath,
+          body: () => this.stagedBody(entry.relativePath),
+        })),
+      { relativePath: "manifest.json", body: () => manifestText },
+      { relativePath: "meta.json", body: () => canonicalJson(bundleMeta) },
+    ];
+    await publishBundle(this.objectStore, this.ids, files);
     this.state = "committed";
-    return { bundleDir: `${this.options.rootDir}/${target}`, manifestSha256 };
+    this.root.close();
+    // The bundle is published: a leftover staging directory is scratch the orphan sweep removes.
+    await this.base.remove(this.stagingPath).catch(() => undefined);
+    this.base.close();
+    return { bundleDir: bundleLocation(this.objectStore, this.ids), manifestSha256 };
+  }
+  /** Streams a staged file through a descriptor pinned under the staging root. */
+  private async stagedBody(path: string): Promise<AsyncIterable<Uint8Array>> {
+    const file = await this.root.openFile(path);
+    return file.createReadStream();
   }
   async abandon(_reason: string): Promise<void> {
     if (this.state === "committed" || this.state === "abandoned") return;
     for (const writer of this.writers.values()) await writer.abort("abandoned");
     this.state = "abandoned";
     this.root.close();
-    await this.base.remove(this.currentPath ?? this.stagingPath);
+    await this.base.remove(this.stagingPath);
     this.base.close();
   }
 }

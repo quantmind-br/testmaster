@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { ContractError, type DiscoveryJob, validate } from "@testmaster/contracts";
 import { sha256, uuidV7IdGenerator } from "@testmaster/domain";
+import { FileObjectStore } from "@testmaster/evidence";
 import { EntityRepository, PersistenceDatabase } from "@testmaster/persistence";
 import { afterEach, describe, expect, it } from "vitest";
 import { ProjectsService } from "../authoring.js";
@@ -75,8 +76,9 @@ async function fixture() {
     modelProviders: [],
   };
   const project = new ProjectsService(ctx).create({ name: "Shop" });
-  const uploads = new UploadsService(ctx, config);
-  const sources = new SourcesService(ctx, config, uploads);
+  const objectStore = new FileObjectStore(dataDir);
+  const uploads = new UploadsService(ctx, config, objectStore);
+  const sources = new SourcesService(ctx, config, uploads, objectStore);
   const discovery = new DiscoveryService(ctx, config, sources, {
     async summarize() {
       return { available: false, reason: "Python image unavailable" };

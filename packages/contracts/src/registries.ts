@@ -331,6 +331,7 @@ export const implementedFeatures: ReadonlySet<string> = new Set([
   ],
   ...["admin-operations", "metrics", "incidents", "server-backup"],
   "terminal",
+  "distributed",
   "remote-workers",
   "tunnels",
   "matrix-advanced",

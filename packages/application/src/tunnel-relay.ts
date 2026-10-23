@@ -22,6 +22,7 @@ import {
 import {
   TUNNEL_SILENCE_MS,
   type TunnelEnd,
+  type TunnelEndRecord,
   type TunnelSessionStatus,
   type TunnelSessions,
   type TunnelsService,
@@ -30,6 +31,9 @@ import {
 
 /** The relay's own allowance of bytes above the steady rate: one second of traffic. */
 const BURST_MS = 1000;
+/** How often a relay reads its tunnel row for an end another controller recorded; well inside the 5 s revocation bound. */
+const TUNNEL_WATCH_MS = 1000;
+
 const SESSION_PATH = /^\/v1\/tunnels\/(tun_[0-9a-f-]+)\/session$/;
 const STREAM_PATH = /^\/v1\/workers\/(wrk_[0-9a-f-]+)\/attempts\/(att_[0-9a-f-]+)\/tunnel$/;
 const OPEN_TOKEN = /^tm_tun_[A-Za-z0-9_-]{43}$/;
@@ -48,6 +52,10 @@ export interface RelayAttempt {
   readonly released: AbortSignal;
   /** Throws while the Attempt's fence is no longer current. */
   assertCurrent(): void;
+  /** Starts watching a hold this process does not own; `released` aborts when it ends. */
+  watch?(): void;
+  /** Stops the watch once the stream that needed it is gone. */
+  dispose?(): void;
 }
 
 /** What the relay reads from the rest of the API process. */
@@ -145,10 +153,13 @@ const header = (request: IncomingMessage, name: string): string | undefined => {
  * worker's TLS to the agent: the relay forwards ciphertext and audits metadata only.
  */
 export class TunnelRelay implements TunnelSessions {
-  readonly id = randomUUID();
   private readonly sessions = new Map<string, RelaySession>();
 
-  constructor(private readonly host: TunnelRelayHost) {}
+  /** `id` is the controller identity: `tunnels.relay_id` names it, so other controllers find this relay. */
+  constructor(
+    private readonly host: TunnelRelayHost,
+    readonly id: string,
+  ) {}
 
   status(tunnelId: string): TunnelSessionStatus {
     const session = this.sessions.get(tunnelId);
@@ -258,7 +269,20 @@ export class TunnelRelay implements TunnelSessions {
     };
     socket.on("data", receive);
     socket.on("close", () => this.end(tunnelId, "closed", "agent_disconnected", true));
+    // An agent that only half-closes its side is gone as well: nothing could ever be sent back.
+    socket.on("end", () => this.end(tunnelId, "closed", "agent_disconnected", true));
     session.timers.push(
+      // A revocation made through another controller settles the row but cannot reach this
+      // session directly, so the row is read at a fixed pace and the end it records is applied.
+      setInterval(() => {
+        let ended: TunnelEndRecord | null = null;
+        try {
+          ended = tunnels.endedAs(tunnelId);
+        } catch {
+          // A failed read is retried at the next tick; the reconciler bounds the session.
+        }
+        if (ended) this.end(tunnelId, ended.state, ended.reason, false);
+      }, TUNNEL_WATCH_MS),
       setInterval(() => {
         if (Date.now() - session.lastHeard >= TUNNEL_SILENCE_MS) {
           this.end(tunnelId, "closed", "heartbeat_lost", true);
@@ -384,7 +408,11 @@ export class TunnelRelay implements TunnelSessions {
     });
     socket.on("close", () => stream.destroy());
     attempt.released.addEventListener("abort", drop, { once: true });
-    stream.on("close", () => attempt.released.removeEventListener("abort", drop));
+    attempt.watch?.();
+    stream.on("close", () => {
+      attempt.released.removeEventListener("abort", drop);
+      attempt.dispose?.();
+    });
     session.writer.json(FrameType.streamOpen, streamId, {
       protocol: "tcp",
       runId: attempt.runId,

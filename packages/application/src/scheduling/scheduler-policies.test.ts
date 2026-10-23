@@ -271,7 +271,7 @@ it("OPS-019 a stale leader that loses the lease between planning and admission s
       stolen = true;
       // Another instance takes over right before the stale leader admits the batch.
       w.app.database.run(
-        "UPDATE scheduler_leases SET holder='usurper',fence=fence+1,expires_at=? WHERE name='scheduler'",
+        "UPDATE controller_leases SET holder='usurper',fence=fence+1,expires_at=? WHERE name='scheduler'",
         "2099-01-01T00:00:00.000Z",
       );
     },
@@ -281,7 +281,7 @@ it("OPS-019 a stale leader that loses the lease between planning and admission s
   expect(w.batches()).toHaveLength(0);
   expect(firings(w, schedule.id)[0]).toMatchObject({ state: "claimed", batchId: null });
   w.app.database.run(
-    "UPDATE scheduler_leases SET expires_at=? WHERE name='scheduler'",
+    "UPDATE controller_leases SET expires_at=? WHERE name='scheduler'",
     "2000-01-01T00:00:00.000Z",
   );
   const next = w.scheduler({ holder: "new-leader" });

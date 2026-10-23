@@ -217,9 +217,11 @@ cancellation never adds a second event or cleanup. Security enforcement absence 
 blocked Run with `security_precondition_failed`, never an implicit process fallback. Admission
 receipts remain in durable Run events even after the seven-day idempotency window expires.
 
-Evidence filesystem publication keeps `.partial` until the fenced transaction publishes every
-Snapshot and Artifact reference together. A renamed bundle without DB references is an orphan,
-not authorized evidence; GC rechecks leases/references before deletion. Storage publication
+Evidence publication writes a `pending/<workspace>/<run>/<attempt>` marker object first (a
+conditional put, so a second publisher of the same Attempt is refused), then the bundle files with
+`meta.json` last, and clears the marker only after the fenced transaction publishes every Snapshot
+and Artifact reference together. A published bundle without DB references is an orphan, not
+authorized evidence; GC rechecks leases/references before deletion. Storage publication
 failure does not rewrite accepted assertion outcomes: the independent evidence gate fails.
 `worker reconcile --dry-run` requires admin authority and lists actions without changing state.
 SQLite storage preflight rejects incompatible network/FUSE filesystems. A real preallocated

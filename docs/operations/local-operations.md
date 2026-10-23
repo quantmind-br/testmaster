@@ -5,7 +5,7 @@
 | Path | Content |
 |---|---|
 | `<repo>/.testmaster/testmaster.db` | SQLite (WAL, foreign keys, `BEGIN IMMEDIATE` writes); override root with `TESTMASTER_DATA_DIR` |
-| `<repo>/.testmaster/runs/<workspace>/<run>/<attempt>/` | committed evidence bundles; `meta.json` is written last, `.partial` marks incomplete staging |
+| `<repo>/.testmaster/runs/<workspace>/<run>/<attempt>/` | committed evidence bundles; `meta.json` is written last; `pending/<workspace>/<run>/<attempt>` marks a publication whose references are not yet in the database |
 | `<repo>/.testmaster/agent-backups/` | backups taken before agent skill files are modified |
 | `~/.config/testmaster/profiles.json` | user profiles and model providers |
 | `~/.config/testmaster/policy.json` | operator ceilings and grants (`allowedModelProviders`, unsafe-local opt-in) |

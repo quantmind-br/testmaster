@@ -1,8 +1,8 @@
 # Server backups and restore (PostgreSQL profile, M4)
 
-Scope: the multi-user server profile (PostgreSQL + filesystem evidence). The single-user SQLite
-backup is described in [local-operations.md](local-operations.md). S3-compatible storage is an M5
-capability and is refused at startup; nothing here covers S3 objects. Encryption rationale:
+Scope: the multi-user server profile (PostgreSQL + filesystem evidence), and the S3 backup
+destination of the distributed profile (below). The single-user SQLite backup is described in
+[local-operations.md](local-operations.md). Encryption rationale:
 [ADR-019](../adr/019-at-rest-encryption.md). Recovery checklists: [disaster-recovery.md](disaster-recovery.md).
 
 ## Configuration
@@ -117,6 +117,72 @@ bucket is kept. Everything else that is authentic is removed from the destinatio
 (MAC mismatch, unreadable manifest) are reported and never removed automatically. Backup retention is
 independent of [run and audit retention](retention.md).
 
+## S3 backup destination (distributed profile)
+
+`backup.destination` may be an object instead of a directory:
+
+```json
+{
+  "backup": {
+    "destination": {
+      "kind": "s3",
+      "endpoint": "https://s3.backup.example",
+      "region": "eu-1",
+      "bucket": "testmaster-backups",
+      "prefix": "prod/",
+      "forcePathStyle": false,
+      "accessKeyIdFile": "/etc/testmaster-backup/s3-access-key-id",
+      "secretAccessKeyFile": "/etc/testmaster-backup/s3-secret-access-key"
+    }
+  }
+}
+```
+
+The bucket must be another bucket with another credential than the evidence storage (the
+configuration refuses a shared bucket or credential file). The format, encryption, key and
+verification are those above; what changes is the medium.
+
+* **Object Lock.** Create the bucket with Object Lock enabled and a default retention in
+  COMPLIANCE mode at least as long as the oldest backup you keep. A locked object version cannot be
+  overwritten or removed by anyone until its retention ends, including the bucket's root credential.
+  TestMaster does not configure the bucket and does not check its lock; the DR record states what was
+  exercised.
+* **No overwrite, catalog entry last.** Objects are laid out as `data/<name>/database.dump.enc`,
+  `data/<name>/evidence/...`, `data/<name>/evidence-index.json.enc` and the manifest as
+  `catalog/<name>.json`. Each is written with a conditional put (`If-None-Match: *`); a name that
+  already exists fails the backup with `backup_object_exists`. The catalog entry is written last and
+  is the commit marker: a backup is listed only when it exists, and a crash before that leaves
+  unlisted objects, never a half backup that reads as whole. There is no rename, so there is no
+  `.partial-*` directory.
+* **Orphans.** A failed backup cannot remove what it wrote (the lock refuses), so its objects stay
+  until their retention ends. Retention removes manifest-less groups older than 48 hours, and a
+  group whose objects are still locked is left alone.
+* **Credential.** The credential files belong to the backup agent user. At startup the server refuses
+  to run when its user can read them (`backup_access_not_separated`, path
+  `backup.destination.accessKeyIdFile` or `secretAccessKeyFile`) unless `allowSharedAccess` is set.
+  The policy needs `s3:PutObject`, `s3:GetObject`, `s3:GetObjectVersion`, `s3:ListBucket`,
+  `s3:ListBucketVersions` and `s3:DeleteObjectVersion` on the bucket. On AWS S3 do not grant
+  `s3:DeleteObject`: a plain delete only adds a delete marker that hides the backup from listings.
+  MinIO needs `s3:DeleteObject` for a versioned delete too, so there the credential can hide a backup
+  behind a delete marker (the locked version, and its data, stay); keep that credential on the agent's
+  host only. The application's evidence credential has no access to this bucket.
+* **Retention.** The retention window of TestMaster and the bucket's lock are independent. A backup
+  that retention wants to remove but whose manifest is still locked is not an error: it is reported as
+  `locked`, stays listed and verifiable, and the next pass tries again. Removal deletes the catalog
+  entry first, so a crash mid-removal leaves an unlisted remainder that the orphan sweep collects.
+  `COMPLIANCE` retention has a one-day minimum, so removal after the lock has expired is covered by a
+  test on an unlocked bucket only.
+* **Listing cost.** A backup is listed from its catalog entry, one small object under `catalog/`, so
+  `backup list`, verification requests and retention read as many objects as there are backups and
+  never the evidence objects (the orphan sweep finds unfinished backups with a delimiter listing of
+  `data/` and reads below a name only for those). Use a prefix per installation. The cost has been
+  shown by counting listed keys, not measured in time.
+* **Restore.** `testmaster backup restore --mode server <name>` restores into the configured
+  storage. For S3 evidence the restore writes the marker object `tm-restore-pending` first, and only a
+  target that holds nothing or holds that marker is accepted; anything else is refused with
+  `restore_target_not_empty`. The marker is removed last, and a rerun after a crash wipes the evidence
+  prefix and starts over with the same result.
+
 ## Verification
 
 Verification is non-destructive and is the check that a backup is usable:
@@ -156,6 +222,9 @@ otherwise). The restore migrates forward to the running release.
    testmaster backup restore --mode server --config /etc/testmaster/server.json \
      /mnt/offhost/testmaster-backups/<compact time>-<backupId>
    ```
+
+   (With an S3 destination the argument is the backup's name, `<compact time>-<backupId>`, not a
+   path.)
 
    The command verifies the manifest and every file before touching the target, restores evidence
    objects (each re-hashed), loads the dump with `pg_restore`, migrates, applies the isolation
@@ -220,3 +289,6 @@ backup unless the WAL path has been rehearsed by you.
 | Missing evidence objects | incomplete backup, `backup_failing` | See [alerts.md](alerts.md#backup_failing). |
 | Restore target populated | `restore_target_not_empty` | Provision a fresh database and evidence root. |
 | Backup newer schema than release | `backup_version_unsupported` | Run a release that has the migrations. |
+| S3 backup name already used | `backup_object_exists` | Nothing was overwritten; the next backup gets a new name. Investigate who wrote into the bucket. |
+| S3 credential readable by the server user | `backup_access_not_separated` | Move the credential files to the backup agent user. |
+| Retention found a locked backup | `locked` in the retention result | Nothing to do; it is removed after its Object Lock expires. |

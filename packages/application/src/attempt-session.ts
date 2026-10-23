@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   type CodeReference,
@@ -24,9 +24,12 @@ import {
   semanticHash,
 } from "@testmaster/domain";
 import {
+  bundleKeyFor,
+  clearPublishMarker,
   EvidenceQuotaError,
   type EvidenceStore,
   FileEvidenceStore,
+  type ObjectStore,
   verifyBundle,
 } from "@testmaster/evidence";
 import {
@@ -289,6 +292,7 @@ export async function eraseSettledCaptures(
 /** The controller collaborators an Attempt needs; the local worker's host provides them in process. */
 export interface AttemptSessionHost {
   config: ResolvedConfig;
+  objectStore: ObjectStore;
   images(): Promise<ImageLock>;
   secrets: SecretsService;
   runs: RunsService;
@@ -729,7 +733,9 @@ export class AttemptSession {
     }
     // A property probe reads the exact bytes its source was imported from (ADR-033).
     const probeSchema =
-      probe?.kind === "property" ? await probeSchemaFile(this.ctx, this.host.config, probe) : null;
+      probe?.kind === "property"
+        ? await probeSchemaFile(this.ctx, this.host.objectStore, probe)
+        : null;
     if (probeSchema) {
       await mkdir(join(inputDir, "property"), { recursive: true, mode: 0o755 });
       await writeFile(join(inputDir, "property", probeSchema.fileName), probeSchema.bytes, {
@@ -745,7 +751,7 @@ export class AttemptSession {
     const projectId = String(requireEntity(this.ctx, "TestCase", String(run.testId)).projectId);
     const fixtureInputs = await stageFixtureInputs(
       this.ctx,
-      this.host.config,
+      this.host.objectStore,
       projectId,
       plan,
       inputDir,
@@ -754,7 +760,7 @@ export class AttemptSession {
     );
     const visualBaselines = await stageVisualBaselines(
       this.ctx,
-      this.host.config,
+      this.host.objectStore,
       (cell.visualBaselines ?? {}) as Record<string, FrozenVisualBaseline>,
       inputDir,
     );
@@ -1032,6 +1038,7 @@ export class AttemptSession {
   evidence(): EvidenceStore {
     this.store ??= new FileEvidenceStore({
       rootDir: this.host.config.dataDir,
+      objectStore: this.host.objectStore,
       maxObjectBytes: this.limits.artifactBytes ?? 67108864,
       maxAttemptBytes: this.limits.attemptArtifactBytes ?? 268435456,
     });
@@ -1421,7 +1428,12 @@ export class AttemptSession {
       omissionReason?: string;
     }[] = [];
     if (result.bundle) {
-      const bundle = await verifyBundle(result.bundle.bundleDir, {
+      const bundleIds = {
+        workspaceId: this.ctx.workspaceId,
+        runId: run.id,
+        attemptId: fence.attemptId,
+      };
+      const bundle = await verifyBundle(this.host.objectStore, bundleKeyFor(bundleIds), {
         workspaceId: this.ctx.workspaceId,
         runId: run.id,
         attemptId: fence.attemptId,
@@ -1461,7 +1473,7 @@ export class AttemptSession {
           });
         }
       });
-      await rm(join(result.bundle.bundleDir, ".partial"), { force: true });
+      await clearPublishMarker(this.host.objectStore, bundleIds);
       unavailableEvidence = bundle.manifest.entries
         .filter((entry) => entry.state !== "available")
         .map((entry) => ({
@@ -1731,7 +1743,7 @@ export class AttemptSession {
  */
 async function stageVisualBaselines(
   ctx: ServiceContext,
-  config: ResolvedConfig,
+  objectStore: ObjectStore,
   frozen: Record<string, FrozenVisualBaseline>,
   inputDir: string,
 ): Promise<Record<string, { state: "available"; path: string } | { state: "missing" | "stale" }>> {
@@ -1751,7 +1763,7 @@ async function stageVisualBaselines(
         baselineId: baseline.baselineId,
       });
     const name = `visual-baseline-${baseline.baselineId}.png`;
-    await writeFile(join(inputDir, name), await readVisualBaselineBytes(ctx, config, record), {
+    await writeFile(join(inputDir, name), await readVisualBaselineBytes(ctx, objectStore, record), {
       mode: 0o644,
       flag: "wx",
     });

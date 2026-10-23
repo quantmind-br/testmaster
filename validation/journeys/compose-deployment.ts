@@ -52,7 +52,7 @@ export interface ComposeDeployment {
   teardown(): Promise<void>;
 }
 
-function run(
+export function run(
   file: string,
   args: string[],
   options: { cwd: string; env: NodeJS.ProcessEnv },
@@ -68,7 +68,7 @@ function run(
   );
 }
 
-async function freePort(): Promise<number> {
+export async function freePort(): Promise<number> {
   const server = createServer();
   await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
   const address = server.address();
@@ -77,12 +77,12 @@ async function freePort(): Promise<number> {
   return address.port;
 }
 
-const secretValue = () =>
+export const secretValue = () =>
   randomBytes(18)
     .toString("base64url")
     .replace(/[^A-Za-z0-9]/gu, "x");
 
-function findString(value: unknown, pattern: RegExp): string {
+export function findString(value: unknown, pattern: RegExp): string {
   if (typeof value === "string" && pattern.test(value)) return value;
   if (value && typeof value === "object")
     for (const child of Object.values(value)) {

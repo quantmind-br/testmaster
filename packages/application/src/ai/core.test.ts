@@ -3,6 +3,7 @@ import { createServer, type Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ContractError, type ExecutablePlan, type PlanStep } from "@testmaster/contracts";
+import { type BundleIds, bundleKeyFor, bundleLocation } from "@testmaster/evidence";
 import { validateProposalPlan } from "@testmaster/planner";
 import { AttemptExecutor } from "@testmaster/sandbox";
 import { afterEach, expect, it, vi } from "vitest";
@@ -1379,31 +1380,31 @@ it("a non-passing exploration job states its cause from the browser network log"
   );
   if (!revision) throw new Error("Missing initialized environment revision");
   const url = String((revision.targetOrigins as string[])[0]);
-  const bundleDir = await mkdtemp(join(tmpdir(), "tm-explore-cause-"));
-  roots.push(bundleDir);
-  await mkdir(join(bundleDir, "browser"), { recursive: true });
-  const writeNetwork = (entries: unknown[]) =>
-    writeFile(join(bundleDir, "browser/network.json"), JSON.stringify({ entries, droppedLogs: 0 }));
+  let network: unknown[] = [];
   let outcome = "inconclusive";
-  vi.spyOn(AttemptExecutor.prototype, "execute").mockImplementation((async () => ({
-    outcome,
-    reasonCode: "insufficient_evidence",
-    bundle: { bundleDir, manifestSha256: "x" },
-  })) as never);
+  vi.spyOn(AttemptExecutor.prototype, "execute").mockImplementation((async (input: BundleIds) => {
+    await f.app.objectStore.put(
+      `${bundleKeyFor(input)}/browser/network.json`,
+      JSON.stringify({ entries: network, droppedLogs: 0 }),
+    );
+    return {
+      outcome,
+      reasonCode: "insufficient_evidence",
+      bundle: { bundleDir: bundleLocation(f.app.objectStore, input), manifestSha256: "x" },
+    };
+  }) as never);
   const request = { projectId: f.projectId, environmentId: environment.id, url };
   const message = (job: { extensions?: unknown }) =>
     (job.extensions as Record<string, unknown>)["testmaster:errorMessage"];
 
-  await writeNetwork([
-    { method: "GET", url: "http://127.0.0.1:1/", failure: "net::ERR_EMPTY_RESPONSE" },
-  ]);
+  network = [{ method: "GET", url: "http://127.0.0.1:1/", failure: "net::ERR_EMPTY_RESPONSE" }];
   const failed = await f.app.explore.start(request);
   expect(failed.phase).toBe("failed");
   expect(message(failed)).toContain("http://127.0.0.1:1/");
   expect(message(failed)).toContain("net::ERR_EMPTY_RESPONSE");
 
   // Control: with no failed navigation the cause falls back to the outcome and reason code.
-  await writeNetwork([]);
+  network = [];
   const empty = await f.app.explore.start(request);
   expect(empty.phase).toBe("failed");
   expect(message(empty)).toContain("insufficient_evidence");
@@ -1427,25 +1428,26 @@ it("an exploration job names a failed action resolution before the generic netwo
   );
   if (!revision) throw new Error("Missing initialized environment revision");
   const url = String((revision.targetOrigins as string[])[0]);
-  const bundleDir = await mkdtemp(join(tmpdir(), "tm-explore-resolution-"));
-  roots.push(bundleDir);
-  await mkdir(join(bundleDir, "browser"), { recursive: true });
-  await writeFile(
-    join(bundleDir, "browser/network.json"),
-    JSON.stringify({
-      entries: [{ method: "GET", url: "http://127.0.0.1:1/", failure: "net::ERR_EMPTY_RESPONSE" }],
-      droppedLogs: 0,
-    }),
-  );
   let observed: unknown[] = [];
-  vi.spyOn(AttemptExecutor.prototype, "execute").mockImplementation((async (input: {
-    resolveAction?: (stepId: string, value: unknown) => Promise<unknown>;
-  }) => {
+  vi.spyOn(AttemptExecutor.prototype, "execute").mockImplementation((async (
+    input: BundleIds & {
+      resolveAction?: (stepId: string, value: unknown) => Promise<unknown>;
+    },
+  ) => {
     for (const value of observed) await input.resolveAction?.("explore-1", value).catch(() => {});
+    await f.app.objectStore.put(
+      `${bundleKeyFor(input)}/browser/network.json`,
+      JSON.stringify({
+        entries: [
+          { method: "GET", url: "http://127.0.0.1:1/", failure: "net::ERR_EMPTY_RESPONSE" },
+        ],
+        droppedLogs: 0,
+      }),
+    );
     return {
       outcome: "inconclusive",
       reasonCode: "insufficient_evidence",
-      bundle: { bundleDir, manifestSha256: "x" },
+      bundle: { bundleDir: bundleLocation(f.app.objectStore, input), manifestSha256: "x" },
     };
   }) as never);
   const request = { projectId: f.projectId, environmentId: environment.id, url };
@@ -1900,6 +1902,42 @@ it("only the caller's cancellation cuts an exploration's model call", async () =
   cancelled(resolved[1]);
   second.release();
   held.release();
+});
+it("a cancel recorded in the job row by another process stops the exploration the controller runs", async () => {
+  const { f, url, link, page, resolved, sandbox } = await explorationWorld();
+  const request = { projectId: f.projectId, url, budget: { steps: 5, timeMs: 60_000 } };
+  sandbox(async (input) => {
+    resolved.push(
+      await input
+        .resolveAction?.("explore-0", page("/", [link("/orders")]))
+        .catch((error) => error),
+    );
+  });
+  const held = f.holdCompletions();
+  const { job, completion } = f.app.explore.begin(request);
+  await held.arrived;
+  // What another controller's `explore.cancel` leaves behind: only the request, no in-process abort.
+  f.app.context.database.run(
+    "UPDATE discovery_jobs SET cancel_requested_at=? WHERE workspace_id=? AND id=?",
+    new Date().toISOString(),
+    f.app.context.workspaceId,
+    job.id,
+  );
+  expect((await completion).phase).toBe("cancelled");
+  expect(resolved[0]).toMatchObject({ code: "PRECONDITION_FAILED" });
+  held.release();
+  // A cancel in the first synchronous moments finds the controller registered and leaves its request in the row.
+  const second = f.holdCompletions();
+  const early = f.app.explore.begin(request);
+  f.app.explore.cancel(early.job.id);
+  expect((await early.completion).phase).toBe("cancelled");
+  second.release();
+  const row = f.app.context.database.get(
+    "SELECT cancel_requested_at FROM discovery_jobs WHERE workspace_id=? AND id=?",
+    f.app.context.workspaceId,
+    early.job.id,
+  );
+  expect(row?.cancel_requested_at).toBeTruthy();
 });
 it("an approved mutation that matches a control on a feature-seeded form page leads to a model call, and invalid approvals are refused before the job", async () => {
   const f = await fixture();

@@ -1,0 +1,36 @@
+{
+  "mode": "distributed",
+  "database": {
+    "engine": "postgres",
+    "url": "postgres://testmaster@postgres:5432/testmaster?sslmode=verify-full",
+    "passwordFile": "/run/testmaster/db.password",
+    "caFile": "/etc/testmaster/tls/ca.crt",
+    "applicationName": "testmaster-controller"
+  },
+  "storage": {
+    "kind": "s3",
+    "endpoint": "https://minio:9000",
+    "region": "us-east-1",
+    "bucket": "testmaster-evidence",
+    "forcePathStyle": true,
+    "accessKeyIdFile": "/run/testmaster/s3-access-key-id",
+    "secretAccessKeyFile": "/run/testmaster/s3-secret-access-key",
+    "caFile": "/etc/testmaster/tls/ca.crt",
+    "capacityBytes": 107374182400,
+    "stagingRoot": "/var/lib/testmaster/staging"
+  },
+  "server": {
+    "listen": { "host": "0.0.0.0", "port": 7331 },
+    "publicOrigin": "https://testmaster.example.com:8443",
+    "internalOrigin": "http://server:7331",
+    "expectedControllers": 2,
+    "trustedProxies": ["172.16.0.0/12", "10.0.0.0/8", "192.168.0.0/16"],
+    "origins": ["https://testmaster.example.com:8443"]
+  },
+  "security": {
+    "masterKeyFile": "/etc/testmaster/keys/master.key",
+    "backupKeyFile": "/etc/testmaster-backup/backup.key",
+    "atRestEncryption": { "database": "operator-volume", "evidence": "operator-volume" }
+  },
+  "telemetry": { "metrics": false, "logExport": "none" }
+}

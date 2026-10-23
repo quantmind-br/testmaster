@@ -9,12 +9,19 @@ import {
   type SecretVersionRecord,
 } from "@testmaster/contracts";
 import { semanticHash } from "@testmaster/domain";
-import { type EntityDocument, IdempotencyRepository } from "@testmaster/persistence";
+import type { ObjectStore } from "@testmaster/evidence";
+import {
+  type EntityDocument,
+  IdempotencyRepository,
+  type PersistenceDatabase,
+} from "@testmaster/persistence";
 import type { SecretRelease } from "@testmaster/sandbox";
 import { auditedOperation, auditSecurity } from "./audit.js";
 import type { ResolvedConfig } from "./config.js";
 import { allEntities, entity, type ServiceContext } from "./context.js";
-import { filesystemRoot, type ServerConfig } from "./server-config.js";
+import { acquireLease, releaseLease, renewLease } from "./controller-leases.js";
+import { readObjectBytes } from "./object-bytes.js";
+import type { ServerConfig } from "./server-config.js";
 
 export type SecretMetadata = SecretReference & EntityDocument & { version: number };
 export type SecretBackendHealth =
@@ -308,6 +315,8 @@ function vaultName(id: string, version: number): string {
  * Where the vault keeps its key and ciphertexts. The local profiles keep them under the user's
  * home and may use the OS keychain; the server profile (ADR-019) takes its key from the operator's
  * `security.masterKeyFile`, stores ciphertexts under the evidence root and never creates a key.
+ * On the S3 profile the ciphertexts are objects of the evidence bucket, shared by every controller
+ * (`shared`); the master key still lives only in each controller's key file, never in the bucket.
  */
 export interface VaultLayout {
   readonly profile: "local" | "server";
@@ -315,9 +324,28 @@ export interface VaultLayout {
   readonly keyName: string;
   readonly dataDirectory: string;
   readonly lockDirectory: string;
+  readonly shared?: { store: ObjectStore; database: PersistenceDatabase };
 }
-export function serverVaultLayout(server: ServerConfig): VaultLayout {
-  const dataDirectory = join(filesystemRoot(server.storage), "secrets");
+/** The shared vault is locked deployment-wide through a database lease. */
+const SHARED_VAULT_LEASE = "vault";
+const SHARED_VAULT_LEASE_MS = 30_000;
+export function serverVaultLayout(
+  server: ServerConfig,
+  shared?: { store: ObjectStore; database: PersistenceDatabase },
+): VaultLayout {
+  if (server.storage.kind === "s3") {
+    if (!shared)
+      throw new ContractError("INTERNAL", "The S3 vault needs the object store and the database");
+    return {
+      profile: "server",
+      keyDirectory: dirname(server.security.masterKeyFile),
+      keyName: basename(server.security.masterKeyFile),
+      dataDirectory: join(server.storage.stagingRoot, "secrets"),
+      lockDirectory: join(server.storage.stagingRoot, "secrets"),
+      shared,
+    };
+  }
+  const dataDirectory = join(server.storage.root, "secrets");
   return {
     profile: "server",
     keyDirectory: dirname(server.security.masterKeyFile),
@@ -326,8 +354,12 @@ export function serverVaultLayout(server: ServerConfig): VaultLayout {
     lockDirectory: dataDirectory,
   };
 }
-export function vaultLayout(config: ResolvedConfig, server?: ServerConfig): VaultLayout {
-  if (server) return serverVaultLayout(server);
+export function vaultLayout(
+  config: ResolvedConfig,
+  server?: ServerConfig,
+  shared?: { store: ObjectStore; database: PersistenceDatabase },
+): VaultLayout {
+  if (server) return serverVaultLayout(server, shared);
   const keyDirectory = join(config.home, ".config", "testmaster");
   return {
     profile: "local",
@@ -336,6 +368,117 @@ export function vaultLayout(config: ResolvedConfig, server?: ServerConfig): Vaul
     dataDirectory: join(config.home, ".local", "share", "testmaster"),
     lockDirectory: keyDirectory,
   };
+}
+/**
+ * Handle of one ciphertext: its file name in the vault directory, or its object key in the shared
+ * store. Keys come from the stored reference (workspace, secret id, version), never from a caller.
+ */
+function ciphertextName(
+  layout: VaultLayout,
+  workspace: string,
+  id: string,
+  version: number,
+): string {
+  const file = vaultName(id, version);
+  return layout.shared ? `vault/${workspace}/${file}` : file;
+}
+/** Writes a ciphertext that must not exist yet; an existing one is refused, never overwritten. */
+async function ciphertextCreate(layout: VaultLayout, name: string, bytes: Buffer): Promise<void> {
+  if (layout.shared) {
+    const stored = await layout.shared.store.put(name, bytes, { ifNoneMatch: true });
+    if (!stored.created) throw unavailable();
+    return;
+  }
+  const directory = await vaultDirectory(layout.dataDirectory);
+  try {
+    await writePrivate(directory, name, bytes);
+  } finally {
+    await directory.close();
+  }
+}
+async function ciphertextRead(layout: VaultLayout, name: string, limit: number): Promise<Buffer> {
+  if (layout.shared) {
+    const bytes = await readObjectBytes(layout.shared.store, name, limit);
+    if (!bytes) throw unavailable();
+    return bytes;
+  }
+  const directory = await vaultDirectory(layout.dataDirectory);
+  try {
+    return await readPrivate(directory, name, limit);
+  } finally {
+    await directory.close();
+  }
+}
+/** Overwrites an existing ciphertext in place (key rewrap). */
+async function ciphertextReplace(layout: VaultLayout, name: string, bytes: Buffer): Promise<void> {
+  if (layout.shared) {
+    await layout.shared.store.put(name, bytes);
+    return;
+  }
+  const directory = await vaultDirectory(layout.dataDirectory);
+  try {
+    await replacePrivate(directory, name, bytes);
+  } finally {
+    await directory.close();
+  }
+}
+async function ciphertextRemove(layout: VaultLayout, name: string): Promise<void> {
+  if (layout.shared) {
+    await layout.shared.store.delete(name);
+    return;
+  }
+  const directory = await vaultDirectory(layout.dataDirectory);
+  try {
+    await unlink(`/proc/self/fd/${directory.fd}/${name}`);
+  } finally {
+    await directory.close();
+  }
+}
+const ACTIVE_VAULT_KEY = "vault/active-key.json";
+/**
+ * The shared vault records which key encrypts new ciphertexts. A controller holding another key
+ * (it missed a rewrap) is refused under the vault lock, so it can never write a ciphertext the
+ * others cannot read or that a retired key would orphan. The first writer adopts its key.
+ */
+async function assertActiveVaultKey(layout: VaultLayout, keyId: string): Promise<void> {
+  if (!layout.shared) return;
+  const { store } = layout.shared;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const recorded = await readObjectBytes(store, ACTIVE_VAULT_KEY, 4096);
+    if (recorded) {
+      if ((JSON.parse(recorded.toString("utf8")) as { keyId?: string }).keyId === keyId) return;
+      throw new ContractError(
+        "PRECONDITION_FAILED",
+        "This controller's vault key is not the active key; install the current key file and restart it",
+        { reasonCode: "vault_key_stale" },
+      );
+    }
+    if (
+      (await store.put(ACTIVE_VAULT_KEY, JSON.stringify({ keyId }), { ifNoneMatch: true })).created
+    )
+      return;
+  }
+  throw unavailable();
+}
+async function publishActiveVaultKey(layout: VaultLayout, keyId: string): Promise<void> {
+  await layout.shared?.store.put(ACTIVE_VAULT_KEY, JSON.stringify({ keyId }));
+}
+/** Handles of every ciphertext in the vault. */
+async function ciphertextNames(layout: VaultLayout): Promise<string[]> {
+  if (layout.shared) {
+    const names: string[] = [];
+    for await (const object of layout.shared.store.list("vault/"))
+      if (object.key.endsWith(".vault")) names.push(object.key);
+    return names;
+  }
+  const directory = await vaultDirectory(layout.dataDirectory);
+  try {
+    return (await readdir(`/proc/self/fd/${directory.fd}`)).filter((name) =>
+      name.endsWith(".vault"),
+    );
+  } finally {
+    await directory.close();
+  }
 }
 /** A restore or a misconfigured deployment without its key must fail loudly, never mint a new one. */
 function masterKeyUnavailable(): ContractError {
@@ -428,6 +571,8 @@ function parseVaultEnvelope(stored: Buffer): VaultEnvelope {
 }
 interface VaultLock {
   directory: FileHandle;
+  /** Extends the deployment-wide lock during a long operation; a lost lock throws. */
+  renew(): void;
   release(): Promise<void>;
 }
 /** Tail of this process's queue of vault lock holders, per lock directory. */
@@ -438,7 +583,7 @@ const vaultLockQueues = new Map<string, Promise<void>>();
  * refused as busy.
  */
 async function vaultLock(layout: VaultLayout): Promise<VaultLock> {
-  const key = layout.lockDirectory;
+  const key = layout.shared ? SHARED_VAULT_LEASE : layout.lockDirectory;
   const previous = vaultLockQueues.get(key) ?? Promise.resolve();
   const turn = Promise.withResolvers<void>();
   const tail = previous.then(() => turn.promise);
@@ -450,18 +595,58 @@ async function vaultLock(layout: VaultLayout): Promise<VaultLock> {
   await previous;
   let lock: VaultLock;
   try {
-    lock = await vaultFileLock(layout);
+    lock = layout.shared
+      ? await sharedVaultLock(layout.shared, layout)
+      : await vaultFileLock(layout);
   } catch (error) {
     finish();
     throw error;
   }
   return {
     directory: lock.directory,
+    renew: () => lock.renew(),
     release: async () => {
       try {
         await lock.release();
       } finally {
         finish();
+      }
+    },
+  };
+}
+/**
+ * The deployment-wide lock of the shared vault: a database lease, so a holder on another controller
+ * is refused as busy and a crashed holder's lock expires on its own.
+ */
+async function sharedVaultLock(
+  shared: { store: ObjectStore; database: PersistenceDatabase },
+  layout: VaultLayout,
+): Promise<VaultLock> {
+  const directory = await vaultDirectory(layout.keyDirectory);
+  const holder = `vault-${randomBytes(8).toString("hex")}`;
+  let lease: { fence: number } | null;
+  try {
+    lease = acquireLease(shared.database, SHARED_VAULT_LEASE, holder, SHARED_VAULT_LEASE_MS);
+  } catch (error) {
+    await directory.close();
+    throw error;
+  }
+  if (!lease) {
+    await directory.close();
+    throw lockBusy(SHARED_VAULT_LEASE);
+  }
+  const { fence } = lease;
+  return {
+    directory,
+    renew: () => {
+      if (!renewLease(shared.database, SHARED_VAULT_LEASE, holder, fence, SHARED_VAULT_LEASE_MS))
+        throw lockBusy(SHARED_VAULT_LEASE);
+    },
+    release: async () => {
+      try {
+        releaseLease(shared.database, SHARED_VAULT_LEASE, holder, fence);
+      } finally {
+        await directory.close();
       }
     },
   };
@@ -513,6 +698,7 @@ async function vaultFileLock(layout: VaultLayout): Promise<VaultLock> {
     }
     return {
       directory,
+      renew: () => {},
       release: async () => {
         try {
           await unlink(path);
@@ -542,21 +728,22 @@ async function vaultWrite(
   version: number,
   value: string,
   allowCreate = true,
+  /** The health probe writes a name nobody else uses, so it needs no lock. */
+  locked = true,
 ): Promise<void> {
-  const lock = await vaultLock(layout);
+  const lock = locked ? await vaultLock(layout) : undefined;
   let key: Buffer | undefined;
-  let directory: FileHandle | undefined;
   try {
     key = await vaultKey(layout, allowCreate);
-    directory = await vaultDirectory(layout.dataDirectory);
     const nonce = randomBytes(12);
     const keyId = createHash("sha256").update(key).digest("hex");
+    await assertActiveVaultKey(layout, keyId);
     const cipher = createCipheriv("aes-256-gcm", key, nonce);
     cipher.setAAD(aad(workspace, id, version));
     const ciphertext = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
-    await writePrivate(
-      directory,
-      vaultName(id, version),
+    await ciphertextCreate(
+      layout,
+      ciphertextName(layout, workspace, id, version),
       Buffer.from(
         JSON.stringify({
           formatVersion: 1,
@@ -570,8 +757,7 @@ async function vaultWrite(
     );
   } finally {
     key?.fill(0);
-    await directory?.close();
-    await lock.release();
+    await lock?.release();
   }
 }
 async function vaultRead(
@@ -585,15 +771,17 @@ async function vaultRead(
     throw layout.profile === "server" ? masterKeyUnavailable() : error;
   });
   let key: Buffer | undefined;
-  let directory: FileHandle | undefined;
   try {
     key = await readPrivate(keys, layout.keyName, 32).catch((error: unknown) => {
       throw layout.profile === "server" ? masterKeyUnavailable() : error;
     });
     if (key.length !== 32)
       throw layout.profile === "server" ? masterKeyUnavailable() : unavailable();
-    directory = await vaultDirectory(layout.dataDirectory);
-    const stored = await readPrivate(directory, vaultName(id, version), MAX_SECRET_BYTES * 2);
+    const stored = await ciphertextRead(
+      layout,
+      ciphertextName(layout, workspace, id, version),
+      MAX_SECRET_BYTES * 2,
+    );
     let bytes = stored;
     if (stored[0] === 123) {
       const envelope = parseVaultEnvelope(stored);
@@ -632,7 +820,6 @@ async function vaultRead(
     throw unavailable();
   } finally {
     key?.fill(0);
-    await directory?.close();
     await keys.close();
   }
 }
@@ -640,14 +827,20 @@ async function erase(layout: VaultLayout, reference: SecretMetadata): Promise<vo
   if (reference.provider === "secret-tool") {
     await keychain("clear", reference.workspaceId, reference.id, reference.secretVersion);
   } else if (reference.provider === "vault") {
-    const directory = await vaultDirectory(layout.dataDirectory);
-    try {
-      await unlink(
-        `/proc/self/fd/${directory.fd}/${vaultName(reference.id, reference.secretVersion)}`,
-      );
-    } finally {
-      await directory.close();
-    }
+    await ciphertextRemove(
+      layout,
+      ciphertextName(layout, reference.workspaceId, reference.id, reference.secretVersion),
+    );
+  }
+}
+
+/** Whether the master key file is present and well formed; it needs no storage round trip. */
+export async function masterKeyReadable(layout: VaultLayout): Promise<boolean> {
+  try {
+    (await vaultKey(layout, false)).fill(0);
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -673,18 +866,21 @@ export async function vaultHealth(layout: VaultLayout): Promise<SecretBackendHea
       /* Try the encrypted fallback, never plaintext persistence. */
     }
   try {
-    await vaultWrite(layout, probeWorkspace, id, 1, canary, layout.profile === "local");
+    await vaultWrite(
+      layout,
+      probeWorkspace,
+      id,
+      1,
+      canary,
+      layout.profile === "local",
+      !layout.shared,
+    );
     try {
       if ((await vaultRead(layout, probeWorkspace, id, 1)) === canary)
         return { backend: "vault", writable: true };
     } finally {
       // The canary never outlives the probe, whether or not it read back.
-      const directory = await vaultDirectory(layout.dataDirectory);
-      try {
-        await unlink(`/proc/self/fd/${directory.fd}/${vaultName(id, 1)}`);
-      } finally {
-        await directory.close();
-      }
+      await ciphertextRemove(layout, ciphertextName(layout, probeWorkspace, id, 1));
     }
   } catch (error) {
     /* A read-only or unsafe home is unavailable, not session persistence. */
@@ -701,14 +897,22 @@ export async function vaultHealth(layout: VaultLayout): Promise<SecretBackendHea
 
 export class SecretsService {
   private readonly layout: VaultLayout;
+  private readonly distributed: boolean;
   constructor(
     private readonly ctx: ServiceContext,
     config: ResolvedConfig,
     server?: ServerConfig,
     /** Process memory shared by every scope of one runtime, so controller loops can release request-scoped ephemeral secrets. */
     private readonly ephemeral: Map<string, string> = new Map(),
+    /** Where the S3 profile keeps ciphertexts; the filesystem profiles do not use it. */
+    objectStore?: ObjectStore,
   ) {
-    this.layout = vaultLayout(config, server);
+    this.distributed = server?.mode === "distributed";
+    this.layout = vaultLayout(
+      config,
+      server,
+      objectStore ? { store: objectStore, database: ctx.database } : undefined,
+    );
   }
   list(): SecretMetadata[] {
     this.ctx.authorize("R");
@@ -745,6 +949,14 @@ export class SecretsService {
     ephemeral: boolean,
   ): Promise<string> {
     if (ephemeral) {
+      // A value in one controller's memory is invisible to the others, which would run the Run
+      // that needs it.
+      if (this.distributed)
+        throw new ContractError(
+          "POLICY_DENIED",
+          "Ephemeral secrets live in one controller's memory and cannot be shared across controllers",
+          { reasonCode: "ephemeral_secret_not_shared" },
+        );
       this.ephemeral.set(`${reference.id}:${reference.secretVersion}`, value);
       return "ephemeral";
     }
@@ -1359,10 +1571,8 @@ export class SecretsService {
     this.ctx.authorize("A");
     return auditedOperation(this.ctx, "secret.key.rewrap", "vault", async () => {
       const lock = await vaultLock(this.layout);
-      let directory: FileHandle;
       let old: Buffer;
       try {
-        directory = await vaultDirectory(this.layout.dataDirectory);
         old = await vaultKey(this.layout, false);
       } catch (error) {
         await lock.release();
@@ -1375,7 +1585,6 @@ export class SecretsService {
       if (retired.retiredKeyIds.includes(previousKeyId)) {
         old.fill(0);
         next.fill(0);
-        await directory.close();
         await lock.release();
         throw new ContractError("PRECONDITION_FAILED", "Cannot rewrap with a retired active key");
       }
@@ -1386,16 +1595,21 @@ export class SecretsService {
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
         }
+        // A controller whose key file is not the deployment's active key must not rewrap: it
+        // would encrypt under a key the others do not hold.
+        await assertActiveVaultKey(this.layout, previousKeyId);
         await replacePrivate(lock.directory, this.layout.keyName, next);
-        for (const name of (await readdir(`/proc/self/fd/${directory.fd}`)).filter((name) =>
-          name.endsWith(".vault"),
-        )) {
-          const stored = await readPrivate(directory, name, MAX_SECRET_BYTES * 2);
+        await publishActiveVaultKey(this.layout, activeKeyId);
+        for (const name of await ciphertextNames(this.layout)) {
+          lock.renew();
+          const stored = await ciphertextRead(this.layout, name, MAX_SECRET_BYTES * 2);
           let envelope: VaultEnvelope;
           if (stored[0] === 123) envelope = parseVaultEnvelope(stored);
           else {
             const reference = this.list().find(
-              (entry) => vaultName(entry.id, entry.secretVersion) === name,
+              (entry) =>
+                ciphertextName(this.layout, entry.workspaceId, entry.id, entry.secretVersion) ===
+                name,
             );
             if (!reference)
               throw new ContractError(
@@ -1426,8 +1640,8 @@ export class SecretsService {
               const cipher = createCipheriv("aes-256-gcm", next, nonce);
               cipher.setAAD(aad(envelope.workspace, envelope.id, envelope.version));
               const encrypted = Buffer.concat([cipher.update(value), cipher.final()]);
-              await replacePrivate(
-                directory,
+              await ciphertextReplace(
+                this.layout,
                 name,
                 Buffer.from(
                   JSON.stringify({
@@ -1451,7 +1665,6 @@ export class SecretsService {
       } finally {
         old.fill(0);
         next.fill(0);
-        await directory.close();
         await lock.release();
       }
     });
@@ -1465,10 +1678,8 @@ export class SecretsService {
       throw new ContractError("INVALID_ARGUMENT", "Invalid vault key ID");
     return auditedOperation(this.ctx, "secret.key.retire", keyId, async () => {
       const lock = await vaultLock(this.layout);
-      let directory: FileHandle;
       let key: Buffer;
       try {
-        directory = await vaultDirectory(this.layout.dataDirectory);
         key = await vaultKey(this.layout, false);
       } catch (error) {
         await lock.release();
@@ -1478,10 +1689,9 @@ export class SecretsService {
         if (createHash("sha256").update(key).digest("hex") === keyId)
           throw new ContractError("PRECONDITION_FAILED", "Cannot retire active vault key");
         const references: string[] = [];
-        for (const name of (await readdir(`/proc/self/fd/${directory.fd}`)).filter((name) =>
-          name.endsWith(".vault"),
-        )) {
-          const bytes = await readPrivate(directory, name, MAX_SECRET_BYTES * 2);
+        for (const name of await ciphertextNames(this.layout)) {
+          lock.renew();
+          const bytes = await ciphertextRead(this.layout, name, MAX_SECRET_BYTES * 2);
           if (bytes[0] !== 123) references.push(name);
           else {
             const envelope = parseVaultEnvelope(bytes);
@@ -1518,7 +1728,6 @@ export class SecretsService {
         return { keyId, dryRun, references, retired: !dryRun };
       } finally {
         key.fill(0);
-        await directory.close();
         await lock.release();
       }
     });

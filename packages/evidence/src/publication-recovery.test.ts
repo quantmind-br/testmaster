@@ -3,7 +3,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { uuidV7IdGenerator } from "@testmaster/domain";
 import { expect, it } from "vitest";
-import { collectGarbage, FileEvidenceStore, findOrphanStaging, verifyBundle } from "./index.js";
+import {
+  bundleKeyFor,
+  collectGarbage,
+  FileEvidenceStore,
+  FileObjectStore,
+  findOrphanPublished,
+  verifyBundle,
+} from "./index.js";
 
 it("OPS-020 interrupted multipart artifacts and mismatched hashes never become available", async () => {
   const rootDir = await mkdtemp(join(tmpdir(), "tm-partial-"));
@@ -35,7 +42,7 @@ it("OPS-020 interrupted multipart artifacts and mismatched hashes never become a
     await corrupt.write(Buffer.from("real bytes"));
     await expect(corrupt.end("0".repeat(64))).rejects.toThrow("SHA-256 mismatch");
     const committed = await stage.commit({ redactionPolicyHash: "0".repeat(64) });
-    const bundle = await verifyBundle(committed.bundleDir, ids);
+    const bundle = await verifyBundle(new FileObjectStore(rootDir), bundleKeyFor(ids), ids);
     expect(bundle.manifest.entries.map((entry) => [entry.state, entry.omissionReason])).toEqual([
       ["missing", "upload_aborted"],
       ["missing", "hash_mismatch"],
@@ -70,12 +77,14 @@ it("OPS-021 filesystem publication concurrent with orphan GC keeps objects prote
     await upload.write(Buffer.from("immutable"));
     await upload.end();
     const committed = await stage.commit({ redactionPolicyHash: "0".repeat(64) });
-    const candidates = await findOrphanStaging(rootDir, 0);
+    const store = new FileObjectStore(rootDir);
+    // Published and not yet referenced by the database: the sweep sees it as a candidate.
+    const candidates = await findOrphanPublished(store, { graceMs: 0 });
     expect(candidates).toHaveLength(1);
     let published = false;
     const removed = await collectGarbage(
-      rootDir,
-      candidates.map((candidate) => ({ relativePath: candidate.relativePath, version: 1 })),
+      store,
+      candidates.map((candidate) => ({ relativePath: candidate.bundleKey, version: 1 })),
       {
         inspect: async () => ({
           activeAttempt: false,
@@ -94,7 +103,7 @@ it("OPS-021 filesystem publication concurrent with orphan GC keeps objects prote
       },
     );
     expect(removed).toEqual([]);
-    expect((await verifyBundle(committed.bundleDir, ids)).manifest.entries[0]?.state).toBe(
+    expect((await verifyBundle(store, bundleKeyFor(ids), ids)).manifest.entries[0]?.state).toBe(
       "available",
     );
     expect(await readFile(join(committed.bundleDir, "result.txt"), "utf8")).toBe("immutable");

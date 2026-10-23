@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { expect, it } from "vitest";
-import { findDrRehearsalViolations, loadDrRehearsal } from "./dr-evidence.js";
+import { findDrRehearsalViolations, findS3LossViolations, loadDrRehearsal } from "./dr-evidence.js";
 
 const recordPath = resolve("validation/results/m4-dr-rehearsal.json");
 
@@ -71,13 +71,127 @@ it("OPS-026 a restored hash, an access check, a failed step or a missing measure
   );
 });
 
-it("OPS-026 never accepts a claim about S3 loss or a verdict that its rows contradict", async () => {
+const measuredS3Loss = (): Json => ({
+  status: "measured",
+  milestone: "M5",
+  scenario: "evidence-bucket-loss",
+  evidenceObjectsLost: 3,
+  backup: {
+    backupId: "bak_1",
+    bucket: "tm-backups",
+    objectLockMode: "COMPLIANCE",
+    objects: 5,
+    authentic: true,
+  },
+  lock: { deleteRefused: true, appCredentialDenied: true },
+  restore: {
+    exitCode: 0,
+    emptiedBucketVerified: true,
+    evidenceFiles: [
+      { path: "runs/a", source: "a".repeat(64), restored: "a".repeat(64), equal: true },
+    ],
+  },
+  rpoSeconds: 12,
+  rtoSeconds: 90,
+  notMeasured: ["multi-region replication"],
+});
+
+it("OPS-026 the retained S3 loss rehearsal restored every evidence object from the locked backup and names what it did not measure", async () => {
+  const record = await loadDrRehearsal(resolve("validation/results/m5-s3-loss-rehearsal.json"));
+  expect(findS3LossViolations(record)).toEqual([]);
+  expect(record.notMeasured).not.toEqual([]);
+});
+
+it("OPS-026 an S3 loss is accepted only with the rows that prove it", async () => {
+  const measured = await copy();
+  measured.s3Loss = measuredS3Loss();
+  expect(findS3LossViolations(measuredS3Loss())).toEqual([]);
+  expect(findDrRehearsalViolations(measured)).toEqual([]);
+
   const claimed = await copy();
-  claimed.s3Loss = { status: "measured", milestone: "M4" };
-  expect(findDrRehearsalViolations(claimed)).toContain(
-    "S3 loss must stay deferred to M5, not claimed",
+  claimed.s3Loss = { status: "measured", milestone: "M5" };
+  expect(findDrRehearsalViolations(claimed)).toContainEqual(expect.stringContaining("S3 loss"));
+  const unknown = await copy();
+  unknown.s3Loss = { status: "later", milestone: "M6" };
+  expect(findDrRehearsalViolations(unknown)).toContain(
+    "S3 loss is neither measured nor honestly deferred",
   );
 
+  const broken: [string, (record: Json) => void, string][] = [
+    [
+      "a file hash",
+      (r) => {
+        element((r.restore as { evidenceFiles: Json[] }).evidenceFiles, 0).restored = "b".repeat(
+          64,
+        );
+      },
+      "hash differs after restore",
+    ],
+    [
+      "an unlocked bucket",
+      (r) => {
+        (r.backup as Json).objectLockMode = "GOVERNANCE";
+      },
+      "COMPLIANCE Object Lock",
+    ],
+    [
+      "an unproven lock",
+      (r) => {
+        (r.lock as Json).deleteRefused = false;
+      },
+      "cannot be deleted",
+    ],
+    [
+      "app access to the backup",
+      (r) => {
+        (r.lock as Json).appCredentialDenied = false;
+      },
+      "app credential",
+    ],
+    [
+      "a restore that did not start empty",
+      (r) => {
+        (r.restore as Json).emptiedBucketVerified = false;
+      },
+      "emptied evidence bucket",
+    ],
+    [
+      "a failed restore",
+      (r) => {
+        (r.restore as Json).exitCode = 1;
+      },
+      "restore exited 1",
+    ],
+    [
+      "an unauthentic backup",
+      (r) => {
+        (r.backup as Json).authentic = false;
+      },
+      "authentic",
+    ],
+    [
+      "an unmeasured RTO",
+      (r) => {
+        delete r.rtoSeconds;
+      },
+      "RTO was not measured",
+    ],
+    [
+      "an undeclared gap",
+      (r) => {
+        delete r.notMeasured;
+      },
+      "did not measure",
+    ],
+  ];
+  for (const [, mutate, expected] of broken) {
+    const record = measuredS3Loss();
+    mutate(record);
+    expect(findS3LossViolations(record)).toContainEqual(expect.stringContaining(expected));
+  }
+});
+
+it("OPS-026 never accepts a verdict that its rows contradict", async () => {
   const flipped = await copy();
   named(flipped, "rowCount.runs").equal = false;
   expect(findDrRehearsalViolations(flipped)).toContain(

@@ -88,3 +88,51 @@ export function assertStorageRoom(room: StorageRoom): void {
     },
   );
 }
+
+/** Where the evidence of this process lives, for the numbers the admission and retention read. */
+export interface EvidenceVolume {
+  /** Share of the evidence capacity in use, 0 to 1. */
+  usedFraction: number;
+  /** Bytes new evidence can still take. */
+  freeBytes: number;
+}
+
+/**
+ * Bytes of evidence the object store holds: artifacts that share a blob count once. The sum covers
+ * every workspace, like the capacity it is compared with.
+ */
+export function storedEvidenceBytes(database: PersistenceDatabase): number {
+  return Number(
+    database
+      .forWorkspace("*")
+      .get(
+        "SELECT COALESCE(SUM(bytes),0) AS n FROM (SELECT DISTINCT workspace_id, storage_key, bytes FROM artifacts WHERE state IN ('available','partial')) blobs",
+      )?.n ?? 0,
+  );
+}
+
+/**
+ * The evidence volume. On a filesystem profile it is the data directory's volume. On the S3 profile
+ * it is the operator's `capacityBytes` less the stored evidence (an object store reports no free
+ * space), and never more than the local staging volume: evidence is staged there before it is
+ * published.
+ */
+export async function evidenceVolume(
+  config: { dataDir: string; evidenceCapacityBytes?: number },
+  database: PersistenceDatabase,
+): Promise<EvidenceVolume> {
+  const local = await statfs(config.dataDir);
+  const localFree = Number(local.bavail) * Number(local.bsize);
+  if (config.evidenceCapacityBytes === undefined) {
+    const total = Number(local.blocks);
+    return {
+      usedFraction: total > 0 ? Math.min(1, Math.max(0, 1 - Number(local.bavail) / total)) : 1,
+      freeBytes: localFree,
+    };
+  }
+  const used = storedEvidenceBytes(database);
+  return {
+    usedFraction: Math.min(1, used / config.evidenceCapacityBytes),
+    freeBytes: Math.min(localFree, Math.max(0, config.evidenceCapacityBytes - used)),
+  };
+}

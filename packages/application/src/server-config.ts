@@ -4,17 +4,35 @@ import { isIP } from "node:net";
 import { isAbsolute } from "node:path";
 import { ContractError, parseStrictJson } from "@testmaster/contracts";
 import type { PostgresConfig } from "@testmaster/persistence";
+import type { S3LocationConfig } from "./storage-config.js";
 
-/** Deployment configuration of the multi-user server profile (ADR-015, ADR-016, ADR-019). */
+/**
+ * Evidence bucket of the server and distributed profiles. `stagingRoot` is the local scratch of one
+ * process (staging, uploads, temp): never shared between controllers. `capacityBytes` is the
+ * operator's quota of the bucket; storage pressure is measured against it.
+ */
+export type S3StorageConfig = { kind: "s3" } & S3LocationConfig & {
+    capacityBytes: number;
+    stagingRoot: string;
+  };
+export type StorageConfig = { kind: "filesystem"; root: string } | S3StorageConfig;
+/** A backup bucket: another bucket and another credential than the evidence bucket (OPS-026). */
+export type S3BackupDestination = { kind: "s3" } & S3LocationConfig;
+
+/** Deployment configuration of the multi-user server and distributed profiles (ADR-015, ADR-016, ADR-019). */
 export interface ServerConfig {
-  mode: "server";
+  mode: "server" | "distributed";
   database: { engine: "postgres" } & PostgresConfig;
-  storage: { kind: "filesystem"; root: string } | { kind: "s3" };
+  storage: StorageConfig;
   server: {
     listen: { host: string; port: number };
     publicOrigin: string;
     trustedProxies: string[];
     origins: string[];
+    /** Origin other controllers reach this one at (distributed only). */
+    internalOrigin?: string;
+    /** Controllers the operator expects to be live (distributed only). */
+    expectedControllers?: number;
   };
   security: {
     masterKeyFile: string;
@@ -29,7 +47,7 @@ export interface ServerConfig {
    * destination unless `allowSharedAccess` says the operator accepts one shared identity.
    */
   backup?: {
-    destination: string;
+    destination: string | S3BackupDestination;
     pgDump?: string[];
     pgRestore?: string[];
     schedule?: "daily" | "disabled";
@@ -90,17 +108,76 @@ function validOrigin(value: string): boolean {
     return false;
   }
 }
-/**
- * The evidence root of the server profile. S3-compatible storage is an M5 capability, so it is
- * refused instead of silently falling back to the filesystem.
- */
-export function filesystemRoot(storage: ServerConfig["storage"]): string {
-  if (storage.kind === "s3")
-    throw new ContractError("CAPABILITY_UNAVAILABLE", "S3-compatible storage is not implemented", {
-      capability: "s3-storage",
-      milestone: "M5",
-    });
-  return storage.root;
+/** The local scratch directory of one process: the evidence root, or the S3 profile's staging root. */
+export function localDataDir(storage: StorageConfig): string {
+  return storage.kind === "s3" ? storage.stagingRoot : storage.root;
+}
+const bucketName = /^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/;
+const locationKeys = [
+  "kind",
+  "endpoint",
+  "region",
+  "bucket",
+  "prefix",
+  "forcePathStyle",
+  "accessKeyIdFile",
+  "secretAccessKeyFile",
+  "caFile",
+] as const;
+/** The bucket, endpoint and credential files shared by the evidence and the backup location. */
+function parseS3Location(
+  value: Json,
+  path: string,
+  extra: readonly string[],
+  issues: string[],
+): S3LocationConfig {
+  known(value, [...locationKeys, ...extra], path, issues);
+  const endpoint = text(value.endpoint, `${path}.endpoint`, issues);
+  if (endpoint && !validOrigin(endpoint))
+    issues.push(`${path}.endpoint must be a bare http or https origin`);
+  const region = text(value.region, `${path}.region`, issues);
+  const bucket = text(value.bucket, `${path}.bucket`, issues);
+  if (bucket && !bucketName.test(bucket))
+    issues.push(`${path}.bucket must be a valid bucket name (3-63 lowercase letters, digits, . -)`);
+  const prefix = optionalText(value.prefix, `${path}.prefix`, issues);
+  if (
+    prefix &&
+    (prefix.startsWith("/") ||
+      prefix.endsWith("/") ||
+      prefix.split("/").some((part) => part === ".." || part === "." || part === ""))
+  )
+    issues.push(`${path}.prefix must be a relative key prefix without empty or dot segments`);
+  if (typeof value.forcePathStyle !== "boolean")
+    issues.push(`${path}.forcePathStyle must be a boolean`);
+  const accessKeyIdFile = absolute(value.accessKeyIdFile, `${path}.accessKeyIdFile`, issues);
+  const secretAccessKeyFile = absolute(
+    value.secretAccessKeyFile,
+    `${path}.secretAccessKeyFile`,
+    issues,
+  );
+  const caFile =
+    value.caFile === undefined ? undefined : absolute(value.caFile, `${path}.caFile`, issues);
+  return {
+    endpoint,
+    region,
+    bucket,
+    ...(prefix ? { prefix } : {}),
+    forcePathStyle: value.forcePathStyle === true,
+    accessKeyIdFile,
+    secretAccessKeyFile,
+    ...(caFile ? { caFile } : {}),
+  };
+}
+const policyDenied = (message: string, reasonCode: string): never => {
+  throw new ContractError("POLICY_DENIED", message, { reasonCode });
+};
+function backupSharesIdentity(storage: S3LocationConfig, destination: S3LocationConfig): boolean {
+  const origin = (location: S3LocationConfig): string => new URL(location.endpoint).origin;
+  return (
+    (origin(storage) === origin(destination) && storage.bucket === destination.bucket) ||
+    storage.accessKeyIdFile === destination.accessKeyIdFile ||
+    storage.secretAccessKeyFile === destination.secretAccessKeyFile
+  );
 }
 /** Validates an already parsed document; every problem is reported at once. */
 export function parseServerConfig(input: unknown): ServerConfig {
@@ -112,9 +189,17 @@ export function parseServerConfig(input: unknown): ServerConfig {
     "$",
     issues,
   );
-  if (root.mode !== "server") issues.push('$.mode must be "server"');
+  if (root.mode !== "server" && root.mode !== "distributed")
+    issues.push('$.mode must be "server" or "distributed"');
+  const mode = root.mode === "distributed" ? "distributed" : "server";
   const db = object(root.database, "$.database", issues);
   known(db, ["engine", "url", "passwordFile", "caFile", "applicationName"], "$.database", issues);
+  // OPS-001: the distributed profile is PostgreSQL only; the refusal names the policy, not the typo.
+  if (mode === "distributed" && db.engine !== "postgres")
+    policyDenied(
+      "The distributed profile needs PostgreSQL; SQLite cannot be shared between controllers",
+      "distributed_requires_postgres",
+    );
   if (db.engine !== "postgres") issues.push('$.database.engine must be "postgres"');
   const url = text(db.url, "$.database.url", issues);
   try {
@@ -130,12 +215,52 @@ export function parseServerConfig(input: unknown): ServerConfig {
   const caFile = optionalText(db.caFile, "$.database.caFile", issues);
   const applicationName = optionalText(db.applicationName, "$.database.applicationName", issues);
   const storage = object(root.storage, "$.storage", issues);
-  if (storage.kind === "s3") filesystemRoot({ kind: "s3" });
-  known(storage, ["kind", "root"], "$.storage", issues);
-  if (storage.kind !== "filesystem") issues.push('$.storage.kind must be "filesystem"');
-  const storageRoot = absolute(storage.root, "$.storage.root", issues);
+  if (mode === "distributed" && storage.kind === "filesystem")
+    policyDenied(
+      "The distributed profile needs shared S3-compatible storage; a filesystem root is not shared between controllers",
+      "distributed_requires_shared_storage",
+    );
+  let storageConfig: StorageConfig = { kind: "filesystem", root: "" };
+  if (storage.kind === "s3") {
+    const location = parseS3Location(
+      storage,
+      "$.storage",
+      ["capacityBytes", "stagingRoot"],
+      issues,
+    );
+    const capacityBytes = storage.capacityBytes;
+    if (
+      typeof capacityBytes !== "number" ||
+      !Number.isSafeInteger(capacityBytes) ||
+      capacityBytes < 1
+    )
+      issues.push("$.storage.capacityBytes must be a positive integer number of bytes");
+    const stagingRoot = absolute(storage.stagingRoot, "$.storage.stagingRoot", issues);
+    storageConfig = {
+      kind: "s3",
+      ...location,
+      capacityBytes: Number(capacityBytes),
+      stagingRoot,
+    };
+  } else {
+    known(storage, ["kind", "root"], "$.storage", issues);
+    if (storage.kind !== "filesystem") issues.push('$.storage.kind must be "filesystem" or "s3"');
+    storageConfig = { kind: "filesystem", root: absolute(storage.root, "$.storage.root", issues) };
+  }
   const server = object(root.server, "$.server", issues);
-  known(server, ["listen", "publicOrigin", "trustedProxies", "origins"], "$.server", issues);
+  known(
+    server,
+    [
+      "listen",
+      "publicOrigin",
+      "trustedProxies",
+      "origins",
+      "internalOrigin",
+      "expectedControllers",
+    ],
+    "$.server",
+    issues,
+  );
   const listen = object(server.listen, "$.server.listen", issues);
   known(listen, ["host", "port"], "$.server.listen", issues);
   const host = text(listen.host, "$.server.listen.host", issues);
@@ -157,6 +282,25 @@ export function parseServerConfig(input: unknown): ServerConfig {
   for (const origin of origins)
     if (!validOrigin(origin))
       issues.push(`$.server.origins entry ${JSON.stringify(origin)} is not a bare origin`);
+  const internalOrigin = optionalText(server.internalOrigin, "$.server.internalOrigin", issues);
+  if (mode === "distributed" && internalOrigin === undefined)
+    issues.push("$.server.internalOrigin is required in the distributed profile");
+  if (mode === "server" && internalOrigin !== undefined)
+    issues.push("$.server.internalOrigin is only valid in the distributed profile");
+  if (internalOrigin && !validOrigin(internalOrigin))
+    issues.push("$.server.internalOrigin must be a bare http or https origin");
+  const expected = server.expectedControllers;
+  if (expected !== undefined) {
+    if (mode !== "distributed")
+      issues.push("$.server.expectedControllers is only valid in the distributed profile");
+    if (
+      typeof expected !== "number" ||
+      !Number.isInteger(expected) ||
+      expected < 1 ||
+      expected > 1000
+    )
+      issues.push("$.server.expectedControllers must be an integer from 1 to 1000");
+  }
   const security = object(root.security, "$.security", issues);
   known(security, ["masterKeyFile", "backupKeyFile", "atRestEncryption"], "$.security", issues);
   const masterKeyFile = absolute(security.masterKeyFile, "$.security.masterKeyFile", issues);
@@ -188,7 +332,15 @@ export function parseServerConfig(input: unknown): ServerConfig {
       "$.backup",
       issues,
     );
-    const destination = absolute(value.destination, "$.backup.destination", issues);
+    let destination: string | S3BackupDestination;
+    if (value.destination && typeof value.destination === "object") {
+      const found = object(value.destination, "$.backup.destination", issues);
+      if (found.kind !== "s3") issues.push('$.backup.destination.kind must be "s3"');
+      destination = {
+        kind: "s3",
+        ...parseS3Location(found, "$.backup.destination", [], issues),
+      };
+    } else destination = absolute(value.destination, "$.backup.destination", issues);
     const pgDump =
       value.pgDump === undefined ? undefined : list(value.pgDump, "$.backup.pgDump", issues);
     const pgRestore =
@@ -226,8 +378,17 @@ export function parseServerConfig(input: unknown): ServerConfig {
     };
   }
   if (issues.length) problems(issues);
+  if (
+    storageConfig.kind === "s3" &&
+    typeof backup?.destination === "object" &&
+    backupSharesIdentity(storageConfig, backup.destination)
+  )
+    policyDenied(
+      "The backup bucket must be another bucket with another credential than the evidence storage",
+      "backup_shares_storage_identity",
+    );
   return {
-    mode: "server",
+    mode,
     database: {
       engine: "postgres",
       url,
@@ -235,12 +396,14 @@ export function parseServerConfig(input: unknown): ServerConfig {
       ...(caFile ? { caFile } : {}),
       ...(applicationName ? { applicationName } : {}),
     },
-    storage: { kind: "filesystem", root: storageRoot },
+    storage: storageConfig,
     server: {
       listen: { host, port: port as number },
       publicOrigin,
       trustedProxies,
       origins,
+      ...(internalOrigin ? { internalOrigin } : {}),
+      ...(typeof expected === "number" ? { expectedControllers: expected } : {}),
     },
     security: {
       masterKeyFile,

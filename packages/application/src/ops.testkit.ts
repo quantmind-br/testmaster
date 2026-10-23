@@ -11,7 +11,9 @@ import {
   type TestDatabase,
 } from "@testmaster/persistence/testing";
 import { Application } from "./application.js";
+import type { ControllerOptions } from "./controller-instances.js";
 import { authenticateSession } from "./identity.js";
+import type { BackupDestination } from "./server-backup.js";
 import type { ServerConfig } from "./server-config.js";
 import { provisionWorkspace } from "./team.js";
 
@@ -61,9 +63,19 @@ export interface OpsStack {
 
 /** A migrated PostgreSQL database, one bootstrapped workspace, key files and an evidence root. */
 export async function opsStack(
-  options: { telemetry?: ServerConfig["telemetry"]; backup?: boolean } = {},
+  options: {
+    telemetry?: ServerConfig["telemetry"];
+    backup?: boolean;
+    controller?: ControllerOptions;
+    /** Where databases come from; defaults to the vitest postgres projects' server. */
+    createDatabase?: typeof createTestDatabase;
+    /** The evidence storage, given the stack's root (for credential files); defaults to a directory. */
+    storage?: (root: string) => Promise<ServerConfig["storage"]> | ServerConfig["storage"];
+    /** The backup destination, given the stack's root; defaults to a directory. */
+    backupDestination?: (root: string) => Promise<BackupDestination> | BackupDestination;
+  } = {},
 ): Promise<OpsStack> {
-  const database = await createTestDatabase();
+  const database = await (options.createDatabase ?? createTestDatabase)();
   const root = await mkdtemp(join(tmpdir(), "tm-ops-"));
   const home = join(root, "home");
   await mkdir(home);
@@ -72,7 +84,10 @@ export async function opsStack(
   const server: ServerConfig = {
     mode: "server",
     database: { engine: "postgres", ...database.config },
-    storage: { kind: "filesystem", root: join(root, "evidence") },
+    storage: (await options.storage?.(root)) ?? {
+      kind: "filesystem",
+      root: join(root, "evidence"),
+    },
     server: {
       listen: { host: "127.0.0.1", port: 0 },
       publicOrigin: "https://tm.example",
@@ -89,14 +104,20 @@ export async function opsStack(
       ? {}
       : {
           backup: {
-            destination: join(root, "backups"),
+            destination: (await options.backupDestination?.(root)) ?? join(root, "backups"),
             pgDump: testPgDump,
             pgRestore: testPgRestore,
             allowSharedAccess: true,
           },
         }),
   };
-  const application = await Application.open({ cwd: root, home, env: {}, server });
+  const application = await Application.open({
+    cwd: root,
+    home,
+    env: {},
+    server,
+    ...(options.controller ? { controller: options.controller } : {}),
+  });
   const created = application.operator.bootstrap({
     workspaceName: "Acme",
     ownerLogin: "acme-owner",
@@ -121,17 +142,20 @@ export async function opsStack(
 }
 
 /** A second, empty database plus evidence root, for restore targets. */
-export async function restoreTarget(stack: OpsStack): Promise<{
+export async function restoreTarget(
+  stack: OpsStack,
+  options: { createDatabase?: typeof createTestDatabase; storage?: ServerConfig["storage"] } = {},
+): Promise<{
   server: ServerConfig;
   cleanup(): Promise<void>;
 }> {
-  const database = await createTestDatabase({ migrate: false });
+  const database = await (options.createDatabase ?? createTestDatabase)({ migrate: false });
   const evidence = join(stack.root, `restored-evidence-${randomBytes(3).toString("hex")}`);
   return {
     server: {
       ...stack.server,
       database: { engine: "postgres", ...database.config },
-      storage: { kind: "filesystem", root: evidence },
+      storage: options.storage ?? { kind: "filesystem", root: evidence },
     },
     cleanup: () => database.drop(),
   };

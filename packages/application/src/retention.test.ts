@@ -5,8 +5,10 @@ import { dirname, join } from "node:path";
 import { uuidV7IdGenerator } from "@testmaster/domain";
 import {
   type AttemptIds,
+  bundleKeyFor,
   ConfinedRoot,
   FileEvidenceStore,
+  FileObjectStore,
   verifyBundle,
 } from "@testmaster/evidence";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -168,7 +170,7 @@ async function fixture(
     storageKey,
     ids,
     committed,
-    service: new RetentionService(ctx, app.config),
+    service: new RetentionService(ctx, app.config, app.objectStore),
     file: join(app.config.dataDir, storageKey),
     key: `retention:artifact:${ctx.workspaceId}:${artifactId}`,
   };
@@ -245,12 +247,12 @@ describe("artifact retention maintenance", () => {
     const runBefore = f.ctx.database.get("SELECT * FROM runs WHERE id=?", f.runId);
     const manifestBefore = await fs.readFile(join(f.committed.bundleDir, "manifest.json"));
     const metaBefore = await fs.readFile(join(f.committed.bundleDir, "meta.json"));
-    const remove = ConfinedRoot.prototype.remove;
-    vi.spyOn(ConfinedRoot.prototype, "remove").mockImplementation(async function (
-      this: ConfinedRoot,
-      path: string,
+    const remove = FileObjectStore.prototype.delete;
+    vi.spyOn(FileObjectStore.prototype, "delete").mockImplementation(async function (
+      this: FileObjectStore,
+      key: string,
     ) {
-      expect(path).toBe(f.storageKey);
+      expect(key).toBe(f.storageKey);
       expect(artifact(f)?.state).toBe("expired");
       expect(record(f).stage).toBe("tombstoned");
       expect(
@@ -265,7 +267,7 @@ describe("artifact retention maintenance", () => {
           f.runId,
         ),
       ).toBeDefined();
-      await remove.call(this, path);
+      await remove.call(this, key);
     });
     expect(await f.service.maintenance()).toMatchObject({
       expiredArtifacts: 1,
@@ -288,7 +290,10 @@ describe("artifact retention maintenance", () => {
     expect(await fs.readFile(join(f.committed.bundleDir, "manifest.json"))).toEqual(manifestBefore);
     expect(await fs.readFile(join(f.committed.bundleDir, "meta.json"))).toEqual(metaBefore);
     await expect(
-      verifyBundle(f.committed.bundleDir, { ...f.ids, manifestSha256: f.committed.manifestSha256 }),
+      verifyBundle(f.app.objectStore, bundleKeyFor(f.ids), {
+        ...f.ids,
+        manifestSha256: f.committed.manifestSha256,
+      }),
     ).rejects.toThrow();
     const view = await f.app.artifacts.get(f.runId);
     expect(view.manifest.entries[0]).toMatchObject({
@@ -458,7 +463,7 @@ describe("artifact retention maintenance", () => {
   it("retries a crashed delete without duplicating expiry/tombstone audit or losing metadata", async () => {
     const f = await fixture();
     const deletion = vi
-      .spyOn(ConfinedRoot.prototype, "remove")
+      .spyOn(FileObjectStore.prototype, "delete")
       .mockRejectedValueOnce(new Error("storage unavailable"));
     await expect(f.service.maintenance()).rejects.toThrow("storage unavailable");
     expect(record(f).stage).toBe("tombstoned");
@@ -476,11 +481,11 @@ describe("artifact retention maintenance", () => {
 
   it("finishes a tombstoned deletion after bytes are already gone", async () => {
     const f = await fixture();
-    const remove = ConfinedRoot.prototype.remove;
+    const remove = FileObjectStore.prototype.delete;
     const deletion = vi
-      .spyOn(ConfinedRoot.prototype, "remove")
-      .mockImplementationOnce(async function (this: ConfinedRoot, path: string) {
-        await remove.call(this, path);
+      .spyOn(FileObjectStore.prototype, "delete")
+      .mockImplementationOnce(async function (this: FileObjectStore, key: string) {
+        await remove.call(this, key);
         throw new Error("crash after unlink");
       });
     await expect(f.service.maintenance()).rejects.toThrow("crash after unlink");
@@ -648,10 +653,14 @@ describe("artifact retention maintenance", () => {
 
   it("a valid-lease upload staged file survives maintenance until its lease expires", async () => {
     const f = await fixture({ completed: false });
-    const uploads = new UploadsService(f.ctx, {
-      ...f.app.config,
-      profilePolicy: { ...f.app.config.profilePolicy, allowUpload: true },
-    });
+    const uploads = new UploadsService(
+      f.ctx,
+      {
+        ...f.app.config,
+        profilePolicy: { ...f.app.config.profilePolicy, allowUpload: true },
+      },
+      f.app.objectStore,
+    );
     const receipt = uploads.create({
       mediaType: "application/json",
       sizeBytes: 10,
@@ -671,7 +680,7 @@ describe("artifact retention maintenance", () => {
   it("unavailable storage during GC emits a delayed-deletion event with its deadline", async () => {
     const f = await fixture();
     const remove = vi
-      .spyOn(ConfinedRoot.prototype, "remove")
+      .spyOn(FileObjectStore.prototype, "delete")
       .mockRejectedValue(Object.assign(new Error("EIO"), { code: "EIO" }));
     expect(await f.service.maintenance()).toMatchObject({ removed: [] });
     expect(await f.service.maintenance()).toMatchObject({ removed: [] });

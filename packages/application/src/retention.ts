@@ -1,4 +1,4 @@
-import { readdir, statfs } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import { ContractError, type DeletionOperation, defaults, validate } from "@testmaster/contracts";
 import { canonicalJson, semanticHash } from "@testmaster/domain";
 import {
@@ -7,6 +7,7 @@ import {
   type GcCandidate,
   type GcPort,
   type GcSafety,
+  type ObjectStore,
   validateRelativePath,
 } from "@testmaster/evidence";
 import {
@@ -20,7 +21,8 @@ import { auditSecurity } from "./audit.js";
 import type { ResolvedConfig } from "./config.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "./context.js";
 import { type FixtureInput, fixtureRecord, fixtureRevoked } from "./input-fixtures.js";
-import { storageMetadataReserveBytes } from "./storage-admission.js";
+import { uploadKey } from "./object-bytes.js";
+import { evidenceVolume, storageMetadataReserveBytes } from "./storage-admission.js";
 
 interface RetentionRecord {
   stage: "marked" | "tombstoned" | "deleted";
@@ -43,6 +45,12 @@ const storageUnavailableCodes: Record<string, true> = {
   ETIMEDOUT: true,
   ENOTCONN: true,
 };
+/** The object store, not the artifact, failed: an errno of the file system or the S3 outage reason. */
+function isStorageOutage(error: unknown): boolean {
+  if (error instanceof ContractError) return error.details.reasonCode === "storage_unavailable";
+  const code = error instanceof Error ? (error as NodeJS.ErrnoException).code : undefined;
+  return code !== undefined && Object.hasOwn(storageUnavailableCodes, code);
+}
 
 function artifactRetentionKey(workspaceId: string, artifactId: string): string {
   return `retention:artifact:${workspaceId}:${artifactId}`;
@@ -97,6 +105,7 @@ export class RetentionService {
   constructor(
     readonly ctx: ServiceContext,
     readonly config: ResolvedConfig,
+    readonly objectStore: ObjectStore,
   ) {}
   requestDeletion(artifactId: string): DeletionOperation {
     const fixture = fixtureRecord(this.ctx, artifactId);
@@ -450,42 +459,34 @@ export class RetentionService {
   }
   private async collectDeletedFixtures(): Promise<string[]> {
     const removed: string[] = [];
-    const root = new ConfinedRoot(this.config.dataDir);
-    try {
-      for (const fixture of this.ctx.database.all<FixtureInput>(
-        "SELECT f.* FROM fixture_inputs f JOIN operational_state d ON d.key='retention:deletion:' || f.workspace_id || ':' || f.id WHERE f.workspace_id=?",
-        this.ctx.workspaceId,
-      )) {
-        if (
-          this.record(fixture.id)?.stage === "deleted" ||
-          this.fixtureDeletionHolds(fixture).length
-        )
-          continue;
-        // Metadata is immutable; the tombstone remains authoritative after blob removal.
-        if (
-          fixture.storage_key !==
-          `fixture-inputs/${this.ctx.workspaceId}/${fixture.project_id}/${fixture.content_hash}`
-        )
-          continue;
-        await root.unlink(fixture.storage_key);
-        this.ctx.database.withTx(() => {
-          const previous = this.record(fixture.id);
-          if (!previous || this.fixtureDeletionHolds(fixture).length) return;
-          this.save(fixture.id, {
-            ...previous,
-            stage: "deleted",
-            deletedAt: new Date().toISOString(),
-          });
-          const pointer = this.ctx.database.get(
-            "SELECT value FROM operational_state WHERE key=?",
-            `retention:deletion:${this.ctx.workspaceId}:${fixture.id}`,
-          )!;
-          this.completeOperationIfAllDeleted(String(pointer.value));
+    for (const fixture of this.ctx.database.all<FixtureInput>(
+      "SELECT f.* FROM fixture_inputs f JOIN operational_state d ON d.key='retention:deletion:' || f.workspace_id || ':' || f.id WHERE f.workspace_id=?",
+      this.ctx.workspaceId,
+    )) {
+      if (this.record(fixture.id)?.stage === "deleted" || this.fixtureDeletionHolds(fixture).length)
+        continue;
+      // Metadata is immutable; the tombstone remains authoritative after blob removal.
+      if (
+        fixture.storage_key !==
+        `fixture-inputs/${this.ctx.workspaceId}/${fixture.project_id}/${fixture.content_hash}`
+      )
+        continue;
+      await this.objectStore.delete(fixture.storage_key);
+      this.ctx.database.withTx(() => {
+        const previous = this.record(fixture.id);
+        if (!previous || this.fixtureDeletionHolds(fixture).length) return;
+        this.save(fixture.id, {
+          ...previous,
+          stage: "deleted",
+          deletedAt: new Date().toISOString(),
         });
-        removed.push(fixture.storage_key);
-      }
-    } finally {
-      root.close();
+        const pointer = this.ctx.database.get(
+          "SELECT value FROM operational_state WHERE key=?",
+          `retention:deletion:${this.ctx.workspaceId}:${fixture.id}`,
+        )!;
+        this.completeOperationIfAllDeleted(String(pointer.value));
+      });
+      removed.push(fixture.storage_key);
     }
     return removed;
   }
@@ -597,13 +598,10 @@ export class RetentionService {
   }
 
   private async storagePressure(): Promise<{ usedFraction: number; admissionSuspended: boolean }> {
-    const storage = await statfs(this.config.dataDir);
-    const total = Number(storage.blocks);
-    const usedFraction =
-      total > 0 ? Math.min(1, Math.max(0, 1 - Number(storage.bavail) / total)) : 1;
+    const volume = await evidenceVolume(this.config, this.ctx.database);
+    const usedFraction = volume.usedFraction;
     const database = this.ctx.database;
-    if (Number(storage.bavail) * Number(storage.bsize) < storageMetadataReserveBytes)
-      releaseControlPlaneReserve(database.path);
+    if (volume.freeBytes < storageMetadataReserveBytes) releaseControlPlaneReserve(database.path);
     database.withTx(() => {
       const warningKey = "storage:high-watermark";
       const warned = database.get("SELECT 1 FROM operational_state WHERE key=?", warningKey);
@@ -667,15 +665,14 @@ export class RetentionService {
       )) {
         const uploadId = String(lease.upload_id);
         if (!/^[a-f0-9]{48}$/.test(uploadId)) throw new Error("Invalid persisted upload lease");
-        const directory = `uploads/${this.ctx.workspaceId}`;
+        // The received bytes are an object; a spool left by a crash is local scratch under this
+        // process's data directory.
+        await this.objectStore.delete(uploadKey(this.ctx.workspaceId, uploadId));
         try {
-          const uploads = uploadsRoot.openDirectory(directory);
+          const uploads = uploadsRoot.openDirectory(`uploads/${this.ctx.workspaceId}`);
           try {
             for (const name of await readdir(`/proc/self/fd/${uploads.fd}`))
-              if (
-                name === `${uploadId}.bin` ||
-                (name.startsWith(`${uploadId}.`) && name.endsWith(".pending"))
-              )
+              if (name.startsWith(`${uploadId}.`) && name.endsWith(".pending"))
                 await uploads.unlink(name);
           } finally {
             uploads.close();
@@ -750,133 +747,120 @@ export class RetentionService {
       );
     };
     let expiredArtifacts = 0;
-    const root = new ConfinedRoot(this.config.dataDir);
     const removed: string[] = [];
-    try {
-      const port: GcPort = {
-        inspect: async (candidate): Promise<GcSafety> => {
-          const safe = Boolean(current(candidate));
-          if (safe) {
-            try {
-              const file = await root.openFile(candidate.relativePath);
-              await file.close();
-            } catch (error) {
-              if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-            }
-          }
-          return {
-            activeAttempt: !safe,
-            validUploadLease: false,
-            legalHold: false,
-            liveReferences: 0,
+    const port: GcPort = {
+      inspect: async (candidate): Promise<GcSafety> => {
+        const safe = Boolean(current(candidate));
+        if (safe) await this.objectStore.head(candidate.relativePath);
+        return {
+          activeAttempt: !safe,
+          validUploadLease: false,
+          legalHold: false,
+          liveReferences: 0,
+        };
+      },
+      mark: async (candidate) =>
+        database.withTx(() => {
+          const row = current(candidate);
+          if (!row) return null;
+          const previous = this.record(row.id);
+          if (previous?.stage === "deleted") return null;
+          if (row.state === "expired" && previous) return { version: Number(row.version) };
+          const record: RetentionRecord = {
+            stage: "marked",
+            expiredAt: new Date().toISOString(),
           };
-        },
-        mark: async (candidate) =>
-          database.withTx(() => {
-            const row = current(candidate);
-            if (!row) return null;
-            const previous = this.record(row.id);
-            if (previous?.stage === "deleted") return null;
-            if (row.state === "expired" && previous) return { version: Number(row.version) };
-            const record: RetentionRecord = {
-              stage: "marked",
-              expiredAt: new Date().toISOString(),
-            };
-            const changed = database.run(
-              `UPDATE artifacts SET state='expired',version=version+1 WHERE workspace_id=? AND id=? AND version=? AND state=? AND ${eligible}`,
-              this.ctx.workspaceId,
-              row.id,
-              candidate.version,
-              row.state,
-              cutoff,
-              cutoff,
-              new Date().toISOString(),
-            );
-            if (!changed.changes) return null;
-            this.save(row.id, record);
-            this.event(
-              row,
-              "artifact.expired",
-              { state: row.state, retention: previous },
-              { state: "expired", retention: record },
-            );
-            database.run(
-              "INSERT INTO blob_reference_counts(workspace_id,storage_key,references_count,checked_at) VALUES(?,?,(SELECT COUNT(*) FROM artifacts WHERE workspace_id=? AND storage_key=? AND state IN ('available','partial')),?) ON CONFLICT(workspace_id,storage_key) DO UPDATE SET references_count=excluded.references_count,checked_at=excluded.checked_at",
-              this.ctx.workspaceId,
-              row.storage_key,
-              this.ctx.workspaceId,
-              row.storage_key,
-              new Date().toISOString(),
-            );
-            if (row.state !== "expired") expiredArtifacts++;
-            return { version: candidate.version + 1 };
-          }),
-        tombstone: async (candidate) =>
-          database.withTx(() => {
-            const row = current(candidate);
-            if (row?.state !== "expired") return null;
-            const previous = this.record(row.id);
-            if (!previous || previous.stage === "deleted") return null;
-            const changed = database.run(
-              `UPDATE artifacts SET version=version+1 WHERE workspace_id=? AND id=? AND version=? AND state='expired' AND ${eligible}`,
-              this.ctx.workspaceId,
-              row.id,
-              candidate.version,
-              cutoff,
-              cutoff,
-              new Date().toISOString(),
-            );
-            if (!changed.changes) return null;
-            if (previous.stage !== "tombstoned") {
-              const record: RetentionRecord = {
-                ...previous,
-                stage: "tombstoned",
-                tombstonedAt: new Date().toISOString(),
-              };
-              this.save(row.id, record);
-              this.event(row, "artifact.tombstoned", previous, record);
-            }
-            return { version: candidate.version + 1 };
-          }),
-        deleted: async (candidate) =>
-          database.withTx(() => {
-            const original = candidates.get(candidate.relativePath);
-            if (!original) return;
-            const previous = this.record(original.id);
-            if (previous?.stage !== "tombstoned") return;
-            const changed = database.run(
-              "UPDATE artifacts SET version=version+1 WHERE workspace_id=? AND id=? AND version=? AND state='expired'",
-              this.ctx.workspaceId,
-              original.id,
-              candidate.version,
-            );
-            if (!changed.changes) return;
+          const changed = database.run(
+            `UPDATE artifacts SET state='expired',version=version+1 WHERE workspace_id=? AND id=? AND version=? AND state=? AND ${eligible}`,
+            this.ctx.workspaceId,
+            row.id,
+            candidate.version,
+            row.state,
+            cutoff,
+            cutoff,
+            new Date().toISOString(),
+          );
+          if (!changed.changes) return null;
+          this.save(row.id, record);
+          this.event(
+            row,
+            "artifact.expired",
+            { state: row.state, retention: previous },
+            { state: "expired", retention: record },
+          );
+          database.run(
+            "INSERT INTO blob_reference_counts(workspace_id,storage_key,references_count,checked_at) VALUES(?,?,(SELECT COUNT(*) FROM artifacts WHERE workspace_id=? AND storage_key=? AND state IN ('available','partial')),?) ON CONFLICT(workspace_id,storage_key) DO UPDATE SET references_count=excluded.references_count,checked_at=excluded.checked_at",
+            this.ctx.workspaceId,
+            row.storage_key,
+            this.ctx.workspaceId,
+            row.storage_key,
+            new Date().toISOString(),
+          );
+          if (row.state !== "expired") expiredArtifacts++;
+          return { version: candidate.version + 1 };
+        }),
+      tombstone: async (candidate) =>
+        database.withTx(() => {
+          const row = current(candidate);
+          if (row?.state !== "expired") return null;
+          const previous = this.record(row.id);
+          if (!previous || previous.stage === "deleted") return null;
+          const changed = database.run(
+            `UPDATE artifacts SET version=version+1 WHERE workspace_id=? AND id=? AND version=? AND state='expired' AND ${eligible}`,
+            this.ctx.workspaceId,
+            row.id,
+            candidate.version,
+            cutoff,
+            cutoff,
+            new Date().toISOString(),
+          );
+          if (!changed.changes) return null;
+          if (previous.stage !== "tombstoned") {
             const record: RetentionRecord = {
               ...previous,
-              stage: "deleted",
-              deletedAt: new Date().toISOString(),
+              stage: "tombstoned",
+              tombstonedAt: new Date().toISOString(),
             };
-            this.save(original.id, record);
-            const deletion = database.get(
-              "SELECT value FROM operational_state WHERE key=?",
-              `retention:deletion:${this.ctx.workspaceId}:${original.id}`,
-            );
-            if (deletion) this.completeOperationIfAllDeleted(String(deletion.value));
-            this.event(original, "artifact.deleted", previous, record);
-          }),
-      };
-      for (const row of candidates.values()) {
-        const candidate = { relativePath: row.storage_key, version: Number(row.version) };
-        try {
-          removed.push(...(await collectGarbage(this.config.dataDir, [candidate], port)));
-        } catch (error) {
-          const code = error instanceof Error ? (error as NodeJS.ErrnoException).code : undefined;
-          if (!code || !Object.hasOwn(storageUnavailableCodes, code)) throw error;
-          this.delayDeletion(row);
-        }
+            this.save(row.id, record);
+            this.event(row, "artifact.tombstoned", previous, record);
+          }
+          return { version: candidate.version + 1 };
+        }),
+      deleted: async (candidate) =>
+        database.withTx(() => {
+          const original = candidates.get(candidate.relativePath);
+          if (!original) return;
+          const previous = this.record(original.id);
+          if (previous?.stage !== "tombstoned") return;
+          const changed = database.run(
+            "UPDATE artifacts SET version=version+1 WHERE workspace_id=? AND id=? AND version=? AND state='expired'",
+            this.ctx.workspaceId,
+            original.id,
+            candidate.version,
+          );
+          if (!changed.changes) return;
+          const record: RetentionRecord = {
+            ...previous,
+            stage: "deleted",
+            deletedAt: new Date().toISOString(),
+          };
+          this.save(original.id, record);
+          const deletion = database.get(
+            "SELECT value FROM operational_state WHERE key=?",
+            `retention:deletion:${this.ctx.workspaceId}:${original.id}`,
+          );
+          if (deletion) this.completeOperationIfAllDeleted(String(deletion.value));
+          this.event(original, "artifact.deleted", previous, record);
+        }),
+    };
+    for (const row of candidates.values()) {
+      const candidate = { relativePath: row.storage_key, version: Number(row.version) };
+      try {
+        removed.push(...(await collectGarbage(this.objectStore, [candidate], port)));
+      } catch (error) {
+        if (!isStorageOutage(error)) throw error;
+        this.delayDeletion(row);
       }
-    } finally {
-      root.close();
     }
     removed.push(...(await this.collectDeletedFixtures()));
     const pressure = await this.storagePressure();

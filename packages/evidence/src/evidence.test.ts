@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { uuidV7IdGenerator } from "@testmaster/domain";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  type AttemptIds,
+  bundleKeyFor,
   ConfinedRoot,
   collectGarbage,
   deriveFailedOnly,
@@ -11,6 +13,7 @@ import {
   extractTar,
   extractZip,
   FileEvidenceStore,
+  FileObjectStore,
   findOrphanStaging,
   streamBundleArtifact,
   validateRelativePath,
@@ -30,6 +33,10 @@ async function fixture() {
   };
   return { rootDir, ids };
 }
+/** The store and key the bundle of `ids` was published under on the filesystem profile. */
+function at(rootDir: string, ids: AttemptIds) {
+  return [new FileObjectStore(rootDir), bundleKeyFor(ids)] as const;
+}
 afterEach(async () => {
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
@@ -45,15 +52,15 @@ it("permits only supervisor-authorized expired object IDs after authenticating t
   const entry = await writer.end();
   const committed = await stage.commit({ redactionPolicyHash: "0".repeat(64) });
   await rm(join(committed.bundleDir, "result.txt"));
-  await expect(verifyBundle(committed.bundleDir, ids)).rejects.toThrow();
-  const expired = await verifyBundle(committed.bundleDir, {
+  await expect(verifyBundle(...at(rootDir, ids), ids)).rejects.toThrow();
+  const expired = await verifyBundle(...at(rootDir, ids), {
     ...ids,
     manifestSha256: committed.manifestSha256,
     expiredArtifactIds: [entry.artifactId],
   });
   expect(expired.manifest.entries[0]?.state).toBe("expired");
   await expect(
-    verifyBundle(committed.bundleDir, {
+    verifyBundle(...at(rootDir, ids), {
       ...ids,
       manifestSha256: "f".repeat(64),
       expiredArtifactIds: [entry.artifactId],
@@ -72,7 +79,7 @@ describe("evidence integrity boundaries", () => {
     await writer.write(Buffer.from("hello"));
     await writer.end();
     const result = await stage.commit({ redactionPolicyHash: "0".repeat(64) });
-    const bundle = await verifyBundle(result.bundleDir, {
+    const bundle = await verifyBundle(...at(rootDir, ids), {
       ...ids,
       manifestSha256: result.manifestSha256,
     });
@@ -84,17 +91,17 @@ describe("evidence integrity boundaries", () => {
       ids.snapshotId,
     );
     await expect(
-      verifyBundle(result.bundleDir, { ...ids, workspaceId: uuidV7IdGenerator.next("ws") }),
+      verifyBundle(...at(rootDir, ids), { ...ids, workspaceId: uuidV7IdGenerator.next("ws") }),
     ).rejects.toThrow("Foreign");
     await expect(
-      verifyBundle(result.bundleDir, { ...ids, snapshotId: uuidV7IdGenerator.next("snp") }),
+      verifyBundle(...at(rootDir, ids), { ...ids, snapshotId: uuidV7IdGenerator.next("snp") }),
     ).rejects.toThrow("Foreign");
     await writeFile(join(result.bundleDir, "evidence/result.txt"), "tampered");
-    await expect(verifyBundle(result.bundleDir, ids)).rejects.toThrow();
+    await expect(verifyBundle(...at(rootDir, ids), ids)).rejects.toThrow();
     const manifest = JSON.parse(await readFile(join(result.bundleDir, "manifest.json"), "utf8"));
     manifest.entries[0].relativePath = "../outside";
     await writeFile(join(result.bundleDir, "manifest.json"), JSON.stringify(manifest));
-    await expect(verifyBundle(result.bundleDir, ids)).rejects.toThrow();
+    await expect(verifyBundle(...at(rootDir, ids), ids)).rejects.toThrow();
   });
   it("reserves bundle bookkeeping names only at the attempt root", async () => {
     const { rootDir, ids } = await fixture();
@@ -111,7 +118,7 @@ describe("evidence integrity boundaries", () => {
         "Reserved artifact path",
       );
     const result = await stage.commit({ redactionPolicyHash: "0".repeat(64) });
-    const bundle = await verifyBundle(result.bundleDir, {
+    const bundle = await verifyBundle(...at(rootDir, ids), {
       ...ids,
       manifestSha256: result.manifestSha256,
     });
@@ -142,7 +149,7 @@ describe("evidence integrity boundaries", () => {
     });
     await expect(large.write(Buffer.alloc(11))).rejects.toBeInstanceOf(EvidenceQuotaError);
     const result = await stage.commit({ redactionPolicyHash: "0".repeat(64) });
-    const bundle = await verifyBundle(result.bundleDir, ids);
+    const bundle = await verifyBundle(...at(rootDir, ids), ids);
     expect(bundle.manifest.entries.every((entry) => entry.state === "missing")).toBe(true);
     await expect(readFile(join(result.bundleDir, "secret.txt"))).rejects.toThrow();
   });
@@ -166,7 +173,8 @@ describe("evidence integrity boundaries", () => {
     );
     const orphans = await findOrphanStaging(rootDir, 0);
     expect(orphans).toHaveLength(1);
-    expect(orphans[0]?.committed).toBe(false);
+    // The interrupted Attempt published nothing: its bundle has neither a marker nor meta.json.
+    expect(await readdir(rootDir)).toEqual(["staging"]);
     await expect(
       readFile(join(rootDir, orphans[0]?.relativePath ?? "", "meta.json")),
     ).rejects.toThrow();
@@ -261,10 +269,11 @@ describe("evidence integrity boundaries", () => {
       tombstone: async () => (tombstone ? { version: 3 } : null),
       deleted: async () => {},
     };
-    expect(await collectGarbage(rootDir, [{ relativePath: "old", version: 1 }], port)).toEqual([]);
+    const store = new FileObjectStore(rootDir);
+    expect(await collectGarbage(store, [{ relativePath: "old", version: 1 }], port)).toEqual([]);
     expect(await readdir(rootDir)).toContain("old");
     tombstone = true;
-    expect(await collectGarbage(rootDir, [{ relativePath: "old", version: 2 }], port)).toEqual([
+    expect(await collectGarbage(store, [{ relativePath: "old", version: 2 }], port)).toEqual([
       "old",
     ]);
     expect(await readdir(rootDir)).not.toContain("old");

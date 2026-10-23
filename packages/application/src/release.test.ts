@@ -184,10 +184,10 @@ it.skipIf(postgresParity)(
     // Re-create the previous release's state: the application rows are real, migrations 10 and later are undone.
     const old = await PersistenceDatabase.open(join(dataDir, "testmaster.db"), { migrate: false });
     old.exec(
-      "DROP TABLE auth_authorizations; DROP TABLE auth_profile_state; DROP INDEX auth_checkpoints_pending; DROP TABLE notification_attempts; DROP TABLE notification_deliveries; DROP INDEX outbox_created_idx; DROP TABLE schedule_firings; DROP TABLE schedule_revisions; DROP TABLE schedules; DROP TABLE scheduler_leases; DROP TABLE refinement_turns; DROP TABLE test_drafts; DROP TABLE inbound_webhook_deliveries; DROP TABLE integrations; DROP TABLE sessions; DROP TABLE password_credentials; DELETE FROM schema_migrations WHERE version>=10",
+      "DROP TABLE auth_authorizations; DROP TABLE auth_profile_state; DROP INDEX auth_checkpoints_pending; DROP TABLE notification_attempts; DROP TABLE notification_deliveries; DROP INDEX outbox_created_idx; DROP TABLE schedule_firings; DROP TABLE schedule_revisions; DROP TABLE schedules; DROP TABLE refinement_turns; DROP TABLE test_drafts; DROP TABLE inbound_webhook_deliveries; DROP TABLE integrations; DROP TABLE sessions; DROP TABLE password_credentials; DELETE FROM schema_migrations WHERE version>=10",
     );
     old.exec(
-      "DROP TABLE github_checks; DROP TABLE github_deployments; DROP TABLE github_pulls; DROP TABLE github_repositories; DROP TABLE github_installations; DROP TABLE admin_operations; DROP TABLE alerts; DROP TABLE incident_events; DROP TABLE incidents; DROP TABLE audit_purge_summaries; DROP TABLE tunnels; DROP TABLE visual_baselines; DROP TABLE issue_links",
+      "DROP TABLE github_checks; DROP TABLE github_deployments; DROP TABLE github_pulls; DROP TABLE github_repositories; DROP TABLE github_installations; DROP TABLE admin_operations; DROP TABLE alerts; DROP TABLE incident_events; DROP TABLE incidents; DROP TABLE audit_purge_summaries; DROP TABLE tunnels; DROP TABLE visual_baselines; DROP TABLE issue_links; DROP TABLE controller_instances; DROP TABLE controller_leases; DROP TABLE remote_attempts; DROP TABLE worker_proof_nonces; DROP TABLE controller_metrics; ALTER TABLE discovery_jobs DROP COLUMN cancel_requested_at",
     );
     // Migration 19 removed the consent ledger; the previous release still had it, so migration 19 has a table to drop again.
     old.exec(

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { ContractError } from "@testmaster/contracts";
 import type { Application } from "./application.js";
 import { readKeyFile } from "./backup-crypto.js";
+import { pruneControllerState } from "./controller-instances.js";
 import { type Controller, ControllerRegistry } from "./controllers.js";
 import { stateJson } from "./operations.js";
 import {
@@ -27,8 +28,10 @@ function workspaceIds(scope: Application): string[] {
 export const alertsController: Controller = {
   name: "alerts",
   intervalMs: 60_000,
-  async run(scope) {
+  elected: true,
+  async run(scope, signal) {
     for (const id of workspaceIds(scope)) {
+      if (signal.aborted) return;
       const workspace = scope.forWorkspaceSystem(id);
       if (workspace.operations.isolated()) continue;
       await workspace.alerts.evaluate();
@@ -39,8 +42,10 @@ export const alertsController: Controller = {
 export const retentionController: Controller = {
   name: "retention-purge",
   intervalMs: 3_600_000,
-  async run(scope) {
+  elected: true,
+  async run(scope, signal) {
     for (const id of workspaceIds(scope)) {
+      if (signal.aborted) return;
       const workspace = scope.forWorkspaceSystem(id);
       if (workspace.operations.isolated()) continue;
       await workspace.retentionPurge.run();
@@ -51,27 +56,57 @@ export const retentionController: Controller = {
 /**
  * Expires the leases of lost workers and settles their Runs. A remote worker has no database to
  * do this itself, so the server process runs it for every pool (ADR-030). It also ends tunnels
- * whose token, TTL, heartbeat or owner lapsed, even when no relay holds them (ADR-031).
+ * whose token, TTL, heartbeat or owner lapsed, even when no relay holds them (ADR-031). It acts on
+ * database rows only, so one controller at a time runs it; the in-memory sweep of each process's own
+ * Attempts is `remoteAttemptSweepController`.
  */
 export const leaseReconcilerController: Controller = {
   name: "lease-reconciler",
   intervalMs: 5_000,
-  async run(scope) {
+  elected: true,
+  run(scope, signal) {
     for (const id of workspaceIds(scope)) {
+      if (signal.aborted) return;
       const workspace = scope.systemScope(id);
       if (workspace.operations.isolated()) continue;
       workspace.worker.settleLeases();
       workspace.tunnels.sweep();
     }
+  },
+};
+
+/**
+ * Drops remote Attempts this process holds in memory whose worker went silent. The session lives
+ * only on the controller that claimed the Attempt, so every controller sweeps its own.
+ */
+export const remoteAttemptSweepController: Controller = {
+  name: "remote-attempt-sweep",
+  intervalMs: 5_000,
+  async run(scope) {
     await scope.remoteWorkers.sweep();
   },
 };
 
-/** Registers the loops the server process runs (alerts, retention and lease reconciliation). */
+/**
+ * Prunes what the distributed profile accumulates deployment-wide: expired proof nonces, metric
+ * windows older than the SLO window and rows of controllers that stopped long ago (ADR-035).
+ */
+export const controllerHousekeepingController: Controller = {
+  name: "controller-housekeeping",
+  intervalMs: 60_000,
+  elected: true,
+  run(scope) {
+    pruneControllerState(scope.database);
+  },
+};
+
+/** Registers the loops the server process runs (alerts, retention, lease reconciliation, housekeeping). */
 export function registerOperationsControllers(registry: ControllerRegistry): void {
   registry.register(alertsController);
   registry.register(retentionController);
   registry.register(leaseReconcilerController);
+  registry.register(remoteAttemptSweepController);
+  registry.register(controllerHousekeepingController);
 }
 
 interface PendingOperation {

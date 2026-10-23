@@ -1,0 +1,242 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "m5-distributed",
+  "class": "deterministic-e2e",
+  "runner": "real-docker-compose-distributed",
+  "externalDependency": "local-minio-s3",
+  "observedAt": "2026-10-23T08:43:30.810Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [],
+  "runIds": [
+    "run_01a167ec-16cf-77c8-a406-a683dd31c2ac",
+    "run_01a167ec-215e-7344-b80d-70839226eb01",
+    "run_01a167ed-91d5-72c8-9b68-dc745a17ce31"
+  ],
+  "oracleVerdicts": [
+    {
+      "check": "twoControllersShareStores",
+      "healthy": true,
+      "controllers": [
+        {
+          "id": "ctl_9f20f33c-302b-4c7a-94c6-5bdbacae367b",
+          "origin": "http://server:7331"
+        },
+        {
+          "id": "ctl_33b4955d-099d-4be2-8fdc-e9575910fdbf",
+          "origin": "http://server-2:7331"
+        }
+      ],
+      "projectCreatedOnA": "prj_01a167eb-e31e-73c0-af67-47db658c3cda",
+      "rounds": [
+        {
+          "runId": "run_01a167ec-16cf-77c8-a406-a683dd31c2ac",
+          "holder": "server",
+          "callsPerUpstream": {
+            "server-2:7331": 10,
+            "server:7331": 7
+          },
+          "relayedCalls": 10,
+          "failedCalls": []
+        }
+      ],
+      "bundleKeys": 6,
+      "artifactsCompared": 3,
+      "bundleHashes": {
+        "runs/ws_01a167eb-ac4d-7571-b893-9265aca0b65e/run_01a167ec-16cf-77c8-a406-a683dd31c2ac/att_01a167ec-1704-7142-8647-2fb6a4c585fe/http/health_request.json": "4ee5b408d04765181119cd32287a0e22d14039003199d2d609a5c4de0fd63311",
+        "runs/ws_01a167eb-ac4d-7571-b893-9265aca0b65e/run_01a167ec-16cf-77c8-a406-a683dd31c2ac/att_01a167ec-1704-7142-8647-2fb6a4c585fe/logs/container.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "runs/ws_01a167eb-ac4d-7571-b893-9265aca0b65e/run_01a167ec-16cf-77c8-a406-a683dd31c2ac/att_01a167ec-1704-7142-8647-2fb6a4c585fe/logs/egress.ndjson": "ac8efd2e86e996a966109280ff00e3c16a02e8b487aa55aee3bdd60af37c9392",
+        "runs/ws_01a167eb-ac4d-7571-b893-9265aca0b65e/run_01a167ec-16cf-77c8-a406-a683dd31c2ac/att_01a167ec-1704-7142-8647-2fb6a4c585fe/manifest.json": "6f2b6f49d5e4ab20c9e1e2dac53442be1cd8bca6e6a77346bad71dd251670741",
+        "runs/ws_01a167eb-ac4d-7571-b893-9265aca0b65e/run_01a167ec-16cf-77c8-a406-a683dd31c2ac/att_01a167ec-1704-7142-8647-2fb6a4c585fe/meta.json": "2c255a17e284e7ffc20872279abeef40438214ee83c0c6b384eb2673baa15014",
+        "runs/ws_01a167eb-ac4d-7571-b893-9265aca0b65e/run_01a167ec-16cf-77c8-a406-a683dd31c2ac/att_01a167ec-1704-7142-8647-2fb6a4c585fe/snapshot/runtime.json": "49fad9dbe5c1214c8e99f5d42161ef399e256e1a35ead5e8542827e5c709738d"
+      }
+    },
+    {
+      "check": "runAdmittedOnOneControllerServedByTheOther",
+      "healthy": true,
+      "runId": "run_01a167ec-215e-7344-b80d-70839226eb01",
+      "admittedAndReadOn": "server",
+      "claimedAndHeldBy": "server-2",
+      "holderId": "ctl_33b4955d-099d-4be2-8fdc-e9575910fdbf",
+      "fence": 1,
+      "workerCallsSeenOnAdmittingController": 0,
+      "artifactsServedByAdmittingController": 3
+    },
+    {
+      "check": "leaderKillMovesLoopsToSurvivor",
+      "healthy": true,
+      "killed": "server",
+      "killedControllerId": "ctl_9f20f33c-302b-4c7a-94c6-5bdbacae367b",
+      "survivor": "server-2",
+      "survivorControllerId": "ctl_33b4955d-099d-4be2-8fdc-e9575910fdbf",
+      "schedulerFenceBefore": 1,
+      "leasesHeldByVictim": [
+        {
+          "name": "alerts",
+          "fence": 1
+        },
+        {
+          "name": "controller-housekeeping",
+          "fence": 1
+        },
+        {
+          "name": "github-reconciler",
+          "fence": 1
+        },
+        {
+          "name": "issue-link-sync",
+          "fence": 1
+        },
+        {
+          "name": "lease-reconciler",
+          "fence": 1
+        },
+        {
+          "name": "notifications-retention",
+          "fence": 1
+        },
+        {
+          "name": "retention-purge",
+          "fence": 1
+        },
+        {
+          "name": "scheduler",
+          "fence": 1
+        }
+      ],
+      "leasesAfter": [
+        {
+          "name": "alerts",
+          "holder": "ctl_33b4955d-099d-4be2-8fdc-e9575910fdbf",
+          "fence": 2
+        },
+        {
+          "name": "controller-housekeeping",
+          "holder": "ctl_33b4955d-099d-4be2-8fdc-e9575910fdbf",
+          "fence": 2
+        },
+        {
+          "name": "github-reconciler",
+          "holder": "ctl_33b4955d-099d-4be2-8fdc-e9575910fdbf",
+          "fence": 2
+        },
+        {
+          "name": "issue-link-sync",
+          "holder": "ctl_33b4955d-099d-4be2-8fdc-e9575910fdbf",
+          "fence": 2
+        },
+        {
+          "name": "lease-reconciler",
+          "holder": "ctl_33b4955d-099d-4be2-8fdc-e9575910fdbf",
+          "fence": 2
+        },
+        {
+          "name": "notifications-retention",
+          "holder": "ctl_33b4955d-099d-4be2-8fdc-e9575910fdbf",
+          "fence": 2
+        },
+        {
+          "name": "retention-purge",
+          "holder": "ctl_33b4955d-099d-4be2-8fdc-e9575910fdbf",
+          "fence": 2
+        },
+        {
+          "name": "scheduler",
+          "holder": "ctl_33b4955d-099d-4be2-8fdc-e9575910fdbf",
+          "fence": 2
+        }
+      ],
+      "takeoverMs": 39925,
+      "leaseTtlMs": 30000,
+      "leaderlessBoundMs": 60000,
+      "apiAnsweredAgainAfterMs": 258,
+      "firings": [
+        {
+          "fireInstant": "2026-10-23T08:41:37.476Z",
+          "fence": 2,
+          "state": "waiting"
+        },
+        {
+          "fireInstant": "2026-10-23T08:42:37.476Z",
+          "fence": 2,
+          "state": "waiting"
+        }
+      ],
+      "restartedControllerId": "ctl_63fd4e73-54a8-4255-8ee5-dffe57fdf667"
+    },
+    {
+      "check": "tunnelStreamCrossesControllers",
+      "healthy": true,
+      "runId": "run_01a167ed-91d5-72c8-9b68-dc745a17ce31",
+      "tunnelId": "tun_01a167ed-59c0-7069-b58d-378005f5688d",
+      "tunnelRelay": "server",
+      "relayControllerId": "ctl_63fd4e73-54a8-4255-8ee5-dffe57fdf667",
+      "attemptHolder": "server-2",
+      "attemptHolderId": "ctl_33b4955d-099d-4be2-8fdc-e9575910fdbf",
+      "streamOpenedOnWorkerSideController": "server-2",
+      "agentStreams": 1,
+      "targetHits": 1,
+      "workerCalledAgentControllerDirectly": false,
+      "agentReady": true
+    },
+    {
+      "check": "backupLockedAndRestoredAfterS3Loss",
+      "healthy": true,
+      "runId": "run_01a167ec-16cf-77c8-a406-a683dd31c2ac",
+      "backupName": "20261023T084312Z-1b46a528-4488-46a1-9df7-e8841c934288",
+      "backupObjects": 21,
+      "manifestKey": "catalog/20261023T084312Z-1b46a528-4488-46a1-9df7-e8841c934288.json",
+      "evidenceCredentialOnBackupBucketDenied": {
+        "list": true,
+        "get": true,
+        "put": true,
+        "delete": true
+      },
+      "lockedVersionDeletable": false,
+      "overwriteOfLockedManifestCreated": false,
+      "evidenceObjectsLost": 19,
+      "restoreResult": {
+        "evidenceComplete": true,
+        "evidenceRestored": 18,
+        "postBackupLedger": "unavailable"
+      },
+      "bundleObjects": 6,
+      "bundleHashesIdentical": true,
+      "artifactsServedAfterRestore": 3,
+      "timingsMs": {
+        "backupMs": 5606,
+        "restoreMs": 1360,
+        "lossToServingMs": 13835
+      }
+    },
+    {
+      "check": "distributedRefusesSqliteAndFilesystem",
+      "healthy": true,
+      "refusals": {
+        "sqlite": {
+          "exitCode": 9,
+          "reasonCode": "distributed_requires_postgres"
+        },
+        "filesystem": {
+          "exitCode": 9,
+          "reasonCode": "distributed_requires_shared_storage"
+        },
+        "no-config": {
+          "exitCode": 9,
+          "reasonCode": "distributed_requires_postgres"
+        }
+      },
+      "controlReadinessExit": 0
+    }
+  ],
+  "limitations": [
+    "Both controllers, PostgreSQL, MinIO, Caddy, the remote workers and the backup agent share one physical host and one Docker daemon; the controllers' private link is the compose bridge network, not a cross-host network.",
+    "Only the pinned MinIO image was exercised; AWS S3 and other S3 implementations were not. MinIO needs s3:DeleteObject for a versioned delete, so the backup credential here can hide a backup behind a delete marker (the locked version stays).",
+    "The COMPLIANCE lock is one day in the journey (the minimum), so removal after a lock expires is not exercised here.",
+    "A journey-owned TLS front per controller pins a worker or an agent to one controller; the public Caddy origin round-robins as deployed. Cross-host failure modes (a partitioned controller, clock skew between hosts) are exercised by unit and PostgreSQL tests, not here."
+  ]
+}

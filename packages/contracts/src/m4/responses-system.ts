@@ -43,6 +43,7 @@ export const serverReadinessReasons = [
   "rls_role_bypass",
   "rls_unprotected_tables",
   "storage_unwritable",
+  "storage_unavailable",
   "storage_low_space",
   "master_key_unavailable",
 ] as const;

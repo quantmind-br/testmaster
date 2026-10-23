@@ -77,19 +77,36 @@ it("ADR-016 the server commands need the deployment file named by --config", asy
   }
 });
 
-it("ADR-016 the CLI refuses S3 storage before it touches any database", async () => {
-  const path = await configFile({ kind: "s3" });
+it("OPS-001 the CLI refuses a distributed profile that is not PostgreSQL on shared storage before it touches any database", async () => {
+  const root = await mkdtemp(join(tmpdir(), "tm-cli-distributed-"));
+  roots.push(root);
+  const path = join(root, "server.json");
+  const base = deployment({ kind: "filesystem", root: join(root, "evidence") });
+  await writeFile(
+    path,
+    JSON.stringify({
+      ...base,
+      mode: "distributed",
+      server: { ...base.server, internalOrigin: "https://c1.internal" },
+    }),
+    { mode: 0o600 },
+  );
   for (const args of [
-    ["server", "start", "--mode", "server"],
+    ["server", "start", "--mode", "distributed"],
     ["server", "operator-token"],
     ["worker", "start", "--mode", "server"],
   ]) {
     const result = await invoke([...args, "--config", path]);
     expect(result.document.error, args.join(" ")).toMatchObject({
-      code: "CAPABILITY_UNAVAILABLE",
-      details: { capability: "s3-storage", milestone: "M5" },
+      code: "POLICY_DENIED",
+      details: { reasonCode: "distributed_requires_shared_storage" },
     });
   }
+  const bare = await invoke(["server", "start", "--mode", "distributed"]);
+  expect(bare.document.error).toMatchObject({
+    code: "POLICY_DENIED",
+    details: { reasonCode: "distributed_requires_postgres" },
+  });
 });
 
 it("ADR-017 the identity commands reject a missing login and a group-readable deployment file", async () => {

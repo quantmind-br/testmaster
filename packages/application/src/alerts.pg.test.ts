@@ -1,6 +1,13 @@
 import { readFile } from "node:fs/promises";
+import { OutboxRepository } from "@testmaster/persistence";
 import { afterEach, expect, it } from "vitest";
 import { type AlertProbes, alertRuleCatalog, alertRules } from "./alerts.js";
+import {
+  newControllerIdentity,
+  registerController,
+  stopController,
+} from "./controller-instances.js";
+import { acquireLease } from "./controller-leases.js";
 import { addWorkspace, type OpsStack, opsStack, seedRun } from "./ops.testkit.js";
 
 const cleanups: (() => Promise<void>)[] = [];
@@ -8,8 +15,8 @@ afterEach(async () => {
   for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
 });
 
-async function freshStack(): Promise<OpsStack> {
-  const stack = await opsStack();
+async function freshStack(options: Parameters<typeof opsStack>[0] = {}): Promise<OpsStack> {
+  const stack = await opsStack(options);
   cleanups.push(() => stack.cleanup());
   return stack;
 }
@@ -79,6 +86,10 @@ function setState(stack: OpsStack, key: string, value: unknown): void {
 }
 
 interface Scenario {
+  /** Options of the stack the scenario runs on. */
+  stack?: Parameters<typeof opsStack>[0];
+  /** Makes the calm baseline the first evaluation sees, for conditions that need standing state. */
+  calm?(stack: OpsStack, now: Date): void;
   /** Creates the synthetic condition; returns probes that make it visible. */
   raise(stack: OpsStack, now: Date): AlertProbes | Promise<AlertProbes>;
   /** Removes the condition; returns the evaluation time and probes of the recovery pass. */
@@ -198,6 +209,96 @@ const scenarios: Record<string, Scenario> = {
     },
     clear: (_stack, now) => ({ now: later(now, 16), probes: healthy }),
   },
+  scheduler_leaderless: {
+    raise(stack, now) {
+      registerController(db(stack), newControllerIdentity(), now.getTime());
+      acquireLease(db(stack), "scheduler", "ctl_gone", 30_000, now.getTime() - 200_000);
+      return healthy;
+    },
+    clear(stack, now) {
+      acquireLease(db(stack), "scheduler", "ctl_next", 30_000, now.getTime());
+      return { now, probes: healthy };
+    },
+  },
+  controllers_below_expected: {
+    stack: { controller: { expectedControllers: 2 } },
+    calm(stack, now) {
+      for (const id of ["ctl_one", "ctl_two"])
+        registerController(
+          db(stack),
+          { id, internalOrigin: `http://${id}.internal:7000`, expected: 2 },
+          now.getTime(),
+        );
+    },
+    raise(stack, now) {
+      stopController(db(stack), "ctl_two", now.getTime());
+      return healthy;
+    },
+    clear(stack, now) {
+      registerController(
+        db(stack),
+        { id: "ctl_two", internalOrigin: "http://ctl_two.internal:7000", expected: 2 },
+        now.getTime(),
+      );
+      return { now, probes: healthy };
+    },
+  },
+  remote_worker_heartbeat_lost: {
+    raise(stack, now) {
+      db(stack).run(
+        "INSERT INTO workers(workspace_id,id,created_at,state,last_heartbeat_at,data_json) VALUES(?,?,?,?,?,?)",
+        stack.workspaceId,
+        "wrk_remote_seed",
+        ago(now, 30),
+        "offline",
+        ago(now, 20),
+        JSON.stringify({ labels: { publicKey: "seed-public-key" } }),
+      );
+      db(stack).withTx(() =>
+        new OutboxRepository(db(stack)).append(
+          stack.workspaceId,
+          "wrk_remote_seed",
+          "worker.offline",
+          {
+            workerId: "wrk_remote_seed",
+          },
+        ),
+      );
+      return healthy;
+    },
+    clear(stack, now) {
+      db(stack).run(
+        "UPDATE workers SET state='ready',last_heartbeat_at=? WHERE workspace_id=? AND id='wrk_remote_seed'",
+        now.toISOString(),
+        stack.workspaceId,
+      );
+      return { now, probes: healthy };
+    },
+  },
+  artifact_gateway_errors: {
+    raise(stack) {
+      const { apiMetrics } = stack.application;
+      for (let index = 0; index < 20; index++) apiMetrics.recordGateway(200);
+      for (let index = 0; index < 10; index++) apiMetrics.recordGateway(500);
+      return healthy;
+    },
+    clear(stack, now) {
+      for (let index = 0; index < 1000; index++) stack.application.apiMetrics.recordGateway(200);
+      return { now, probes: healthy };
+    },
+  },
+  object_store_publish_failing: {
+    raise(stack, now) {
+      seedRun(stack, {
+        createdAt: ago(now, 5),
+        endedAt: ago(now, 5),
+        outcome: "inconclusive",
+        reasonCode: "storage_unavailable",
+      });
+      return healthy;
+    },
+    clear: (_stack, now) => ({ now: later(now, 16), probes: healthy }),
+  },
 };
 
 it("OPS-028 defines an alert rule for every required condition with an owner, severity and runbook anchor", async () => {
@@ -218,8 +319,9 @@ it("OPS-028 defines an alert rule for every required condition with an owner, se
 async function firesAndResolves(rule: string): Promise<void> {
   const scenario = scenarios[rule];
   if (!scenario) throw new Error(`No scenario for ${rule}`);
-  const stack = await freshStack();
+  const stack = await freshStack(scenario.stack);
   const now = new Date();
+  scenario.calm?.(stack, now);
   expect((await stack.workspace.alerts.evaluate({ now, ...healthy })).fired).toEqual([]);
 
   const probes = await scenario.raise(stack, now);
@@ -275,6 +377,16 @@ it("OPS-028 tenant_violation fires from a synthetic condition with its outbox ev
   firesAndResolves("tenant_violation"));
 it("OPS-028 egress_denied fires from a synthetic condition with its outbox event and audit row, then resolves", () =>
   firesAndResolves("egress_denied"));
+it("OPS-028 scheduler_leaderless fires from a synthetic condition with its outbox event and audit row, then resolves", () =>
+  firesAndResolves("scheduler_leaderless"));
+it("OPS-028 controllers_below_expected fires from a synthetic condition with its outbox event and audit row, then resolves", () =>
+  firesAndResolves("controllers_below_expected"));
+it("OPS-028 remote_worker_heartbeat_lost fires from a synthetic condition with its outbox event and audit row, then resolves", () =>
+  firesAndResolves("remote_worker_heartbeat_lost"));
+it("OPS-028 artifact_gateway_errors fires from a synthetic condition with its outbox event and audit row, then resolves", () =>
+  firesAndResolves("artifact_gateway_errors"));
+it("OPS-028 object_store_publish_failing fires from a synthetic condition with its outbox event and audit row, then resolves", () =>
+  firesAndResolves("object_store_publish_failing"));
 
 it("OPS-028 stays quiet on a healthy deployment and below every threshold", async () => {
   const stack = await freshStack();

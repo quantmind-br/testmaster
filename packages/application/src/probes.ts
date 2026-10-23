@@ -1,5 +1,3 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import {
   ContractError,
   DEFAULT_PROPERTY_EXAMPLES,
@@ -13,14 +11,15 @@ import {
   validate,
 } from "@testmaster/contracts";
 import { sha256 } from "@testmaster/domain";
-import { streamBundleArtifact } from "@testmaster/evidence";
+import type { ObjectStore } from "@testmaster/evidence";
 import type { ImageLock } from "@testmaster/sandbox";
 import { loadSourceView } from "./ai/source-documents.js";
-import { readAiState } from "./ai/sources.js";
+import { MAX_SOURCE_BYTES, readAiState } from "./ai/sources.js";
 import type { ArtifactsService } from "./artifacts.js";
 import type { TestsService } from "./authoring.js";
 import type { ResolvedConfig } from "./config.js";
 import { requireEntity, type ServiceContext } from "./context.js";
+import { readObjectBytes, sourceBytesKey } from "./object-bytes.js";
 import type { OwnedReceipt, RunsService } from "./runs.js";
 
 /** The source media type each probe API reads (`parseSource` stores it on the revision). */
@@ -164,17 +163,19 @@ export function assertProbeAdmissible(
  */
 export async function probeSchemaFile(
   ctx: ServiceContext,
-  config: ResolvedConfig,
+  objectStore: ObjectStore,
   spec: PropertyProbe,
 ): Promise<{ fileName: string; bytes: Buffer }> {
   const source = requireEntity(ctx, "SourceRevision", spec.sourceRevisionId);
-  const bytes = await readFile(
-    join(config.dataDir, "sources", ctx.workspaceId, `${spec.sourceRevisionId}.bin`),
-  ).catch(() => {
+  const bytes = await readObjectBytes(
+    objectStore,
+    sourceBytesKey(ctx.workspaceId, spec.sourceRevisionId),
+    MAX_SOURCE_BYTES,
+  );
+  if (!bytes)
     throw new ContractError("PRECONDITION_FAILED", "The probe's source bytes are unavailable", {
       sourceRevisionId: spec.sourceRevisionId,
     });
-  });
   if (sha256(bytes) !== String(source.contentHash).replace(/^sha256:/u, ""))
     throw new ContractError("PRECONDITION_FAILED", "The probe's source bytes changed", {
       sourceRevisionId: spec.sourceRevisionId,
@@ -270,10 +271,7 @@ export class ReproductionsService {
         artifact: relativePath,
       });
     const chunks: Buffer[] = [];
-    for await (const chunk of streamBundleArtifact(
-      { rootDir: bundle.bundleDir, manifest: bundle.manifest, meta: bundle.meta },
-      entry.relativePath,
-    ))
+    for await (const chunk of this.artifacts.streamEntry(bundle, entry.relativePath))
       chunks.push(Buffer.from(chunk));
     return Buffer.concat(chunks);
   }

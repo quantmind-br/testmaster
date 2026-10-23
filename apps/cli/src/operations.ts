@@ -3,6 +3,7 @@ import {
   backupAgentRegistry,
   backupSettings,
   createServerBackup,
+  isS3Destination,
   listServerBackups,
   readKeyFile,
   readServerConfig,
@@ -364,7 +365,9 @@ export function serverBackupCommands(group: Command, runtime: Runtime): void {
     modeConfig(group.command("verify <path>")).description("Verify one server backup end to end"),
     async (rt, args) => {
       const { server } = await settingsOf(rt);
-      return { data: await verifyServerBackup(await rt.confinedPath(String(args[0])), server) };
+      return {
+        data: await verifyServerBackup(await backupLocation(rt, server, String(args[0])), server),
+      };
     },
   );
   runtime.bind(
@@ -378,6 +381,7 @@ export function serverBackupCommands(group: Command, runtime: Runtime): void {
       const loops = runControllers(application, backupAgentRegistry(server), {
         profile: "server",
         signal: controller.signal,
+        instance: false,
         onError: (name, error) =>
           rt.stderr.write(
             `backup agent ${name} failed: ${error instanceof ContractError ? error.code : "INTERNAL"}\n`,
@@ -395,11 +399,22 @@ export function serverBackupCommands(group: Command, runtime: Runtime): void {
   );
 }
 
+/** A server backup is a directory on a filesystem destination and a name (key prefix) on S3. */
+async function backupLocation(
+  rt: Runtime,
+  server: ServerConfig,
+  argument: string,
+): Promise<string> {
+  const destination = server.backup?.destination;
+  return destination && isS3Destination(destination) ? argument : rt.confinedPath(argument);
+}
+
 export async function serverBackupCreate(rt: Runtime) {
   const { application, server } = await rt.serverApp();
   const result = await createServerBackup({
     database: application.controllerScope().database,
     server,
+    objectStore: application.objectStore,
   });
   return {
     data: {
@@ -411,7 +426,8 @@ export async function serverBackupCreate(rt: Runtime) {
   };
 }
 
-export async function serverBackupRestore(rt: Runtime, directory: string, keepSchema: boolean) {
+export async function serverBackupRestore(rt: Runtime, argument: string, keepSchema: boolean) {
   const server = await readServerConfig(rt.path(required(rt.options, "config")));
+  const directory = await backupLocation(rt, server, argument);
   return { data: await restoreServerBackup({ directory, server, keepSchema }) };
 }

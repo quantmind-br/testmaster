@@ -1,14 +1,14 @@
 # Disaster recovery (server profile, M4)
 
-This page is the checklist for host loss, database loss and key loss on the PostgreSQL + filesystem
-evidence profile. Procedures use the commands of [backups.md](backups.md). Numbers on this page are
+This page is the checklist for host loss, database loss, S3 loss and key loss on the PostgreSQL
+profile with filesystem or S3 evidence (OPS-026). Procedures use the commands of [backups.md](backups.md). Numbers on this page are
 **proposed objectives or measured rehearsal results, never both mixed**: measured values live only in
-`validation/results/m4-dr-rehearsal.json` and are quoted from there. A rehearsal that was not run stays
+`validation/results/m4-dr-rehearsal.json` (filesystem) and `m5-s3-loss-rehearsal.json` (S3) and are quoted from there. A rehearsal that was not run stays
 "not measured".
 
-Out of scope here: S3-compatible storage and the S3 loss rehearsal (deferred to M5), distributed
-deployments and distributed SLOs (M5), Windows and macOS hosts (M6). The server profile refuses an S3
-storage configuration; there is no S3 recovery procedure to follow.
+Out of scope here: distributed SLOs and multi-host measurements (M5-08), Windows and macOS hosts (M6).
+The distributed profile's S3 evidence storage and S3 backup destination are covered in the S3 loss
+section; its numbers are quoted from `validation/results/m5-s3-loss-rehearsal.json` only.
 
 ## Objectives
 
@@ -87,6 +87,32 @@ evidence root or accept missing artifacts; either way run `testmaster artifact r
 preview before applying, and treat artifacts that cannot be recovered as `missing`. Do not edit rows to
 make artifacts look available.
 
+## S3 loss (distributed profile)
+
+Storage is S3-compatible; the backup destination is a separate COMPLIANCE Object Lock bucket with its
+own credential ([backups.md](backups.md#s3-backup-destination-distributed-profile)).
+
+| Lost | Effect | Recovery |
+|---|---|---|
+| Evidence bucket (or its prefix), database intact | Artifacts read as missing; verdicts stay. | Create an empty bucket or prefix, point `storage` at it and run `testmaster backup restore --mode server <name>` into a fresh database; or accept missing artifacts and run `artifact repair-references` preview first. A target that holds other objects is refused (`restore_target_not_empty`). |
+| Evidence bucket and database | Everything since the last backup. | As in Database loss, with an empty bucket as the evidence target. The restore writes the marker object `tm-restore-pending` first; a crash leaves it and a rerun wipes the prefix and starts over. |
+| Backup bucket deleted by an operator error or attacker | Locked backup objects cannot be removed or overwritten until their retention ends, not even with the bucket's root credential. | Take a new backup at once into a fresh prefix. Objects of backups whose manifest was hidden behind a delete marker are still in the bucket; list versions and remove the marker with the backup credential. |
+| Backup credential lost or leaked | A leaked credential can add objects and, on MinIO, delete markers. It cannot remove a locked version. | Rotate the credential at the S3 service and replace the files on the agent host; take a new backup. The application's evidence credential never has access to the backup bucket. |
+| Evidence credential lost | The server cannot read or write evidence. | Issue a new credential for the evidence bucket only. Backups are unaffected. |
+| Object Lock expired on the oldest backups | Retention removes them on its next pass. | Not a loss. Size the default retention above the oldest backup you intend to keep. |
+
+Checklist before relying on it: the backup bucket has Object Lock with a default retention in
+COMPLIANCE mode; the evidence credential cannot list or read that bucket; the backup credential files
+are unreadable by the server user; `backup verify` of the newest backup succeeds; a restore into an
+empty bucket and a fresh database was rehearsed since the last upgrade.
+
+What `validation/results/m5-s3-loss-rehearsal.json` measured and did not: it restored three evidence
+objects and a near-empty database on one host against the pinned MinIO image, compared every object
+hash, and showed that the locked manifest refused removal and that the evidence credential could not
+read it. Not measured: lock expiry (COMPLIANCE has a one-day minimum), a bucket larger than three
+objects, restore across a network, AWS S3 or any other S3 implementation, and a production RPO or RTO
+(the file's numbers are the test's own gaps).
+
 ## Key loss
 
 | Lost | Effect | Recovery |
@@ -107,5 +133,10 @@ timestamps of every step, the restored database and evidence hash comparison, th
 restored owner and of a stale operator token, the isolation checks (isolated after restore, release
 refused before the review, isolation surviving a server start, release after `backup review --mode
 server`), `rpoSeconds` and `rtoSeconds`. Use those two fields as the only source of observed numbers.
-The S3 loss case is recorded as `deferred` to M5. A missing file means the rehearsal did not happen and
-no recovery SLA is offered.
+The S3 loss case is recorded in `validation/results/m5-s3-loss-rehearsal.json`, written by
+`packages/application/src/fault-matrix-s3.docker.test.ts` into `$TESTMASTER_RESULTS_DIR` (default
+`validation/results/tmp`; the committed copy is made with `TESTMASTER_RESULTS_DIR=validation/results`;
+one PostgreSQL
+and one MinIO container on one host): it holds the backup, the lock checks, the evidence hash
+comparison, `rpoSeconds`, `rtoSeconds` and the list of what it did not measure. A missing file means
+the rehearsal did not happen and no recovery SLA is offered.

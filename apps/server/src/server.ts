@@ -10,6 +10,7 @@ import {
   authenticateSession,
   correlationId,
   executeIdempotent,
+  isGatewayRoute,
   OperationalLogger,
   type PopProof,
   parsePopAuthorization,
@@ -35,6 +36,7 @@ import fastify, {
   type FastifyRequest,
   type HTTPMethods,
 } from "fastify";
+import { Forwarder } from "./forwarding.js";
 import { isPortalRequest, loadPortal, type PortalOptions, registerPortal } from "./portal.js";
 import { holdConnectionOpen } from "./routes/authoring.js";
 import { buildRouteTable, type RouteContext } from "./routes/index.js";
@@ -140,6 +142,7 @@ export function createServer(options: ServerOptions): FastifyInstance {
   const identities = new WeakMap<FastifyRequest, AuthenticatedIdentity>();
   const credentials = new WeakMap<FastifyRequest, PresentedCredential>();
   const workers = new WeakMap<FastifyRequest, WorkerCredential>();
+  const forwarder = new Forwarder(options.application);
   contexts.set(app, { options, identities });
   const portal = options.portal === false ? null : loadPortal(options.portal);
   const codec = new SignedCursorCodec(
@@ -241,12 +244,16 @@ export function createServer(options: ServerOptions): FastifyInstance {
       correlationId: request.id,
       statusCode: reply.statusCode,
     });
+    const route = request.routeOptions.url ?? "unmatched";
+    // A signed link names no workspace, so downloads are counted deployment-wide as well (OPS-028).
+    if (isGatewayRoute(request.method, route))
+      options.application.apiMetrics.recordGateway(reply.statusCode);
     const identity = identities.get(request);
     if (identity)
       options.application.apiMetrics.record({
         workspaceId: identity.workspaceId,
         method: request.method,
-        route: request.routeOptions.url ?? "unmatched",
+        route,
         status: reply.statusCode,
         seconds: reply.elapsedTime / 1000,
       });
@@ -273,6 +280,13 @@ export function createServer(options: ServerOptions): FastifyInstance {
     if (route.auth === "worker") {
       // A remote worker proves possession of its enrolled key; only a refused call costs budget.
       const params = request.params as Record<string, string | undefined>;
+      // A call for an Attempt another controller holds goes there before any proof is read: only
+      // the holder verifies it, and a forwarded call is never forwarded again (ADR-035).
+      if (
+        params.attemptId !== undefined &&
+        (await forwarder.relay(request, reply, params.attemptId))
+      )
+        return;
       try {
         if (params.id === undefined) {
           const authorization = request.headers.authorization;
@@ -433,6 +447,8 @@ export function createServer(options: ServerOptions): FastifyInstance {
       );
       return;
     }
+    // A stream whose tunnel session another controller holds is proxied there, proof untouched.
+    if (forwarder.upgrade(request, socket, head)) return;
     if (!options.application.handleTunnelUpgrade(request, socket, head)) socket.destroy();
   });
   app.get("/v1/openapi.json", async (_request, reply) =>

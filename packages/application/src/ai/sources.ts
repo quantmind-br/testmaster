@@ -1,5 +1,5 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
-import { constants } from "node:fs";
+import { constants, createReadStream } from "node:fs";
 import { mkdir, open, realpath, rename, rm, writeFile } from "node:fs/promises";
 import { basename, extname, join, relative, resolve, sep } from "node:path";
 import {
@@ -12,6 +12,7 @@ import {
   validate,
 } from "@testmaster/contracts";
 import { canonicalJson, sha256, uuidV7IdGenerator } from "@testmaster/domain";
+import type { ObjectStore } from "@testmaster/evidence";
 import {
   type EntityDocument,
   IdempotencyRepository,
@@ -26,6 +27,7 @@ import {
 import { authoringTransaction } from "../authoring.js";
 import type { ResolvedConfig } from "../config.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "../context.js";
+import { readObjectBytes, sourceBytesKey, uploadKey } from "../object-bytes.js";
 import { type RequirementResetReport, resetRequirementsForSourceRevision } from "./invalidation.js";
 import {
   diffOperations,
@@ -35,7 +37,7 @@ import {
   staleTestsFor,
 } from "./source-insights.js";
 
-const MAX_SOURCE_BYTES = 25 * 1024 * 1024;
+export const MAX_SOURCE_BYTES = 25 * 1024 * 1024;
 const MAX_STATE_BYTES = 32 * 1024 * 1024;
 type StoredSource = Source & EntityDocument;
 export function readAiState<T>(ctx: ServiceContext, key: string): T | null {
@@ -111,6 +113,7 @@ export class UploadsService {
   constructor(
     readonly ctx: ServiceContext,
     readonly config: ResolvedConfig,
+    private readonly objectStore: ObjectStore,
   ) {}
   private allowed(): void {
     this.ctx.authorize("W");
@@ -142,10 +145,23 @@ export class UploadsService {
       throw new ContractError("NOT_FOUND", "Upload does not exist");
     return record;
   }
+  /** Local spool of bytes being received; never shared between controllers. */
   private async root(): Promise<string> {
     const root = join(this.config.dataDir, "uploads", this.ctx.workspaceId);
     await mkdir(root, { recursive: true, mode: 0o700 });
     return realpath(root);
+  }
+  /** Server-side key of a completed upload; the workspace comes from the authenticated context. */
+  private key(id: string): string {
+    return uploadKey(this.ctx.workspaceId, id);
+  }
+  private async stored(id: string): Promise<Buffer> {
+    const bytes = await readObjectBytes(this.objectStore, this.key(id), MAX_SOURCE_BYTES);
+    if (!bytes)
+      throw new ContractError("PRECONDITION_FAILED", "Upload bytes are unavailable", {
+        uploadId: id,
+      });
+    return bytes;
   }
   private receipt(record: UploadRecord): UploadReceipt {
     return validate<UploadReceipt>("UploadReceipt", {
@@ -254,13 +270,15 @@ export class UploadsService {
       } finally {
         await handle.close();
       }
-      await rename(temporary, join(root, `${id}.bin`));
+      await this.objectStore.put(this.key(id), createReadStream(temporary));
+      await rm(temporary, { force: true });
       temporary = undefined;
       record.received = received;
       record.receivedHash = hash.digest("hex");
       return this.receipt(record);
     } catch (error) {
-      if (!(error instanceof ContractError)) this.alert(id);
+      if (!(error instanceof ContractError) || error.details?.reasonCode === "storage_unavailable")
+        this.alert(id);
       throw error;
     } finally {
       if (temporary) await rm(temporary, { force: true });
@@ -276,7 +294,7 @@ export class UploadsService {
     if (replay) return replay;
     if (record.writing || record.receivedHash === null || record.received !== record.sizeBytes)
       throw new ContractError("PRECONDITION_FAILED", "Upload is truncated or unfinished");
-    const bytes = await readConfinedCodeFile(await this.root(), `${id}.bin`, MAX_SOURCE_BYTES);
+    const bytes = await this.stored(id);
     if (
       bytes.length !== record.sizeBytes ||
       sha256(bytes) !== record.contentHash ||
@@ -308,7 +326,7 @@ export class UploadsService {
     const record = this.record(id);
     if (record.state !== "complete")
       throw new ContractError("PRECONDITION_FAILED", "Source requires a completed upload");
-    const bytes = await readConfinedCodeFile(await this.root(), `${id}.bin`, MAX_SOURCE_BYTES);
+    const bytes = await this.stored(id);
     if (bytes.length !== record.sizeBytes || sha256(bytes) !== record.contentHash)
       throw new ContractError("PRECONDITION_FAILED", "Completed upload integrity failed");
     return { bytes, mediaType: record.mediaType };
@@ -432,6 +450,7 @@ export class SourcesService {
     readonly ctx: ServiceContext,
     readonly config: ResolvedConfig,
     readonly uploads: UploadsService,
+    private readonly objectStore: ObjectStore,
   ) {}
   list(projectId: string): StoredSource[] {
     this.ctx.authorize("R", projectId);
@@ -598,10 +617,8 @@ export class SourcesService {
       }) as StoredSource);
     const next = { ...source, activeRevisionId: id };
     validate("Source", next);
-    const storage = join(this.config.dataDir, "sources", this.ctx.workspaceId);
-    await mkdir(storage, { recursive: true, mode: 0o700 });
-    const path = join(storage, `${id}.bin`);
-    await writeFile(path, bytes, { flag: "wx", mode: 0o600 });
+    const key = sourceBytesKey(this.ctx.workspaceId, id);
+    await this.objectStore.put(key, bytes, { ifNoneMatch: true });
     try {
       const admission = new IdempotencyRepository(this.ctx.database).execute(
         {
@@ -658,10 +675,10 @@ export class SourcesService {
           return { ...this.get(source.id), ...(reset ? { requirementsReset: reset } : {}) };
         },
       );
-      if (admission.replayed) await rm(path, { force: true });
+      if (admission.replayed) await this.objectStore.delete(key);
       return admission.receipt;
     } catch (error) {
-      await rm(path, { force: true });
+      await this.objectStore.delete(key);
       throw error;
     }
   }

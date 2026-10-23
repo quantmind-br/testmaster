@@ -1,10 +1,11 @@
 import { ContractError, defaults, type ExecutablePlan, validate } from "@testmaster/contracts";
 import { canonicalJson, sha256, visualMaskHash } from "@testmaster/domain";
-import { ConfinedRoot, streamBundleArtifact } from "@testmaster/evidence";
+import type { ObjectStore } from "@testmaster/evidence";
 import { AuditRepository, type EntityDocument, type PageCursor } from "@testmaster/persistence";
 import type { ArtifactsService } from "./artifacts.js";
 import type { ResolvedConfig } from "./config.js";
 import { entity, requireEntity, type ServiceContext } from "./context.js";
+import { readObjectBytes } from "./object-bytes.js";
 import type { RunsService } from "./runs.js";
 import { runVisualDigest, visualSteps } from "./visual-cell.js";
 
@@ -19,6 +20,8 @@ export interface VisualBaselineListFilter {
   testId?: string;
 }
 
+/** A baseline is a copy of one evidence object, which the Attempt limit already bounds. */
+const MAX_BASELINE_BYTES = 64 * 1024 * 1024;
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 const storageKeyOf = (workspaceId: string, projectId: string, hash: string): string =>
@@ -39,30 +42,23 @@ function unavailable(baselineId: string, reason: string): never {
  */
 export async function readVisualBaselineBytes(
   ctx: ServiceContext,
-  config: ResolvedConfig,
+  objectStore: ObjectStore,
   baseline: EntityDocument,
 ): Promise<Buffer> {
   const hash = String(baseline.sha256);
-  const root = new ConfinedRoot(config.dataDir);
+  let bytes: Buffer | null;
   try {
-    let bytes: Buffer;
-    try {
-      const file = await root.openFile(
-        storageKeyOf(ctx.workspaceId, String(baseline.projectId), hash),
-      );
-      try {
-        bytes = await file.readFile();
-      } finally {
-        await file.close();
-      }
-    } catch {
-      return unavailable(baseline.id, "input_bytes_unavailable");
-    }
-    if (sha256(bytes) !== hash) unavailable(baseline.id, "content_hash_mismatch");
-    return bytes;
-  } finally {
-    root.close();
+    bytes = await readObjectBytes(
+      objectStore,
+      storageKeyOf(ctx.workspaceId, String(baseline.projectId), hash),
+      MAX_BASELINE_BYTES,
+    );
+  } catch {
+    return unavailable(baseline.id, "input_bytes_unavailable");
   }
+  if (!bytes) return unavailable(baseline.id, "input_bytes_unavailable");
+  if (sha256(bytes) !== hash) unavailable(baseline.id, "content_hash_mismatch");
+  return bytes;
 }
 
 /** Width and height from the IHDR chunk, which a PNG must open with. */
@@ -91,6 +87,7 @@ export class VisualBaselinesService {
   constructor(
     readonly ctx: ServiceContext,
     private readonly config: ResolvedConfig,
+    private readonly objectStore: ObjectStore,
     private readonly artifacts: ArtifactsService,
     private readonly runs: RunsService,
   ) {}
@@ -119,35 +116,13 @@ export class VisualBaselinesService {
     });
   }
 
-  /** Stores the image under its hash; an existing file of that hash must still hold those bytes. */
+  /** Stores the image under its hash; an existing object of that hash must still hold those bytes. */
   private async store(projectId: string, hash: string, bytes: Buffer): Promise<void> {
     const key = storageKeyOf(this.ctx.workspaceId, projectId, hash);
-    const root = new ConfinedRoot(this.config.dataDir, true);
-    try {
-      try {
-        const file = await root.openFile(key, true);
-        try {
-          await file.writeFile(bytes);
-          await file.sync();
-        } finally {
-          await file.close();
-        }
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-        const file = await root.openFile(key);
-        try {
-          if (
-            (await file.stat()).size !== bytes.byteLength ||
-            sha256(await file.readFile()) !== hash
-          )
-            unavailable(hash, "stored_hash_mismatch");
-        } finally {
-          await file.close();
-        }
-      }
-    } finally {
-      root.close();
-    }
+    const { created } = await this.objectStore.put(key, bytes, { ifNoneMatch: true });
+    if (created) return;
+    const stored = await readObjectBytes(this.objectStore, key, MAX_BASELINE_BYTES);
+    if (!stored || sha256(stored) !== hash) unavailable(hash, "stored_hash_mismatch");
   }
 
   /** The image a Run captured at one `visualMatches` step: the candidate when no baseline existed, else the actual. */
@@ -179,10 +154,7 @@ export class VisualBaselinesService {
         sizeBytes: entry.sizeBytes,
       });
     const chunks: Buffer[] = [];
-    for await (const chunk of streamBundleArtifact(
-      { rootDir: bundle.bundleDir, manifest: bundle.manifest, meta: bundle.meta },
-      entry.relativePath,
-    ))
+    for await (const chunk of this.artifacts.streamEntry(bundle, entry.relativePath))
       chunks.push(Buffer.from(chunk));
     return { bytes: Buffer.concat(chunks), artifactId: entry.artifactId };
   }

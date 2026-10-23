@@ -9,19 +9,25 @@
       "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./testing": {
+      "source": "./src/testing/minio.ts",
+      "types": "./dist/testing/minio.d.ts",
+      "default": "./dist/testing/minio.js"
     }
   },
   "files": [
     "dist"
   ],
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1152.0",
     "@testmaster/contracts": "workspace:*",
     "@testmaster/domain": "workspace:*",
-    "yauzl": "3.4.0",
-    "tar-stream": "3.2.2"
+    "tar-stream": "3.2.2",
+    "yauzl": "3.4.0"
   },
   "devDependencies": {
-    "@types/yauzl": "3.4.0",
-    "@types/tar-stream": "3.1.5"
+    "@types/tar-stream": "3.1.5",
+    "@types/yauzl": "3.4.0"
   }
 }

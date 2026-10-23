@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { statfs } from "node:fs/promises";
 import { type AlertRuleView, type AlertView, ContractError, validate } from "@testmaster/contracts";
 import {
   AuditRepository,
@@ -8,8 +7,12 @@ import {
 } from "@testmaster/persistence";
 import { authoringTransaction } from "./authoring.js";
 import type { ServiceContext } from "./context.js";
+import { CONTROLLER_LIVE_MS, liveControllers } from "./controller-instances.js";
+import { readLease, SCHEDULER_LEASE_MS } from "./controller-leases.js";
 import { type OperationsService, stateJson } from "./operations.js";
 import type { ServerConfig } from "./server-config.js";
+import { evidenceVolume } from "./storage-admission.js";
+import { type ApiMetrics, gatewayTotals } from "./telemetry.js";
 
 /** Alert rules of OPS-028: every rule has an owner and a runbook section in docs/operations/alerts.md. */
 type Severity = AlertRuleView["severity"];
@@ -38,6 +41,10 @@ interface Environment {
   probes: AlertProbes;
   operations: OperationsService;
   liveWorker: () => boolean;
+  /** Live controllers the deployment states it runs; null keeps `controllers_below_expected` off. */
+  expectedControllers: number | null;
+  metrics: ApiMetrics;
+  controllerId: string;
 }
 
 interface RuleDefinition extends Omit<AlertRuleView, "id" | "runbook"> {
@@ -51,6 +58,10 @@ export const storageWarningFraction = 0.8;
 export const storageCriticalFraction = 0.9;
 export const leaseExpirationThreshold = { count: 3, windowMinutes: 15 };
 export const backupStaleHours = 26;
+export const remoteWorkerLossWindowMinutes = 15;
+export const objectStoreWindowMinutes = 15;
+export const artifactGatewayErrorFraction = 0.05;
+export const artifactGatewayMinimumRequests = 20;
 
 const count = (environment: Environment, sql: string, ...values: unknown[]): number =>
   Number(environment.database.get(sql, environment.workspaceId, ...values)?.n ?? 0);
@@ -60,8 +71,15 @@ const sinceIso = (environment: Environment, minutes: number): string =>
 
 async function storageUsed(environment: Environment): Promise<number> {
   if (environment.probes.storageUsedFraction) return environment.probes.storageUsedFraction();
-  const storage = await statfs(environment.dataDir);
-  return 1 - Number(storage.bavail) / Number(storage.blocks);
+  const storage = environment.server?.storage;
+  const volume = await evidenceVolume(
+    {
+      dataDir: environment.dataDir,
+      ...(storage?.kind === "s3" ? { evidenceCapacityBytes: storage.capacityBytes } : {}),
+    },
+    environment.database,
+  );
+  return volume.usedFraction;
 }
 
 function auditProbe(environment: Environment): boolean {
@@ -304,6 +322,125 @@ export const alertRuleCatalog: Record<string, RuleDefinition> = {
         : [];
     },
   },
+  scheduler_leaderless: {
+    title: "Scheduler has no leader",
+    severity: "critical",
+    owner: "platform-operator",
+    description: `A controller is live but none has held the scheduler lease for more than ${(2 * SCHEDULER_LEASE_MS) / 1000} seconds (twice its term).`,
+    threshold: { seconds: (2 * SCHEDULER_LEASE_MS) / 1000 },
+    find(environment) {
+      const nowMs = environment.now.getTime();
+      const [oldest] = liveControllers(environment.database, nowMs);
+      if (!oldest) return [];
+      const lease = readLease(environment.database, "scheduler");
+      // Without any lease row the clock starts when the oldest live controller did.
+      const since = lease ? Date.parse(lease.expiresAt) : Date.parse(oldest.startedAt);
+      const gapSeconds = Math.floor((nowMs - since) / 1000);
+      return gapSeconds > (2 * SCHEDULER_LEASE_MS) / 1000
+        ? [
+            {
+              subject: "",
+              summary: `No controller has led the scheduler for ${gapSeconds} seconds`,
+              detail: { gapSeconds, threshold: (2 * SCHEDULER_LEASE_MS) / 1000 },
+            },
+          ]
+        : [];
+    },
+  },
+  controllers_below_expected: {
+    title: "Fewer controllers are live than configured",
+    severity: "high",
+    owner: "platform-operator",
+    description:
+      "The deployment states how many controllers it runs and fewer have a heartbeat newer than 30 seconds.",
+    threshold: { heartbeatSeconds: CONTROLLER_LIVE_MS / 1000 },
+    find(environment) {
+      const expected = environment.expectedControllers;
+      if (expected === null) return [];
+      const live = liveControllers(environment.database, environment.now.getTime()).length;
+      return live < expected
+        ? [
+            {
+              subject: "",
+              summary: `${live} of ${expected} controllers are live`,
+              detail: { live, expected },
+            },
+          ]
+        : [];
+    },
+  },
+  remote_worker_heartbeat_lost: {
+    title: "A remote worker stopped heartbeating",
+    severity: "high",
+    owner: "platform-operator",
+    description: `A remote worker was marked offline within the last ${remoteWorkerLossWindowMinutes} minutes because its heartbeat stopped.`,
+    threshold: { windowMinutes: remoteWorkerLossWindowMinutes },
+    find(environment) {
+      return environment.database
+        .all<{ worker_id: string; lost_at: string }>(
+          "SELECT o.aggregate_id AS worker_id, MAX(o.created_at) AS lost_at FROM outbox o JOIN workers w ON w.workspace_id=o.workspace_id AND w.id=o.aggregate_id WHERE o.workspace_id=? AND o.type='worker.offline' AND o.created_at>=? AND w.state='offline' AND json_extract(w.data_json,'$.labels.publicKey') IS NOT NULL GROUP BY o.aggregate_id",
+          environment.workspaceId,
+          sinceIso(environment, remoteWorkerLossWindowMinutes),
+        )
+        .map((row) => ({
+          subject: row.worker_id,
+          summary: "A remote worker went offline without draining",
+          detail: { workerId: row.worker_id, lostAt: row.lost_at },
+        }));
+    },
+  },
+  artifact_gateway_errors: {
+    title: "Artifact downloads are failing",
+    severity: "high",
+    owner: "platform-operator",
+    description: `More than ${artifactGatewayErrorFraction * 100}% of at least ${artifactGatewayMinimumRequests} artifact downloads answered 5xx in the current and previous hour.`,
+    threshold: {
+      fraction: artifactGatewayErrorFraction,
+      minimumRequests: artifactGatewayMinimumRequests,
+    },
+    find(environment) {
+      const { requests, errors } = gatewayTotals(
+        environment.database,
+        environment.metrics,
+        environment.controllerId,
+        environment.now.getTime(),
+        true,
+      );
+      return requests >= artifactGatewayMinimumRequests &&
+        errors / requests > artifactGatewayErrorFraction
+        ? [
+            {
+              subject: "",
+              summary: `${errors} of ${requests} artifact downloads failed`,
+              detail: { requests, errors, threshold: artifactGatewayErrorFraction },
+            },
+          ]
+        : [];
+    },
+  },
+  object_store_publish_failing: {
+    title: "Evidence cannot be published to the object store",
+    severity: "critical",
+    owner: "platform-operator",
+    description: `A Run ended because the object store refused or lost a write within the last ${objectStoreWindowMinutes} minutes.`,
+    threshold: { count: 1, windowMinutes: objectStoreWindowMinutes },
+    find(environment) {
+      const failed = count(
+        environment,
+        "SELECT COUNT(DISTINCT aggregate_id) AS n FROM outbox WHERE workspace_id=? AND type IN ('run.completed','run.execution_error') AND created_at>=? AND json_extract(data_json,'$.reasonCode')='storage_unavailable'",
+        sinceIso(environment, objectStoreWindowMinutes),
+      );
+      return failed
+        ? [
+            {
+              subject: "",
+              summary: `${failed} Runs could not publish evidence to the object store`,
+              detail: { failed, windowMinutes: objectStoreWindowMinutes },
+            },
+          ]
+        : [];
+    },
+  },
 };
 
 interface AlertRow {
@@ -352,6 +489,10 @@ export interface AlertsDeps {
   dataDir: string;
   operations(): OperationsService;
   liveWorker(): boolean;
+  /** The controller this process is; `expected` is the live count the deployment states, or null. */
+  controller: { id: string; expected: number | null };
+  /** The API counters of this process, added to what the live controllers flushed. */
+  metrics: ApiMetrics;
 }
 
 export class AlertsService {
@@ -463,6 +604,9 @@ export class AlertsService {
       probes,
       operations: this.deps.operations(),
       liveWorker: this.deps.liveWorker,
+      expectedControllers: this.deps.controller.expected,
+      metrics: this.deps.metrics,
+      controllerId: this.deps.controller.id,
     };
     const findings = new Map<string, Finding[]>();
     const errors: Record<string, string> = {};

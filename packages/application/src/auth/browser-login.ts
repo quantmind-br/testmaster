@@ -2,7 +2,7 @@ import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { type ExecutablePlan, validate } from "@testmaster/contracts";
 import { uuidV7IdGenerator } from "@testmaster/domain";
-import { FileEvidenceStore } from "@testmaster/evidence";
+import { FileEvidenceStore, type ObjectStore } from "@testmaster/evidence";
 import {
   AttemptExecutor,
   type AttemptRuntimeExecutor,
@@ -16,6 +16,7 @@ import type { BrowserLoginProbe } from "./profiles.js";
 
 export interface BrowserLoginHost {
   config: ResolvedConfig;
+  objectStore: ObjectStore;
   secrets: SecretsService;
   seccompPath: string;
   images(): Promise<ImageLock>;
@@ -69,7 +70,7 @@ export function createBrowserLoginProbe(
     const baseUrl = environment.targetOrigins[0] ?? "";
     const releases = await Promise.all(secretIds.map((id) => host.secrets.release(id)));
     const result = await new AttemptExecutor(
-      new FileEvidenceStore({ rootDir: host.config.dataDir }),
+      new FileEvidenceStore({ rootDir: host.config.dataDir, objectStore: host.objectStore }),
       host.docker ?? new DockerExecutor(host.dockerCommand),
       runtimeRoot,
     ).execute({

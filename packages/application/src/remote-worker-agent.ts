@@ -26,7 +26,12 @@ import {
   type RemoteWorkerIdentity,
   TUNNEL_PROTOCOL,
 } from "@testmaster/contracts";
-import { EvidenceQuotaError, FileEvidenceStore } from "@testmaster/evidence";
+import {
+  clearPublishMarker,
+  EvidenceQuotaError,
+  FileEvidenceStore,
+  FileObjectStore,
+} from "@testmaster/evidence";
 import {
   AttemptExecutor,
   type AttemptInput,
@@ -275,12 +280,11 @@ async function sha256File(path: string): Promise<string> {
   return hash.digest("hex");
 }
 
-/** Every file of a sealed bundle except its `.partial` marker, which the server writes itself. */
+/** Every file of a sealed bundle, which the controller republishes under its own store. */
 async function bundleFiles(root: string, prefix = ""): Promise<BundleFile[]> {
   const files: BundleFile[] = [];
   for (const name of (await readdir(join(root, prefix))).sort()) {
     const relative = prefix ? `${prefix}/${name}` : name;
-    if (relative === ".partial") continue;
     const info = await lstat(join(root, relative));
     if (info.isDirectory()) files.push(...(await bundleFiles(root, relative)));
     else if (info.isFile())
@@ -664,7 +668,14 @@ export class RemoteWorkerAgent {
       renewals.abort();
       force?.removeEventListener("abort", forceStop);
       await rm(inputDir, { recursive: true, force: true });
-      if (bundleDir) await rm(bundleDir, { recursive: true, force: true });
+      if (bundleDir) {
+        await rm(bundleDir, { recursive: true, force: true });
+        await clearPublishMarker(new FileObjectStore(dataDir), {
+          workspaceId: attempt.workspaceId,
+          runId: attempt.runId,
+          attemptId,
+        });
+      }
     }
   }
 

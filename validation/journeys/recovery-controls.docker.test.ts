@@ -81,7 +81,12 @@ it("OPS-021/024 real concurrent GC and publication survive discrepant refcounts 
         TESTMASTER_ACCEPTANCE_FAULTS: "1",
       });
       await gc;
-      expect(await readFile(join(renamedDir, ".partial"), "utf8")).toContain(secondId);
+      // The paused publication is still unreferenced: its pending marker must outlive the sweep.
+      const [attemptId, runId, workspaceId] = renamedDir.split("/").reverse();
+      expect(runId).toBe(secondId);
+      await readFile(
+        join(session.dataDir, "pending", String(workspaceId), secondId, String(attemptId)),
+      );
       await writeFile(`${marker}.release`, "release");
       await session.command(["run", "wait", secondId, "--timeout", "120"]);
       const firstBundle = await session.command(["artifact", "get", firstId]);

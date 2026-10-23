@@ -223,7 +223,7 @@ it("persists private immutable inputs, freezes hashes and stages verified contai
   expect(admission.inputFixtureHashes).toEqual({ [imported.id]: imported.contentHash });
   const staged = await stageFixtureInputs(
     app.context,
-    app.config,
+    app.objectStore,
     init.projectId,
     plan,
     inputDir,
@@ -286,7 +286,7 @@ it("stages only terminal program fixtures as executable and names every fixture 
   expect(Object.keys(hashes).sort()).toEqual([program!.id, data!.id].sort());
   const staged = await stageFixtureInputs(
     app.context,
-    app.config,
+    app.objectStore,
     init.projectId,
     plan,
     inputDir,
@@ -300,7 +300,7 @@ it("stages only terminal program fixtures as executable and names every fixture 
   // A fixture referenced by a non-terminal plan keeps the plain mode even when it is a binary.
   const upload = await stageFixtureInputs(
     app.context,
-    app.config,
+    app.objectStore,
     init.projectId,
     uploadPlan(other!.id),
     join(inputDir, ".."),
@@ -320,7 +320,7 @@ it("refuses a fixture above the execution limit and names the limit", async () =
   const plan = uploadPlan(imported.id);
   const hashes = fixtureInputHashes(app.context, init.projectId, plan);
   await expect(
-    stageFixtureInputs(app.context, app.config, init.projectId, plan, inputDir, hashes, {
+    stageFixtureInputs(app.context, app.objectStore, init.projectId, plan, inputDir, hashes, {
       artifactBytes: 32,
     }),
   ).rejects.toMatchObject({
@@ -383,7 +383,14 @@ it("dispatch input staging refuses missing, foreign, revoked and corrupt fixture
     details: { reasonCode: "security_precondition_failed" },
   };
   await expect(
-    stageFixtureInputs(app.context, app.config, init.projectId, uploadPlan(missing), inputDir, {}),
+    stageFixtureInputs(
+      app.context,
+      app.objectStore,
+      init.projectId,
+      uploadPlan(missing),
+      inputDir,
+      {},
+    ),
   ).rejects.toMatchObject(security);
   const foreign = app.projects.create({ name: "Other project" });
   const other = await app.artifacts.importFixtureInput({
@@ -393,9 +400,16 @@ it("dispatch input staging refuses missing, foreign, revoked and corrupt fixture
     mimeType: "text/plain",
   });
   await expect(
-    stageFixtureInputs(app.context, app.config, init.projectId, uploadPlan(other.id), inputDir, {
-      [other.id]: other.contentHash,
-    }),
+    stageFixtureInputs(
+      app.context,
+      app.objectStore,
+      init.projectId,
+      uploadPlan(other.id),
+      inputDir,
+      {
+        [other.id]: other.contentHash,
+      },
+    ),
   ).rejects.toMatchObject(security);
   const imported = await app.artifacts.importFixtureInput({
     projectId: init.projectId,
@@ -405,16 +419,23 @@ it("dispatch input staging refuses missing, foreign, revoked and corrupt fixture
   });
   const hashes = fixtureInputHashes(app.context, init.projectId, uploadPlan(imported.id));
   await expect(
-    stageFixtureInputs(app.context, app.config, init.projectId, uploadPlan(imported.id), inputDir, {
-      [imported.id]: "0".repeat(64),
-    }),
+    stageFixtureInputs(
+      app.context,
+      app.objectStore,
+      init.projectId,
+      uploadPlan(imported.id),
+      inputDir,
+      {
+        [imported.id]: "0".repeat(64),
+      },
+    ),
   ).rejects.toMatchObject(security);
   const record = fixtureRecord(app.context, imported.id)!;
   await writeFile(join(app.config.dataDir, record.storage_key), "evil");
   await expect(
     stageFixtureInputs(
       app.context,
-      app.config,
+      app.objectStore,
       init.projectId,
       uploadPlan(imported.id),
       inputDir,
@@ -427,7 +448,7 @@ it("dispatch input staging refuses missing, foreign, revoked and corrupt fixture
   await expect(
     stageFixtureInputs(
       app.context,
-      app.config,
+      app.objectStore,
       init.projectId,
       uploadPlan(imported.id),
       inputDir,

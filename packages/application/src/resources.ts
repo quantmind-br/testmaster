@@ -10,7 +10,7 @@ import {
   validate,
 } from "@testmaster/contracts";
 import { canonicalJson, evaluateRisk, semanticHash, uuidV7IdGenerator } from "@testmaster/domain";
-import { FileEvidenceStore } from "@testmaster/evidence";
+import { FileEvidenceStore, type ObjectStore } from "@testmaster/evidence";
 import {
   AuditRepository,
   type EntityDocument,
@@ -41,6 +41,7 @@ export interface CleanupReceipt {
 type StoredResource = ResourceRecord & EntityDocument;
 interface ResourcesHost {
   config: ResolvedConfig;
+  objectStore: ObjectStore;
   runs: RunsService;
   approvals: ApprovalsService;
   secrets: SecretsService;
@@ -325,7 +326,10 @@ export class ResourcesService {
     let receipt: CleanupReceipt;
     try {
       const result = await new AttemptExecutor(
-        new FileEvidenceStore({ rootDir: this.host.config.dataDir }),
+        new FileEvidenceStore({
+          rootDir: this.host.config.dataDir,
+          objectStore: this.host.objectStore,
+        }),
         undefined,
         `/tmp/testmaster-runtime-${process.getuid?.() ?? "unknown"}`,
       ).execute({

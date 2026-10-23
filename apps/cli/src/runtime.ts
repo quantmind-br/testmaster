@@ -45,9 +45,14 @@ export class CliFailure extends ContractError {
     super(code, message, details);
   }
 }
-/** `--mode server` selects the PostgreSQL deployment file named by `--config`. */
-export const modeOption = () =>
-  new Option("--mode <mode>", "Deployment mode").choices(["local", "server"]).default("local");
+/**
+ * `--mode server` selects the PostgreSQL deployment file named by `--config`. `server start` also
+ * accepts `distributed` (`extra`), which additionally registers the process as one controller.
+ */
+export const modeOption = (extra: readonly string[] = []) =>
+  new Option("--mode <mode>", "Deployment mode")
+    .choices(["local", "server", ...extra])
+    .default("local");
 export function string(options: Options, key: string): string | undefined {
   const value = options[key];
   return typeof value === "string" ? value : undefined;
@@ -284,9 +289,17 @@ export class Runtime {
    * Opens the PostgreSQL server profile from the deployment file named by `--config`; for the
    * server commands that option is the server configuration, never a project configuration.
    */
-  async serverApp(): Promise<{ application: Application; server: ServerConfig }> {
+  async serverApp(
+    expectMode?: ServerConfig["mode"],
+  ): Promise<{ application: Application; server: ServerConfig }> {
     if (this.signal) throw this.interrupted();
     const server = await readServerConfig(this.path(required(this.options, "config")));
+    if (expectMode && server.mode !== expectMode)
+      throw new ContractError(
+        "INVALID_ARGUMENT",
+        `--mode ${expectMode} does not match the deployment file, which declares mode ${server.mode}`,
+        { reasonCode: "server_mode_mismatch" },
+      );
     const cwd = string(this.options, "cwd");
     this.opening ??= Application.open({
       correlationId: this.requestId,

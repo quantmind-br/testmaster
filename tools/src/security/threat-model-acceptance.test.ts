@@ -188,11 +188,11 @@ describe("SEC-001 versioned threat model acceptance", () => {
   });
 
   it("fails when code enables a boundary the model still lists as disabled, and when the model drops coverage", async () => {
-    const enabledDistributed = components.capabilities.map((capability) =>
-      capability.id === "distributed" ? { ...capability, enabled: true } : capability,
+    const enabledSso = components.capabilities.map((capability) =>
+      capability.id === "sso" ? { ...capability, enabled: true } : capability,
     );
-    expect(await check(markdown, { ...components, capabilities: enabledDistributed })).toEqual([
-      "capability:distributed is enabled in code but modelled under disabled boundary B-30",
+    expect(await check(markdown, { ...components, capabilities: enabledSso })).toEqual([
+      "capability:sso is enabled in code but modelled under disabled boundary B-17",
     ]);
     const disabledMcp = components.capabilities.map((capability) =>
       capability.id === "mcp" ? { ...capability, enabled: false } : capability,
@@ -248,18 +248,26 @@ describe("M0-03 boundary defaults", () => {
 });
 
 describe("disabled boundaries", () => {
-  it("distributed profile, SSO, SCIM and every other unimplemented M4+ capability stay disabled and refuse use", () => {
+  it("SSO, SCIM and every other unimplemented M4+ capability stay disabled and refuse use", () => {
     const future = Object.values(capabilityRegistry).filter(
       (capability) =>
         ["M4", "M5", "M6"].includes(capability.milestone) &&
         !implementedFeatures.has(capability.id),
     );
     expect(future.map((capability) => capability.id)).toEqual(
-      expect.arrayContaining(["distributed", "sso", "scim"]),
+      expect.arrayContaining(["sso", "scim"]),
     );
-    // Negative control: the server identity, remote worker and tunnel capabilities are
-    // implemented, so they are not refused.
-    for (const id of ["server", "multi-user", "identity", "postgres", "remote-workers", "tunnels"])
+    // Negative control: the server identity, remote worker, tunnel and distributed capabilities
+    // are implemented, so they are not refused.
+    for (const id of [
+      "server",
+      "multi-user",
+      "identity",
+      "postgres",
+      "remote-workers",
+      "tunnels",
+      "distributed",
+    ])
       expect(() => requireCapability(id)).not.toThrow();
     for (const capability of future) {
       expect(capability.enabled).toBe(false);

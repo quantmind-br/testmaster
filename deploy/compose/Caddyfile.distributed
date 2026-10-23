@@ -1,0 +1,42 @@
+# Public entry of the distributed profile (ADR-035). TLS terminates here; both controllers are
+# upstreams. Requests are spread round robin; a controller that fails its health probe leaves the
+# rotation until it passes again. A worker's call for an Attempt that another controller holds is
+# relayed by the controller that received it (the Forwarder), so no session affinity is needed.
+# `reverse_proxy` relays an Upgrade (the tunnel stream of `testmaster-tunnel/1`) byte for byte, and
+# `flush_interval -1` streams server-sent events without buffering.
+# The access log carries the method, URI, status and chosen upstream, never a header: a worker's
+# signed proof and a session cookie never reach the log.
+{
+	admin off
+	auto_https disable_redirects
+}
+
+{$TESTMASTER_PUBLIC_HOST:localhost}:8443 {
+	tls internal
+	encode zstd gzip
+	log {
+		output stdout
+		format filter {
+			wrap json
+			fields {
+				request>headers delete
+				resp_headers delete
+			}
+		}
+	}
+	log_append upstream {http.reverse_proxy.upstream.hostport}
+	reverse_proxy server:7331 server-2:7331 {
+		lb_policy round_robin
+		lb_try_duration 5s
+		lb_try_interval 250ms
+		flush_interval -1
+		header_up X-Forwarded-Proto https
+		header_up X-Forwarded-For {remote_host}
+		health_uri /v1/health/live
+		health_interval 5s
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+}

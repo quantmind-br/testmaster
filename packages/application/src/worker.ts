@@ -10,7 +10,17 @@ import {
   reduceOutcome,
   semanticHash,
 } from "@testmaster/domain";
-import { ConfinedRoot, collectGarbage, findOrphanStaging } from "@testmaster/evidence";
+import {
+  clearPublishMarker,
+  collectGarbage,
+  collectStagingGarbage,
+  findOrphanPublished,
+  findOrphanStaging,
+  type GcCandidate,
+  type GcPort,
+  type ObjectStore,
+  sweepTemporaryObjects,
+} from "@testmaster/evidence";
 import {
   auxiliaryQueues,
   type EntityDocument,
@@ -51,7 +61,7 @@ import type { ResolvedDependency, RunsService } from "./runs.js";
 import type { SecretsService } from "./secrets.js";
 import {
   type EvidenceLimits,
-  freeDataBytes,
+  evidenceVolume,
   hasStorageRoom,
   inFlightEvidenceBytes,
   runEvidenceBytes,
@@ -81,6 +91,7 @@ const leaseHeartbeatIntervalMs = 10000;
 
 export interface WorkerHost {
   config: ResolvedConfig;
+  objectStore: ObjectStore;
   images(): Promise<ImageLock>;
   /** The pinned image lock without inspecting this host's Docker, for remote workers (ADR-030). */
   lockedImages?: () => Promise<ImageLock>;
@@ -279,23 +290,12 @@ export class WorkerService {
     return this.maintenance();
   }
   private async countMissingArtifactReferences(): Promise<number> {
-    const root = new ConfinedRoot(this.host.config.dataDir);
     let missing = 0;
-    try {
-      for (const row of this.ctx.database.all(
-        "SELECT storage_key FROM artifacts WHERE workspace_id=? AND state='available'",
-        this.ctx.workspaceId,
-      )) {
-        try {
-          await (await root.openFile(String(row.storage_key))).close();
-        } catch (error) {
-          if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-          missing++;
-        }
-      }
-    } finally {
-      root.close();
-    }
+    for (const row of this.ctx.database.all(
+      "SELECT storage_key FROM artifacts WHERE workspace_id=? AND state='available'",
+      this.ctx.workspaceId,
+    ))
+      if (!(await this.host.objectStore.head(String(row.storage_key)))) missing++;
     return missing;
   }
   isQuarantined(): boolean {
@@ -555,56 +555,87 @@ export class WorkerService {
         return Boolean(row && row.state !== "leased");
       })
       .catch(() => []);
+    const orphanPort = (attemptIdOf: (candidate: GcCandidate) => Promise<string>): GcPort => ({
+      inspect: async (candidate) => {
+        const attemptId = await attemptIdOf(candidate);
+        const lease = database.get(
+          "SELECT j.state FROM attempts a JOIN job_leases j ON j.workspace_id=a.workspace_id AND j.id=a.job_id WHERE a.workspace_id=? AND a.id=?",
+          this.ctx.workspaceId,
+          attemptId,
+        );
+        const references = database.get(
+          "SELECT COUNT(*) AS n FROM snapshots WHERE workspace_id=? AND attempt_id=?",
+          this.ctx.workspaceId,
+          attemptId,
+        );
+        return {
+          activeAttempt: lease?.state === "leased",
+          validUploadLease: false,
+          legalHold: false,
+          liveReferences: Number(references?.n ?? 0),
+        };
+      },
+      mark: async () => ({ version: 2 }),
+      tombstone: async (candidate) => {
+        // Publication is fenced by a live lease; orphan markers have no public snapshot.
+        const attemptId = await attemptIdOf(candidate);
+        const live = database.get(
+          "SELECT 1 FROM snapshots WHERE workspace_id=? AND attempt_id=? UNION SELECT 1 FROM attempts a JOIN job_leases j ON j.workspace_id=a.workspace_id AND j.id=a.job_id WHERE a.workspace_id=? AND a.id=? AND j.state='leased'",
+          this.ctx.workspaceId,
+          attemptId,
+          this.ctx.workspaceId,
+          attemptId,
+        );
+        return live ? null : { version: 3 };
+      },
+      deleted: async () => {},
+    });
     const orphans = await findOrphanStaging(this.host.config.dataDir).catch(() => []);
-    const removed = await collectGarbage(
+    const removedStaging = await collectStagingGarbage(
       this.host.config.dataDir,
       orphans.map((orphan) => ({ relativePath: orphan.relativePath, version: 1 })),
+      orphanPort(async (candidate) => {
+        const partial = JSON.parse(
+          await readFile(
+            join(this.host.config.dataDir, candidate.relativePath, ".partial"),
+            "utf8",
+          ),
+        ) as Record<string, string>;
+        return String(partial.attemptId);
+      }),
+    );
+    // Published bundles whose pending marker outlived the grace: crashed before `meta.json`, or never referenced.
+    const published = await findOrphanPublished(this.host.objectStore, {
+      workspaceId: this.ctx.workspaceId,
+    }).catch(() => []);
+    const publishedPort = orphanPort(async (candidate) =>
+      String(candidate.relativePath.split("/")[3]),
+    );
+    const removedPublished = await collectGarbage(
+      this.host.objectStore,
+      published.map((orphan) => ({ relativePath: orphan.bundleKey, version: 1 })),
       {
+        ...publishedPort,
         inspect: async (candidate) => {
-          const partial = JSON.parse(
-            await readFile(
-              join(this.host.config.dataDir, candidate.relativePath, ".partial"),
-              "utf8",
-            ),
-          ) as Record<string, string>;
-          const lease = database.get(
-            "SELECT j.state FROM attempts a JOIN job_leases j ON j.workspace_id=a.workspace_id AND j.id=a.job_id WHERE a.workspace_id=? AND a.id=?",
-            this.ctx.workspaceId,
-            partial.attemptId,
-          );
-          const references = database.get(
-            "SELECT COUNT(*) AS n FROM snapshots WHERE workspace_id=? AND attempt_id=?",
-            this.ctx.workspaceId,
-            partial.attemptId,
-          );
-          return {
-            activeAttempt: lease?.state === "leased",
-            validUploadLease: false,
-            legalHold: false,
-            liveReferences: Number(references?.n ?? 0),
-          };
+          const safety = await publishedPort.inspect(candidate);
+          // The database references the bundle; only the clearing of its marker was lost.
+          if (safety.liveReferences > 0) {
+            const [, workspaceId, runId, attemptId] = candidate.relativePath.split("/");
+            await clearPublishMarker(this.host.objectStore, {
+              workspaceId: String(workspaceId),
+              runId: String(runId),
+              attemptId: String(attemptId),
+            });
+          }
+          return safety;
         },
-        mark: async () => ({ version: 2 }),
-        tombstone: async (candidate) => {
-          // Publication is fenced by a live lease; orphan markers have no public snapshot.
-          const partial = JSON.parse(
-            await readFile(
-              join(this.host.config.dataDir, candidate.relativePath, ".partial"),
-              "utf8",
-            ),
-          ) as Record<string, string>;
-          const live = database.get(
-            "SELECT 1 FROM snapshots WHERE workspace_id=? AND attempt_id=? UNION SELECT 1 FROM attempts a JOIN job_leases j ON j.workspace_id=a.workspace_id AND j.id=a.job_id WHERE a.workspace_id=? AND a.id=? AND j.state='leased'",
-            this.ctx.workspaceId,
-            partial.attemptId,
-            this.ctx.workspaceId,
-            partial.attemptId,
-          );
-          return live ? null : { version: 3 };
-        },
-        deleted: async () => {},
       },
     );
+    const removed = [
+      ...removedStaging,
+      ...removedPublished,
+      ...(await sweepTemporaryObjects(this.host.config.dataDir)),
+    ];
     await this.host.retention?.maintenance();
     await this.host.analysis?.settlePending();
     try {
@@ -625,7 +656,7 @@ export class WorkerService {
     return {
       expired,
       reaped,
-      orphanStaging: orphans.length,
+      orphanStaging: orphans.length + published.length,
       removed,
       availableBytes: Number(storage.bavail) * Number(storage.bsize),
     };
@@ -633,7 +664,7 @@ export class WorkerService {
   /** Free bytes and the worst-case evidence of the runs in progress, read before a claim. */
   private async storageRoom(): Promise<Omit<StorageRoom, "incomingBytes">> {
     return {
-      freeBytes: await freeDataBytes(this.host.config.dataDir),
+      freeBytes: (await evidenceVolume(this.host.config, this.ctx.database)).freeBytes,
       inFlightBytes: inFlightEvidenceBytes(this.ctx.database),
     };
   }

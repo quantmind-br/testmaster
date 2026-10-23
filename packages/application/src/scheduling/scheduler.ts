@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { hostname } from "node:os";
 import {
   ContractError,
   type ScheduleDefinition,
@@ -12,6 +11,14 @@ import {
 } from "@testmaster/persistence";
 import type { Application, AuthenticatedIdentity, PermissionGrant } from "../application.js";
 import { auditAs } from "../audit.js";
+import {
+  acquireLease,
+  assertLease,
+  LeaseLostError,
+  releaseLease,
+  SCHEDULER_LEASE_MS,
+  type Lease as StoredLease,
+} from "../controller-leases.js";
 import type { Controller } from "../controllers.js";
 import { isRestoreIsolated } from "../operations-state.js";
 import type { TokenData } from "../tokens.js";
@@ -25,7 +32,6 @@ import {
 import {
   type FiringFrozen,
   type FiringState,
-  type Lease,
   type PauseReason,
   ScheduleStore,
   type StoredFiring,
@@ -38,7 +44,7 @@ const AUTO_PAUSE_EVALUATION_MS = 30_000;
 const iso = (ms: number): string => new Date(ms).toISOString();
 
 export interface SchedulerOptions {
-  /** Distinguishes this scheduler instance in the lease; defaults to host, pid and a random suffix. */
+  /** Distinguishes this scheduler instance in the lease; defaults to the process's controller id. */
   holder?: string;
   now?: () => number;
   /** How long a leadership term lasts without renewal. */
@@ -54,11 +60,8 @@ export interface TickSummary {
   dispatched: number;
 }
 class PlanSkipped extends Error {}
-class LeaseLost extends Error {
-  constructor() {
-    super("Scheduler lease lost");
-  }
-}
+/** What a tick needs of the lease it won: who holds it and under which fence. */
+type Lease = Pick<StoredLease, "holder" | "fence">;
 interface Drive {
   firing: StoredFiring;
   schedule: StoredSchedule;
@@ -89,9 +92,9 @@ export class Scheduler {
     private readonly scope: Application,
     private readonly options: SchedulerOptions = {},
   ) {
-    this.holder = options.holder ?? `${hostname()}:${process.pid}:${randomUUID().slice(0, 8)}`;
+    this.holder = options.holder ?? scope.controllerIdentity.id;
     this.now = options.now ?? Date.now;
-    this.leaseMs = options.leaseMs ?? 30_000;
+    this.leaseMs = options.leaseMs ?? SCHEDULER_LEASE_MS;
   }
 
   private databaseFor(workspaceId: string): PersistenceDatabase {
@@ -102,52 +105,24 @@ export class Scheduler {
   }
 
   /** Takes or renews leadership; null when another instance holds an unexpired lease. */
-  private acquire(nowMs: number): Lease | null {
-    const store = new ScheduleStore(this.scope.database);
-    return this.scope.database.withTx(() => {
-      const current = store.lease(LEASE_NAME);
-      const expiresAt = iso(nowMs + this.leaseMs);
-      if (!current) {
-        const created = { holder: this.holder, fence: 1, acquiredAt: iso(nowMs), expiresAt };
-        return store.insertLease(LEASE_NAME, created) ? created : null;
-      }
-      const live = Date.parse(current.expiresAt) > nowMs;
-      if (current.holder === this.holder && live) {
-        const renewed = { ...current, expiresAt };
-        return store.updateLease(LEASE_NAME, current.fence, renewed) ? renewed : null;
-      }
-      if (live) return null;
-      const taken = {
-        holder: this.holder,
-        fence: current.fence + 1,
-        acquiredAt: iso(nowMs),
-        expiresAt,
-      };
-      return store.updateLease(LEASE_NAME, current.fence, taken) ? taken : null;
-    });
+  private acquire(nowMs?: number): Lease | null {
+    const granted = acquireLease(this.scope.database, LEASE_NAME, this.holder, this.leaseMs, nowMs);
+    return granted ? { holder: this.holder, fence: granted.fence } : null;
   }
   /** Gives leadership up immediately so another instance can take over without waiting for expiry. */
   release(): void {
     const lease = this.lease;
     if (!lease) return;
-    this.scope.database.withTx(() =>
-      new ScheduleStore(this.scope.database).expireLease(
-        LEASE_NAME,
-        lease.holder,
-        lease.fence,
-        iso(0),
-      ),
-    );
+    releaseLease(this.scope.database, LEASE_NAME, lease.holder, lease.fence);
     this.lease = null;
   }
   /** Throws inside the caller's transaction when this instance is no longer the leader. */
   private guard(database: PersistenceDatabase, lease: Lease): void {
-    const current = new ScheduleStore(database).lease(LEASE_NAME);
-    if (!current || current.holder !== lease.holder || current.fence !== lease.fence)
-      throw new LeaseLost();
+    assertLease(database, LEASE_NAME, lease.holder, lease.fence);
   }
 
-  async tick(nowMs: number = this.now()): Promise<TickSummary> {
+  async tick(explicitNowMs?: number): Promise<TickSummary> {
+    const nowMs = explicitNowMs ?? this.now();
     const summary: TickSummary = {
       leader: false,
       isolated: false,
@@ -157,7 +132,10 @@ export class Scheduler {
     };
     // A restored copy must not act on its own until an operator releases it (OPS-025).
     if (isRestoreIsolated(this.scope.database)) return { ...summary, isolated: true };
-    const lease = this.acquire(nowMs);
+    // Only a test that injects a clock decides lease expiry itself; a server uses the database clock.
+    const lease = this.acquire(
+      explicitNowMs === undefined && this.options.now === undefined ? undefined : nowMs,
+    );
     this.lease = lease;
     if (!lease) return summary;
     summary.leader = true;
@@ -180,7 +158,7 @@ export class Scheduler {
         if (outcome === "dispatched") summary.dispatched++;
       }
     } catch (error) {
-      if (!(error instanceof LeaseLost)) throw error;
+      if (!(error instanceof LeaseLostError)) throw error;
       this.lease = null;
       summary.leader = false;
     }
@@ -814,9 +792,9 @@ export class Scheduler {
       });
       return "dispatched";
     } catch (error) {
-      if (error instanceof LeaseLost) throw error;
+      if (error instanceof LeaseLostError) throw error;
       if (!(error instanceof ContractError)) throw error;
-      if (error.details.lease === "lost") throw new LeaseLost();
+      if (error.details.lease === "lost") throw new LeaseLostError(LEASE_NAME);
       const noWorker =
         error.code === "PRECONDITION_FAILED" &&
         Array.isArray(error.details.nextActions) &&

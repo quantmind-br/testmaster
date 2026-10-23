@@ -1,6 +1,9 @@
 import { ContractError, type SloIndicator, validate } from "@testmaster/contracts";
+import type { PersistenceDatabase } from "@testmaster/persistence";
 import type { AlertsService } from "./alerts.js";
 import type { ServiceContext } from "./context.js";
+import { CONTROLLER_LIVE_MS, liveControllers } from "./controller-instances.js";
+import { readLease, SCHEDULER_LEASE_MS } from "./controller-leases.js";
 import { type OperationsService, stateJson } from "./operations.js";
 import type { ServerConfig } from "./server-config.js";
 
@@ -30,13 +33,29 @@ interface WorkspaceApiMetrics {
   errors5xx: number;
 }
 
+/** Counter name of one workspace's API metric in `controller_metrics`; the workspace id is part of the name. */
+const apiCounter = (metric: string, workspaceId: string): string => `api.${metric}|${workspaceId}`;
+/** Deployment-wide counters of the artifact gateway: they have no workspace because a signed link names none. */
+const gatewayRequests = "gateway.requests";
+const gatewayErrors = "gateway.errors5xx";
+/** True for the routes that stream artifact bytes; only their answers feed `artifact_gateway_availability`. */
+export const isGatewayRoute = (method: string, route: string): boolean =>
+  method === "GET" && /^\/v1\/artifacts\/:id(?:\/content)?$/u.test(route);
+
 /**
  * In-process API counters since server start. Only API responses count: a Run that ends in a
  * target timeout never produces an API error, so target behaviour cannot consume the API budget.
+ * The same events also accumulate in `pending`, which `flushApiMetrics` drains into
+ * `controller_metrics` so every controller's counters reach the SLO report (ADR-035).
  */
 export class ApiMetrics {
   readonly since = new Date();
   private readonly workspaces = new Map<string, WorkspaceApiMetrics>();
+  private pending = new Map<string, number>();
+
+  private bump(name: string, amount: number): void {
+    this.pending.set(name, (this.pending.get(name) ?? 0) + amount);
+  }
 
   record(sample: ApiSample): void {
     let entry = this.workspaces.get(sample.workspaceId);
@@ -53,11 +72,42 @@ export class ApiMetrics {
     const key = `${sample.method}\u0000${sample.route}\u0000${Math.floor(sample.status / 100)}xx`;
     entry.requests.set(key, (entry.requests.get(key) ?? 0) + 1);
     apiLatencyBuckets.forEach((bound, index) => {
-      if (sample.seconds <= bound) entry.buckets[index] = (entry.buckets[index] ?? 0) + 1;
+      if (sample.seconds <= bound) {
+        entry.buckets[index] = (entry.buckets[index] ?? 0) + 1;
+        this.bump(apiCounter(`bucket.${index}`, sample.workspaceId), 1);
+      }
     });
     entry.sum += sample.seconds;
     entry.count++;
-    if (sample.status >= 500) entry.errors5xx++;
+    this.bump(apiCounter("sum", sample.workspaceId), sample.seconds);
+    this.bump(apiCounter("count", sample.workspaceId), 1);
+    if (sample.status >= 500) {
+      entry.errors5xx++;
+      this.bump(apiCounter("errors5xx", sample.workspaceId), 1);
+    }
+  }
+
+  /** One artifact download answered by this controller; `status` is the HTTP status it sent. */
+  recordGateway(status: number): void {
+    this.bump(gatewayRequests, 1);
+    if (status >= 500) this.bump(gatewayErrors, 1);
+  }
+
+  /** Counters since the last flush, then forgets them. */
+  drain(): Map<string, number> {
+    const drained = this.pending;
+    this.pending = new Map();
+    return drained;
+  }
+
+  /** Puts drained counters back after a failed flush, so no event is lost. */
+  restore(drained: ReadonlyMap<string, number>): void {
+    for (const [name, amount] of drained) this.bump(name, amount);
+  }
+
+  /** Counters not yet flushed; the SLO report adds them to the rows other flushes wrote. */
+  unflushed(name: string): number {
+    return this.pending.get(name) ?? 0;
   }
 
   snapshot(workspaceId: string): {
@@ -89,8 +139,128 @@ export class ApiMetrics {
   }
 }
 
+const hourMs = 3_600_000;
+
+/**
+ * Writes the counters accumulated since the last flush into the row of the current hour (adding to
+ * it), so a minute-by-minute flush keeps the table to one row per controller, metric and hour. A
+ * failed write puts the counters back and rethrows.
+ */
+export function flushApiMetrics(
+  database: PersistenceDatabase,
+  controllerId: string,
+  metrics: ApiMetrics,
+  nowMs: number = Date.now(),
+): void {
+  const drained = metrics.drain();
+  if (!drained.size) return;
+  const windowStart = new Date(Math.floor(nowMs / hourMs) * hourMs).toISOString();
+  try {
+    database.withTx(() => {
+      for (const [name, value] of drained)
+        database.run(
+          "INSERT INTO controller_metrics(controller_id,window_start,name,value) VALUES(?,?,?,?) ON CONFLICT(controller_id,window_start,name) DO UPDATE SET value=controller_metrics.value+excluded.value",
+          controllerId,
+          windowStart,
+          name,
+          value,
+        );
+    });
+  } catch (error) {
+    metrics.restore(drained);
+    throw error;
+  }
+}
+
+/**
+ * Sums the named counters across the live controllers' flushed rows (and this process's own), plus
+ * what this process has not flushed yet. A stopped or silent controller's rows are left out, as its
+ * in-memory counters were before the table existed. `sinceWindow` leaves out hour windows that
+ * started before it.
+ */
+function sumCounters(
+  database: PersistenceDatabase,
+  metrics: ApiMetrics,
+  ownId: string,
+  names: readonly string[],
+  nowMs: number,
+  sinceWindow = "",
+): Map<string, number> {
+  const totals = new Map<string, number>(names.map((name) => [name, metrics.unflushed(name)]));
+  const rows = database.all<{ name: string; total: number }>(
+    `SELECT name,SUM(value) AS total FROM controller_metrics WHERE name IN (${names.map(() => "?").join(",")}) AND window_start>=? AND (controller_id=? OR controller_id IN (SELECT id FROM controller_instances WHERE stopped_at IS NULL AND heartbeat_at>?)) GROUP BY name`,
+    ...names,
+    sinceWindow,
+    ownId,
+    new Date(nowMs - CONTROLLER_LIVE_MS).toISOString(),
+  );
+  for (const row of rows) totals.set(row.name, (totals.get(row.name) ?? 0) + Number(row.total));
+  return totals;
+}
+
+/**
+ * Artifact downloads and their 5xx answers over the live controllers. With `recent` only the current
+ * and the previous hour window count, which is what an alert needs to clear after an incident.
+ */
+export function gatewayTotals(
+  database: PersistenceDatabase,
+  metrics: ApiMetrics,
+  ownId: string,
+  nowMs: number,
+  recent = false,
+): { requests: number; errors: number } {
+  const sinceWindow = recent
+    ? new Date(Math.floor(nowMs / hourMs) * hourMs - hourMs).toISOString()
+    : "";
+  const totals = sumCounters(
+    database,
+    metrics,
+    ownId,
+    [gatewayRequests, gatewayErrors],
+    nowMs,
+    sinceWindow,
+  );
+  return { requests: totals.get(gatewayRequests) ?? 0, errors: totals.get(gatewayErrors) ?? 0 };
+}
+
+interface ApiTotals {
+  buckets: number[];
+  sum: number;
+  count: number;
+  errors5xx: number;
+}
+
+function apiTotals(
+  database: PersistenceDatabase,
+  metrics: ApiMetrics,
+  ownId: string,
+  workspaceId: string,
+  nowMs: number,
+): ApiTotals {
+  const bucketNames = apiLatencyBuckets.map((_, index) =>
+    apiCounter(`bucket.${index}`, workspaceId),
+  );
+  const names = [
+    apiCounter("count", workspaceId),
+    apiCounter("errors5xx", workspaceId),
+    apiCounter("sum", workspaceId),
+    ...bucketNames,
+  ];
+  const totals = sumCounters(database, metrics, ownId, names, nowMs);
+  return {
+    count: totals.get(names[0] as string) ?? 0,
+    errors5xx: totals.get(names[1] as string) ?? 0,
+    sum: totals.get(names[2] as string) ?? 0,
+    buckets: bucketNames.map((name) => totals.get(name) ?? 0),
+  };
+}
+
 export interface TelemetryDeps {
   metrics: ApiMetrics;
+  /** This process's controller id: its own flushed rows count even before its first heartbeat. */
+  controllerId: string;
+  /** Expected live controller count; absent means a single controller. */
+  controller?: { expected: number | null };
   server?: ServerConfig;
   operations(): OperationsService;
   alerts(): AlertsService;
@@ -141,7 +311,13 @@ export class TelemetryService {
     this.ctx.authorize("R");
     const since = new Date(now.getTime() - sloWindowDays * dayMs).toISOString();
     const window = `${sloWindowDays}d`;
-    const api = this.deps.metrics.snapshot(this.ctx.workspaceId);
+    const api = apiTotals(
+      this.ctx.database,
+      this.deps.metrics,
+      this.deps.controllerId,
+      this.ctx.workspaceId,
+      now.getTime(),
+    );
     const indicators: SloIndicator[] = [];
     const base = {
       window,
@@ -306,6 +482,56 @@ export class TelemetryService {
         errorBudgetRemaining: null,
         notes: "Age of the newest verified server backup.",
       }),
+    );
+    const nowMs = now.getTime();
+    const database = this.ctx.database;
+    const everRegistered = Number(
+      database.get("SELECT COUNT(*) AS n FROM controller_instances")?.n ?? 0,
+    );
+    const expected = this.deps.controller?.expected ?? 1;
+    indicators.push(
+      ratio(
+        "controller_availability",
+        "Live controllers",
+        1,
+        everRegistered ? Math.min(liveControllers(database, nowMs).length, expected) : 0,
+        everRegistered ? expected : 0,
+        "Controllers with a heartbeat newer than 30 s over the number the deployment expects (ADR-035).",
+        "current",
+      ),
+    );
+    const schedulerLease = readLease(database, "scheduler");
+    const leaderGap = schedulerLease
+      ? Math.max(0, (nowMs - Date.parse(schedulerLease.expiresAt)) / 1000)
+      : null;
+    indicators.push(
+      validate<SloIndicator>("SloIndicator", {
+        id: "scheduler_leader_gap",
+        title: "Scheduler leaderless time",
+        unit: "seconds",
+        window: "current",
+        proposedTarget: (2 * SCHEDULER_LEASE_MS) / 1000,
+        observed: leaderGap,
+        measurement: leaderGap === null ? "not_measured" : "measured",
+        numerator: null,
+        denominator: leaderGap === null ? 0 : 1,
+        buckets: [],
+        errorBudgetRemaining: null,
+        notes:
+          "Seconds since the scheduler lease lapsed; 0 while a live controller holds it. The target is twice the lease term.",
+      }),
+    );
+    const gateway = gatewayTotals(database, this.deps.metrics, this.deps.controllerId, nowMs);
+    indicators.push(
+      ratio(
+        "artifact_gateway_availability",
+        "Artifact gateway availability",
+        0.999,
+        gateway.requests - gateway.errors,
+        gateway.requests,
+        "Artifact downloads answered below 500 over all downloads since the live controllers started; the deployment never exposes object-store URLs.",
+        "since_start",
+      ),
     );
     return { generatedAt: now.toISOString(), workspaceId: this.ctx.workspaceId, indicators };
   }

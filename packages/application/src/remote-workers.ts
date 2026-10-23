@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, type ReadStream } from "node:fs";
-import { lstat, mkdir, readdir, rm } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { lstat, readdir, rm } from "node:fs/promises";
+import { join } from "node:path";
 import {
   ContractError,
   errorRegistry,
@@ -13,7 +13,12 @@ import {
   type RunnerEvent,
 } from "@testmaster/contracts";
 import { canonicalJson, semanticHash } from "@testmaster/domain";
-import { ConfinedRoot, validateRelativePath } from "@testmaster/evidence";
+import {
+  bundleLocation,
+  ConfinedRoot,
+  publishBundle,
+  validateRelativePath,
+} from "@testmaster/evidence";
 import {
   EntityRepository,
   type PersistenceDatabase,
@@ -25,6 +30,11 @@ import { type AttemptSession, executorKindOf } from "./attempt-session.js";
 import { runMatrixCell } from "./comparisons.js";
 import { requireEntity } from "./context.js";
 import { type PopProof, PopVerifier } from "./proof-of-possession.js";
+import {
+  markSettled,
+  type RemoteAttemptRouteState,
+  recordHolder,
+} from "./remote-attempt-routes.js";
 import { runnerOf } from "./runner-kinds.js";
 import { type EvidenceLimits, runEvidenceBytes } from "./storage-admission.js";
 import type { RemoteWorkerCaller } from "./worker-pool.js";
@@ -69,8 +79,14 @@ interface RemoteAttempt {
 /** The remote Attempts this API process holds; shared by every scoped `Application`. */
 export class RemoteAttemptRegistry {
   private readonly attempts = new Map<string, RemoteAttempt>();
-  /** One nonce cache per process, so a captured signed call is refused by every scope (ADR-031). */
-  readonly proofs = new PopVerifier();
+  /** Nonces live in the database, so a captured signed call is refused by every scope and controller (ADR-035). */
+  readonly proofs: PopVerifier;
+  /** Where the routing row of each held Attempt lives (every workspace: the `"*"` scope). */
+  readonly routes: PersistenceDatabase;
+  constructor(database: PersistenceDatabase) {
+    this.proofs = new PopVerifier(database);
+    this.routes = database.forWorkspace("*");
+  }
   add(attempt: RemoteAttempt): void {
     this.attempts.set(attempt.attemptId, attempt);
   }
@@ -84,9 +100,18 @@ export class RemoteAttemptRegistry {
     return [...this.attempts.values()];
   }
   /** Ends the controller's hold: its waits stop, inputs and unpublished uploads are removed. */
-  async drop(attempt: RemoteAttempt): Promise<void> {
+  async drop(
+    attempt: RemoteAttempt,
+    ended: Exclude<RemoteAttemptRouteState, "active"> = attempt.settled ? "settled" : "dropped",
+  ): Promise<void> {
     if (this.attempts.get(attempt.attemptId) !== attempt) return;
     this.attempts.delete(attempt.attemptId);
+    try {
+      markSettled(this.routes, attempt.attemptId, ended);
+    } catch {
+      // The route only tells other controllers where to forward. A row left `active` points them
+      // here, where the Attempt is gone, and they are answered `lease_lost` as for any lost hold.
+    }
     attempt.controller.abort();
     attempt.released.abort();
     await rm(attempt.inputDir, { recursive: true, force: true });
@@ -340,6 +365,21 @@ export class RemoteWorkerService {
         settled: false,
       };
       this.registry.add(attempt);
+      // Other controllers learn from this row where to forward the worker's calls (ADR-035). The
+      // worker cannot call before it hears the claim, so the row precedes every forwarded call.
+      try {
+        recordHolder(this.registry.routes, {
+          attemptId: attempt.attemptId,
+          workspaceId,
+          runId: attempt.runId,
+          workerId: caller.workerId,
+          controllerId: this.root.controllerIdentity.id,
+          fence: session.fence.fence,
+        });
+      } catch (error) {
+        await this.registry.drop(attempt);
+        throw error;
+      }
       const { inputDir: _local, ...portable } = dispatch;
       return {
         state: synced.state,
@@ -583,34 +623,45 @@ export class RemoteWorkerService {
       attempt.session.assertCurrent();
       await attempt.session.fail(reportedError(input.error));
       attempt.settled = true;
-      await this.registry.drop(attempt);
+      await this.registry.drop(attempt, "failed");
       return { accepted: true as const };
     });
   }
 
-  /** Moves the staged upload to the Attempt's final, immutable directory under a current fence. */
+  /**
+   * Publishes the staged upload through the object store (conditional puts, `meta.json` last)
+   * under a current fence: checked before anything is written and again before the commit marker.
+   */
   private async publishUpload(attempt: RemoteAttempt): Promise<string> {
-    const relative = `runs/${attempt.workspaceId}/${attempt.runId}/${attempt.attemptId}`;
     const uploadPath = attempt.uploadPath;
     if (!uploadPath) throw new ContractError("INTERNAL", "No staged upload");
-    const dataDir = this.root.config.dataDir;
-    await mkdir(dirname(join(dataDir, relative)), { recursive: true, mode: 0o700 });
-    const base = new ConfinedRoot(dataDir);
+    if (!attempt.uploads.has("manifest.json") || !attempt.uploads.has("meta.json"))
+      throw new ContractError("PRECONDITION_FAILED", "Uploaded bundle lacks its manifest or meta", {
+        reasonCode: "evidence_incomplete",
+      });
+    const ids = {
+      workspaceId: attempt.workspaceId,
+      runId: attempt.runId,
+      attemptId: attempt.attemptId,
+    };
+    attempt.session.assertCurrent();
+    const staging = new ConfinedRoot(uploadPath);
     try {
-      // No overwrite: final Attempt directories are immutable and unique.
-      const lock = await base.openFile(
-        `runs/${attempt.workspaceId}/${attempt.runId}/.tm-publish-${attempt.attemptId}`,
-        true,
+      await publishBundle(
+        this.root.objectStore,
+        ids,
+        [...attempt.uploads.keys()].map((path) => ({
+          relativePath: path,
+          body: async () => (await staging.openFile(path)).createReadStream(),
+        })),
+        { beforeMeta: () => attempt.session.assertCurrent() },
       );
-      await lock.close();
-      attempt.session.assertCurrent();
-      await base.rename(uploadPath.slice(dataDir.length + 1), relative);
-      await base.sync();
     } finally {
-      base.close();
+      staging.close();
     }
+    await rm(uploadPath, { recursive: true, force: true });
     attempt.uploadPath = null;
-    return join(dataDir, relative);
+    return bundleLocation(this.root.objectStore, ids);
   }
 
   /**

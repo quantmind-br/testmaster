@@ -14,6 +14,7 @@ export {
 export const issueLinkSyncController: Controller = {
   name: "issue-link-sync",
   intervalMs: 15 * 60_000,
+  elected: true,
   async run(scope, signal) {
     for (const workspaceId of scope.operator.workspaceIds()) {
       if (signal.aborted) return;

@@ -31,6 +31,7 @@ import {
   validate,
 } from "@testmaster/contracts";
 import { uuidV7IdGenerator } from "@testmaster/domain";
+import { FileObjectStore, type ObjectStore } from "@testmaster/evidence";
 import {
   type EntityDocument,
   EntityRepository,
@@ -64,6 +65,12 @@ import { AlertsService } from "./alerts.js";
 import { ApprovalsService } from "./approvals.js";
 import { ArtifactLinksService } from "./artifact-links.js";
 import { ArtifactsService, ReportsService } from "./artifacts.js";
+import {
+  attemptForwardTarget,
+  type ForwardTarget,
+  routedRelayAttempt,
+  tunnelStreamForwardTarget,
+} from "./attempt-forwarding.js";
 import { AuditService, auditSecurity } from "./audit.js";
 import { createBrowserLoginProbe } from "./auth/browser-login.js";
 import { AuthCheckpointsService, AuthProfilesService } from "./auth/index.js";
@@ -84,6 +91,11 @@ import {
   resolveConfig,
 } from "./config.js";
 import { entity, type RunActor, type Scope, type ServiceContext } from "./context.js";
+import {
+  type ControllerIdentity,
+  type ControllerOptions,
+  newControllerIdentity,
+} from "./controller-instances.js";
 import { ControllerRegistry } from "./controllers.js";
 import { DeliveryService } from "./delivery.js";
 import { FeatureMapService } from "./feature-map.js";
@@ -134,14 +146,16 @@ import { SchedulesService } from "./scheduling/service.js";
 import { SecretsService } from "./secrets.js";
 import { SelectionService } from "./selection.js";
 import type { ServerConfig } from "./server-config.js";
-import { filesystemRoot } from "./server-config.js";
+import { localDataDir } from "./server-config.js";
 import { serverReadiness } from "./server-profile.js";
 import {
   assertStorageRoom,
-  freeDataBytes,
+  evidenceVolume,
   inFlightEvidenceBytes,
   runEvidenceBytes,
 } from "./storage-admission.js";
+import { closeObjectStore, openEvidenceStore } from "./storage-config.js";
+import { assertObjectStoreAvailable } from "./storage-health.js";
 import { SuitesService } from "./suites.js";
 import {
   hasSystemPrincipal,
@@ -208,12 +222,25 @@ export interface ApplicationOptions extends ResolveConfigOptions {
   github?: GithubRuntimeOptions;
   /** `init` may start a workspace inside a directory tree that is already initialized. */
   allowNestedWorkspace?: boolean;
+  /** Identity this process registers under when its loops start; see `ControllerOptions`. */
+  controller?: ControllerOptions;
+}
+/** What the distributed profile tells the controller registry about this process (ADR-035). */
+function controllerOptionsOf(server: ServerConfig): ControllerOptions {
+  return {
+    ...(server.server.internalOrigin ? { internalOrigin: server.server.internalOrigin } : {}),
+    ...(server.server.expectedControllers
+      ? { expectedControllers: server.server.expectedControllers }
+      : {}),
+  };
 }
 interface SharedRuntime {
   controllers: ControllerRegistry;
   /** API client, installation-token cache and clocks of the GitHub App integration. */
   github: GithubRuntime;
   apiMetrics: ApiMetrics;
+  objectStore: ObjectStore;
+  controllerIdentity: ControllerIdentity;
   controllerScope?: Application;
   /** Workspace system scopes handed to controller loops, built once per workspace. */
   systemScopes?: Map<string, Application>;
@@ -342,6 +369,10 @@ export class Application {
   readonly retentionPurge: RetentionPurgeService;
   /** API counters since start; the server records into it, telemetry reads it. */
   readonly apiMetrics: ApiMetrics;
+  /** Where sealed evidence bundles are published and read; every bundle call site goes through it. */
+  readonly objectStore: ObjectStore;
+  /** Who this process is among the controllers that share the database (ADR-035). */
+  readonly controllerIdentity: ControllerIdentity;
   readonly selection: SelectionService;
   readonly database: PersistenceDatabase;
   readonly identityService: IdentityService;
@@ -374,6 +405,8 @@ export class Application {
       ephemeralSecrets: new Map(),
       github: new GithubRuntime(),
       apiMetrics: new ApiMetrics(),
+      objectStore: new FileObjectStore(config.dataDir),
+      controllerIdentity: newControllerIdentity(),
     },
     readonly serverConfig?: ServerConfig,
   ) {
@@ -381,6 +414,8 @@ export class Application {
     this.database = database;
     this.controllers = shared.controllers;
     this.apiMetrics = shared.apiMetrics;
+    this.objectStore = shared.objectStore;
+    this.controllerIdentity = shared.controllerIdentity;
     // Only the local profile (no deployment configuration) may infer its workspace and principal.
     const implicit = bound === null && !serverConfig;
     const workspaceId =
@@ -442,12 +477,16 @@ export class Application {
     });
     this.alerts = new AlertsService(this.context, {
       ...(serverConfig ? { server: serverConfig } : {}),
+      controller: shared.controllerIdentity,
+      metrics: shared.apiMetrics,
       dataDir: config.dataDir,
       operations: () => this.operations,
       liveWorker: () => this.worker.live(),
     });
     this.telemetry = new TelemetryService(this.context, {
       metrics: shared.apiMetrics,
+      controllerId: shared.controllerIdentity.id,
+      controller: shared.controllerIdentity,
       ...(serverConfig ? { server: serverConfig } : {}),
       operations: () => this.operations,
       alerts: () => this.alerts,
@@ -461,7 +500,13 @@ export class Application {
     this.tests = new TestsService(this.context);
     this.revisions = new RevisionsService(this.context);
     this.approvals = new ApprovalsService(this.context, config);
-    this.secrets = new SecretsService(this.context, config, serverConfig, shared.ephemeralSecrets);
+    this.secrets = new SecretsService(
+      this.context,
+      config,
+      serverConfig,
+      shared.ephemeralSecrets,
+      shared.objectStore,
+    );
     this.runs = new RunsService(this.context, {
       config,
       admittedImages: () => this.verifiedImages,
@@ -480,9 +525,10 @@ export class Application {
         ),
     });
     this.batches = new BatchesService(this.context, this.runs);
-    this.retention = new RetentionService(this.context, config);
+    this.retention = new RetentionService(this.context, config, shared.objectStore);
     this.worker = new WorkerService(this.context, {
       config,
+      objectStore: shared.objectStore,
       images: () => this.images(),
       lockedImages: () => this.lockedImages(),
       seccompPath: this.seccompPath,
@@ -498,7 +544,7 @@ export class Application {
     this.flake = new FlakeService(this.context, this.runs, this.batches, this.worker);
     this.quarantine = new QuarantineService(this.context);
     this.selection = new SelectionService(this.context, this.runs, this.batches, this.quarantine);
-    this.artifacts = new ArtifactsService(this.context, config, this.runs);
+    this.artifacts = new ArtifactsService(this.context, config, this.runs, shared.objectStore);
     this.reproductions = new ReproductionsService(
       this.context,
       this.artifacts,
@@ -508,6 +554,7 @@ export class Application {
     this.visualBaselines = new VisualBaselinesService(
       this.context,
       config,
+      shared.objectStore,
       this.artifacts,
       this.runs,
     );
@@ -515,8 +562,8 @@ export class Application {
     this.agentSkills = new AgentSkillsService(this.context, config.cwd);
     this.model = new ModelService(this.context, config);
     this.memory = new MemoryService(this.context, config);
-    this.uploads = new UploadsService(this.context, config);
-    this.sources = new SourcesService(this.context, config, this.uploads);
+    this.uploads = new UploadsService(this.context, config, shared.objectStore);
+    this.sources = new SourcesService(this.context, config, this.uploads, shared.objectStore);
     this.discovery = new DiscoveryService(this.context, config, this.sources);
     this.analysis = new AnalysisService(this.context, this.model, this.artifacts, this.discovery);
     this.healing = new HealingService(
@@ -565,7 +612,7 @@ export class Application {
     this.revisionHistory = new RevisionHistoryService(this.context);
     this.testDrafts = new TestDraftsService(this.context);
     this.usage = new UsageService(this.context);
-    this.explore = new ExploreService(this.context, config);
+    this.explore = new ExploreService(this.context, config, shared.objectStore);
     this.jobs = new JobsService(this.context, this.explore, this.discovery);
     this.agentMode = new AgentModeService(this.context, config);
     this.codeImport = new CodeImportService(this.context, config);
@@ -573,6 +620,7 @@ export class Application {
     this.codeGeneration = new CodeGenerationService(this.context, config);
     this.resources = new ResourcesService(this.context, {
       config,
+      objectStore: shared.objectStore,
       runs: this.runs,
       approvals: this.approvals,
       secrets: this.secrets,
@@ -598,6 +646,7 @@ export class Application {
       stepUp: (password, operation) => this.identityService.confirmPassword(password, operation),
       browserLogin: createBrowserLoginProbe(this.context, {
         config,
+        objectStore: shared.objectStore,
         secrets: this.secrets,
         seccompPath: this.seccompPath,
         images: () => this.images(),
@@ -609,7 +658,7 @@ export class Application {
     const publicOrigin = serverConfig?.server.publicOrigin ?? defaultPublicOrigin;
     this.integrations.useDelivery({ secrets: this.platformSecrets(), publicOrigin });
     this.workerPool = new WorkerPoolService(this.context);
-    this.shared.remoteAttempts ??= new RemoteAttemptRegistry();
+    this.shared.remoteAttempts ??= new RemoteAttemptRegistry(root);
     this.remoteWorkers = new RemoteWorkerService(this, this.shared.remoteAttempts);
     this.shared.tunnelRelay ??= this.createTunnelRelay(this.shared.remoteAttempts);
     this.tunnels = new TunnelsService(
@@ -647,30 +696,35 @@ export class Application {
   /** The relay reads attempts, workers and tunnels of every workspace through system scopes. */
   private createTunnelRelay(attempts: RemoteAttemptRegistry): TunnelRelay {
     const all = this.root.forWorkspace("*");
-    return new TunnelRelay({
-      proofs: attempts.proofs,
-      tunnelWorkspace: (tunnelId) => {
-        const row = all.get("SELECT workspace_id FROM tunnels WHERE id=?", tunnelId);
-        return row ? String(row.workspace_id) : null;
+    return new TunnelRelay(
+      {
+        proofs: attempts.proofs,
+        tunnelWorkspace: (tunnelId) => {
+          const row = all.get("SELECT workspace_id FROM tunnels WHERE id=?", tunnelId);
+          return row ? String(row.workspace_id) : null;
+        },
+        tunnels: (workspaceId) => this.systemScope(workspaceId).tunnels,
+        identifyWorker: (proof, request, workerId) =>
+          this.remoteWorkers.identify(proof, request, workerId),
+        heldAttempt: (attemptId) => {
+          const attempt = attempts.get(attemptId);
+          return attempt
+            ? {
+                workerId: attempt.workerId,
+                workspaceId: attempt.workspaceId,
+                runId: attempt.runId,
+                settled: attempt.settled,
+                released: attempt.released.signal,
+                assertCurrent: () => attempt.session.assertCurrent(),
+              }
+            : // Another controller's Attempt is valid while its route and lease are (ADR-035).
+              routedRelayAttempt(all, this.shared.controllerIdentity.id, attemptId);
+        },
+        runTunnel: (workspaceId, runId) =>
+          runTunnelId(this.systemScope(workspaceId).runs.get(runId)),
       },
-      tunnels: (workspaceId) => this.systemScope(workspaceId).tunnels,
-      identifyWorker: (proof, request, workerId) =>
-        this.remoteWorkers.identify(proof, request, workerId),
-      heldAttempt: (attemptId) => {
-        const attempt = attempts.get(attemptId);
-        return attempt
-          ? {
-              workerId: attempt.workerId,
-              workspaceId: attempt.workspaceId,
-              runId: attempt.runId,
-              settled: attempt.settled,
-              released: attempt.released.signal,
-              assertCurrent: () => attempt.session.assertCurrent(),
-            }
-          : undefined;
-      },
-      runTunnel: (workspaceId, runId) => runTunnelId(this.systemScope(workspaceId).runs.get(runId)),
-    });
+      this.shared.controllerIdentity.id,
+    );
   }
 
   /** The workspace system principal for background loops; cached, unlike `forWorkspaceSystem`. */
@@ -692,12 +746,22 @@ export class Application {
     const resolved = await resolveConfig(options);
     if (!options.server && !options.allowNestedWorkspace)
       assertNotInsideWorkspace(options, resolved);
-    // The server profile keeps evidence under its configured root, not the project directory.
+    // The server profile keeps its local scratch under its configured root (the staging root on the
+    // S3 profile), not the project directory.
     const config = options.server
-      ? { ...resolved, dataDir: filesystemRoot(options.server.storage) }
+      ? {
+          ...resolved,
+          dataDir: localDataDir(options.server.storage),
+          ...(options.server.storage.kind === "s3"
+            ? { evidenceCapacityBytes: options.server.storage.capacityBytes }
+            : {}),
+        }
       : resolved;
     await mkdir(config.dataDir, { recursive: true, mode: 0o700 });
     await chmod(config.dataDir, 0o700);
+    const objectStore = options.server
+      ? await openEvidenceStore(options.server.storage)
+      : new FileObjectStore(config.dataDir);
     // PostgreSQL is never migrated implicitly (ADR-015): a schema that is behind is refused.
     const database = options.server
       ? PersistenceDatabase.openPostgres(options.server.database, {
@@ -709,6 +773,7 @@ export class Application {
         database.assertCurrent();
       } catch (error) {
         database.close();
+        closeObjectStore(objectStore);
         throw error;
       }
     const application = new Application(
@@ -724,6 +789,10 @@ export class Application {
         ephemeralSecrets: new Map(),
         github: new GithubRuntime(options.github),
         apiMetrics: new ApiMetrics(),
+        objectStore,
+        controllerIdentity: newControllerIdentity(
+          options.controller ?? (options.server ? controllerOptionsOf(options.server) : undefined),
+        ),
       },
       options.server,
     );
@@ -735,6 +804,7 @@ export class Application {
     application.controllers.register({
       name: "github-reconciler",
       intervalMs: 2000,
+      elected: true,
       run: async (scope) => {
         await scope.github.reconcile();
       },
@@ -748,6 +818,7 @@ export class Application {
     // A stopping process ends the sessions it relays; their Runs end `tunnel_lost` (ADR-031).
     this.shared.tunnelRelay?.closeAll();
     this.root.close();
+    closeObjectStore(this.shared.objectStore);
   }
   /**
    * Serves a tunnel upgrade (an agent's session or a worker's stream) on the API origin; answers
@@ -755,6 +826,30 @@ export class Application {
    */
   handleTunnelUpgrade(request: IncomingMessage, socket: Duplex, head: Buffer): boolean {
     return this.shared.tunnelRelay?.handleUpgrade(request, socket, head) ?? false;
+  }
+  /**
+   * The live controller a worker's call for `attemptId` must be forwarded to because it holds the
+   * Attempt; null when this controller answers it (it holds the Attempt, or no live holder does).
+   */
+  attemptForwardTarget(attemptId: string): ForwardTarget | null {
+    if (this.shared.remoteAttempts?.get(attemptId)) return null;
+    return attemptForwardTarget(
+      this.root.forWorkspace("*"),
+      this.shared.controllerIdentity.id,
+      attemptId,
+    );
+  }
+  /**
+   * The live controller whose relay holds the tunnel session a worker stream of `attemptId` needs;
+   * null when this controller's relay is that one (or none is live: the stream is refused here).
+   */
+  tunnelStreamForwardTarget(attemptId: string): ForwardTarget | null {
+    return tunnelStreamForwardTarget(
+      this.root.forWorkspace("*"),
+      this.shared.controllerIdentity.id,
+      attemptId,
+      (route) => runTunnelId(this.systemScope(route.workspaceId).runs.get(route.runId)),
+    );
   }
   /**
    * Request-scoped services bound to the identity's workspace. Without a `workspaceId` (a plain
@@ -1290,8 +1385,9 @@ export class Application {
         reasonCode: "storage_not_writable",
       });
     }
+    await assertObjectStoreAvailable(this.objectStore);
     assertStorageRoom({
-      freeBytes: await freeDataBytes(this.config.dataDir),
+      freeBytes: (await evidenceVolume(this.config, this.database)).freeBytes,
       inFlightBytes: inFlightEvidenceBytes(this.database),
       incomingBytes,
     });
@@ -1395,7 +1491,11 @@ export class Application {
   }
   async readiness() {
     if (this.serverConfig)
-      return serverReadiness({ database: this.database, server: this.serverConfig });
+      return serverReadiness({
+        database: this.database,
+        server: this.serverConfig,
+        objectStore: this.objectStore,
+      });
     let persistence = false;
     try {
       const status = this.database.status();
@@ -1655,7 +1755,11 @@ export class Application {
       }
     }
     const server = this.serverConfig
-      ? await serverReadiness({ database: this.database, server: this.serverConfig })
+      ? await serverReadiness({
+          database: this.database,
+          server: this.serverConfig,
+          objectStore: this.objectStore,
+        })
       : null;
     const checks = {
       node: {
