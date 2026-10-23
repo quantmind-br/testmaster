@@ -11685,11 +11685,85 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M5",
       "ownerRole": "Quality",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "tools/src/benchmark/m5-capacity.test.ts::reports p95 from n=100 and p99 only from n=500, with nearest-rank values",
+        "tools/src/benchmark/m5-capacity.test.ts::does not let a p95 withheld for lack of samples become a pass",
+        "tools/src/benchmark/m5-capacity.test.ts::is not met when any invariant failed, even if another was not observed",
+        "tools/src/benchmark/m5-capacity.test.ts::is not measured, never met, when an invariant could not be observed",
+        "tools/src/benchmark/m5-capacity.test.ts::judges a clean soak met and names what broke a failed one",
+        "tools/src/benchmark/m5-capacity.test.ts::derives storage growth per completed Run from the first and last bucket readings",
+        "tools/src/benchmark/m5-capacity.test.ts::tells each documented refusal apart from a crash",
+        "tools/src/benchmark/m5-capacity.test.ts::tells a server's own retryable envelope from a proxy error and from a crash",
+        "tools/src/benchmark/m5-capacity.test.ts::judges backpressure met only at the bound, with Retry-After and no crash",
+        "tools/src/benchmark/m5-capacity.test.ts::flags a result nothing supports and an Attempt claimed twice",
+        "tools/src/benchmark/m5-capacity.test.ts::requires a lapsed Attempt's Run to move on or end non-passed",
+        "tools/src/benchmark/m5-capacity.test.ts::fails a lapsed Attempt that still passed, and a Run that neither moved nor ended non-passed",
+        "tools/src/benchmark/m5-capacity.test.ts::reports a passed Run without a manifest with what the bucket says about its bundle",
+        "tools/src/benchmark/m5-capacity.test.ts::sets aside Runs whose assertions passed with the gate failed, and expects them only inside an outage",
+        "tools/src/benchmark/m5-capacity.test.ts::refuses a partition that cannot outlast the lease, but only when chaos runs"
+      ],
+      "oracle": [
+        "On one physical host the distributed compose stack (two controllers behind Caddy, PostgreSQL 17, MinIO with Object Lock, two remote workers with two slots each) runs Runs against a loopback fixture only; the result publishes the hardware manifest, dataset, concurrency, n and window of every measurement, p95 only from n >= 100 and p99 only from n >= 500, and separates queue, preparation, execution, collection and orchestration overhead from the target's service time (NFR-006).",
+        "A 30-minute soak, a controller kill, a MinIO restart and a worker partition under load are judged on invariants read from the database and the S3 API: no Run passes without a passed Attempt and its manifest in the bucket, a Run whose assertions passed with a failed evidence gate is never counted as passed, no Attempt executes twice, no schedule fires twice, leases move with a higher fence, and late calls of a lapsed Attempt are refused; driving admission past the queue bound yields queue_overflow refusals with Retry-After and no crash (OPS-034). An invariant that could not be observed reads not measured, never met.",
+        "The capacity guide and the support matrix publish only measured numbers, keep the unmeasured ones (64 MiB artifacts, more than one host, non-MinIO S3, hostile tenants) as hypotheses and make no strong isolation promise for hostile multi-tenancy by containers or workspaces alone."
+      ],
+      "evidence": [
+        "validation/results/M5-08-capacity.json",
+        "docs/operations/capacity.md",
+        "docs/support-matrix.md",
+        "docs/operations/distributed.md"
+      ],
+      "code": [
+        "tools/src/benchmark/m5-capacity.ts",
+        "tools/src/benchmark/distributed-stack.ts",
+        "tools/src/benchmark/hardware.ts",
+        "tools/src/benchmark/server-load-stack.ts",
+        "deploy/compose/compose.distributed.yaml",
+        "deploy/compose/Caddyfile.distributed",
+        "apps/server/src/server.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012), one measured run of the committed tool on one physical host (AMD Ryzen 9 9950X3D, 60 GiB, NVMe btrfs, Docker 29.9 rootful). The worker partition is a SIGSTOP of the remote worker process, not a network cut; artifacts were a few KiB, so the 64 MiB publication target stays not measured; only MinIO was exercised.",
+      "coverage": {
+        "positive": [
+          "tools/src/benchmark/m5-capacity.test.ts::judges a clean soak met and names what broke a failed one",
+          "tools/src/benchmark/m5-capacity.test.ts::judges backpressure met only at the bound, with Retry-After and no crash",
+          "tools/src/benchmark/m5-capacity.test.ts::sets aside Runs whose assertions passed with the gate failed, and expects them only inside an outage"
+        ],
+        "negative": [
+          "tools/src/benchmark/m5-capacity.test.ts::does not let a p95 withheld for lack of samples become a pass",
+          "tools/src/benchmark/m5-capacity.test.ts::is not measured, never met, when an invariant could not be observed",
+          "tools/src/benchmark/m5-capacity.test.ts::requires a lapsed Attempt's Run to move on or end non-passed",
+          "tools/src/benchmark/m5-capacity.test.ts::fails a lapsed Attempt that still passed, and a Run that neither moved nor ended non-passed",
+          "tools/src/benchmark/m5-capacity.test.ts::reports a passed Run without a manifest with what the bucket says about its bundle"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "tools/src/benchmark/m5-capacity.test.ts",
+            "assertion": "expect(hundred.p99).toBeNull();"
+          },
+          {
+            "path": "tools/src/benchmark/m5-capacity.test.ts",
+            "assertion": "expect(judgeP95(summarizePercentiles(ramp(50)), 1000).verdict).toBe(\"not measured\");"
+          },
+          {
+            "path": "tools/src/benchmark/m5-capacity.test.ts",
+            "assertion": "expect(judgeBackpressure(at([...bound, sample(\"server_error\")]), true).verdict).toBe(\"not met\");"
+          },
+          {
+            "path": "tools/src/benchmark/m5-capacity.test.ts",
+            "assertion": "expect(judgeBackpressure(at(bound), false).verdict).toBe(\"not met\");"
+          },
+          {
+            "path": "tools/src/benchmark/m5-capacity.test.ts",
+            "assertion": "expect(passedLate.detail).toContain(\"passed after its lease lapsed\");"
+          },
+          {
+            "path": "tools/src/benchmark/m5-capacity.test.ts",
+            "assertion": "expect(outside.detail).toContain(\"outside it: run_3\");"
+          }
+        ]
+      }
     },
     {
       "id": "M5-09",
