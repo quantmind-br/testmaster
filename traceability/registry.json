@@ -4492,11 +4492,77 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M5",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/j13-tracker.pg.test.ts::J13 a Jira ticket imports as a source and a changed ticket creates a new revision",
+        "validation/journeys/j13-tracker.pg.test.ts::J13 approved project memory reaches proposals as data and forgotten memory does not",
+        "packages/application/src/ai/core.test.ts::every normative injection channel remains data with a compromised endpoint and no classifier",
+        "packages/application/src/integrations/trackers/trackers.test.ts::stores a ticket as a source, adds no revision while the text is unchanged and one when the acceptance criteria change",
+        "packages/application/src/integrations/trackers/trackers.test.ts::imports a Linear issue the same way",
+        "packages/application/src/integrations/trackers/trackers.test.ts::refuses a missing issue, an issue of another project and a secret bound to another origin",
+        "packages/application/src/integrations/trackers/trackers.test.ts::reads the configured Jira project and Linear team and writes nothing",
+        "packages/application/src/integrations/trackers/trackers.test.ts::refuses a tracker at a private address before any request leaves",
+        "packages/application/src/integrations/trackers/trackers.test.ts::refuses the cloud metadata address even when the secret is bound to it"
+      ],
+      "oracle": [
+        "Through POST /v1/integrations/{id}/issues/import on PostgreSQL a Jira ticket becomes a project source revision whose text carries the ticket's embedded instruction as content; importing the unchanged ticket again returns unchanged:true with the same revision, and editing its acceptance criteria adds a second revision with a new checksum. The integration test reads the configured project with GET only.",
+        "The ticket's embedded instruction reaches the normalization call only inside untrustedData, never in the system prompt, and no request offers tools; the adversarial ticket channel stays data with a compromised endpoint and creates no tracker issue, approval, file or test.",
+        "A tracker configured at https://169.254.169.254 is refused with POLICY_DENIED egress_denied before a request leaves, even with a secret bound to that origin; private addresses are refused the same way."
+      ],
+      "evidence": [
+        "validation/journeys/j13-tracker.pg.test.ts",
+        "validation/results/j13-tracker.json",
+        "docs/adr/034-trackers-memory.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "apps/cli/src/issues.ts",
+        "apps/server/src/routes/trackers.ts",
+        "packages/application/src/ai/sources.ts",
+        "packages/application/src/integrations/trackers/adapter.ts",
+        "packages/application/src/integrations/trackers/index.ts",
+        "packages/application/src/integrations/trackers/jira.ts",
+        "packages/application/src/integrations/trackers/linear.ts",
+        "packages/application/src/integrations/trackers/providers.ts",
+        "packages/application/src/integrations/trackers/service.ts",
+        "packages/application/src/notifications/https.ts",
+        "packages/contracts/src/m5/issues.ts",
+        "packages/contracts/src/m5/trackers.ts",
+        "packages/persistence/migrations/postgres/0028_trackers.sql",
+        "packages/persistence/migrations/sqlite/0028_trackers.sql",
+        "packages/persistence/src/contract-projections.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012) against local HTTPS servers speaking the Jira REST v3 and Linear GraphQL shapes, over the test CA; no hosted Jira or Linear tenant was contacted. The J13 journey runs the REST server in-process on PostgreSQL 17 so the test egress hook can admit the loopback fakes; production egress refuses every private address.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/j13-tracker.pg.test.ts::J13 a Jira ticket imports as a source and a changed ticket creates a new revision",
+          "packages/application/src/integrations/trackers/trackers.test.ts::stores a ticket as a source, adds no revision while the text is unchanged and one when the acceptance criteria change"
+        ],
+        "negative": [
+          "packages/application/src/ai/core.test.ts::every normative injection channel remains data with a compromised endpoint and no classifier",
+          "packages/application/src/integrations/trackers/trackers.test.ts::refuses the cloud metadata address even when the secret is bound to it",
+          "packages/application/src/integrations/trackers/trackers.test.ts::refuses a tracker at a private address before any request leaves",
+          "packages/application/src/integrations/trackers/trackers.test.ts::refuses a missing issue, an issue of another project and a secret bound to another origin"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/j13-tracker.pg.test.ts",
+            "assertion": "expect(carried[0]).toEqual({ inData: true, inInstructions: false, tools: false });"
+          },
+          {
+            "path": "packages/application/src/ai/core.test.ts",
+            "assertion": "expect(f.payloads.every((payload) => !Object.hasOwn(payload, \"tools\"))).toBe(true);"
+          },
+          {
+            "path": "validation/journeys/j13-tracker.pg.test.ts",
+            "assertion": "details: { reasonCode: \"egress_denied\" },"
+          },
+          {
+            "path": "validation/journeys/j13-tracker.pg.test.ts",
+            "assertion": "expect(changed.data.revisionId).not.toBe(first.data.revisionId);"
+          }
+        ]
+      }
     },
     {
       "id": "INT-031",
@@ -4504,11 +4570,72 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M5",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/j13-tracker.pg.test.ts::J13 a failing run links to a Linear issue only after preview and acknowledgement",
+        "packages/application/src/integrations/trackers/trackers.test.ts::never claims a defect when the cause is not established and contacts no tracker",
+        "packages/application/src/integrations/trackers/trackers.test.ts::states the established cause when the analysis supports it",
+        "packages/application/src/integrations/trackers/trackers.test.ts::drafts only for a failed Run through an active tracker integration of the project",
+        "packages/application/src/integrations/trackers/trackers.test.ts::sends nothing without a preview, the previewed hash and an acknowledgement",
+        "packages/application/src/integrations/trackers/trackers.test.ts::files the previewed payload exactly and attaches the Run",
+        "packages/application/src/integrations/trackers/trackers.test.ts::files a Linear issue with its Run attachment",
+        "packages/application/src/integrations/trackers/trackers.test.ts::keeps an issue that was created when attaching the Run fails and retries without creating another",
+        "packages/application/src/integrations/trackers/trackers.test.ts::links a repeated failure to its open issue and files a different signature separately"
+      ],
+      "oracle": [
+        "A link draft contacts no tracker. Executing it without a preview is refused PRECONDITION_FAILED issue_link_not_previewed, with a hash other than the previewed one INVALID_ARGUMENT payload_hash_mismatch, and without acknowledge:true INVALID_ARGUMENT; the fake tracker received zero requests and created no issue until the acknowledged execute filed exactly the previewed payload and attached the Run URL.",
+        "A failure without an established cause is drafted as \"Unconfirmed failure:\" with the testmaster-unconfirmed label and uncertain:true; an analysed cause is stated as the established cause."
+      ],
+      "evidence": [
+        "validation/journeys/j13-tracker.pg.test.ts",
+        "validation/results/j13-tracker.json",
+        "docs/adr/034-trackers-memory.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "apps/cli/src/issues.ts",
+        "apps/server/src/routes/trackers.ts",
+        "packages/application/src/ai/sources.ts",
+        "packages/application/src/integrations/trackers/adapter.ts",
+        "packages/application/src/integrations/trackers/index.ts",
+        "packages/application/src/integrations/trackers/jira.ts",
+        "packages/application/src/integrations/trackers/linear.ts",
+        "packages/application/src/integrations/trackers/providers.ts",
+        "packages/application/src/integrations/trackers/service.ts",
+        "packages/application/src/notifications/https.ts",
+        "packages/contracts/src/m5/issues.ts",
+        "packages/contracts/src/m5/trackers.ts",
+        "packages/persistence/migrations/postgres/0028_trackers.sql",
+        "packages/persistence/migrations/sqlite/0028_trackers.sql",
+        "packages/persistence/src/contract-projections.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012) against local HTTPS servers speaking the Jira REST v3 and Linear GraphQL shapes, over the test CA; no hosted Jira or Linear tenant was contacted. The J13 journey runs the REST server in-process on PostgreSQL 17 so the test egress hook can admit the loopback fakes; production egress refuses every private address.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/j13-tracker.pg.test.ts::J13 a failing run links to a Linear issue only after preview and acknowledgement",
+          "packages/application/src/integrations/trackers/trackers.test.ts::files the previewed payload exactly and attaches the Run",
+          "packages/application/src/integrations/trackers/trackers.test.ts::links a repeated failure to its open issue and files a different signature separately"
+        ],
+        "negative": [
+          "packages/application/src/integrations/trackers/trackers.test.ts::sends nothing without a preview, the previewed hash and an acknowledgement",
+          "packages/application/src/integrations/trackers/trackers.test.ts::drafts only for a failed Run through an active tracker integration of the project",
+          "packages/application/src/integrations/trackers/trackers.test.ts::never claims a defect when the cause is not established and contacts no tracker"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/j13-tracker.pg.test.ts",
+            "assertion": "expect(fake.requests).toHaveLength(0);"
+          },
+          {
+            "path": "validation/journeys/j13-tracker.pg.test.ts",
+            "assertion": "details: { reasonCode: \"issue_link_not_previewed\" },"
+          },
+          {
+            "path": "validation/journeys/j13-tracker.pg.test.ts",
+            "assertion": "expect(draft.payload.title.startsWith(\"Unconfirmed failure:\")).toBe(true);"
+          }
+        ]
+      }
     },
     {
       "id": "INT-032",
@@ -4516,11 +4643,68 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M5",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/j13-tracker.pg.test.ts::J13 sync records a deleted issue without touching the run",
+        "packages/application/src/integrations/trackers/trackers.test.ts::records closed, deleted, moved and revoked issues and leaves Runs, outcomes and gates untouched",
+        "packages/application/src/integrations/trackers/trackers.test.ts::marks a link revoked when the tracker rejects the credential",
+        "packages/application/src/integrations/trackers/trackers.test.ts::syncs Linear issues the same way"
+      ],
+      "oracle": [
+        "Sync records a closed issue (externalStatusCategory closed), a deleted one (syncState deleted), a moved one (conflict) and a rejected credential (revoked); the Run row, its outcome failed and gate failed, and the analyses are byte-identical before and after."
+      ],
+      "evidence": [
+        "validation/journeys/j13-tracker.pg.test.ts",
+        "validation/results/j13-tracker.json",
+        "docs/adr/034-trackers-memory.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "apps/cli/src/issues.ts",
+        "apps/server/src/routes/trackers.ts",
+        "packages/application/src/ai/sources.ts",
+        "packages/application/src/integrations/trackers/adapter.ts",
+        "packages/application/src/integrations/trackers/index.ts",
+        "packages/application/src/integrations/trackers/jira.ts",
+        "packages/application/src/integrations/trackers/linear.ts",
+        "packages/application/src/integrations/trackers/providers.ts",
+        "packages/application/src/integrations/trackers/service.ts",
+        "packages/application/src/notifications/https.ts",
+        "packages/contracts/src/m5/issues.ts",
+        "packages/contracts/src/m5/trackers.ts",
+        "packages/persistence/migrations/postgres/0028_trackers.sql",
+        "packages/persistence/migrations/sqlite/0028_trackers.sql",
+        "packages/persistence/src/contract-projections.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012) against local HTTPS servers speaking the Jira REST v3 and Linear GraphQL shapes, over the test CA; no hosted Jira or Linear tenant was contacted. The J13 journey runs the REST server in-process on PostgreSQL 17 so the test egress hook can admit the loopback fakes; production egress refuses every private address.",
+      "coverage": {
+        "positive": [
+          "packages/application/src/integrations/trackers/trackers.test.ts::syncs Linear issues the same way"
+        ],
+        "negative": [
+          "validation/journeys/j13-tracker.pg.test.ts::J13 sync records a deleted issue without touching the run",
+          "packages/application/src/integrations/trackers/trackers.test.ts::records closed, deleted, moved and revoked issues and leaves Runs, outcomes and gates untouched",
+          "packages/application/src/integrations/trackers/trackers.test.ts::marks a link revoked when the tracker rejects the credential"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/j13-tracker.pg.test.ts",
+            "assertion": "expect(w.runRow(runId)).toBe(before);"
+          },
+          {
+            "path": "validation/journeys/j13-tracker.pg.test.ts",
+            "assertion": "expect(run.data).toMatchObject({ outcome: \"failed\", gate: \"failed\" });"
+          },
+          {
+            "path": "validation/journeys/j13-tracker.pg.test.ts",
+            "assertion": "expect(deleted.data.links).toEqual([expect.objectContaining({ syncState: \"deleted\" })]);"
+          },
+          {
+            "path": "packages/application/src/integrations/trackers/trackers.test.ts",
+            "assertion": "expect(snapshotRuns(f.app)).toBe(runsBefore);"
+          }
+        ]
+      }
     },
     {
       "id": "INT-033",
@@ -4528,11 +4712,58 @@
       "sourceFile": "specs/09-web-and-integrations.md",
       "milestone": "M5",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/j13-tracker.pg.test.ts::J13 a failing run links to a Linear issue only after preview and acknowledgement",
+        "packages/application/src/integrations/trackers/trackers.test.ts::links a repeated failure to its open issue and files a different signature separately",
+        "packages/application/src/integrations/trackers/trackers.test.ts::files the same failure in another environment or test revision as its own issue"
+      ],
+      "oracle": [
+        "A repeated failure with the same signature drafts a link to the open issue instead of creating one; a different step, failure kind, environment or test revision produces a different signature and files its own issue, and a closed issue no longer absorbs new failures."
+      ],
+      "evidence": [
+        "validation/journeys/j13-tracker.pg.test.ts",
+        "validation/results/j13-tracker.json",
+        "docs/adr/034-trackers-memory.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "apps/cli/src/issues.ts",
+        "apps/server/src/routes/trackers.ts",
+        "packages/application/src/ai/sources.ts",
+        "packages/application/src/integrations/trackers/adapter.ts",
+        "packages/application/src/integrations/trackers/index.ts",
+        "packages/application/src/integrations/trackers/jira.ts",
+        "packages/application/src/integrations/trackers/linear.ts",
+        "packages/application/src/integrations/trackers/providers.ts",
+        "packages/application/src/integrations/trackers/service.ts",
+        "packages/application/src/notifications/https.ts",
+        "packages/contracts/src/m5/issues.ts",
+        "packages/contracts/src/m5/trackers.ts",
+        "packages/persistence/migrations/postgres/0028_trackers.sql",
+        "packages/persistence/migrations/sqlite/0028_trackers.sql",
+        "packages/persistence/src/contract-projections.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012) against local HTTPS servers speaking the Jira REST v3 and Linear GraphQL shapes, over the test CA; no hosted Jira or Linear tenant was contacted. The J13 journey runs the REST server in-process on PostgreSQL 17 so the test egress hook can admit the loopback fakes; production egress refuses every private address.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/j13-tracker.pg.test.ts::J13 a failing run links to a Linear issue only after preview and acknowledgement",
+          "packages/application/src/integrations/trackers/trackers.test.ts::links a repeated failure to its open issue and files a different signature separately"
+        ],
+        "negative": [
+          "packages/application/src/integrations/trackers/trackers.test.ts::files the same failure in another environment or test revision as its own issue"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "packages/application/src/integrations/trackers/trackers.test.ts",
+            "assertion": "expect(elsewhere.signature).not.toBe(later.signature);"
+          },
+          {
+            "path": "validation/journeys/j13-tracker.pg.test.ts",
+            "assertion": "expect(explained.data).toMatchObject({ kind: \"create\", issueKey: null, uncertain: false });"
+          }
+        ]
+      }
     },
     {
       "id": "INT-034",
@@ -7279,16 +7510,23 @@
       "status": "verified",
       "scenario": [
         "validation/journeys/j13-schedule-notify.pg.test.ts::J13 M4-06 M4-08 OPS-016 OPS-018 REQ-035 INT-003 INT-026 INT-028 OPS-011 ARCH-004 a schedule fires a cross-project list and a Slack outage, a webhook timeout and a forged callback never change a Run, a gate or the Run count",
-        "validation/journeys/j13-schedule-notify.pg.test.ts::J13 M4-06 INT-003 INT-026 OPS-011 negative control: healthy destinations deliver every scheduled event once on the first attempt with no dead letter"
+        "validation/journeys/j13-schedule-notify.pg.test.ts::J13 M4-06 INT-003 INT-026 OPS-011 negative control: healthy destinations deliver every scheduled event once on the first attempt with no dead letter",
+        "validation/journeys/j13-tracker.pg.test.ts::J13 a Jira ticket imports as a source and a changed ticket creates a new revision",
+        "validation/journeys/j13-tracker.pg.test.ts::J13 a failing run links to a Linear issue only after preview and acknowledgement",
+        "validation/journeys/j13-tracker.pg.test.ts::J13 sync records a deleted issue without touching the run",
+        "validation/journeys/j13-tracker.pg.test.ts::J13 approved project memory reaches proposals as data and forgotten memory does not"
       ],
       "oracle": [
         "On PostgreSQL the real scheduler fires a New York schedule over a cross-project list: the DST gap is skipped, an overlapping firing is forbidden, and the next firing publishes a new BatchRun with one Run per revision and cell, while a late tick records a misfire. While Slack answers 503, one webhook request times out after it was sent and a forged callback is refused by the egress policy, every event has exactly one delivery per destination, Slack and the forged callback end as visible dead letters, the webhook retries under the same delivery and event IDs, and no Run verdict, gate or Run count moves.",
-        "After the destination recovers, requeueing from the operations DLQ redelivers the first attempt's bytes under the same delivery IDs once each, the forged callback stays refused, and a second dispatcher or a restarted scheduler creates no further delivery. A control with healthy destinations delivers each event once on the first attempt with no dead letter. Only the Jira/Linear tracker part of J13 is M5."
+        "After the destination recovers, requeueing from the operations DLQ redelivers the first attempt's bytes under the same delivery IDs once each, the forged callback stays refused, and a second dispatcher or a restarted scheduler creates no further delivery. A control with healthy destinations delivers each event once on the first attempt with no dead letter. Only the Jira/Linear tracker part of J13 is M5.",
+        "Tracker half on PostgreSQL through REST: a Jira ticket with an embedded instruction imports as a source revision and a changed ticket adds a revision; a failed Run reaches Linear only after a preview, the previewed hash and acknowledge:true, with zero tracker requests before; sync records a closed and a deleted Jira issue while the Run row, outcome failed and gate failed stay byte-identical; the ticket's instruction reaches the model only as untrustedData, approved project memory reaches the proposal prompt as data and forgotten memory does not."
       ],
       "evidence": [
         "validation/results/m4-acceptance/w2a/016-w2a-final-pg/output.log",
         "validation/results/m4-acceptance/w2a/016-w2a-final-pg/manifest.json",
-        "validation/results/m4-acceptance/w2a/016-w2a-final-pg/created/validation/results/j13-schedule-notify.json"
+        "validation/results/m4-acceptance/w2a/016-w2a-final-pg/created/validation/results/j13-schedule-notify.json",
+        "validation/journeys/j13-tracker.pg.test.ts",
+        "validation/results/j13-tracker.json"
       ],
       "code": [
         "validation/journeys/j13-schedule-notify.pg.test.ts",
@@ -7299,14 +7537,21 @@
         "packages/application/src/notifications/service.ts",
         "packages/application/src/notifications/providers.ts",
         "packages/application/src/notifications/https.ts",
-        "packages/application/src/operations.ts"
+        "packages/application/src/operations.ts",
+        "validation/journeys/j13-tracker.pg.test.ts",
+        "packages/application/src/testing/fake-trackers.ts",
+        "packages/application/src/integrations/trackers/service.ts",
+        "packages/application/src/memory.ts"
       ],
       "coverage": {
         "positive": [
-          "validation/journeys/j13-schedule-notify.pg.test.ts::J13 M4-06 M4-08 OPS-016 OPS-018 REQ-035 INT-003 INT-026 INT-028 OPS-011 ARCH-004 a schedule fires a cross-project list and a Slack outage, a webhook timeout and a forged callback never change a Run, a gate or the Run count"
+          "validation/journeys/j13-schedule-notify.pg.test.ts::J13 M4-06 M4-08 OPS-016 OPS-018 REQ-035 INT-003 INT-026 INT-028 OPS-011 ARCH-004 a schedule fires a cross-project list and a Slack outage, a webhook timeout and a forged callback never change a Run, a gate or the Run count",
+          "validation/journeys/j13-tracker.pg.test.ts::J13 a Jira ticket imports as a source and a changed ticket creates a new revision"
         ],
         "negative": [
-          "validation/journeys/j13-schedule-notify.pg.test.ts::J13 M4-06 INT-003 INT-026 OPS-011 negative control: healthy destinations deliver every scheduled event once on the first attempt with no dead letter"
+          "validation/journeys/j13-schedule-notify.pg.test.ts::J13 M4-06 INT-003 INT-026 OPS-011 negative control: healthy destinations deliver every scheduled event once on the first attempt with no dead letter",
+          "validation/journeys/j13-tracker.pg.test.ts::J13 a failing run links to a Linear issue only after preview and acknowledgement",
+          "validation/journeys/j13-tracker.pg.test.ts::J13 sync records a deleted issue without touching the run"
         ],
         "criticalAssertions": [
           {
@@ -7340,20 +7585,22 @@
           {
             "path": "validation/journeys/j13-schedule-notify.pg.test.ts",
             "assertion": "    expect(evidence.firings.filter((firing) => firing.batchId !== null)).toHaveLength(2);"
+          },
+          {
+            "path": "validation/journeys/j13-tracker.pg.test.ts",
+            "assertion": "expect(fake.requests).toHaveLength(0);"
+          },
+          {
+            "path": "validation/journeys/j13-tracker.pg.test.ts",
+            "assertion": "expect(w.runRow(runId)).toBe(before);"
+          },
+          {
+            "path": "validation/journeys/j13-tracker.pg.test.ts",
+            "assertion": "expect(carried[0]).toEqual({ inData: true, inInstructions: false, tools: false });"
           }
         ]
       },
-      "deferred": [
-        {
-          "milestone": "M5",
-          "scope": "Jira/Linear tracker import as intent, issue preview/link and ticket prompt-injection handling",
-          "specQuote": {
-            "path": "specs/10-validation.md",
-            "text": "M4 schedule/delivery, M5 tracker."
-          }
-        }
-      ],
-      "note": "J13's schedule and delivery half is proven on PostgreSQL in M4; the tracker half is M5. Local HTTPS receivers stand in for Slack and the webhook consumer, so no SaaS endpoint was contacted."
+      "note": "J13's schedule and delivery half is proven on PostgreSQL in M4 and its tracker half in M5 (j13-tracker.pg.test.ts). Local HTTPS receivers stand in for Slack and the webhook consumer, and local Jira and Linear fakes for the trackers, so no SaaS endpoint was contacted."
     },
     {
       "id": "J14",
@@ -11349,11 +11596,88 @@
       "sourceFile": "ROADMAP.md",
       "milestone": "M5",
       "ownerRole": "Integrations",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/j13-tracker.pg.test.ts::J13 a Jira ticket imports as a source and a changed ticket creates a new revision",
+        "validation/journeys/j13-tracker.pg.test.ts::J13 a failing run links to a Linear issue only after preview and acknowledgement",
+        "validation/journeys/j13-tracker.pg.test.ts::J13 sync records a deleted issue without touching the run",
+        "validation/journeys/j13-tracker.pg.test.ts::J13 approved project memory reaches proposals as data and forgotten memory does not",
+        "packages/application/src/ai/core.test.ts::every normative injection channel remains data with a compromised endpoint and no classifier",
+        "packages/application/src/integrations/trackers/trackers.test.ts::records closed, deleted, moved and revoked issues and leaves Runs, outcomes and gates untouched",
+        "packages/application/src/integrations/trackers/trackers.test.ts::sends nothing without a preview, the previewed hash and an acknowledgement",
+        "packages/application/src/memory.test.ts::a new source revision makes an entry stale and it stops reaching the prompt",
+        "packages/application/src/memory.test.ts::an archived source retires the entries that cite it",
+        "validation/journeys/m5-journey-manifests.test.ts::VAL-035 J13 tracker and J18 manifests come from versioned scripts the registry cites and record an automatic, reviewer-named pass"
+      ],
+      "oracle": [
+        "Through POST /v1/integrations/{id}/issues/import on PostgreSQL a Jira ticket becomes a project source revision whose text carries the ticket's embedded instruction as content; importing the unchanged ticket again returns unchanged:true with the same revision, and editing its acceptance criteria adds a second revision with a new checksum. The integration test reads the configured project with GET only.",
+        "The ticket's embedded instruction reaches the normalization call only inside untrustedData, never in the system prompt, and no request offers tools; the adversarial ticket channel stays data with a compromised endpoint and creates no tracker issue, approval, file or test.",
+        "A link draft contacts no tracker. Executing it without a preview is refused PRECONDITION_FAILED issue_link_not_previewed, with a hash other than the previewed one INVALID_ARGUMENT payload_hash_mismatch, and without acknowledge:true INVALID_ARGUMENT; the fake tracker received zero requests and created no issue until the acknowledged execute filed exactly the previewed payload and attached the Run URL.",
+        "Sync records a closed issue (externalStatusCategory closed), a deleted one (syncState deleted), a moved one (conflict) and a rejected credential (revoked); the Run row, its outcome failed and gate failed, and the analyses are byte-identical before and after.",
+        "Approved, active project memory reaches the plan, analyze and heal prompts as untrustedData.projectMemory entries with their source references and never in the system prompt; pending, edited-unreviewed, expired, stale (cited source revised) and retired (cited source archived) entries do not, and a forgotten entry erases its text and stops reaching the proposal prompt while its approval stays for audit."
+      ],
+      "evidence": [
+        "validation/journeys/j13-tracker.pg.test.ts",
+        "validation/results/j13-tracker.json",
+        "docs/adr/034-trackers-memory.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "apps/cli/src/issues.ts",
+        "apps/server/src/routes/trackers.ts",
+        "packages/application/src/ai/sources.ts",
+        "packages/application/src/integrations/trackers/adapter.ts",
+        "packages/application/src/integrations/trackers/index.ts",
+        "packages/application/src/integrations/trackers/jira.ts",
+        "packages/application/src/integrations/trackers/linear.ts",
+        "packages/application/src/integrations/trackers/providers.ts",
+        "packages/application/src/integrations/trackers/service.ts",
+        "packages/application/src/notifications/https.ts",
+        "packages/contracts/src/m5/issues.ts",
+        "packages/contracts/src/m5/trackers.ts",
+        "packages/persistence/migrations/postgres/0028_trackers.sql",
+        "packages/persistence/migrations/sqlite/0028_trackers.sql",
+        "packages/persistence/src/contract-projections.ts",
+        "apps/cli/src/memory.ts",
+        "apps/server/src/routes/memory.ts",
+        "packages/application/src/ai/model.ts",
+        "packages/application/src/memory.ts",
+        "packages/contracts/src/m5/memory.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012) against local HTTPS servers speaking the Jira REST v3 and Linear GraphQL shapes, over the test CA; no hosted Jira or Linear tenant was contacted. The J13 journey runs the REST server in-process on PostgreSQL 17 so the test egress hook can admit the loopback fakes; production egress refuses every private address. Memory is scoped to one project; see REQ-044.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/j13-tracker.pg.test.ts::J13 a Jira ticket imports as a source and a changed ticket creates a new revision",
+          "validation/journeys/j13-tracker.pg.test.ts::J13 approved project memory reaches proposals as data and forgotten memory does not"
+        ],
+        "negative": [
+          "validation/journeys/j13-tracker.pg.test.ts::J13 sync records a deleted issue without touching the run",
+          "packages/application/src/ai/core.test.ts::every normative injection channel remains data with a compromised endpoint and no classifier",
+          "packages/application/src/memory.test.ts::an archived source retires the entries that cite it"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/j13-tracker.pg.test.ts",
+            "assertion": "expect(carried[0]).toEqual({ inData: true, inInstructions: false, tools: false });"
+          },
+          {
+            "path": "packages/application/src/ai/core.test.ts",
+            "assertion": "expect(f.payloads.every((payload) => !Object.hasOwn(payload, \"tools\"))).toBe(true);"
+          },
+          {
+            "path": "packages/application/src/memory.test.ts",
+            "assertion": "expect(f.app.memory.list(f.projectId)[0]?.state).toBe(\"stale\");"
+          },
+          {
+            "path": "validation/journeys/j13-tracker.pg.test.ts",
+            "assertion": "expect(w.runRow(runId)).toBe(before);"
+          },
+          {
+            "path": "validation/journeys/j13-tracker.pg.test.ts",
+            "assertion": "expect(run.data).toMatchObject({ outcome: \"failed\", gate: \"failed\" });"
+          }
+        ]
+      }
     },
     {
       "id": "M5-08",
@@ -18885,11 +19209,77 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M5",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/j13-tracker.pg.test.ts::J13 a Jira ticket imports as a source and a changed ticket creates a new revision",
+        "validation/journeys/j13-tracker.pg.test.ts::J13 a failing run links to a Linear issue only after preview and acknowledgement",
+        "validation/journeys/j13-tracker.pg.test.ts::J13 sync records a deleted issue without touching the run",
+        "packages/application/src/integrations/trackers/trackers.test.ts::stores a ticket as a source, adds no revision while the text is unchanged and one when the acceptance criteria change",
+        "packages/application/src/integrations/trackers/trackers.test.ts::imports a Linear issue the same way",
+        "packages/application/src/integrations/trackers/trackers.test.ts::refuses a missing issue, an issue of another project and a secret bound to another origin",
+        "packages/application/src/integrations/trackers/trackers.test.ts::reads the configured Jira project and Linear team and writes nothing",
+        "packages/application/src/integrations/trackers/trackers.test.ts::sends nothing without a preview, the previewed hash and an acknowledgement",
+        "packages/application/src/integrations/trackers/trackers.test.ts::files the previewed payload exactly and attaches the Run",
+        "packages/application/src/integrations/trackers/trackers.test.ts::files a Linear issue with its Run attachment",
+        "packages/application/src/integrations/trackers/trackers.test.ts::keeps an issue that was created when attaching the Run fails and retries without creating another",
+        "packages/application/src/integrations/trackers/trackers.test.ts::records closed, deleted, moved and revoked issues and leaves Runs, outcomes and gates untouched",
+        "packages/application/src/integrations/trackers/trackers.test.ts::lists the links of a Run and of a project, newest first"
+      ],
+      "oracle": [
+        "Through POST /v1/integrations/{id}/issues/import on PostgreSQL a Jira ticket becomes a project source revision whose text carries the ticket's embedded instruction as content; importing the unchanged ticket again returns unchanged:true with the same revision, and editing its acceptance criteria adds a second revision with a new checksum. The integration test reads the configured project with GET only.",
+        "A link draft contacts no tracker. Executing it without a preview is refused PRECONDITION_FAILED issue_link_not_previewed, with a hash other than the previewed one INVALID_ARGUMENT payload_hash_mismatch, and without acknowledge:true INVALID_ARGUMENT; the fake tracker received zero requests and created no issue until the acknowledged execute filed exactly the previewed payload and attached the Run URL.",
+        "Sync records a closed issue (externalStatusCategory closed), a deleted one (syncState deleted), a moved one (conflict) and a rejected credential (revoked); the Run row, its outcome failed and gate failed, and the analyses are byte-identical before and after."
+      ],
+      "evidence": [
+        "validation/journeys/j13-tracker.pg.test.ts",
+        "validation/results/j13-tracker.json",
+        "docs/adr/034-trackers-memory.md",
+        "docs/security/threat-model.md"
+      ],
+      "code": [
+        "apps/cli/src/issues.ts",
+        "apps/server/src/routes/trackers.ts",
+        "packages/application/src/ai/sources.ts",
+        "packages/application/src/integrations/trackers/adapter.ts",
+        "packages/application/src/integrations/trackers/index.ts",
+        "packages/application/src/integrations/trackers/jira.ts",
+        "packages/application/src/integrations/trackers/linear.ts",
+        "packages/application/src/integrations/trackers/providers.ts",
+        "packages/application/src/integrations/trackers/service.ts",
+        "packages/application/src/notifications/https.ts",
+        "packages/contracts/src/m5/issues.ts",
+        "packages/contracts/src/m5/trackers.ts",
+        "packages/persistence/migrations/postgres/0028_trackers.sql",
+        "packages/persistence/migrations/sqlite/0028_trackers.sql",
+        "packages/persistence/src/contract-projections.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012) against local HTTPS servers speaking the Jira REST v3 and Linear GraphQL shapes, over the test CA; no hosted Jira or Linear tenant was contacted. The J13 journey runs the REST server in-process on PostgreSQL 17 so the test egress hook can admit the loopback fakes; production egress refuses every private address.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/j13-tracker.pg.test.ts::J13 a Jira ticket imports as a source and a changed ticket creates a new revision",
+          "packages/application/src/integrations/trackers/trackers.test.ts::files the previewed payload exactly and attaches the Run",
+          "packages/application/src/integrations/trackers/trackers.test.ts::imports a Linear issue the same way"
+        ],
+        "negative": [
+          "validation/journeys/j13-tracker.pg.test.ts::J13 a failing run links to a Linear issue only after preview and acknowledgement",
+          "packages/application/src/integrations/trackers/trackers.test.ts::sends nothing without a preview, the previewed hash and an acknowledgement",
+          "packages/application/src/integrations/trackers/trackers.test.ts::refuses a missing issue, an issue of another project and a secret bound to another origin"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/j13-tracker.pg.test.ts",
+            "assertion": "expect(changed.data.revisionId).not.toBe(first.data.revisionId);"
+          },
+          {
+            "path": "validation/journeys/j13-tracker.pg.test.ts",
+            "assertion": "expect(fake.requests).toHaveLength(0);"
+          },
+          {
+            "path": "validation/journeys/j13-tracker.pg.test.ts",
+            "assertion": "details: { reasonCode: \"issue_link_not_previewed\" },"
+          }
+        ]
+      }
     },
     {
       "id": "REQ-044",
@@ -18897,11 +19287,73 @@
       "sourceFile": "specs/01-requirements.md",
       "milestone": "M5",
       "ownerRole": "Core",
-      "status": "planned",
-      "scenario": [],
-      "oracle": [],
-      "evidence": [],
-      "code": []
+      "status": "verified",
+      "scenario": [
+        "validation/journeys/j13-tracker.pg.test.ts::J13 approved project memory reaches proposals as data and forgotten memory does not",
+        "packages/application/src/memory.test.ts::a new source revision makes an entry stale and it stops reaching the prompt",
+        "packages/application/src/memory.test.ts::an archived source retires the entries that cite it",
+        "packages/application/src/memory.test.ts::an entry applies only between validFrom and expiresAt",
+        "packages/application/src/memory.test.ts::forgetting erases the text and sources, keeps the approval and is idempotent",
+        "packages/application/src/memory.test.ts::only approved, active entries reach the provider, and only for plan, analyze and heal",
+        "packages/application/src/memory.test.ts::admission counts the memory the call will carry",
+        "packages/application/src/memory.test.ts::approval is an Approval record bound to the entry, the author may approve it and an edit clears it",
+        "packages/application/src/memory.test.ts::refuses text that holds a credential or personal data, and sources outside the evidence",
+        "packages/application/src/memory.test.ts::one project never sees another project's memory or cites its sources",
+        "apps/server/src/memory.test.ts::REQ-044 the memory routes create, review, edit and forget an entry, and refuse a reader and a mixed patch",
+        "apps/cli/src/memory.test.ts::REQ-044 memory add, approve, edit and forget work through the CLI and refuse a malformed source reference"
+      ],
+      "oracle": [
+        "Approved, active project memory reaches the plan, analyze and heal prompts as untrustedData.projectMemory entries with their source references and never in the system prompt; pending, edited-unreviewed, expired, stale (cited source revised) and retired (cited source archived) entries do not, and a forgotten entry erases its text and stops reaching the proposal prompt while its approval stays for audit.",
+        "Memory text holding a credential or personal data is refused POLICY_DENIED memory_sensitive_content, a source outside the project's evidence memory_source_unresolved; another project's entries never reach a prompt."
+      ],
+      "evidence": [
+        "validation/journeys/j13-tracker.pg.test.ts",
+        "validation/results/j13-tracker.json",
+        "docs/adr/034-trackers-memory.md"
+      ],
+      "code": [
+        "apps/cli/src/memory.ts",
+        "apps/server/src/routes/memory.ts",
+        "packages/application/src/ai/model.ts",
+        "packages/application/src/memory.ts",
+        "packages/contracts/src/m5/memory.ts"
+      ],
+      "note": "Verified by automated oracles only (ADR-012) with a local OpenAI-compatible fake model; the subject is what each prompt carries, not model quality. Memory is scoped to one project: the MemoryEntry contract requires projectId, so workspace-wide entries are not offered and one project never sees another's.",
+      "coverage": {
+        "positive": [
+          "validation/journeys/j13-tracker.pg.test.ts::J13 approved project memory reaches proposals as data and forgotten memory does not",
+          "packages/application/src/memory.test.ts::only approved, active entries reach the provider, and only for plan, analyze and heal",
+          "apps/server/src/memory.test.ts::REQ-044 the memory routes create, review, edit and forget an entry, and refuse a reader and a mixed patch"
+        ],
+        "negative": [
+          "packages/application/src/memory.test.ts::one project never sees another project's memory or cites its sources",
+          "packages/application/src/memory.test.ts::a new source revision makes an entry stale and it stops reaching the prompt",
+          "packages/application/src/memory.test.ts::refuses text that holds a credential or personal data, and sources outside the evidence",
+          "packages/application/src/memory.test.ts::forgetting erases the text and sources, keeps the approval and is idempotent"
+        ],
+        "criticalAssertions": [
+          {
+            "path": "validation/journeys/j13-tracker.pg.test.ts",
+            "assertion": "expect(withoutMemory.data.projectMemory).toBeUndefined();"
+          },
+          {
+            "path": "validation/journeys/j13-tracker.pg.test.ts",
+            "assertion": "expect(withMemory.system).not.toContain(fact);"
+          },
+          {
+            "path": "packages/application/src/memory.test.ts",
+            "assertion": "expect(await f.memoryTexts(\"plan\", other.id)).toEqual([\"Invoices are monthly\"]);"
+          },
+          {
+            "path": "packages/application/src/memory.test.ts",
+            "assertion": "expect(await f.memoryTexts(\"normalize\")).toEqual([]);"
+          },
+          {
+            "path": "packages/application/src/memory.test.ts",
+            "assertion": "expect(f.app.memory.list(f.projectId)[0]?.state).toBe(\"stale\");"
+          }
+        ]
+      }
     },
     {
       "id": "REQ-045",
@@ -29467,11 +29919,14 @@
         "validation/journeys/governance-ops.docker.test.ts::OPS002 actual hardened runner readiness follows migration and admission without target or model probes",
         "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result",
         "validation/journeys/m4-journey-manifests.test.ts::VAL-035 J09 J10 J12 J13 J16 J17 each have a versioned script, a passing retained run and an automatic, reviewer-named manifest",
-        "validation/journeys/m4-journey-manifests.test.ts::VAL-035 rejects a journey whose script does not name it, whose run failed, or whose manifest claims a human"
+        "validation/journeys/m4-journey-manifests.test.ts::VAL-035 rejects a journey whose script does not name it, whose run failed, or whose manifest claims a human",
+        "validation/journeys/m5-journey-manifests.test.ts::VAL-035 J13 tracker and J18 manifests come from versioned scripts the registry cites and record an automatic, reviewer-named pass",
+        "validation/journeys/m5-journey-manifests.test.ts::VAL-035 rejects an M5 manifest its script does not write, the registry does not cite, or that claims a human"
       ],
       "oracle": [
         "Real new manifests record automatic method, named automated reviewer and precise limitations, never human sign-off.",
-        "Each M4 journey (J09, J10, J12, J13, J16, J17-server) is a versioned script that names its journey, has a retained wrapper record of a passing run that ran it or created its manifest, and the harness manifests carry the automatic method, the named automated reviewer and the no-independent-human-sign-off limitation; a script without the journey id, a failed run, a manual method, missing limitations or a missing manifest are each refused."
+        "Each M4 journey (J09, J10, J12, J13, J16, J17-server) is a versioned script that names its journey, has a retained wrapper record of a passing run that ran it or created its manifest, and the harness manifests carry the automatic method, the named automated reviewer and the no-independent-human-sign-off limitation; a script without the journey id, a failed run, a manual method, missing limitations or a missing manifest are each refused.",
+        "The M5 manifests (j13-tracker for J13; M5-03-visual-baselines, M5-04-accessibility-mutant/healthy, M5-05-property-openapi/auth and M5-06-access/dast/load composing J18) are each written by a versioned script that names them, cited as evidence of their journey item next to that script, and record an automatic pass by testmaster-automated-acceptance with the no-independent-human-sign-off limitation; a manifest its script does not write, an uncited script or manifest, a failed or manual manifest, missing limitations or a missing manifest are each refused."
       ],
       "evidence": [
         "validation/journeys/harness-metadata.test.ts",
@@ -29482,7 +29937,17 @@
         "validation/results/m4-acceptance/w1/024-w1-val035-manifests/output.log",
         "validation/results/m4-acceptance/s6/007-s6-test-postgres-merged/created/validation/results/j09-cross-project-list.json",
         "validation/results/m4-acceptance/w2b/034-w2b-postgres-final3/created/validation/results/j12-github.json",
-        "validation/results/m4-acceptance/w2a/016-w2a-final-pg/created/validation/results/j13-schedule-notify.json"
+        "validation/results/m4-acceptance/w2a/016-w2a-final-pg/created/validation/results/j13-schedule-notify.json",
+        "validation/journeys/m5-journey-manifests.test.ts",
+        "validation/results/j13-tracker.json",
+        "validation/results/M5-03-visual-baselines.json",
+        "validation/results/M5-04-accessibility-mutant.json",
+        "validation/results/M5-04-accessibility-healthy.json",
+        "validation/results/M5-05-property-openapi.json",
+        "validation/results/M5-05-property-auth.json",
+        "validation/results/M5-06-access.json",
+        "validation/results/M5-06-dast.json",
+        "validation/results/M5-06-load.json"
       ],
       "code": [
         "validation/journeys/harness.ts",
@@ -29494,19 +29959,23 @@
         "validation/journeys/j10-auth-secrets.portal.test.ts",
         "validation/journeys/j12-github.pg.test.ts",
         "validation/journeys/j13-schedule-notify.pg.test.ts",
-        "validation/journeys/j16-accessibility.portal.test.ts"
+        "validation/journeys/j16-accessibility.portal.test.ts",
+        "validation/journeys/m5-journey-manifests.test.ts",
+        "validation/journeys/j13-tracker.pg.test.ts"
       ],
-      "note": "M0-M3 manifest provenance producers are implemented and record automatic method, a named automated reviewer and precise limitations, never human sign-off. J09/J10/J12-App/J13/J16/J17-server fixtures (M4), J13-tracker/J18 (M5) and the full J01-J18 supported-scope corpus (M6) are deferred: no full-corpus claim. Historical manifests are unchanged and not backfilled as new observations. S2a added the J17-server journey manifest (compose stack, rootless host worker, crash recovery) produced through the harness metadata. The M4 journeys J09, J10, J12, J13, J16 and J17-server are versioned scripts with retained passing runs; J10 and J16 keep the preservation wrapper's record as their manifest of the execution (no harness manifest).",
+      "note": "M0-M3 manifest provenance producers are implemented and record automatic method, a named automated reviewer and precise limitations, never human sign-off. The full J01-J18 supported-scope corpus (M6) is deferred: no full-corpus claim. Historical manifests are unchanged and not backfilled as new observations. S2a added the J17-server journey manifest (compose stack, rootless host worker, crash recovery) produced through the harness metadata. The M4 journeys J09, J10, J12, J13, J16 and J17-server are versioned scripts with retained passing runs; J10 and J16 keep the preservation wrapper's record as their manifest of the execution (no harness manifest). The M5 J13 tracker and J18 harness manifests are checked against their scripts and registry citations by m5-journey-manifests.test.ts.",
       "coverage": {
         "positive": [
           "validation/journeys/harness-metadata.test.ts::records automatic method reviewer and limitations without claiming a human or unopened UI",
           "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result",
-          "validation/journeys/m4-journey-manifests.test.ts::VAL-035 J09 J10 J12 J13 J16 J17 each have a versioned script, a passing retained run and an automatic, reviewer-named manifest"
+          "validation/journeys/m4-journey-manifests.test.ts::VAL-035 J09 J10 J12 J13 J16 J17 each have a versioned script, a passing retained run and an automatic, reviewer-named manifest",
+          "validation/journeys/m5-journey-manifests.test.ts::VAL-035 J13 tracker and J18 manifests come from versioned scripts the registry cites and record an automatic, reviewer-named pass"
         ],
         "negative": [
           "validation/journeys/governance-ops.docker.test.ts::OPS002 actual hardened runner readiness follows migration and admission without target or model probes",
           "validation/journeys/j17-server.docker.test.ts::M4-02 OPS-001 OPS-038 SEC-036 VAL-035 J17-server compose stack with TLS, a rootless host worker and crash recovery that never invents a result",
-          "validation/journeys/m4-journey-manifests.test.ts::VAL-035 rejects a journey whose script does not name it, whose run failed, or whose manifest claims a human"
+          "validation/journeys/m4-journey-manifests.test.ts::VAL-035 rejects a journey whose script does not name it, whose run failed, or whose manifest claims a human",
+          "validation/journeys/m5-journey-manifests.test.ts::VAL-035 rejects an M5 manifest its script does not write, the registry does not cite, or that claims a human"
         ],
         "criticalAssertions": [
           {
@@ -29532,18 +30001,14 @@
           {
             "path": "validation/journeys/m4-journey-manifests.test.ts",
             "assertion": "expect(journeyProblems(entry, text, { ...record, exitCode: 1 }, harness)).toContain("
+          },
+          {
+            "path": "validation/journeys/m5-journey-manifests.test.ts",
+            "assertion": "expect(manifestProblems(entry, text, item, manifest), entry.journey).toEqual([]);"
           }
         ]
       },
       "deferred": [
-        {
-          "milestone": "M5",
-          "scope": "J13 tracker and J18 advanced-quality journey manifests",
-          "specQuote": {
-            "path": "specs/10-validation.md",
-            "text": "**M5 — remote/distributed/matrix/advanced/memory** | Workers remotos com leases/fencing/partições, tunnels, issue import/link; matriz cross-browser visual/a11y"
-          }
-        },
         {
           "milestone": "M6",
           "scope": "full J01–J18 supported-scope corpus and J14–J17 journey manifests",

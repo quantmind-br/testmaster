@@ -1,0 +1,91 @@
+{
+  "schemaVersion": "1.0.0",
+  "journey": "j13-tracker",
+  "class": "deterministic-e2e",
+  "runner": "trackers-memory-rest-postgres",
+  "externalDependency": "postgres-container-and-local-https-tracker-fakes",
+  "observedAt": "2026-10-23T05:37:58.647Z",
+  "passed": true,
+  "method": "automatic",
+  "reviewer": "testmaster-automated-acceptance",
+  "reviewLimitations": [
+    "Automated oracle only; no independent human sign-off implied."
+  ],
+  "commands": [],
+  "runIds": [],
+  "oracleVerdicts": [
+    {
+      "scenario": "jira-import-revisions",
+      "receipts": [
+        {
+          "revisionId": "svr_01a16744-12a5-734d-ac59-4a90f3b1f972",
+          "unchanged": false,
+          "checksum": "6a66faa7c162099b4b7d62dcbbca93e27164920d8b87ed79f3fad9fff1c511e2"
+        },
+        {
+          "revisionId": "svr_01a16744-12a5-734d-ac59-4a90f3b1f972",
+          "unchanged": true,
+          "checksum": "6a66faa7c162099b4b7d62dcbbca93e27164920d8b87ed79f3fad9fff1c511e2"
+        },
+        {
+          "revisionId": "svr_01a16744-12cf-709b-9112-86dc2121465f",
+          "unchanged": false,
+          "checksum": "f63f36dd5c43fb0ba06760a21a8ab7d43c64a84eb58518911de938f8febe2bea"
+        }
+      ],
+      "revisions": 2,
+      "integrationTestMethods": [
+        "GET"
+      ],
+      "metadataRefusal": "POLICY_DENIED"
+    },
+    {
+      "scenario": "linear-preview-acknowledge",
+      "refusals": {
+        "unpreviewed": 422,
+        "wrongHash": 400,
+        "unacknowledged": 400
+      },
+      "requestsBeforeExecute": 0,
+      "issueKey": "ENG-100",
+      "repeatKind": "link",
+      "explainedKind": "create",
+      "created": 1
+    },
+    {
+      "scenario": "jira-sync-deleted",
+      "issueKey": "DEMO-100",
+      "closedSync": [
+        {
+          "id": "isl_01a16744-14e4-7663-a6b6-f9ed5192f9fc",
+          "syncState": "ok",
+          "externalStatus": "Done",
+          "externalStatusCategory": "closed"
+        }
+      ],
+      "deletedSync": [
+        {
+          "id": "isl_01a16744-14e4-7663-a6b6-f9ed5192f9fc",
+          "syncState": "deleted",
+          "externalStatus": "Done",
+          "externalStatusCategory": "closed"
+        }
+      ],
+      "runUnchanged": true,
+      "runOutcome": "failed"
+    },
+    {
+      "scenario": "memory-in-proposals",
+      "memoryInFirstPrompt": 1,
+      "pendingEntryState": "pending",
+      "memoryInSystemPrompt": false,
+      "memoryAfterForget": null
+    }
+  ],
+  "limitations": [
+    "Local HTTPS servers speaking the Jira REST v3 and Linear GraphQL shapes stand in for the trackers; no hosted Jira or Linear tenant is contacted.",
+    "Failed Runs and their analyses are seeded as a worker and the analyzer leave them; no sandbox executes them, so verdict content is not the subject.",
+    "A local OpenAI-compatible fake answers the normalization and proposal calls; the subject is what the prompt carries, not model quality.",
+    "PostgreSQL 17 on one host; the REST server runs in-process so the test egress hook can admit the loopback fakes."
+  ]
+}
