@@ -135,6 +135,12 @@ export async function startTlsProxy(options: {
   ca: TestCa;
   /** Resolved per request: the upstream port is only known after the server starts. */
   upstreamPort: () => number;
+  /**
+   * Opens a new upstream connection for every request instead of pooling keep-alive sockets. A
+   * proxy in front of an upstream that restarts needs it: a pooled socket to the old process fails
+   * the first request after the restart, and the proxy answers it 502.
+   */
+  freshUpstreamConnections?: boolean;
 }): Promise<TlsProxy> {
   const requests: string[] = [];
   const traffic: Buffer[] = [];
@@ -166,6 +172,7 @@ export async function startTlsProxy(options: {
           method: incoming.method,
           path: incoming.url,
           headers: forwardedHeaders(incoming),
+          ...(options.freshUpstreamConnections ? { agent: false } : {}),
         },
         (response) => {
           const forwarded: Record<string, string | string[]> = {};

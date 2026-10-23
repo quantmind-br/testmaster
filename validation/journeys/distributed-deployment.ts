@@ -258,7 +258,12 @@ export async function startDistributedDeployment(): Promise<DistributedDeploymen
     const ports: Record<ControllerName, number> = { server: port1, "server-2": port2 };
     const controllers: Controller[] = [];
     for (const name of controllerNames) {
-      const front = await startTlsProxy({ ca: frontCa, upstreamPort: () => ports[name] });
+      const front = await startTlsProxy({
+        ca: frontCa,
+        upstreamPort: () => ports[name],
+        // The journey kills and restarts controllers behind these fronts.
+        freshUpstreamConnections: true,
+      });
       fronts.push(front);
       controllers.push({
         name,
