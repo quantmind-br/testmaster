@@ -232,10 +232,14 @@ export function httpsWorkerTransport(options: {
   };
 }
 
-/** A call is repeated after a transport failure or a refusal the server marks as transient. */
-function transient(error: unknown): boolean {
+/**
+ * A call is repeated after a transport failure, a refusal the server marks as transient, or a
+ * gateway's 502/504: the controller itself never answers those, so they mean the proxy in front
+ * lost its upstream (a controller restarting) exactly like a reset connection would.
+ */
+export function isTransientFailure(error: unknown): boolean {
   if (!(error instanceof RemoteCallError)) return true;
-  return error.status === 429 || error.status === 503;
+  return [429, 502, 503, 504].includes(error.status);
 }
 
 /** The error a worker reports for an Attempt that ended without a sandbox result. */
@@ -345,7 +349,7 @@ export class RemoteWorkerAgent {
       try {
         return await call();
       } catch (error) {
-        if (signal?.aborted || !transient(error)) throw error;
+        if (signal?.aborted || !isTransientFailure(error)) throw error;
         await delay(wait, undefined, signal ? { signal } : undefined);
         wait = Math.min(wait * 2, 5000);
       }
