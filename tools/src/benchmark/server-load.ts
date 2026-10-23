@@ -17,6 +17,7 @@ import {
   uuidV7IdGenerator,
 } from "@testmaster/domain";
 import { type EntityDocument, OutboxRepository } from "@testmaster/persistence";
+import { hardwareFacts, sourceCommit } from "./hardware.js";
 import {
   type BenchPrincipal,
   type BenchStack,
@@ -461,73 +462,6 @@ async function meter<T>(
   }
 }
 
-async function dockerFacts(): Promise<Record<string, string>> {
-  const out: Record<string, string> = {};
-  for (const [key, args] of [
-    ["serverVersion", ["version", "--format", "{{.Server.Version}}"]],
-    ["clientVersion", ["version", "--format", "{{.Client.Version}}"]],
-    ["storageDriver", ["info", "--format", "{{.Driver}}"]],
-    ["cgroupVersion", ["info", "--format", "{{.CgroupVersion}}"]],
-  ] as const)
-    out[key] = await exec("docker", [...args]).then(
-      (result) => result.stdout.trim(),
-      () => "unavailable",
-    );
-  return out;
-}
-
-async function hardwareFacts(
-  workDirectory: string,
-  nodeCommit: { commit: string; dirty: boolean },
-) {
-  const cpus = os.cpus();
-  const filesystem = await exec("stat", ["-f", "-c", "%T", workDirectory]).then(
-    (result) => result.stdout.trim(),
-    () => "unknown",
-  );
-  const dockerRoot = await exec("docker", ["info", "--format", "{{.DockerRootDir}}"]).then(
-    (result) => result.stdout.trim(),
-    () => "",
-  );
-  const dockerFilesystem = dockerRoot
-    ? await exec("stat", ["-f", "-c", "%T", dockerRoot]).then(
-        (result) => result.stdout.trim(),
-        () => "unknown",
-      )
-    : "unknown";
-  return {
-    cpuModel: cpus[0]?.model ?? "unknown",
-    logicalCores: cpus.length,
-    memoryTotalGiB: rounded(os.totalmem() / 1024 ** 3),
-    memoryFreeGiBAtStart: rounded(os.freemem() / 1024 ** 3),
-    kernel: os.release(),
-    platform: `${os.platform()} ${os.arch()}`,
-    node: process.version,
-    docker: await dockerFacts(),
-    evidenceAndStateFilesystem: filesystem,
-    postgresDataFilesystem: dockerFilesystem,
-    sourceCommit: nodeCommit.commit,
-    sourceTreeDirty: nodeCommit.dirty,
-  };
-}
-
-function sourceCommit(): { commit: string; dirty: boolean } {
-  const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
-  try {
-    const commit = execFileSync("git", ["rev-parse", "HEAD"], {
-      cwd: root,
-      encoding: "utf8",
-    }).trim();
-    const status = execFileSync("git", ["status", "--porcelain", "--untracked-files=no"], {
-      cwd: root,
-      encoding: "utf8",
-    }).trim();
-    return { commit, dirty: status.length > 0 };
-  } catch {
-    return { commit: "unknown", dirty: false };
-  }
-}
-
 /* -------------------------------------------------------------------------------------------- */
 /* Seeding                                                                                        */
 /* -------------------------------------------------------------------------------------------- */
@@ -570,7 +504,7 @@ interface Seeded {
   readonly runsInDatabase: number;
 }
 
-const planFor = (name: string): ExecutablePlan => ({
+export const planFor = (name: string): ExecutablePlan => ({
   schemaVersion: "1.0.0" as const,
   kind: "executable" as const,
   name,

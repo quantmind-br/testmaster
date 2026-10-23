@@ -9,6 +9,7 @@ import {
   request,
   type Server,
 } from "node:http";
+import { Agent as HttpsAgent, request as httpsRequest } from "node:https";
 import { join } from "node:path";
 import { performance } from "node:perf_hooks";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -32,13 +33,25 @@ export interface HttpResult {
   readonly ms: number;
 }
 
-/** Keep-alive HTTP client that presents itself the way a trusted TLS-terminating proxy would. */
+/**
+ * Keep-alive HTTP client that presents itself the way a trusted TLS-terminating proxy would. With
+ * `ca` it speaks HTTPS and trusts that certificate authority, for a deployment fronted by a real
+ * TLS-terminating proxy.
+ */
 export class BenchClient {
-  private agent = new Agent({ keepAlive: true, maxSockets: 512 });
+  private agent: Agent | HttpsAgent;
   constructor(
     readonly baseUrl: URL,
     private readonly defaultToken: string | null = null,
-  ) {}
+    private readonly ca: string | null = null,
+  ) {
+    this.agent = this.createAgent();
+  }
+
+  private createAgent(): Agent | HttpsAgent {
+    const options = { keepAlive: true, maxSockets: 512 };
+    return this.ca ? new HttpsAgent({ ...options, ca: this.ca }) : new Agent(options);
+  }
 
   headers(token: string | null, extra: Record<string, string> = {}): Record<string, string> {
     return {
@@ -70,7 +83,7 @@ export class BenchClient {
     });
     const started = performance.now();
     return new Promise<HttpResult>((resolve, reject) => {
-      const call = request(
+      const call = (this.ca ? httpsRequest : request)(
         {
           host: this.baseUrl.hostname,
           port: this.baseUrl.port,
@@ -107,7 +120,7 @@ export class BenchClient {
     onOpen: (status: number) => void,
   ): { close(): void; closed: Promise<void> } {
     const { promise, resolve } = Promise.withResolvers<void>();
-    const call = request(
+    const call = (this.ca ? httpsRequest : request)(
       {
         host: this.baseUrl.hostname,
         port: this.baseUrl.port,
@@ -116,6 +129,7 @@ export class BenchClient {
         headers: this.headers(token, { accept: "text/event-stream" }),
         // A dedicated socket per stream, as separate browser tabs would use.
         agent: false,
+        ...(this.ca ? { ca: this.ca } : {}),
       },
       (response: IncomingMessage) => {
         onOpen(response.statusCode ?? 0);
@@ -133,11 +147,11 @@ export class BenchClient {
   /**
    * Drops pooled sockets. The benchmark process blocks its own event loop while it seeds through
    * the synchronous database bridge, so it cannot notice that the server closed idle connections
-   * (keep-alive timeout 5 s); reusing such a socket would fail the next request.
+   * (keep-alive timeout 65 s); reusing such a socket would fail the next request.
    */
   resetConnections(): void {
     this.agent.destroy();
-    this.agent = new Agent({ keepAlive: true, maxSockets: 512 });
+    this.agent = this.createAgent();
   }
 
   close(): void {
@@ -190,14 +204,19 @@ export interface PostgresFacts {
   readonly container: string;
 }
 
-interface Spawned {
+export interface Spawned {
   readonly child: ChildProcess;
   readonly stdout: () => string;
   readonly stderr: () => string;
   readonly exited: Promise<number | null>;
 }
 
-function spawnCli(cli: string, args: string[], env: NodeJS.ProcessEnv, cwd: string): Spawned {
+export function spawnCli(
+  cli: string,
+  args: string[],
+  env: NodeJS.ProcessEnv,
+  cwd: string,
+): Spawned {
   const child = spawn(process.execPath, [cli, ...args, "--json"], { cwd, env, stdio: "pipe" });
   let stdout = "";
   let stderr = "";
@@ -213,7 +232,7 @@ function spawnCli(cli: string, args: string[], env: NodeJS.ProcessEnv, cwd: stri
   return { child, stdout: () => stdout, stderr: () => stderr, exited };
 }
 
-function findString(value: unknown, pattern: RegExp): string | null {
+export function findString(value: unknown, pattern: RegExp): string | null {
   if (typeof value === "string") return pattern.test(value) ? value : null;
   if (Array.isArray(value))
     for (const member of value) {
@@ -228,12 +247,140 @@ function findString(value: unknown, pattern: RegExp): string | null {
   return null;
 }
 
-function expectString(value: unknown, pattern: RegExp, what: string): string {
+export function expectString(value: unknown, pattern: RegExp, what: string): string {
   const found = findString(value, pattern);
   if (!found) throw new Error(`Expected ${what} in ${JSON.stringify(value).slice(0, 400)}`);
   return found;
 }
 
+export interface PrincipalBootstrap {
+  readonly publicOrigin: string;
+  readonly workspaceId: string;
+  readonly ownerLogin: string;
+  /** The one-time `tm_rec_` token `server bootstrap` printed for the owner. */
+  readonly recoveryToken: string;
+}
+
+export interface Principals {
+  readonly owner: BenchPrincipal;
+  /** A call authenticated as the owner's browser session (cookie and CSRF token), for setup mutations. */
+  ownerSession(method: string, path: string, body?: unknown): Promise<HttpResult>;
+  /** Creates a `runner` member (read and execute) with its own bearer token. */
+  addRunner(): Promise<BenchPrincipal>;
+}
+
+/**
+ * Adopts the owner from the bootstrap recovery token, issues the owner's bearer token and returns
+ * the means to create runner principals. Setup calls share the server's per-address authentication
+ * budget, so they wait for it to refill instead of failing.
+ */
+export async function bootstrapPrincipals(
+  client: BenchClient,
+  bootstrap: PrincipalBootstrap,
+): Promise<Principals> {
+  const { publicOrigin, workspaceId, ownerLogin, recoveryToken } = bootstrap;
+  const baseHeaders = { origin: publicOrigin };
+  const setupCall: BenchClient["call"] = async (method, path, callOptions) => {
+    for (let waited = 0; ; waited += 2_000) {
+      const response = await client.call(method, path, callOptions);
+      if (response.status !== 429 || waited >= 120_000) return response;
+      await sleep(2_000);
+    }
+  };
+  const signIn = async (login: string, password: string) => {
+    const response = await setupCall("POST", "/v1/identity/login", {
+      body: { principal: login, password },
+      headers: baseHeaders,
+      idempotent: true,
+      token: null,
+    });
+    if (response.status !== 200)
+      throw new Error(`login for ${login} failed: ${response.status} ${response.body}`);
+    const cookie = [response.headers["set-cookie"] ?? []]
+      .flat()
+      .map((value) => value.split(";")[0] ?? "")
+      .find((value) => value.startsWith("__Host-tm_session="));
+    const receipt = (
+      JSON.parse(response.body.toString()) as {
+        data: { principalId: string; csrfToken: string };
+      }
+    ).data;
+    if (!cookie) throw new Error("login did not set a session cookie");
+    return { principalId: receipt.principalId, csrfToken: receipt.csrfToken, cookie };
+  };
+  const adopt = async (login: string, token: string) => {
+    const password = `Pw-${randomBytes(18).toString("base64url")}`;
+    const recovered = await setupCall("POST", "/v1/identity/recovery", {
+      body: { principal: login, recoveryToken: token, newPassword: password },
+      headers: baseHeaders,
+      idempotent: true,
+      token: null,
+    });
+    if (recovered.status !== 200)
+      throw new Error(`recovery for ${login} failed: ${recovered.status} ${recovered.body}`);
+    return signIn(login, password);
+  };
+
+  const ownerSession = await adopt(ownerLogin, recoveryToken);
+  const sessionCall = async (method: string, path: string, body?: unknown) =>
+    setupCall(method, path, {
+      body,
+      token: null,
+      idempotent: true,
+      headers: {
+        ...baseHeaders,
+        cookie: ownerSession.cookie,
+        "x-csrf-token": ownerSession.csrfToken,
+      },
+    });
+  const issueToken = async (principalId: string, scopes: string[]): Promise<string> => {
+    const issued = await sessionCall("POST", "/v1/tokens", {
+      name: `bench-${randomBytes(3).toString("hex")}`,
+      scopes,
+      grants: [],
+      principalId,
+      expiresAt: new Date(Date.now() + 6 * 3_600_000).toISOString(),
+    });
+    if (issued.status !== 201 && issued.status !== 200)
+      throw new Error(`token issue failed: ${issued.status} ${issued.body}`);
+    return expectString(
+      JSON.parse(issued.body.toString()),
+      /^tm_(api|local|op|wrk)_/,
+      "bearer token",
+    );
+  };
+  const owner: BenchPrincipal = {
+    login: ownerLogin,
+    principalId: ownerSession.principalId,
+    token: await issueToken(ownerSession.principalId, ["R", "W", "X", "A"]),
+  };
+  return {
+    owner,
+    ownerSession: sessionCall,
+    async addRunner() {
+      const login = `runner-${randomBytes(4).toString("hex")}`;
+      const created = await sessionCall("POST", `/v1/workspaces/${workspaceId}/members`, {
+        login,
+        displayName: `Runner ${login}`,
+        role: "runner",
+        projectRestrictions: [],
+      });
+      if (created.status !== 201 && created.status !== 200)
+        throw new Error(`member creation failed: ${created.status} ${created.body}`);
+      const memberRecovery = expectString(
+        JSON.parse(created.body.toString()),
+        /^tm_rec_/,
+        "member recovery token",
+      );
+      const member = await adopt(login, memberRecovery);
+      return {
+        login,
+        principalId: member.principalId,
+        token: await issueToken(member.principalId, ["R", "X"]),
+      };
+    },
+  };
+}
 export interface BenchPrincipal {
   readonly login: string;
   readonly principalId: string;
@@ -487,82 +634,13 @@ export async function startBenchStack(options: BenchStackOptions): Promise<Bench
     const serverPid = server.child.pid;
     if (!serverPid) throw new Error("Server process has no PID");
     const client = new BenchClient(new URL(`http://127.0.0.1:${port}`));
-    const baseHeaders = { origin: publicOrigin };
-    /** Setup calls share the server's per-address authentication budget; wait for it to refill. */
-    const setupCall: BenchClient["call"] = async (method, path, callOptions) => {
-      for (let waited = 0; ; waited += 2_000) {
-        const response = await client.call(method, path, callOptions);
-        if (response.status !== 429 || waited >= 120_000) return response;
-        await sleep(2_000);
-      }
-    };
-    const signIn = async (login: string, password: string) => {
-      const response = await setupCall("POST", "/v1/identity/login", {
-        body: { principal: login, password },
-        headers: baseHeaders,
-        idempotent: true,
-        token: null,
-      });
-      if (response.status !== 200)
-        throw new Error(`login for ${login} failed: ${response.status} ${response.body}`);
-      const cookie = [response.headers["set-cookie"] ?? []]
-        .flat()
-        .map((value) => value.split(";")[0] ?? "")
-        .find((value) => value.startsWith("__Host-tm_session="));
-      const receipt = (
-        JSON.parse(response.body.toString()) as {
-          data: { principalId: string; csrfToken: string };
-        }
-      ).data;
-      if (!cookie) throw new Error("login did not set a session cookie");
-      return { principalId: receipt.principalId, csrfToken: receipt.csrfToken, cookie };
-    };
-    const adopt = async (login: string, token: string) => {
-      const password = `Pw-${randomBytes(18).toString("base64url")}`;
-      const recovered = await setupCall("POST", "/v1/identity/recovery", {
-        body: { principal: login, recoveryToken: token, newPassword: password },
-        headers: baseHeaders,
-        idempotent: true,
-        token: null,
-      });
-      if (recovered.status !== 200)
-        throw new Error(`recovery for ${login} failed: ${recovered.status} ${recovered.body}`);
-      return signIn(login, password);
-    };
-
-    const ownerSession = await adopt(ownerLogin, recoveryToken);
-    const sessionCall = async (method: string, path: string, body: unknown) =>
-      setupCall(method, path, {
-        body,
-        token: null,
-        idempotent: true,
-        headers: {
-          ...baseHeaders,
-          cookie: ownerSession.cookie,
-          "x-csrf-token": ownerSession.csrfToken,
-        },
-      });
-    const issueToken = async (principalId: string, scopes: string[]): Promise<string> => {
-      const issued = await sessionCall("POST", "/v1/tokens", {
-        name: `bench-${randomBytes(3).toString("hex")}`,
-        scopes,
-        grants: [],
-        principalId,
-        expiresAt: new Date(Date.now() + 6 * 3_600_000).toISOString(),
-      });
-      if (issued.status !== 201 && issued.status !== 200)
-        throw new Error(`token issue failed: ${issued.status} ${issued.body}`);
-      return expectString(
-        JSON.parse(issued.body.toString()),
-        /^tm_(api|local|op|wrk)_/,
-        "bearer token",
-      );
-    };
-    const owner: BenchPrincipal = {
-      login: ownerLogin,
-      principalId: ownerSession.principalId,
-      token: await issueToken(ownerSession.principalId, ["R", "W", "X", "A"]),
-    };
+    const principals = await bootstrapPrincipals(client, {
+      publicOrigin,
+      workspaceId,
+      ownerLogin,
+      recoveryToken,
+    });
+    const owner = principals.owner;
 
     let application: Application | null = null;
     let worker: Spawned | null = null;
@@ -580,28 +658,7 @@ export async function startBenchStack(options: BenchStackOptions): Promise<Bench
         dataVolume: volume,
         container,
       },
-      async addRunner() {
-        const login = `runner-${randomBytes(4).toString("hex")}`;
-        const created = await sessionCall("POST", `/v1/workspaces/${workspaceId}/members`, {
-          login,
-          displayName: `Runner ${login}`,
-          role: "runner",
-          projectRestrictions: [],
-        });
-        if (created.status !== 201 && created.status !== 200)
-          throw new Error(`member creation failed: ${created.status} ${created.body}`);
-        const memberRecovery = expectString(
-          JSON.parse(created.body.toString()),
-          /^tm_rec_/,
-          "member recovery token",
-        );
-        const member = await adopt(login, memberRecovery);
-        return {
-          login,
-          principalId: member.principalId,
-          token: await issueToken(member.principalId, ["R", "X"]),
-        };
-      },
+      addRunner: () => principals.addRunner(),
       async scope() {
         application ??= await Application.open({ cwd, home, env, server: config });
         return application.controllerScope();
