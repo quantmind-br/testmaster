@@ -548,14 +548,7 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ["GET", "/incidents/{id}", "ops:R", "M4", "Empty", "Incident"],
   ["POST", "/incidents/{id}/events", "ops:A", "M4", "IncidentEventInput", "Incident"],
   ["POST", "/incidents/{id}/close", "ops:A", "M4", "IncidentCloseInput", "Incident"],
-  [
-    "GET,POST",
-    "/projects/{id}/memory",
-    "memory:R/W",
-    "M5",
-    "MemoryEntryInput",
-    "MemoryEntryView",
-  ],
+  ["GET,POST", "/projects/{id}/memory", "memory:R/W", "M5", "MemoryEntryInput", "MemoryEntryView"],
   ["PATCH,DELETE", "/memory/{id}", "memory:W", "M5", "MemoryEntryPatchInput", "MemoryEntryView"],
   [
     "POST",
@@ -568,14 +561,7 @@ const routeRows: ReadonlyArray<readonly [string, string, string, Milestone, stri
   ["GET,POST", "/issue-links", "issues:R/W", "M5", "IssueLinkDraftInput", "IssueLink"],
   ["POST", "/issue-links/{id}/preview", "issues:W", "M5", "Empty", "IssueLinkPreview"],
   ["POST", "/issue-links/{id}/execute", "issues:W", "M5", "IssueLinkExecuteInput", "IssueLink"],
-  [
-    "POST",
-    "/projects/{id}/issue-links/sync",
-    "issues:W",
-    "M5",
-    "Empty",
-    "IssueLinkSyncReceipt",
-  ],
+  ["POST", "/projects/{id}/issue-links/sync", "issues:W", "M5", "Empty", "IssueLinkSyncReceipt"],
   ["GET", "/visual-baselines", "tests:R", "M5", "Empty", "VisualBaseline"],
   ["POST", "/visual-baselines", "tests:W", "M5", "VisualBaselineInput", "VisualBaseline"],
   [

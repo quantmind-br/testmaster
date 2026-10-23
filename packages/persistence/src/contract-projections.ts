@@ -108,7 +108,11 @@ export function scalarPredicate(schema: Record<string, unknown>, expression: str
 /** Tables introduced after 0004; each one receives its generated constraints in its own forward migration. */
 const introducedAfter0004 = ["analyses", "healing_proposals", "deliveries"] as const;
 /** Tables whose constraints a later migration generates, so the 0004 `null` selection leaves them out. */
-const excludedFrom0004: readonly string[] = [...introducedAfter0004, "visual_baselines", "issue_links"];
+const excludedFrom0004: readonly string[] = [
+  ...introducedAfter0004,
+  "visual_baselines",
+  "issue_links",
+];
 type Engine = "sqlite" | "postgres";
 interface ConstraintMigrationSpec {
   /** Tables whose constraints the migration generates; `null` is every table not introduced later. */
