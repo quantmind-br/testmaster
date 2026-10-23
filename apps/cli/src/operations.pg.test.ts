@@ -2,6 +2,7 @@ import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Writable } from "node:stream";
+import { alertRules } from "@testmaster/application";
 import { PersistenceDatabase } from "@testmaster/persistence";
 import { createTestDatabase, type TestDatabase } from "@testmaster/persistence/testing";
 import { afterEach, expect, it } from "vitest";
@@ -123,7 +124,16 @@ it("M4-02 operates a server deployment from the host CLI: status, admission, ale
     "enabled",
   );
 
-  expect((await invoke(["ops", "alert-rules", ...server(path)])).body.data.items).toHaveLength(10);
+  // Every rule of the deployment's catalogue is listed, the distributed-profile rules included.
+  expect(
+    (await invoke(["ops", "alert-rules", ...server(path)])).body.data.items
+      .map((rule: { id: string }) => rule.id)
+      .sort(),
+  ).toEqual(
+    alertRules()
+      .map((rule) => rule.id)
+      .sort(),
+  );
   expect((await invoke(["ops", "alerts", "list", ...server(path)])).body.data.items).toEqual([]);
   const preview = await invoke(["ops", "reconcile", "preview", ...server(path)]);
   expect(preview.body.data).toMatchObject({ kind: "reconcile", state: "completed" });

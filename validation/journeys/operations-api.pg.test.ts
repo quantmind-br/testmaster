@@ -1,3 +1,4 @@
+import { alertRules } from "@testmaster/application";
 import { afterEach, expect, it } from "vitest";
 import { createListingTest, insertListedRuns } from "../../packages/application/src/ops.testkit.js";
 import { type ServerStack, startServerStack } from "./server-stack.js";
@@ -76,7 +77,17 @@ it("M4-02 serves the operations routes over HTTPS: the owner pauses admission, a
   expect(viewerReconcile.status).toBe(403);
   const alerts = await owner.request("GET", "/v1/alert-rules");
   expect(alerts.status).toBe(200);
-  expect(alerts.json<{ data: { items: unknown[] } }>().data.items.length).toBe(10);
+  // Every rule of the deployment's catalogue is listed, the distributed-profile rules included.
+  expect(
+    alerts
+      .json<{ data: { items: { id: string }[] } }>()
+      .data.items.map((rule) => rule.id)
+      .sort(),
+  ).toEqual(
+    alertRules()
+      .map((rule) => rule.id)
+      .sort(),
+  );
 });
 
 it("NFR-010 exposes opt-in Prometheus metrics for the caller's own workspace without tenant-identifying labels", async () => {
