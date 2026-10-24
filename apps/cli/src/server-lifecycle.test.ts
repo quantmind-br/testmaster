@@ -40,7 +40,10 @@ async function fixture() {
   });
   await app.init();
   const port = await freePort();
-  const invoke = async (interruptWhileOpening = false) => {
+  const invoke = async (
+    interruptWhileOpening = false,
+    observe?: (runtime: Runtime, stdout: () => string) => void,
+  ) => {
     let stdout = "";
     let stderr = "";
     const collect = (sink: (text: string) => void) =>
@@ -58,6 +61,7 @@ async function fixture() {
         stderr += text;
       }),
     );
+    observe?.(runtime, () => stdout);
     runtime.app = async () => {
       if (interruptWhileOpening) runtime.interrupt("SIGTERM");
       return app;
@@ -107,6 +111,36 @@ it("a local server whose worker drains by itself shuts down cleanly instead of s
   expect(result.exit).toBe(0);
   expect(result.stderr).toContain("worker drained; shutting the server down");
   expect(result.documents.some((document) => document.error)).toBe(false);
+  expect(await f.listening()).toBe(false);
+}, 30_000);
+
+it("a local server announces itself and listens only once its worker is ready to claim", async () => {
+  const f = await fixture();
+  const workerReady = Promise.withResolvers<void>();
+  vi.spyOn(f.app.worker, "run").mockImplementation(async (options = {}) => {
+    await workerReady.promise;
+    options.onReady?.("wrk_ready");
+    const { signal } = options;
+    if (signal && !signal.aborted)
+      await new Promise((resolve) => signal.addEventListener("abort", resolve, { once: true }));
+    return { workerId: "wrk_ready", drained: true };
+  });
+  let runtime: Runtime | undefined;
+  let stdout = () => "";
+  const result = f.invoke(false, (observed, read) => {
+    runtime = observed;
+    stdout = read;
+  });
+  // The receipt is what clients wait for; before the worker is ready, a Run sent on it would be
+  // refused with "No live worker".
+  await delay(1000);
+  expect(stdout()).toBe("");
+  expect(await f.listening()).toBe(false);
+  workerReady.resolve();
+  await vi.waitFor(() => expect(stdout()).toContain("tokenPath"), { timeout: 10_000 });
+  expect(await f.listening()).toBe(true);
+  runtime?.interrupt("SIGTERM");
+  await result;
   expect(await f.listening()).toBe(false);
 }, 30_000);
 

@@ -170,10 +170,12 @@ export function serverCommands(program: Command, runtime: Runtime): void {
       // `controller` stops the worker and loops; it is aborted by shutdown or by a worker failure.
       const controller = new AbortController();
       announceDrain(rt);
+      const workerReady = Promise.withResolvers<void>();
       const worker = application.worker
         .run({
           signal: controller.signal,
           force: rt.forceController.signal,
+          onReady: () => workerReady.resolve(),
           onContended: (elapsedMs) =>
             rt.stderr.write(
               `worker is waiting for the database writer lock (${Math.round(elapsedMs / 1000)} s so far; another process holds it)\n`,
@@ -196,18 +198,25 @@ export function serverCommands(program: Command, runtime: Runtime): void {
           },
         );
       const loops = controllerLoops(rt, application, "local", controller.signal);
-      const address = await app.listen({ host, port: options.port as number });
-      const receipt = {
-        address,
-        tokenPath: token.tokenPath,
-        ...(options.printToken ? { token: token.token } : {}),
-      };
-      rt.emit({
-        data: receipt,
-        text: `Server listening at ${address}\nCapability token file: ${token.tokenPath}${options.printToken ? `\n${token.token}` : ""}`,
-      });
+      const stopped = AbortSignal.any([rt.controller.signal, controller.signal]);
+      let receipt: { address: string; tokenPath: string; token?: string } | null = null;
       try {
-        await waitForAbort(AbortSignal.any([rt.controller.signal, controller.signal]));
+        // The receipt is the signal clients wait for, so it waits for a worker that admits Runs:
+        // until the worker is ready, a Run sent on it would be refused with "No live worker".
+        await Promise.race([workerReady.promise, waitForAbort(stopped)]);
+        if (!stopped.aborted) {
+          const address = await app.listen({ host, port: options.port as number });
+          receipt = {
+            address,
+            tokenPath: token.tokenPath,
+            ...(options.printToken ? { token: token.token } : {}),
+          };
+          rt.emit({
+            data: receipt,
+            text: `Server listening at ${address}\nCapability token file: ${token.tokenPath}${options.printToken ? `\n${token.token}` : ""}`,
+          });
+          await waitForAbort(stopped);
+        }
       } finally {
         controller.abort();
         await app.close();
@@ -215,7 +224,7 @@ export function serverCommands(program: Command, runtime: Runtime): void {
       }
       const outcome = await worker;
       if (outcome) throw outcome.error;
-      return { data: receipt };
+      return { data: receipt ?? { tokenPath: token.tokenPath } };
     },
   );
   runtime.bind(
