@@ -651,6 +651,46 @@ async function sharedVaultLock(
     },
   };
 }
+/**
+ * Publishes this process's pid as `name` inside `directory`; a holder that is alive (or that
+ * this process may not signal) is refused with `busy()`, and a dead holder's file is reclaimed
+ * once. `release` unlinks the file and leaves the directory handle to the caller.
+ */
+export async function holdPidLock(
+  directory: FileHandle,
+  name: string,
+  busy: () => ContractError,
+): Promise<{ release(): Promise<void> }> {
+  const path = `/proc/self/fd/${directory.fd}/${name}`;
+  const pidBytes = Buffer.from(String(process.pid));
+  try {
+    await writePrivate(directory, name, pidBytes);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    // A holder between its link and unlink steps leaves two links on a complete lock.
+    const text = (await readPrivate(directory, name, 32, 2)).toString();
+    const pid = Number(text);
+    if (!/^[0-9]+$/.test(text) || !Number.isSafeInteger(pid) || pid < 1) throw busy();
+    try {
+      process.kill(pid, 0);
+      throw busy();
+    } catch (owner) {
+      if (owner instanceof ContractError) throw owner;
+      const code = (owner as NodeJS.ErrnoException).code;
+      if (code === "EPERM") throw busy();
+      if (code !== "ESRCH") throw owner;
+    }
+    await unlink(path);
+    try {
+      await writePrivate(directory, name, pidBytes);
+    } catch (second) {
+      // Another process reclaimed the dead holder's lock first.
+      if ((second as NodeJS.ErrnoException).code === "EEXIST") throw busy();
+      throw second;
+    }
+  }
+  return { release: () => unlink(path) };
+}
 /** The cross-process lock file; a live holder in another process is refused as busy. */
 async function vaultFileLock(layout: VaultLayout): Promise<VaultLock> {
   const directory = await vaultDirectory(layout.keyDirectory);
@@ -666,42 +706,15 @@ async function vaultFileLock(layout: VaultLayout): Promise<VaultLock> {
     if (lockDirectory !== directory) await lockDirectory.close();
     await directory.close();
   };
-  const path = `/proc/self/fd/${lockDirectory.fd}/vault.lock`;
   const busyPath = join(layout.lockDirectory, "vault.lock");
-  const pidBytes = Buffer.from(String(process.pid));
   try {
-    try {
-      await writePrivate(lockDirectory, "vault.lock", pidBytes);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-      // A holder between its link and unlink steps leaves two links on a complete lock.
-      const text = (await readPrivate(lockDirectory, "vault.lock", 32, 2)).toString();
-      const pid = Number(text);
-      if (!/^[0-9]+$/.test(text) || !Number.isSafeInteger(pid) || pid < 1) throw lockBusy(busyPath);
-      try {
-        process.kill(pid, 0);
-        throw lockBusy(busyPath);
-      } catch (owner) {
-        if (owner instanceof ContractError) throw owner;
-        const code = (owner as NodeJS.ErrnoException).code;
-        if (code === "EPERM") throw lockBusy(busyPath);
-        if (code !== "ESRCH") throw owner;
-      }
-      await unlink(path);
-      try {
-        await writePrivate(lockDirectory, "vault.lock", pidBytes);
-      } catch (second) {
-        // Another process reclaimed the dead holder's lock first.
-        if ((second as NodeJS.ErrnoException).code === "EEXIST") throw lockBusy(busyPath);
-        throw second;
-      }
-    }
+    const held = await holdPidLock(lockDirectory, "vault.lock", () => lockBusy(busyPath));
     return {
       directory,
       renew: () => {},
       release: async () => {
         try {
-          await unlink(path);
+          await held.release();
         } finally {
           await closeAll();
         }

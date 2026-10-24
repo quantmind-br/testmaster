@@ -46,6 +46,7 @@ import {
 } from "@testmaster/sandbox";
 import type { AttemptDispatch } from "./attempt-session.js";
 import { popAuthorization, popPublicKey } from "./proof-of-possession.js";
+import { holdPidLock, privateDirectory } from "./secrets.js";
 import { tunnelDialer } from "./tunnel-dialer.js";
 import { validateCapacity, type WorkerCapacity } from "./worker-capacity.js";
 import { localHandshake } from "./worker-handshake.js";
@@ -66,6 +67,41 @@ export class RemoteCallError extends Error {
 /** True when the server refused a call because the worker no longer holds the Attempt's lease. */
 export function isLeaseLost(error: unknown): boolean {
   return error instanceof RemoteCallError && error.details.reasonCode === "lease_lost";
+}
+
+/**
+ * Holds `worker.lock` in the worker's data directory for the life of the process, so two
+ * processes never serve one worker identity and the start-up sweep never removes a live sandbox.
+ */
+export async function lockWorkerDataDir(dataDir: string): Promise<{ release(): Promise<void> }> {
+  const directory = await privateDirectory(dataDir);
+  try {
+    const held = await holdPidLock(
+      directory,
+      "worker.lock",
+      () =>
+        new ContractError(
+          "PRECONDITION_FAILED",
+          "Another worker process uses this data directory",
+          {
+            reasonCode: "lock_busy",
+            path: join(dataDir, "worker.lock"),
+          },
+        ),
+    );
+    return {
+      release: async () => {
+        try {
+          await held.release();
+        } finally {
+          await directory.close();
+        }
+      },
+    };
+  } catch (error) {
+    await directory.close();
+    throw error;
+  }
 }
 
 /** The remote worker's only channel to the controller (ADR-030). */
@@ -424,6 +460,16 @@ export class RemoteWorkerAgent {
         diagnostics: doctor.diagnostics,
       });
     await mkdir(this.options.dataDir, { recursive: true, mode: 0o700 });
+    const dirLock = await lockWorkerDataDir(this.options.dataDir);
+    try {
+      return await this.serve(signal, force);
+    } finally {
+      await dirLock.release();
+    }
+  }
+
+  private async serve(signal: AbortSignal, force?: AbortSignal): Promise<{ workerId: string }> {
+    const { transport, dataDir } = this.options;
     const lock = await this.images();
     const handshake = localHandshake(lock);
     const capacity = await this.capacity();
@@ -432,6 +478,19 @@ export class RemoteWorkerAgent {
       signal,
     );
     const workerId = identity.workerId;
+    // The data-dir lock and the key bound at enrollment (ADR-031) leave one live process per
+    // worker identity, so every sandbox labelled with it now is a dead predecessor's leftover.
+    // A sandbox that cannot be removed refuses the start.
+    const swept = await this.docker.removeWorkerContainers(workerId);
+    await rm(join(dataDir, "cache", "attempt-input"), { recursive: true, force: true });
+    for (const { attemptId } of swept)
+      if (attemptId)
+        await rm(join(await this.runtimeRoot(), "testmaster", attemptId), {
+          recursive: true,
+          force: true,
+        });
+    if (swept.length > 0)
+      this.log({ event: "worker.sweep", workerId, containers: swept.map((s) => s.name) });
     this.log({ event: "worker.ready", workerId, shared: identity.shared });
     const tasks = new Set<Promise<void>>();
     const claimBody = (state: "ready" | "draining") => ({
@@ -550,6 +609,7 @@ export class RemoteWorkerAgent {
     let sequence = 0;
     return {
       ...dispatch,
+      workerId,
       inputDir,
       seccompPath: this.seccompPath,
       secretRefs: secretRefs.map((ref) => ({

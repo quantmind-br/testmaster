@@ -1,9 +1,11 @@
+import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, writeFile } from "node:fs/promises";
 import { request as httpsRequest } from "node:https";
 import { join } from "node:path";
 import type { Duplex } from "node:stream";
 import { connect as tlsConnect } from "node:tls";
+import { promisify } from "node:util";
 import type { ExecutablePlan, PlanStep } from "@testmaster/contracts";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { loadOrCreatePopKey } from "../../packages/application/src/proof-of-possession.js";
@@ -39,6 +41,7 @@ import {
   startCliAgent as startTunnelAgent,
 } from "./tunnel-helpers.js";
 
+const exec = promisify(execFile);
 /** Text only the developer's loopback target serves: it must never cross the relay in clear. */
 const MARKER = "laptop-only-7f3c9e1a5b";
 const TENANT_MARKER = "tenant-two-2d8b6f04";
@@ -247,13 +250,19 @@ describe("M5-02 tunnels", () => {
     return { ...options, controller, ended };
   };
 
-  const startWorker = async (workspace: number, name: string): Promise<Spawned> => {
+  /** Mints an enrollment token for `name` and writes it where `spawnWorker` reads it. */
+  const mintWorker = async (workspace: number, name: string) => {
     const { stack } = live();
     const token = text((await data(workspace, "POST", "/v1/workers", { name })).enrollmentToken);
     const directory = join(stack.cwd, ".workers", name);
     await mkdir(directory, { recursive: true, mode: 0o700 });
-    const tokenFile = join(directory, "enroll.token");
-    await writeFile(tokenFile, token, { mode: 0o600 });
+    await writeFile(join(directory, "enroll.token"), token, { mode: 0o600 });
+  };
+
+  /** Starts `name` from its token file and data dir; a restart re-enrolls with the same key. */
+  const spawnWorker = async (name: string): Promise<Spawned> => {
+    const { stack } = live();
+    const directory = join(stack.cwd, ".workers", name);
     const worker = stack.spawn([
       "worker",
       "start",
@@ -264,7 +273,7 @@ describe("M5-02 tunnels", () => {
       "--ca-file",
       caFile,
       "--enroll-token-file",
-      tokenFile,
+      join(directory, "enroll.token"),
       "--data-dir",
       join(directory, "data"),
       "--slots",
@@ -279,6 +288,11 @@ describe("M5-02 tunnels", () => {
     if (worker.child.exitCode !== null)
       throw new Error(`remote worker ${name} exited: ${worker.stderr()} ${worker.stdout()}`);
     return worker;
+  };
+
+  const startWorker = async (workspace: number, name: string): Promise<Spawned> => {
+    await mintWorker(workspace, name);
+    return spawnWorker(name);
   };
 
   /** The signed transport of an enrolled worker, built from its own key file. */
@@ -689,6 +703,7 @@ describe("M5-02 tunnels", () => {
         (held) => held.length === 1,
         180_000,
       );
+      const killed = worker;
       await stopProcess(worker, "SIGKILL");
       const held = laptop.heldAt("/once-borrower")[0];
       await eventually(
@@ -712,6 +727,47 @@ describe("M5-02 tunnels", () => {
         outcome: finished.outcome,
         tunnelStateAfterBorrowerStop: "active",
       });
+
+      // The killed worker left its sandbox behind; restarting it under the same identity removes it.
+      const leftovers = async () =>
+        (
+          await exec("docker", [
+            "ps",
+            "-a",
+            "--filter",
+            `label=io.testmaster.run=${runId}`,
+            "--format",
+            "{{.Names}}",
+          ])
+        ).stdout
+          .split("\n")
+          .filter(Boolean);
+      const before = await leftovers();
+      expect(before.length).toBeGreaterThan(0);
+      const killedId = text(lineOf(killed, "worker.ready")?.workerId);
+      const restarted = await spawnWorker("tunnel-worker");
+      try {
+        expect(text(lineOf(restarted, "worker.ready")?.workerId)).toBe(killedId);
+        const after = await eventually(leftovers, (names) => names.length === 0, 30_000);
+        const inputs = await readdir(
+          join(live().stack.cwd, ".workers", "tunnel-worker", "data", "cache", "attempt-input"),
+        ).catch((error: NodeJS.ErrnoException) => {
+          if (error.code === "ENOENT") return [];
+          throw error;
+        });
+        expect(inputs).toEqual([]);
+        session.oracles.push({
+          check: "killedWorkerSandboxReclaimed",
+          healthy: true,
+          runId,
+          workerId: killedId,
+          leftoversBeforeRestart: before,
+          leftoversAfterRestart: after,
+          sweptLog: lineOf(restarted, "worker.sweep") ?? null,
+        });
+      } finally {
+        await stopProcess(restarted);
+      }
     });
   }, 600_000);
 
