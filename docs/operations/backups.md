@@ -183,6 +183,30 @@ verification are those above; what changes is the medium.
   `restore_target_not_empty`. The marker is removed last, and a rerun after a crash wipes the evidence
   prefix and starts over with the same result.
 
+### Recovering a backup hidden behind a delete marker
+
+A plain delete on a versioned bucket (possible with the MinIO backup credential, or any credential
+holding `s3:DeleteObject`) does not remove a locked version; it adds a delete marker that makes the
+backup disappear from listings. Remove the marker, never the version, with the backup agent's
+credential:
+
+1. List the versions of the catalog entry and note the delete marker's version id:
+   `mc ls --versions <alias>/<bucket>/<prefix>catalog/<name>.json`, or
+   `aws s3api list-object-versions --bucket <bucket> --prefix <prefix>catalog/<name>.json` (the
+   marker is under `DeleteMarkers` with `IsLatest: true`).
+2. Remove only that marker version:
+   `mc rm --version-id <marker-version-id> <alias>/<bucket>/<prefix>catalog/<name>.json`, or
+   `aws s3api delete-object --bucket <bucket> --key <prefix>catalog/<name>.json --version-id <DeleteMarkers[].VersionId>`.
+3. Repeat both steps for every object under `<prefix>data/<name>/` whose latest version is a delete
+   marker (`mc ls --versions --recursive <alias>/<bucket>/<prefix>data/<name>/`).
+4. Confirm that `mc ls <alias>/<bucket>/<prefix>catalog/` lists `<name>.json` again, then create a
+   verification request for the backup (see [Verification](#verification)); it must report
+   `complete: true`.
+
+Removing a marker needs `s3:DeleteObjectVersion`, which the backup credential already holds. The same
+permission cannot remove a version whose lock has not expired, so a mistaken version id on a locked
+backup fails instead of deleting data.
+
 ## Verification
 
 Verification is non-destructive and is the check that a backup is usable:
