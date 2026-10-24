@@ -74,8 +74,6 @@ export const defaults = Object.freeze({
   httpConcurrency: 4,
   pythonConcurrency: 1,
   batchCells: 500,
-  workerHeartbeatMs: 10000,
-  workerLeaseMs: 30000,
   reconcilerIntervalMs: 30000,
   cancellationGraceMs: 10000,
   tempBytes: 1073741824,
