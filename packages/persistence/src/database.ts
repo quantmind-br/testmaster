@@ -138,6 +138,10 @@ const tableRebuildMigrations = [
   "probe_runner",
   "trackers",
 ];
+/**
+ * The PostgreSQL bridge blocks the main thread while a migration runs, so no signal handler
+ * (Ctrl-C included) can run; this deadline is the only way a stuck migration ends without SIGKILL.
+ */
 const migrationTimeoutMs = 600_000;
 const bypassRefusal = "Database role bypasses row-level security";
 

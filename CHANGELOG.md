@@ -9,6 +9,7 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 
 ## Unreleased
 
+- `docs/operations/distributed.md` now states what happens to a PostgreSQL migration that runs longer than 10 minutes (it fails with `UNAVAILABLE` `database_timeout` and the migration in progress rolls back) and that Ctrl-C does not interrupt a running migration. The 10-minute deadline stays: the database bridge waits synchronously, so it is the only way a stuck migration ends without killing the process.
 - The single-server compose `Caddyfile` now closes idle upstream connections to the server after 30 s, below the server's 65 s keep-alive, as the distributed Caddyfile already did, so Caddy never sends a request on a socket the server is closing (a spurious 502).
 - `testmaster config show` and `doctor` no longer list `workerHeartbeatMs` and `workerLeaseMs` under `operationalDefaults`: no code read them, and the worker lease and heartbeat are set where the lease repository claims a job.
 - Offline mode (`TESTMASTER_OFFLINE`, `profilePolicy.offline`) now also checks the destination a Run is admitted against: a `testmaster:targetUrl` override, or an environment's stored base URL, outside loopback is refused with `POLICY_DENIED` even when the environment's network profile is `local-loopback`. Before, such an override was admitted and only pinned to 127.0.0.1 by the egress proxy.

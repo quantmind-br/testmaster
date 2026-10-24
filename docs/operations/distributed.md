@@ -32,6 +32,12 @@ Follow the README sequence: TLS (`gen-tls.sh` also issues the MinIO certificate)
 bootstrap`, then the controllers and Caddy. Only one process migrates. Bootstrap prints the owner's
 one-time recovery token.
 
+A PostgreSQL migration that runs longer than 10 minutes fails with `UNAVAILABLE` and `reasonCode:
+"database_timeout"`: the connection is dropped, the migration in progress rolls back and the ones that
+finished before it stay applied, so `db migrate` can be run again. Ctrl-C does not interrupt a running
+migration, because the process waits on the database synchronously until the statement returns; the
+10-minute deadline is the only way a stuck migration ends without killing the process.
+
 `minio-init` creates the evidence bucket, the backup bucket with Object Lock and a default COMPLIANCE
 retention of `TESTMASTER_BACKUP_LOCK_DAYS`, and two users each limited to its own bucket. The
 controllers get only the evidence user. Check the result with `testmaster server readiness --config
