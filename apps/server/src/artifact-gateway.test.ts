@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { request as httpRequest } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import {
   Application,
   issueLocalToken,
@@ -20,7 +22,7 @@ afterEach(async () => {
 
 const page = "<html><body><script>alert(1)</script><p>evidence</p></body></html>";
 
-async function fixture() {
+async function fixture(extra: { relativePath: string; body: string }[] = []) {
   const cwd = await mkdtemp(join(tmpdir(), "tm-gateway-"));
   const home = join(cwd, "home");
   await mkdir(home);
@@ -48,6 +50,7 @@ async function fixture() {
             body: "raw-bytes",
             restricted: true,
           },
+          ...extra.map((item) => ({ ...item, kind: "console", mimeType: "text/plain" })),
         ],
       },
     ],
@@ -233,3 +236,38 @@ it("UX-032 M4-01 DELETE /v1/artifacts/{id} over HTTP tombstones the artifact and
   expect((await f.app.inject({ url })).statusCode).toBe(404);
   expect((await f.mint(dom.id)).statusCode).toBe(404);
 });
+
+it("a download the client abandons mid-stream ends quietly and the server keeps answering", async () => {
+  const large = "x".repeat(16 * 1024 * 1024);
+  const f = await fixture([{ relativePath: "large.txt", body: large }]);
+  const rejections: unknown[] = [];
+  const record = (reason: unknown) => rejections.push(reason);
+  process.on("unhandledRejection", record);
+  cleanup.push(async () => {
+    process.off("unhandledRejection", record);
+  });
+  const origin = await f.app.listen({ host: "127.0.0.1", port: 0 });
+  const { id } = f.artifact("large.txt");
+  const abandoned = Promise.withResolvers<void>();
+  const download = httpRequest(
+    `${origin}/v1/artifacts/${id}`,
+    { headers: f.headers },
+    (response) => {
+      expect(response.statusCode).toBe(200);
+      // The client leaves after the first chunk, long before the server has streamed 16 MiB.
+      response.once("data", () => {
+        download.destroy();
+        abandoned.resolve();
+      });
+    },
+  );
+  download.on("error", () => {});
+  download.end();
+  await abandoned.promise;
+  // The server serves the next download in full: the abandoned one did not take it over.
+  const next = await fetch(`${origin}/v1/artifacts/${id}`, { headers: f.headers });
+  expect(next.status).toBe(200);
+  expect((await next.arrayBuffer()).byteLength).toBe(large.length);
+  await delay(200);
+  expect(rejections).toEqual([]);
+}, 60_000);

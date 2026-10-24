@@ -649,6 +649,10 @@ export function createServer(options: ServerOptions): FastifyInstance {
             : await operation();
         // Handlers that stream or answer on their own have already taken over the reply.
         if (reply.sent) return reply;
+        // A stream the client left mid-way ends without `writableEnded`, but its headers are out:
+        // returning nothing keeps Fastify from sending an envelope after them (and from raising
+        // ERR_HTTP_HEADERS_SENT as an unhandled rejection).
+        if (reply.raw.headersSent) return;
         if (data && typeof data === "object" && "version" in data)
           reply.header("ETag", `"${data.version}"`);
         // Bodies are per credential: no shared cache may replay one tenant's response to another.

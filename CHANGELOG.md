@@ -9,6 +9,7 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 
 ## Unreleased
 
+- A streamed response the client abandons part-way (an artifact download, a remote worker's input file, or one relayed by another controller) now ends quietly. Before, the server then tried to send its JSON envelope after the streamed headers, which raised `ERR_HTTP_HEADERS_SENT` as an unhandled promise rejection; under Node's default rejection mode that can stop the server process.
 - Local `testmaster server start` now listens and prints its receipt (address and token file) only once its worker is registered and ready to claim. Before, a Run sent as soon as the receipt appeared could be refused with `PRECONDITION_FAILED` "No live worker" while the worker was still checking the runner images.
 - The distributed compose files and the MinIO evidence tests now pull MinIO from `ghcr.io/quantmind-br/minio@sha256:a1a8bd4a…`, a public, unmodified linux/amd64 mirror of `minio/minio` RELEASE.2025-09-07T16-13-09Z (same layers and configuration), because Docker Hub no longer serves the original. A fresh host can now start the distributed profile without a saved copy of the image.
 - `docs/operations/backups.md` gains a runbook for recovering an S3 backup hidden behind a delete marker (list the versions, remove only the marker versions of the catalog entry and the data objects with the backup credential, then verify), and the disaster-recovery table points at it.
