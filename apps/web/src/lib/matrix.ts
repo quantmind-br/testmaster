@@ -77,7 +77,13 @@ export function buildMatrix(receipt: BatchReceiptLike, runs: readonly RunRecord[
     inconclusive: 0,
     inFlight: 0,
   };
-  for (const run of runs) summary[run.outcome ?? "inFlight"] += 1;
+  // A passed Run whose gate failed is inconclusive, as the batch counts it (specs/11).
+  for (const run of runs)
+    summary[
+      run.outcome === "passed" && run.gate === "failed"
+        ? "inconclusive"
+        : (run.outcome ?? "inFlight")
+    ] += 1;
   const missingRuns = Math.max(0, receipt.allMembers.length - runs.length);
   const complete = receipt.notDispatched.length === 0 && missingRuns === 0;
   const headline = complete

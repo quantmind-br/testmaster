@@ -9,6 +9,7 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 
 ## Unreleased
 
+- The portal no longer shows a Run whose assertions passed but whose gate failed as Passed outside the Run page: the project's and the retention page's Run lists, the batch matrix and the comparison sides show it as degraded "Passed, gate failed", and the batch matrix summary counts it as inconclusive.
 - Flake studies count a Run whose assertions passed but whose gate failed (evidence not published, cleanup not proven) as `inconclusive`, never as a pass, as batch counts already did, so it no longer lowers the failure rate.
 - `docs/operations/distributed.md` now states what happens to a PostgreSQL migration that runs longer than 10 minutes (it fails with `UNAVAILABLE` `database_timeout` and the migration in progress rolls back) and that Ctrl-C does not interrupt a running migration. The 10-minute deadline stays: the database bridge waits synchronously, so it is the only way a stuck migration ends without killing the process.
 - The single-server compose `Caddyfile` now closes idle upstream connections to the server after 30 s, below the server's 65 s keep-alive, as the distributed Caddyfile already did, so Caddy never sends a request on a socket the server is closing (a spurious 502).

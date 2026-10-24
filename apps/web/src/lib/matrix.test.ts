@@ -128,4 +128,17 @@ describe("batch matrix completeness", () => {
       first.id,
     ]);
   });
+
+  it("UX-036 a passed Run whose gate failed is summarised as inconclusive", () => {
+    const runs = [
+      { ...run("t1", "chromium", "passed"), gate: "failed" as const },
+      { ...run("t1", "firefox", "passed"), gate: "passed" as const },
+      { ...run("t2", "chromium", "failed"), gate: "failed" as const },
+    ];
+    expect(buildMatrix(receipt(runs), runs).summary).toMatchObject({
+      passed: 1,
+      failed: 1,
+      inconclusive: 1,
+    });
+  });
 });

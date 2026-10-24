@@ -11,6 +11,7 @@ import {
   formatServerTime,
   formatStructured,
   isTerminalEvent,
+  runListBadge,
   sensitiveStepIds,
   toRunEvent,
 } from "./run-facts";
@@ -98,6 +99,19 @@ describe("run facts label", () => {
     expect(facts).toMatchObject({ label: "Failed", status: "failed", passed: false });
     expect(facts.notes).toEqual(["Cleanup failed.", "The gate failed."]);
     expect(describeRunFacts(run({ outcome: "cancelled" }), null).label).toBe("Cancelled");
+  });
+
+  it("UX-029 a list badge never shows a gate-failed pass as Passed", () => {
+    expect(runListBadge(run({ gate: "failed" }))).toEqual({
+      status: "degraded",
+      label: "Passed, gate failed",
+    });
+    expect(runListBadge(run({}))).toEqual({ status: "passed" });
+    expect(runListBadge(run({ outcome: "failed", status: "failed", gate: "failed" }))).toEqual({
+      status: "failed",
+    });
+    // A list item that carries only its status follows the same rule.
+    expect(runListBadge({ status: "passed", gate: "failed" }).status).toBe("degraded");
   });
 });
 

@@ -7,6 +7,7 @@ import { UntrustedText } from "../components/untrusted-text";
 import { StatusView, ViewState } from "../components/view-state";
 import { usePageTitle } from "../hooks/use-page-title";
 import { usePaged, useResource } from "../hooks/use-resource";
+import { runListBadge } from "../lib/run-facts";
 import type { ProjectSummary } from "./home";
 import { NotFoundPage } from "./not-found";
 import type { PortalRoute } from "./types";
@@ -20,6 +21,8 @@ interface EnvironmentSummary {
 interface RunSummary {
   readonly id: string;
   readonly status: string;
+  readonly outcome?: string | null;
+  readonly gate?: string;
   readonly createdAt: string;
   readonly testId?: string;
 }
@@ -35,7 +38,7 @@ const environmentColumns: Column<EnvironmentSummary>[] = [
 
 const runColumns: Column<RunSummary>[] = [
   { key: "id", header: "Run", render: (run) => <code>{run.id}</code> },
-  { key: "status", header: "Status", render: (run) => <StatusBadge status={run.status} /> },
+  { key: "status", header: "Status", render: (run) => <StatusBadge {...runListBadge(run)} /> },
   {
     key: "createdAt",
     header: "Created",

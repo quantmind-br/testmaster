@@ -355,3 +355,18 @@ export function buildCurrentContext(
     ...(environment ? { environmentRevisionId: environment.activeRevisionId } : {}),
   };
 }
+
+/**
+ * The badge of a Run in a list or a matrix (UX-029): a passed Run whose gate failed shows as
+ * `degraded` "Passed, gate failed", never as a plain pass.
+ */
+export function runListBadge(run: {
+  readonly status: string;
+  readonly outcome?: string | null | undefined;
+  readonly gate?: string | undefined;
+}): { status: string; label?: string } {
+  const verdict = run.outcome ?? run.status;
+  if (verdict === "passed" && run.gate === "failed")
+    return { status: "degraded", label: "Passed, gate failed" };
+  return { status: verdict };
+}

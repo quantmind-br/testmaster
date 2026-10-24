@@ -23,6 +23,7 @@ import {
   groupComparison,
 } from "../lib/comparison-view";
 import { buildMatrix } from "../lib/matrix";
+import { runListBadge } from "../lib/run-facts";
 import type { RunRecord } from "../lib/run-types";
 import { stringField } from "../lib/url-state";
 import { NotFoundPage } from "./not-found";
@@ -303,7 +304,7 @@ function SideSummary({
         <dd>
           <Link to={`/runs/${encodeURIComponent(id)}`}>{id}</Link>{" "}
           {outcome ? (
-            <StatusBadge status={outcome} />
+            <StatusBadge {...runListBadge({ status: outcome, outcome, gate: record.gate })} />
           ) : (
             <StatusBadge status={record.phase ?? "pending"} label="Not finished" />
           )}

@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { useResource } from "../hooks/use-resource";
 import { describeRunContext, shortId } from "../lib/batch-view";
 import type { BatchMatrix, MatrixCell } from "../lib/matrix";
+import { runListBadge } from "../lib/run-facts";
 import type { RunRecord } from "../lib/run-types";
 import { Icon, StatusBadge } from "./status";
 import { UntrustedText } from "./untrusted-text";
@@ -37,7 +38,7 @@ function RunEntry({ run }: { run: RunRecord }): ReactNode {
   const repetition = run.matrixCell?.repetitionIndex;
   return (
     <li className="matrix-run" data-run-id={run.id}>
-      <StatusBadge status={run.outcome ?? run.status} />{" "}
+      <StatusBadge {...runListBadge(run)} />{" "}
       <Link to={`/runs/${encodeURIComponent(run.id)}`}>
         Run {shortId(run.id)}
         {repetition === undefined ? "" : ` (repetition ${repetition + 1})`}
