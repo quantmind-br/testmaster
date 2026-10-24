@@ -9,6 +9,7 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 
 ## Unreleased
 
+- The single-server compose `Caddyfile` now closes idle upstream connections to the server after 30 s, below the server's 65 s keep-alive, as the distributed Caddyfile already did, so Caddy never sends a request on a socket the server is closing (a spurious 502).
 - `testmaster config show` and `doctor` no longer list `workerHeartbeatMs` and `workerLeaseMs` under `operationalDefaults`: no code read them, and the worker lease and heartbeat are set where the lease repository claims a job.
 - Offline mode (`TESTMASTER_OFFLINE`, `profilePolicy.offline`) now also checks the destination a Run is admitted against: a `testmaster:targetUrl` override, or an environment's stored base URL, outside loopback is refused with `POLICY_DENIED` even when the environment's network profile is `local-loopback`. Before, such an override was admitted and only pinned to 127.0.0.1 by the egress proxy.
 - A remote worker (`worker start --mode remote`) now holds `worker.lock` in its data directory for its lifetime; a second process on the same directory is refused with `PRECONDITION_FAILED` `lock_busy`, and the lock of a process that died is reclaimed. Right after enrollment the worker removes every sandbox still labelled with its worker id, its leftover Attempt inputs and the sockets directories of those Attempts, so a worker killed mid-Attempt no longer leaves a `tm-att-*` container behind once it restarts; a sandbox it cannot remove refuses the start with `container_cleanup_failed`.

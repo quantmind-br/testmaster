@@ -14,6 +14,11 @@
 		header_up X-Forwarded-For {remote_host}
 		health_uri /v1/health/live
 		health_interval 5s
+		# An idle upstream connection lives 30 s, below the server's 65 s keepAliveTimeout, so Caddy
+		# never reuses a socket the server is closing (a spurious 502).
+		transport http {
+			keepalive 30s
+		}
 	}
 	header {
 		Strict-Transport-Security "max-age=31536000"
