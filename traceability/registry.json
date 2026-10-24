@@ -5884,15 +5884,17 @@
       "scenario": [
         "packages/application/src/application.test.ts::rejects insufficient session scopes even for the local workspace owner",
         "packages/sandbox/src/docker/isolation.docker.test.ts::reaches only the approved loopback app from sandboxed Chromium and undici; blocks raw egress and host access",
-        "apps/server/src/server.test.ts::requires private hashed expiring tokens, scope and exact Origin and honors revocation"
+        "apps/server/src/server.test.ts::requires private hashed expiring tokens, scope and exact Origin and honors revocation",
+        "packages/application/src/execution-risk.test.ts::offline admission refuses a target override outside loopback and admits a loopback one"
       ],
       "oracle": [
-        "Application service scope checks and supervisor proxy enforce authorized destination outside CLI."
+        "Application service scope checks and supervisor proxy enforce authorized destination outside CLI. Offline admission checks the destination of a target override, not only the environment's network profile."
       ],
       "evidence": [
         "packages/application/src/application.test.ts",
         "apps/server/src/server.test.ts",
-        "packages/sandbox/src/docker/isolation.docker.test.ts"
+        "packages/sandbox/src/docker/isolation.docker.test.ts",
+        "packages/application/src/execution-risk.test.ts"
       ],
       "code": [
         "packages/application/src/context.ts",
@@ -5907,7 +5909,8 @@
         ],
         "negative": [
           "apps/server/src/server.test.ts::requires private hashed expiring tokens, scope and exact Origin and honors revocation",
-          "packages/application/src/application.test.ts::rejects insufficient session scopes even for the local workspace owner"
+          "packages/application/src/application.test.ts::rejects insufficient session scopes even for the local workspace owner",
+          "packages/application/src/execution-risk.test.ts::offline admission refuses a target override outside loopback and admits a loopback one"
         ],
         "criticalAssertions": [
           {
@@ -10972,10 +10975,13 @@
         "validation/journeys/m5-remote-workers.docker.test.ts::M5-01 a partitioned remote worker loses its lease: its egress ends, its stale publication is refused with lease_lost and the Run completes from the worker that reclaimed it",
         "validation/journeys/m5-remote-workers.docker.test.ts::M5-01 an external effect in flight on a partitioned remote worker stays uncertain and its Run is not retried",
         "packages/application/src/remote-workers.test.ts::M5-01 a remote worker whose lease expired publishes nothing: upload, heartbeat and finalize are refused with lease_lost and the Run is reclaimed",
-        "apps/server/src/workers-deliveries.test.ts::M5-01 the remote worker routes answer only calls signed with the worker's bound key and refuse an attempt it does not hold"
+        "apps/server/src/workers-deliveries.test.ts::M5-01 the remote worker routes answer only calls signed with the worker's bound key and refuse an attempt it does not hold",
+        "packages/sandbox/src/docker/executor.test.ts::reaps every orphan whose durable lease expired even when another container cannot be read",
+        "packages/sandbox/src/docker/executor.test.ts::removes every leftover sandbox of a worker and names the one Docker could not remove",
+        "packages/sandbox/src/docker/executor.test.ts::keeps Docker's reason when the container of a finished attempt cannot be removed"
       ],
       "oracle": [
-        "On the real server profile (PostgreSQL, server start --mode server behind TLS) remote workers without database credentials run Attempts on the host Docker daemon over HTTPS: a worker partitioned from the controller mid-Attempt stops its sandbox and egress within one lease period (the held target connection closes, no container is left), the reconciler retries the Run under a new fence on a second worker which passes it, and the healed worker's settle is refused with lease_lost with no artifact for the stale Attempt; a POST in flight with a planned resource on a partitioned worker ends retry_unsafe_external_effect with one Attempt, one target POST and the resource uncertain; a shared pool worker flooded by one workspace claims another workspace's Run within its first three claims (six-run flood, two slots)."
+        "On the real server profile (PostgreSQL, server start --mode server behind TLS) remote workers without database credentials run Attempts on the host Docker daemon over HTTPS: a worker partitioned from the controller mid-Attempt stops its sandbox and egress within one lease period (the held target connection closes, no container is left), the reconciler retries the Run under a new fence on a second worker which passes it, and the healed worker's settle is refused with lease_lost with no artifact for the stale Attempt; a POST in flight with a planned resource on a partitioned worker ends retry_unsafe_external_effect with one Attempt, one target POST and the resource uncertain; a shared pool worker flooded by one workspace claims another workspace's Run within its first three claims (six-run flood, two slots). Orphan reaping removes containers one by one and keeps Docker's reason for each it could not remove; a remote worker removes its own leftover sandboxes on start."
       ],
       "evidence": [
         "validation/results/M5-01-remote-workers.json",
@@ -10984,7 +10990,9 @@
         "apps/server/src/workers-deliveries.test.ts",
         "docs/adr/030-remote-workers.md",
         "docs/operations/workers.md",
-        "docs/security/threat-model.md"
+        "docs/security/threat-model.md",
+        "packages/sandbox/src/docker/executor.test.ts",
+        "packages/application/src/remote-worker-agent.test.ts"
       ],
       "code": [
         "packages/application/src/remote-workers.ts",
@@ -10996,7 +11004,8 @@
         "packages/contracts/src/m5/remote-workers.ts",
         "apps/server/src/routes/workers.ts",
         "apps/server/src/server.ts",
-        "apps/cli/src/workers.ts"
+        "apps/cli/src/workers.ts",
+        "packages/sandbox/src/docker/executor.ts"
       ],
       "note": "Verified by automated oracles only (ADR-012). Controller, workers and Docker share one host; the partition is a blackholing TCP relay between one worker and the controller's TLS proxy. Remote calls need the API process that answered the claim (affinity on the worker id). The distributed deployment profile of specs/08-operations.md (stateless API replicas, elected scheduler, shared object storage, mTLS service identities) and its capability stay disabled; remote worker identity is the proof of possession of ADR-031.",
       "coverage": {
@@ -11008,7 +11017,10 @@
           "validation/journeys/m5-remote-workers.docker.test.ts::M5-01 a partitioned remote worker loses its lease: its egress ends, its stale publication is refused with lease_lost and the Run completes from the worker that reclaimed it",
           "validation/journeys/m5-remote-workers.docker.test.ts::M5-01 an external effect in flight on a partitioned remote worker stays uncertain and its Run is not retried",
           "packages/application/src/remote-workers.test.ts::M5-01 a remote worker whose lease expired publishes nothing: upload, heartbeat and finalize are refused with lease_lost and the Run is reclaimed",
-          "apps/server/src/workers-deliveries.test.ts::M5-01 the remote worker routes answer only calls signed with the worker's bound key and refuse an attempt it does not hold"
+          "apps/server/src/workers-deliveries.test.ts::M5-01 the remote worker routes answer only calls signed with the worker's bound key and refuse an attempt it does not hold",
+          "packages/sandbox/src/docker/executor.test.ts::reaps every orphan whose durable lease expired even when another container cannot be read",
+          "packages/sandbox/src/docker/executor.test.ts::removes every leftover sandbox of a worker and names the one Docker could not remove",
+          "packages/sandbox/src/docker/executor.test.ts::keeps Docker's reason when the container of a finished attempt cannot be removed"
         ],
         "criticalAssertions": [
           {
@@ -22530,17 +22542,19 @@
         "packages/application/src/audit.test.ts::records identified grant, secret and export denials alongside authorized operations without secret payloads",
         "packages/application/src/audit.test.ts::exports a consistent private ledger and verifies independently retained digest, ownership, order and append-only history",
         "apps/cli/src/audit.test.ts::exports and independently verifies the actual local ledger through the public CLI",
-        "packages/application/src/audit.test.ts::fails sensitive secret writes and exports closed when mandatory audit cannot be appended"
+        "packages/application/src/audit.test.ts::fails sensitive secret writes and exports closed when mandatory audit cannot be appended",
+        "apps/server/src/writer-contention.test.ts::answers authenticated reads under writer contention and refuses audited requests with the enveloped 503, then recovers"
       ],
       "oracle": [
-        "Auth/grant/secret/export allow/deny audit with actor/correlation; sensitive effects fail when audit unavailable; real CLI private export tamper/truncation/order/ownership verifier and append-only UPDATE/DELETEguards."
+        "Auth/grant/secret/export allow/deny audit with actor/correlation; sensitive effects fail when audit unavailable; real CLI private export tamper/truncation/order/ownership verifier and append-only UPDATE/DELETEguards. Authenticated writes and every denial are audited; a successful read writes no audit row."
       ],
       "evidence": [
         "packages/application/src/audit.test.ts",
         "apps/server/src/security.test.ts",
         "apps/cli/src/audit.test.ts",
         "packages/application/src/artifact-streaming.test.ts",
-        "validation/results/governance-ops.json"
+        "validation/results/governance-ops.json",
+        "apps/server/src/writer-contention.test.ts"
       ],
       "code": [
         "packages/application/src/audit.ts",
@@ -22557,7 +22571,8 @@
           "packages/application/src/audit.test.ts::records identified grant, secret and export denials alongside authorized operations without secret payloads"
         ],
         "negative": [
-          "packages/application/src/audit.test.ts::fails sensitive secret writes and exports closed when mandatory audit cannot be appended"
+          "packages/application/src/audit.test.ts::fails sensitive secret writes and exports closed when mandatory audit cannot be appended",
+          "apps/server/src/writer-contention.test.ts::answers authenticated reads under writer contention and refuses audited requests with the enveloped 503, then recovers"
         ],
         "criticalAssertions": [
           {
@@ -23627,17 +23642,20 @@
         "packages/application/src/tunnels.test.ts::SEC-043 the reconciler ends a session at its TTL and after three missed heartbeats, not before",
         "packages/application/src/tunnels.test.ts::SEC-043 a tunnel that ends cancels every Run still bound to it with tunnel_lost",
         "packages/application/src/tunnel-frames.test.ts::SEC-043 a replayed, reordered, unknown or oversized frame breaks the session",
-        "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-042 SEC-044 the relay admits a stream only for a held Attempt of the tunnel's Run, refuses the 33rd without affecting another tenant and is never a general proxy"
+        "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-042 SEC-044 the relay admits a stream only for a held Attempt of the tunnel's Run, refuses the 33rd without affecting another tenant and is never a general proxy",
+        "packages/application/src/remote-worker-agent.test.ts::SEC-043 refuses a second process on a held data dir and frees it on release",
+        "packages/application/src/remote-worker-agent.test.ts::SEC-043 reclaims the lock of a worker process that died without releasing it"
       ],
       "oracle": [
-        "Owner revocation refuses new streams at once, closes the held stream within 5 s on a healthy network and the agent exits with owner_revoked; a control channel that stalls ends the session after three missed 10 s heartbeats (closed, heartbeat_lost, measured between 20 s and 50 s after the partition) on both relay and agent; the TTL ends the session on both sides (expired, ttl_expired); each end cancels the Runs still bound with tunnel_lost; a used open token never opens a second session, and a replayed, reordered, unknown or oversized frame breaks the session instead of resuming a byte stream. Stopping a borrowing worker ends only its streams: the owner's session stays live. Cancelling a held tunnelled Run ends it cancelled while the tunnel stays live."
+        "Owner revocation refuses new streams at once, closes the held stream within 5 s on a healthy network and the agent exits with owner_revoked; a control channel that stalls ends the session after three missed 10 s heartbeats (closed, heartbeat_lost, measured between 20 s and 50 s after the partition) on both relay and agent; the TTL ends the session on both sides (expired, ttl_expired); each end cancels the Runs still bound with tunnel_lost; a used open token never opens a second session, and a replayed, reordered, unknown or oversized frame breaks the session instead of resuming a byte stream. Stopping a borrowing worker ends only its streams: the owner's session stays live. Cancelling a held tunnelled Run ends it cancelled while the tunnel stays live. A worker restarted after SIGKILL removes the sandboxes and attempt inputs its previous process left behind, and a second process on a held data dir is refused."
       ],
       "evidence": [
         "validation/results/M5-02-tunnels.json",
         "validation/journeys/m5-tunnels.docker.test.ts",
         "docs/adr/031-tunnels-and-worker-proof-of-possession.md",
         "docs/operations/tunnels.md",
-        "docs/security/threat-model.md"
+        "docs/security/threat-model.md",
+        "packages/application/src/remote-worker-agent.test.ts"
       ],
       "code": [
         "packages/application/src/tunnels.ts",
@@ -23654,7 +23672,8 @@
         "packages/persistence/migrations/postgres/0025_tunnels.sql",
         "apps/server/src/routes/tunnels.ts",
         "apps/server/src/server.ts",
-        "apps/cli/src/tunnels.ts"
+        "apps/cli/src/tunnels.ts",
+        "packages/application/src/secrets.ts"
       ],
       "note": "Verified by automated oracles only (ADR-012). Controller, relay, remote workers, tunnel agents and Docker share one host; the laptop is a loopback app beside the agent and the partition is a stalling TCP relay between one agent and the controller's TLS proxy. The relay runs in the API process with sessions in memory, so a session needs the API process that opened it.",
       "coverage": {
@@ -23667,7 +23686,9 @@
           "packages/application/src/tunnels.test.ts::SEC-043 the reconciler ends a session at its TTL and after three missed heartbeats, not before",
           "packages/application/src/tunnels.test.ts::SEC-043 a tunnel that ends cancels every Run still bound to it with tunnel_lost",
           "packages/application/src/tunnel-frames.test.ts::SEC-043 a replayed, reordered, unknown or oversized frame breaks the session",
-          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-042 SEC-044 the relay admits a stream only for a held Attempt of the tunnel's Run, refuses the 33rd without affecting another tenant and is never a general proxy"
+          "validation/journeys/m5-tunnels.docker.test.ts::M5-02 SEC-042 SEC-044 the relay admits a stream only for a held Attempt of the tunnel's Run, refuses the 33rd without affecting another tenant and is never a general proxy",
+          "packages/application/src/remote-worker-agent.test.ts::SEC-043 refuses a second process on a held data dir and frees it on release",
+          "packages/application/src/remote-worker-agent.test.ts::SEC-043 reclaims the lock of a worker process that died without releasing it"
         ],
         "criticalAssertions": [
           {
@@ -26039,7 +26060,8 @@
         "apps/web/src/lib/run-facts.test.ts::UX-029 a Run that is loading, running or without evidence never turns Passed with time",
         "apps/web/src/lib/run-facts.test.ts::UX-029 a failed Run keeps its verdict and names a failed cleanup or gate",
         "validation/journeys/portal-runs-detail.portal.test.ts::UX-029 a pass is never plain Passed when cleanup or the gate failed",
-        "validation/journeys/portal-runs-detail.portal.test.ts::UX-029 a step cites evidence only from its own attempt's bundle"
+        "validation/journeys/portal-runs-detail.portal.test.ts::UX-029 a step cites evidence only from its own attempt's bundle",
+        "apps/web/src/lib/run-facts.test.ts::UX-029 a list badge never shows a gate-failed pass as Passed"
       ],
       "oracle": [
         "Attempts keep their own number, pinned policy, retry reason and result, and steps stay under their own Attempt.",
@@ -26068,7 +26090,8 @@
           "apps/web/src/lib/run-facts.test.ts::UX-029 a Run that is loading, running or without evidence never turns Passed with time",
           "apps/web/src/lib/run-facts.test.ts::UX-029 a failed Run keeps its verdict and names a failed cleanup or gate",
           "validation/journeys/portal-runs-detail.portal.test.ts::UX-029 a pass is never plain Passed when cleanup or the gate failed",
-          "validation/journeys/portal-runs-detail.portal.test.ts::UX-029 a step cites evidence only from its own attempt's bundle"
+          "validation/journeys/portal-runs-detail.portal.test.ts::UX-029 a step cites evidence only from its own attempt's bundle",
+          "apps/web/src/lib/run-facts.test.ts::UX-029 a list badge never shows a gate-failed pass as Passed"
         ],
         "criticalAssertions": [
           {
@@ -26384,7 +26407,8 @@
         "validation/journeys/portal-runs-compare.portal.test.ts::UX-036 a complete batch reads its gate, with every pair run and no Not run cell",
         "apps/web/src/lib/matrix.test.ts::UX-036 a member without a loaded Run makes the batch incomplete instead of green",
         "apps/web/src/lib/matrix.test.ts::UX-036 a member that was not dispatched keeps its reason code and makes the batch incomplete",
-        "apps/web/src/lib/batch-view.test.ts::UX-036 an incomplete batch never shows a passed gate"
+        "apps/web/src/lib/batch-view.test.ts::UX-036 an incomplete batch never shows a passed gate",
+        "apps/web/src/lib/matrix.test.ts::UX-036 a passed Run whose gate failed is summarised as inconclusive"
       ],
       "oracle": [
         "The batch matrix lists every Run per test and environment, repetitions included, with text status and links to each Run.",
@@ -26411,7 +26435,8 @@
         "negative": [
           "apps/web/src/lib/matrix.test.ts::UX-036 a member without a loaded Run makes the batch incomplete instead of green",
           "apps/web/src/lib/matrix.test.ts::UX-036 a member that was not dispatched keeps its reason code and makes the batch incomplete",
-          "apps/web/src/lib/batch-view.test.ts::UX-036 an incomplete batch never shows a passed gate"
+          "apps/web/src/lib/batch-view.test.ts::UX-036 an incomplete batch never shows a passed gate",
+          "apps/web/src/lib/matrix.test.ts::UX-036 a passed Run whose gate failed is summarised as inconclusive"
         ],
         "criticalAssertions": [
           {
@@ -28279,10 +28304,11 @@
         "validation/journeys/m3-history-acceptance.docker.test.ts::distinguishes real intermittent transport loss from intermittent business assertions without inferring cause confirmation from counts",
         "validation/journeys/m3-history-selection.docker.test.ts::executes ten distinct serial strict samples against an independently recorded intermittent target and preserves history after quarantine",
         "packages/application/src/flake.test.ts::retains fixed source, fixture, environment and runtime identity while excluding repetition/run IDs",
-        "packages/domain/src/flake-statistics.test.ts::reports exact zero-failure bounds for n=%i without invented confirmation"
+        "packages/domain/src/flake-statistics.test.ts::reports exact zero-failure bounds for n=%i without invented confirmation",
+        "packages/application/src/flake.test.ts::a passed Run whose gate failed is counted inconclusive, never as a pass"
       ],
       "oracle": [
-        "Real clean source commits A/B bind strict immutable first-Attempt samples; independent alternating HTTP body and socket-loss recorders distinguish suspected flake, deterministic defect and unstable infrastructure. SHA/revision/environment split cohort and windows; separate diagnostic pass cannot enter prior study or rewrite failure."
+        "Real clean source commits A/B bind strict immutable first-Attempt samples; independent alternating HTTP body and socket-loss recorders distinguish suspected flake, deterministic defect and unstable infrastructure. SHA/revision/environment split cohort and windows; separate diagnostic pass cannot enter prior study or rewrite failure. A Run that passed while its gate failed counts as inconclusive in the study, never as a pass."
       ],
       "evidence": [
         "validation/journeys/m3-history-acceptance.docker.test.ts",
@@ -28309,7 +28335,8 @@
           "validation/journeys/m3-history-acceptance.docker.test.ts::accumulates verified-source strict product samples, splits changed SHA/revision/environment windows and excludes diagnostic rerun passes",
           "validation/journeys/m3-history-acceptance.docker.test.ts::distinguishes real intermittent transport loss from intermittent business assertions without inferring cause confirmation from counts",
           "packages/application/src/flake.test.ts::retains fixed source, fixture, environment and runtime identity while excluding repetition/run IDs",
-          "packages/domain/src/flake-statistics.test.ts::reports exact zero-failure bounds for n=%i without invented confirmation"
+          "packages/domain/src/flake-statistics.test.ts::reports exact zero-failure bounds for n=%i without invented confirmation",
+          "packages/application/src/flake.test.ts::a passed Run whose gate failed is counted inconclusive, never as a pass"
         ],
         "criticalAssertions": [
           {
