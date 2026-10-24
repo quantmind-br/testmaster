@@ -30,7 +30,10 @@ async function queuedRun() {
   vi.spyOn(app, "preflight").mockResolvedValue();
   vi.spyOn(app, "images").mockResolvedValue(lock);
   vi.spyOn(app.runs.host, "admittedImages").mockReturnValue(lock);
-  vi.spyOn(DockerExecutor.prototype, "listOrphans").mockResolvedValue([]);
+  vi.spyOn(DockerExecutor.prototype, "listOrphans").mockResolvedValue({
+    orphans: [],
+    failures: [],
+  });
   const test = app.tests.create({ projectId: init.projectId, plan: scaffoldPlan("backend") });
   const receipt = await app.runs.admit(
     { testId: test.id, environmentId: init.environmentId },

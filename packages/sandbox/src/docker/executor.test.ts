@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { AttemptClock } from "@testmaster/domain";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  ContainerCleanupError,
   type DockerAttempt,
   type DockerCommand,
   DockerExecutor,
@@ -89,32 +90,119 @@ it("doctor refuses missing seccomp or cgroup v2 and reports rootless/rootful acc
     expect(result.mode).toBe(mode);
   }
 });
-it("reaps only orphan attempts whose durable lease expired", async () => {
+function labels(attemptId: string | undefined) {
+  return JSON.stringify([
+    {
+      Config: {
+        Labels: {
+          "io.testmaster.attempt": attemptId,
+          "io.testmaster.run": "run_example",
+          "io.testmaster.owner-pid": "123",
+        },
+      },
+    },
+  ]);
+}
+function answer(stdout: string, code = 0, stderr = "") {
+  return { code, stdout: Buffer.from(stdout), stderr: Buffer.from(stderr), droppedBytes: 0 };
+}
+it("reaps every orphan whose durable lease expired even when another container cannot be read", async () => {
   const removed: string[] = [];
   const command: DockerCommand = async (args) => {
-    const stdout =
-      args[0] === "ps"
-        ? "tm-att-att_expired\ntm-att-att_live\n"
-        : args[0] === "inspect"
-          ? JSON.stringify([
-              {
-                Config: {
-                  Labels: {
-                    "io.testmaster.attempt": args[1]?.slice(7),
-                    "io.testmaster.run": "run_example",
-                    "io.testmaster.owner-pid": "123",
-                  },
-                },
-              },
-            ])
-          : "";
+    if (args[0] === "ps")
+      return answer("tm-att-att_broken\ntm-att-att_gone\ntm-att-att_expired\ntm-att-att_live\n");
+    if (args[0] === "inspect" && args[1] === "tm-att-att_broken")
+      return answer("", 1, "Error response from daemon: connection reset");
+    if (args[0] === "inspect" && args[1] === "tm-att-att_gone")
+      return answer("", 1, "Error: No such object: tm-att-att_gone");
+    if (args[0] === "inspect") return answer(labels(args[1]?.slice(7)));
     if (args[0] === "rm") removed.push(args[2] ?? "");
-    return { code: 0, stdout: Buffer.from(stdout), stderr: Buffer.alloc(0), droppedBytes: 0 };
+    return answer("");
   };
   expect(await new DockerExecutor(command).reapOrphans(async (id) => id === "att_expired")).toEqual(
-    ["att_expired"],
+    {
+      removed: ["att_expired"],
+      failures: [
+        { name: "tm-att-att_broken", reason: "Error response from daemon: connection reset" },
+      ],
+    },
   );
   expect(removed).toEqual(["tm-att-att_expired"]);
+});
+it("removes every leftover sandbox of a worker and names the one Docker could not remove", async () => {
+  const removals: string[] = [];
+  const command: DockerCommand = async (args) => {
+    if (args[0] === "ps") {
+      expect(args).toContain("label=io.testmaster.worker=wrk_example");
+      return answer("tm-att-att_busy\ntm-att-att_free\n");
+    }
+    if (args[0] === "inspect") return answer(labels(args[1]?.slice(7)));
+    if (args[0] === "rm") {
+      removals.push(args[2] ?? "");
+      if (args[2] === "tm-att-att_busy")
+        return answer("", 1, "Error response from daemon: device busy");
+    }
+    return answer("");
+  };
+  const outcome = await new DockerExecutor(command).removeWorkerContainers("wrk_example").then(
+    () => undefined,
+    (error: unknown) => error,
+  );
+  expect(outcome).toBeInstanceOf(ContainerCleanupError);
+  expect(outcome).toMatchObject({
+    containerName: "tm-att-att_busy",
+    detail: "tm-att-att_busy: Error response from daemon: device busy",
+  });
+  expect(removals).toEqual(["tm-att-att_busy", "tm-att-att_free"]);
+});
+it("keeps Docker's reason when the container of a finished attempt cannot be removed", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "tm-cleanup-"));
+  try {
+    await Promise.all(["input", "sockets"].map((name) => mkdir(join(directory, name))));
+    await writeFile(join(directory, "seccomp.json"), "{}");
+    const command: DockerCommand = async (args) => {
+      if (args[0] === "rm") return answer("", 1, "Error response from daemon: device busy\n");
+      if (args[0] !== "inspect") return answer("");
+      return answer(
+        JSON.stringify([
+          {
+            Image: attempt.imageId,
+            Config: { User: "1000:1000", Labels: {} },
+            HostConfig: {
+              NetworkMode: "none",
+              ReadonlyRootfs: true,
+              CapDrop: ["ALL"],
+              CapAdd: [],
+              SecurityOpt: ["seccomp=profile", "no-new-privileges"],
+              Memory: 512 * 1024 ** 2,
+              MemorySwap: 512 * 1024 ** 2,
+              PidsLimit: 128,
+              NanoCpus: 1e9,
+            },
+            Mounts: [],
+            State: { OOMKilled: false, ExitCode: 0, StartedAt: "2026-01-01T00:00:00Z", Error: "" },
+          },
+        ]),
+      );
+    };
+    const outcome = await new DockerExecutor(command)
+      .execute({
+        ...attempt,
+        kind: "http",
+        inputDir: join(directory, "input"),
+        socketsDir: join(directory, "sockets"),
+        seccompPath: join(directory, "seccomp.json"),
+      })
+      .then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+    expect(outcome).toBeInstanceOf(ContainerCleanupError);
+    expect((outcome as ContainerCleanupError).detail).toContain("device busy");
+    expect((outcome as ContainerCleanupError).message).toContain("device busy");
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 });
 function info(fields: Record<string, unknown>): DockerCommand {
   return async () => ({

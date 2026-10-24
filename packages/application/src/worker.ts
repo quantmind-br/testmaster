@@ -545,16 +545,24 @@ export class WorkerService {
     const database = this.ctx.database;
     const expired = this.settleLeases();
     await this.eraseSettledCaptures();
-    const reaped = await this.dockerExecutor()
-      .reapOrphans(async (attemptId) => {
+    let reaped: string[] = [];
+    let reapFailures: { container: string | null; reason: string }[] = [];
+    try {
+      const result = await this.dockerExecutor().reapOrphans(async (attemptId) => {
         const row = database.get(
           "SELECT j.state FROM attempts a JOIN job_leases j ON j.workspace_id=a.workspace_id AND j.id=a.job_id WHERE a.workspace_id=? AND a.id=?",
           this.ctx.workspaceId,
           attemptId,
         );
         return Boolean(row && row.state !== "leased");
-      })
-      .catch(() => []);
+      });
+      reaped = result.removed;
+      reapFailures = result.failures.map(({ name, reason }) => ({ container: name, reason }));
+    } catch (error) {
+      reapFailures = [
+        { container: null, reason: error instanceof Error ? error.message : String(error) },
+      ];
+    }
     const orphanPort = (attemptIdOf: (candidate: GcCandidate) => Promise<string>): GcPort => ({
       inspect: async (candidate) => {
         const attemptId = await attemptIdOf(candidate);
@@ -656,6 +664,7 @@ export class WorkerService {
     return {
       expired,
       reaped,
+      reapFailures,
       orphanStaging: orphans.length + published.length,
       removed,
       availableBytes: Number(storage.bavail) * Number(storage.bsize),

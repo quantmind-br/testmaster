@@ -253,7 +253,8 @@ export function reportedFailure(error: unknown): RemoteFailInput["error"] {
       code: "INTERNAL",
       reasonCode: "container_cleanup_failed",
       containerName: error.containerName.slice(0, NAME_MAX_LENGTH),
-      message,
+      // The controller rebuilds the error around the container name, so only Docker's reason travels.
+      message: error.detail.slice(0, DESCRIPTION_MAX_LENGTH),
     };
   if (error instanceof PolicyDenied)
     return { code: "POLICY_DENIED", reasonCode: "security_precondition_failed", message };

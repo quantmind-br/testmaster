@@ -120,6 +120,8 @@ export interface AttemptInput {
   workspaceId: string;
   runId: string;
   attemptId: string;
+  /** Set by a remote worker so its sandbox is labelled for the start-up sweep. */
+  workerId?: string;
   revisionId: string;
   snapshotId: string;
   executionSnapshot?: ArtifactManifest["executionSnapshot"];
@@ -489,6 +491,7 @@ export class AttemptExecutor {
           attemptTimeoutMs: input.attemptTimeoutMs ?? 300000,
           clock,
           cancellationGraceMs: input.cancellationGraceMs ?? 10000,
+          ...(input.workerId === undefined ? {} : { workerId: input.workerId }),
         },
         controller.signal,
       );

@@ -40,7 +40,10 @@ async function openWorkspace() {
   vi.spyOn(app, "preflight").mockResolvedValue();
   vi.spyOn(app, "images").mockResolvedValue(lock);
   vi.spyOn(app.runs.host, "admittedImages").mockReturnValue(lock);
-  vi.spyOn(DockerExecutor.prototype, "listOrphans").mockResolvedValue([]);
+  vi.spyOn(DockerExecutor.prototype, "listOrphans").mockResolvedValue({
+    orphans: [],
+    failures: [],
+  });
   return { cwd, app, init };
 }
 

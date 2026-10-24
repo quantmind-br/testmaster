@@ -17,7 +17,10 @@ import { entity } from "./context.js";
 const roots: string[] = [];
 const applications: Application[] = [];
 beforeEach(() => {
-  vi.spyOn(DockerExecutor.prototype, "listOrphans").mockResolvedValue([]);
+  vi.spyOn(DockerExecutor.prototype, "listOrphans").mockResolvedValue({
+    orphans: [],
+    failures: [],
+  });
   // Only the monotonic clock that measures a model wait is faked; leases keep real time.
   vi.useFakeTimers({ toFake: ["performance"] });
 });

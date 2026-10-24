@@ -4,15 +4,27 @@ import { isAbsolute, join } from "node:path";
 import { AttemptClock } from "@testmaster/domain";
 import { PolicyDenied } from "../egress/policy.js";
 
+/** A container teardown that may have left the sandbox behind; `detail` keeps Docker's reason. */
 export class ContainerCleanupError extends Error {
   readonly code = "container_cleanup_failed";
   constructor(
     readonly containerName: string,
+    readonly detail: string,
     override readonly cause?: unknown,
   ) {
-    super(`Failed to cleanup container ${containerName}`);
+    super(`Failed to cleanup container ${containerName}: ${detail}`);
     this.name = "ContainerCleanupError";
   }
+}
+
+const FAILURE_DETAIL_MAX_LENGTH = 500;
+function failureDetail(result: CommandResult): string {
+  const stderr = result.stderr.toString().trim().slice(0, FAILURE_DETAIL_MAX_LENGTH);
+  return stderr || `exit ${result.code}`;
+}
+export interface OrphanFailure {
+  name: string;
+  reason: string;
 }
 
 export type ExecutorKind = "browser" | "http" | "python" | "terminal" | "dast";
@@ -49,6 +61,8 @@ export interface DockerAttempt {
   user?: string;
   attemptTimeoutMs?: number;
   cancellationGraceMs?: number;
+  /** The remote worker that owns the sandbox, so it can find its leftovers after a crash. */
+  workerId?: string;
   /**
    * The attempt clock `attemptTimeoutMs` is counted on. The caller pauses it while the host
    * resolves a model request for the container, so waiting for a model answer never costs
@@ -133,6 +147,7 @@ function identifier(value: string): void {
 export function dockerCreateArgs(options: DockerAttempt): string[] {
   identifier(options.attemptId);
   identifier(options.runId);
+  if (options.workerId !== undefined) identifier(options.workerId);
   if (!/^sha256:[a-f0-9]{64}$/u.test(options.imageId)) throw new PolicyDenied("unpinned_image");
   const user = options.user ?? "1000:1000";
   if (!/^[1-9][0-9]*:[1-9][0-9]*$/u.test(user)) throw new PolicyDenied("root_user_denied");
@@ -152,6 +167,9 @@ export function dockerCreateArgs(options: DockerAttempt): string[] {
     `io.testmaster.run=${options.runId}`,
     "--label",
     `io.testmaster.owner-pid=${process.pid}`,
+    ...(options.workerId === undefined
+      ? []
+      : ["--label", `io.testmaster.worker=${options.workerId}`]),
     "--network",
     "none",
     "--read-only",
@@ -357,9 +375,15 @@ export class DockerExecutor {
     let cleanupError: Error | undefined;
     if (created) {
       try {
-        await this.checked(["rm", "-f", name]);
+        const removal = await this.command(["rm", "-f", name]);
+        if (removal.code !== 0)
+          cleanupError = new ContainerCleanupError(name, failureDetail(removal));
       } catch (error) {
-        cleanupError = new ContainerCleanupError(name, error);
+        cleanupError = new ContainerCleanupError(
+          name,
+          error instanceof Error ? error.message : String(error),
+          error,
+        );
       }
     }
     // Teardown uncertainty always quarantines the slot, including after an execution error.
@@ -370,9 +394,14 @@ export class DockerExecutor {
     }
     return executionResult;
   }
-  async listOrphans(): Promise<
-    { name: string; attemptId: string; runId: string; ownerPid: number }[]
-  > {
+  /**
+   * Lists the labelled sandboxes; one unreadable container is reported in `failures` and never
+   * hides the others from the reaper.
+   */
+  async listOrphans(): Promise<{
+    orphans: { name: string; attemptId: string; runId: string; ownerPid: number }[];
+    failures: OrphanFailure[];
+  }> {
     const list = await this.checked([
       "ps",
       "-a",
@@ -381,9 +410,16 @@ export class DockerExecutor {
       "--format",
       "{{.Names}}",
     ]);
-    const result = [];
+    const orphans = [];
+    const failures: OrphanFailure[] = [];
     for (const name of list.stdout.toString().trim().split("\n").filter(Boolean)) {
-      const raw = await this.checked(["inspect", name]);
+      const raw = await this.command(["inspect", name]);
+      if (raw.code !== 0) {
+        // Removed between `ps` and `inspect`: nothing is left to reap.
+        if (/No such (?:object|container)/iu.test(raw.stderr.toString())) continue;
+        failures.push({ name, reason: failureDetail(raw) });
+        continue;
+      }
       const item = (JSON.parse(raw.stdout.toString()) as DockerInspect[])[0];
       if (!item) continue;
       const labels = item.Config.Labels;
@@ -396,19 +432,65 @@ export class DockerExecutor {
         !Number.isInteger(ownerPid) ||
         ownerPid < 1 ||
         name !== `tm-att-${attemptId}`
-      )
-        throw new PolicyDenied("invalid_orphan_identity");
-      result.push({ name, attemptId, runId, ownerPid });
-    }
-    return result;
-  }
-  async reapOrphans(isLeaseExpired: (attemptId: string) => Promise<boolean>): Promise<string[]> {
-    const removed = [];
-    for (const orphan of await this.listOrphans())
-      if (await isLeaseExpired(orphan.attemptId)) {
-        await this.checked(["rm", "-f", orphan.name]);
-        removed.push(orphan.attemptId);
+      ) {
+        failures.push({ name, reason: "invalid_orphan_identity" });
+        continue;
       }
+      orphans.push({ name, attemptId, runId, ownerPid });
+    }
+    return { orphans, failures };
+  }
+  /** Removes every orphan whose lease expired; a failed removal is reported, never fatal to the pass. */
+  async reapOrphans(
+    isLeaseExpired: (attemptId: string) => Promise<boolean>,
+  ): Promise<{ removed: string[]; failures: OrphanFailure[] }> {
+    const removed = [];
+    const { orphans, failures } = await this.listOrphans();
+    for (const orphan of orphans)
+      if (await isLeaseExpired(orphan.attemptId)) {
+        const removal = await this.command(["rm", "-f", orphan.name]);
+        if (removal.code === 0) removed.push(orphan.attemptId);
+        else failures.push({ name: orphan.name, reason: failureDetail(removal) });
+      }
+    return { removed, failures };
+  }
+  /**
+   * Removes every sandbox labelled with this remote worker. Only a process holding the worker's
+   * data-dir lock and enrolled key may call it, so each such container is a leftover of a dead
+   * predecessor; every container is attempted before a failure is thrown.
+   */
+  async removeWorkerContainers(workerId: string): Promise<{ name: string; attemptId: string }[]> {
+    identifier(workerId);
+    const list = await this.checked([
+      "ps",
+      "-a",
+      "--filter",
+      `label=io.testmaster.worker=${workerId}`,
+      "--format",
+      "{{.Names}}",
+    ]);
+    const removed: { name: string; attemptId: string }[] = [];
+    const failures: OrphanFailure[] = [];
+    for (const name of list.stdout.toString().trim().split("\n").filter(Boolean)) {
+      const raw = await this.command(["inspect", name]);
+      if (raw.code !== 0) {
+        if (/No such (?:object|container)/iu.test(raw.stderr.toString())) continue;
+        failures.push({ name, reason: failureDetail(raw) });
+        continue;
+      }
+      const attemptId =
+        (JSON.parse(raw.stdout.toString()) as DockerInspect[])[0]?.Config.Labels[
+          "io.testmaster.attempt"
+        ] ?? "";
+      const removal = await this.command(["rm", "-f", name]);
+      if (removal.code === 0) removed.push({ name, attemptId });
+      else failures.push({ name, reason: failureDetail(removal) });
+    }
+    if (failures.length > 0)
+      throw new ContainerCleanupError(
+        failures.map((failure) => failure.name).join(","),
+        failures.map((failure) => `${failure.name}: ${failure.reason}`).join("; "),
+      );
     return removed;
   }
   async doctor(probe?: DockerAttempt): Promise<{

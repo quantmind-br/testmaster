@@ -40,7 +40,10 @@ it("a leased diagnosis job held by another process does not make the worker trea
     new URL("../../../containers/images.lock.json", import.meta.url).pathname,
   );
   vi.spyOn(application, "images").mockResolvedValue(lock);
-  vi.spyOn(sandbox.DockerExecutor.prototype, "listOrphans").mockResolvedValue([]);
+  vi.spyOn(sandbox.DockerExecutor.prototype, "listOrphans").mockResolvedValue({
+    orphans: [],
+    failures: [],
+  });
   const job = analysisJob(application, init.workspaceId);
   const claimed = new AuxiliaryLeaseRepository(application.database).claim({
     workspaceId: init.workspaceId,
@@ -86,7 +89,10 @@ it("a registered worker reports its id once its row is ready, so a supervisor ca
     new URL("../../../containers/images.lock.json", import.meta.url).pathname,
   );
   vi.spyOn(application, "images").mockResolvedValue(lock);
-  vi.spyOn(sandbox.DockerExecutor.prototype, "listOrphans").mockResolvedValue([]);
+  vi.spyOn(sandbox.DockerExecutor.prototype, "listOrphans").mockResolvedValue({
+    orphans: [],
+    failures: [],
+  });
   const controller = new AbortController();
   const seen: { workerId: string; state: unknown }[] = [];
   const running = application.worker.run({

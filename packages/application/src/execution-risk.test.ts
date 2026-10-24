@@ -29,7 +29,10 @@ const applications: Application[] = [];
 
 beforeEach(() => {
   // Reconciliation is real; only unrelated host-container enumeration is isolated.
-  vi.spyOn(DockerExecutor.prototype, "listOrphans").mockResolvedValue([]);
+  vi.spyOn(DockerExecutor.prototype, "listOrphans").mockResolvedValue({
+    orphans: [],
+    failures: [],
+  });
 });
 afterEach(async () => {
   vi.restoreAllMocks();

@@ -30,7 +30,10 @@ async function workspace() {
   vi.spyOn(app, "preflight").mockResolvedValue();
   vi.spyOn(app, "images").mockResolvedValue(lock);
   vi.spyOn(app.runs.host, "admittedImages").mockReturnValue(lock);
-  vi.spyOn(DockerExecutor.prototype, "listOrphans").mockResolvedValue([]);
+  vi.spyOn(DockerExecutor.prototype, "listOrphans").mockResolvedValue({
+    orphans: [],
+    failures: [],
+  });
   const test = app.tests.create({ projectId: init.projectId, plan: scaffoldPlan("backend") });
   const admit = async () =>
     (await app.runs.admit({ testId: test.id, environmentId: init.environmentId }, { wait: true }))

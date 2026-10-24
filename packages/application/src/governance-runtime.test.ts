@@ -76,7 +76,10 @@ it("an old local worker advertises real digests but never claims a queued action
   vi.spyOn(app, "preflight").mockResolvedValue();
   const lock = await imageLock();
   vi.spyOn(app, "images").mockResolvedValue(lock);
-  vi.spyOn(sandbox.DockerExecutor.prototype, "listOrphans").mockResolvedValue([]);
+  vi.spyOn(sandbox.DockerExecutor.prototype, "listOrphans").mockResolvedValue({
+    orphans: [],
+    failures: [],
+  });
   const receipt = await app.runs.admit(
     { testId: test.id, environmentId: init.environmentId },
     { wait: true },
