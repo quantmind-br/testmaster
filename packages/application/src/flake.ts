@@ -59,6 +59,37 @@ export interface FlakeStudyReport {
   limitations: string[];
   incompatible: { batchId: string; reasons: string[] }[];
 }
+export interface FlakeCounts {
+  nPlanned: number;
+  nPass: number;
+  nFail: number;
+  nBlocked: number;
+  nCancelled: number;
+  nInconclusive: number;
+}
+/**
+ * Counts a study's Runs by verdict; a passed Run whose gate failed is `inconclusive`, never a
+ * pass (specs/11-contract-details.md batch counts, as `aggregateBatch` counts it).
+ */
+export function flakeCounts(runs: readonly Pick<Run, "outcome" | "gate">[]): FlakeCounts {
+  const counts = {
+    nPlanned: runs.length,
+    nPass: 0,
+    nFail: 0,
+    nBlocked: 0,
+    nCancelled: 0,
+    nInconclusive: 0,
+  };
+  for (const run of runs) {
+    if (run.outcome === "passed" && run.gate === "failed") counts.nInconclusive++;
+    else if (run.outcome === "passed") counts.nPass++;
+    else if (run.outcome === "failed") counts.nFail++;
+    else if (run.outcome === "blocked") counts.nBlocked++;
+    else if (run.outcome === "cancelled") counts.nCancelled++;
+    else if (run.outcome === "inconclusive") counts.nInconclusive++;
+  }
+  return counts;
+}
 export function flakeIdentity(run: Run): { identityHash: string; limitations: string[] } {
   const cell = runMatrixCell(run);
   const snapshot = cell.admissionSnapshot as unknown as AdmissionSnapshot | undefined;
@@ -214,21 +245,7 @@ export class FlakeService {
       for (const run of runs) all.set(run.id, run);
     }
     const runs = [...all.values()];
-    const counts = {
-      nPlanned: runs.length,
-      nPass: 0,
-      nFail: 0,
-      nBlocked: 0,
-      nCancelled: 0,
-      nInconclusive: 0,
-    };
-    for (const run of runs) {
-      if (run.outcome === "passed") counts.nPass++;
-      else if (run.outcome === "failed") counts.nFail++;
-      else if (run.outcome === "blocked") counts.nBlocked++;
-      else if (run.outcome === "cancelled") counts.nCancelled++;
-      else if (run.outcome === "inconclusive") counts.nInconclusive++;
-    }
+    const counts = flakeCounts(runs);
     const stats = flakeStatistics(counts);
     const failureCauses: FlakeStudyReport["failureCauses"] = [];
     const environmentReasons: Record<string, true> = {

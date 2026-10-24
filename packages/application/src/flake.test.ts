@@ -1,7 +1,7 @@
 import type { Run } from "@testmaster/contracts";
 import { describe, expect, it } from "vitest";
 import { runMatrixCell } from "./comparisons.js";
-import { flakeIdentity } from "./flake.js";
+import { flakeCounts, flakeIdentity } from "./flake.js";
 
 function sample(): Run {
   return {
@@ -58,5 +58,25 @@ describe("flake cohort identity", () => {
     expect(flakeIdentity(missing).limitations).toEqual(
       expect.arrayContaining(["source-binding-unavailable", "runtime-identity-unavailable"]),
     );
+  });
+});
+
+describe("flake study counts", () => {
+  it("a passed Run whose gate failed is counted inconclusive, never as a pass", () => {
+    expect(
+      flakeCounts([
+        { outcome: "passed", gate: "passed" },
+        { outcome: "passed", gate: "failed" },
+        { outcome: "passed", gate: "passed" },
+        { outcome: "failed", gate: "failed" },
+      ]),
+    ).toEqual({
+      nPlanned: 4,
+      nPass: 2,
+      nFail: 1,
+      nBlocked: 0,
+      nCancelled: 0,
+      nInconclusive: 1,
+    });
   });
 });
