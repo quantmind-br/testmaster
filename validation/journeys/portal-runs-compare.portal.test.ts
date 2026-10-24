@@ -488,6 +488,8 @@ describe("flake studies", () => {
     const { page } = await portal();
     await page.goto(`/projects/${projectId}/flake-studies/new`);
     await page.getByRole("heading", { level: 1, name: "Start a flake study" }).waitFor();
+    // The form renders only after the tests and environments lists load.
+    await page.locator("#flake-n").waitFor();
     const keyboard = await keyboardOnly(page);
     await keyboard.tabTo((element) => element.name.startsWith("Number of Runs"));
     await keyboard.press("Control+a");
