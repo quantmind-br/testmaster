@@ -40,7 +40,7 @@ afterEach(async () => {
   for (const root of roots.splice(0)) await fs.rm(root, { recursive: true, force: true });
 });
 
-async function fixture(limits?: ExecutionLimits) {
+async function fixture(limits?: ExecutionLimits, env: Record<string, string> = {}) {
   const root = await fs.mkdtemp(join(tmpdir(), "tm-execution-risk-"));
   roots.push(root);
   const home = join(root, "home");
@@ -52,7 +52,7 @@ async function fixture(limits?: ExecutionLimits) {
       mode: 0o600,
     });
   }
-  const app = await Application.open({ cwd: root, home, env: {} });
+  const app = await Application.open({ cwd: root, home, env });
   applications.push(app);
   const init = await app.init();
   const plan = scaffoldPlan("backend");
@@ -478,6 +478,25 @@ describe("admission risk boundaries", () => {
       baseUrl: "http://127.0.0.1:3000",
     });
     expect(app.secrets.get(secret.id).allowedOrigins).toEqual(["http://127.0.0.1:3000"]);
+  });
+
+  it("offline admission refuses a target override outside loopback and admits a loopback one", async () => {
+    const { app, request } = await fixture(undefined, { TESTMASTER_OFFLINE: "true" });
+    expect(app.config.profilePolicy.offline).toBe(true);
+    await expect(
+      app.runs.admit(
+        { ...request, extensions: { "testmaster:targetUrl": "https://unapproved.example/health" } },
+        { wait: true },
+      ),
+    ).rejects.toMatchObject({ code: "POLICY_DENIED" });
+    expectNoAdmission(app);
+    const receipt = await app.runs.admit(
+      { ...request, extensions: { "testmaster:targetUrl": "http://127.0.0.1:3000/health" } },
+      { wait: true },
+    );
+    expect(app.runs.get(receipt.runId).matrixCell).toMatchObject({
+      baseUrl: "http://127.0.0.1:3000",
+    });
   });
 
   it("a Run leased before storage pressure still finalizes while admission is suspended", async () => {

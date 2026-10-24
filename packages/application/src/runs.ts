@@ -30,6 +30,7 @@ import {
   OutboxRepository,
 } from "@testmaster/persistence";
 import type { ImageLock } from "@testmaster/sandbox";
+import { networkProfile } from "./authoring.js";
 import type { ResolvedConfig } from "./config.js";
 import { allEntities, entity, requireEntity, type ServiceContext } from "./context.js";
 import { type ReuseBinding, resolveReuse } from "./dependency-reuse.js";
@@ -393,7 +394,11 @@ export class RunsService {
     const baseUrl = typeof targetUrl === "string" ? new URL(targetUrl).origin : originalUrl;
     if (!baseUrl)
       throw new ContractError("PRECONDITION_FAILED", "Environment revision has no target origin");
-    if (this.host.config.profilePolicy.offline && env.networkProfile !== "local-loopback")
+    // An override names its own destination, so offline mode checks it as well as the environment.
+    if (
+      this.host.config.profilePolicy.offline &&
+      (env.networkProfile !== "local-loopback" || networkProfile(baseUrl) !== "local-loopback")
+    )
       throw new ContractError(
         "POLICY_DENIED",
         "Offline execution allows authorized local targets only",

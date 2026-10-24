@@ -186,7 +186,8 @@ function origin(baseUrl: string, label = "Environment baseUrl"): string {
     );
   return url.origin;
 }
-function networkProfile(baseUrl: string): EnvironmentRevision["networkProfile"] {
+/** Classifies a base URL: a literal loopback host is `local-loopback`, anything else `public`. */
+export function networkProfile(baseUrl: string): EnvironmentRevision["networkProfile"] {
   const host = new URL(baseUrl).hostname;
   return host === "localhost" || host === "[::1]" || /^127\./.test(host)
     ? "local-loopback"
