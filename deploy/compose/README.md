@@ -141,8 +141,10 @@ it into a controller.
 
 Things to know before relying on it:
 
-- The MinIO image is pinned by digest, and Docker Hub no longer serves that repository; keep a copy
-  in your own registry or pin another image you have run the journey against.
+- Docker Hub no longer serves `minio/minio`, so the MinIO image is pinned by digest to
+  `ghcr.io/quantmind-br/minio`, an unmodified linux/amd64 mirror of RELEASE.2025-09-07T16-13-09Z
+  (AGPL-3.0, source at github.com/minio/minio). For another architecture, pin an image you have run
+  the journey against.
 - `TESTMASTER_BACKUP_LOCK_DAYS` sets a COMPLIANCE retention. Nobody, including the MinIO root user,
   can shorten it or delete a backup earlier, so choose it deliberately (the journey uses one day).
 - Controllers talk to each other over the compose network in plain HTTP. Do not publish their ports

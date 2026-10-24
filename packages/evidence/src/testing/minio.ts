@@ -11,12 +11,12 @@ import {
 const exec = (file: string, args: string[]) => promisify(childProcess.execFile)(file, args);
 
 /**
- * The S3-compatible server evidence tests run against. The Docker Hub repository is gone, so the
- * only copy is the local image; the digest keeps a different build from being used silently
- * (RELEASE.2025-09-07T16-13-09Z).
+ * The S3-compatible server evidence tests run against: an unmodified mirror of minio/minio
+ * RELEASE.2025-09-07T16-13-09Z, whose Docker Hub repository is gone. The digest keeps a different
+ * build from being used silently.
  */
 export const minioTestImage =
-  "minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e";
+  "ghcr.io/quantmind-br/minio@sha256:a1a8bd4ac40ad7881a245bab97323e18f971e4d4cba2c2007ec1bedd21cbaba2";
 
 export interface MinioTestServer {
   /** `http://127.0.0.1:<port>`; the container binds loopback only. */
@@ -57,7 +57,7 @@ export async function startMinioTestServer(): Promise<MinioTestServer> {
     await exec("docker", ["image", "inspect", minioTestImage]);
   } catch (error) {
     throw new Error(
-      `MinIO test image ${minioTestImage} is not available to Docker (${error instanceof Error ? error.message.split("\n")[0] : error}); the Docker Hub repository no longer serves it, so restore it from a saved copy (docker load)`,
+      `MinIO test image ${minioTestImage} is not available to Docker (${error instanceof Error ? error.message.split("\n")[0] : error}); pull it with docker pull ${minioTestImage}`,
     );
   }
   const name = `tm-minio-test-${process.pid}-${Date.now().toString(36)}`;

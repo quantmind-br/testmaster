@@ -81,7 +81,7 @@ describe("distributed reference deployment files (ADR-035)", () => {
       "testmaster-server:local",
     ]);
     expect(distributed).toContain(
-      "minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e",
+      "ghcr.io/quantmind-br/minio@sha256:a1a8bd4ac40ad7881a245bab97323e18f971e4d4cba2c2007ec1bedd21cbaba2",
     );
     expect(distributed).toContain(
       "caddy:2-alpine@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f",

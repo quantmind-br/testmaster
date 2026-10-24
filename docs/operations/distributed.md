@@ -148,8 +148,10 @@ after the evidence bucket was emptied and the database dropped; timings are in
   proxy share.
 - Both controllers, the database, the bucket, Caddy and the workers of the journey share one host; no
   multi-host behaviour is claimed beyond what the database-clock tests cover.
-- Only MinIO RELEASE.2025-09-07T16-13-09Z was exercised. AWS S3 was not. The pinned MinIO image is no
-  longer on Docker Hub; keep your own copy.
+- Only MinIO RELEASE.2025-09-07T16-13-09Z was exercised. AWS S3 was not. Docker Hub no longer serves
+  `minio/minio`, so the compose files pull `ghcr.io/quantmind-br/minio`: an unmodified linux/amd64
+  mirror of that release (same layers and configuration; MinIO is AGPL-3.0, source at
+  github.com/minio/minio). There is no arm64 image.
 - MinIO needs `s3:DeleteObject` for a versioned delete, so the backup credential can hide a backup
   behind a delete marker; the locked version stays. Keep that credential on the agent host.
 - `backup list` reads one catalog object per backup; its time was not measured.

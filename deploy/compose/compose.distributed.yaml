@@ -86,11 +86,10 @@ services:
       timeout: 3s
       retries: 20
 
-  # The Docker Hub repository of this image is gone: the digest below is only reachable from an
-  # image store that already holds it (docker save / load) or from a registry mirror. Keep a saved
-  # copy; docs/adr/035-distributed-profile.md records the risk and the replacement path.
+  # An unmodified linux/amd64 mirror of minio/minio RELEASE.2025-09-07T16-13-09Z (AGPL-3.0, source
+  # at github.com/minio/minio), whose Docker Hub repository is gone. docs/adr/035 records why.
   minio:
-    image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    image: ghcr.io/quantmind-br/minio@sha256:a1a8bd4ac40ad7881a245bab97323e18f971e4d4cba2c2007ec1bedd21cbaba2
     restart: unless-stopped
     user: "${TESTMASTER_CONTAINER_USER:-0:0}"
     read_only: true
@@ -126,7 +125,7 @@ services:
       retries: 20
 
   minio-init:
-    image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    image: ghcr.io/quantmind-br/minio@sha256:a1a8bd4ac40ad7881a245bab97323e18f971e4d4cba2c2007ec1bedd21cbaba2
     restart: "no"
     user: "${TESTMASTER_CONTAINER_USER:-0:0}"
     read_only: true
