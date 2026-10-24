@@ -399,15 +399,23 @@ it("M5-06 a load probe reports latency, stops on its error-rate condition, cance
           code: "POLICY_DENIED",
           details: { reasonCode: "production_load_refused", probe: "load" },
         });
-        // Another target is refused until an approval names its origin, before anything is queued.
-        const external = await session.start([
+        // Offline mode (the journey default) refuses a target outside loopback before any approval.
+        const externalArgs = [
           "test",
           "run",
           catalog,
           "--target-url",
           "https://load-target.example",
           ...RUN_TIMEOUT,
-        ]).result;
+        ];
+        const offline = await session.start(externalArgs).result;
+        expect(offline.exitCode, offline.stdout).toBe(9);
+        const offlineError = object(object(offline.json).error);
+        expect(offlineError).toMatchObject({ code: "POLICY_DENIED" });
+        expect(object(offlineError.details).binding).toBeUndefined();
+        // Online, another target is refused until an approval names its origin, before anything
+        // is queued.
+        const external = await session.start(externalArgs, { TESTMASTER_OFFLINE: "false" }).result;
         expect(external.exitCode, external.stdout).toBe(9);
         const externalError = object(object(external.json).error);
         expect(externalError).toMatchObject({
@@ -425,6 +433,7 @@ it("M5-06 a load probe reports latency, stops on its error-rate condition, cance
           stopCondition: stopSummary.stopCondition,
           cancelled,
           production: error,
+          offline: offlineError,
           external: externalError,
         });
       } finally {
