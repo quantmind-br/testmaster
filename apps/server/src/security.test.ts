@@ -71,13 +71,23 @@ it("rejects expired, wrong-audience, wrong-workspace and revoked tokens on an ac
     hash,
   );
   expect((await f.request(f.issued.token)).status).toBe(200);
+  // An authenticated write is audited even when the route then refuses it; reads are not.
+  const write = await fetch(`${f.address}/v1/runs/run_missing/cancel`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${f.issued.token}`, "content-type": "application/json" },
+    body: "{}",
+  });
+  expect(write.status).not.toBe(401);
+  await write.arrayBuffer();
   revokeLocalToken(f.application, f.issued.token);
   expect((await f.request(f.issued.token)).status).toBe(401);
   const rows = f.application.database.all(
     "SELECT actor,action,request_id FROM audit_events WHERE action LIKE 'auth.%'",
   );
   expect(rows.filter((row) => row.action === "auth.denied")).toHaveLength(5);
-  expect(rows.filter((row) => row.action === "auth.allowed")).toHaveLength(2);
+  expect(rows.filter((row) => row.action === "auth.allowed")).toEqual([
+    expect.objectContaining({ request_id: write.headers.get("x-correlation-id") }),
+  ]);
   expect(rows.every((row) => row.actor && row.request_id)).toBe(true);
   expect(JSON.stringify(rows)).not.toContain(f.issued.token);
 });

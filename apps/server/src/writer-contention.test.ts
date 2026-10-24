@@ -34,10 +34,33 @@ async function fixture() {
     release: () => holder.exec("COMMIT"),
     get: (path: string, authorization?: string) =>
       fetch(`${address}${path}`, authorization ? { headers: { authorization } } : {}),
+    post: (path: string, authorization: string) =>
+      fetch(`${address}${path}`, {
+        method: "POST",
+        headers: { authorization, "content-type": "application/json" },
+        body: "{}",
+      }),
   };
 }
 
-it("answers authenticated and unauthenticated requests under writer contention with the same enveloped 503, then recovers", async () => {
+async function expectContended(response: Response, label: string) {
+  expect(response.status, label).toBe(503);
+  expect(response.headers.get("content-type"), label).toContain("application/json");
+  const correlation = response.headers.get("x-correlation-id");
+  expect(correlation, label).toBeTruthy();
+  expect(await response.json(), label).toMatchObject({
+    schemaVersion: "1.0.0",
+    requestId: correlation,
+    error: {
+      code: "UNAVAILABLE",
+      retryable: true,
+      details: { reasonCode: "writer_contention", retryable: true },
+      nextActions: [],
+    },
+  });
+}
+
+it("answers authenticated reads under writer contention and refuses audited requests with the enveloped 503, then recovers", async () => {
   const f = await fixture();
   const bearer = `Bearer ${f.issued.token}`;
   // Positive controls before contention: the credential alone decides the outcome.
@@ -45,26 +68,14 @@ it("answers authenticated and unauthenticated requests under writer contention w
   expect((await f.get("/v1/projects", bearer)).status).toBe(200);
   f.hold();
   try {
-    // The 503 comes from the audit write in the hook / error handler, so it is route independent.
-    for (const path of ["/v1/me", "/v1/projects"])
-      for (const authorization of [undefined, bearer]) {
-        const label = `${path} ${authorization ? "authenticated" : "anonymous"}`;
-        const response = await f.get(path, authorization);
-        expect(response.status, label).toBe(503);
-        expect(response.headers.get("content-type"), label).toContain("application/json");
-        const correlation = response.headers.get("x-correlation-id");
-        expect(correlation, label).toBeTruthy();
-        expect(await response.json(), label).toMatchObject({
-          schemaVersion: "1.0.0",
-          requestId: correlation,
-          error: {
-            code: "UNAVAILABLE",
-            retryable: true,
-            details: { reasonCode: "writer_contention", retryable: true },
-            nextActions: [],
-          },
-        });
-      }
+    for (const path of ["/v1/me", "/v1/projects"]) {
+      // A successful read writes no audit row, so it never waits on the writer.
+      expect((await f.get(path, bearer)).status, `${path} authenticated`).toBe(200);
+      // A denial is always audited; when that row cannot be written the refusal is the 503.
+      await expectContended(await f.get(path), `${path} anonymous`);
+    }
+    // An authenticated write is audited before its route runs.
+    await expectContended(await f.post("/v1/runs/run_missing/cancel", bearer), "write");
   } finally {
     f.release();
   }

@@ -9,6 +9,7 @@ table below drifts from `packages/persistence/migrations/sqlite/`.
 
 ## Unreleased
 
+- The server no longer writes an `auth.allowed` audit row for a successful `GET`, `HEAD` or `OPTIONS` request. Authenticated writes and every denial are still audited, as are artifact downloads, links, report exports and MCP tool calls. A read therefore no longer waits on the single database writer to record itself and no longer answers `503` `writer_contention` while a long write holds it; an unauthenticated request still does, because its denial must be recorded. `docs/operations/capacity.md` notes that its recorded read figures included that row.
 - The portal no longer shows a Run whose assertions passed but whose gate failed as Passed outside the Run page: the project's and the retention page's Run lists, the batch matrix and the comparison sides show it as degraded "Passed, gate failed", and the batch matrix summary counts it as inconclusive.
 - Flake studies count a Run whose assertions passed but whose gate failed (evidence not published, cleanup not proven) as `inconclusive`, never as a pass, as batch counts already did, so it no longer lowers the failure rate.
 - `docs/operations/distributed.md` now states what happens to a PostgreSQL migration that runs longer than 10 minutes (it fails with `UNAVAILABLE` `database_timeout` and the migration in progress rolls back) and that Ctrl-C does not interrupt a running migration. The 10-minute deadline stays: the database bridge waits synchronously, so it is the only way a stuck migration ends without killing the process.

@@ -359,13 +359,16 @@ export function createServer(options: ServerOptions): FastifyInstance {
       )
         throw new ContractError("FORBIDDEN", "CSRF validation failed", { reason: "csrf" });
     }
-    auditSecurity(
-      options.application.forIdentity(identity).context,
-      "auth",
-      identity.credential.kind === "local" ? "local-api" : `${identity.credential.kind}-api`,
-      "allowed",
-      request.id,
-    );
+    // Writes and every denial are audited; a successful read writes no row, so a read does not
+    // wait on the single writer (ADR-015) just to record that it was allowed.
+    if (!["GET", "HEAD", "OPTIONS"].includes(request.method))
+      auditSecurity(
+        options.application.forIdentity(identity).context,
+        "auth",
+        identity.credential.kind === "local" ? "local-api" : `${identity.credential.kind}-api`,
+        "allowed",
+        request.id,
+      );
     identities.set(request, identity);
     if (!["GET", "HEAD", "OPTIONS"].includes(request.method)) {
       spend(buckets, identity.principalId, actorBudget, "Actor admission rate exceeded", "actor");

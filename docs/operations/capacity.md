@@ -278,8 +278,10 @@ a different harness (executing Runs under load), which this slice did not build.
   liveness probe is delayed by heavy requests too (11 ms p95 at c=32 here).
 * **Run listing was measured at one history size.** Only the 10,000-Run dataset was measured; the
   dependence on a larger history was not.
-* **Every authenticated request, including reads, writes an audit row.** The per-request cost in the
-  tables includes it.
+* **Measured with an audit row per read.** When these figures were recorded every authenticated
+  request, reads included, wrote an audit row. Since then only authenticated writes and every denial
+  write one; a successful read does not, so the per-request cost of reads in the tables is an upper
+  bound.
 * **Control plane only.** Run execution, target load, queue start lag and artifact publication were
   not under load. Execution capacity depends on the number of workers and the host, and is separate
   from the numbers above.
@@ -376,8 +378,9 @@ at concurrency 2 waited 15.0 s in the queue (maximum), which weighs on that 118 
 
 Each series is 200 requests through Caddy and both controllers, run after the three load levels (about
 300 Runs in the database), with 0 errors and every answer `200`. The windows are 0.02 to 9.0 s, so
-these are short-window rates, and p99 is withheld (n = 200). Every authenticated request also writes
-an audit row. Cells are operations per second, then p50 / p95 in milliseconds.
+these are short-window rates, and p99 is withheld (n = 200). When they were measured every
+authenticated request, reads included, also wrote an audit row; successful reads no longer do, so
+these read figures are an upper bound. Cells are operations per second, then p50 / p95 in milliseconds.
 
 | Operation | Concurrency 1 | Concurrency 4 | Concurrency 8 |
 |---|---|---|---|
@@ -424,8 +427,9 @@ cover one window and exclude the first 20 %; they do not prove the absence of a 
 Total container memory (page cache included) moved with the cache, not the heap: `server` 4,817 → 1,981
 MiB, `server-2` 1,038 → 670 MiB, MinIO 350 → 510 MiB, PostgreSQL 167 → 317 MiB, Caddy 25 → 34 MiB.
 Growth per completed Run: **73,742 bytes of PostgreSQL** (this includes the audit rows of the load
-generator's 500 ms polling), **24,329 bytes and 6.10 objects in the bucket**; the bucket grows
-84.8 MB per hour at this rate (57.9 Runs/min). No container restarted.
+generator's 500 ms polling, which successful reads no longer write), **24,329 bytes and 6.10
+objects in the bucket**; the bucket grows 84.8 MB per hour at this rate (57.9 Runs/min). No container
+restarted.
 
 ### Chaos recovery
 
